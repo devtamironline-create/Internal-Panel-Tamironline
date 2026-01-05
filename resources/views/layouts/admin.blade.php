@@ -9,6 +9,7 @@
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
@@ -35,13 +36,40 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .sidebar-menu-item {
-            @apply relative flex items-center gap-3 px-3 py-2.5 font-medium rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0.75rem;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.2s;
+        }
+        .sidebar-menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
         .sidebar-menu-item-active {
-            @apply bg-white/15 text-white;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #ffffff !important;
         }
         .sidebar-submenu {
-            @apply mr-8 mt-1 space-y-1;
+            margin-right: 2rem;
+            margin-top: 0.25rem;
+        }
+        .sidebar-submenu .sidebar-menu-item {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+        .sidebar-menu-item svg {
+            color: rgba(255, 255, 255, 0.85);
+            flex-shrink: 0;
+        }
+        .sidebar-menu-item:hover svg,
+        .sidebar-menu-item-active svg {
+            color: #ffffff;
         }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@latest/dist/css/persian-datepicker.min.css">
@@ -101,12 +129,12 @@
                 <!-- کارتابل پرسنلی -->
                 @canany(['view-attendance', 'view-leave', 'manage-attendance', 'manage-leave', 'manage-permissions'])
                 <div class="mt-6" x-data="{ open: {{ request()->routeIs('attendance.*') || request()->routeIs('leave.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item justify-between">
-                        <div class="flex items-center gap-3">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                             کارتابل پرسنلی
-                        </div>
-                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div x-show="open" x-collapse class="sidebar-submenu">
                         @canany(['view-attendance', 'manage-permissions'])
@@ -140,12 +168,12 @@
                 <!-- کارتابل عملیاتی -->
                 @canany(['view-tasks', 'manage-tasks', 'manage-teams', 'view-reports', 'manage-permissions'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('tasks.*') || request()->routeIs('teams.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item justify-between">
-                        <div class="flex items-center gap-3">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
                             کارتابل عملیاتی
-                        </div>
-                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div x-show="open" x-collapse class="sidebar-submenu">
                         @canany(['view-tasks', 'create-tasks', 'manage-tasks', 'manage-permissions'])
