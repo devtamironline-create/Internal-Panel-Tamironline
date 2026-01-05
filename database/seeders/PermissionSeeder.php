@@ -40,6 +40,10 @@ class PermissionSeeder extends Seeder
             // گزارش
             'view-reports' => 'مشاهده گزارش‌ها',
 
+            // OKR
+            'view-okr' => 'مشاهده OKR',
+            'manage-okr' => 'مدیریت OKR',
+
             // پیام‌رسان
             'use-messenger' => 'استفاده از پیام‌رسان',
 
