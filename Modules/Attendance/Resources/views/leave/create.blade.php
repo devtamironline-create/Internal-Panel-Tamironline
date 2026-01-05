@@ -74,8 +74,8 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">از تاریخ</label>
                     <input type="text" id="start_date_display" placeholder="انتخاب تاریخ..."
-                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer" readonly>
-                    <input type="hidden" name="start_date" id="start_date" x-model="startDate">
+                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" readonly required>
+                    <input type="hidden" name="start_date" id="start_date" value="{{ old('start_date') }}">
                     @error('start_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -84,8 +84,8 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تا تاریخ</label>
                     <input type="text" id="end_date_display" placeholder="انتخاب تاریخ..."
-                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer" readonly>
-                    <input type="hidden" name="end_date" id="end_date" x-model="endDate">
+                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" readonly required>
+                    <input type="hidden" name="end_date" id="end_date" value="{{ old('end_date') }}">
                     @error('end_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -242,6 +242,18 @@ function leaveForm() {
             const endMinutes = endH * 60 + endM;
 
             this.hoursCount = Math.max(0, (endMinutes - startMinutes) / 60);
+        },
+
+        setStartDate(gregorian) {
+            this.startDate = gregorian;
+            document.getElementById('start_date').value = gregorian;
+            this.calculateDays();
+        },
+
+        setEndDate(gregorian) {
+            this.endDate = gregorian;
+            document.getElementById('end_date').value = gregorian;
+            this.calculateDays();
         }
     };
 }
@@ -252,7 +264,6 @@ $(document).ready(function() {
         format: 'YYYY/MM/DD',
         initialValue: false,
         autoClose: true,
-        minDate: new persianDate().unix() * 1000,
         calendar: {
             persian: {
                 locale: 'fa',
@@ -268,12 +279,13 @@ $(document).ready(function() {
         },
         onSelect: function(unix) {
             const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
-            $('#start_date').val(gregorian).trigger('change');
+            document.getElementById('start_date').value = gregorian;
 
-            // Update Alpine data
-            const component = document.querySelector('[x-data]').__x.$data;
-            component.startDate = gregorian;
-            component.calculateDays();
+            // Update Alpine
+            const el = document.querySelector('[x-data]');
+            if (el && el._x_dataStack) {
+                el._x_dataStack[0].setStartDate(gregorian);
+            }
         }
     });
 
@@ -282,7 +294,6 @@ $(document).ready(function() {
         format: 'YYYY/MM/DD',
         initialValue: false,
         autoClose: true,
-        minDate: new persianDate().unix() * 1000,
         calendar: {
             persian: {
                 locale: 'fa',
@@ -298,12 +309,13 @@ $(document).ready(function() {
         },
         onSelect: function(unix) {
             const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
-            $('#end_date').val(gregorian).trigger('change');
+            document.getElementById('end_date').value = gregorian;
 
-            // Update Alpine data
-            const component = document.querySelector('[x-data]').__x.$data;
-            component.endDate = gregorian;
-            component.calculateDays();
+            // Update Alpine
+            const el = document.querySelector('[x-data]');
+            if (el && el._x_dataStack) {
+                el._x_dataStack[0].setEndDate(gregorian);
+            }
         }
     });
 });
