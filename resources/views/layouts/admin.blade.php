@@ -84,6 +84,12 @@
                                 پیام‌رسان
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('attendance.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('attendance.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                حضور و غیاب
+                            </a>
+                        </li>
                     </ul>
                 </div>
 
@@ -96,6 +102,14 @@
                                 پرسنل
                             </a>
                         </li>
+                        @can('manage-attendance')
+                        <li>
+                            <a href="{{ route('attendance.admin') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('attendance.admin') || request()->routeIs('attendance.settings') ? 'menu-item-active' : 'menu-item-inactive' }}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                مدیریت حضور و غیاب
+                            </a>
+                        </li>
+                        @endcan
                     </ul>
                 </div>
             </nav>
