@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $isAdmin ? 'ورود به پنل مدیریت' : 'ورود به حساب کاربری' }} | Hostlino</title>
+    <title>{{ $isAdmin ? 'ورود به پنل مدیریت' : 'ورود به حساب کاربری' }} | تعمیرآنلاین</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -163,12 +163,12 @@
                     </svg>
                 </div>
 
-                <h2 class="text-3xl font-bold text-white mb-4">هاستلینو</h2>
+                <h2 class="text-3xl font-bold text-white mb-4">تعمیرآنلاین</h2>
                 <p class="text-lg {{ $isAdmin ? 'text-blue-100' : 'text-emerald-100' }} max-w-sm">
                     @if($isAdmin)
-                    سیستم مدیریت یکپارچه خدمات هاستینگ و سرور مجازی
+                    پنل داخلی مدیریت تعمیرات
                     @else
-                    خدمات میزبانی وب، سرور مجازی و ثبت دامنه
+                    خدمات تعمیرات آنلاین
                     @endif
                 </p>
                 

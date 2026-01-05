@@ -1,8 +1,8 @@
 {
   "$schema": "https://coolify.io/schemas/coolify.json",
-  "name": "CRM Hostlino",
+  "name": "Internal Panel Tamironline",
   "description": "CRM System for Hostlino",
-  "documentation": "https://github.com/maysamnc1993/CRM-Hostlino",
+  "documentation": "https://github.com/maysamnc1993/Tamironline-Panel",
   "build": {
     "dockerfile": "Dockerfile"
   },
@@ -19,7 +19,7 @@
   "env": [
     {
       "key": "APP_NAME",
-      "value": "CRM-Hostlino",
+      "value": "Tamironline-Panel",
       "is_required": true
     },
     {

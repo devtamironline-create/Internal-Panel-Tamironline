@@ -253,8 +253,8 @@
     <table class="header-table">
         <tr>
             <td class="logo-cell">
-                <div class="logo">هاستلینو</div>
-                <div class="logo-subtitle">خدمات میزبانی وب و دامنه</div>
+                <div class="logo">تعمیرآنلاین</div>
+                <div class="logo-subtitle">خدمات تعمیرات آنلاین</div>
             </td>
             <td class="info-cell">
                 <div class="info-box">
@@ -364,7 +364,7 @@
     <!-- Footer -->
     <div class="footer">
         <div class="footer-text">با تشکر از اعتماد شما</div>
-        <div class="footer-site">www.hostlino.com</div>
+        <div class="footer-site">www.tamironline.ir</div>
     </div>
 </body>
 </html>

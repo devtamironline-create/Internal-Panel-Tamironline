@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('page-title', 'داشبورد') | Hostlino</title>
+    <title>@yield('page-title', 'داشبورد') | تعمیرآنلاین</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -60,7 +60,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold text-gray-900 dark:text-white">Hostlino</span>
+                    <span class="text-xl font-bold text-gray-900 dark:text-white">تعمیرآنلاین</span>
                 </a>
                 <button @click="sidebarToggle = false" class="lg:hidden text-gray-500">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -85,63 +85,9 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('admin.customers.index') }}" class="py-3 border-b border-slate-100w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.customers.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z"/></svg>
-                                مشتریان
-                            </a>
-                        </li>
-                        <!-- مدیریت هاست - Submenu -->
-                        <li x-data="{ open: {{ request()->routeIs('admin.services.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.product-categories.*') || request()->routeIs('admin.product-addons.*') || request()->routeIs('admin.servers.*') ? 'true' : 'false' }} }">
-                            <button @click="open = !open" class="py-3 border-b border-slate-100 w-full flex flex-row items-center justify-between gap-2 menu-item {{ request()->routeIs('admin.services.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.product-categories.*') || request()->routeIs('admin.product-addons.*') || request()->routeIs('admin.servers.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <span class="flex items-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
-                                    مدیریت هاست
-                                </span>
-                                <svg class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                            <ul x-show="open" x-collapse class="pr-4 mt-1 space-y-1">
-                                <li>
-                                    <a href="{{ route('admin.services.index') }}" class="py-2 w-full flex flex-row items-center gap-2 menu-item text-sm {{ request()->routeIs('admin.services.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
-                                        سرویس‌ها
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('admin.products.index') }}" class="py-2 w-full flex flex-row items-center gap-2 menu-item text-sm {{ request()->routeIs('admin.products.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                                        محصولات
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('admin.product-categories.index') }}" class="py-2 w-full flex flex-row items-center gap-2 menu-item text-sm {{ request()->routeIs('admin.product-categories.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                        دسته‌بندی محصولات
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('admin.product-addons.index') }}" class="py-2 w-full flex flex-row items-center gap-2 menu-item text-sm {{ request()->routeIs('admin.product-addons.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                                        افزونه‌های محصولات
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('admin.servers.index') }}" class="py-2 w-full flex flex-row items-center gap-2 menu-item text-sm {{ request()->routeIs('admin.servers.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
-                                        سرورها
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li>
                             <a href="{{ route('admin.invoices.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.invoices.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
                                 فاکتورها
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.tickets.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.tickets.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                                تیکت‌ها
                             </a>
                         </li>
                     </ul>
@@ -154,24 +100,6 @@
                             <a href="{{ route('admin.staff.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.staff.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                 پرسنل
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.reports.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.reports.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                                گزارش‌ها
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.import.index') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.import.*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                                ایمپورت اکسل
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.settings') }}" class="py-3 border-b border-slate-100 w-full flex flex-row items-center gap-2 menu-item {{ request()->routeIs('admin.settings*') ? 'menu-item-active' : 'menu-item-inactive' }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                تنظیمات
                             </a>
                         </li>
                     </ul>
@@ -195,7 +123,7 @@
 
                         <!-- Logo Mobile -->
                         <a href="{{ route('admin.dashboard') }}" class="lg:hidden">
-                            <span class="text-xl font-bold text-gray-900 dark:text-white">Hostlino</span>
+                            <span class="text-xl font-bold text-gray-900 dark:text-white">تعمیرآنلاین</span>
                         </a>
 
                         <!-- Search -->
@@ -244,7 +172,6 @@
                                 </div>
                                 <ul class="space-y-1">
                                     <li><a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5">پروفایل</a></li>
-                                    <li><a href="{{ route('admin.settings') }}" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5">تنظیمات</a></li>
                                 </ul>
                                 <form action="{{ route('logout') }}" method="POST" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                                     @csrf
