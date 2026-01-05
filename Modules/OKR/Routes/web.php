@@ -6,7 +6,7 @@ use Modules\OKR\Http\Controllers\CycleController;
 use Modules\OKR\Http\Controllers\ObjectiveController;
 use Modules\OKR\Http\Controllers\KeyResultController;
 
-Route::middleware(['auth', 'staff'])->prefix('admin/okr')->name('okr.')->group(function () {
+Route::middleware(['web', 'auth'])->prefix('admin/okr')->name('okr.')->group(function () {
     // Dashboard
     Route::get('/', [OKRController::class, 'dashboard'])->name('dashboard');
 
