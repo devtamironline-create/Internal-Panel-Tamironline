@@ -73,9 +73,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">از تاریخ</label>
-                    <input type="date" name="start_date" value="{{ old('start_date') }}"
-                        x-model="startDate" @change="calculateDays()"
-                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" required>
+                    <input type="text" id="start_date_display" placeholder="انتخاب تاریخ..."
+                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer" readonly>
+                    <input type="hidden" name="start_date" id="start_date" x-model="startDate">
                     @error('start_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -83,9 +83,9 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تا تاریخ</label>
-                    <input type="date" name="end_date" value="{{ old('end_date') }}"
-                        x-model="endDate" @change="calculateDays()"
-                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" required>
+                    <input type="text" id="end_date_display" placeholder="انتخاب تاریخ..."
+                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer" readonly>
+                    <input type="hidden" name="end_date" id="end_date" x-model="endDate">
                     @error('end_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -94,18 +94,30 @@
                 <!-- Time fields for hourly leave -->
                 <div x-show="isHourly" x-transition>
                     <label class="block text-sm font-medium text-gray-700 mb-1">از ساعت</label>
-                    <input type="time" name="start_time" value="{{ old('start_time') }}"
+                    <select name="start_time" x-model="startTime" @change="calculateHours()"
                         class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">انتخاب ساعت</option>
+                        @for($h = 7; $h <= 19; $h++)
+                            <option value="{{ sprintf('%02d:00', $h) }}">{{ sprintf('%02d:00', $h) }}</option>
+                            <option value="{{ sprintf('%02d:30', $h) }}">{{ sprintf('%02d:30', $h) }}</option>
+                        @endfor
+                    </select>
                 </div>
 
                 <div x-show="isHourly" x-transition>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تا ساعت</label>
-                    <input type="time" name="end_time" value="{{ old('end_time') }}"
+                    <select name="end_time" x-model="endTime" @change="calculateHours()"
                         class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">انتخاب ساعت</option>
+                        @for($h = 7; $h <= 19; $h++)
+                            <option value="{{ sprintf('%02d:00', $h) }}">{{ sprintf('%02d:00', $h) }}</option>
+                            <option value="{{ sprintf('%02d:30', $h) }}">{{ sprintf('%02d:30', $h) }}</option>
+                        @endfor
+                    </select>
                 </div>
 
                 <!-- Half day option -->
-                <div x-show="!isHourly && startDate === endDate" x-transition class="md:col-span-2">
+                <div x-show="!isHourly && startDate && startDate === endDate" x-transition class="md:col-span-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" x-model="isHalfDay" @change="calculateDays()"
                             class="rounded text-blue-600 focus:ring-blue-500">
@@ -117,9 +129,10 @@
             </div>
 
             <!-- Duration display -->
-            <div x-show="daysCount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div x-show="daysCount > 0 || hoursCount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p class="text-sm text-gray-600">
-                    مدت مرخصی: <strong class="text-gray-900" x-text="daysCount + ' روز'"></strong>
+                    <span x-show="!isHourly">مدت مرخصی: <strong class="text-gray-900" x-text="daysCount == 0.5 ? 'نیم روز' : daysCount + ' روز'"></strong></span>
+                    <span x-show="isHourly">مدت مرخصی: <strong class="text-gray-900" x-text="hoursCount + ' ساعت'"></strong></span>
                 </p>
             </div>
         </div>
@@ -180,15 +193,22 @@ function leaveForm() {
         leaveTypeId: '{{ old('leave_type_id', '') }}',
         startDate: '{{ old('start_date', '') }}',
         endDate: '{{ old('end_date', '') }}',
+        startTime: '{{ old('start_time', '') }}',
+        endTime: '{{ old('end_time', '') }}',
         isHourly: false,
         requiresDocument: false,
         isHalfDay: false,
         daysCount: 0,
+        hoursCount: 0,
 
         onLeaveTypeChange(type) {
             this.isHourly = type.is_hourly;
             this.requiresDocument = type.requires_document;
-            this.calculateDays();
+            if (this.isHourly) {
+                this.calculateHours();
+            } else {
+                this.calculateDays();
+            }
         },
 
         calculateDays() {
@@ -207,9 +227,86 @@ function leaveForm() {
             } else {
                 this.daysCount = diffDays;
             }
+        },
+
+        calculateHours() {
+            if (!this.startTime || !this.endTime) {
+                this.hoursCount = 0;
+                return;
+            }
+
+            const [startH, startM] = this.startTime.split(':').map(Number);
+            const [endH, endM] = this.endTime.split(':').map(Number);
+
+            const startMinutes = startH * 60 + startM;
+            const endMinutes = endH * 60 + endM;
+
+            this.hoursCount = Math.max(0, (endMinutes - startMinutes) / 60);
         }
     };
 }
+
+$(document).ready(function() {
+    // Start Date Picker
+    $('#start_date_display').persianDatepicker({
+        format: 'YYYY/MM/DD',
+        initialValue: false,
+        autoClose: true,
+        minDate: new persianDate().unix() * 1000,
+        calendar: {
+            persian: {
+                locale: 'fa',
+                showHint: true,
+                leapYearMode: 'algorithmic'
+            }
+        },
+        toolbox: {
+            enabled: true,
+            calendarSwitch: { enabled: false },
+            todayButton: { enabled: true, text: { fa: 'امروز' } },
+            submitButton: { enabled: true, text: { fa: 'تایید' } }
+        },
+        onSelect: function(unix) {
+            const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
+            $('#start_date').val(gregorian).trigger('change');
+
+            // Update Alpine data
+            const component = document.querySelector('[x-data]').__x.$data;
+            component.startDate = gregorian;
+            component.calculateDays();
+        }
+    });
+
+    // End Date Picker
+    $('#end_date_display').persianDatepicker({
+        format: 'YYYY/MM/DD',
+        initialValue: false,
+        autoClose: true,
+        minDate: new persianDate().unix() * 1000,
+        calendar: {
+            persian: {
+                locale: 'fa',
+                showHint: true,
+                leapYearMode: 'algorithmic'
+            }
+        },
+        toolbox: {
+            enabled: true,
+            calendarSwitch: { enabled: false },
+            todayButton: { enabled: true, text: { fa: 'امروز' } },
+            submitButton: { enabled: true, text: { fa: 'تایید' } }
+        },
+        onSelect: function(unix) {
+            const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
+            $('#end_date').val(gregorian).trigger('change');
+
+            // Update Alpine data
+            const component = document.querySelector('[x-data]').__x.$data;
+            component.endDate = gregorian;
+            component.calculateDays();
+        }
+    });
+});
 </script>
 @endpush
 @endsection
