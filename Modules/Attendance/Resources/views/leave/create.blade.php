@@ -259,6 +259,15 @@ function leaveForm() {
 }
 
 $(document).ready(function() {
+    // Helper function to convert unix to gregorian date string
+    function unixToGregorian(unix) {
+        var date = new Date(unix);
+        var year = date.getFullYear();
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
     // Start Date Picker
     $('#start_date_display').persianDatepicker({
         format: 'YYYY/MM/DD',
@@ -278,14 +287,9 @@ $(document).ready(function() {
             submitButton: { enabled: true, text: { fa: 'تایید' } }
         },
         onSelect: function(unix) {
-            const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
+            var gregorian = unixToGregorian(unix);
             document.getElementById('start_date').value = gregorian;
-
-            // Update Alpine
-            const el = document.querySelector('[x-data]');
-            if (el && el._x_dataStack) {
-                el._x_dataStack[0].setStartDate(gregorian);
-            }
+            console.log('Start date:', gregorian);
         }
     });
 
@@ -308,14 +312,21 @@ $(document).ready(function() {
             submitButton: { enabled: true, text: { fa: 'تایید' } }
         },
         onSelect: function(unix) {
-            const gregorian = new persianDate(unix).toCalendar('gregorian').format('YYYY-MM-DD');
+            var gregorian = unixToGregorian(unix);
             document.getElementById('end_date').value = gregorian;
+            console.log('End date:', gregorian);
+        }
+    });
 
-            // Update Alpine
-            const el = document.querySelector('[x-data]');
-            if (el && el._x_dataStack) {
-                el._x_dataStack[0].setEndDate(gregorian);
-            }
+    // Form submit validation
+    $('form').on('submit', function(e) {
+        var startVal = $('#start_date').val();
+        var endVal = $('#end_date').val();
+
+        if (!startVal || !endVal) {
+            e.preventDefault();
+            alert('لطفا تاریخ شروع و پایان را انتخاب کنید');
+            return false;
         }
     });
 });
