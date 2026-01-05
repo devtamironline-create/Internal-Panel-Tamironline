@@ -26,7 +26,7 @@
                 <p class="text-brand-200 text-sm">دوره فعال</p>
                 <h2 class="text-xl font-bold mt-1">{{ $activeCycle->title }}</h2>
                 <p class="text-brand-200 text-sm mt-2">
-                    {{ verta($activeCycle->start_date)->format('Y/m/d') }} - {{ verta($activeCycle->end_date)->format('Y/m/d') }}
+                    {{ $activeCycle->jalali_start_date }} - {{ $activeCycle->jalali_end_date }}
                 </p>
             </div>
             <div class="flex items-center gap-6">
@@ -188,7 +188,7 @@
                             <a href="{{ route('okr.cycles.show', $cycle) }}" class="font-medium text-gray-900 hover:text-brand-600">{{ $cycle->title }}</a>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600">
-                            {{ verta($cycle->start_date)->format('Y/m/d') }} - {{ verta($cycle->end_date)->format('Y/m/d') }}
+                            {{ $cycle->jalali_start_date }} - {{ $cycle->jalali_end_date }}
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ $cycle->objectives_count }}</td>
                         <td class="px-4 py-3">

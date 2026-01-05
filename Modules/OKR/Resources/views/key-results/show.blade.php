@@ -114,7 +114,7 @@
                         </div>
                         <div>
                             <p class="font-medium text-gray-900">{{ $checkIn->user->full_name }}</p>
-                            <p class="text-sm text-gray-500">{{ verta($checkIn->created_at)->formatDifference() }}</p>
+                            <p class="text-sm text-gray-500">{{ $checkIn->jalali_created_at_diff }}</p>
                         </div>
                     </div>
                     <div class="text-left">

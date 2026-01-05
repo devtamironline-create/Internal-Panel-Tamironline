@@ -37,7 +37,7 @@
                         @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ verta($cycle->start_date)->format('Y/m/d') }} - {{ verta($cycle->end_date)->format('Y/m/d') }}
+                        {{ $cycle->jalali_start_date }} - {{ $cycle->jalali_end_date }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">{{ $cycle->objectives_count }}</td>
                     <td class="px-6 py-4">

@@ -5,6 +5,7 @@ namespace Modules\OKR\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Morilog\Jalali\Jalalian;
 
 class CheckIn extends Model
 {
@@ -55,5 +56,15 @@ class CheckIn extends Model
         $targetDirection = $kr->target_value >= $kr->start_value ? 1 : -1;
         $changeDirection = $this->change >= 0 ? 1 : -1;
         return $targetDirection === $changeDirection;
+    }
+
+    public function getJalaliCreatedAtAttribute(): string
+    {
+        return Jalalian::fromDateTime($this->created_at)->format('Y/m/d H:i');
+    }
+
+    public function getJalaliCreatedAtDiffAttribute(): string
+    {
+        return Jalalian::fromDateTime($this->created_at)->ago();
     }
 }
