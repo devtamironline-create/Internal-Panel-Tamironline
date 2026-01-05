@@ -13,8 +13,8 @@ class KavenegarService
 
     public function __construct()
     {
-        $this->apiKey = config('sms.kavenegar.api_key', '');
-        $this->sender = config('sms.kavenegar.sender', '');
+        $this->apiKey = config('sms.kavenegar.api_key') ?? '';
+        $this->sender = config('sms.kavenegar.sender') ?? '';
     }
 
     public function send(string $receptor, string $message): array
