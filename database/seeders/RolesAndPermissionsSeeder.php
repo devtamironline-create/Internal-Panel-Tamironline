@@ -13,13 +13,12 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
-            'view-customers', 'create-customers', 'edit-customers', 'delete-customers',
-            'view-tickets', 'reply-tickets', 'close-tickets', 'delete-tickets', 'assign-tickets',
+            // Invoice permissions
             'view-invoices', 'create-invoices', 'edit-invoices', 'delete-invoices', 'mark-invoices-paid',
-            'view-products', 'create-products', 'edit-products', 'delete-products',
-            'view-services', 'create-services', 'edit-services', 'delete-services', 'suspend-services', 'terminate-services',
-            'manage-staff', 'manage-settings',
-            'view-reports', 'view-transactions', 'manage-wallets',
+            // Staff management
+            'manage-staff',
+            // Chat/Messenger
+            'view-conversations', 'manage-conversations',
         ];
 
         foreach ($permissions as $name) {
@@ -29,30 +28,20 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $managerRole = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
         $supportRole = Role::firstOrCreate(['name' => 'support', 'guard_name' => 'web']);
-        $salesRole = Role::firstOrCreate(['name' => 'sales', 'guard_name' => 'web']);
 
+        // Admin gets all permissions
         $adminRole->syncPermissions(Permission::all());
 
+        // Manager permissions
         $managerRole->syncPermissions([
-            'view-customers', 'create-customers', 'edit-customers',
-            'view-tickets', 'reply-tickets', 'close-tickets', 'assign-tickets',
             'view-invoices', 'create-invoices', 'edit-invoices', 'mark-invoices-paid',
-            'view-products', 'create-products', 'edit-products',
-            'view-services', 'create-services', 'edit-services', 'suspend-services',
-            'view-reports', 'view-transactions',
+            'view-conversations', 'manage-conversations',
         ]);
 
+        // Support permissions
         $supportRole->syncPermissions([
-            'view-customers',
-            'view-tickets', 'reply-tickets', 'close-tickets',
-            'view-services',
-        ]);
-
-        $salesRole->syncPermissions([
-            'view-customers', 'create-customers', 'edit-customers',
-            'view-invoices', 'create-invoices',
-            'view-products',
-            'view-services', 'create-services',
+            'view-invoices',
+            'view-conversations',
         ]);
     }
 }
