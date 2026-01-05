@@ -8,7 +8,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Morilog\Jalali\Jalalian;
-use Modules\Customer\Models\Customer;
 use App\Models\Chat\Conversation;
 use App\Models\Chat\Message;
 use App\Models\Chat\Call;
@@ -90,11 +89,6 @@ class User extends Authenticatable
         ]);
     }
 
-    public function scopeCustomers($query)
-    {
-        return $query->where('is_staff', false);
-    }
-
     public function scopeStaff($query)
     {
         return $query->where('is_staff', true);
@@ -108,50 +102,6 @@ class User extends Authenticatable
     public function scopeByMobile($query, string $mobile)
     {
         return $query->where('mobile', $mobile);
-    }
-
-    /**
-     * Get the customer record associated with this user
-     */
-    public function customer()
-    {
-        return $this->hasOne(Customer::class);
-    }
-
-    /**
-     * Get customer or create one if it doesn't exist
-     * Also links existing customer by mobile if found
-     */
-    public function getOrCreateCustomer(): Customer
-    {
-        // First check if user already has a linked customer
-        if ($this->customer) {
-            return $this->customer;
-        }
-
-        // Check if customer exists by mobile (may have been created by admin)
-        $existingCustomer = Customer::where('mobile', $this->mobile)->first();
-
-        if ($existingCustomer) {
-            // Link existing customer to this user
-            $existingCustomer->update(['user_id' => $this->id]);
-            $this->refresh();
-            return $existingCustomer;
-        }
-
-        // Create new customer (use placeholder if name is not set)
-        return Customer::create([
-            'user_id' => $this->id,
-            'first_name' => $this->first_name ?: 'کاربر',
-            'last_name' => $this->last_name ?: 'جدید',
-            'mobile' => $this->mobile,
-            'email' => $this->email,
-            'national_code' => $this->national_code,
-            'birth_date' => $this->birth_date,
-            'business_name' => $this->business_name,
-            'address' => $this->address,
-            'is_active' => true,
-        ]);
     }
 
     // Chat relationships
