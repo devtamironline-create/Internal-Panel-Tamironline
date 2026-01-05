@@ -16,8 +16,6 @@ return new class extends Migration
 
             // Relations
             $table->foreignId('invoice_id')->constrained('invoices')->cascadeOnDelete();
-            $table->foreignId('service_id')->nullable()->constrained('services')->nullOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained('products')->nullOnDelete();
 
             // Item Details
             $table->string('description'); // شرح آیتم

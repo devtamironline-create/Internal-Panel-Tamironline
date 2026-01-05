@@ -285,17 +285,15 @@
         <table class="customer-table">
             <tr>
                 <td class="customer-label">نام و نام خانوادگی:</td>
-                <td class="customer-value">{{ $invoice->customer->full_name }}</td>
+                <td class="customer-value">{{ $invoice->client_name }}</td>
                 <td class="customer-label">شماره تلفن:</td>
-                <td class="customer-value">{{ $invoice->customer->mobile }}</td>
+                <td class="customer-value">{{ $invoice->client_mobile ?? '-' }}</td>
                 <td class="customer-label">ایمیل:</td>
-                <td class="customer-value">{{ $invoice->customer->email ?? '-' }}</td>
+                <td class="customer-value">{{ $invoice->client_email ?? '-' }}</td>
             </tr>
             <tr>
                 <td class="customer-label">آدرس:</td>
-                <td class="customer-value" colspan="3">{{ $invoice->customer->address ?? '-' }}</td>
-                <td class="customer-label">کد پستی:</td>
-                <td class="customer-value">{{ $invoice->customer->postal_code ?? '-' }}</td>
+                <td class="customer-value" colspan="5">{{ $invoice->client_address ?? '-' }}</td>
             </tr>
         </table>
     </div>

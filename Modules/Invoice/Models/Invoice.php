@@ -5,8 +5,6 @@ namespace Modules\Invoice\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Modules\Customer\Models\Customer;
-use Modules\Service\Models\Service;
 use Modules\Invoice\Observers\InvoiceObserver;
 
 #[ObservedBy([InvoiceObserver::class])]
@@ -15,8 +13,10 @@ class Invoice extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'customer_id',
-        'service_id',
+        'client_name',
+        'client_mobile',
+        'client_email',
+        'client_address',
         'invoice_number',
         'invoice_date',
         'due_date',
@@ -39,17 +39,6 @@ class Invoice extends Model
         'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
-
-    // Relations
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class);
-    }
-
-    public function service()
-    {
-        return $this->belongsTo(Service::class);
-    }
 
     public function items()
     {
@@ -89,13 +78,12 @@ class Invoice extends Model
     // Helpers
     public static function generateInvoiceNumber()
     {
-        // گرفتن آخرین شماره فاکتور
         $latest = self::max('invoice_number');
 
         if ($latest && is_numeric($latest)) {
             $sequence = intval($latest) + 1;
         } else {
-            $sequence = 10001; // شروع از 10001
+            $sequence = 10001;
         }
 
         return (string) $sequence;
@@ -125,7 +113,6 @@ class Invoice extends Model
         };
     }
 
-    // Calculate totals
     public function calculateTotals()
     {
         $this->subtotal = $this->items()->sum('total');

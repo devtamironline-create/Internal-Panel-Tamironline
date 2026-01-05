@@ -15,7 +15,7 @@
     <div class="p-6 border-b border-gray-100">
         <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو (شماره فاکتور، مشتری)..." class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو (شماره فاکتور، نام مشتری)..." class="w-full px-4 py-2 border border-gray-300 rounded-lg">
             </div>
             <div>
                 <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
@@ -54,9 +54,10 @@
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $invoice->invoice_number }}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">
-                        <a href="{{ route('admin.customers.show', $invoice->customer_id) }}" class="text-blue-600 hover:text-blue-800">
-                            {{ $invoice->customer->full_name }}
-                        </a>
+                        <div>{{ $invoice->client_name }}</div>
+                        @if($invoice->client_mobile)
+                        <div class="text-xs text-gray-500">{{ $invoice->client_mobile }}</div>
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">{{ \Morilog\Jalali\Jalalian::fromDateTime($invoice->invoice_date)->format('Y/m/d') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">{{ \Morilog\Jalali\Jalalian::fromDateTime($invoice->due_date)->format('Y/m/d') }}</td>

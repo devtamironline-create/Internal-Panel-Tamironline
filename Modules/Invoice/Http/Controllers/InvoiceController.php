@@ -6,23 +6,17 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Invoice\Models\Invoice;
 use Modules\Invoice\Models\InvoiceItem;
-use Modules\Customer\Models\Customer;
-use Modules\Service\Models\Service;
-use Modules\Product\Models\Product;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Invoice::with(['customer', 'service', 'items']);
+        $query = Invoice::with('items');
 
         if ($search = $request->input('search')) {
             $query->where('invoice_number', 'like', "%{$search}%")
-                ->orWhereHas('customer', function($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('mobile', 'like', "%{$search}%");
-                });
+                ->orWhere('client_name', 'like', "%{$search}%")
+                ->orWhere('client_mobile', 'like', "%{$search}%");
         }
 
         if ($status = $request->input('status')) {
@@ -36,18 +30,16 @@ class InvoiceController extends Controller
 
     public function create()
     {
-        $customers = Customer::active()->get();
-        $services = Service::active()->with('product')->get();
-        $products = Product::active()->get();
-
-        return view('invoice::invoices.create', compact('customers', 'services', 'products'));
+        return view('invoice::invoices.create');
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'service_id' => 'nullable|exists:services,id',
+            'client_name' => 'required|string|max:255',
+            'client_mobile' => 'nullable|string|max:20',
+            'client_email' => 'nullable|email|max:255',
+            'client_address' => 'nullable|string',
             'invoice_date' => 'required|string',
             'due_date' => 'required|string',
             'tax_amount' => 'nullable|numeric|min:0',
@@ -82,8 +74,6 @@ class InvoiceController extends Controller
                 'description' => $item['description'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $item['unit_price'],
-                'service_id' => $item['service_id'] ?? null,
-                'product_id' => $item['product_id'] ?? null,
             ]);
         }
 
@@ -95,25 +85,23 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['customer', 'service', 'items.product', 'items.service']);
+        $invoice->load('items');
         return view('invoice::invoices.show', compact('invoice'));
     }
 
     public function edit(Invoice $invoice)
     {
-        $customers = Customer::active()->get();
-        $services = Service::active()->with('product')->get();
-        $products = Product::active()->get();
         $invoice->load('items');
-
-        return view('invoice::invoices.edit', compact('invoice', 'customers', 'services', 'products'));
+        return view('invoice::invoices.edit', compact('invoice'));
     }
 
     public function update(Request $request, Invoice $invoice)
     {
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'service_id' => 'nullable|exists:services,id',
+            'client_name' => 'required|string|max:255',
+            'client_mobile' => 'nullable|string|max:20',
+            'client_email' => 'nullable|email|max:255',
+            'client_address' => 'nullable|string',
             'invoice_date' => 'required|string',
             'due_date' => 'required|string',
             'tax_amount' => 'nullable|numeric|min:0',
@@ -149,8 +137,6 @@ class InvoiceController extends Controller
                 'description' => $item['description'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $item['unit_price'],
-                'service_id' => $item['service_id'] ?? null,
-                'product_id' => $item['product_id'] ?? null,
             ]);
         }
 
@@ -168,7 +154,6 @@ class InvoiceController extends Controller
             ->with('success', 'فاکتور حذف شد');
     }
 
-    // تغییر وضعیت فاکتور
     public function updateStatus(Request $request, Invoice $invoice)
     {
         $validated = $request->validate([
@@ -184,10 +169,9 @@ class InvoiceController extends Controller
         return back()->with('success', 'وضعیت فاکتور بروزرسانی شد');
     }
 
-    // تولید PDF با mPDF
     public function downloadPdf(Invoice $invoice)
     {
-        $invoice->load(['customer', 'service', 'items']);
+        $invoice->load('items');
 
         try {
             $fontDir = storage_path('fonts');
@@ -213,7 +197,6 @@ class InvoiceController extends Controller
                 ],
             ]);
 
-            // تنظیم RTL برای کل سند
             $mpdf->SetDirectionality('rtl');
 
             $html = view('invoice::pdf.invoice', compact('invoice'))->render();
