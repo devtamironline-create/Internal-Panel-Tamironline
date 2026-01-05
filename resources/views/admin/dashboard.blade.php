@@ -4,7 +4,7 @@
 <div class="space-y-6">
     <!-- Stats Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Customers Card -->
+        <!-- Staff Card -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
@@ -12,47 +12,40 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                     </svg>
                 </div>
-                <span class="text-xs text-green-600 font-medium">+{{ $stats['new_customers_this_month'] }} این ماه</span>
             </div>
             <div class="mt-4">
-                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['customers']) }}</h3>
-                <p class="text-sm text-gray-600 mt-1">کل مشتریان</p>
+                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['staff_count']) }}</h3>
+                <p class="text-sm text-gray-600 mt-1">کارمندان</p>
             </div>
         </div>
 
-        <!-- Active Services Card -->
+        <!-- Invoices This Month Card -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
                     <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                 </div>
-                @if($stats['expiring_soon'] > 0)
-                <span class="text-xs text-orange-600 font-medium">{{ $stats['expiring_soon'] }} در حال انقضا</span>
-                @endif
             </div>
             <div class="mt-4">
-                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['active_services']) }}</h3>
-                <p class="text-sm text-gray-600 mt-1">سرویس‌های فعال</p>
+                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['invoices_this_month']) }}</h3>
+                <p class="text-sm text-gray-600 mt-1">فاکتورهای این ماه</p>
             </div>
         </div>
 
-        <!-- Tickets Card -->
+        <!-- Unpaid Invoices Card -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-50">
                     <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
-                @if($stats['urgent_tickets'] > 0)
-                <span class="text-xs text-red-600 font-medium">{{ $stats['urgent_tickets'] }} فوری</span>
-                @endif
             </div>
             <div class="mt-4">
-                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['open_tickets']) }}</h3>
-                <p class="text-sm text-gray-600 mt-1">تیکت‌های باز</p>
+                <h3 class="text-2xl font-bold text-gray-900">{{ number_format($stats['unpaid_invoices_count']) }}</h3>
+                <p class="text-sm text-gray-600 mt-1">فاکتورهای پرداخت نشده</p>
             </div>
         </div>
 
@@ -103,77 +96,6 @@
         </div>
     </div>
 
-    <!-- Tables Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Expiring Services -->
-        <div class="bg-white rounded-xl shadow-sm">
-            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-900">سرویس‌های در حال انقضا</h3>
-                <a href="{{ route('admin.services.index') }}" class="text-sm text-blue-600 hover:text-blue-800">مشاهده همه</a>
-            </div>
-            <div class="p-6">
-                @forelse($expiringServices as $service)
-                <div class="flex items-center justify-between py-3 {{ !$loop->last ? 'border-b border-gray-100' : '' }}">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900">{{ $service->product->name }}</p>
-                        <p class="text-xs text-gray-600 mt-1">{{ $service->customer->full_name }}</p>
-                    </div>
-                    <div class="text-left">
-                        <p class="text-xs text-gray-600">سررسید:</p>
-                        <p class="text-sm font-medium {{ $service->next_due_date <= now()->addDays(3) ? 'text-red-600' : 'text-orange-600' }}">
-                            {{ \Morilog\Jalali\Jalalian::fromDateTime($service->next_due_date)->format('Y/m/d') }}
-                        </p>
-                    </div>
-                </div>
-                @empty
-                <div class="text-center py-8 text-gray-500">
-                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-sm">هیچ سرویسی در حال انقضا نیست</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-
-        <!-- Recent Tickets -->
-        <div class="bg-white rounded-xl shadow-sm">
-            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-900">تیکت‌های اخیر</h3>
-                <a href="{{ route('admin.tickets.index') }}" class="text-sm text-blue-600 hover:text-blue-800">مشاهده همه</a>
-            </div>
-            <div class="p-6">
-                @forelse($recentTickets as $ticket)
-                <div class="flex items-center justify-between py-3 {{ !$loop->last ? 'border-b border-gray-100' : '' }}">
-                    <div class="flex-1">
-                        <a href="{{ route('admin.tickets.show', $ticket) }}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
-                            {{ Str::limit($ticket->subject, 30) }}
-                        </a>
-                        <p class="text-xs text-gray-600 mt-1">{{ $ticket->customer->full_name }}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            @if($ticket->priority === 'urgent') bg-red-100 text-red-800
-                            @elseif($ticket->priority === 'high') bg-orange-100 text-orange-800
-                            @elseif($ticket->priority === 'normal') bg-blue-100 text-blue-800
-                            @else bg-gray-100 text-gray-800
-                            @endif">
-                            {{ $ticket->priority_label }}
-                        </span>
-                    </div>
-                </div>
-                @empty
-                <div class="text-center py-8 text-gray-500">
-                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-sm">هیچ تیکت بازی وجود ندارد</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
     <!-- Unpaid Invoices -->
     <div class="bg-white rounded-xl shadow-sm">
         <div class="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -198,7 +120,7 @@
                         <td class="px-6 py-4 text-sm font-medium text-gray-900">
                             {{ $invoice->invoice_number }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $invoice->customer->full_name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $invoice->client_name }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ number_format($invoice->total_amount) }} تومان</td>
                         <td class="px-6 py-4 text-sm {{ $invoice->due_date < now() ? 'text-red-600 font-medium' : 'text-gray-600' }}">
                             {{ \Morilog\Jalali\Jalalian::fromDateTime($invoice->due_date)->format('Y/m/d') }}
