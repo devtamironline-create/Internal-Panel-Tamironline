@@ -5,6 +5,7 @@ use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\DashboardController;
 use Modules\Staff\Http\Controllers\StaffController;
 use App\Http\Controllers\Admin\ChatController;
+use App\Http\Controllers\Admin\PermissionController;
 
 // Home - redirect to admin login
 Route::get('/', function () {
@@ -41,6 +42,11 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     // Staff Management
     Route::resource('staff', StaffController::class)->except(['show']);
     Route::patch('staff/{staff}/toggle-status', [StaffController::class, 'toggleStatus'])->name('staff.toggle-status');
+
+    // Permission Management
+    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+    Route::get('/permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
+    Route::put('/permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
 
     // Chat System
     Route::prefix('chat')->name('chat.')->group(function () {
