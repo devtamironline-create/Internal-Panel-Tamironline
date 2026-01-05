@@ -18,7 +18,7 @@
                 <span class="px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">بسته شده</span>
                 @endif
             </div>
-            <p class="text-gray-600">{{ verta($cycle->start_date)->format('Y/m/d') }} - {{ verta($cycle->end_date)->format('Y/m/d') }}</p>
+            <p class="text-gray-600">{{ $cycle->jalali_start_date }} - {{ $cycle->jalali_end_date }}</p>
             @if($cycle->description)
             <p class="text-gray-500 mt-2">{{ $cycle->description }}</p>
             @endif

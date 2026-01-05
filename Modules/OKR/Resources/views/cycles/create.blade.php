@@ -24,12 +24,12 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تاریخ شروع *</label>
-                    <input type="date" name="start_date" value="{{ old('start_date') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 @error('start_date') border-red-500 @enderror" required>
+                    <input type="text" name="start_date" value="{{ old('start_date') }}" placeholder="مثال: 1404/01/01" class="jalali-datepicker w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer bg-white @error('start_date') border-red-500 @enderror" required>
                     @error('start_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تاریخ پایان *</label>
-                    <input type="date" name="end_date" value="{{ old('end_date') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 @error('end_date') border-red-500 @enderror" required>
+                    <input type="text" name="end_date" value="{{ old('end_date') }}" placeholder="مثال: 1404/03/31" class="jalali-datepicker w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer bg-white @error('end_date') border-red-500 @enderror" required>
                     @error('end_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
             </div>

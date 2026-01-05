@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Morilog\Jalali\Jalalian;
 
 class Cycle extends Model
 {
@@ -65,5 +66,35 @@ class Cycle extends Model
         if ($total === 0) return 100;
         $elapsed = $this->start_date->diffInDays(now());
         return min(100, round(($elapsed / $total) * 100, 2));
+    }
+
+    public function getJalaliStartDateAttribute(): ?string
+    {
+        return $this->start_date ? Jalalian::fromDateTime($this->start_date)->format('Y/m/d') : null;
+    }
+
+    public function getJalaliEndDateAttribute(): ?string
+    {
+        return $this->end_date ? Jalalian::fromDateTime($this->end_date)->format('Y/m/d') : null;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match($this->status) {
+            'draft' => 'پیش‌نویس',
+            'active' => 'فعال',
+            'closed' => 'بسته شده',
+            default => 'نامشخص',
+        };
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->status) {
+            'draft' => 'gray',
+            'active' => 'green',
+            'closed' => 'red',
+            default => 'gray',
+        };
     }
 }
