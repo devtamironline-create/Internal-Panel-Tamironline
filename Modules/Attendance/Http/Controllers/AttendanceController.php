@@ -23,8 +23,9 @@ class AttendanceController extends Controller
         $employeeSettings = EmployeeSetting::getOrCreate($user->id);
 
         // Get this month's attendances
-        $startOfMonth = Jalalian::now()->getStartDayOfMonth()->toCarbon();
-        $endOfMonth = Jalalian::now()->getEndDayOfMonth()->toCarbon();
+        $jalaliNow = Jalalian::now();
+        $startOfMonth = (new Jalalian($jalaliNow->getYear(), $jalaliNow->getMonth(), 1))->toCarbon();
+        $endOfMonth = (new Jalalian($jalaliNow->getYear(), $jalaliNow->getMonth(), $jalaliNow->getMonthDays()))->toCarbon();
 
         $monthlyAttendances = Attendance::where('user_id', $user->id)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
@@ -180,8 +181,9 @@ class AttendanceController extends Controller
         $jalaliYear = $request->get('year', Jalalian::now()->getYear());
         $jalaliMonth = $request->get('month', Jalalian::now()->getMonth());
 
-        $startDate = (new Jalalian($jalaliYear, $jalaliMonth, 1))->toCarbon();
-        $endDate = (new Jalalian($jalaliYear, $jalaliMonth, 1))->getEndDayOfMonth()->toCarbon();
+        $jalaliStart = new Jalalian($jalaliYear, $jalaliMonth, 1);
+        $startDate = $jalaliStart->toCarbon();
+        $endDate = (new Jalalian($jalaliYear, $jalaliMonth, $jalaliStart->getMonthDays()))->toCarbon();
 
         $attendances = Attendance::where('user_id', $user->id)
             ->whereBetween('date', [$startDate, $endDate])
@@ -199,10 +201,12 @@ class AttendanceController extends Controller
         ];
 
         // Generate month options
-        $months = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $months[$i] = Jalalian::fromFormat('m', str_pad($i, 2, '0', STR_PAD_LEFT))->format('F');
-        }
+        $months = [
+            1 => 'فروردین', 2 => 'اردیبهشت', 3 => 'خرداد',
+            4 => 'تیر', 5 => 'مرداد', 6 => 'شهریور',
+            7 => 'مهر', 8 => 'آبان', 9 => 'آذر',
+            10 => 'دی', 11 => 'بهمن', 12 => 'اسفند',
+        ];
 
         return view('attendance::attendance.history', compact(
             'attendances',
