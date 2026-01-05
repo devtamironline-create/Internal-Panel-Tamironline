@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\DashboardController;
 use Modules\Staff\Http\Controllers\StaffController;
-use Modules\Invoice\Http\Controllers\InvoiceController;
 use App\Http\Controllers\Admin\ChatController;
 
 // Home - redirect to admin login
@@ -42,11 +41,6 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     // Staff Management
     Route::resource('staff', StaffController::class)->except(['show']);
     Route::patch('staff/{staff}/toggle-status', [StaffController::class, 'toggleStatus'])->name('staff.toggle-status');
-
-    // Invoices
-    Route::resource('invoices', InvoiceController::class);
-    Route::patch('invoices/{invoice}/status', [InvoiceController::class, 'updateStatus'])->name('invoices.update-status');
-    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.download-pdf');
 
     // Chat System
     Route::prefix('chat')->name('chat.')->group(function () {
