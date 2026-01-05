@@ -1,0 +1,100 @@
+{
+  "$schema": "https://coolify.io/schemas/coolify.json",
+  "name": "CRM Hostlino",
+  "description": "CRM System for Hostlino",
+  "documentation": "https://github.com/maysamnc1993/CRM-Hostlino",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "healthcheck": {
+    "path": "/",
+    "port": 80,
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3
+  },
+  "ports": {
+    "expose": [80, 8080]
+  },
+  "env": [
+    {
+      "key": "APP_NAME",
+      "value": "CRM-Hostlino",
+      "is_required": true
+    },
+    {
+      "key": "APP_ENV",
+      "value": "production",
+      "is_required": true
+    },
+    {
+      "key": "APP_DEBUG",
+      "value": "false",
+      "is_required": true
+    },
+    {
+      "key": "APP_KEY",
+      "value": "4vGAbkoYTMXbI/1nh0anXZ5Kx8e9pbBNEX6EkJpqGJ4=",
+      "is_required": true,
+      "is_secret": true,
+      "description": "Run: php artisan key:generate --show"
+    },
+    {
+      "key": "APP_URL",
+      "value": "https://vko4488o4kk048os8w0gos40.hdmplus.ir",
+      "is_required": true,
+      "description": "Your domain URL (e.g., https://crm.example.com)"
+    },
+    {
+      "key": "DB_CONNECTION",
+      "value": "mysql",
+      "is_required": true
+    },
+    {
+      "key": "DB_HOST",
+      "value": "mysql-database-usg00o08skoow4wo8ks8kosk",
+      "is_required": true
+    },
+    {
+      "key": "DB_PORT",
+      "value": "3306",
+      "is_required": true
+    },
+    {
+      "key": "DB_DATABASE",
+      "value": "crm",
+      "is_required": true
+    },
+    {
+      "key": "DB_USERNAME",
+      "value": "crm",
+      "is_required": true
+    },
+    {
+      "key": "DB_PASSWORD",
+      "value": "6bOYPfuqWH5bUFBVYYAYn6J2n2CUlXLAAfnS6q3SkFoGB2APEOAd82F0gLPsi97C",
+      "is_required": true,
+      "is_secret": true
+    },
+    {
+      "key": "REDIS_HOST",
+      "value": "",
+      "is_required": false
+    },
+    {
+      "key": "CACHE_DRIVER",
+      "value": "redis",
+      "is_required": false
+    },
+    {
+      "key": "SESSION_DRIVER",
+      "value": "redis",
+      "is_required": false
+    },
+    {
+      "key": "QUEUE_CONNECTION",
+      "value": "redis",
+      "is_required": false
+    }
+  ]
+}
