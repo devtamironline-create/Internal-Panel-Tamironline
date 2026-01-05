@@ -123,6 +123,9 @@ class TaskController extends Controller
             try {
                 $dueDate = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $dueDateStr)->toCarbon();
             } catch (\Exception $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'فرمت تاریخ نامعتبر است'], 422);
+                }
                 return back()->withErrors(['due_date' => 'فرمت تاریخ نامعتبر است'])->withInput();
             }
         }
@@ -131,7 +134,7 @@ class TaskController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'team_id' => $request->team_id,
-            'assigned_to' => $request->assigned_to,
+            'assigned_to' => $request->assigned_to ?: null,
             'priority' => $request->priority,
             'due_date' => $dueDate,
             'status' => 'todo',
@@ -149,6 +152,13 @@ class TaskController extends Controller
             }
         }
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'task' => $task,
+            ]);
+        }
+
         $team = Team::find($request->team_id);
 
         return redirect()->route('tasks.index', ['team' => $team->slug])
@@ -163,6 +173,48 @@ class TaskController extends Controller
         $task->load(['team', 'creator', 'assignee', 'labels', 'checklists', 'comments.user', 'activities.user', 'attachments']);
 
         return view('task::show', compact('task'));
+    }
+
+    /**
+     * Get task as JSON (for modal)
+     */
+    public function json(Task $task)
+    {
+        $task->load(['team', 'creator', 'assignee', 'labels', 'checklists', 'comments.user']);
+
+        $progress = $task->checklist_progress;
+
+        return response()->json([
+            'id' => $task->id,
+            'title' => $task->title,
+            'description' => $task->description,
+            'status' => $task->status,
+            'status_label' => $task->status_label,
+            'status_color' => $task->status_color,
+            'priority' => $task->priority,
+            'priority_label' => $task->priority_label,
+            'priority_color' => $task->priority_color,
+            'due_date' => $task->jalali_due_date,
+            'is_overdue' => $task->is_overdue,
+            'creator_name' => $task->creator?->full_name ?? 'نامشخص',
+            'assignee_name' => $task->assignee?->full_name,
+            'team_name' => $task->team?->name,
+            'checklist_total' => $progress['total'],
+            'checklist_completed' => $progress['completed'],
+            'checklist_percentage' => $progress['percentage'],
+            'checklists' => $task->checklists->map(fn($c) => [
+                'id' => $c->id,
+                'title' => $c->title,
+                'is_completed' => (bool) $c->is_completed,
+            ]),
+            'comments' => $task->comments->map(fn($c) => [
+                'id' => $c->id,
+                'body' => $c->body,
+                'user_name' => $c->user?->full_name ?? 'نامشخص',
+                'user_initial' => mb_substr($c->user?->first_name ?? 'U', 0, 1),
+                'created_at' => \Morilog\Jalali\Jalalian::fromDateTime($c->created_at)->format('Y/m/d H:i'),
+            ]),
+        ]);
     }
 
     /**
@@ -229,10 +281,14 @@ class TaskController extends Controller
     /**
      * Delete task
      */
-    public function destroy(Task $task)
+    public function destroy(Request $request, Task $task)
     {
         $teamSlug = $task->team->slug;
         $task->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->route('tasks.index', ['team' => $teamSlug])
             ->with('success', 'تسک حذف شد');
@@ -248,10 +304,13 @@ class TaskController extends Controller
         ]);
 
         $task->updateStatus($request->status, auth()->id());
+        $task = $task->fresh();
 
         return response()->json([
             'success' => true,
-            'task' => $task->fresh(),
+            'task' => $task,
+            'status_label' => $task->status_label,
+            'status_color' => $task->status_color,
         ]);
     }
 
@@ -295,11 +354,18 @@ class TaskController extends Controller
         ]);
 
         $comment = TaskComment::addComment($task, auth()->id(), $request->body);
+        $comment->load('user');
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'comment' => $comment->load('user'),
+                'comment' => [
+                    'id' => $comment->id,
+                    'body' => $comment->body,
+                    'user_name' => $comment->user?->full_name ?? 'نامشخص',
+                    'user_initial' => mb_substr($comment->user?->first_name ?? 'U', 0, 1),
+                    'created_at' => \Morilog\Jalali\Jalalian::fromDateTime($comment->created_at)->format('Y/m/d H:i'),
+                ],
             ]);
         }
 
