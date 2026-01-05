@@ -31,6 +31,7 @@ Route::middleware(['web', 'auth'])->prefix('tasks')->group(function () {
     // CRUD
     Route::get('/create', [TaskController::class, 'create'])->name('tasks.create');
     Route::post('/', [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/{task}/json', [TaskController::class, 'json'])->name('tasks.json');
     Route::get('/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::get('/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
     Route::put('/{task}', [TaskController::class, 'update'])->name('tasks.update');
