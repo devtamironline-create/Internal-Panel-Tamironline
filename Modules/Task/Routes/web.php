@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Task\Http\Controllers\TaskController;
+use Modules\Task\Http\Controllers\TeamController;
 
 /*
 |--------------------------------------------------------------------------
@@ -9,6 +10,19 @@ use Modules\Task\Http\Controllers\TaskController;
 |--------------------------------------------------------------------------
 */
 
+// Team Management Routes
+Route::middleware(['web', 'auth'])->prefix('teams')->group(function () {
+    Route::get('/', [TeamController::class, 'index'])->name('teams.index');
+    Route::get('/create', [TeamController::class, 'create'])->name('teams.create');
+    Route::post('/', [TeamController::class, 'store'])->name('teams.store');
+    Route::get('/{team}/edit', [TeamController::class, 'edit'])->name('teams.edit');
+    Route::put('/{team}', [TeamController::class, 'update'])->name('teams.update');
+    Route::delete('/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
+    Route::post('/order', [TeamController::class, 'updateOrder'])->name('teams.order');
+    Route::patch('/{team}/toggle', [TeamController::class, 'toggleStatus'])->name('teams.toggle');
+});
+
+// Task Management Routes
 Route::middleware(['web', 'auth'])->prefix('tasks')->group(function () {
     // Main views
     Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
