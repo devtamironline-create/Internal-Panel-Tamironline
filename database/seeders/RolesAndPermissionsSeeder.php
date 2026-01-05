@@ -13,12 +13,12 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
-            // Invoice permissions
-            'view-invoices', 'create-invoices', 'edit-invoices', 'delete-invoices', 'mark-invoices-paid',
             // Staff management
             'manage-staff',
             // Chat/Messenger
             'view-conversations', 'manage-conversations',
+            // Attendance
+            'manage-attendance',
         ];
 
         foreach ($permissions as $name) {
@@ -34,13 +34,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Manager permissions
         $managerRole->syncPermissions([
-            'view-invoices', 'create-invoices', 'edit-invoices', 'mark-invoices-paid',
             'view-conversations', 'manage-conversations',
+            'manage-attendance',
         ]);
 
         // Support permissions
         $supportRole->syncPermissions([
-            'view-invoices',
             'view-conversations',
         ]);
     }
