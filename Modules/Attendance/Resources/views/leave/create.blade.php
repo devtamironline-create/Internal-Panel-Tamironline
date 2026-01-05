@@ -32,6 +32,25 @@
         </div>
     </div>
 
+    <!-- Validation Errors -->
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-medium text-red-800">لطفا خطاهای زیر را برطرف کنید:</p>
+                <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <form action="{{ route('leave.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="leaveForm()">
         @csrf
 
@@ -73,9 +92,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">از تاریخ</label>
-                    <input type="text" id="start_date_display" placeholder="انتخاب تاریخ..."
-                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" readonly required>
-                    <input type="hidden" name="start_date" id="start_date" value="{{ old('start_date') }}">
+                    <input type="text" name="start_date" id="start_date" value="{{ old('start_date') }}"
+                        placeholder="مثال: 1404/10/15"
+                        class="jalali-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" required>
                     @error('start_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -83,9 +102,9 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تا تاریخ</label>
-                    <input type="text" id="end_date_display" placeholder="انتخاب تاریخ..."
-                        class="leave-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" readonly required>
-                    <input type="hidden" name="end_date" id="end_date" value="{{ old('end_date') }}">
+                    <input type="text" name="end_date" id="end_date" value="{{ old('end_date') }}"
+                        placeholder="مثال: 1404/10/16"
+                        class="jalali-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" required>
                     @error('end_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -116,23 +135,12 @@
                     </select>
                 </div>
 
-                <!-- Half day option -->
-                <div x-show="!isHourly && startDate && startDate === endDate" x-transition class="md:col-span-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" x-model="isHalfDay" @change="calculateDays()"
-                            class="rounded text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">نیم روز مرخصی</span>
-                    </label>
-                </div>
-
-                <input type="hidden" name="days_count" :value="daysCount">
             </div>
 
-            <!-- Duration display -->
-            <div x-show="daysCount > 0 || hoursCount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <!-- Duration display for hourly -->
+            <div x-show="isHourly && hoursCount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p class="text-sm text-gray-600">
-                    <span x-show="!isHourly">مدت مرخصی: <strong class="text-gray-900" x-text="daysCount == 0.5 ? 'نیم روز' : daysCount + ' روز'"></strong></span>
-                    <span x-show="isHourly">مدت مرخصی: <strong class="text-gray-900" x-text="hoursCount + ' ساعت'"></strong></span>
+                    مدت مرخصی: <strong class="text-gray-900" x-text="hoursCount + ' ساعت'"></strong>
                 </p>
             </div>
         </div>
@@ -191,42 +199,15 @@
 function leaveForm() {
     return {
         leaveTypeId: '{{ old('leave_type_id', '') }}',
-        startDate: '{{ old('start_date', '') }}',
-        endDate: '{{ old('end_date', '') }}',
         startTime: '{{ old('start_time', '') }}',
         endTime: '{{ old('end_time', '') }}',
         isHourly: false,
         requiresDocument: false,
-        isHalfDay: false,
-        daysCount: 0,
         hoursCount: 0,
 
         onLeaveTypeChange(type) {
             this.isHourly = type.is_hourly;
             this.requiresDocument = type.requires_document;
-            if (this.isHourly) {
-                this.calculateHours();
-            } else {
-                this.calculateDays();
-            }
-        },
-
-        calculateDays() {
-            if (!this.startDate || !this.endDate) {
-                this.daysCount = 0;
-                return;
-            }
-
-            const start = new Date(this.startDate);
-            const end = new Date(this.endDate);
-            const diffTime = Math.abs(end - start);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-            if (this.isHalfDay && this.startDate === this.endDate) {
-                this.daysCount = 0.5;
-            } else {
-                this.daysCount = diffDays;
-            }
         },
 
         calculateHours() {
@@ -242,94 +223,9 @@ function leaveForm() {
             const endMinutes = endH * 60 + endM;
 
             this.hoursCount = Math.max(0, (endMinutes - startMinutes) / 60);
-        },
-
-        setStartDate(gregorian) {
-            this.startDate = gregorian;
-            document.getElementById('start_date').value = gregorian;
-            this.calculateDays();
-        },
-
-        setEndDate(gregorian) {
-            this.endDate = gregorian;
-            document.getElementById('end_date').value = gregorian;
-            this.calculateDays();
         }
     };
 }
-
-$(document).ready(function() {
-    // Helper function to convert unix to gregorian date string
-    function unixToGregorian(unix) {
-        var date = new Date(unix);
-        var year = date.getFullYear();
-        var month = String(date.getMonth() + 1).padStart(2, '0');
-        var day = String(date.getDate()).padStart(2, '0');
-        return year + '-' + month + '-' + day;
-    }
-
-    // Start Date Picker
-    $('#start_date_display').persianDatepicker({
-        format: 'YYYY/MM/DD',
-        initialValue: false,
-        autoClose: true,
-        calendar: {
-            persian: {
-                locale: 'fa',
-                showHint: true,
-                leapYearMode: 'algorithmic'
-            }
-        },
-        toolbox: {
-            enabled: true,
-            calendarSwitch: { enabled: false },
-            todayButton: { enabled: true, text: { fa: 'امروز' } },
-            submitButton: { enabled: true, text: { fa: 'تایید' } }
-        },
-        onSelect: function(unix) {
-            var gregorian = unixToGregorian(unix);
-            document.getElementById('start_date').value = gregorian;
-            console.log('Start date:', gregorian);
-        }
-    });
-
-    // End Date Picker
-    $('#end_date_display').persianDatepicker({
-        format: 'YYYY/MM/DD',
-        initialValue: false,
-        autoClose: true,
-        calendar: {
-            persian: {
-                locale: 'fa',
-                showHint: true,
-                leapYearMode: 'algorithmic'
-            }
-        },
-        toolbox: {
-            enabled: true,
-            calendarSwitch: { enabled: false },
-            todayButton: { enabled: true, text: { fa: 'امروز' } },
-            submitButton: { enabled: true, text: { fa: 'تایید' } }
-        },
-        onSelect: function(unix) {
-            var gregorian = unixToGregorian(unix);
-            document.getElementById('end_date').value = gregorian;
-            console.log('End date:', gregorian);
-        }
-    });
-
-    // Form submit validation
-    $('form').on('submit', function(e) {
-        var startVal = $('#start_date').val();
-        var endVal = $('#end_date').val();
-
-        if (!startVal || !endVal) {
-            e.preventDefault();
-            alert('لطفا تاریخ شروع و پایان را انتخاب کنید');
-            return false;
-        }
-    });
-});
 </script>
 @endpush
 @endsection

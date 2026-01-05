@@ -57,8 +57,8 @@ class LeaveController extends Controller
     {
         $request->validate([
             'leave_type_id' => 'required|exists:leave_types,id',
-            'start_date' => 'required|date_format:Y-m-d',
-            'end_date' => 'required|date_format:Y-m-d',
+            'start_date' => 'required|string',
+            'end_date' => 'required|string',
             'start_time' => 'nullable',
             'end_time' => 'nullable',
             'reason' => 'nullable|string|max:500',
@@ -68,16 +68,20 @@ class LeaveController extends Controller
         ], [
             'leave_type_id.required' => 'لطفا نوع مرخصی را انتخاب کنید',
             'start_date.required' => 'تاریخ شروع الزامی است',
-            'start_date.date_format' => 'فرمت تاریخ شروع نامعتبر است',
             'end_date.required' => 'تاریخ پایان الزامی است',
-            'end_date.date_format' => 'فرمت تاریخ پایان نامعتبر است',
         ]);
 
         $leaveType = LeaveType::findOrFail($request->leave_type_id);
 
+        // Convert Jalali to Gregorian
+        try {
+            $startDate = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $request->start_date)->toCarbon();
+            $endDate = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $request->end_date)->toCarbon();
+        } catch (\Exception $e) {
+            return back()->withErrors(['start_date' => 'فرمت تاریخ نامعتبر است. مثال: 1404/10/15'])->withInput();
+        }
+
         // Calculate days
-        $startDate = \Carbon\Carbon::parse($request->start_date);
-        $endDate = \Carbon\Carbon::parse($request->end_date);
         $daysCount = $request->days_count ?? ($startDate->diffInDays($endDate) + 1);
 
         // Check balance
@@ -99,8 +103,8 @@ class LeaveController extends Controller
         $leaveRequest = LeaveRequest::createRequest([
             'user_id' => auth()->id(),
             'leave_type_id' => $request->leave_type_id,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'days_count' => $daysCount,
