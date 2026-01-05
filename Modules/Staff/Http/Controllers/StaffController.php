@@ -7,9 +7,35 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class StaffController extends Controller
 {
+    // Permission labels for Persian display
+    private static $permissionLabels = [
+        'view-staff' => 'مشاهده پرسنل',
+        'manage-staff' => 'مدیریت پرسنل',
+        'view-attendance' => 'مشاهده حضور و غیاب',
+        'manage-attendance' => 'مدیریت حضور و غیاب',
+        'view-leave' => 'مشاهده مرخصی',
+        'request-leave' => 'درخواست مرخصی',
+        'manage-leave' => 'مدیریت مرخصی',
+        'view-tasks' => 'مشاهده تسک‌ها',
+        'create-tasks' => 'ایجاد تسک',
+        'manage-tasks' => 'مدیریت تسک‌ها',
+        'view-teams' => 'مشاهده تیم‌ها',
+        'manage-teams' => 'مدیریت تیم‌ها',
+        'view-reports' => 'مشاهده گزارش‌ها',
+        'use-messenger' => 'استفاده از پیام‌رسان',
+        'manage-settings' => 'مدیریت تنظیمات',
+        'manage-permissions' => 'مدیریت دسترسی‌ها',
+    ];
+
+    public static function getPermissionLabel(string $permission): string
+    {
+        return self::$permissionLabels[$permission] ?? $permission;
+    }
+
     public function index(Request $request)
     {
         $query = User::staff()->with('roles');
@@ -70,7 +96,28 @@ class StaffController extends Controller
     {
         if (!$staff->is_staff) abort(404);
         $roles = Role::all();
-        return view('staff::edit', compact('staff', 'roles'));
+
+        // Get all permissions grouped by category
+        $allPermissions = Permission::all();
+        $permissions = [
+            'پرسنل' => $allPermissions->filter(fn($p) => str_contains($p->name, 'staff')),
+            'حضور و غیاب' => $allPermissions->filter(fn($p) => str_contains($p->name, 'attendance')),
+            'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
+            'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
+            'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
+            'سایر' => $allPermissions->filter(fn($p) =>
+                !str_contains($p->name, 'staff') &&
+                !str_contains($p->name, 'attendance') &&
+                !str_contains($p->name, 'leave') &&
+                !str_contains($p->name, 'task') &&
+                !str_contains($p->name, 'team')
+            ),
+        ];
+
+        // Get user's direct permissions
+        $userPermissions = $staff->getDirectPermissions()->pluck('name')->toArray();
+
+        return view('staff::edit', compact('staff', 'roles', 'permissions', 'userPermissions'));
     }
 
     public function update(Request $request, User $staff)
@@ -85,6 +132,8 @@ class StaffController extends Controller
             'password' => 'nullable|min:8|confirmed',
             'role' => 'required|exists:roles,name',
             'is_active' => 'boolean',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,name',
         ]);
 
         $staff->update([
@@ -100,6 +149,9 @@ class StaffController extends Controller
         }
 
         $staff->syncRoles([$validated['role']]);
+
+        // Sync direct permissions
+        $staff->syncPermissions($validated['permissions'] ?? []);
 
         return redirect()->route('admin.staff.index')->with('success', 'اطلاعات بروزرسانی شد');
     }
