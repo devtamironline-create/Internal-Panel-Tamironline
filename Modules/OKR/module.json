@@ -1,0 +1,11 @@
+{
+    "name": "OKR",
+    "alias": "okr",
+    "description": "OKR Management Module",
+    "keywords": ["okr", "objectives", "key-results"],
+    "priority": 0,
+    "providers": [
+        "Modules\\OKR\\Providers\\OKRServiceProvider"
+    ],
+    "files": []
+}

@@ -25,6 +25,8 @@ class StaffController extends Controller
         'view-teams' => 'مشاهده تیم‌ها',
         'manage-teams' => 'مدیریت تیم‌ها',
         'view-reports' => 'مشاهده گزارش‌ها',
+        'view-okr' => 'مشاهده OKR',
+        'manage-okr' => 'مدیریت OKR',
         'use-messenger' => 'استفاده از پیام‌رسان',
         'manage-settings' => 'مدیریت تنظیمات',
         'manage-permissions' => 'مدیریت دسترسی‌ها',
@@ -62,12 +64,14 @@ class StaffController extends Controller
             'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
             'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
             'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
+            'OKR' => $allPermissions->filter(fn($p) => str_contains($p->name, 'okr')),
             'سایر' => $allPermissions->filter(fn($p) =>
                 !str_contains($p->name, 'staff') &&
                 !str_contains($p->name, 'attendance') &&
                 !str_contains($p->name, 'leave') &&
                 !str_contains($p->name, 'task') &&
-                !str_contains($p->name, 'team')
+                !str_contains($p->name, 'team') &&
+                !str_contains($p->name, 'okr')
             ),
         ];
 
@@ -118,12 +122,14 @@ class StaffController extends Controller
             'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
             'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
             'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
+            'OKR' => $allPermissions->filter(fn($p) => str_contains($p->name, 'okr')),
             'سایر' => $allPermissions->filter(fn($p) =>
                 !str_contains($p->name, 'staff') &&
                 !str_contains($p->name, 'attendance') &&
                 !str_contains($p->name, 'leave') &&
                 !str_contains($p->name, 'task') &&
-                !str_contains($p->name, 'team')
+                !str_contains($p->name, 'team') &&
+                !str_contains($p->name, 'okr')
             ),
         ];
 
