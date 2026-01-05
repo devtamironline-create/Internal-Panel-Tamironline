@@ -39,18 +39,26 @@
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <span class="text-gray-600">نام:</span>
-                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->customer->full_name }}</span>
+                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->client_name }}</span>
                     </div>
-                    @if($invoice->customer->business_name)
-                    <div>
-                        <span class="text-gray-600">شرکت:</span>
-                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->customer->business_name }}</span>
-                    </div>
-                    @endif
+                    @if($invoice->client_mobile)
                     <div>
                         <span class="text-gray-600">موبایل:</span>
-                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->customer->mobile }}</span>
+                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->client_mobile }}</span>
                     </div>
+                    @endif
+                    @if($invoice->client_email)
+                    <div>
+                        <span class="text-gray-600">ایمیل:</span>
+                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->client_email }}</span>
+                    </div>
+                    @endif
+                    @if($invoice->client_address)
+                    <div class="col-span-2">
+                        <span class="text-gray-600">آدرس:</span>
+                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->client_address }}</span>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -62,12 +70,6 @@
                         <span class="text-gray-600">تاریخ سررسید:</span>
                         <span class="font-medium text-gray-900 mr-2">{{ \Morilog\Jalali\Jalalian::fromDateTime($invoice->due_date)->format('Y/m/d') }}</span>
                     </div>
-                    @if($invoice->service)
-                    <div>
-                        <span class="text-gray-600">سرویس:</span>
-                        <span class="font-medium text-gray-900 mr-2">{{ $invoice->service->product->name }}</span>
-                    </div>
-                    @endif
                 </div>
             </div>
 
@@ -100,7 +102,7 @@
             <div class="bg-blue-50 rounded-lg p-4">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-700">جمع کل:</span>
-                    <span class="text-sm font-medium text-gray-900">{{ number_format($invoice->subtotal) }} تومان</span>
+                    <span class="text-sm font-medium text-gray-900">{{ number_format($invoice->subtotal ?? $invoice->total_amount) }} تومان</span>
                 </div>
                 @if($invoice->discount_amount > 0)
                 <div class="flex justify-between items-center mb-2">

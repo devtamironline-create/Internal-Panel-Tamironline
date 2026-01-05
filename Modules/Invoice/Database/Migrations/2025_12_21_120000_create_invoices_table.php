@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
 
-            // Relations
-            $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete();
-            $table->foreignId('service_id')->nullable()->constrained('services')->nullOnDelete();
+            // Client info (no foreign key - standalone)
+            $table->string('client_name'); // نام مشتری
+            $table->string('client_mobile')->nullable(); // شماره موبایل
+            $table->string('client_email')->nullable(); // ایمیل
+            $table->text('client_address')->nullable(); // آدرس
 
             // Invoice Details
             $table->string('invoice_number')->unique(); // شماره فاکتور
@@ -42,7 +44,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['customer_id', 'status']);
+            $table->index('status');
             $table->index('invoice_date');
         });
     }

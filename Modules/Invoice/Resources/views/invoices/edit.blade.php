@@ -24,30 +24,41 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">مشتری *</label>
-                    <select name="customer_id" id="customer_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('customer_id') border-red-500 @enderror" required>
-                        <option value="">انتخاب مشتری...</option>
-                        @foreach($customers as $customer)
-                        <option value="{{ $customer->id }}" {{ (old('customer_id', $invoice->customer_id) == $customer->id) ? 'selected' : '' }}>
-                            {{ $customer->full_name }} ({{ $customer->mobile }})
-                        </option>
-                        @endforeach
-                    </select>
-                    @error('customer_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                </div>
+            <!-- Client Information -->
+            <div class="border-b pb-6">
+                <h3 class="text-md font-semibold text-gray-900 mb-4">مشخصات مشتری</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نام مشتری *</label>
+                        <input type="text" name="client_name" value="{{ old('client_name', $invoice->client_name) }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('client_name') border-red-500 @enderror"
+                            placeholder="نام و نام خانوادگی" required>
+                        @error('client_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">سرویس مرتبط (اختیاری)</label>
-                    <select name="service_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">بدون سرویس...</option>
-                        @foreach($services as $service)
-                        <option value="{{ $service->id }}" {{ (old('service_id', $invoice->service_id) == $service->id) ? 'selected' : '' }}>
-                            {{ $service->order_number }} - {{ $service->product->name }}
-                        </option>
-                        @endforeach
-                    </select>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">شماره تلفن</label>
+                        <input type="text" name="client_mobile" value="{{ old('client_mobile', $invoice->client_mobile) }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('client_mobile') border-red-500 @enderror"
+                            placeholder="09123456789">
+                        @error('client_mobile')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ایمیل</label>
+                        <input type="email" name="client_email" value="{{ old('client_email', $invoice->client_email) }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('client_email') border-red-500 @enderror"
+                            placeholder="email@example.com">
+                        @error('client_email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">آدرس</label>
+                        <input type="text" name="client_address" value="{{ old('client_address', $invoice->client_address) }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('client_address') border-red-500 @enderror"
+                            placeholder="آدرس مشتری">
+                        @error('client_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
                 </div>
             </div>
 
@@ -126,7 +137,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">جمع کل</label>
-                        <input type="text" id="total_display" class="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg font-bold" readonly value="{{ number_format($invoice->total) }} تومان">
+                        <input type="text" id="total_display" class="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg font-bold" readonly value="{{ number_format($invoice->total_amount) }} تومان">
                     </div>
                 </div>
             </div>
