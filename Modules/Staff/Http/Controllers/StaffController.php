@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class StaffController extends Controller
@@ -38,7 +37,7 @@ class StaffController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::staff()->with('roles');
+        $query = User::staff()->with('permissions');
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -48,20 +47,33 @@ class StaffController extends Controller
             });
         }
 
-        if ($role = $request->input('role')) {
-            $query->role($role);
-        }
-
         $staff = $query->latest()->paginate(20);
-        $roles = Role::all();
 
-        return view('staff::index', compact('staff', 'roles'));
+        return view('staff::index', compact('staff'));
     }
 
     public function create()
     {
-        $roles = Role::all();
-        return view('staff::create', compact('roles'));
+        // Get all permissions grouped by category
+        $allPermissions = Permission::all();
+        $permissions = [
+            'پرسنل' => $allPermissions->filter(fn($p) => str_contains($p->name, 'staff')),
+            'حضور و غیاب' => $allPermissions->filter(fn($p) => str_contains($p->name, 'attendance')),
+            'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
+            'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
+            'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
+            'سایر' => $allPermissions->filter(fn($p) =>
+                !str_contains($p->name, 'staff') &&
+                !str_contains($p->name, 'attendance') &&
+                !str_contains($p->name, 'leave') &&
+                !str_contains($p->name, 'task') &&
+                !str_contains($p->name, 'team')
+            ),
+        ];
+
+        $userPermissions = [];
+
+        return view('staff::create', compact('permissions', 'userPermissions'));
     }
 
     public function store(Request $request)
@@ -72,8 +84,9 @@ class StaffController extends Controller
             'mobile' => 'required|regex:/^09[0-9]{9}$/|unique:users',
             'email' => 'nullable|email|unique:users',
             'password' => 'required|min:8|confirmed',
-            'role' => 'required|exists:roles,name',
             'is_active' => 'boolean',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,name',
         ]);
 
         $user = User::create([
@@ -87,7 +100,8 @@ class StaffController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        $user->assignRole($validated['role']);
+        // Assign permissions directly to user
+        $user->syncPermissions($validated['permissions'] ?? []);
 
         return redirect()->route('admin.staff.index')->with('success', 'پرسنل جدید ایجاد شد');
     }
@@ -95,7 +109,6 @@ class StaffController extends Controller
     public function edit(User $staff)
     {
         if (!$staff->is_staff) abort(404);
-        $roles = Role::all();
 
         // Get all permissions grouped by category
         $allPermissions = Permission::all();
@@ -117,7 +130,7 @@ class StaffController extends Controller
         // Get user's direct permissions
         $userPermissions = $staff->getDirectPermissions()->pluck('name')->toArray();
 
-        return view('staff::edit', compact('staff', 'roles', 'permissions', 'userPermissions'));
+        return view('staff::edit', compact('staff', 'permissions', 'userPermissions'));
     }
 
     public function update(Request $request, User $staff)
@@ -130,7 +143,6 @@ class StaffController extends Controller
             'mobile' => 'required|regex:/^09[0-9]{9}$/|unique:users,mobile,' . $staff->id,
             'email' => 'nullable|email|unique:users,email,' . $staff->id,
             'password' => 'nullable|min:8|confirmed',
-            'role' => 'required|exists:roles,name',
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
             'permissions.*' => 'exists:permissions,name',
@@ -148,9 +160,7 @@ class StaffController extends Controller
             $staff->update(['password' => Hash::make($validated['password'])]);
         }
 
-        $staff->syncRoles([$validated['role']]);
-
-        // Sync direct permissions
+        // Sync permissions directly to user
         $staff->syncPermissions($validated['permissions'] ?? []);
 
         return redirect()->route('admin.staff.index')->with('success', 'اطلاعات بروزرسانی شد');
