@@ -57,14 +57,20 @@ class LeaveController extends Controller
     {
         $request->validate([
             'leave_type_id' => 'required|exists:leave_types,id',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'start_time' => 'nullable|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i|after:start_time',
+            'start_date' => 'required|date_format:Y-m-d',
+            'end_date' => 'required|date_format:Y-m-d',
+            'start_time' => 'nullable',
+            'end_time' => 'nullable',
             'reason' => 'nullable|string|max:500',
             'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'substitute_id' => 'nullable|exists:users,id',
             'days_count' => 'nullable|numeric|min:0.5',
+        ], [
+            'leave_type_id.required' => 'لطفا نوع مرخصی را انتخاب کنید',
+            'start_date.required' => 'تاریخ شروع الزامی است',
+            'start_date.date_format' => 'فرمت تاریخ شروع نامعتبر است',
+            'end_date.required' => 'تاریخ پایان الزامی است',
+            'end_date.date_format' => 'فرمت تاریخ پایان نامعتبر است',
         ]);
 
         $leaveType = LeaveType::findOrFail($request->leave_type_id);
