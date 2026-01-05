@@ -13,7 +13,7 @@
                 @can('view-attendance')
                 @if(isset($stats['attendance']))
                     @if(!$stats['attendance']['checked_in'])
-                    <a href="{{ route('attendance.checkin') }}" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
+                    <a href="{{ route('attendance.index') }}" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
                         ثبت ورود
                     </a>
                     @elseif(!$stats['attendance']['checked_out'])
@@ -202,7 +202,7 @@
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900">حضور و غیاب امروز</h3>
-                    <a href="{{ route('attendance.manage') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت</a>
+                    <a href="{{ route('attendance.admin') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت</a>
                 </div>
                 <div class="grid grid-cols-3 gap-4">
                     <div class="text-center p-4 bg-green-50 rounded-xl">
@@ -241,7 +241,7 @@
                     @endcan
 
                     @can('request-leave')
-                    <a href="{{ route('attendance.leave.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
+                    <a href="{{ route('leave.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
                         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
                             <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -301,7 +301,7 @@
                     </div>
                     @if($stats['leave']['pending_requests'] > 0)
                     <div class="pt-2 border-t">
-                        <a href="{{ route('attendance.leave.index') }}" class="flex items-center justify-between text-sm text-yellow-600 hover:text-yellow-700">
+                        <a href="{{ route('leave.index') }}" class="flex items-center justify-between text-sm text-yellow-600 hover:text-yellow-700">
                             <span>درخواست در انتظار</span>
                             <span class="px-2 py-0.5 bg-yellow-100 rounded-full">{{ $stats['leave']['pending_requests'] }}</span>
                         </a>
