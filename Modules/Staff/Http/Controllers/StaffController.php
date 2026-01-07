@@ -27,6 +27,8 @@ class StaffController extends Controller
         'view-reports' => 'مشاهده گزارش‌ها',
         'view-okr' => 'مشاهده OKR',
         'manage-okr' => 'مدیریت OKR',
+        'view-salary' => 'مشاهده حقوق خود',
+        'manage-salary' => 'مدیریت حقوق',
         'use-messenger' => 'استفاده از پیام‌رسان',
         'manage-settings' => 'مدیریت تنظیمات',
         'manage-permissions' => 'مدیریت دسترسی‌ها',

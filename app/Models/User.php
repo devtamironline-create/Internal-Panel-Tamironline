@@ -137,6 +137,11 @@ class User extends Authenticatable
         return $this->hasOne(UserPresence::class);
     }
 
+    public function employeeSetting()
+    {
+        return $this->hasOne(\Modules\Attendance\Models\EmployeeSetting::class);
+    }
+
     public function isOnline(): bool
     {
         return $this->presence && $this->presence->isOnline();

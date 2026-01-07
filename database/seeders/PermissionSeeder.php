@@ -44,6 +44,10 @@ class PermissionSeeder extends Seeder
             'view-okr' => 'مشاهده OKR',
             'manage-okr' => 'مدیریت OKR',
 
+            // حقوق
+            'view-salary' => 'مشاهده حقوق خود',
+            'manage-salary' => 'مدیریت حقوق',
+
             // پیام‌رسان
             'use-messenger' => 'استفاده از پیام‌رسان',
 

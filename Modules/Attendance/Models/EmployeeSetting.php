@@ -17,11 +17,27 @@ class EmployeeSetting extends Model
         'annual_leave_balance',
         'sick_leave_balance',
         'supervisor_id',
+        // Salary fields
+        'daily_agreed_wage',
+        'daily_insurance_wage',
+        'daily_declared_wage',
+        'is_married',
+        'children_count',
+        'seniority_years',
+        'bank_name',
+        'bank_account',
+        'sheba_number',
     ];
 
     protected $casts = [
         'base_salary' => 'decimal:0',
         'hourly_rate' => 'decimal:0',
+        'daily_agreed_wage' => 'decimal:0',
+        'daily_insurance_wage' => 'decimal:0',
+        'daily_declared_wage' => 'decimal:0',
+        'is_married' => 'boolean',
+        'children_count' => 'integer',
+        'seniority_years' => 'integer',
     ];
 
     public function user(): BelongsTo
