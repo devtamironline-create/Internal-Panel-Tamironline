@@ -29,7 +29,7 @@
                 <tr>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">پرسنل</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">موبایل</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">دسترسی‌ها</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">نقش</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">وضعیت</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">عملیات</th>
                 </tr>
@@ -48,11 +48,27 @@
                     </td>
                     <td class="px-6 py-4 text-gray-900" dir="ltr">{{ $member->mobile }}</td>
                     <td class="px-6 py-4">
-                        @php $permCount = $member->permissions->count(); @endphp
-                        @if($permCount > 0)
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800">{{ $permCount }} دسترسی</span>
+                        @php
+                            $role = $member->roles->first();
+                            $roleLabels = [
+                                'admin' => 'مدیر سیستم',
+                                'manager' => 'مدیر',
+                                'supervisor' => 'سرپرست',
+                                'staff' => 'کارمند',
+                            ];
+                            $roleColors = [
+                                'admin' => 'bg-red-100 text-red-800',
+                                'manager' => 'bg-purple-100 text-purple-800',
+                                'supervisor' => 'bg-blue-100 text-blue-800',
+                                'staff' => 'bg-gray-100 text-gray-800',
+                            ];
+                        @endphp
+                        @if($role)
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roleColors[$role->name] ?? 'bg-brand-100 text-brand-800' }}">
+                            {{ $roleLabels[$role->name] ?? $role->name }}
+                        </span>
                         @else
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">بدون دسترسی</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">بدون نقش</span>
                         @endif
                     </td>
                     <td class="px-6 py-4">
