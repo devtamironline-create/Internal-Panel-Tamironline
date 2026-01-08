@@ -1,24 +1,44 @@
 #!/bin/sh
 set -e
 
-echo "🚀 Starting CRM Hostlino..."
+echo "🚀 Starting CRM Tamironline..."
 
-# Wait for database
+# Debug: Show environment
+echo "📋 Database Config:"
+echo "   Host: $DB_HOST"
+echo "   Port: $DB_PORT"
+echo "   Database: $DB_DATABASE"
+echo "   User: $DB_USERNAME"
+
+# Wait for database with timeout
 echo "⏳ Waiting for database..."
-while ! mysqladmin ping -h"$DB_HOST" -u"$DB_USERNAME" -p"$DB_PASSWORD" --silent 2>/dev/null; do
+COUNTER=0
+MAX_TRIES=30
+
+while [ $COUNTER -lt $MAX_TRIES ]; do
+    if mysqladmin ping -h"$DB_HOST" -u"$DB_USERNAME" -p"$DB_PASSWORD" --silent 2>/dev/null; then
+        echo "✅ Database is ready!"
+        break
+    fi
+    COUNTER=$((COUNTER + 1))
+    echo "   Attempt $COUNTER/$MAX_TRIES - Database not ready, waiting..."
     sleep 2
 done
-echo "✅ Database is ready!"
+
+if [ $COUNTER -eq $MAX_TRIES ]; then
+    echo "⚠️ Warning: Could not connect to database after $MAX_TRIES attempts"
+    echo "   Continuing anyway... migrations may fail"
+fi
 
 # Run migrations
 echo "📦 Running migrations..."
-php artisan migrate --force
+php artisan migrate --force || echo "⚠️ Migration failed or skipped"
 
 # Clear and cache config
 echo "🔧 Optimizing application..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 
 # Create storage link
 php artisan storage:link 2>/dev/null || true
