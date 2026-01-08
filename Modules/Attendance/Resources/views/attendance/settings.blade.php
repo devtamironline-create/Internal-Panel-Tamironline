@@ -23,7 +23,7 @@
         <!-- Work Hours -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <h3 class="text-lg font-bold text-gray-900 mb-4">ساعات کاری</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">ساعت شروع کار</label>
                     <input type="time" name="work_start_time" value="{{ $settings->work_start_time }}"
@@ -39,6 +39,12 @@
                     <input type="number" name="late_tolerance_minutes" value="{{ $settings->late_tolerance_minutes }}" min="0"
                         class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" required>
                     <p class="text-xs text-gray-500 mt-1">تاخیر تا این مدت ثبت نمی‌شود</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">مدت نهار (دقیقه)</label>
+                    <input type="number" name="lunch_duration_minutes" value="{{ $settings->lunch_duration_minutes ?? 30 }}" min="0" max="120"
+                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" required>
+                    <p class="text-xs text-gray-500 mt-1">مدت زمان مجاز برای نهار</p>
                 </div>
             </div>
         </div>

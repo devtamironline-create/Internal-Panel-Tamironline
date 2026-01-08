@@ -15,6 +15,8 @@ Route::middleware(['web', 'auth'])->prefix('attendance')->group(function () {
     Route::get('/', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.check-in');
     Route::post('/check-out', [AttendanceController::class, 'checkOut'])->name('attendance.check-out');
+    Route::post('/lunch-start', [AttendanceController::class, 'startLunch'])->name('attendance.lunch-start');
+    Route::post('/lunch-end', [AttendanceController::class, 'endLunch'])->name('attendance.lunch-end');
     Route::get('/history', [AttendanceController::class, 'history'])->name('attendance.history');
 
     // Admin routes

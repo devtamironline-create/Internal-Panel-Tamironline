@@ -74,6 +74,8 @@ class SalarySettingController extends Controller
     public function updateEmployee(Request $request, User $user)
     {
         $validated = $request->validate([
+            'work_start_time' => 'nullable|date_format:H:i',
+            'work_end_time' => 'nullable|date_format:H:i',
             'daily_agreed_wage' => 'required|numeric|min:0',
             'daily_insurance_wage' => 'required|numeric|min:0',
             'daily_declared_wage' => 'required|numeric|min:0',
@@ -84,6 +86,14 @@ class SalarySettingController extends Controller
             'bank_account' => 'nullable|string|max:50',
             'sheba_number' => 'nullable|string|max:30',
         ]);
+
+        // Handle empty time values
+        if (empty($validated['work_start_time'])) {
+            $validated['work_start_time'] = null;
+        }
+        if (empty($validated['work_end_time'])) {
+            $validated['work_end_time'] = null;
+        }
 
         $employeeSetting = EmployeeSetting::getOrCreate($user->id);
         $employeeSetting->update($validated);

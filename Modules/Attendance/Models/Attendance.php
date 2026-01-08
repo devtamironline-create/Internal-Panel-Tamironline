@@ -20,6 +20,9 @@ class Attendance extends Model
         'check_out_ip',
         'check_out_location',
         'check_out_selfie',
+        'lunch_start',
+        'lunch_end',
+        'lunch_minutes',
         'late_minutes',
         'early_leave_minutes',
         'overtime_minutes',
@@ -145,6 +148,11 @@ class Attendance extends Model
             throw new \Exception('قبلا خروج ثبت شده است');
         }
 
+        // Can't check out while on lunch
+        if ($attendance->lunch_start && !$attendance->lunch_end) {
+            throw new \Exception('ابتدا باید پایان نهار را ثبت کنید');
+        }
+
         $now = now();
         $settings = AttendanceSetting::get();
         $employeeSettings = EmployeeSetting::getOrCreate($userId);
@@ -161,9 +169,9 @@ class Attendance extends Model
             $overtimeMinutes = $now->diffInMinutes($workEndTime);
         }
 
-        // Calculate total work minutes
+        // Calculate total work minutes (minus lunch time)
         $checkInTime = \Carbon\Carbon::createFromTimeString($attendance->check_in);
-        $workMinutes = $now->diffInMinutes($checkInTime);
+        $workMinutes = $now->diffInMinutes($checkInTime) - $attendance->lunch_minutes;
 
         $attendance->update([
             'check_out' => $now->format('H:i:s'),
@@ -177,5 +185,83 @@ class Attendance extends Model
         ]);
 
         return $attendance;
+    }
+
+    public static function startLunch(int $userId): self
+    {
+        $attendance = self::where('user_id', $userId)
+            ->where('date', today())
+            ->first();
+
+        if (!$attendance || !$attendance->check_in) {
+            throw new \Exception('ابتدا باید ورود ثبت شود');
+        }
+
+        if ($attendance->check_out) {
+            throw new \Exception('خروج ثبت شده است');
+        }
+
+        if ($attendance->lunch_start) {
+            throw new \Exception('قبلا شروع نهار ثبت شده است');
+        }
+
+        $attendance->update([
+            'lunch_start' => now()->format('H:i:s'),
+        ]);
+
+        return $attendance;
+    }
+
+    public static function endLunch(int $userId): self
+    {
+        $attendance = self::where('user_id', $userId)
+            ->where('date', today())
+            ->first();
+
+        if (!$attendance || !$attendance->lunch_start) {
+            throw new \Exception('ابتدا باید شروع نهار ثبت شود');
+        }
+
+        if ($attendance->lunch_end) {
+            throw new \Exception('قبلا پایان نهار ثبت شده است');
+        }
+
+        $now = now();
+        $lunchStartTime = \Carbon\Carbon::createFromTimeString($attendance->lunch_start);
+        $lunchMinutes = $now->diffInMinutes($lunchStartTime);
+
+        // Get allowed lunch duration
+        $settings = AttendanceSetting::get();
+        $allowedLunchMinutes = $settings->lunch_duration_minutes ?? 30;
+
+        // Calculate extra lunch time (over the allowed duration)
+        $extraLunchMinutes = max(0, $lunchMinutes - $allowedLunchMinutes);
+
+        $attendance->update([
+            'lunch_end' => $now->format('H:i:s'),
+            'lunch_minutes' => $lunchMinutes,
+        ]);
+
+        return $attendance;
+    }
+
+    public function getIsOnLunchAttribute(): bool
+    {
+        return $this->lunch_start && !$this->lunch_end;
+    }
+
+    public function getLunchTimeAttribute(): string
+    {
+        if (!$this->lunch_minutes) return '-';
+        $hours = intdiv($this->lunch_minutes, 60);
+        $minutes = $this->lunch_minutes % 60;
+        return $hours > 0 ? sprintf('%d:%02d', $hours, $minutes) : "{$minutes} دقیقه";
+    }
+
+    public function getExtraLunchMinutesAttribute(): int
+    {
+        $settings = AttendanceSetting::get();
+        $allowedLunchMinutes = $settings->lunch_duration_minutes ?? 30;
+        return max(0, $this->lunch_minutes - $allowedLunchMinutes);
     }
 }

@@ -18,6 +18,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">کارمند</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">ساعت کاری</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">حقوق توافقی</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">حقوق بیمه‌ای</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">متأهل</th>
@@ -37,6 +38,13 @@
                             </div>
                             <span class="font-medium text-gray-900">{{ $employee->full_name }}</span>
                         </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        @if($es && ($es->work_start_time || $es->work_end_time))
+                            {{ $es->work_start_time ?? '-' }} - {{ $es->work_end_time ?? '-' }}
+                        @else
+                            <span class="text-gray-400">پیش‌فرض</span>
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
                         {{ $es && $es->daily_agreed_wage ? number_format($es->daily_agreed_wage) : '-' }}
@@ -61,7 +69,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">کارمندی یافت نشد</td>
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">کارمندی یافت نشد</td>
                 </tr>
                 @endforelse
             </tbody>

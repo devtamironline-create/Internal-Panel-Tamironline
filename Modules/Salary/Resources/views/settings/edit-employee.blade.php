@@ -18,8 +18,27 @@
             @csrf
             @method('PUT')
 
-            <!-- Wages -->
+            <!-- Work Schedule -->
             <div class="space-y-4">
+                <h3 class="font-medium text-gray-900 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    ساعت کاری (اختیاری)
+                </h3>
+                <p class="text-xs text-gray-500 -mt-2">در صورت خالی بودن، از تنظیمات پیش‌فرض استفاده می‌شود</p>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ساعت شروع کار</label>
+                        <input type="time" name="work_start_time" value="{{ old('work_start_time', $employeeSetting->work_start_time) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ساعت پایان کار</label>
+                        <input type="time" name="work_end_time" value="{{ old('work_end_time', $employeeSetting->work_end_time) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wages -->
+            <div class="space-y-4 pt-4 border-t border-gray-100">
                 <h3 class="font-medium text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     حقوق پایه (روزانه)

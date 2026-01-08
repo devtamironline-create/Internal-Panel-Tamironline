@@ -10,6 +10,7 @@ class AttendanceSetting extends Model
         'work_start_time',
         'work_end_time',
         'late_tolerance_minutes',
+        'lunch_duration_minutes',
         'verification_methods',
         'allowed_ips',
         'allowed_location_lat',
@@ -37,6 +38,7 @@ class AttendanceSetting extends Model
             'work_start_time' => '08:00:00',
             'work_end_time' => '17:00:00',
             'late_tolerance_minutes' => 15,
+            'lunch_duration_minutes' => 30,
             'verification_methods' => ['trust'],
             'working_days' => [0, 1, 2, 3, 4],
         ]);
