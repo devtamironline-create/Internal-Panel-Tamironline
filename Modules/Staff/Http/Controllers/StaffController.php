@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class StaffController extends Controller
 {
@@ -41,7 +42,7 @@ class StaffController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::staff()->with('permissions');
+        $query = User::staff()->with('roles');
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -58,28 +59,9 @@ class StaffController extends Controller
 
     public function create()
     {
-        // Get all permissions grouped by category
-        $allPermissions = Permission::all();
-        $permissions = [
-            'پرسنل' => $allPermissions->filter(fn($p) => str_contains($p->name, 'staff')),
-            'حضور و غیاب' => $allPermissions->filter(fn($p) => str_contains($p->name, 'attendance')),
-            'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
-            'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
-            'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
-            'OKR' => $allPermissions->filter(fn($p) => str_contains($p->name, 'okr')),
-            'سایر' => $allPermissions->filter(fn($p) =>
-                !str_contains($p->name, 'staff') &&
-                !str_contains($p->name, 'attendance') &&
-                !str_contains($p->name, 'leave') &&
-                !str_contains($p->name, 'task') &&
-                !str_contains($p->name, 'team') &&
-                !str_contains($p->name, 'okr')
-            ),
-        ];
+        $roles = Role::with('permissions')->get();
 
-        $userPermissions = [];
-
-        return view('staff::create', compact('permissions', 'userPermissions'));
+        return view('staff::create', compact('roles'));
     }
 
     public function store(Request $request)
@@ -91,8 +73,7 @@ class StaffController extends Controller
             'email' => 'nullable|email|unique:users',
             'password' => 'required|min:8|confirmed',
             'is_active' => 'boolean',
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'exists:permissions,name',
+            'role' => 'nullable|exists:roles,name',
         ]);
 
         $user = User::create([
@@ -106,8 +87,8 @@ class StaffController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        // Assign permissions directly to user
-        $user->syncPermissions($validated['permissions'] ?? []);
+        // Assign role to user
+        $user->syncRoles($validated['role'] ?? 'staff');
 
         return redirect()->route('admin.staff.index')->with('success', 'پرسنل جدید ایجاد شد');
     }
@@ -116,29 +97,10 @@ class StaffController extends Controller
     {
         if (!$staff->is_staff) abort(404);
 
-        // Get all permissions grouped by category
-        $allPermissions = Permission::all();
-        $permissions = [
-            'پرسنل' => $allPermissions->filter(fn($p) => str_contains($p->name, 'staff')),
-            'حضور و غیاب' => $allPermissions->filter(fn($p) => str_contains($p->name, 'attendance')),
-            'مرخصی' => $allPermissions->filter(fn($p) => str_contains($p->name, 'leave')),
-            'تسک‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'task')),
-            'تیم‌ها' => $allPermissions->filter(fn($p) => str_contains($p->name, 'team')),
-            'OKR' => $allPermissions->filter(fn($p) => str_contains($p->name, 'okr')),
-            'سایر' => $allPermissions->filter(fn($p) =>
-                !str_contains($p->name, 'staff') &&
-                !str_contains($p->name, 'attendance') &&
-                !str_contains($p->name, 'leave') &&
-                !str_contains($p->name, 'task') &&
-                !str_contains($p->name, 'team') &&
-                !str_contains($p->name, 'okr')
-            ),
-        ];
+        $roles = Role::with('permissions')->get();
+        $userRole = $staff->roles->first()?->name ?? 'staff';
 
-        // Get user's direct permissions
-        $userPermissions = $staff->getDirectPermissions()->pluck('name')->toArray();
-
-        return view('staff::edit', compact('staff', 'permissions', 'userPermissions'));
+        return view('staff::edit', compact('staff', 'roles', 'userRole'));
     }
 
     public function update(Request $request, User $staff)
@@ -152,8 +114,7 @@ class StaffController extends Controller
             'email' => 'nullable|email|unique:users,email,' . $staff->id,
             'password' => 'nullable|min:8|confirmed',
             'is_active' => 'boolean',
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'exists:permissions,name',
+            'role' => 'nullable|exists:roles,name',
         ]);
 
         $staff->update([
@@ -168,8 +129,8 @@ class StaffController extends Controller
             $staff->update(['password' => Hash::make($validated['password'])]);
         }
 
-        // Sync permissions directly to user
-        $staff->syncPermissions($validated['permissions'] ?? []);
+        // Sync role
+        $staff->syncRoles($validated['role'] ?? 'staff');
 
         return redirect()->route('admin.staff.index')->with('success', 'اطلاعات بروزرسانی شد');
     }

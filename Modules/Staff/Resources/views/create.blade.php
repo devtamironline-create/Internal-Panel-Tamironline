@@ -54,32 +54,31 @@
                 <label for="is_active" class="text-gray-700">حساب فعال باشد</label>
             </div>
 
-            @if(isset($permissions))
-            <!-- Permissions Section -->
+            @if(isset($roles))
+            <!-- Role Section -->
             <div class="pt-6 border-t border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">دسترسی‌ها</h3>
-                <p class="text-sm text-gray-500 mb-4">دسترسی‌هایی که به این کاربر اختصاص می‌یابد</p>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">سطح دسترسی</h3>
+                <p class="text-sm text-gray-500 mb-4">نقش کاربر در سیستم</p>
 
-                <div class="space-y-6">
-                    @foreach($permissions as $category => $categoryPermissions)
-                        @if($categoryPermissions->count() > 0)
-                        <div>
-                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-brand-500"></span>
-                                {{ $category }}
-                            </h4>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                @foreach($categoryPermissions as $permission)
-                                <label class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                                    <input type="checkbox" name="permissions[]" value="{{ $permission->name }}"
-                                        class="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500"
-                                        {{ in_array($permission->name, old('permissions', $userPermissions ?? [])) ? 'checked' : '' }}>
-                                    <span class="text-sm text-gray-700">{{ \Modules\Staff\Http\Controllers\StaffController::getPermissionLabel($permission->name) }}</span>
-                                </label>
-                                @endforeach
-                            </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    @foreach($roles as $role)
+                    @php
+                        $roleLabels = [
+                            'admin' => 'مدیر سیستم',
+                            'manager' => 'مدیر',
+                            'supervisor' => 'سرپرست',
+                            'staff' => 'کارمند',
+                        ];
+                    @endphp
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="role" value="{{ $role->name }}"
+                            class="peer sr-only"
+                            {{ old('role', 'staff') === $role->name ? 'checked' : '' }}>
+                        <div class="p-4 border-2 rounded-xl transition peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:bg-gray-50">
+                            <div class="font-medium text-gray-900">{{ $roleLabels[$role->name] ?? $role->name }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ $role->permissions->count() }} دسترسی</div>
                         </div>
-                        @endif
+                    </label>
                     @endforeach
                 </div>
             </div>
