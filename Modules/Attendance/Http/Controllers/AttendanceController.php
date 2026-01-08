@@ -171,6 +171,56 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Start Lunch Break
+     */
+    public function startLunch(Request $request)
+    {
+        try {
+            $attendance = Attendance::startLunch(auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'شروع نهار ثبت شد',
+                'attendance' => $attendance
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * End Lunch Break
+     */
+    public function endLunch(Request $request)
+    {
+        try {
+            $attendance = Attendance::endLunch(auth()->id());
+            $settings = AttendanceSetting::get();
+
+            $message = 'پایان نهار ثبت شد - مدت: ' . $attendance->lunch_time;
+            if ($attendance->extra_lunch_minutes > 0) {
+                $message .= ' - اضافه نهار: ' . $attendance->extra_lunch_minutes . ' دقیقه';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'attendance' => $attendance
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
      * History - Show attendance history
      */
     public function history(Request $request)
@@ -266,6 +316,7 @@ class AttendanceController extends Controller
             'work_start_time' => $request->work_start_time,
             'work_end_time' => $request->work_end_time,
             'late_tolerance_minutes' => $request->late_tolerance_minutes,
+            'lunch_duration_minutes' => $request->lunch_duration_minutes ?? 30,
             'verification_methods' => $request->verification_methods ?? ['trust'],
             'allowed_ips' => $request->allowed_ips ? array_filter(explode("\n", str_replace("\r", "", $request->allowed_ips))) : null,
             'allowed_location_lat' => $request->allowed_location_lat,
