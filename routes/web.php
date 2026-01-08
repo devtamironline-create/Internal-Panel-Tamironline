@@ -7,6 +7,31 @@ use Modules\Staff\Http\Controllers\StaffController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\RoleController;
 
+// Health Check for Coolify/Docker
+Route::get('/health', function () {
+    $status = ['status' => 'ok', 'timestamp' => now()->toISOString()];
+
+    // Check database
+    try {
+        \DB::connection()->getPdo();
+        $status['database'] = 'ok';
+    } catch (\Exception $e) {
+        $status['database'] = 'error';
+        $status['status'] = 'degraded';
+    }
+
+    // Check redis
+    try {
+        \Illuminate\Support\Facades\Redis::ping();
+        $status['redis'] = 'ok';
+    } catch (\Exception $e) {
+        $status['redis'] = 'error';
+        $status['status'] = 'degraded';
+    }
+
+    return response()->json($status, $status['status'] === 'ok' ? 200 : 503);
+})->name('health');
+
 // Home - redirect to admin login
 Route::get('/', function () {
     if (auth()->check()) {

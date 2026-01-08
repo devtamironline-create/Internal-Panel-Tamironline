@@ -76,6 +76,10 @@ RUN mkdir -p /var/log/supervisor \
 # Expose port
 EXPOSE 80
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
 # Start script
 COPY docker/start.sh /start.sh
 RUN chmod +x /start.sh
