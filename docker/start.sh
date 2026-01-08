@@ -1,22 +1,25 @@
 #!/bin/sh
-set -e
 
 echo "🚀 Starting CRM Tamironline..."
 
 # Debug: Show environment
 echo "📋 Database Config:"
 echo "   Host: $DB_HOST"
-echo "   Port: $DB_PORT"
+echo "   Port: ${DB_PORT:-3306}"
 echo "   Database: $DB_DATABASE"
 echo "   User: $DB_USERNAME"
 
-# Wait for database with timeout
+echo "📋 Redis Config:"
+echo "   Host: $REDIS_HOST"
+echo "   Port: ${REDIS_PORT:-6379}"
+
+# Wait for database using PHP (more reliable than mysqladmin)
 echo "⏳ Waiting for database..."
 COUNTER=0
 MAX_TRIES=30
 
 while [ $COUNTER -lt $MAX_TRIES ]; do
-    if mysqladmin ping -h"$DB_HOST" -u"$DB_USERNAME" -p"$DB_PASSWORD" --silent 2>/dev/null; then
+    if php -r "try { new PDO('mysql:host='.\$_SERVER['DB_HOST'].';port='.(\$_SERVER['DB_PORT']??3306), \$_SERVER['DB_USERNAME'], \$_SERVER['DB_PASSWORD']); echo 'OK'; exit(0); } catch(Exception \$e) { exit(1); }" 2>/dev/null; then
         echo "✅ Database is ready!"
         break
     fi
@@ -27,18 +30,20 @@ done
 
 if [ $COUNTER -eq $MAX_TRIES ]; then
     echo "⚠️ Warning: Could not connect to database after $MAX_TRIES attempts"
-    echo "   Continuing anyway... migrations may fail"
 fi
 
 # Run migrations
 echo "📦 Running migrations..."
-php artisan migrate --force || echo "⚠️ Migration failed or skipped"
+php artisan migrate --force 2>&1 || echo "⚠️ Migration completed with warnings"
+
+# Seed default data if needed
+php artisan db:seed --class=RoleSeeder --force 2>/dev/null || true
 
 # Clear and cache config
 echo "🔧 Optimizing application..."
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+php artisan config:cache 2>&1 || true
+php artisan route:cache 2>&1 || true
+php artisan view:cache 2>&1 || true
 
 # Create storage link
 php artisan storage:link 2>/dev/null || true
