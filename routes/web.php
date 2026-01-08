@@ -11,25 +11,26 @@ use App\Http\Controllers\Admin\RoleController;
 Route::get('/health', function () {
     $status = ['status' => 'ok', 'timestamp' => now()->toISOString()];
 
-    // Check database
+    // Check database (required)
     try {
         \DB::connection()->getPdo();
         $status['database'] = 'ok';
     } catch (\Exception $e) {
         $status['database'] = 'error';
-        $status['status'] = 'degraded';
+        $status['status'] = 'error';
     }
 
-    // Check redis
+    // Check redis (optional - don't fail health check if redis is down)
     try {
         \Illuminate\Support\Facades\Redis::ping();
         $status['redis'] = 'ok';
     } catch (\Exception $e) {
-        $status['redis'] = 'error';
-        $status['status'] = 'degraded';
+        $status['redis'] = 'unavailable';
+        // Don't mark as error - redis is optional when using file session/cache
     }
 
-    return response()->json($status, $status['status'] === 'ok' ? 200 : 503);
+    // Return 200 if database is ok, 503 only if database fails
+    return response()->json($status, $status['database'] === 'ok' ? 200 : 503);
 })->name('health');
 
 // Home - redirect to admin login
