@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('page-title', 'داشبورد') | تعمیرآنلاین</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/vendor/js/tailwind.min.js"></script>
+    <script src="/vendor/js/apexcharts.min.js"></script>
+    <script defer src="/vendor/js/alpine-collapse.min.js"></script>
+    <script defer src="/vendor/js/alpine.min.js"></script>
+    <link rel="stylesheet" href="/vendor/css/apexcharts.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -72,7 +72,7 @@
             color: #ffffff;
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@latest/dist/css/persian-datepicker.min.css">
+    <link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">
     @stack('styles')
 </head>
 <body
@@ -395,9 +395,9 @@
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-date@latest/dist/persian-date.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@latest/dist/js/persian-datepicker.min.js"></script>
+    <script src="/vendor/js/jquery.min.js"></script>
+    <script src="/vendor/js/persian-date.min.js"></script>
+    <script src="/vendor/js/persian-datepicker.min.js"></script>
     <script>
         $(document).ready(function() {
             $('.jalali-datepicker').persianDatepicker({
@@ -423,7 +423,7 @@
         });
     </script>
 
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="/vendor/tinymce/tinymce.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             tinymce.init({

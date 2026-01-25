@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('page-title', 'پنل کاربری') | Hostlino</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/vendor/js/tailwind.min.js"></script>
+    <script defer src="/vendor/js/alpine.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
