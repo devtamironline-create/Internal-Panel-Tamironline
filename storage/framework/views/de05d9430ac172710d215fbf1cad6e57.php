@@ -18,6 +18,16 @@
                         </div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($today->lunch_start): ?>
+                        <div class="text-center px-4 py-2 <?php echo e($today->is_on_lunch ? 'bg-orange-50' : 'bg-amber-50'); ?> rounded-lg">
+                            <span class="block text-xs text-gray-500">نهار</span>
+                            <span class="text-lg font-bold <?php echo e($today->is_on_lunch ? 'text-orange-600' : 'text-amber-600'); ?>">
+                                <?php echo e($today->lunch_start); ?> <?php echo e($today->lunch_end ? '- ' . $today->lunch_end : '(در حال نهار)'); ?>
+
+                            </span>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($today->check_out): ?>
                         <div class="text-center px-4 py-2 bg-blue-50 rounded-lg">
                             <span class="block text-xs text-gray-500">خروج</span>
@@ -57,20 +67,56 @@
                     ثبت ورود
                 </button>
             <?php elseif(!$today->check_out): ?>
-                <button
-                    @click="checkOut()"
-                    :disabled="loading"
-                    class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                    <svg x-show="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
-                    <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    ثبت خروج
-                </button>
+                
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($today->is_on_lunch): ?>
+                    
+                    <button
+                        @click="endLunch()"
+                        :disabled="loading"
+                        class="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        <svg x-show="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        پایان نهار
+                    </button>
+                <?php else: ?>
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$today->lunch_start): ?>
+                        <button
+                            @click="startLunch()"
+                            :disabled="loading"
+                            class="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            <svg x-show="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            شروع نهار
+                        </button>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <button
+                        @click="checkOut()"
+                        :disabled="loading"
+                        class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        <svg x-show="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        ثبت خروج
+                    </button>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             <?php else: ?>
                 <div class="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg">
                     <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +134,7 @@
     </div>
 
     <!-- Work Settings Info -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-4">
                 <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
@@ -99,6 +145,20 @@
                 <div>
                     <p class="text-sm text-gray-500">ساعت کاری</p>
                     <p class="text-lg font-bold text-gray-900"><?php echo e($employeeSettings->getWorkStartTime()); ?> - <?php echo e($employeeSettings->getWorkEndTime()); ?></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
+                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">مدت نهار</p>
+                    <p class="text-lg font-bold text-gray-900"><?php echo e($settings->lunch_duration_minutes ?? 30); ?> دقیقه</p>
                 </div>
             </div>
         </div>
@@ -313,6 +373,64 @@ function attendanceApp() {
             } catch (error) {
                 this.success = false;
                 this.message = 'خطا در ثبت خروج';
+            }
+
+            this.loading = false;
+        },
+
+        async startLunch() {
+            this.loading = true;
+            this.message = '';
+
+            try {
+                const response = await fetch('<?php echo e(route("attendance.lunch-start")); ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                this.success = data.success;
+                this.message = data.message;
+
+                if (data.success) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (error) {
+                this.success = false;
+                this.message = 'خطا در ثبت شروع نهار';
+            }
+
+            this.loading = false;
+        },
+
+        async endLunch() {
+            this.loading = true;
+            this.message = '';
+
+            try {
+                const response = await fetch('<?php echo e(route("attendance.lunch-end")); ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                this.success = data.success;
+                this.message = data.message;
+
+                if (data.success) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (error) {
+                this.success = false;
+                this.message = 'خطا در ثبت پایان نهار';
             }
 
             this.loading = false;
