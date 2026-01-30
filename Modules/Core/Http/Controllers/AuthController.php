@@ -134,6 +134,76 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Login with username/mobile and password
+     */
+    public function loginWithPassword(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string|min:6',
+            'is_admin' => ['sometimes', 'boolean'],
+        ], [
+            'username.required' => 'نام کاربری یا موبایل الزامی است',
+            'password.required' => 'رمز عبور الزامی است',
+            'password.min' => 'رمز عبور باید حداقل ۶ کاراکتر باشد',
+        ]);
+
+        $username = $request->input('username');
+        $password = $request->input('password');
+        $isAdmin = $request->boolean('is_admin');
+
+        // Find user by mobile or username
+        $user = User::where('mobile', $username)
+            ->orWhere('username', $username)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کاربری با این مشخصات یافت نشد'
+            ], 422);
+        }
+
+        // Check password
+        if (!$user->password || !\Hash::check($password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'رمز عبور اشتباه است'
+            ], 422);
+        }
+
+        // Admin login checks
+        if ($isAdmin) {
+            if (!$user->isStaff()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'شما دسترسی به پنل مدیریت ندارید'
+                ], 403);
+            }
+        }
+
+        if (!$user->isActive()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حساب کاربری شما غیرفعال شده است'
+            ], 403);
+        }
+
+        $user->recordLogin($request->ip());
+        Auth::login($user, true);
+
+        $redirectUrl = $user->isStaff()
+            ? route('admin.dashboard')
+            : route('panel.dashboard');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ورود موفق',
+            'redirect' => $redirectUrl
+        ]);
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

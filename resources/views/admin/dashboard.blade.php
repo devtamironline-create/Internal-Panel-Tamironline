@@ -315,21 +315,21 @@
             @canany(['view-teams', 'manage-teams'])
             @if(isset($stats['teams']) && $stats['teams']->count() > 0)
             <!-- Teams Overview -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">تیم‌ها</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">تیم‌ها</h3>
                     <a href="{{ route('teams.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مشاهده همه</a>
                 </div>
                 <div class="space-y-3">
                     @foreach($stats['teams']->take(5) as $team)
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold" style="background-color: {{ $team->color }}">
                                 {{ mb_substr($team->name, 0, 1) }}
                             </div>
-                            <span class="font-medium text-gray-900">{{ $team->name }}</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ $team->name }}</span>
                         </div>
-                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                             <span>{{ $team->members_count }} عضو</span>
                             <span class="w-1 h-1 rounded-full bg-gray-300"></span>
                             <span>{{ $team->tasks_count }} تسک</span>
@@ -340,6 +340,66 @@
             </div>
             @endif
             @endcanany
+
+            <!-- Birthdays Widget -->
+            @if(isset($stats['birthdays']))
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-50 dark:bg-pink-900/30">
+                        <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">تولدها</h3>
+                </div>
+
+                @if(count($stats['birthdays']['today']) > 0)
+                <div class="mb-4">
+                    @foreach($stats['birthdays']['today'] as $birthday)
+                    <div class="p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white text-lg font-bold animate-pulse">
+                                🎂
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-gray-900 dark:text-white">{{ $birthday['name'] }}</p>
+                                <p class="text-sm text-pink-600 dark:text-pink-400">
+                                    امروز {{ $birthday['age'] }} ساله می‌شود! 🎉
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
+                @if(count($stats['birthdays']['upcoming']) > 0)
+                <div class="space-y-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">تولدهای پیش رو:</p>
+                    @foreach($stats['birthdays']['upcoming'] as $birthday)
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 text-sm">
+                                🎂
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-900 dark:text-white text-sm">{{ $birthday['name'] }}</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $birthday['jalali_date'] }}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-full">
+                            {{ $birthday['days_until'] }} روز دیگر
+                        </span>
+                    </div>
+                    @endforeach
+                </div>
+                @elseif(count($stats['birthdays']['today']) === 0)
+                <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                    تولدی در هفته آینده نیست
+                </p>
+                @endif
+            </div>
+            @endif
         </div>
     </div>
 </div>

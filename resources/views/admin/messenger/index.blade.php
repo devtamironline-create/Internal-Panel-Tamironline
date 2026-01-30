@@ -124,13 +124,31 @@
         <template x-if="currentConversation">
             <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
                 <template x-for="msg in messages" :key="msg.id">
-                    <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'">
-                        <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="max-w-md rounded-2xl px-4 py-3">
+                    <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group">
+                        <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="relative max-w-md rounded-2xl px-4 py-3">
                             <template x-if="currentConversation?.type === 'group' && !msg.is_mine">
                                 <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
                             </template>
-                            <p class="text-sm leading-relaxed" x-text="msg.content"></p>
+                            <!-- File attachment -->
+                            <template x-if="msg.type === 'file' || msg.type === 'image'">
+                                <div class="mb-2">
+                                    <template x-if="msg.type === 'image'">
+                                        <img :src="'/storage/' + msg.file_path" class="max-w-full rounded-lg cursor-pointer" @click="window.open('/storage/' + msg.file_path, '_blank')">
+                                    </template>
+                                    <template x-if="msg.type === 'file'">
+                                        <a :href="'/storage/' + msg.file_path" target="_blank" class="flex items-center gap-2 p-2 bg-white/10 dark:bg-gray-600 rounded-lg">
+                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                            <span class="text-sm" x-text="msg.file_name"></span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+                            <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
                             <p class="text-xs mt-1 opacity-60 text-left" x-text="msg.time"></p>
+                            <!-- Copy button -->
+                            <button @click="copyMessage(msg.content)" class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-700 rounded-lg shadow transition" title="کپی متن">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
                         </div>
                     </div>
                 </template>
@@ -141,7 +159,8 @@
         <template x-if="currentConversation">
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div class="flex items-center gap-3">
-                    <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                    <input type="file" x-ref="fileInput" @change="sendFile($event)" class="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar">
+                    <button @click="$refs.fileInput.click()" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
                     <input x-model="newMessage" @keydown.enter="sendMessage()" type="text" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="پیام خود را بنویسید...">
@@ -186,26 +205,79 @@
 
     <!-- New Group Modal -->
     <div x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 shadow-2xl overflow-hidden">
-            <div class="bg-brand-500 text-white p-6 text-center">
-                <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[450px] max-w-[95vw] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 text-center shrink-0">
+                <!-- Group Avatar Upload -->
+                <div class="relative w-20 h-20 mx-auto mb-3">
+                    <div class="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold" x-text="newGroupName?.charAt(0) || '?'">
+                    </div>
+                    <label class="absolute -bottom-1 -right-1 w-8 h-8 bg-white text-brand-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-gray-100 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <input type="file" accept="image/*" class="hidden" @change="handleGroupAvatar($event)">
+                    </label>
+                </div>
                 <h3 class="text-xl font-bold">گروه جدید</h3>
+                <p class="text-sm opacity-80 mt-1">یک گروه برای چت با همکاران بسازید</p>
             </div>
-            <div class="p-4">
-                <input x-model="newGroupName" type="text" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" placeholder="نام گروه">
+
+            <!-- Group Info -->
+            <div class="p-4 space-y-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <input x-model="newGroupName" type="text" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="نام گروه *">
+                <textarea x-model="newGroupDescription" rows="2" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none" placeholder="توضیحات گروه (اختیاری)"></textarea>
             </div>
-            <div class="max-h-60 overflow-y-auto px-4">
+
+            <!-- Group Settings -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3 shrink-0">
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    تنظیمات گروه
+                </h4>
+                <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <input type="checkbox" x-model="groupSettings.onlyAdminsCanSend" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
+                    <div>
+                        <span class="text-gray-900 dark:text-white font-medium">فقط مدیران پیام بفرستند</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">فقط مدیران گروه می‌توانند پیام ارسال کنند</p>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <input type="checkbox" x-model="groupSettings.membersCanAddOthers" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
+                    <div>
+                        <span class="text-gray-900 dark:text-white font-medium">اعضا می‌توانند عضو اضافه کنند</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">همه اعضا می‌توانند افراد جدید دعوت کنند</p>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Members Selection -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            انتخاب اعضا
+                            <span x-show="selectedGroupMembers.length > 0" class="text-brand-500">(<span x-text="selectedGroupMembers.length"></span> نفر)</span>
+                        </h4>
+                        <button @click="selectedGroupMembers = users.map(u => u.id)" class="text-xs text-brand-500 hover:underline">انتخاب همه</button>
+                    </div>
+                </div>
                 <template x-for="user in users" :key="user.id">
-                    <label class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded-lg">
-                        <input type="checkbox" :value="user.id" x-model="selectedGroupMembers" class="w-5 h-5 text-brand-500 rounded">
-                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center font-bold" x-text="user.name?.charAt(0)"></div>
-                        <span class="text-gray-900 dark:text-white" x-text="user.name"></span>
+                    <label class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50">
+                        <input type="checkbox" :value="user.id" x-model="selectedGroupMembers" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300" x-text="user.name?.charAt(0)"></div>
+                        <div class="flex-1">
+                            <span class="text-gray-900 dark:text-white font-medium" x-text="user.name"></span>
+                            <p class="text-xs text-gray-500" x-text="user.role || ''"></p>
+                        </div>
+                        <button @click.prevent="toggleGroupAdmin(user.id)" :class="groupAdmins.includes(user.id) ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'" class="px-2 py-1 text-xs rounded-lg transition" x-show="selectedGroupMembers.includes(user.id)">
+                            <span x-text="groupAdmins.includes(user.id) ? 'مدیر' : 'عضو'"></span>
+                        </button>
                     </label>
                 </template>
             </div>
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                <button @click="showNewGroup = false" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400">انصراف</button>
-                <button @click="createGroup()" :disabled="!newGroupName || selectedGroupMembers.length === 0" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-lg">ایجاد</button>
+
+            <!-- Actions -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 shrink-0 bg-gray-50 dark:bg-gray-900">
+                <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
+                <button @click="createGroup()" :disabled="!newGroupName || selectedGroupMembers.length === 0" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
             </div>
         </div>
     </div>
@@ -278,7 +350,14 @@ function messenger() {
         showPhone: false,
         showNewGroup: false,
         newGroupName: '',
+        newGroupDescription: '',
         selectedGroupMembers: [],
+        groupAdmins: [],
+        groupAvatar: null,
+        groupSettings: {
+            onlyAdminsCanSend: false,
+            membersCanAddOthers: true
+        },
 
         // Call state
         incomingCall: null,
@@ -320,6 +399,7 @@ function messenger() {
                 const newUnread = this.getTotalUnread();
                 if (newUnread > oldUnread) {
                     this.showNotification('پیام جدید', `شما ${newUnread} پیام خوانده نشده دارید`);
+                    this.playNotificationSound();
                 }
 
                 if (this.currentConversation) {
@@ -407,19 +487,48 @@ function messenger() {
                     },
                     body: JSON.stringify({
                         name: this.newGroupName,
-                        member_ids: this.selectedGroupMembers
+                        description: this.newGroupDescription,
+                        member_ids: this.selectedGroupMembers,
+                        admin_ids: this.groupAdmins,
+                        settings: this.groupSettings
                     })
                 });
                 const data = await response.json();
                 if (data.conversation) {
-                    this.showNewGroup = false;
-                    this.newGroupName = '';
-                    this.selectedGroupMembers = [];
+                    this.resetGroupForm();
                     this.currentConversation = data.conversation;
                     await this.loadConversations();
                 }
             } catch (e) {
                 console.error('Error creating group:', e);
+            }
+        },
+
+        resetGroupForm() {
+            this.showNewGroup = false;
+            this.newGroupName = '';
+            this.newGroupDescription = '';
+            this.selectedGroupMembers = [];
+            this.groupAdmins = [];
+            this.groupAvatar = null;
+            this.groupSettings = {
+                onlyAdminsCanSend: false,
+                membersCanAddOthers: true
+            };
+        },
+
+        toggleGroupAdmin(userId) {
+            if (this.groupAdmins.includes(userId)) {
+                this.groupAdmins = this.groupAdmins.filter(id => id !== userId);
+            } else {
+                this.groupAdmins.push(userId);
+            }
+        },
+
+        handleGroupAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.groupAvatar = file;
             }
         },
 
@@ -449,6 +558,55 @@ function messenger() {
         scrollToBottom() {
             const container = this.$refs.messagesContainer;
             if (container) container.scrollTop = container.scrollHeight;
+        },
+
+        async sendFile(event) {
+            const file = event.target.files[0];
+            if (!file || !this.currentConversation) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', file.type.startsWith('image/') ? 'image' : 'file');
+
+            try {
+                const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.message) {
+                    this.messages.push(data.message);
+                    this.$nextTick(() => this.scrollToBottom());
+                }
+            } catch (e) {
+                console.error('Error sending file:', e);
+                alert('خطا در ارسال فایل');
+            }
+
+            event.target.value = '';
+        },
+
+        copyMessage(content) {
+            if (!content) return;
+            navigator.clipboard.writeText(content).then(() => {
+                // Show toast notification
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-[200] animate-pulse';
+                toast.textContent = 'متن کپی شد';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        },
+
+        playNotificationSound() {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleAN1qeNzAACy9l0AAMz/LxMl3P8MACX8/wAA');
+            audio.volume = 0.5;
+            audio.play().catch(e => {});
         },
 
         async updatePresence(status) {
@@ -617,15 +775,109 @@ function messenger() {
             }
         },
 
+        async checkMicrophonePermission() {
+            try {
+                // Check if mediaDevices is supported
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    return { granted: false, error: 'مرورگر شما از تماس صوتی پشتیبانی نمی‌کند' };
+                }
+
+                // Check permission status if available
+                if (navigator.permissions) {
+                    try {
+                        const permission = await navigator.permissions.query({ name: 'microphone' });
+                        if (permission.state === 'denied') {
+                            return { granted: false, error: 'دسترسی به میکروفون مسدود شده است. لطفا از تنظیمات مرورگر دسترسی را فعال کنید.' };
+                        }
+                    } catch (e) {
+                        // permissions.query not supported for microphone in some browsers
+                    }
+                }
+
+                return { granted: true };
+            } catch (e) {
+                return { granted: false, error: 'خطا در بررسی دسترسی میکروفون' };
+            }
+        },
+
+        async requestMicrophoneAccess() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // Immediately stop the test stream
+                stream.getTracks().forEach(track => track.stop());
+                return { granted: true };
+            } catch (e) {
+                if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+                    return { granted: false, error: 'دسترسی به میکروفون رد شد. برای برقراری تماس نیاز به اجازه میکروفون است.' };
+                } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+                    return { granted: false, error: 'میکروفونی یافت نشد. لطفا میکروفون خود را بررسی کنید.' };
+                } else if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
+                    return { granted: false, error: 'میکروفون در دسترس نیست. ممکن است برنامه دیگری از آن استفاده کند.' };
+                }
+                return { granted: false, error: 'خطا در دسترسی به میکروفون: ' + e.message };
+            }
+        },
+
+        showMicrophoneError(message) {
+            // Create toast notification for microphone error
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-red-600 text-white p-4 rounded-xl shadow-lg z-[200] animate-pulse';
+            toast.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    </svg>
+                    <div>
+                        <p class="font-bold">خطای میکروفون</p>
+                        <p class="text-sm opacity-90">${message}</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="mr-auto text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 8000);
+        },
+
         async setupWebRTC(isInitiator, remoteUserId) {
             try {
-                this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // Check microphone permission first
+                const permCheck = await this.checkMicrophonePermission();
+                if (!permCheck.granted) {
+                    this.showMicrophoneError(permCheck.error);
+                    this.cleanupCall();
+                    return;
+                }
+
+                // Request microphone access with error handling
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        },
+                        video: false
+                    });
+                } catch (e) {
+                    const accessResult = await this.requestMicrophoneAccess();
+                    if (!accessResult.granted) {
+                        this.showMicrophoneError(accessResult.error);
+                        this.cleanupCall();
+                        return;
+                    }
+                    // Retry after permission check
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                }
+
                 this.$refs.localAudio.srcObject = this.localStream;
 
                 this.peerConnection = new RTCPeerConnection({
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
                     ]
                 });
 
@@ -643,6 +895,13 @@ function messenger() {
                     }
                 };
 
+                this.peerConnection.onconnectionstatechange = () => {
+                    if (this.peerConnection.connectionState === 'failed') {
+                        this.showMicrophoneError('اتصال قطع شد. لطفا دوباره تلاش کنید.');
+                        this.cleanupCall();
+                    }
+                };
+
                 if (isInitiator && remoteUserId) {
                     const offer = await this.peerConnection.createOffer();
                     await this.peerConnection.setLocalDescription(offer);
@@ -650,7 +909,7 @@ function messenger() {
                 }
             } catch (e) {
                 console.error('Error setting up WebRTC:', e);
-                alert('خطا در دسترسی به میکروفون');
+                this.showMicrophoneError('خطا در برقراری تماس. لطفا دوباره تلاش کنید.');
                 this.cleanupCall();
             }
         },

@@ -107,20 +107,43 @@ class ChatController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:500',
             'member_ids' => 'required|array|min:1',
             'member_ids.*' => 'exists:users,id',
+            'admin_ids' => 'nullable|array',
+            'admin_ids.*' => 'exists:users,id',
+            'settings' => 'nullable|array',
+            'settings.onlyAdminsCanSend' => 'nullable|boolean',
+            'settings.membersCanAddOthers' => 'nullable|boolean',
         ]);
+
+        // Prepare settings
+        $settings = [
+            'only_admins_can_send' => $request->input('settings.onlyAdminsCanSend', false),
+            'members_can_add_others' => $request->input('settings.membersCanAddOthers', true),
+        ];
 
         $conversation = Conversation::createGroup(
             $request->name,
             auth()->id(),
-            $request->member_ids
+            $request->member_ids,
+            $request->description,
+            $settings
         );
+
+        // Set additional admins
+        if ($request->filled('admin_ids')) {
+            foreach ($request->admin_ids as $adminId) {
+                $conversation->participants()->updateExistingPivot($adminId, [
+                    'is_admin' => true,
+                ]);
+            }
+        }
 
         // Create system message
         Message::createSystem(
             $conversation->id,
-            'گروه ایجاد شد'
+            'گروه «' . $request->name . '» ایجاد شد'
         );
 
         return response()->json([
@@ -249,6 +272,25 @@ class ChatController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Set activity status (meeting, remote, lunch, break, etc.)
+     */
+    public function setActivityStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|in:online,meeting,remote,lunch,break,leave,busy,away',
+        ]);
+
+        $presence = UserPresence::setStatus(auth()->id(), $request->status);
+
+        return response()->json([
+            'success' => true,
+            'status' => $presence->status,
+            'label' => $presence->getStatusLabel(),
+            'color' => $presence->getStatusColor(),
+        ]);
     }
 
     /**

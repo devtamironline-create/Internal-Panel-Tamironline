@@ -3,6 +3,8 @@
 namespace Modules\Attendance\Models;
 
 use App\Models\User;
+use App\Notifications\LeaveRequestApproved;
+use App\Notifications\LeaveRequestRejected;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Morilog\Jalali\Jalalian;
@@ -181,6 +183,10 @@ class LeaveRequest extends Model
         // Update attendance records for these days
         $this->markAttendanceAsLeave();
 
+        // Send notification to user
+        $this->load('approver', 'leaveType');
+        $this->user->notify(new LeaveRequestApproved($this));
+
         return $this;
     }
 
@@ -192,6 +198,10 @@ class LeaveRequest extends Model
             'approved_at' => now(),
             'approval_note' => $note,
         ]);
+
+        // Send notification to user
+        $this->load('approver', 'leaveType');
+        $this->user->notify(new LeaveRequestRejected($this));
 
         return $this;
     }

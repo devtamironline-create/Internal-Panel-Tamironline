@@ -20,19 +20,28 @@
             <div class="w-full max-w-md mx-auto">
                 
                 <div x-data="loginForm()" x-cloak>
-                    <!-- Step 1: Mobile -->
+                    <!-- Step 1: Mobile / Password Selection -->
                     <div x-show="step === 'mobile'" x-transition>
-                        <div class="mb-8">
+                        <div class="mb-6">
                             @if($isAdmin)
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ورود به پنل مدیریت</h1>
-                            <p class="mt-2 text-gray-600 dark:text-gray-400">شماره موبایل ادمین را وارد کنید</p>
                             @else
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ورود / ثبت‌نام</h1>
-                            <p class="mt-2 text-gray-600 dark:text-gray-400">شماره موبایل خود را وارد کنید</p>
                             @endif
                         </div>
-                        
-                        <form @submit.prevent="sendOTP" class="space-y-6">
+
+                        <!-- Login Method Tabs -->
+                        <div class="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                            <button type="button" @click="loginMethod = 'otp'" :class="loginMethod === 'otp' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition">
+                                ورود با کد پیامکی
+                            </button>
+                            <button type="button" @click="loginMethod = 'password'" :class="loginMethod === 'password' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition">
+                                ورود با رمز عبور
+                            </button>
+                        </div>
+
+                        <!-- OTP Login Form -->
+                        <form x-show="loginMethod === 'otp'" @submit.prevent="sendOTP" class="space-y-6">
                             <div>
                                 <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                                     شماره موبایل <span class="text-red-500">*</span>
@@ -49,8 +58,8 @@
                                 <p x-show="errors.mobile" x-text="errors.mobile" class="mt-2 text-sm text-red-600"></p>
                             </div>
                             
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 class="w-full px-5 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 :disabled="loading || !isValidMobile"
                             >
@@ -61,6 +70,50 @@
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                     </svg>
                                     در حال ارسال...
+                                </span>
+                            </button>
+                        </form>
+
+                        <!-- Password Login Form -->
+                        <form x-show="loginMethod === 'password'" @submit.prevent="loginWithPassword" class="space-y-6">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    نام کاربری یا موبایل <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    x-model="username"
+                                    class="w-full px-5 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                    placeholder="نام کاربری یا شماره موبایل"
+                                    :disabled="loading"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    رمز عبور <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    x-model="password"
+                                    class="w-full px-5 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                    placeholder="رمز عبور"
+                                    :disabled="loading"
+                                >
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="w-full px-5 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                :disabled="loading || !username || !password"
+                            >
+                                <span x-show="!loading">ورود</span>
+                                <span x-show="loading" class="flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    در حال بررسی...
                                 </span>
                             </button>
                         </form>
@@ -214,8 +267,11 @@
     function loginForm() {
         return {
             step: 'mobile',
+            loginMethod: 'otp',
             mobile: '',
             code: '',
+            username: '',
+            password: '',
             loading: false,
             timer: 0,
             timerInterval: null,
@@ -224,7 +280,7 @@
             errors: {},
             debugCode: null,
             isAdmin: {{ $isAdmin ? 'true' : 'false' }},
-            
+
             get isValidMobile() { return /^09[0-9]{9}$/.test(this.mobile); },
             get formatTimer() {
                 const m = Math.floor(this.timer / 60);
@@ -290,6 +346,31 @@
                         this.message = data.message;
                         this.messageType = 'error';
                         this.code = '';
+                    }
+                } catch (e) { this.message = 'خطا در برقراری ارتباط'; this.messageType = 'error'; }
+                this.loading = false;
+            },
+
+            async loginWithPassword() {
+                if (!this.username || !this.password || this.loading) return;
+                this.loading = true;
+                this.message = '';
+
+                try {
+                    const res = await fetch('{{ route("auth.login-password") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        body: JSON.stringify({ username: this.username, password: this.password, is_admin: this.isAdmin })
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        this.message = data.message;
+                        this.messageType = 'success';
+                        setTimeout(() => window.location.href = data.redirect, 500);
+                    } else {
+                        this.message = data.message;
+                        this.messageType = 'error';
                     }
                 } catch (e) { this.message = 'خطا در برقراری ارتباط'; this.messageType = 'error'; }
                 this.loading = false;

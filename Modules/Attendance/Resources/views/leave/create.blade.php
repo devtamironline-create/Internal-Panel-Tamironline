@@ -51,7 +51,7 @@
     </div>
     @endif
 
-    <form action="{{ route('leave.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="leaveForm()">
+    <form action="{{ route('leave.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="leaveForm()" x-init="init()" @submit="validateForm($event)">
         @csrf
 
         <!-- Leave Type -->
@@ -137,10 +137,23 @@
 
             </div>
 
+            <!-- Time Error -->
+            <div x-show="isHourly && timeError" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm text-red-600" x-text="timeError"></p>
+            </div>
+
             <!-- Duration display for hourly -->
-            <div x-show="isHourly && hoursCount > 0" class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <p class="text-sm text-gray-600">
-                    مدت مرخصی: <strong class="text-gray-900" x-text="hoursCount + ' ساعت'"></strong>
+            <div x-show="isHourly && hoursCount > 0 && !timeError" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p class="text-sm text-green-700">
+                    مدت مرخصی: <strong x-text="hoursCount + ' ساعت'"></strong>
+                </p>
+            </div>
+
+            <!-- Info for hourly leave -->
+            <div x-show="isHourly" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-sm text-blue-700">
+                    <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    برای مرخصی ساعتی، تاریخ شروع و پایان باید یکسان باشد.
                 </p>
             </div>
         </div>
@@ -204,13 +217,44 @@ function leaveForm() {
         isHourly: false,
         requiresDocument: false,
         hoursCount: 0,
+        timeError: '',
+
+        init() {
+            // Watch for start date changes to sync end date for hourly leave
+            this.$watch('isHourly', (value) => {
+                if (value) {
+                    this.syncDatesForHourly();
+                }
+            });
+        },
 
         onLeaveTypeChange(type) {
             this.isHourly = type.is_hourly;
             this.requiresDocument = type.requires_document;
+            if (this.isHourly) {
+                this.syncDatesForHourly();
+            }
+        },
+
+        syncDatesForHourly() {
+            // For hourly leave, end date should be same as start date
+            const startDate = document.getElementById('start_date');
+            const endDate = document.getElementById('end_date');
+            if (startDate && endDate && startDate.value) {
+                endDate.value = startDate.value;
+            }
+            // Add event listener to sync dates
+            if (startDate) {
+                startDate.addEventListener('change', () => {
+                    if (this.isHourly && endDate) {
+                        endDate.value = startDate.value;
+                    }
+                });
+            }
         },
 
         calculateHours() {
+            this.timeError = '';
             if (!this.startTime || !this.endTime) {
                 this.hoursCount = 0;
                 return;
@@ -222,7 +266,40 @@ function leaveForm() {
             const startMinutes = startH * 60 + startM;
             const endMinutes = endH * 60 + endM;
 
-            this.hoursCount = Math.max(0, (endMinutes - startMinutes) / 60);
+            if (endMinutes <= startMinutes) {
+                this.timeError = 'ساعت پایان باید بعد از ساعت شروع باشد';
+                this.hoursCount = 0;
+                return;
+            }
+
+            this.hoursCount = (endMinutes - startMinutes) / 60;
+        },
+
+        validateForm(event) {
+            if (this.isHourly) {
+                // Check if end date is same as start date
+                const startDate = document.getElementById('start_date')?.value;
+                const endDate = document.getElementById('end_date')?.value;
+                if (startDate && endDate && startDate !== endDate) {
+                    alert('برای مرخصی ساعتی، تاریخ شروع و پایان باید یکسان باشد');
+                    event.preventDefault();
+                    return false;
+                }
+
+                // Check time validation
+                if (this.timeError) {
+                    alert(this.timeError);
+                    event.preventDefault();
+                    return false;
+                }
+
+                if (!this.startTime || !this.endTime) {
+                    alert('لطفا ساعت شروع و پایان را انتخاب کنید');
+                    event.preventDefault();
+                    return false;
+                }
+            }
+            return true;
         }
     };
 }

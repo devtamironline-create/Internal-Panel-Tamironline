@@ -31,10 +31,48 @@
         }
     </script>
     <style>
-        * { font-family: 'Rokh', sans-serif; font-weight: 500; }
+        * { font-family: 'Rokh', system-ui, sans-serif; }
+        body { font-weight: 400; line-height: 1.7; }
+        h1, h2, h3, h4, h5, h6, .font-bold { font-weight: 700; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        strong, b { font-weight: 700; }
+        input, select, textarea, button { font-family: inherit; }
         [x-cloak] { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Improved Typography */
+        .text-sm { font-size: 0.875rem; line-height: 1.5; }
+        .text-xs { font-size: 0.75rem; line-height: 1.4; }
+        .text-lg { font-size: 1.125rem; line-height: 1.6; }
+        .text-xl { font-size: 1.25rem; line-height: 1.5; }
+        .text-2xl { font-size: 1.5rem; line-height: 1.4; }
+
+        /* Dark Mode Global Styles */
+        .dark .bg-white { background-color: #1f2937 !important; }
+        .dark .bg-gray-50 { background-color: #111827 !important; }
+        .dark .bg-gray-100 { background-color: #1f2937 !important; }
+        .dark .text-gray-900 { color: #f9fafb !important; }
+        .dark .text-gray-800 { color: #f3f4f6 !important; }
+        .dark .text-gray-700 { color: #e5e7eb !important; }
+        .dark .text-gray-600 { color: #d1d5db !important; }
+        .dark .border-gray-200 { border-color: #374151 !important; }
+        .dark .border-gray-100 { border-color: #374151 !important; }
+        .dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important; }
+        .dark input, .dark select, .dark textarea {
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        .dark input::placeholder, .dark textarea::placeholder {
+            color: #9ca3af !important;
+        }
+        .dark .rounded-xl.shadow-sm { background-color: #1f2937; }
+        .dark table { background-color: #1f2937; }
+        .dark th { background-color: #374151; color: #f9fafb; }
+        .dark td { color: #e5e7eb; border-color: #374151; }
+        .dark tr:hover td { background-color: #374151; }
+
         .sidebar-menu-item {
             position: relative;
             display: flex;
@@ -73,6 +111,61 @@
         }
     </style>
     <link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">
+    <style>
+        /* Persian Datepicker Dark Mode & Enhancements */
+        .datepicker-container {
+            z-index: 9999 !important;
+            font-family: Vazirmatn, system-ui, sans-serif !important;
+        }
+        .datepicker-container .datepicker-plot-area {
+            border-radius: 12px !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+            border: 1px solid #e5e7eb !important;
+        }
+        .dark .datepicker-container .datepicker-plot-area {
+            background: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        .dark .datepicker-container .datepicker-header {
+            background: #111827 !important;
+            color: #f9fafb !important;
+        }
+        .dark .datepicker-container .month-table,
+        .dark .datepicker-container .year-table {
+            background: #1f2937 !important;
+        }
+        .dark .datepicker-container td,
+        .dark .datepicker-container .header-row-cell,
+        .dark .datepicker-container .btn-today {
+            color: #e5e7eb !important;
+        }
+        .dark .datepicker-container td.selected span,
+        .dark .datepicker-container td.selected-range-head span,
+        .dark .datepicker-container td.selected-range-tail span {
+            background: #3b82f6 !important;
+            color: #fff !important;
+        }
+        .dark .datepicker-container td:hover span {
+            background: #374151 !important;
+        }
+        .dark .datepicker-container .toolbox {
+            background: #111827 !important;
+            border-color: #374151 !important;
+        }
+        .dark .datepicker-container .btn-submit {
+            background: #3b82f6 !important;
+            color: #fff !important;
+        }
+        .datepicker-container .today span {
+            border: 2px solid #3b82f6 !important;
+            border-radius: 50% !important;
+        }
+        .datepicker-container .btn-submit,
+        .datepicker-container .btn-today {
+            border-radius: 6px !important;
+            padding: 6px 12px !important;
+        }
+    </style>
     @stack('styles')
 </head>
 <body
@@ -319,17 +412,73 @@
                         </a>
 
                         <!-- Search -->
-                        <div class="hidden lg:block">
+                        <div class="hidden lg:block" x-data="globalSearch()">
                             <div class="relative">
                                 <span class="absolute top-1/2 right-4 -translate-y-1/2">
                                     <svg class="fill-gray-500" width="20" height="20" viewBox="0 0 20 20"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"/></svg>
                                 </span>
-                                <input type="text" placeholder="جستجو یا تایپ دستور..." class="h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pr-12 pl-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 xl:w-[430px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
+                                <input type="text" x-model="query" @input.debounce.300ms="search()" @focus="showResults = true" @click.away="showResults = false" placeholder="جستجو یا تایپ دستور..." class="h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pr-12 pl-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 xl:w-[430px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
+
+                                <!-- Search Results Dropdown -->
+                                <div x-show="showResults && (results.length > 0 || loading)" x-transition class="absolute top-full right-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                                    <div x-show="loading" class="p-4 text-center text-gray-500">
+                                        <svg class="animate-spin h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                    </div>
+                                    <template x-for="item in results" :key="item.url">
+                                        <a :href="item.url" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="item.type === 'staff' ? 'bg-blue-100 text-blue-600' : (item.type === 'task' ? 'bg-green-100 text-green-600' : (item.type === 'team' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'))">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="item.title"></div>
+                                                <div class="text-xs text-gray-500" x-text="item.subtitle"></div>
+                                            </div>
+                                        </a>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-end gap-4 px-5 py-4 lg:px-0">
+                        <!-- Activity Status -->
+                        <div class="relative" x-data="activityStatus()">
+                            <button @click="open = !open" class="flex h-11 items-center gap-2 px-3 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 text-sm">
+                                <span class="w-2.5 h-2.5 rounded-full" :class="'bg-' + statusColor + '-500'"></span>
+                                <span x-text="statusLabel" class="hidden sm:inline"></span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute left-0 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-900 overflow-hidden z-50">
+                                <div class="p-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">وضعیت فعالیت</div>
+                                <div class="p-1">
+                                    <button @click="setStatus('online')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> آنلاین
+                                    </button>
+                                    <button @click="setStatus('meeting')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> در جلسه
+                                    </button>
+                                    <button @click="setStatus('remote')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> دورکاری
+                                    </button>
+                                    <button @click="setStatus('lunch')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> ناهار
+                                    </button>
+                                    <button @click="setStatus('break')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> استراحت
+                                    </button>
+                                    <button @click="setStatus('leave')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> مرخصی
+                                    </button>
+                                    <button @click="setStatus('busy')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> مشغول
+                                    </button>
+                                    <button @click="setStatus('away')" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span> دور
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Dark Mode -->
                         <button @click="darkMode = !darkMode" class="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800">
                             <svg x-show="!darkMode" class="fill-current" width="20" height="20" viewBox="0 0 20 20"><path d="M17.4547 11.97L18.1799 12.1611C18.265 11.8383 18.1265 11.4982 17.8401 11.3266C17.5538 11.1551 17.1885 11.1934 16.944 11.4207L17.4547 11.97ZM8.0306 2.5459L8.57989 3.05657C8.80718 2.81209 8.84554 2.44682 8.67398 2.16046C8.50243 1.8741 8.16227 1.73559 7.83948 1.82066L8.0306 2.5459ZM12.9154 13.0035C9.64678 13.0035 6.99707 10.3538 6.99707 7.08524H5.49707C5.49707 11.1823 8.81835 14.5035 12.9154 14.5035V13.0035ZM16.944 11.4207C15.8869 12.4035 14.4721 13.0035 12.9154 13.0035V14.5035C14.8657 14.5035 16.6418 13.7499 17.9654 12.5193L16.944 11.4207ZM16.7295 11.7789C15.9437 14.7607 13.2277 16.9586 10.0003 16.9586V18.4586C13.9257 18.4586 17.2249 15.7853 18.1799 12.1611L16.7295 11.7789ZM10.0003 16.9586C6.15734 16.9586 3.04199 13.8433 3.04199 10.0003H1.54199C1.54199 14.6717 5.32892 18.4586 10.0003 18.4586V16.9586ZM3.04199 10.0003C3.04199 6.77289 5.23988 4.05695 8.22173 3.27114L7.83948 1.82066C4.21532 2.77574 1.54199 6.07486 1.54199 10.0003H3.04199ZM6.99707 7.08524C6.99707 5.52854 7.5971 4.11366 8.57989 3.05657L7.48132 2.03522C6.25073 3.35885 5.49707 5.13487 5.49707 7.08524H6.99707Z"/></svg>
@@ -337,11 +486,41 @@
                         </button>
 
                         <!-- Notifications -->
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800">
-                                <span class="absolute top-0.5 left-0 h-2 w-2 rounded-full bg-orange-400"></span>
+                        <div class="relative" x-data="notificationPanel()" x-init="loadNotifications()">
+                            <button @click="open = !open; if(open) loadNotifications()" class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800">
+                                <span x-show="unreadCount > 0" class="absolute top-0.5 left-0 h-2 w-2 rounded-full bg-orange-400"></span>
                                 <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z"/></svg>
                             </button>
+
+                            <!-- Notifications Dropdown -->
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute left-0 mt-4 w-80 rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-900 overflow-hidden z-50">
+                                <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 class="font-bold text-gray-900 dark:text-white">اعلان‌ها</h3>
+                                    <button x-show="unreadCount > 0" @click="markAllRead()" class="text-xs text-brand-600 hover:text-brand-700">
+                                        خواندن همه
+                                    </button>
+                                </div>
+                                <div class="max-h-80 overflow-y-auto">
+                                    <template x-if="notifications.length === 0">
+                                        <div class="p-8 text-center text-gray-400">
+                                            <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                            <p class="text-sm">اعلان جدیدی ندارید</p>
+                                        </div>
+                                    </template>
+                                    <template x-for="notif in notifications" :key="notif.id">
+                                        <a :href="notif.url" @click="markRead(notif.id)" class="flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-700 last:border-0" :class="{ 'bg-blue-50 dark:bg-blue-900/20': !notif.read }">
+                                            <div class="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="font-medium text-gray-900 dark:text-white text-sm" x-text="notif.title"></p>
+                                                <p class="text-xs text-gray-500 truncate" x-text="notif.message"></p>
+                                                <p class="text-xs text-gray-400 mt-1" x-text="notif.time"></p>
+                                            </div>
+                                        </a>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- User Dropdown -->
@@ -359,7 +538,10 @@
                                     <span class="block text-xs text-gray-500">{{ auth()->user()->mobile }}</span>
                                 </div>
                                 <ul class="space-y-1">
-                                    <li><a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5">پروفایل</a></li>
+                                    <li><a href="{{ route('admin.profile') }}" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                        پروفایل
+                                    </a></li>
                                 </ul>
                                 <form action="{{ route('logout') }}" method="POST" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                                     @csrf
@@ -400,25 +582,71 @@
     <script src="/vendor/js/persian-datepicker.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('.jalali-datepicker').persianDatepicker({
-                format: 'YYYY/MM/DD',
-                initialValue: false,
-                autoClose: true,
-                calendar: {
-                    persian: {
-                        locale: 'fa',
-                        showHint: true,
-                        leapYearMode: 'algorithmic'
+            $('.jalali-datepicker').each(function() {
+                var $input = $(this);
+                $input.persianDatepicker({
+                    format: 'YYYY/MM/DD',
+                    initialValue: false,
+                    autoClose: true,
+                    responsive: true,
+                    position: 'auto',
+                    altField: $input.data('alt-field') || null,
+                    altFormat: 'X',
+                    observer: true,
+                    inputDelay: 500,
+                    calendar: {
+                        persian: {
+                            locale: 'fa',
+                            showHint: true,
+                            leapYearMode: 'algorithmic'
+                        }
+                    },
+                    navigator: {
+                        enabled: true,
+                        scroll: { enabled: true },
+                        text: {
+                            btnNextText: '<',
+                            btnPrevText: '>'
+                        }
+                    },
+                    toolbox: {
+                        enabled: true,
+                        calendarSwitch: { enabled: false },
+                        todayButton: { enabled: true, text: { fa: 'امروز' } },
+                        submitButton: { enabled: true, text: { fa: 'تایید' } }
+                    },
+                    dayPicker: { enabled: true, titleFormat: 'YYYY MMMM' },
+                    monthPicker: { enabled: true, titleFormat: 'YYYY' },
+                    yearPicker: { enabled: true, titleFormat: 'YYYY' },
+                    minDate: $input.data('min-date') || null,
+                    maxDate: $input.data('max-date') || null,
+                    onSelect: function(unix) {
+                        $input.trigger('change');
+                        // Trigger Alpine.js change event if present
+                        $input[0].dispatchEvent(new Event('input', { bubbles: true }));
                     }
-                },
-                toolbox: {
-                    enabled: true,
-                    calendarSwitch: { enabled: false },
-                    todayButton: { enabled: true, text: { fa: 'امروز' } },
-                    submitButton: { enabled: true, text: { fa: 'تایید' } }
-                },
-                dayPicker: { enabled: true, titleFormat: 'YYYY MMMM' },
-                onSelect: function(unix) { $(this).trigger('change'); }
+                });
+            });
+
+            // Initialize timepicker for time inputs
+            $('.jalali-timepicker').each(function() {
+                var $input = $(this);
+                $input.persianDatepicker({
+                    format: 'HH:mm',
+                    initialValue: false,
+                    autoClose: true,
+                    onlyTimePicker: true,
+                    timePicker: {
+                        enabled: true,
+                        step: 30,
+                        hour: { enabled: true },
+                        minute: { enabled: true, step: 30 },
+                        second: { enabled: false }
+                    },
+                    onSelect: function(unix) {
+                        $input.trigger('change');
+                    }
+                });
             });
         });
     </script>
@@ -439,6 +667,107 @@
                 setup: function(editor) { editor.on('change', function() { editor.save(); }); }
             });
         });
+    </script>
+
+    <!-- Global Scripts -->
+    <script>
+    function activityStatus() {
+        return {
+            open: false,
+            status: 'online',
+            statusLabel: 'آنلاین',
+            statusColor: 'green',
+            async setStatus(status) {
+                try {
+                    const response = await fetch('/admin/chat/activity-status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ status: status })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        this.status = data.status;
+                        this.statusLabel = data.label;
+                        this.statusColor = data.color;
+                    }
+                } catch (e) {
+                    console.error('Activity status error:', e);
+                }
+                this.open = false;
+            }
+        };
+    }
+
+    function globalSearch() {
+        return {
+            query: '',
+            results: [],
+            loading: false,
+            showResults: false,
+            async search() {
+                if (this.query.length < 2) {
+                    this.results = [];
+                    return;
+                }
+                this.loading = true;
+                try {
+                    const response = await fetch(`/admin/search?q=${encodeURIComponent(this.query)}`);
+                    const data = await response.json();
+                    this.results = data.results || [];
+                } catch (e) {
+                    console.error('Search error:', e);
+                } finally {
+                    this.loading = false;
+                }
+            }
+        };
+    }
+
+    function notificationPanel() {
+        return {
+            open: false,
+            notifications: [],
+            unreadCount: 0,
+            async loadNotifications() {
+                try {
+                    const response = await fetch('/admin/notifications');
+                    const data = await response.json();
+                    this.notifications = data.notifications || [];
+                    this.unreadCount = data.unread_count || 0;
+                } catch (e) {
+                    console.error('Notification error:', e);
+                }
+            },
+            async markRead(id) {
+                try {
+                    await fetch(`/admin/notifications/${id}/read`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    const notif = this.notifications.find(n => n.id === id);
+                    if (notif) notif.read = true;
+                    this.unreadCount = Math.max(0, this.unreadCount - 1);
+                } catch (e) {}
+            },
+            async markAllRead() {
+                try {
+                    await fetch('/admin/notifications/read-all', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    this.notifications.forEach(n => n.read = true);
+                    this.unreadCount = 0;
+                } catch (e) {}
+            }
+        };
+    }
     </script>
 
     @stack('scripts')

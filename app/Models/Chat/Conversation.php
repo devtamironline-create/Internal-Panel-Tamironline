@@ -14,8 +14,14 @@ class Conversation extends Model
     protected $fillable = [
         'type',
         'name',
+        'description',
         'avatar',
         'created_by',
+        'settings',
+    ];
+
+    protected $casts = [
+        'settings' => 'array',
     ];
 
     // Relations
@@ -130,12 +136,17 @@ class Conversation extends Model
         return $conversation;
     }
 
-    public static function createGroup(string $name, int $creatorId, array $participantIds): self
+    public static function createGroup(string $name, int $creatorId, array $participantIds, ?string $description = null, ?array $settings = null): self
     {
         $conversation = self::create([
             'type' => 'group',
             'name' => $name,
+            'description' => $description,
             'created_by' => $creatorId,
+            'settings' => $settings ?? [
+                'only_admins_can_send' => false,
+                'members_can_add_others' => true,
+            ],
         ]);
 
         // Add creator as admin
@@ -151,5 +162,43 @@ class Conversation extends Model
         $conversation->participants()->attach($participants);
 
         return $conversation;
+    }
+
+    public function canSendMessage(int $userId): bool
+    {
+        // Private conversations always allow messages
+        if ($this->isPrivate()) {
+            return true;
+        }
+
+        // Check if user is a participant
+        $participant = $this->participants()->where('user_id', $userId)->first();
+        if (!$participant) {
+            return false;
+        }
+
+        // Check if only admins can send
+        if ($this->settings['only_admins_can_send'] ?? false) {
+            return (bool) $participant->pivot->is_admin;
+        }
+
+        return true;
+    }
+
+    public function canAddMembers(int $userId): bool
+    {
+        // Check if user is a participant
+        $participant = $this->participants()->where('user_id', $userId)->first();
+        if (!$participant) {
+            return false;
+        }
+
+        // Admins can always add members
+        if ($participant->pivot->is_admin) {
+            return true;
+        }
+
+        // Check if members can add others
+        return $this->settings['members_can_add_others'] ?? true;
     }
 }

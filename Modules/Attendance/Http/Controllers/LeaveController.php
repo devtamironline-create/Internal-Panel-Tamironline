@@ -62,13 +62,15 @@ class LeaveController extends Controller
             'start_time' => 'nullable',
             'end_time' => 'nullable',
             'reason' => 'nullable|string|max:500',
-            'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'document' => 'nullable|file|mimetypes:image/jpeg,image/png,application/pdf|max:5120',
             'substitute_id' => 'nullable|exists:users,id',
             'days_count' => 'nullable|numeric|min:0.5',
         ], [
             'leave_type_id.required' => 'لطفا نوع مرخصی را انتخاب کنید',
             'start_date.required' => 'تاریخ شروع الزامی است',
             'end_date.required' => 'تاریخ پایان الزامی است',
+            'document.mimetypes' => 'فرمت فایل باید JPG، PNG یا PDF باشد',
+            'document.max' => 'حجم فایل نباید بیشتر از 5 مگابایت باشد',
         ]);
 
         $leaveType = LeaveType::findOrFail($request->leave_type_id);
