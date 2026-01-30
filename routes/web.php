@@ -50,6 +50,7 @@ Route::middleware('guest')->group(function () {
     // OTP endpoints
     Route::post('/auth/send-otp', [AuthController::class, 'sendOTP'])->name('auth.send-otp');
     Route::post('/auth/verify-otp', [AuthController::class, 'verifyOTP'])->name('auth.verify-otp');
+    Route::post('/auth/login-password', [AuthController::class, 'loginWithPassword'])->name('auth.login-password');
 });
 
 Route::middleware('auth')->group(function () {
@@ -59,6 +60,19 @@ Route::middleware('auth')->group(function () {
 // Admin Panel
 Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
+
+    // Profile
+    Route::get('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
+    Route::get('/profile/edit', [App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+
+    // Global Search API
+    Route::get('/search', [App\Http\Controllers\Admin\SearchController::class, 'search'])->name('search');
+
+    // Notifications API
+    Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/{id}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
     // Messenger
     Route::get('/messenger', function () {
@@ -86,6 +100,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
+        Route::post('/activity-status', [ChatController::class, 'setActivityStatus'])->name('activity-status');
         Route::get('/online-users', [ChatController::class, 'onlineUsers'])->name('online-users');
         Route::post('/calls/initiate', [ChatController::class, 'initiateCall'])->name('calls.initiate');
         Route::post('/calls/{call}/answer', [ChatController::class, 'answerCall'])->name('calls.answer');

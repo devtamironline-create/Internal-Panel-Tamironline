@@ -117,6 +117,70 @@ class DashboardController extends Controller
             $stats['teams'] = Team::withCount('members', 'tasks')->get();
         }
 
+        // Birthday stats - show upcoming birthdays
+        $stats['birthdays'] = $this->getUpcomingBirthdays();
+
         return view('admin.dashboard', compact('stats'));
+    }
+
+    /**
+     * Get upcoming birthdays in the next 7 days
+     */
+    protected function getUpcomingBirthdays(): array
+    {
+        $today = now();
+        $endDate = now()->addDays(7);
+
+        // Get all staff with birth dates
+        $users = User::staff()
+            ->where('is_active', true)
+            ->whereNotNull('birth_date')
+            ->get();
+
+        $upcomingBirthdays = [];
+        $todayBirthdays = [];
+
+        foreach ($users as $user) {
+            $birthDate = $user->birth_date;
+
+            // Create a date for this year's birthday
+            $birthdayThisYear = $birthDate->copy()->year($today->year);
+
+            // If birthday has passed this year, check next year
+            if ($birthdayThisYear->lt($today->startOfDay())) {
+                $birthdayThisYear->addYear();
+            }
+
+            // Check if birthday is within the next 7 days
+            if ($birthdayThisYear->between($today->startOfDay(), $endDate->endOfDay())) {
+                $daysUntil = $today->startOfDay()->diffInDays($birthdayThisYear->startOfDay());
+                $age = $birthdayThisYear->diffInYears($birthDate);
+
+                $birthdayData = [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'date' => $birthdayThisYear->format('Y-m-d'),
+                    'jalali_date' => \Morilog\Jalali\Jalalian::fromCarbon($birthdayThisYear)->format('j F'),
+                    'days_until' => $daysUntil,
+                    'age' => $age,
+                    'is_today' => $daysUntil === 0,
+                ];
+
+                if ($daysUntil === 0) {
+                    $todayBirthdays[] = $birthdayData;
+                } else {
+                    $upcomingBirthdays[] = $birthdayData;
+                }
+            }
+        }
+
+        // Sort upcoming birthdays by days until
+        usort($upcomingBirthdays, fn($a, $b) => $a['days_until'] <=> $b['days_until']);
+
+        return [
+            'today' => $todayBirthdays,
+            'upcoming' => array_slice($upcomingBirthdays, 0, 5), // Only show next 5
+            'total_upcoming' => count($upcomingBirthdays),
+        ];
     }
 }

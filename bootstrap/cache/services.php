@@ -36,12 +36,9 @@
     32 => 'Nwidart\\Modules\\LaravelModulesServiceProvider',
     33 => 'Spatie\\Permission\\PermissionServiceProvider',
     34 => 'App\\Providers\\AppServiceProvider',
-    35 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
-    36 => 'Modules\\Customer\\Providers\\CustomerServiceProvider',
-    37 => 'Modules\\Product\\Providers\\ProductServiceProvider',
-    38 => 'Modules\\Service\\Providers\\ServiceServiceProvider',
-    39 => 'Modules\\Invoice\\Providers\\InvoiceServiceProvider',
-    40 => 'Modules\\Ticket\\Providers\\TicketServiceProvider',
+    35 => 'Modules\\Core\\Providers\\CoreServiceProvider',
+    36 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
+    37 => 'Modules\\Attendance\\Providers\\AttendanceServiceProvider',
   ),
   'eager' => 
   array (
@@ -64,12 +61,9 @@
     16 => 'Nwidart\\Modules\\LaravelModulesServiceProvider',
     17 => 'Spatie\\Permission\\PermissionServiceProvider',
     18 => 'App\\Providers\\AppServiceProvider',
-    19 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
-    20 => 'Modules\\Customer\\Providers\\CustomerServiceProvider',
-    21 => 'Modules\\Product\\Providers\\ProductServiceProvider',
-    22 => 'Modules\\Service\\Providers\\ServiceServiceProvider',
-    23 => 'Modules\\Invoice\\Providers\\InvoiceServiceProvider',
-    24 => 'Modules\\Ticket\\Providers\\TicketServiceProvider',
+    19 => 'Modules\\Core\\Providers\\CoreServiceProvider',
+    20 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
+    21 => 'Modules\\Attendance\\Providers\\AttendanceServiceProvider',
   ),
   'deferred' => 
   array (
