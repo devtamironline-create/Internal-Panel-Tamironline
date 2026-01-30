@@ -25,13 +25,13 @@
                         warning: { 50: '#fffaeb', 500: '#f79009' },
                         orange: { 400: '#fd853a', 500: '#fb6514' }
                     },
-                    fontFamily: { vazir: ['Rokh', 'sans-serif'] },
+                    fontFamily: { vazir: ['Vazirmatn', 'sans-serif'] },
                 }
             }
         }
     </script>
     <style>
-        * { font-family: 'Rokh', system-ui, sans-serif; }
+        * { font-family: 'Vazirmatn', system-ui, sans-serif; }
         body { font-weight: 400; line-height: 1.7; }
         h1, h2, h3, h4, h5, h6, .font-bold { font-weight: 700; }
         .font-medium { font-weight: 500; }
@@ -707,21 +707,59 @@
             results: [],
             loading: false,
             showResults: false,
+            searchTimeout: null,
             async search() {
-                if (this.query.length < 2) {
+                // Clear previous timeout
+                if (this.searchTimeout) {
+                    clearTimeout(this.searchTimeout);
+                }
+
+                if (this.query.trim().length < 2) {
                     this.results = [];
+                    this.showResults = false;
                     return;
                 }
+
                 this.loading = true;
-                try {
-                    const response = await fetch(`/admin/search?q=${encodeURIComponent(this.query)}`);
-                    const data = await response.json();
-                    this.results = data.results || [];
-                } catch (e) {
-                    console.error('Search error:', e);
-                } finally {
-                    this.loading = false;
-                }
+                this.showResults = true;
+
+                // Debounce search
+                this.searchTimeout = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`/admin/search?q=${encodeURIComponent(this.query.trim())}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Search request failed');
+                        }
+
+                        const data = await response.json();
+                        this.results = data.results || [];
+
+                        if (this.results.length === 0 && this.query.trim().length >= 2) {
+                            this.results = [{
+                                type: 'empty',
+                                title: 'نتیجه‌ای یافت نشد',
+                                subtitle: `برای "${this.query}"`,
+                                url: '#'
+                            }];
+                        }
+                    } catch (e) {
+                        console.error('Search error:', e);
+                        this.results = [{
+                            type: 'error',
+                            title: 'خطا در جستجو',
+                            subtitle: 'لطفاً دوباره تلاش کنید',
+                            url: '#'
+                        }];
+                    } finally {
+                        this.loading = false;
+                    }
+                }, 300);
             }
         };
     }
@@ -765,6 +803,126 @@
                     this.notifications.forEach(n => n.read = true);
                     this.unreadCount = 0;
                 } catch (e) {}
+            }
+        };
+    }
+    </script>
+
+    <!-- Toast Notification Component -->
+    <div x-data="toastManager()" x-init="init()" class="fixed bottom-4 left-4 z-[100] space-y-2">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-show="toast.show"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform translate-x-full"
+                x-transition:enter-end="opacity-100 transform translate-x-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 transform translate-x-0"
+                x-transition:leave-end="opacity-0 transform translate-x-full"
+                class="flex items-start gap-3 p-4 rounded-xl shadow-lg max-w-sm"
+                :class="{
+                    'bg-green-500 text-white': toast.type === 'success',
+                    'bg-red-500 text-white': toast.type === 'error',
+                    'bg-blue-500 text-white': toast.type === 'info',
+                    'bg-yellow-500 text-white': toast.type === 'warning',
+                    'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700': toast.type === 'default'
+                }">
+                <div class="flex-shrink-0">
+                    <template x-if="toast.type === 'success'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'error'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'info'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'warning'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </template>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm" x-text="toast.title"></p>
+                    <p class="text-sm opacity-90" x-text="toast.message" x-show="toast.message"></p>
+                </div>
+                <button @click="removeToast(toast.id)" class="flex-shrink-0 opacity-70 hover:opacity-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </template>
+    </div>
+
+    <script>
+    // Global Toast Manager
+    function toastManager() {
+        return {
+            toasts: [],
+            toastId: 0,
+
+            init() {
+                // Make toast functions globally available
+                window.showToast = this.addToast.bind(this);
+
+                // Check for session flash messages
+                @if(session('success'))
+                this.addToast('success', '{{ session('success') }}');
+                @endif
+                @if(session('error'))
+                this.addToast('error', '{{ session('error') }}');
+                @endif
+                @if(session('info'))
+                this.addToast('info', '{{ session('info') }}');
+                @endif
+
+                // Poll for new notifications
+                this.pollNotifications();
+            },
+
+            addToast(type, title, message = '', duration = 5000) {
+                const id = ++this.toastId;
+                this.toasts.push({ id, type, title, message, show: true });
+
+                if (duration > 0) {
+                    setTimeout(() => this.removeToast(id), duration);
+                }
+
+                return id;
+            },
+
+            removeToast(id) {
+                const toast = this.toasts.find(t => t.id === id);
+                if (toast) {
+                    toast.show = false;
+                    setTimeout(() => {
+                        this.toasts = this.toasts.filter(t => t.id !== id);
+                    }, 200);
+                }
+            },
+
+            async pollNotifications() {
+                let lastCheck = Date.now();
+
+                setInterval(async () => {
+                    try {
+                        const response = await fetch('/admin/notifications?since=' + lastCheck, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await response.json();
+
+                        if (data.new_notifications && data.new_notifications.length > 0) {
+                            data.new_notifications.forEach(notif => {
+                                this.addToast(
+                                    notif.type === 'leave_approved' ? 'success' :
+                                    notif.type === 'leave_rejected' ? 'warning' : 'info',
+                                    notif.title,
+                                    notif.body || notif.message
+                                );
+                            });
+                        }
+                        lastCheck = Date.now();
+                    } catch (e) {
+                        // Silent fail for polling
+                    }
+                }, 30000); // Check every 30 seconds
             }
         };
     }
