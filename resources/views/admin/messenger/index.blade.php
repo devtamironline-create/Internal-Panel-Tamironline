@@ -144,7 +144,20 @@
                                 </div>
                             </template>
                             <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
-                            <p class="text-xs mt-1 opacity-60 text-left" x-text="msg.time"></p>
+                            <div class="flex items-center justify-end gap-1 mt-1">
+                                <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                <!-- Read status ticks (only for my messages) -->
+                                <template x-if="msg.is_mine">
+                                    <span class="text-xs" :class="msg.is_read ? 'text-blue-400' : 'opacity-60'">
+                                        <template x-if="msg.is_read">
+                                            <span title="خوانده شده">✓✓</span>
+                                        </template>
+                                        <template x-if="!msg.is_read">
+                                            <span title="ارسال شده">✓</span>
+                                        </template>
+                                    </span>
+                                </template>
+                            </div>
                             <!-- Copy button -->
                             <button @click="copyMessage(msg.content)" class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-700 rounded-lg shadow transition" title="کپی متن">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>

@@ -1,0 +1,103 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - publish
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json, bcmath, pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Create deployment package
+        run: |
+          # Remove development files
+          rm -rf node_modules
+          rm -rf tests
+          rm -rf .git
+          rm -rf .github
+          rm -f .env
+          rm -f .env.example
+          rm -f phpunit.xml
+          rm -f vite.config.js
+          rm -f package*.json
+          rm -f composer.lock
+
+          # Create deployment archive
+          tar -czf deploy.tar.gz .
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "deploy.tar.gz"
+          target: "~/deploy_temp"
+
+      - name: Execute deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/public_html
+
+            # Backup current version
+            if [ -d "backup" ]; then rm -rf backup; fi
+            mkdir -p backup
+
+            # Extract new version
+            cd ~/deploy_temp
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+
+            # Sync files (preserving .env and storage)
+            rsync -av --exclude='.env' --exclude='storage/app/*' --exclude='storage/logs/*' --delete ./ ~/public_html/
+
+            # Set permissions
+            cd ~/public_html
+            chmod -R 755 storage bootstrap/cache
+
+            # Run migrations
+            php artisan migrate --force
+
+            # Clear and cache
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan storage:link 2>/dev/null || true
+
+            # Cleanup
+            rm -rf ~/deploy_temp
+
+            echo "Deployment completed successfully!"
