@@ -55,20 +55,22 @@ echo -e "${GREEN}[4/5] Deploying on server...${NC}"
 sshpass -p "$SSH_PASSWORD" ssh -p $SSH_PORT ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
     cd ~
 
-    # Backup current .env
-    if [ -f public_html/.env ]; then
-        cp public_html/.env ~/env_backup
-    fi
+    # Backup .env and .htaccess (these should NEVER be overwritten)
+    echo "Backing up protected files..."
+    if [ -f public_html/.env ]; then cp public_html/.env ~/env_backup; fi
+    if [ -f public_html/.htaccess ]; then cp public_html/.htaccess ~/htaccess_backup; fi
+    if [ -f public_html/public/.htaccess ]; then cp public_html/public/.htaccess ~/public_htaccess_backup; fi
 
     # Extract new files
     cd public_html
     tar -xzf ~/deploy.tar.gz
     rm ~/deploy.tar.gz
 
-    # Restore .env
-    if [ -f ~/env_backup ]; then
-        mv ~/env_backup .env
-    fi
+    # Restore protected files
+    echo "Restoring protected files..."
+    if [ -f ~/env_backup ]; then mv ~/env_backup .env; fi
+    if [ -f ~/htaccess_backup ]; then mv ~/htaccess_backup .htaccess; fi
+    if [ -f ~/public_htaccess_backup ]; then mv ~/public_htaccess_backup public/.htaccess; fi
 
     # Set permissions
     chmod -R 755 storage bootstrap/cache
