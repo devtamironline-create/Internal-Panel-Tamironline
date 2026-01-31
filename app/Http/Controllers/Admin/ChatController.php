@@ -167,13 +167,28 @@ class ChatController extends Controller
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
+        // Get other participant IDs for checking read status
+        $otherParticipantIds = $conversation->participants()
+            ->where('user_id', '!=', $userId)
+            ->whereNull('left_at')
+            ->pluck('user_id')
+            ->toArray();
+
         $messages = $conversation->messages()
-            ->with('user', 'replyTo.user')
+            ->with(['user', 'replyTo.user', 'readBy'])
             ->latest()
             ->take($request->get('limit', 50))
             ->get()
             ->reverse()
-            ->map(function ($message) use ($userId) {
+            ->map(function ($message) use ($userId, $otherParticipantIds) {
+                // Check if message is read by any other participant
+                $isRead = false;
+                if ($message->user_id === $userId) {
+                    // For my messages, check if any other participant has read it
+                    $readByIds = $message->readBy->pluck('id')->toArray();
+                    $isRead = !empty(array_intersect($otherParticipantIds, $readByIds));
+                }
+
                 return [
                     'id' => $message->id,
                     'content' => $message->body,
@@ -183,11 +198,24 @@ class ChatController extends Controller
                     'file_size' => $message->file_size,
                     'sender_name' => $message->user->full_name,
                     'is_mine' => $message->user_id === $userId,
+                    'is_read' => $isRead,
                     'time' => $message->created_at->format('H:i'),
                 ];
             });
 
-        // Mark as read
+        // Mark messages from others as read
+        $messagesToMark = $conversation->messages()
+            ->where('user_id', '!=', $userId)
+            ->whereDoesntHave('readBy', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            })
+            ->get();
+
+        foreach ($messagesToMark as $message) {
+            $message->markAsReadBy($userId);
+        }
+
+        // Update last_read_at for participant
         $conversation->participants()->updateExistingPivot($userId, [
             'last_read_at' => now(),
         ]);
@@ -256,6 +284,7 @@ class ChatController extends Controller
                 'file_size' => $message->file_size,
                 'sender_name' => $message->user->full_name,
                 'is_mine' => true,
+                'is_read' => false, // New message is not read yet
                 'time' => $message->created_at->format('H:i'),
             ],
         ]);
