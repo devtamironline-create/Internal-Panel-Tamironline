@@ -1,0 +1,37 @@
+# Environment files
+.env
+.env.backup
+.env.production
+
+# Laravel
+/vendor/
+/node_modules/
+/public/build/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+bootstrap/cache/*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deployment
+deploy.tar.gz
+cpanel-deploy.zip
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
