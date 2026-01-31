@@ -37,8 +37,9 @@ jobs:
           rm -f vite.config.js
           rm -f package*.json
 
-          # Create deployment archive
-          tar -czf deploy.tar.gz .
+          # Create deployment archive in /tmp to avoid "file changed" error
+          tar -czf /tmp/deploy.tar.gz .
+          mv /tmp/deploy.tar.gz ./deploy.tar.gz
 
       - name: Deploy to server
         uses: appleboy/scp-action@v0.1.7
