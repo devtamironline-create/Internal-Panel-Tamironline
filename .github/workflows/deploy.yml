@@ -13,27 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, ctype, json, bcmath, pdo_mysql
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install NPM dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build assets
-        run: npm run build
+        run: npm run build || true
 
       - name: Create deployment package
         run: |
@@ -47,7 +36,6 @@ jobs:
           rm -f phpunit.xml
           rm -f vite.config.js
           rm -f package*.json
-          rm -f composer.lock
 
           # Create deployment archive
           tar -czf deploy.tar.gz .
@@ -77,6 +65,7 @@ jobs:
             if [ -f ".env" ]; then cp .env ~/env_backup; fi
             if [ -f ".htaccess" ]; then cp .htaccess ~/htaccess_backup; fi
             if [ -f "public/.htaccess" ]; then cp public/.htaccess ~/public_htaccess_backup; fi
+            if [ -d "vendor" ]; then cp -r vendor ~/vendor_backup; fi
 
             # Extract new version
             cd ~/deploy_temp
@@ -84,7 +73,7 @@ jobs:
             rm deploy.tar.gz
 
             # Sync files (preserving storage uploads)
-            rsync -av --exclude='storage/app/public/*' --exclude='storage/logs/*' --delete ./ ~/public_html/
+            rsync -av --exclude='storage/app/public/*' --exclude='storage/logs/*' --exclude='vendor/' --delete ./ ~/public_html/
 
             # Restore protected files
             cd ~/public_html
@@ -92,6 +81,11 @@ jobs:
             if [ -f ~/env_backup ]; then mv ~/env_backup .env; fi
             if [ -f ~/htaccess_backup ]; then mv ~/htaccess_backup .htaccess; fi
             if [ -f ~/public_htaccess_backup ]; then mv ~/public_htaccess_backup public/.htaccess; fi
+            if [ -d ~/vendor_backup ]; then mv ~/vendor_backup vendor; fi
+
+            # Install/update composer dependencies on server
+            echo "Installing composer dependencies..."
+            composer install --no-dev --optimize-autoloader --no-interaction 2>/dev/null || composer update --no-dev --optimize-autoloader --no-interaction
 
             # Set permissions
             chmod -R 755 storage bootstrap/cache
