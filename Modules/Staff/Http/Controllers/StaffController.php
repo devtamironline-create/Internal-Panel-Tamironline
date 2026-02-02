@@ -77,7 +77,6 @@ class StaffController extends Controller
             'role' => 'nullable|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
-            'national_code' => 'nullable|string|max:10',
         ]);
 
         $userData = [
@@ -89,7 +88,6 @@ class StaffController extends Controller
             'mobile_verified_at' => now(),
             'is_staff' => true,
             'is_active' => $validated['is_active'] ?? true,
-            'national_code' => $validated['national_code'] ?? null,
         ];
 
         // Convert Jalali birth_date to Gregorian
@@ -134,7 +132,6 @@ class StaffController extends Controller
             'role' => 'nullable|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
-            'national_code' => 'nullable|string|max:10',
         ]);
 
         $updateData = [
@@ -143,7 +140,6 @@ class StaffController extends Controller
             'mobile' => $validated['mobile'],
             'email' => $validated['email'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
-            'national_code' => $validated['national_code'] ?? null,
         ];
 
         // Convert Jalali birth_date to Gregorian
