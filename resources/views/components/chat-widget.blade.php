@@ -261,7 +261,7 @@ function chatWidget() {
 
         // Notification tracking
         lastKnownMessages: {},
-        toastQueue: [],
+        activeToasts: new Set(), // Track which conversations have active toasts
         audioInitialized: false,
 
         // Call state
@@ -361,15 +361,20 @@ function chatWidget() {
 
                 // If there's a new message
                 if (oldState) {
-                    const hasNewMessage = newUnread > oldState.unreadCount ||
-                                         (newLastMsgId > oldState.lastMessageId && newUnread > 0);
+                    // Only trigger notification when there's a NEW message (based on message ID)
+                    // This prevents duplicate notifications from the two conditions
+                    const hasNewMessage = newLastMsgId > oldState.lastMessageId && newUnread > 0;
+
+                    // Check if toast for this conversation is already showing
+                    const hasActiveToast = this.activeToasts.has(conv.id);
 
                     // Show notification if:
                     // 1. There's a new message, AND
-                    // 2. Either chat widget is closed OR viewing a different conversation
-                    const shouldNotify = hasNewMessage && (!this.isOpen || !isCurrentConversation);
+                    // 2. Either chat widget is closed OR viewing a different conversation, AND
+                    // 3. No toast is already showing for this conversation
+                    const shouldNotify = hasNewMessage && (!this.isOpen || !isCurrentConversation) && !hasActiveToast;
 
-                    console.log(`📊 hasNewMessage=${hasNewMessage}, isOpen=${this.isOpen}, isCurrentConv=${isCurrentConversation}, shouldNotify=${shouldNotify}`);
+                    console.log(`📊 hasNewMessage=${hasNewMessage}, isOpen=${this.isOpen}, isCurrentConv=${isCurrentConversation}, hasActiveToast=${hasActiveToast}, shouldNotify=${shouldNotify}`);
 
                     if (shouldNotify) {
                         console.log('🔔 Showing notification for:', conv.display_name);
@@ -383,7 +388,9 @@ function chatWidget() {
                 } else {
                     console.log(`⚠️ No oldState for conv ${conv.id}, this is a new conversation`);
                     // New conversation detected - add to tracking
-                    if (newUnread > 0 && !this.isOpen) {
+                    // Check if toast is already showing
+                    const hasActiveToast = this.activeToasts.has(conv.id);
+                    if (newUnread > 0 && !this.isOpen && !hasActiveToast) {
                         console.log('🔔 New conversation with unread, showing notification');
                         this.showToastNotification({
                             conversationId: conv.id,
@@ -457,6 +464,15 @@ function chatWidget() {
         showToastNotification({ conversationId, senderName, message, avatar }) {
             console.log('🍞 Creating toast notification:', { conversationId, senderName, message });
 
+            // Check if toast for this conversation already exists (prevent duplicates)
+            if (this.activeToasts.has(conversationId)) {
+                console.log('⏭️ Toast already exists for conversation:', conversationId);
+                return;
+            }
+
+            // Mark this conversation as having an active toast
+            this.activeToasts.add(conversationId);
+
             // Play notification sound
             this.playNotificationSound();
 
@@ -464,6 +480,7 @@ function chatWidget() {
             const container = document.getElementById('chat-toast-container');
             if (!container) {
                 console.error('❌ Toast container not found!');
+                this.activeToasts.delete(conversationId);
                 return;
             }
             console.log('✅ Toast container found');
@@ -483,7 +500,7 @@ function chatWidget() {
                         <h4 class="font-semibold text-gray-900 dark:text-white text-sm truncate">${senderName}</h4>
                         <p class="text-gray-500 dark:text-gray-400 text-xs mt-0.5 truncate">${truncatedMessage}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); this.closest('.pointer-events-auto').remove();" class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mr-1">
+                    <button class="toast-close-btn flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mr-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -491,11 +508,19 @@ function chatWidget() {
                 </div>
             `;
 
+            // Close button handler
+            toast.querySelector('.toast-close-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.activeToasts.delete(conversationId);
+                toast.remove();
+            });
+
             // Store conversation ID for click handler
             toast.dataset.conversationId = conversationId;
 
             // Click to open chat
             toast.addEventListener('click', () => {
+                this.activeToasts.delete(conversationId);
                 const conv = this.conversations.find(c => c.id == conversationId);
                 if (conv) {
                     this.isOpen = true;
@@ -520,6 +545,7 @@ function chatWidget() {
             // Auto remove after 8 seconds
             setTimeout(() => {
                 if (document.getElementById(toastId)) {
+                    this.activeToasts.delete(conversationId);
                     toast.classList.remove('scale-100', 'opacity-100');
                     toast.classList.add('scale-95', 'opacity-0');
                     setTimeout(() => toast.remove(), 300);
