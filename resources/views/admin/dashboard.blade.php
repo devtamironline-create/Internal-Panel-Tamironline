@@ -3,7 +3,7 @@
 @section('main')
 <div class="space-y-6">
     <!-- Welcome Section -->
-    <div class="bg-gradient-to-r from-brand-600 to-brand-800 rounded-xl shadow-sm p-6 text-white">
+    <div class="bg-gradient-to-r from-gray-700 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-sm p-6 text-white border border-gray-600 dark:border-gray-700">
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="text-xl font-bold">سلام {{ auth()->user()->first_name }}!</h2>
