@@ -288,10 +288,13 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'content' => 'required_without:file|string|max:5000',
+            'content' => 'required_without_all:file,file_path|nullable|string|max:5000',
             'type' => 'nullable|in:text,file,image,audio',
             'file' => 'nullable|file|max:10240', // 10MB max
             'reply_to_id' => 'nullable|exists:messages,id',
+            'forwarded_from' => 'nullable|exists:messages,id',
+            'file_path' => 'nullable|string', // For forwarded files
+            'file_name' => 'nullable|string', // For forwarded files
         ]);
 
         $type = $request->type ?? 'text';
@@ -300,6 +303,7 @@ class ChatController extends Controller
         $fileSize = null;
 
         if ($request->hasFile('file')) {
+            // New file upload
             $file = $request->file('file');
             $filePath = $file->store('chat-files', 'public');
             $fileName = $file->getClientOriginalName();
@@ -313,6 +317,14 @@ class ChatController extends Controller
             } else {
                 $type = 'file';
             }
+        } elseif ($request->filled('file_path')) {
+            // Forwarded file - reuse existing file path
+            $filePath = $request->file_path;
+            $fileName = $request->file_name;
+            // Get file size from storage if exists
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+                $fileSize = \Illuminate\Support\Facades\Storage::disk('public')->size($filePath);
+            }
         }
 
         $message = Message::create([
@@ -324,6 +336,7 @@ class ChatController extends Controller
             'file_name' => $fileName,
             'file_size' => $fileSize,
             'reply_to_id' => $request->reply_to_id,
+            'forwarded_from' => $request->forwarded_from,
         ]);
 
         $message->load(['user', 'replyTo.user']);

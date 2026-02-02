@@ -22,6 +22,7 @@ class Message extends Model
         'file_name',
         'file_size',
         'reply_to_id',
+        'forwarded_from',
     ];
 
     protected $casts = [
@@ -47,6 +48,16 @@ class Message extends Model
     public function replies(): HasMany
     {
         return $this->hasMany(Message::class, 'reply_to_id');
+    }
+
+    public function forwardedFrom(): BelongsTo
+    {
+        return $this->belongsTo(Message::class, 'forwarded_from');
+    }
+
+    public function isForwarded(): bool
+    {
+        return !is_null($this->forwarded_from);
     }
 
     public function reactions(): HasMany

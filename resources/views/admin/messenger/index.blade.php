@@ -170,13 +170,16 @@
                                 <template x-if="msg.type === 'file' || msg.type === 'image'">
                                     <div class="mb-2">
                                         <template x-if="msg.type === 'image'">
-                                            <img :src="'/storage/' + msg.file_path" class="max-w-full rounded-lg cursor-pointer" @click="window.open('/storage/' + msg.file_path, '_blank')">
+                                            <img :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition" @click.stop="openLightbox(msg)">
                                         </template>
                                         <template x-if="msg.type === 'file'">
-                                            <a :href="'/storage/' + msg.file_path" target="_blank" class="flex items-center gap-2 p-2 bg-white/10 dark:bg-gray-600 rounded-lg">
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                                <span class="text-sm" x-text="msg.file_name"></span>
-                                            </a>
+                                            <div @click.stop="openLightbox(msg)" class="flex items-center gap-2 p-3 bg-white/10 dark:bg-gray-600 rounded-lg cursor-pointer hover:bg-white/20 dark:hover:bg-gray-500 transition">
+                                                <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                <div class="flex-1 min-w-0">
+                                                    <span class="text-sm block truncate" x-text="msg.file_name"></span>
+                                                    <span class="text-xs opacity-60">کلیک برای مشاهده</span>
+                                                </div>
+                                            </div>
                                         </template>
                                     </div>
                                 </template>
@@ -188,6 +191,9 @@
                                         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button @click.stop="setReplyTo(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="پاسخ">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </button>
+                                            <button @click.stop="openForwardModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="فوروارد">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                                             </button>
                                             <button @click.stop="showEmojiPicker = showEmojiPicker === msg.id ? null : msg.id" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="واکنش">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -433,6 +439,89 @@
         </div>
     </div>
 
+    <!-- Lightbox Modal -->
+    <div x-show="lightbox" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" @click="lightbox = null" @keydown.escape.window="lightbox = null">
+        <div class="relative max-w-4xl max-h-[90vh] w-full mx-4" @click.stop>
+            <!-- Close button -->
+            <button @click="lightbox = null" class="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <!-- Image -->
+            <template x-if="lightbox?.type === 'image'">
+                <img :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl">
+            </template>
+
+            <!-- File preview -->
+            <template x-if="lightbox?.type === 'file'">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-md mx-auto">
+                    <svg class="w-20 h-20 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2" x-text="lightbox.file_name"></h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">برای دانلود روی دکمه زیر کلیک کنید</p>
+                </div>
+            </template>
+
+            <!-- Actions -->
+            <div class="flex justify-center gap-4 mt-4">
+                <a :href="'/storage/' + lightbox?.file_path" download class="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    دانلود
+                </a>
+                <button @click="openForwardModal(lightbox); lightbox = null" class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    فوروارد
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forward Modal -->
+    <div x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-h-[80vh] shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">فوروارد پیام</h3>
+                    <button @click="showForwardModal = false; forwardingMessage = null" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <!-- Preview of forwarding message -->
+                <div class="mt-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 truncate" x-show="forwardingMessage">
+                    <template x-if="forwardingMessage?.type === 'image'">
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> تصویر</span>
+                    </template>
+                    <template x-if="forwardingMessage?.type === 'file'">
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> <span x-text="forwardingMessage.file_name"></span></span>
+                    </template>
+                    <template x-if="forwardingMessage?.type === 'text'">
+                        <span x-text="forwardingMessage.content"></span>
+                    </template>
+                </div>
+            </div>
+            <div class="max-h-80 overflow-y-auto">
+                <p class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">انتخاب گفتگو:</p>
+                <template x-for="conv in conversations" :key="conv.id">
+                    <div @click="forwardMessage(conv.id)" class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700">
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold overflow-hidden">
+                                <template x-if="conv.avatar">
+                                    <img :src="conv.avatar" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="!conv.avatar">
+                                    <span x-text="conv.display_name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-900 dark:text-white" x-text="conv.display_name"></h4>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio Elements -->
     <audio x-ref="localAudio" muted></audio>
     <audio x-ref="remoteAudio" autoplay></audio>
@@ -467,6 +556,13 @@ function messenger() {
         replyingTo: null,
         showEmojiPicker: null,
         quickEmojis: ['👍', '❤️', '😂', '😮', '😢', '😡'],
+
+        // Lightbox state
+        lightbox: null,
+
+        // Forward state
+        forwardingMessage: null,
+        showForwardModal: false,
 
         // Call state
         incomingCall: null,
@@ -1102,6 +1198,63 @@ function messenger() {
                     })
                 });
             } catch (e) {}
+        },
+
+        // Lightbox functions
+        openLightbox(msg) {
+            this.lightbox = msg;
+        },
+
+        // Forward functions
+        openForwardModal(msg) {
+            this.forwardingMessage = msg;
+            this.showForwardModal = true;
+        },
+
+        async forwardMessage(conversationId) {
+            if (!this.forwardingMessage || !conversationId) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('type', this.forwardingMessage.type || 'text');
+                formData.append('content', this.forwardingMessage.content || '');
+                formData.append('forwarded_from', this.forwardingMessage.id);
+
+                if (this.forwardingMessage.file_path) {
+                    formData.append('file_path', this.forwardingMessage.file_path);
+                    formData.append('file_name', this.forwardingMessage.file_name || '');
+                }
+
+                const response = await fetch(`/admin/chat/conversations/${conversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.message) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'پیام فوروارد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+
+                    // If forwarding to current conversation, add to messages
+                    if (this.currentConversation?.id === conversationId) {
+                        this.messages.push(data.message);
+                        this.$nextTick(() => this.scrollToBottom());
+                    }
+                }
+            } catch (e) {
+                console.error('Error forwarding message:', e);
+                alert('خطا در فوروارد پیام');
+            }
+
+            this.showForwardModal = false;
+            this.forwardingMessage = null;
         }
     }
 }
