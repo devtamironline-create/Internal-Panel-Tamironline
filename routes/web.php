@@ -6,6 +6,7 @@ use Modules\Core\Http\Controllers\DashboardController;
 use Modules\Staff\Http\Controllers\StaffController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\PermissionController;
 
 // Health Check for Coolify/Docker
 Route::get('/health', function () {
@@ -90,6 +91,11 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
     Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
     Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
+
+    // Permission Management
+    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+    Route::get('/permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
+    Route::put('/permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
 
     // Chat System
     Route::prefix('chat')->name('chat.')->group(function () {
