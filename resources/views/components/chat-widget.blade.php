@@ -385,7 +385,7 @@ function chatWidget() {
             });
 
             await this.loadUsers();
-            this.updatePresence('online');
+            this.heartbeat();
 
             // Setup Echo listeners if available
             this.setupEchoListeners();
@@ -405,7 +405,7 @@ function chatWidget() {
 
             // Update presence every 30 seconds
             setInterval(() => {
-                this.updatePresence('online');
+                this.heartbeat();
             }, 30000);
 
             console.log('✅ Chat widget initialized');
@@ -982,6 +982,18 @@ function chatWidget() {
             } catch (e) {
                 console.error('Error updating presence:', e);
             }
+        },
+
+        async heartbeat() {
+            try {
+                await fetch('/admin/chat/heartbeat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+            } catch (e) {}
         },
 
         // Call functions
