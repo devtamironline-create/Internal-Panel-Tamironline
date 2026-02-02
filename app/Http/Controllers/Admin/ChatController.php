@@ -288,11 +288,11 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'content' => 'required_without_all:file,file_path|nullable|string|max:5000',
+            'content' => 'nullable|string|max:5000',
             'type' => 'nullable|in:text,file,image,audio',
             'file' => 'nullable|file|max:10240', // 10MB max
             'reply_to_id' => 'nullable|exists:messages,id',
-            'forwarded_from' => 'nullable|exists:messages,id',
+            'forwarded_from' => 'nullable|integer',
             'file_path' => 'nullable|string', // For forwarded files
             'file_name' => 'nullable|string', // For forwarded files
         ]);
@@ -327,17 +327,24 @@ class ChatController extends Controller
             }
         }
 
-        $message = Message::create([
+        // Build message data
+        $messageData = [
             'conversation_id' => $conversation->id,
             'user_id' => $userId,
-            'body' => $request->content,
+            'body' => $request->content ?: ($request->filled('file_path') ? 'فوروارد شده' : ''),
             'type' => $type,
             'file_path' => $filePath,
             'file_name' => $fileName,
             'file_size' => $fileSize,
             'reply_to_id' => $request->reply_to_id,
-            'forwarded_from' => $request->forwarded_from,
-        ]);
+        ];
+
+        // Only add forwarded_from if the column exists
+        if (\Schema::hasColumn('messages', 'forwarded_from')) {
+            $messageData['forwarded_from'] = $request->forwarded_from;
+        }
+
+        $message = Message::create($messageData);
 
         $message->load(['user', 'replyTo.user']);
 

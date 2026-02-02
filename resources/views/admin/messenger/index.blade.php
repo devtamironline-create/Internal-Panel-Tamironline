@@ -170,7 +170,21 @@
                                 <template x-if="msg.type === 'file' || msg.type === 'image'">
                                     <div class="mb-2">
                                         <template x-if="msg.type === 'image'">
-                                            <img :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition" @click.stop="openLightbox(msg)">
+                                            <div class="relative group/img">
+                                                <img :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition" @click.stop="openLightbox(msg)">
+                                                <!-- Overlay with actions on hover -->
+                                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
+                                                    <button @click.stop="openLightbox(msg)" class="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition" title="مشاهده">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                    </button>
+                                                    <button @click.stop="setReplyTo(msg)" class="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition" title="پاسخ">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                                    </button>
+                                                    <button @click.stop="openForwardModal(msg)" class="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition" title="ارسال به دیگران">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </template>
                                         <template x-if="msg.type === 'file'">
                                             <div @click.stop="openLightbox(msg)" class="flex items-center gap-2 p-3 bg-white/10 dark:bg-gray-600 rounded-lg cursor-pointer hover:bg-white/20 dark:hover:bg-gray-500 transition">
@@ -812,9 +826,16 @@ function messenger() {
 
         // Reply functions
         setReplyTo(msg) {
+            let content = msg.content;
+            // For image/file messages, show appropriate placeholder
+            if (msg.type === 'image') {
+                content = '📷 تصویر';
+            } else if (msg.type === 'file') {
+                content = '📎 ' + (msg.file_name || 'فایل');
+            }
             this.replyingTo = {
                 id: msg.id,
-                content: msg.content,
+                content: content,
                 sender_name: msg.sender_name
             };
             this.$nextTick(() => {
