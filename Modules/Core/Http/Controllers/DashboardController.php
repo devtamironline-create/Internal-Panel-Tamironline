@@ -128,8 +128,8 @@ class DashboardController extends Controller
      */
     protected function getUpcomingBirthdays(): array
     {
-        $today = now();
-        $endDate = now()->addDays(7);
+        $today = now()->startOfDay();
+        $endDate = now()->addDays(7)->endOfDay();
 
         // Get all staff with birth dates
         $users = User::staff()
@@ -144,17 +144,18 @@ class DashboardController extends Controller
             $birthDate = $user->birth_date;
 
             // Create a date for this year's birthday
-            $birthdayThisYear = $birthDate->copy()->year($today->year);
+            $birthdayThisYear = $birthDate->copy()->year(now()->year)->startOfDay();
 
             // If birthday has passed this year, check next year
-            if ($birthdayThisYear->lt($today->startOfDay())) {
+            if ($birthdayThisYear->lt($today)) {
                 $birthdayThisYear->addYear();
             }
 
             // Check if birthday is within the next 7 days
-            if ($birthdayThisYear->between($today->startOfDay(), $endDate->endOfDay())) {
-                $daysUntil = $today->startOfDay()->diffInDays($birthdayThisYear->startOfDay());
-                $age = $birthdayThisYear->diffInYears($birthDate);
+            if ($birthdayThisYear->between($today, $endDate)) {
+                $isToday = $birthdayThisYear->isSameDay($today);
+                $daysUntil = (int) $today->diffInDays($birthdayThisYear);
+                $age = $birthdayThisYear->year - $birthDate->year;
 
                 $birthdayData = [
                     'id' => $user->id,
@@ -163,10 +164,10 @@ class DashboardController extends Controller
                     'jalali_date' => \Morilog\Jalali\Jalalian::fromCarbon($birthdayThisYear)->format('j F'),
                     'days_until' => $daysUntil,
                     'age' => $age,
-                    'is_today' => $daysUntil === 0,
+                    'is_today' => $isToday,
                 ];
 
-                if ($daysUntil === 0) {
+                if ($isToday) {
                     $todayBirthdays[] = $birthdayData;
                 } else {
                     $upcomingBirthdays[] = $birthdayData;
