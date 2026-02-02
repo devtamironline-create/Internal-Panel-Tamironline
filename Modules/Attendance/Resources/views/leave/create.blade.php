@@ -90,8 +90,9 @@
         <div class="bg-white rounded-xl shadow-sm p-6">
             <h3 class="text-lg font-bold text-gray-900 mb-4">تاریخ و زمان</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">از تاریخ</label>
+                <!-- Single date for hourly leave, from date for daily leave -->
+                <div :class="isHourly ? 'md:col-span-2' : ''">
+                    <label class="block text-sm font-medium text-gray-700 mb-1" x-text="isHourly ? 'تاریخ' : 'از تاریخ'"></label>
                     <input type="text" name="start_date" id="start_date" value="{{ old('start_date') }}"
                         placeholder="مثال: 1404/10/15"
                         class="jalali-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" required>
@@ -100,11 +101,12 @@
                     @enderror
                 </div>
 
-                <div>
+                <!-- End date only for daily leave (hidden for hourly) -->
+                <div x-show="!isHourly" x-transition>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تا تاریخ</label>
                     <input type="text" name="end_date" id="end_date" value="{{ old('end_date') }}"
                         placeholder="مثال: 1404/10/16"
-                        class="jalali-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white" required>
+                        class="jalali-datepicker w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer bg-white">
                     @error('end_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -146,14 +148,6 @@
             <div x-show="isHourly && hoursCount > 0 && !timeError" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p class="text-sm text-green-700">
                     مدت مرخصی: <strong x-text="hoursCount + ' ساعت'"></strong>
-                </p>
-            </div>
-
-            <!-- Info for hourly leave -->
-            <div x-show="isHourly" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p class="text-sm text-blue-700">
-                    <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    برای مرخصی ساعتی، تاریخ شروع و پایان باید یکسان باشد.
                 </p>
             </div>
         </div>
@@ -220,7 +214,7 @@ function leaveForm() {
         timeError: '',
 
         init() {
-            // Watch for start date changes to sync end date for hourly leave
+            // Watch for hourly changes
             this.$watch('isHourly', (value) => {
                 if (value) {
                     this.syncDatesForHourly();
@@ -237,20 +231,7 @@ function leaveForm() {
         },
 
         syncDatesForHourly() {
-            // For hourly leave, end date should be same as start date
-            const startDate = document.getElementById('start_date');
-            const endDate = document.getElementById('end_date');
-            if (startDate && endDate && startDate.value) {
-                endDate.value = startDate.value;
-            }
-            // Add event listener to sync dates
-            if (startDate) {
-                startDate.addEventListener('change', () => {
-                    if (this.isHourly && endDate) {
-                        endDate.value = startDate.value;
-                    }
-                });
-            }
+            // For hourly leave, we'll sync end_date on form submit
         },
 
         calculateHours() {
@@ -277,13 +258,11 @@ function leaveForm() {
 
         validateForm(event) {
             if (this.isHourly) {
-                // Check if end date is same as start date
+                // For hourly leave, set end_date = start_date
                 const startDate = document.getElementById('start_date')?.value;
-                const endDate = document.getElementById('end_date')?.value;
-                if (startDate && endDate && startDate !== endDate) {
-                    alert('برای مرخصی ساعتی، تاریخ شروع و پایان باید یکسان باشد');
-                    event.preventDefault();
-                    return false;
+                const endDateInput = document.getElementById('end_date');
+                if (startDate && endDateInput) {
+                    endDateInput.value = startDate;
                 }
 
                 // Check time validation
