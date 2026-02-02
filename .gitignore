@@ -36,3 +36,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env
+storage/framework/views/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/logs/*
+.htaccess
+error_log
+!storage/framework/views/.gitkeep
+!storage/framework/cache/.gitkeep
+!storage/framework/sessions/.gitkeep
+!storage/logs/.gitkeep
