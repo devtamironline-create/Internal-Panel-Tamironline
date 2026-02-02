@@ -75,12 +75,12 @@
                 <!-- Password Login Form -->
                 <form x-show="loginMethod === 'password'" @submit.prevent="loginWithPassword" class="space-y-4">
                     <div>
-                        <label class="block mb-2 text-sm font-medium text-slate-300">نام کاربری یا موبایل</label>
+                        <label class="block mb-2 text-sm font-medium text-slate-300">شماره موبایل یا ایمیل</label>
                         <input
                             type="text"
                             x-model="username"
                             class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            placeholder="نام کاربری یا شماره موبایل"
+                            placeholder="شماره موبایل یا ایمیل"
                             :disabled="loading"
                         >
                     </div>

@@ -153,9 +153,9 @@ class AuthController extends Controller
         $password = $request->input('password');
         $isAdmin = $request->boolean('is_admin');
 
-        // Find user by mobile or username
+        // Find user by mobile or email
         $user = User::where('mobile', $username)
-            ->orWhere('username', $username)
+            ->orWhere('email', $username)
             ->first();
 
         if (!$user) {
