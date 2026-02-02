@@ -278,13 +278,18 @@ function chatWidget() {
         localStream: null,
 
         async init() {
+            console.log('🚀 Chat widget initializing...');
+
             // Store initial message state to prevent notifications on first load
             await this.loadConversations();
+            console.log('📋 Loaded conversations:', this.conversations.length);
+
             this.conversations.forEach(conv => {
                 this.lastKnownMessages[conv.id] = {
                     lastMessageId: conv.last_message_id || 0,
                     unreadCount: conv.unread_count || 0
                 };
+                console.log(`📌 Initial state for conv ${conv.id}: msgId=${conv.last_message_id}, unread=${conv.unread_count}`);
             });
 
             await this.loadUsers();
@@ -310,6 +315,8 @@ function chatWidget() {
             setInterval(() => {
                 this.updatePresence('online');
             }, 30000);
+
+            console.log('✅ Chat widget initialized');
         },
 
         initAudio() {
@@ -336,17 +343,20 @@ function chatWidget() {
         },
 
         async checkForNewMessages() {
-            const previousConversations = JSON.parse(JSON.stringify(this.conversations));
+            const previousState = JSON.parse(JSON.stringify(this.lastKnownMessages));
             await this.loadConversations();
 
             // Check each conversation for new messages
             this.conversations.forEach(conv => {
-                const oldState = this.lastKnownMessages[conv.id];
+                const oldState = previousState[conv.id];
                 const newUnread = conv.unread_count || 0;
                 const newLastMsgId = conv.last_message_id || 0;
 
                 // Find if this is the currently open conversation
-                const isCurrentConversation = this.currentConversation?.id === conv.id;
+                const isCurrentConversation = this.currentConversation?.id === conv.id && this.currentView === 'chat';
+
+                // Debug log
+                console.log(`🔍 Conv ${conv.id} (${conv.display_name}): oldUnread=${oldState?.unreadCount}, newUnread=${newUnread}, oldMsgId=${oldState?.lastMessageId}, newMsgId=${newLastMsgId}`);
 
                 // If there's a new message
                 if (oldState) {
@@ -354,12 +364,26 @@ function chatWidget() {
                                          (newLastMsgId > oldState.lastMessageId && newUnread > 0);
 
                     // Show notification if:
-                    // 1. Chat widget is closed (!this.isOpen), OR
-                    // 2. Chat is open but viewing a different conversation
-                    const shouldNotify = hasNewMessage && (!this.isOpen || (this.isOpen && !isCurrentConversation));
+                    // 1. There's a new message, AND
+                    // 2. Either chat widget is closed OR viewing a different conversation
+                    const shouldNotify = hasNewMessage && (!this.isOpen || !isCurrentConversation);
+
+                    console.log(`📊 hasNewMessage=${hasNewMessage}, isOpen=${this.isOpen}, isCurrentConv=${isCurrentConversation}, shouldNotify=${shouldNotify}`);
 
                     if (shouldNotify) {
-                        console.log('New message detected, showing notification for:', conv.display_name);
+                        console.log('🔔 Showing notification for:', conv.display_name);
+                        this.showToastNotification({
+                            conversationId: conv.id,
+                            senderName: conv.display_name,
+                            message: conv.last_message || 'پیام جدید',
+                            avatar: conv.display_name?.charAt(0) || '?'
+                        });
+                    }
+                } else {
+                    console.log(`⚠️ No oldState for conv ${conv.id}, this is a new conversation`);
+                    // New conversation detected - add to tracking
+                    if (newUnread > 0 && !this.isOpen) {
+                        console.log('🔔 New conversation with unread, showing notification');
                         this.showToastNotification({
                             conversationId: conv.id,
                             senderName: conv.display_name,
@@ -426,19 +450,25 @@ function chatWidget() {
         },
 
         showToastNotification({ conversationId, senderName, message, avatar }) {
+            console.log('🍞 Creating toast notification:', { conversationId, senderName, message });
+
             // Play notification sound
             this.playNotificationSound();
 
             // Create toast element
             const container = document.getElementById('chat-toast-container');
-            if (!container) return;
+            if (!container) {
+                console.error('❌ Toast container not found!');
+                return;
+            }
+            console.log('✅ Toast container found');
 
             const toastId = 'toast-' + Date.now();
             const truncatedMessage = message.length > 50 ? message.substring(0, 50) + '...' : message;
 
             const toast = document.createElement('div');
             toast.id = toastId;
-            toast.className = 'pointer-events-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 transform translate-x-full opacity-0 transition-all duration-300 ease-out cursor-pointer hover:shadow-3xl hover:scale-[1.02]';
+            toast.className = 'pointer-events-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 transform scale-95 opacity-0 transition-all duration-300 ease-out cursor-pointer hover:shadow-3xl hover:scale-[1.02]';
             toast.innerHTML = `
                 <div class="flex items-start gap-3">
                     <div class="flex-shrink-0 w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-lg">
@@ -476,17 +506,20 @@ function chatWidget() {
             });
 
             container.appendChild(toast);
+            console.log('✅ Toast added to container');
 
             // Animate in
             requestAnimationFrame(() => {
-                toast.classList.remove('translate-x-full', 'opacity-0');
-                toast.classList.add('translate-x-0', 'opacity-100');
+                toast.classList.remove('scale-95', 'opacity-0');
+                toast.classList.add('scale-100', 'opacity-100');
+                console.log('✅ Toast animated in');
             });
 
             // Auto remove after 8 seconds
             setTimeout(() => {
                 if (document.getElementById(toastId)) {
-                    toast.classList.add('translate-x-full', 'opacity-0');
+                    toast.classList.remove('scale-100', 'opacity-100');
+                    toast.classList.add('scale-95', 'opacity-0');
                     setTimeout(() => toast.remove(), 300);
                 }
             }, 8000);
