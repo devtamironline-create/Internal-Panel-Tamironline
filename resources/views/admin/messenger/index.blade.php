@@ -122,49 +122,103 @@
 
         <!-- Messages Area -->
         <template x-if="currentConversation">
-            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
+            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900" @click="showEmojiPicker = null">
                 <template x-for="msg in messages" :key="msg.id">
-                    <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group">
-                        <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="relative max-w-md rounded-2xl px-4 py-3">
-                            <template x-if="currentConversation?.type === 'group' && !msg.is_mine">
-                                <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
-                            </template>
-                            <!-- File attachment -->
-                            <template x-if="msg.type === 'file' || msg.type === 'image'">
-                                <div class="mb-2">
-                                    <template x-if="msg.type === 'image'">
-                                        <img :src="'/storage/' + msg.file_path" class="max-w-full rounded-lg cursor-pointer" @click="window.open('/storage/' + msg.file_path, '_blank')">
-                                    </template>
-                                    <template x-if="msg.type === 'file'">
-                                        <a :href="'/storage/' + msg.file_path" target="_blank" class="flex items-center gap-2 p-2 bg-white/10 dark:bg-gray-600 rounded-lg">
-                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                            <span class="text-sm" x-text="msg.file_name"></span>
-                                        </a>
+                    <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
+                        <div class="relative max-w-md">
+                            <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="rounded-2xl px-4 py-3">
+                                <!-- Reply Preview -->
+                                <template x-if="msg.reply_to">
+                                    <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
+                                        <p class="font-medium opacity-80" x-text="msg.reply_to.sender_name"></p>
+                                        <p class="opacity-70 truncate" x-text="msg.reply_to.content"></p>
+                                    </div>
+                                </template>
+                                <template x-if="currentConversation?.type === 'group' && !msg.is_mine">
+                                    <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
+                                </template>
+                                <!-- File attachment -->
+                                <template x-if="msg.type === 'file' || msg.type === 'image'">
+                                    <div class="mb-2">
+                                        <template x-if="msg.type === 'image'">
+                                            <img :src="'/storage/' + msg.file_path" class="max-w-full rounded-lg cursor-pointer" @click="window.open('/storage/' + msg.file_path, '_blank')">
+                                        </template>
+                                        <template x-if="msg.type === 'file'">
+                                            <a :href="'/storage/' + msg.file_path" target="_blank" class="flex items-center gap-2 p-2 bg-white/10 dark:bg-gray-600 rounded-lg">
+                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                <span class="text-sm" x-text="msg.file_name"></span>
+                                            </a>
+                                        </template>
+                                    </div>
+                                </template>
+                                <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
+                                <div class="flex items-center justify-between gap-2 mt-1">
+                                    <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                    <div class="flex items-center gap-1">
+                                        <!-- Inline Actions -->
+                                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button @click.stop="setReplyTo(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="پاسخ">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </button>
+                                            <button @click.stop="showEmojiPicker = showEmojiPicker === msg.id ? null : msg.id" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="واکنش">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </button>
+                                            <button @click="copyMessage(msg.content)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="کپی">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                            </button>
+                                        </div>
+                                        <!-- Read status ticks (only for my messages) -->
+                                        <template x-if="msg.is_mine">
+                                            <span class="text-xs" :class="msg.is_read ? 'text-blue-400' : 'opacity-60'">
+                                                <template x-if="msg.is_read">
+                                                    <span title="خوانده شده">✓✓</span>
+                                                </template>
+                                                <template x-if="!msg.is_read">
+                                                    <span title="ارسال شده">✓</span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reactions Display -->
+                            <template x-if="msg.reactions && msg.reactions.length > 0">
+                                <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-start' : 'justify-end'">
+                                    <template x-for="reaction in msg.reactions" :key="reaction.emoji">
+                                        <button @click.stop="toggleReaction(msg.id, reaction.emoji)" :class="reaction.has_reacted ? 'bg-brand-100 dark:bg-brand-900 border-brand-300' : 'bg-white dark:bg-gray-700'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:scale-105 transition-transform shadow-sm" :title="reaction.users.map(u => u.name).join(', ')">
+                                            <span x-text="reaction.emoji"></span>
+                                            <span class="text-gray-600 dark:text-gray-300" x-text="reaction.count"></span>
+                                        </button>
                                     </template>
                                 </div>
                             </template>
-                            <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
-                            <div class="flex items-center justify-end gap-1 mt-1">
-                                <span class="text-xs opacity-60" x-text="msg.time"></span>
-                                <!-- Read status ticks (only for my messages) -->
-                                <template x-if="msg.is_mine">
-                                    <span class="text-xs" :class="msg.is_read ? 'text-blue-400' : 'opacity-60'">
-                                        <template x-if="msg.is_read">
-                                            <span title="خوانده شده">✓✓</span>
-                                        </template>
-                                        <template x-if="!msg.is_read">
-                                            <span title="ارسال شده">✓</span>
-                                        </template>
-                                    </span>
-                                </template>
-                            </div>
-                            <!-- Copy button -->
-                            <button @click="copyMessage(msg.content)" class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-700 rounded-lg shadow transition" title="کپی متن">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            </button>
+
+                            <!-- Emoji Picker Popup -->
+                            <template x-if="showEmojiPicker === msg.id">
+                                <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 bottom-full mb-1' : 'right-0 bottom-full mb-1'" @click.stop>
+                                    <template x-for="emoji in quickEmojis" :key="emoji">
+                                        <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </template>
+            </div>
+        </template>
+
+        <!-- Reply Preview Bar -->
+        <template x-if="currentConversation && replyingTo">
+            <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex items-center gap-3">
+                <div class="w-1 h-12 bg-brand-500 rounded-full"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-brand-600 dark:text-brand-400" x-text="'پاسخ به ' + replyingTo.sender_name"></p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 truncate" x-text="replyingTo.content"></p>
+                </div>
+                <button @click="replyingTo = null" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
         </template>
 
@@ -176,7 +230,7 @@
                     <button @click="$refs.fileInput.click()" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
-                    <input x-model="newMessage" @keydown.enter="sendMessage()" type="text" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="پیام خود را بنویسید...">
+                    <input x-model="newMessage" @keydown.enter="sendMessage()" @keydown.escape="replyingTo = null" x-ref="messageInput" type="text" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="پیام خود را بنویسید...">
                     <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition">
                         <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     </button>
@@ -372,6 +426,11 @@ function messenger() {
             membersCanAddOthers: true
         },
 
+        // Reply & Reaction state
+        replyingTo: null,
+        showEmojiPicker: null,
+        quickEmojis: ['👍', '❤️', '😂', '😮', '😢', '😡'],
+
         // Call state
         incomingCall: null,
         activeCall: null,
@@ -548,7 +607,9 @@ function messenger() {
         async sendMessage() {
             if (!this.newMessage.trim() || !this.currentConversation) return;
             const message = this.newMessage;
+            const replyToId = this.replyingTo?.id || null;
             this.newMessage = '';
+            this.replyingTo = null;
             try {
                 const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
                     method: 'POST',
@@ -556,7 +617,7 @@ function messenger() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ content: message, type: 'text' })
+                    body: JSON.stringify({ content: message, type: 'text', reply_to_id: replyToId })
                 });
                 const data = await response.json();
                 if (data.message) {
@@ -614,6 +675,55 @@ function messenger() {
             }).catch(err => {
                 console.error('Copy failed:', err);
             });
+        },
+
+        // Reply functions
+        setReplyTo(msg) {
+            this.replyingTo = {
+                id: msg.id,
+                content: msg.content,
+                sender_name: msg.sender_name
+            };
+            this.$nextTick(() => {
+                this.$refs.messageInput?.focus();
+            });
+        },
+
+        scrollToMessage(messageId) {
+            const container = this.$refs.messagesContainer;
+            if (!container) return;
+
+            const el = container.querySelector(`[data-message-id="${messageId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30', 'rounded-lg');
+                setTimeout(() => {
+                    el.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30', 'rounded-lg');
+                }, 2000);
+            }
+        },
+
+        // Reaction functions
+        async toggleReaction(messageId, emoji) {
+            try {
+                const response = await fetch(`/admin/chat/messages/${messageId}/reaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ emoji })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const msg = this.messages.find(m => m.id === messageId);
+                    if (msg) {
+                        msg.reactions = data.reactions;
+                    }
+                }
+            } catch (e) {
+                console.error('Error toggling reaction:', e);
+            }
         },
 
         playNotificationSound() {
