@@ -1,10 +1,9 @@
 @if(auth()->check() && auth()->user()->is_staff)
-<!-- Toast Notification Container - Fixed at top right -->
-<div id="chat-toast-container" class="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
-
 <!-- Notification Sound Element - Using Web Audio API for reliable playback -->
 
 <div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 left-6 z-50" @keydown.escape="closeChat()">
+    <!-- Toast Notification Container - Above chat button -->
+    <div id="chat-toast-container" class="absolute bottom-20 left-0 z-[200] flex flex-col-reverse gap-2 w-80 pointer-events-none"></div>
     <!-- Incoming Call Modal -->
     <div x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
         <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full mx-4">
@@ -228,14 +227,15 @@
     </div>
 
     <!-- Chat Toggle Button -->
-    <button @click="toggleChat()" class="relative flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg transition-all hover:scale-105 px-4 py-3">
-        <template x-if="totalUnread > 0">
-            <span class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center animate-bounce" x-text="totalUnread"></span>
-        </template>
+    <button @click="toggleChat()" class="relative flex items-center justify-center bg-brand-500 hover:bg-brand-600 text-white rounded-2xl shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl w-14 h-14">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-        <!-- Pulse Ring Animation -->
+        <!-- Unread Badge -->
+        <template x-if="totalUnread > 0">
+            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center shadow-sm" x-text="totalUnread > 99 ? '99+' : totalUnread"></span>
+        </template>
+        <!-- Pulse Animation -->
         <template x-if="totalUnread > 0 && !isOpen">
-            <span class="absolute inset-0 rounded-full bg-brand-400 animate-ping opacity-75"></span>
+            <span class="absolute -top-1 -right-1 w-[18px] h-[18px] rounded-full bg-red-400 animate-ping"></span>
         </template>
     </button>
 
@@ -464,28 +464,25 @@ function chatWidget() {
             console.log('✅ Toast container found');
 
             const toastId = 'toast-' + Date.now();
-            const truncatedMessage = message.length > 50 ? message.substring(0, 50) + '...' : message;
+            const truncatedMessage = message.length > 40 ? message.substring(0, 40) + '...' : message;
 
             const toast = document.createElement('div');
             toast.id = toastId;
-            toast.className = 'pointer-events-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 transform scale-95 opacity-0 transition-all duration-300 ease-out cursor-pointer hover:shadow-3xl hover:scale-[1.02]';
+            toast.className = 'pointer-events-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-3 transform scale-95 opacity-0 transition-all duration-200 ease-out cursor-pointer hover:shadow-xl';
             toast.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-lg">
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-brand-500 flex items-center justify-center text-white font-semibold text-sm">
                         ${avatar}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between gap-2">
-                            <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate">${senderName}</h4>
-                            <button onclick="event.stopPropagation(); this.closest('.pointer-events-auto').remove();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">${truncatedMessage}</p>
-                        <p class="text-brand-500 text-xs mt-2 font-medium">کلیک کنید برای مشاهده</p>
+                        <h4 class="font-semibold text-gray-900 dark:text-white text-sm truncate">${senderName}</h4>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-0.5 truncate">${truncatedMessage}</p>
                     </div>
+                    <button onclick="event.stopPropagation(); this.closest('.pointer-events-auto').remove();" class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mr-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
             `;
 
