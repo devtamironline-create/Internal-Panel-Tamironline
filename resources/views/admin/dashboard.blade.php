@@ -36,16 +36,16 @@
         @canany(['view-staff', 'manage-staff', 'manage-permissions'])
         @if(isset($stats['staff_count']))
         <!-- Staff Count -->
-        <div class="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
                     <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-gray-900">{{ number_format($stats['staff_count']) }}</p>
-                    <p class="text-sm text-gray-500">کل پرسنل</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['staff_count']) }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">کل پرسنل</p>
                 </div>
             </div>
         </div>
@@ -55,16 +55,16 @@
         @canany(['view-leave', 'request-leave'])
         @if(isset($stats['leave']))
         <!-- Leave Balance -->
-        <div class="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/30">
                     <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['leave']['annual_balance'] }}</p>
-                    <p class="text-sm text-gray-500">روز مرخصی باقیمانده</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['leave']['annual_balance'] }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">روز مرخصی باقیمانده</p>
                 </div>
             </div>
         </div>
@@ -74,16 +74,16 @@
         @canany(['view-tasks', 'create-tasks', 'manage-tasks'])
         @if(isset($stats['tasks']))
         <!-- My Tasks -->
-        <div class="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-900/30">
                     <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['tasks']['my_in_progress'] }}</p>
-                    <p class="text-sm text-gray-500">تسک در حال انجام</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['tasks']['my_in_progress'] }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">تسک در حال انجام</p>
                 </div>
             </div>
         </div>
@@ -93,16 +93,16 @@
         @can('manage-leave')
         @if(isset($stats['leave_management']))
         <!-- Pending Leave Requests -->
-        <div class="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-50">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-50 dark:bg-yellow-900/30">
                     <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['leave_management']['pending_count'] }}</p>
-                    <p class="text-sm text-gray-500">درخواست در انتظار تایید</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['leave_management']['pending_count'] }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">درخواست در انتظار تایید</p>
                 </div>
             </div>
         </div>
@@ -116,20 +116,20 @@
             @canany(['view-attendance', 'manage-attendance'])
             @if(isset($stats['monthly_attendance']))
             <!-- Monthly Attendance Summary -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">خلاصه حضور و غیاب ماهانه</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">خلاصه حضور و غیاب ماهانه</h3>
                 <div class="grid grid-cols-3 gap-4">
-                    <div class="text-center p-4 bg-green-50 rounded-xl">
-                        <p class="text-3xl font-bold text-green-600">{{ $stats['monthly_attendance']['present_days'] }}</p>
-                        <p class="text-sm text-gray-600 mt-1">روز حضور</p>
+                    <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-xl">
+                        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ $stats['monthly_attendance']['present_days'] }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">روز حضور</p>
                     </div>
-                    <div class="text-center p-4 bg-red-50 rounded-xl">
-                        <p class="text-3xl font-bold text-red-600">{{ $stats['monthly_attendance']['absent_days'] }}</p>
-                        <p class="text-sm text-gray-600 mt-1">روز غیبت</p>
+                    <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-xl">
+                        <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ $stats['monthly_attendance']['absent_days'] }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">روز غیبت</p>
                     </div>
-                    <div class="text-center p-4 bg-blue-50 rounded-xl">
-                        <p class="text-3xl font-bold text-blue-600">{{ $stats['monthly_attendance']['leave_days'] }}</p>
-                        <p class="text-sm text-gray-600 mt-1">روز مرخصی</p>
+                    <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ $stats['monthly_attendance']['leave_days'] }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">روز مرخصی</p>
                     </div>
                 </div>
             </div>
@@ -139,27 +139,27 @@
             @canany(['view-tasks', 'create-tasks', 'manage-tasks'])
             @if(isset($stats['tasks']))
             <!-- My Tasks Overview -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">تسک‌های من</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">تسک‌های من</h3>
                     <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مشاهده همه</a>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="text-center p-4 bg-gray-50 rounded-xl">
-                        <p class="text-2xl font-bold text-gray-700">{{ $stats['tasks']['my_total'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">کل</p>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200">{{ $stats['tasks']['my_total'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">کل</p>
                     </div>
-                    <div class="text-center p-4 bg-yellow-50 rounded-xl">
-                        <p class="text-2xl font-bold text-yellow-600">{{ $stats['tasks']['my_in_progress'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">در حال انجام</p>
+                    <div class="text-center p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ $stats['tasks']['my_in_progress'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">در حال انجام</p>
                     </div>
-                    <div class="text-center p-4 bg-green-50 rounded-xl">
-                        <p class="text-2xl font-bold text-green-600">{{ $stats['tasks']['my_completed'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">تکمیل شده</p>
+                    <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ $stats['tasks']['my_completed'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">تکمیل شده</p>
                     </div>
-                    <div class="text-center p-4 bg-red-50 rounded-xl">
-                        <p class="text-2xl font-bold text-red-600">{{ $stats['tasks']['my_overdue'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">عقب‌افتاده</p>
+                    <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $stats['tasks']['my_overdue'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">عقب‌افتاده</p>
                     </div>
                 </div>
             </div>
@@ -169,27 +169,27 @@
             @can('manage-tasks')
             @if(isset($stats['task_management']))
             <!-- Task Management Overview -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">نمای کلی تسک‌ها</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">نمای کلی تسک‌ها</h3>
                     <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت تسک‌ها</a>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="text-center p-4 border rounded-xl">
-                        <p class="text-2xl font-bold text-gray-700">{{ $stats['task_management']['total_tasks'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">کل تسک‌ها</p>
+                    <div class="text-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200">{{ $stats['task_management']['total_tasks'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">کل تسک‌ها</p>
                     </div>
-                    <div class="text-center p-4 border rounded-xl">
-                        <p class="text-2xl font-bold text-green-600">{{ $stats['task_management']['completed_tasks'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">تکمیل شده</p>
+                    <div class="text-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ $stats['task_management']['completed_tasks'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">تکمیل شده</p>
                     </div>
-                    <div class="text-center p-4 border rounded-xl">
-                        <p class="text-2xl font-bold text-red-600">{{ $stats['task_management']['overdue_tasks'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">عقب‌افتاده</p>
+                    <div class="text-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $stats['task_management']['overdue_tasks'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">عقب‌افتاده</p>
                     </div>
-                    <div class="text-center p-4 border rounded-xl">
-                        <p class="text-2xl font-bold text-blue-600">{{ $stats['task_management']['teams_count'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">تیم‌ها</p>
+                    <div class="text-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ $stats['task_management']['teams_count'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">تیم‌ها</p>
                     </div>
                 </div>
             </div>
@@ -199,23 +199,23 @@
             @can('manage-attendance')
             @if(isset($stats['attendance_management']))
             <!-- Today's Attendance (Manager View) -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">حضور و غیاب امروز</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">حضور و غیاب امروز</h3>
                     <a href="{{ route('attendance.admin') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت</a>
                 </div>
                 <div class="grid grid-cols-3 gap-4">
-                    <div class="text-center p-4 bg-green-50 rounded-xl">
-                        <p class="text-2xl font-bold text-green-600">{{ $stats['attendance_management']['today_checked_in'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">ورود ثبت شده</p>
+                    <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ $stats['attendance_management']['today_checked_in'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ورود ثبت شده</p>
                     </div>
-                    <div class="text-center p-4 bg-blue-50 rounded-xl">
-                        <p class="text-2xl font-bold text-blue-600">{{ $stats['attendance_management']['today_present'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">حاضر کامل</p>
+                    <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ $stats['attendance_management']['today_present'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">حاضر کامل</p>
                     </div>
-                    <div class="text-center p-4 bg-yellow-50 rounded-xl">
-                        <p class="text-2xl font-bold text-yellow-600">{{ $stats['attendance_management']['today_incomplete'] }}</p>
-                        <p class="text-xs text-gray-500 mt-1">بدون خروج</p>
+                    <div class="text-center p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl">
+                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ $stats['attendance_management']['today_incomplete'] }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">بدون خروج</p>
                     </div>
                 </div>
             </div>
@@ -226,50 +226,50 @@
         <!-- Sidebar Widgets -->
         <div class="space-y-6">
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">دسترسی سریع</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">دسترسی سریع</h3>
                 <div class="space-y-2">
                     @can('use-messenger')
-                    <a href="{{ route('admin.messenger') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
+                    <a href="{{ route('admin.messenger') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/30">
                             <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                             </svg>
                         </div>
-                        <span class="text-gray-700">پیام‌رسان</span>
+                        <span class="text-gray-700 dark:text-gray-200">پیام‌رسان</span>
                     </a>
                     @endcan
 
                     @can('request-leave')
-                    <a href="{{ route('leave.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                    <a href="{{ route('leave.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
                             <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                             </svg>
                         </div>
-                        <span class="text-gray-700">درخواست مرخصی</span>
+                        <span class="text-gray-700 dark:text-gray-200">درخواست مرخصی</span>
                     </a>
                     @endcan
 
                     @can('create-tasks')
-                    <a href="{{ route('tasks.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
+                    <a href="{{ route('tasks.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">
                             <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                             </svg>
                         </div>
-                        <span class="text-gray-700">ایجاد تسک جدید</span>
+                        <span class="text-gray-700 dark:text-gray-200">ایجاد تسک جدید</span>
                     </a>
                     @endcan
 
                     @can('manage-staff')
-                    <a href="{{ route('admin.staff.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50">
+                    <a href="{{ route('admin.staff.create') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30">
                             <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
                             </svg>
                         </div>
-                        <span class="text-gray-700">افزودن پرسنل</span>
+                        <span class="text-gray-700 dark:text-gray-200">افزودن پرسنل</span>
                     </a>
                     @endcan
                 </div>
@@ -278,32 +278,32 @@
             @canany(['view-leave', 'request-leave'])
             @if(isset($stats['leave']))
             <!-- Leave Balance Card -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">مانده مرخصی</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">مانده مرخصی</h3>
                 <div class="space-y-4">
                     <div>
                         <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-600">مرخصی استحقاقی</span>
-                            <span class="font-medium">{{ $stats['leave']['annual_balance'] }} روز</span>
+                            <span class="text-gray-600 dark:text-gray-400">مرخصی استحقاقی</span>
+                            <span class="font-medium dark:text-white">{{ $stats['leave']['annual_balance'] }} روز</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div class="bg-green-500 h-2 rounded-full" style="width: {{ min(($stats['leave']['annual_balance'] / 26) * 100, 100) }}%"></div>
                         </div>
                     </div>
                     <div>
                         <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-600">مرخصی استعلاجی</span>
-                            <span class="font-medium">{{ $stats['leave']['sick_balance'] }} روز</span>
+                            <span class="text-gray-600 dark:text-gray-400">مرخصی استعلاجی</span>
+                            <span class="font-medium dark:text-white">{{ $stats['leave']['sick_balance'] }} روز</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div class="bg-blue-500 h-2 rounded-full" style="width: {{ min(($stats['leave']['sick_balance'] / 12) * 100, 100) }}%"></div>
                         </div>
                     </div>
                     @if($stats['leave']['pending_requests'] > 0)
-                    <div class="pt-2 border-t">
-                        <a href="{{ route('leave.index') }}" class="flex items-center justify-between text-sm text-yellow-600 hover:text-yellow-700">
+                    <div class="pt-2 border-t dark:border-gray-700">
+                        <a href="{{ route('leave.index') }}" class="flex items-center justify-between text-sm text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300">
                             <span>درخواست در انتظار</span>
-                            <span class="px-2 py-0.5 bg-yellow-100 rounded-full">{{ $stats['leave']['pending_requests'] }}</span>
+                            <span class="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">{{ $stats['leave']['pending_requests'] }}</span>
                         </a>
                     </div>
                     @endif
