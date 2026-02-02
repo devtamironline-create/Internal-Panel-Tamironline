@@ -87,7 +87,7 @@
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col relative">
         <!-- No Chat Selected -->
         <template x-if="!currentConversation">
             <div class="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -194,17 +194,25 @@
                                 </div>
                             </template>
 
-                            <!-- Emoji Picker Popup -->
-                            <template x-if="showEmojiPicker === msg.id">
-                                <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 top-full mt-1' : 'right-0 top-full mt-1'" @click.stop>
-                                    <template x-for="emoji in quickEmojis" :key="emoji">
-                                        <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
-                                    </template>
-                                </div>
-                            </template>
                         </div>
                     </div>
                 </template>
+            </div>
+        </template>
+
+        <!-- Emoji Picker Bar - Shows above input when selecting reaction -->
+        <template x-if="currentConversation && showEmojiPicker !== null">
+            <div class="px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 border-t border-gray-200 dark:border-gray-600" @click.stop>
+                <div class="flex items-center gap-3">
+                    <div class="flex gap-2 flex-1 justify-center">
+                        <template x-for="emoji in quickEmojis" :key="emoji">
+                            <button @click.stop="toggleReaction(showEmojiPicker, emoji); showEmojiPicker = null" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-gray-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-xl text-2xl hover:scale-110 transition-all shadow-sm border border-gray-200 dark:border-gray-500" x-text="emoji"></button>
+                        </template>
+                    </div>
+                    <button @click="showEmojiPicker = null" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
             </div>
         </template>
 

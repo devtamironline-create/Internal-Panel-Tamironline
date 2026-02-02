@@ -229,14 +229,6 @@
                                     </div>
                                 </template>
 
-                                <!-- Emoji Picker Popup -->
-                                <template x-if="showEmojiPicker === msg.id">
-                                    <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 top-full mt-1' : 'right-0 top-full mt-1'" @click.stop>
-                                        <template x-for="emoji in quickEmojis" :key="emoji">
-                                            <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
-                                        </template>
-                                    </div>
-                                </template>
                             </div>
                         </div>
                     </template>
@@ -252,6 +244,22 @@
                         </div>
                     </template>
                 </div>
+
+                <!-- Emoji Picker Bar - Shows above input when selecting reaction -->
+                <template x-if="showEmojiPicker !== null">
+                    <div class="px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 border-t border-gray-200 dark:border-gray-600" @click.stop>
+                        <div class="flex items-center gap-2">
+                            <div class="flex gap-1 flex-1 justify-center">
+                                <template x-for="emoji in quickEmojis" :key="emoji">
+                                    <button @click.stop="toggleReaction(showEmojiPicker, emoji); showEmojiPicker = null" class="w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg text-xl hover:scale-110 transition-all shadow-sm border border-gray-200 dark:border-gray-500" x-text="emoji"></button>
+                                </template>
+                            </div>
+                            <button @click="showEmojiPicker = null" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
 
                 <!-- Reply Preview Bar -->
                 <template x-if="replyingTo">
