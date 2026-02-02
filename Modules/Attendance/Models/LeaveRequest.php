@@ -34,6 +34,7 @@ class LeaveRequest extends Model
         'end_date' => 'date',
         'approved_at' => 'datetime',
         'days_count' => 'decimal:2',
+        'hours_count' => 'decimal:2',
     ];
 
     const STATUS_PENDING = 'pending';
@@ -97,7 +98,14 @@ class LeaveRequest extends Model
     public function getDurationTextAttribute(): string
     {
         if ($this->leaveType && $this->leaveType->is_hourly) {
-            return $this->hours_count . ' ساعت';
+            $hours = (float) $this->hours_count;
+            if ($hours == 0.5) {
+                return 'نیم ساعت';
+            } elseif ($hours == (int)$hours) {
+                return (int)$hours . ' ساعت';
+            } else {
+                return $hours . ' ساعت';
+            }
         }
 
         if ($this->days_count == 0.5) {
