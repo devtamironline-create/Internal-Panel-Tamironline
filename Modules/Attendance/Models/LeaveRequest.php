@@ -149,7 +149,9 @@ class LeaveRequest extends Model
         if ($leaveType->is_hourly && isset($data['start_time']) && isset($data['end_time'])) {
             $startTime = \Carbon\Carbon::createFromTimeString($data['start_time']);
             $endTime = \Carbon\Carbon::createFromTimeString($data['end_time']);
-            $hoursCount = $endTime->diffInHours($startTime);
+            // Calculate difference in minutes and convert to hours (decimal)
+            $diffInMinutes = $startTime->diffInMinutes($endTime, false);
+            $hoursCount = round($diffInMinutes / 60, 2);
         }
 
         return self::create([
