@@ -142,7 +142,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">تسک‌های من</h3>
-                    <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مشاهده همه</a>
+                    <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">مشاهده همه</a>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
@@ -172,7 +172,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">نمای کلی تسک‌ها</h3>
-                    <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت تسک‌ها</a>
+                    <a href="{{ route('tasks.index') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">مدیریت تسک‌ها</a>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
@@ -202,7 +202,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">حضور و غیاب امروز</h3>
-                    <a href="{{ route('attendance.admin') }}" class="text-sm text-brand-600 hover:text-brand-700">مدیریت</a>
+                    <a href="{{ route('attendance.admin') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">مدیریت</a>
                 </div>
                 <div class="grid grid-cols-3 gap-4">
                     <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-xl">
@@ -318,7 +318,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">تیم‌ها</h3>
-                    <a href="{{ route('teams.index') }}" class="text-sm text-brand-600 hover:text-brand-700">مشاهده همه</a>
+                    <a href="{{ route('teams.index') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">مشاهده همه</a>
                 </div>
                 <div class="space-y-3">
                     @foreach($stats['teams']->take(5) as $team)
