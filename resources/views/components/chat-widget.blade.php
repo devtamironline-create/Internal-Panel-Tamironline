@@ -223,18 +223,18 @@
     </div>
 
     <!-- Chat Toggle Button -->
-    <button @click="toggleChat()" :class="{'animate-pulse': totalUnread > 0 && !isOpen}" class="relative flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg transition-all hover:scale-105 px-4 py-3">
+    <button @click="toggleChat()" class="relative flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg transition-all hover:scale-105 px-4 py-3">
         <template x-if="totalUnread > 0">
-            <span class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center" x-text="totalUnread"></span>
+            <span class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center animate-bounce" x-text="totalUnread"></span>
         </template>
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <!-- Pulse Ring Animation -->
+        <template x-if="totalUnread > 0 && !isOpen">
+            <span class="absolute inset-0 rounded-full bg-brand-400 animate-ping opacity-75"></span>
+        </template>
     </button>
 
-    <!-- Notification Sound -->
-    <audio x-ref="notificationSound" preload="auto">
-        <source src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYOAH2fAAAAAAD/+9DEAAAIAANIAAAAExswax8xIAAAJMEYGAAAQBAEHygIAgGP5QEHLg+D4Pg+XB8HwfB8uf/y4Pv/5c/6gIOXKAgGP+sEHwf/y7///+sEAQc/+XAgCAIOX/Lg/8uD/y4P/lAQ//9YIBAMf9Zz/rOc/1n//rP/9Z//Wf/+sEP/+sEAgEAwf/lz/rP/9Zz//////1nP/rP/9Z//+s5/1nOc/+sEH/+sEAgGAx/+XP+s//1nP/////rP/rP/9Z//rOf9ZznP/rBD//rBAIBgMf/lz/rP/9Zz//////rP+s//1nP/rOf/1nOf/WCH//WCAYDA==" type="audio/mp3">
-    </audio>
-
+    
     <!-- Audio elements for WebRTC -->
     <audio x-ref="localAudio" muted></audio>
     <audio x-ref="remoteAudio" autoplay></audio>
@@ -307,11 +307,24 @@ function chatWidget() {
         },
 
         playNotificationSound() {
-            const audio = this.$refs.notificationSound;
-            if (audio) {
-                audio.currentTime = 0;
-                audio.volume = 0.5;
-                audio.play().catch(() => {});
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('Audio not supported');
             }
         },
 
