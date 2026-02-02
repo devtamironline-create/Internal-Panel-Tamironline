@@ -101,6 +101,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
         Route::post('/activity-status', [ChatController::class, 'setActivityStatus'])->name('activity-status');
+        Route::post('/heartbeat', [ChatController::class, 'heartbeat'])->name('heartbeat');
         Route::get('/online-users', [ChatController::class, 'onlineUsers'])->name('online-users');
         Route::post('/calls/initiate', [ChatController::class, 'initiateCall'])->name('calls.initiate');
         Route::post('/calls/{call}/answer', [ChatController::class, 'answerCall'])->name('calls.answer');

@@ -396,6 +396,28 @@ class ChatController extends Controller
     }
 
     /**
+     * Heartbeat - update last_seen_at without changing status
+     */
+    public function heartbeat(): JsonResponse
+    {
+        $presence = UserPresence::where('user_id', auth()->id())->first();
+
+        if ($presence) {
+            // Just update last_seen_at, keep current status
+            $presence->update(['last_seen_at' => now()]);
+        } else {
+            // First time - set as online
+            $presence = UserPresence::setStatus(auth()->id(), 'online');
+        }
+
+        return response()->json([
+            'status' => $presence->status,
+            'label' => $presence->getStatusLabel(),
+            'color' => $presence->getStatusColor(),
+        ]);
+    }
+
+    /**
      * Get online users
      */
     public function onlineUsers(): JsonResponse

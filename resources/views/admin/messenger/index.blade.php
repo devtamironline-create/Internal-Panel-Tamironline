@@ -494,7 +494,7 @@ function messenger() {
         async init() {
             await this.loadConversations();
             await this.loadUsers();
-            this.updatePresence('online');
+            this.heartbeat();
 
             // Request notification permission
             this.requestNotificationPermission();
@@ -518,7 +518,7 @@ function messenger() {
             }, 2000);
 
             setInterval(() => {
-                this.updatePresence('online');
+                this.heartbeat();
             }, 30000);
         },
 
@@ -778,6 +778,18 @@ function messenger() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify({ status })
+                });
+            } catch (e) {}
+        },
+
+        async heartbeat() {
+            try {
+                await fetch('/admin/chat/heartbeat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
                 });
             } catch (e) {}
         },
