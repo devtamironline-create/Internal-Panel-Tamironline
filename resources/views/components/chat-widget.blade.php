@@ -2,10 +2,7 @@
 <!-- Toast Notification Container - Fixed at top right -->
 <div id="chat-toast-container" class="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
 
-<!-- Notification Sound Element - WAV format for better compatibility -->
-<audio id="chat-notification-sound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRl9vAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YTtvAAB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4B/gH+Bf4J/g3+Ef4V/hn+Hf4l/in+Lf4x/jn+Pf5B/kn+Tf5R/ln+Xf5l/mn+cf51/n3+gf6J/pH+lf6d/qH+qf6x/rn+wf7F/s3+1f7d/uX+7f71/v3/Bf8N/xX/Hf8p/zH/Of9B/0n/Vf9d/2n/cf99/4X/kf+d/6n/sf+9/8n/1f/h/+3/+fwGABIAHgAqADYAQgBOAFoAZgByAH4AigCWAKIArgC6AMYAzgDaAOYA8gD+AQoBFgEiAS4BOgFGAVIBXgFqAXYBggGOAZoBpgGuAboBxgHSAd4B6gH2AgICDgIaAiYCMgI+AkoCVgJiAm4CdgKCAo4CmgKmArICugLGAtIC3gLqAvYDAgMOAxoDJgMuAzoDRgNSA14DagN2A4IDjgOaA6IDrgO6A8YD0gPeA+oD9gQCBA4EGgQmBDIEPgRGBFIEXgRqBHYEggSOBJoEpgSyBL4EygTSBN4E6gT2BQIFDgUaBSYFMgU+BUoFVgViBW4FegWGBZIFngWqBbYFwgXOBdYF4gXuBfoGBgYSBh4GKgY2BkIGTgZaBmYGbgZ6BoYGkgaeBqoGtgbCBs4G1gbiAu4G+gcGBxIHHgcqBzYHQgdOB1oHZgdyB34HigeSB54HqgeyB74HygfWB+IH7gf6CAYIEggeCCoINghCCE4IWghmCHIIfgiKCJYIogiqCLYIwgjOCNoI5gjyCPoJBgkSCR4JKgk2CUIJTglaCWYJcgl6CYYJkgmeCaoJtgnCCc4J2gnmCfIJ+goGChIKHgoqCjYKQgpOCloKZgpuCnoKhgqSCp4Kqgq2CsIKzgraCuYK8gr6CwYLEgseAyoLNgtCC04LWgtmC3ILfguKC5YLogumC7ILvgvKC9YL4gvuC/oMBgwSDB4MKgw2DEIMTgxaDGYMcgx+DIoMlgyiDK4MuAzGDNIM3gzqDPYNAg0ODRoNJg0yDToNRg1SDV4Nag12DYINjg2aDaYNsg2+DcoN1g3iDe4N+g4CDg4OGg4mDjIOPg5KDlYOYg5uDnoOhg6SDp4Oqg62DsIOzg7aDuYO8g76DwYPEg8eDyoPNg9CD04PWg9mD3IPfg+KD5YPog+uD7oPwg/OD9oP5g/yD/4QChAWECIQLhA6EEYQUhBeEGoQdhCCEI4QmhCmELIQvhDKENYQ4hDqEPYRAhEOERoRJhEyET4RShFWEWIRbhF6EYYRkhGaEaYRshG+EcoR1hHiEe4R+hIGEhISHhIqEjYSQhJOElYSYhJuEnoShhKSEp4SqhK2EsISzhLaEuYS8hL+EwYTEhMeEyoTNhNCA04TWgNmA3IDfgOKA5YDogOuA7oDxgPSA94D6gP2BAIEDgQaBCYEMgQ+AEoEVgBiAG4AegCGAJIAngCqALYAwgDOANoA5gDyAP4BCgEWASIBLgE6AUYBUgFeAWoBdgGCAY4BmgGmAbIBvgHKAdYB4gHuAfoABgAOABoAJgAyAD4ASgBWAGIAbgB6AIYAkgCeAKoAtgDCAM4A2gDmAPIA/gEKARYBIgEuAToAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==" type="audio/wav">
-</audio>
+<!-- Notification Sound Element - Using Web Audio API for reliable playback -->
 
 <div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 left-6 z-50" @keydown.escape="closeChat()">
     <!-- Incoming Call Modal -->
@@ -317,15 +314,29 @@ function chatWidget() {
 
         initAudio() {
             if (this.audioInitialized) return;
-            const audio = document.getElementById('chat-notification-sound');
-            if (audio) {
-                audio.load();
-                this.audioInitialized = true;
+            // Initialize Web Audio API context on user interaction
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    // Create and immediately stop a silent oscillator to unlock audio
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.001);
+                    this.audioInitialized = true;
+                    console.log('Audio initialized successfully');
+                }
+            } catch (e) {
+                console.log('Audio init error:', e);
             }
         },
 
         async checkForNewMessages() {
-            const oldConversations = [...this.conversations];
+            const previousConversations = JSON.parse(JSON.stringify(this.conversations));
             await this.loadConversations();
 
             // Check each conversation for new messages
@@ -334,13 +345,21 @@ function chatWidget() {
                 const newUnread = conv.unread_count || 0;
                 const newLastMsgId = conv.last_message_id || 0;
 
-                // If there's a new message (higher unread count or new message ID)
+                // Find if this is the currently open conversation
+                const isCurrentConversation = this.currentConversation?.id === conv.id;
+
+                // If there's a new message
                 if (oldState) {
                     const hasNewMessage = newUnread > oldState.unreadCount ||
                                          (newLastMsgId > oldState.lastMessageId && newUnread > 0);
 
-                    if (hasNewMessage && !this.isOpen) {
-                        // Show toast notification
+                    // Show notification if:
+                    // 1. Chat widget is closed (!this.isOpen), OR
+                    // 2. Chat is open but viewing a different conversation
+                    const shouldNotify = hasNewMessage && (!this.isOpen || (this.isOpen && !isCurrentConversation));
+
+                    if (shouldNotify) {
+                        console.log('New message detected, showing notification for:', conv.display_name);
                         this.showToastNotification({
                             conversationId: conv.id,
                             senderName: conv.display_name,
@@ -359,53 +378,50 @@ function chatWidget() {
         },
 
         playNotificationSound() {
+            console.log('Playing notification sound...');
             try {
-                const audio = document.getElementById('chat-notification-sound');
-                if (audio) {
-                    audio.currentTime = 0;
-                    const playPromise = audio.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(e => {
-                            console.log('Audio play failed, trying fallback:', e);
-                            this.playFallbackSound();
-                        });
-                    }
-                } else {
-                    this.playFallbackSound();
+                // Use Web Audio API for reliable cross-browser sound
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) {
+                    console.log('Web Audio API not supported');
+                    return;
                 }
-            } catch (e) {
-                console.log('Audio error:', e);
-                this.playFallbackSound();
-            }
-        },
 
-        playFallbackSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioContext = new AudioContext();
 
-                // Create a pleasant notification sound (two-tone)
-                const playTone = (freq, startTime, duration) => {
+                // Resume context if suspended (browser policy)
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                // Create a pleasant "ding" notification sound
+                const playTone = (frequency, startTime, duration, volume = 0.5) => {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
 
-                    oscillator.frequency.value = freq;
+                    oscillator.frequency.value = frequency;
                     oscillator.type = 'sine';
 
-                    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime + startTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + startTime + duration);
+                    // Envelope: quick attack, gradual decay
+                    const now = audioContext.currentTime + startTime;
+                    gainNode.gain.setValueAtTime(0, now);
+                    gainNode.gain.linearRampToValueAtTime(volume, now + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
 
-                    oscillator.start(audioContext.currentTime + startTime);
-                    oscillator.stop(audioContext.currentTime + startTime + duration);
+                    oscillator.start(now);
+                    oscillator.stop(now + duration);
                 };
 
-                // Two-tone notification: high then higher
-                playTone(880, 0, 0.15);
-                playTone(1100, 0.15, 0.2);
+                // Play a pleasant two-tone "ding-dong" sound
+                playTone(830, 0, 0.2, 0.5);      // First ding
+                playTone(1046, 0.15, 0.3, 0.4);  // Second ding (higher)
+
+                console.log('Notification sound played successfully');
             } catch (e) {
-                console.log('Fallback audio not supported');
+                console.log('Audio playback error:', e);
             }
         },
 

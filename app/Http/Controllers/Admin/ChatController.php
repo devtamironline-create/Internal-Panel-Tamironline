@@ -67,6 +67,7 @@ class ChatController extends Controller
                     'unread_count' => $conversation->getUnreadCount($userId),
                     'last_message' => $conversation->latestMessage?->body ?? '',
                     'last_message_time' => $conversation->latestMessage?->created_at?->diffForHumans() ?? '',
+                    'last_message_id' => $conversation->latestMessage?->id ?? 0,
                 ];
             })
             ->sortByDesc(fn($c) => $c['last_message_time']);
