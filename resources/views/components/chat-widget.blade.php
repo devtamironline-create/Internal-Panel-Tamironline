@@ -1,4 +1,12 @@
 @if(auth()->check() && auth()->user()->is_staff)
+<!-- Toast Notification Container - Fixed at top right -->
+<div id="chat-toast-container" class="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+<!-- Notification Sound Element - WAV format for better compatibility -->
+<audio id="chat-notification-sound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRl9vAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YTtvAAB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4B/gH+Bf4J/g3+Ef4V/hn+Hf4l/in+Lf4x/jn+Pf5B/kn+Tf5R/ln+Xf5l/mn+cf51/n3+gf6J/pH+lf6d/qH+qf6x/rn+wf7F/s3+1f7d/uX+7f71/v3/Bf8N/xX/Hf8p/zH/Of9B/0n/Vf9d/2n/cf99/4X/kf+d/6n/sf+9/8n/1f/h/+3/+fwGABIAHgAqADYAQgBOAFoAZgByAH4AigCWAKIArgC6AMYAzgDaAOYA8gD+AQoBFgEiAS4BOgFGAVIBXgFqAXYBggGOAZoBpgGuAboBxgHSAd4B6gH2AgICDgIaAiYCMgI+AkoCVgJiAm4CdgKCAo4CmgKmArICugLGAtIC3gLqAvYDAgMOAxoDJgMuAzoDRgNSA14DagN2A4IDjgOaA6IDrgO6A8YD0gPeA+oD9gQCBA4EGgQmBDIEPgRGBFIEXgRqBHYEggSOBJoEpgSyBL4EygTSBN4E6gT2BQIFDgUaBSYFMgU+BUoFVgViBW4FegWGBZIFngWqBbYFwgXOBdYF4gXuBfoGBgYSBh4GKgY2BkIGTgZaBmYGbgZ6BoYGkgaeBqoGtgbCBs4G1gbiAu4G+gcGBxIHHgcqBzYHQgdOB1oHZgdyB34HigeSB54HqgeyB74HygfWB+IH7gf6CAYIEggeCCoINghCCE4IWghmCHIIfgiKCJYIogiqCLYIwgjOCNoI5gjyCPoJBgkSCR4JKgk2CUIJTglaCWYJcgl6CYYJkgmeCaoJtgnCCc4J2gnmCfIJ+goGChIKHgoqCjYKQgpOCloKZgpuCnoKhgqSCp4Kqgq2CsIKzgraCuYK8gr6CwYLEgseAyoLNgtCC04LWgtmC3ILfguKC5YLogumC7ILvgvKC9YL4gvuC/oMBgwSDB4MKgw2DEIMTgxaDGYMcgx+DIoMlgyiDK4MuAzGDNIM3gzqDPYNAg0ODRoNJg0yDToNRg1SDV4Nag12DYINjg2aDaYNsg2+DcoN1g3iDe4N+g4CDg4OGg4mDjIOPg5KDlYOYg5uDnoOhg6SDp4Oqg62DsIOzg7aDuYO8g76DwYPEg8eDyoPNg9CD04PWg9mD3IPfg+KD5YPog+uD7oPwg/OD9oP5g/yD/4QChAWECIQLhA6EEYQUhBeEGoQdhCCEI4QmhCmELIQvhDKENYQ4hDqEPYRAhEOERoRJhEyET4RShFWEWIRbhF6EYYRkhGaEaYRshG+EcoR1hHiEe4R+hIGEhISHhIqEjYSQhJOElYSYhJuEnoShhKSEp4SqhK2EsISzhLaEuYS8hL+EwYTEhMeEyoTNhNCA04TWgNmA3IDfgOKA5YDogOuA7oDxgPSA94D6gP2BAIEDgQaBCYEMgQ+AEoEVgBiAG4AegCGAJIAngCqALYAwgDOANoA5gDyAP4BCgEWASIBLgE6AUYBUgFeAWoBdgGCAY4BmgGmAbIBvgHKAdYB4gHuAfoABgAOABoAJgAyAD4ASgBWAGIAbgB6AIYAkgCeAKoAtgDCAM4A2gDmAPIA/gEKARYBIgEuAToAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAP///////wAAAAAAAAAAAAD///////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==" type="audio/wav">
+</audio>
+
 <div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 left-6 z-50" @keydown.escape="closeChat()">
     <!-- Incoming Call Modal -->
     <div x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
@@ -256,6 +264,11 @@ function chatWidget() {
         totalUnread: 0,
         isTyping: false,
 
+        // Notification tracking
+        lastKnownMessages: {},
+        toastQueue: [],
+        audioInitialized: false,
+
         // Call state
         incomingCall: null,
         activeCall: null,
@@ -268,26 +281,28 @@ function chatWidget() {
         localStream: null,
 
         async init() {
+            // Store initial message state to prevent notifications on first load
             await this.loadConversations();
+            this.conversations.forEach(conv => {
+                this.lastKnownMessages[conv.id] = {
+                    lastMessageId: conv.last_message_id || 0,
+                    unreadCount: conv.unread_count || 0
+                };
+            });
+
             await this.loadUsers();
             this.updatePresence('online');
-
-            // Request notification permission
-            this.requestNotificationPermission();
 
             // Setup Echo listeners if available
             this.setupEchoListeners();
 
-            // Fallback: Poll for new messages every 3 seconds (when Echo not available)
-            setInterval(async () => {
-                const oldUnread = this.totalUnread;
-                await this.loadConversations();
+            // Initialize audio on first user interaction
+            document.addEventListener('click', () => this.initAudio(), { once: true });
+            document.addEventListener('keydown', () => this.initAudio(), { once: true });
 
-                // Check for new messages
-                if (this.totalUnread > oldUnread) {
-                    this.playNotificationSound();
-                    this.showNotification('پیام جدید', `شما ${this.totalUnread} پیام خوانده نشده دارید`);
-                }
+            // Poll for new messages every 3 seconds
+            setInterval(async () => {
+                await this.checkForNewMessages();
 
                 if (this.currentView === 'chat' && this.currentConversation) {
                     this.loadMessages(this.currentConversation.id);
@@ -300,42 +315,165 @@ function chatWidget() {
             }, 30000);
         },
 
-        requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
+        initAudio() {
+            if (this.audioInitialized) return;
+            const audio = document.getElementById('chat-notification-sound');
+            if (audio) {
+                audio.load();
+                this.audioInitialized = true;
             }
+        },
+
+        async checkForNewMessages() {
+            const oldConversations = [...this.conversations];
+            await this.loadConversations();
+
+            // Check each conversation for new messages
+            this.conversations.forEach(conv => {
+                const oldState = this.lastKnownMessages[conv.id];
+                const newUnread = conv.unread_count || 0;
+                const newLastMsgId = conv.last_message_id || 0;
+
+                // If there's a new message (higher unread count or new message ID)
+                if (oldState) {
+                    const hasNewMessage = newUnread > oldState.unreadCount ||
+                                         (newLastMsgId > oldState.lastMessageId && newUnread > 0);
+
+                    if (hasNewMessage && !this.isOpen) {
+                        // Show toast notification
+                        this.showToastNotification({
+                            conversationId: conv.id,
+                            senderName: conv.display_name,
+                            message: conv.last_message || 'پیام جدید',
+                            avatar: conv.display_name?.charAt(0) || '?'
+                        });
+                    }
+                }
+
+                // Update tracking state
+                this.lastKnownMessages[conv.id] = {
+                    lastMessageId: newLastMsgId,
+                    unreadCount: newUnread
+                };
+            });
         },
 
         playNotificationSound() {
             try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.5);
+                const audio = document.getElementById('chat-notification-sound');
+                if (audio) {
+                    audio.currentTime = 0;
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.log('Audio play failed, trying fallback:', e);
+                            this.playFallbackSound();
+                        });
+                    }
+                } else {
+                    this.playFallbackSound();
+                }
             } catch (e) {
-                console.log('Audio not supported');
+                console.log('Audio error:', e);
+                this.playFallbackSound();
             }
         },
 
-        showNotification(title, body) {
-            if (Notification.permission === 'granted') {
-                new Notification(title, {
-                    body: body,
-                    icon: '/favicon.ico',
-                    tag: 'chat-notification'
-                });
+        playFallbackSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Create a pleasant notification sound (two-tone)
+                const playTone = (freq, startTime, duration) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = freq;
+                    oscillator.type = 'sine';
+
+                    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime + startTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + startTime + duration);
+
+                    oscillator.start(audioContext.currentTime + startTime);
+                    oscillator.stop(audioContext.currentTime + startTime + duration);
+                };
+
+                // Two-tone notification: high then higher
+                playTone(880, 0, 0.15);
+                playTone(1100, 0.15, 0.2);
+            } catch (e) {
+                console.log('Fallback audio not supported');
             }
+        },
+
+        showToastNotification({ conversationId, senderName, message, avatar }) {
+            // Play notification sound
+            this.playNotificationSound();
+
+            // Create toast element
+            const container = document.getElementById('chat-toast-container');
+            if (!container) return;
+
+            const toastId = 'toast-' + Date.now();
+            const truncatedMessage = message.length > 50 ? message.substring(0, 50) + '...' : message;
+
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = 'pointer-events-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 transform translate-x-full opacity-0 transition-all duration-300 ease-out cursor-pointer hover:shadow-3xl hover:scale-[1.02]';
+            toast.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-lg">
+                        ${avatar}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate">${senderName}</h4>
+                            <button onclick="event.stopPropagation(); this.closest('.pointer-events-auto').remove();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">${truncatedMessage}</p>
+                        <p class="text-brand-500 text-xs mt-2 font-medium">کلیک کنید برای مشاهده</p>
+                    </div>
+                </div>
+            `;
+
+            // Store conversation ID for click handler
+            toast.dataset.conversationId = conversationId;
+
+            // Click to open chat
+            toast.addEventListener('click', () => {
+                const conv = this.conversations.find(c => c.id == conversationId);
+                if (conv) {
+                    this.isOpen = true;
+                    this.openConversation(conv);
+                } else {
+                    this.isOpen = true;
+                    this.currentView = 'conversations';
+                }
+                toast.remove();
+            });
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+                toast.classList.add('translate-x-0', 'opacity-100');
+            });
+
+            // Auto remove after 8 seconds
+            setTimeout(() => {
+                if (document.getElementById(toastId)) {
+                    toast.classList.add('translate-x-full', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 8000);
         },
 
         setupEchoListeners() {
