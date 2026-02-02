@@ -10,100 +10,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install NPM dependencies
-        run: npm install
-
-      - name: Build assets
-        run: npm run build || true
-
-      - name: Create deployment package
-        run: |
-          # Remove development files
-          rm -rf node_modules
-          rm -rf tests
-          rm -rf .git
-          rm -rf .github
-          rm -f .env
-          rm -f .env.example
-          rm -f phpunit.xml
-          rm -f vite.config.js
-          rm -f package*.json
-
-          # Create deployment archive (ignore "file changed" warning - exit code 1 is OK)
-          tar -czf /tmp/deploy.tar.gz . || [[ $? -eq 1 ]]
-          mv /tmp/deploy.tar.gz ./deploy.tar.gz
-
-          # Verify archive was created
-          ls -la deploy.tar.gz
-
-      - name: Deploy to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "deploy.tar.gz"
-          target: "~/deploy_temp"
-
-      - name: Execute deployment
+      - name: Deploy via SSH (git pull)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
+          command_timeout: 30m
           script: |
             cd ~/public_html
 
-            # Backup important files that should NOT be overwritten
-            echo "Backing up .env and .htaccess..."
-            if [ -f ".env" ]; then cp .env ~/env_backup; fi
-            if [ -f ".htaccess" ]; then cp .htaccess ~/htaccess_backup; fi
-            if [ -f "public/.htaccess" ]; then cp public/.htaccess ~/public_htaccess_backup; fi
-            if [ -d "vendor" ]; then cp -r vendor ~/vendor_backup; fi
+            # Backup .env and .htaccess
+            echo "📦 Backing up config files..."
+            cp .env ~/env_backup 2>/dev/null || true
+            cp .htaccess ~/htaccess_backup 2>/dev/null || true
+            cp public/.htaccess ~/public_htaccess_backup 2>/dev/null || true
 
-            # Extract new version
-            cd ~/deploy_temp
-            tar -xzf deploy.tar.gz
-            rm deploy.tar.gz
-
-            # Sync files (preserving storage uploads)
-            rsync -av --exclude='storage/app/public/*' --exclude='storage/logs/*' --exclude='vendor/' --delete ./ ~/public_html/
+            # Pull latest code from GitHub
+            echo "⬇️ Pulling latest code..."
+            git fetch origin publish
+            git reset --hard origin/publish
 
             # Restore protected files
-            cd ~/public_html
-            echo "Restoring .env and .htaccess..."
-            if [ -f ~/env_backup ]; then mv ~/env_backup .env; fi
-            if [ -f ~/htaccess_backup ]; then mv ~/htaccess_backup .htaccess; fi
-            if [ -f ~/public_htaccess_backup ]; then mv ~/public_htaccess_backup public/.htaccess; fi
-            if [ -d ~/vendor_backup ]; then mv ~/vendor_backup vendor; fi
+            echo "🔄 Restoring config files..."
+            cp ~/env_backup .env 2>/dev/null || true
+            cp ~/htaccess_backup .htaccess 2>/dev/null || true
+            cp ~/public_htaccess_backup public/.htaccess 2>/dev/null || true
 
-            # Install/update composer dependencies on server
-            echo "Installing composer dependencies..."
-            composer install --no-dev --optimize-autoloader --no-interaction 2>/dev/null || composer update --no-dev --optimize-autoloader --no-interaction
+            # Install composer dependencies
+            echo "📥 Installing composer packages..."
+            composer install --no-dev --optimize-autoloader --no-interaction
 
-            # Set permissions
-            chmod -R 755 storage bootstrap/cache
+            # Build assets if npm is available
+            if command -v npm &> /dev/null; then
+              echo "🔨 Building assets..."
+              npm install && npm run build 2>/dev/null || true
+            fi
 
-            # Run migrations
+            # Laravel commands
+            echo "⚙️ Running Laravel commands..."
             php artisan migrate --force
-
-            # Clear and cache
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             php artisan storage:link 2>/dev/null || true
 
-            # Cleanup
-            rm -rf ~/deploy_temp
+            # Set permissions
+            chmod -R 755 storage bootstrap/cache
 
-            echo "Deployment completed successfully!"
+            echo "✅ Deployment completed!"
