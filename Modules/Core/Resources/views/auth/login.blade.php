@@ -5,262 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $isAdmin ? 'ورود به پنل مدیریت' : 'ورود به حساب کاربری' }} | تعمیرآنلاین</title>
-    <link href="/css/fonts.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="/vendor/js/tailwind.min.js"></script>
     <script defer src="/vendor/js/alpine.min.js"></script>
     <style>
-        * { font-family: 'Rokh', sans-serif; font-weight: 500; }
+        * { font-family: 'Vazirmatn', sans-serif; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900">
-    <div class="flex min-h-screen">
-        <!-- Left Side - Form -->
-        <div class="flex flex-col justify-center w-full px-4 py-12 lg:w-1/2 sm:px-6 lg:px-20 xl:px-24">
-            <div class="w-full max-w-md mx-auto">
-                
-                <div x-data="loginForm()" x-cloak>
-                    <!-- Step 1: Mobile / Password Selection -->
-                    <div x-show="step === 'mobile'" x-transition>
-                        <div class="mb-6">
-                            @if($isAdmin)
-                            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ورود به پنل مدیریت</h1>
-                            @else
-                            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ورود / ثبت‌نام</h1>
-                            @endif
-                        </div>
-
-                        <!-- Login Method Tabs -->
-                        <div class="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                            <button type="button" @click="loginMethod = 'otp'" :class="loginMethod === 'otp' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition">
-                                ورود با کد پیامکی
-                            </button>
-                            <button type="button" @click="loginMethod = 'password'" :class="loginMethod === 'password' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition">
-                                ورود با رمز عبور
-                            </button>
-                        </div>
-
-                        <!-- OTP Login Form -->
-                        <form x-show="loginMethod === 'otp'" @submit.prevent="sendOTP" class="space-y-6">
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    شماره موبایل <span class="text-red-500">*</span>
-                                </label>
-                                <input 
-                                    type="tel" 
-                                    x-model="mobile"
-                                    class="w-full px-5 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                    placeholder="09123456789"
-                                    maxlength="11"
-                                    dir="ltr"
-                                    :disabled="loading"
-                                >
-                                <p x-show="errors.mobile" x-text="errors.mobile" class="mt-2 text-sm text-red-600"></p>
-                            </div>
-                            
-                            <button
-                                type="submit"
-                                class="w-full px-5 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                :disabled="loading || !isValidMobile"
-                            >
-                                <span x-show="!loading">دریافت کد تایید</span>
-                                <span x-show="loading" class="flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                    </svg>
-                                    در حال ارسال...
-                                </span>
-                            </button>
-                        </form>
-
-                        <!-- Password Login Form -->
-                        <form x-show="loginMethod === 'password'" @submit.prevent="loginWithPassword" class="space-y-6">
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    نام کاربری یا موبایل <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    x-model="username"
-                                    class="w-full px-5 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                    placeholder="نام کاربری یا شماره موبایل"
-                                    :disabled="loading"
-                                >
-                            </div>
-
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    رمز عبور <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="password"
-                                    x-model="password"
-                                    class="w-full px-5 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                    placeholder="رمز عبور"
-                                    :disabled="loading"
-                                >
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="w-full px-5 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                :disabled="loading || !username || !password"
-                            >
-                                <span x-show="!loading">ورود</span>
-                                <span x-show="loading" class="flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                    </svg>
-                                    در حال بررسی...
-                                </span>
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <!-- Step 2: OTP -->
-                    <div x-show="step === 'otp'" x-transition>
-                        <button 
-                            type="button" 
-                            @click="step = 'mobile'; code = ''" 
-                            class="flex items-center gap-2 mb-6 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                            </svg>
-                            بازگشت
-                        </button>
-                        
-                        <div class="mb-8">
-                            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تایید شماره موبایل</h1>
-                            <p class="mt-2 text-gray-600 dark:text-gray-400">
-                                کد تایید به شماره <span class="font-medium text-gray-900 dark:text-white" dir="ltr" x-text="mobile"></span> ارسال شد
-                            </p>
-                        </div>
-                        
-                        <!-- Debug Code -->
-                        <div x-show="debugCode" class="p-4 mb-6 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p class="text-sm text-amber-800">
-                                <span class="font-medium">کد تست:</span>
-                                <span class="font-bold text-lg mr-2" x-text="debugCode"></span>
-                            </p>
-                        </div>
-                        
-                        <form @submit.prevent="verifyOTP" class="space-y-6">
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    کد تایید <span class="text-red-500">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    x-model="code"
-                                    x-ref="codeInput"
-                                    class="w-full px-5 py-4 text-2xl font-bold tracking-[0.5em] text-center text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                    placeholder="------"
-                                    maxlength="6"
-                                    dir="ltr"
-                                    :disabled="loading"
-                                >
-                            </div>
-                            
-                            <div class="text-center">
-                                <p x-show="timer > 0" class="text-sm text-gray-600 dark:text-gray-400">
-                                    ارسال مجدد تا <span class="font-medium text-gray-900 dark:text-white" x-text="formatTimer"></span>
-                                </p>
-                                <button 
-                                    type="button" 
-                                    x-show="timer === 0" 
-                                    @click="sendOTP" 
-                                    class="text-sm font-medium text-blue-600 hover:text-blue-700"
-                                    :disabled="loading"
-                                >
-                                    ارسال مجدد کد
-                                </button>
-                            </div>
-                            
-                            <button 
-                                type="submit" 
-                                class="w-full px-5 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                :disabled="loading || code.length !== 6"
-                            >
-                                <span x-show="!loading">تایید و ورود</span>
-                                <span x-show="loading">در حال بررسی...</span>
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <!-- Messages -->
-                    <div x-show="message" x-transition class="mt-6">
-                        <div 
-                            class="p-4 rounded-lg text-sm"
-                            :class="messageType === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'"
-                        >
-                            <p x-text="message"></p>
-                        </div>
-                    </div>
-                </div>
-                
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div class="w-full max-w-sm mx-4" x-data="loginForm()" x-cloak>
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+                </svg>
             </div>
+            <h1 class="text-xl font-bold text-white">{{ $isAdmin ? 'پنل مدیریت' : 'ورود به حساب' }}</h1>
         </div>
-        
-        <!-- Right Side - Branding -->
-        <div class="relative hidden lg:flex lg:w-1/2 bg-gradient-to-br {{ $isAdmin ? 'from-blue-600 to-indigo-800' : 'from-emerald-500 to-teal-700' }}">
-            <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Crect%20x%3D%2236%22%20width%3D%226%22%20height%3D%226%22%2F%3E%3Crect%20x%3D%2218%22%20y%3D%2218%22%20width%3D%226%22%20height%3D%226%22%2F%3E%3Crect%20y%3D%2236%22%20width%3D%226%22%20height%3D%226%22%2F%3E%3Crect%20x%3D%2236%22%20y%3D%2236%22%20width%3D%226%22%20height%3D%226%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50"></div>
-            <div class="relative flex flex-col items-center justify-center w-full px-12 text-center">
-                <!-- Logo -->
-                <div class="flex items-center justify-center w-20 h-20 mb-8 bg-white rounded-2xl shadow-lg">
-                    <svg class="w-10 h-10 {{ $isAdmin ? 'text-blue-600' : 'text-emerald-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+
+        <!-- Card -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+            <!-- Step 1: Login -->
+            <div x-show="step === 'mobile'" x-transition>
+                <!-- Login Method Tabs -->
+                <div class="flex mb-6 bg-slate-700/50 rounded-xl p-1">
+                    <button type="button" @click="loginMethod = 'otp'" :class="loginMethod === 'otp' ? 'bg-blue-600 text-white' : 'text-slate-400'" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all">
+                        کد پیامکی
+                    </button>
+                    <button type="button" @click="loginMethod = 'password'" :class="loginMethod === 'password' ? 'bg-blue-600 text-white' : 'text-slate-400'" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all">
+                        رمز عبور
+                    </button>
+                </div>
+
+                <!-- OTP Login Form -->
+                <form x-show="loginMethod === 'otp'" @submit.prevent="sendOTP" class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-slate-300">شماره موبایل</label>
+                        <input
+                            type="tel"
+                            x-model="mobile"
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="09123456789"
+                            maxlength="11"
+                            dir="ltr"
+                            :disabled="loading"
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 transition-all"
+                        :disabled="loading || !isValidMobile"
+                    >
+                        <span x-show="!loading">دریافت کد تایید</span>
+                        <span x-show="loading" class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            در حال ارسال...
+                        </span>
+                    </button>
+                </form>
+
+                <!-- Password Login Form -->
+                <form x-show="loginMethod === 'password'" @submit.prevent="loginWithPassword" class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-slate-300">نام کاربری یا موبایل</label>
+                        <input
+                            type="text"
+                            x-model="username"
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="نام کاربری یا شماره موبایل"
+                            :disabled="loading"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-slate-300">رمز عبور</label>
+                        <input
+                            type="password"
+                            x-model="password"
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="رمز عبور"
+                            :disabled="loading"
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 transition-all"
+                        :disabled="loading || !username || !password"
+                    >
+                        <span x-show="!loading">ورود</span>
+                        <span x-show="loading" class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            در حال بررسی...
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div x-show="step === 'otp'" x-transition>
+                <button
+                    type="button"
+                    @click="step = 'mobile'; code = ''"
+                    class="flex items-center gap-1 mb-4 text-sm text-slate-400 hover:text-white transition"
+                >
+                    <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
+                    بازگشت
+                </button>
+
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-white mb-1">کد تایید</h2>
+                    <p class="text-sm text-slate-400">ارسال شده به <span class="text-white" dir="ltr" x-text="mobile"></span></p>
                 </div>
 
-                <h2 class="text-3xl font-bold text-white mb-4">تعمیرآنلاین</h2>
-                <p class="text-lg {{ $isAdmin ? 'text-blue-100' : 'text-emerald-100' }} max-w-sm">
-                    @if($isAdmin)
-                    پنل داخلی مدیریت تعمیرات
-                    @else
-                    خدمات تعمیرات آنلاین
-                    @endif
-                </p>
-                
-                <!-- Features -->
-                <div class="grid grid-cols-2 gap-4 mt-12 text-right">
-                    <div class="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                        </div>
-                        <span class="text-white text-sm">مدیریت مشتریان</span>
+                <!-- Debug Code -->
+                <div x-show="debugCode" class="p-3 mb-4 bg-amber-500/20 border border-amber-500/30 rounded-xl">
+                    <p class="text-sm text-amber-200">
+                        کد تست: <span class="font-bold text-lg" x-text="debugCode"></span>
+                    </p>
+                </div>
+
+                <form @submit.prevent="verifyOTP" class="space-y-4">
+                    <div>
+                        <input
+                            type="text"
+                            x-model="code"
+                            x-ref="codeInput"
+                            class="w-full px-4 py-4 text-2xl font-bold tracking-[0.5em] text-center bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="------"
+                            maxlength="6"
+                            dir="ltr"
+                            :disabled="loading"
+                        >
                     </div>
-                    <div class="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
-                            </svg>
-                        </div>
-                        <span class="text-white text-sm">صدور فاکتور</span>
+
+                    <div class="text-center text-sm">
+                        <p x-show="timer > 0" class="text-slate-400">
+                            ارسال مجدد تا <span class="text-white font-medium" x-text="formatTimer"></span>
+                        </p>
+                        <button
+                            type="button"
+                            x-show="timer === 0"
+                            @click="sendOTP"
+                            class="text-blue-400 hover:text-blue-300 font-medium"
+                            :disabled="loading"
+                        >
+                            ارسال مجدد کد
+                        </button>
                     </div>
-                    <div class="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                            </svg>
-                        </div>
-                        <span class="text-white text-sm">پشتیبانی تیکت</span>
-                    </div>
-                    <div class="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
-                            </svg>
-                        </div>
-                        <span class="text-white text-sm">مدیریت سرویس</span>
-                    </div>
+
+                    <button
+                        type="submit"
+                        class="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 transition-all"
+                        :disabled="loading || code.length !== 6"
+                    >
+                        <span x-show="!loading">تایید و ورود</span>
+                        <span x-show="loading">در حال بررسی...</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Messages -->
+            <div x-show="message" x-transition class="mt-4">
+                <div
+                    class="p-3 rounded-xl text-sm"
+                    :class="messageType === 'error' ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-green-500/20 text-green-200 border border-green-500/30'"
+                >
+                    <p x-text="message"></p>
                 </div>
             </div>
         </div>
+
+        <!-- Footer -->
+        <p class="text-center text-slate-500 text-xs mt-6">تعمیرآنلاین &copy; {{ date('Y') }}</p>
     </div>
 
     <script>
@@ -287,7 +217,7 @@
                 const s = this.timer % 60;
                 return `${m}:${s.toString().padStart(2, '0')}`;
             },
-            
+
             startTimer(sec) {
                 this.timer = sec;
                 if (this.timerInterval) clearInterval(this.timerInterval);
@@ -296,13 +226,13 @@
                     else clearInterval(this.timerInterval);
                 }, 1000);
             },
-            
+
             async sendOTP() {
                 if (!this.isValidMobile || this.loading) return;
                 this.loading = true;
                 this.message = '';
                 this.debugCode = null;
-                
+
                 try {
                     const res = await fetch('{{ route("auth.send-otp") }}', {
                         method: 'POST',
@@ -310,7 +240,7 @@
                         body: JSON.stringify({ mobile: this.mobile })
                     });
                     const data = await res.json();
-                    
+
                     if (data.success) {
                         this.step = 'otp';
                         this.startTimer(data.expires_in || 120);
@@ -324,7 +254,7 @@
                 } catch (e) { this.message = 'خطا در برقراری ارتباط'; this.messageType = 'error'; }
                 this.loading = false;
             },
-            
+
             async verifyOTP() {
                 if (this.code.length !== 6 || this.loading) return;
                 this.loading = true;
@@ -337,7 +267,7 @@
                         body: JSON.stringify({ mobile: this.mobile, code: this.code, is_admin: this.isAdmin })
                     });
                     const data = await res.json();
-                    
+
                     if (data.success) {
                         this.message = data.message;
                         this.messageType = 'success';
