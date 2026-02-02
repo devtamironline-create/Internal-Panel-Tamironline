@@ -2,10 +2,6 @@
 @section('page-title', 'داشبورد')
 @section('main')
 <div class="space-y-6">
-    <!-- TEST DEPLOY BANNER - حذف شود بعد از تست -->
-    <div class="bg-yellow-500 text-black p-4 rounded-xl text-center font-bold text-lg">
-        تست دیپلوی - 1404/11/13 - ساعت {{ now()->format('H:i') }}
-    </div>
     <!-- Welcome Section -->
     <div class="bg-gradient-to-r from-brand-600 to-brand-800 rounded-xl shadow-sm p-6 text-white">
         <div class="flex items-center justify-between">
