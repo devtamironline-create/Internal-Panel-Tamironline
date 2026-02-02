@@ -9,7 +9,7 @@
             <p class="text-gray-600 dark:text-gray-400">برد کانبان برای مدیریت وظایف</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('tasks.my') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+            <a href="{{ route('tasks.my') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
@@ -169,11 +169,11 @@
         @endforeach
     </div>
     @else
-    <div class="bg-white rounded-xl shadow-sm p-8 text-center">
-        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 text-center">
+        <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
         </svg>
-        <p class="text-gray-500">هیچ تیمی وجود ندارد</p>
+        <p class="text-gray-500 dark:text-gray-400">هیچ تیمی وجود ندارد</p>
     </div>
     @endif
 
@@ -247,30 +247,30 @@
                         <div class="grid grid-cols-4 gap-2">
                             <label class="relative cursor-pointer">
                                 <input type="radio" x-model="newTask.priority" value="low" class="peer sr-only">
-                                <div class="flex flex-col items-center p-2 border-2 rounded-lg transition peer-checked:border-gray-500 peer-checked:bg-gray-50 hover:bg-gray-50">
+                                <div class="flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg transition peer-checked:border-gray-500 peer-checked:bg-gray-50 dark:peer-checked:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <span class="w-3 h-3 rounded-full bg-gray-500 mb-1"></span>
-                                    <span class="text-xs">کم</span>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300">کم</span>
                                 </div>
                             </label>
                             <label class="relative cursor-pointer">
                                 <input type="radio" x-model="newTask.priority" value="medium" class="peer sr-only">
-                                <div class="flex flex-col items-center p-2 border-2 rounded-lg transition peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50">
+                                <div class="flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg transition peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <span class="w-3 h-3 rounded-full bg-blue-500 mb-1"></span>
-                                    <span class="text-xs">متوسط</span>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300">متوسط</span>
                                 </div>
                             </label>
                             <label class="relative cursor-pointer">
                                 <input type="radio" x-model="newTask.priority" value="high" class="peer sr-only">
-                                <div class="flex flex-col items-center p-2 border-2 rounded-lg transition peer-checked:border-orange-500 peer-checked:bg-orange-50 hover:bg-gray-50">
+                                <div class="flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg transition peer-checked:border-orange-500 peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/30 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <span class="w-3 h-3 rounded-full bg-orange-500 mb-1"></span>
-                                    <span class="text-xs">بالا</span>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300">بالا</span>
                                 </div>
                             </label>
                             <label class="relative cursor-pointer">
                                 <input type="radio" x-model="newTask.priority" value="urgent" class="peer sr-only">
-                                <div class="flex flex-col items-center p-2 border-2 rounded-lg transition peer-checked:border-red-500 peer-checked:bg-red-50 hover:bg-gray-50">
+                                <div class="flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg transition peer-checked:border-red-500 peer-checked:bg-red-50 dark:peer-checked:bg-red-900/30 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <span class="w-3 h-3 rounded-full bg-red-500 mb-1"></span>
-                                    <span class="text-xs">فوری</span>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300">فوری</span>
                                 </div>
                             </label>
                         </div>

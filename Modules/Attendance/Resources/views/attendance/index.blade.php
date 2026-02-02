@@ -3,47 +3,47 @@
 @section('main')
 <div class="space-y-6" x-data="attendanceApp()">
     <!-- Today's Status Card -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-                <h2 class="text-xl font-bold text-gray-900 mb-2">وضعیت امروز</h2>
-                <p class="text-gray-600">{{ \Morilog\Jalali\Jalalian::now()->format('l، d F Y') }}</p>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">وضعیت امروز</h2>
+                <p class="text-gray-600 dark:text-gray-400">{{ \Morilog\Jalali\Jalalian::now()->format('l، d F Y') }}</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-4">
                 @if($today)
                     @if($today->check_in)
-                        <div class="text-center px-4 py-2 bg-green-50 rounded-lg">
-                            <span class="block text-xs text-gray-500">ورود</span>
-                            <span class="text-lg font-bold text-green-600">{{ $today->check_in }}</span>
+                        <div class="text-center px-4 py-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">ورود</span>
+                            <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ $today->check_in }}</span>
                         </div>
                     @endif
 
                     @if($today->lunch_start)
-                        <div class="text-center px-4 py-2 {{ $today->is_on_lunch ? 'bg-orange-50' : 'bg-amber-50' }} rounded-lg">
-                            <span class="block text-xs text-gray-500">نهار</span>
-                            <span class="text-lg font-bold {{ $today->is_on_lunch ? 'text-orange-600' : 'text-amber-600' }}">
+                        <div class="text-center px-4 py-2 {{ $today->is_on_lunch ? 'bg-orange-50 dark:bg-orange-900/30' : 'bg-amber-50 dark:bg-amber-900/30' }} rounded-lg">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">نهار</span>
+                            <span class="text-lg font-bold {{ $today->is_on_lunch ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400' }}">
                                 {{ $today->lunch_start }} {{ $today->lunch_end ? '- ' . $today->lunch_end : '(در حال نهار)' }}
                             </span>
                         </div>
                     @endif
 
                     @if($today->check_out)
-                        <div class="text-center px-4 py-2 bg-blue-50 rounded-lg">
-                            <span class="block text-xs text-gray-500">خروج</span>
-                            <span class="text-lg font-bold text-blue-600">{{ $today->check_out }}</span>
+                        <div class="text-center px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">خروج</span>
+                            <span class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ $today->check_out }}</span>
                         </div>
                     @endif
 
                     @if($today->late_minutes > 0)
-                        <div class="text-center px-4 py-2 bg-red-50 rounded-lg">
-                            <span class="block text-xs text-gray-500">تاخیر</span>
-                            <span class="text-lg font-bold text-red-600">{{ $today->late_time }}</span>
+                        <div class="text-center px-4 py-2 bg-red-50 dark:bg-red-900/30 rounded-lg">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">تاخیر</span>
+                            <span class="text-lg font-bold text-red-600 dark:text-red-400">{{ $today->late_time }}</span>
                         </div>
                     @endif
                 @else
-                    <div class="text-center px-4 py-2 bg-gray-50 rounded-lg">
-                        <span class="text-gray-500">هنوز ورود ثبت نشده</span>
+                    <div class="text-center px-4 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <span class="text-gray-500 dark:text-gray-400">هنوز ورود ثبت نشده</span>
                     </div>
                 @endif
             </div>
@@ -67,9 +67,7 @@
                     ثبت ورود
                 </button>
             @elseif(!$today->check_out)
-                {{-- Show lunch or checkout buttons based on lunch status --}}
                 @if($today->is_on_lunch)
-                    {{-- Currently on lunch - show end lunch button --}}
                     <button
                         @click="endLunch()"
                         :disabled="loading"
@@ -85,7 +83,6 @@
                         پایان نهار
                     </button>
                 @else
-                    {{-- Not on lunch - show start lunch and checkout buttons --}}
                     @if(!$today->lunch_start)
                         <button
                             @click="startLunch()"
@@ -118,7 +115,7 @@
                     </button>
                 @endif
             @else
-                <div class="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg">
+                <div class="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg">
                     <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
@@ -128,65 +125,65 @@
         </div>
 
         <!-- Message -->
-        <div x-show="message" x-transition class="mt-4 p-4 rounded-lg" :class="success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+        <div x-show="message" x-transition class="mt-4 p-4 rounded-lg" :class="success ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'">
             <span x-text="message"></span>
         </div>
     </div>
 
     <!-- Work Settings Info -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
-                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
+                    <svg class="w-6 h-6 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">ساعت کاری</p>
-                    <p class="text-lg font-bold text-gray-900">{{ $employeeSettings->getWorkStartTime() }} - {{ $employeeSettings->getWorkEndTime() }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">ساعت کاری</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $employeeSettings->getWorkStartTime() }} - {{ $employeeSettings->getWorkEndTime() }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
-                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-900/30">
+                    <svg class="w-6 h-6 text-orange-500 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">مدت نهار</p>
-                    <p class="text-lg font-bold text-gray-900">{{ $settings->lunch_duration_minutes ?? 30 }} دقیقه</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">مدت نهار</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $settings->lunch_duration_minutes ?? 30 }} دقیقه</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-50">
-                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-50 dark:bg-yellow-900/30">
+                    <svg class="w-6 h-6 text-yellow-500 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">تلرانس تاخیر</p>
-                    <p class="text-lg font-bold text-gray-900">{{ $settings->late_tolerance_minutes }} دقیقه</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">تلرانس تاخیر</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $settings->late_tolerance_minutes }} دقیقه</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
-                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/30">
+                    <svg class="w-6 h-6 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">روش تایید</p>
-                    <p class="text-lg font-bold text-gray-900">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">روش تایید</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white">
                         @php
                             $methods = $settings->verification_methods ?? ['trust'];
                             $labels = ['trust' => 'اعتماد', 'ip' => 'IP', 'gps' => 'GPS', 'selfie' => 'سلفی'];
@@ -199,71 +196,71 @@
     </div>
 
     <!-- Monthly Stats -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">آمار این ماه</h3>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">آمار این ماه</h3>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div class="text-center p-4 bg-green-50 rounded-lg">
-                <span class="block text-2xl font-bold text-green-600">{{ $stats['present_days'] }}</span>
-                <span class="text-sm text-gray-600">روز حضور</span>
+            <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <span class="block text-2xl font-bold text-green-600 dark:text-green-400">{{ $stats['present_days'] }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">روز حضور</span>
             </div>
-            <div class="text-center p-4 bg-red-50 rounded-lg">
-                <span class="block text-2xl font-bold text-red-600">{{ $stats['absent_days'] }}</span>
-                <span class="text-sm text-gray-600">روز غیبت</span>
+            <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
+                <span class="block text-2xl font-bold text-red-600 dark:text-red-400">{{ $stats['absent_days'] }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">روز غیبت</span>
             </div>
-            <div class="text-center p-4 bg-blue-50 rounded-lg">
-                <span class="block text-2xl font-bold text-blue-600">{{ $stats['total_work_hours'] }}</span>
-                <span class="text-sm text-gray-600">ساعت کارکرد</span>
+            <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <span class="block text-2xl font-bold text-blue-600 dark:text-blue-400">{{ $stats['total_work_hours'] }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">ساعت کارکرد</span>
             </div>
-            <div class="text-center p-4 bg-yellow-50 rounded-lg">
-                <span class="block text-2xl font-bold text-yellow-600">{{ $stats['total_late_minutes'] }}</span>
-                <span class="text-sm text-gray-600">دقیقه تاخیر</span>
+            <div class="text-center p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                <span class="block text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ $stats['total_late_minutes'] }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">دقیقه تاخیر</span>
             </div>
-            <div class="text-center p-4 bg-purple-50 rounded-lg">
-                <span class="block text-2xl font-bold text-purple-600">{{ $stats['total_overtime_minutes'] }}</span>
-                <span class="text-sm text-gray-600">دقیقه اضافه‌کاری</span>
+            <div class="text-center p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                <span class="block text-2xl font-bold text-purple-600 dark:text-purple-400">{{ $stats['total_overtime_minutes'] }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">دقیقه اضافه‌کاری</span>
             </div>
         </div>
     </div>
 
     <!-- Recent Attendances -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-gray-900">سوابق این ماه</h3>
-            <a href="{{ route('attendance.history') }}" class="text-sm text-blue-600 hover:text-blue-700">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">سوابق این ماه</h3>
+            <a href="{{ route('attendance.history') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700">
                 مشاهده همه
             </a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-gray-50">
+                <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">تاریخ</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">ورود</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">خروج</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">کارکرد</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">تاخیر</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">وضعیت</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">تاریخ</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ورود</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">خروج</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">کارکرد</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">تاخیر</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">وضعیت</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($monthlyAttendances->take(10) as $attendance)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $attendance->jalali_date }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $attendance->check_in ?? '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $attendance->check_out ?? '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $attendance->work_hours }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm {{ $attendance->late_minutes > 0 ? 'text-red-600' : 'text-gray-600' }}">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ $attendance->jalali_date }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ $attendance->check_in ?? '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ $attendance->check_out ?? '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ $attendance->work_hours }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm {{ $attendance->late_minutes > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400' }}">
                             {{ $attendance->late_time }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $attendance->status_color }}-100 text-{{ $attendance->status_color }}-800">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $attendance->status_color }}-100 dark:bg-{{ $attendance->status_color }}-900/30 text-{{ $attendance->status_color }}-800 dark:text-{{ $attendance->status_color }}-400">
                                 {{ $attendance->status_label }}
                             </span>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                             هیچ رکوردی یافت نشد
                         </td>
                     </tr>
@@ -287,7 +284,6 @@ function attendanceApp() {
             this.message = '';
 
             try {
-                // Try to get location if available
                 let position = null;
                 if (navigator.geolocation) {
                     position = await new Promise((resolve, reject) => {
