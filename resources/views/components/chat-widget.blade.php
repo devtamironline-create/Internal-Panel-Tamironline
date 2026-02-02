@@ -185,8 +185,8 @@
                 <!-- Messages -->
                 <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
                     <template x-for="msg in messages" :key="msg.id">
-                        <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group relative transition-colors duration-500 rounded-lg" :data-message-id="msg.id">
-                            <div class="relative max-w-[75%]">
+                        <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group transition-colors duration-500 rounded-lg px-2" :data-message-id="msg.id">
+                            <div class="relative max-w-[80%]">
                                 <!-- Message Bubble -->
                                 <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="rounded-2xl px-4 py-2">
                                     <!-- Reply Preview -->
@@ -202,7 +202,19 @@
                                     </template>
                                     <!-- Message content -->
                                     <p class="text-sm whitespace-pre-wrap" x-text="msg.content"></p>
-                                    <p class="text-xs mt-1 opacity-60" x-text="msg.time"></p>
+                                    <!-- Time and Actions Row -->
+                                    <div class="flex items-center justify-between gap-2 mt-1">
+                                        <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                        <!-- Inline Actions -->
+                                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button @click.stop="setReplyTo(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="پاسخ">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </button>
+                                            <button @click.stop="showEmojiPicker = showEmojiPicker === msg.id ? null : msg.id" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="واکنش">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Reactions Display -->
@@ -217,21 +229,9 @@
                                     </div>
                                 </template>
 
-                                <!-- Message Actions (Reply & React) - Show on hover -->
-                                <div class="absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1" :class="msg.is_mine ? '-left-20' : '-right-20'">
-                                    <!-- Reply Button -->
-                                    <button @click.stop="setReplyTo(msg)" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-brand-500" title="پاسخ">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                    </button>
-                                    <!-- React Button -->
-                                    <button @click.stop="showEmojiPicker = showEmojiPicker === msg.id ? null : msg.id" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-brand-500" title="واکنش">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    </button>
-                                </div>
-
                                 <!-- Emoji Picker Popup -->
                                 <template x-if="showEmojiPicker === msg.id">
-                                    <div class="absolute z-10 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 top-full mt-1' : 'right-0 top-full mt-1'" @click.stop>
+                                    <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 bottom-full mb-1' : 'right-0 bottom-full mb-1'" @click.stop>
                                         <template x-for="emoji in quickEmojis" :key="emoji">
                                             <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
                                         </template>
