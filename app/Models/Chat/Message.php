@@ -49,6 +49,11 @@ class Message extends Model
         return $this->hasMany(Message::class, 'reply_to_id');
     }
 
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MessageReaction::class);
+    }
+
     public function readBy(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'message_reads')

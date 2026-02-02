@@ -181,17 +181,62 @@
             </div>
 
             <!-- Chat View -->
-            <div x-show="currentView === 'chat'" class="h-full flex flex-col">
+            <div x-show="currentView === 'chat'" class="h-full flex flex-col" @click="showEmojiPicker = null">
                 <!-- Messages -->
-                <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
                     <template x-for="msg in messages" :key="msg.id">
-                        <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'">
-                            <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="max-w-[75%] rounded-2xl px-4 py-2">
-                                <template x-if="currentConversation?.type === 'group' && !msg.is_mine">
-                                    <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
+                        <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group relative transition-colors duration-500 rounded-lg" :data-message-id="msg.id">
+                            <div class="relative max-w-[75%]">
+                                <!-- Message Bubble -->
+                                <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="rounded-2xl px-4 py-2">
+                                    <!-- Reply Preview -->
+                                    <template x-if="msg.reply_to">
+                                        <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-200 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
+                                            <p class="font-medium opacity-80" x-text="msg.reply_to.sender_name"></p>
+                                            <p class="opacity-70 truncate" x-text="msg.reply_to.content"></p>
+                                        </div>
+                                    </template>
+                                    <!-- Sender name for groups -->
+                                    <template x-if="currentConversation?.type === 'group' && !msg.is_mine">
+                                        <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
+                                    </template>
+                                    <!-- Message content -->
+                                    <p class="text-sm whitespace-pre-wrap" x-text="msg.content"></p>
+                                    <p class="text-xs mt-1 opacity-60" x-text="msg.time"></p>
+                                </div>
+
+                                <!-- Reactions Display -->
+                                <template x-if="msg.reactions && msg.reactions.length > 0">
+                                    <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-start' : 'justify-end'">
+                                        <template x-for="reaction in msg.reactions" :key="reaction.emoji">
+                                            <button @click.stop="toggleReaction(msg.id, reaction.emoji)" :class="reaction.has_reacted ? 'bg-brand-100 dark:bg-brand-900 border-brand-300' : 'bg-gray-100 dark:bg-gray-700'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:scale-105 transition-transform" :title="reaction.users.map(u => u.name).join(', ')">
+                                                <span x-text="reaction.emoji"></span>
+                                                <span class="text-gray-600 dark:text-gray-300" x-text="reaction.count"></span>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </template>
-                                <p class="text-sm" x-text="msg.content"></p>
-                                <p class="text-xs mt-1 opacity-60" x-text="msg.time"></p>
+
+                                <!-- Message Actions (Reply & React) - Show on hover -->
+                                <div class="absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1" :class="msg.is_mine ? '-left-20' : '-right-20'">
+                                    <!-- Reply Button -->
+                                    <button @click.stop="setReplyTo(msg)" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-brand-500" title="پاسخ">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                    </button>
+                                    <!-- React Button -->
+                                    <button @click.stop="showEmojiPicker = showEmojiPicker === msg.id ? null : msg.id" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-brand-500" title="واکنش">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </button>
+                                </div>
+
+                                <!-- Emoji Picker Popup -->
+                                <template x-if="showEmojiPicker === msg.id">
+                                    <div class="absolute z-10 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 top-full mt-1' : 'right-0 top-full mt-1'" @click.stop>
+                                        <template x-for="emoji in quickEmojis" :key="emoji">
+                                            <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </template>
@@ -208,13 +253,27 @@
                     </template>
                 </div>
 
+                <!-- Reply Preview Bar -->
+                <template x-if="replyingTo">
+                    <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex items-center gap-3">
+                        <div class="w-1 h-10 bg-brand-500 rounded-full"></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-brand-600 dark:text-brand-400" x-text="'پاسخ به ' + replyingTo.sender_name"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 truncate" x-text="replyingTo.content"></p>
+                        </div>
+                        <button @click="replyingTo = null" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </template>
+
                 <!-- Input -->
                 <div class="p-4 border-t border-gray-200 dark:border-gray-700">
                     <div class="flex items-center gap-2">
                         <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                         </button>
-                        <input x-model="newMessage" @keydown.enter="sendMessage()" type="text" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-brand-500 dark:bg-gray-700 dark:text-white text-sm" placeholder="پیام خود را بنویسید...">
+                        <input x-model="newMessage" @keydown.enter="sendMessage()" @keydown.escape="replyingTo = null" type="text" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-brand-500 dark:bg-gray-700 dark:text-white text-sm" placeholder="پیام خود را بنویسید..." x-ref="messageInput">
                         <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-full transition">
                             <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                         </button>
@@ -258,6 +317,13 @@ function chatWidget() {
         selectedGroupMembers: [],
         totalUnread: 0,
         isTyping: false,
+
+        // Reply state
+        replyingTo: null,
+
+        // Reaction picker
+        showEmojiPicker: null, // message id showing picker
+        quickEmojis: ['👍', '❤️', '😂', '😮', '😢', '😡'],
 
         // Notification tracking
         lastKnownMessages: {},
@@ -788,7 +854,9 @@ function chatWidget() {
             if (!this.newMessage.trim() || !this.currentConversation) return;
 
             const message = this.newMessage;
+            const replyToId = this.replyingTo?.id || null;
             this.newMessage = '';
+            this.replyingTo = null;
 
             try {
                 const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
@@ -797,7 +865,7 @@ function chatWidget() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ content: message, type: 'text' })
+                    body: JSON.stringify({ content: message, type: 'text', reply_to_id: replyToId })
                 });
                 const data = await response.json();
                 if (data.message) {
@@ -808,6 +876,61 @@ function chatWidget() {
                 }
             } catch (e) {
                 console.error('Error sending message:', e);
+            }
+        },
+
+        // Reply functions
+        setReplyTo(msg) {
+            this.replyingTo = {
+                id: msg.id,
+                content: msg.content,
+                sender_name: msg.sender_name
+            };
+            this.$nextTick(() => {
+                this.$refs.messageInput?.focus();
+            });
+        },
+
+        scrollToMessage(messageId) {
+            const container = this.$refs.messagesContainer;
+            if (!container) return;
+
+            // Find the message element
+            const messages = container.querySelectorAll('[data-message-id]');
+            for (const el of messages) {
+                if (el.dataset.messageId == messageId) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight briefly
+                    el.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30');
+                    setTimeout(() => {
+                        el.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30');
+                    }, 2000);
+                    return;
+                }
+            }
+        },
+
+        // Reaction functions
+        async toggleReaction(messageId, emoji) {
+            try {
+                const response = await fetch(`/admin/chat/messages/${messageId}/reaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ emoji })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update reactions for this message
+                    const msg = this.messages.find(m => m.id === messageId);
+                    if (msg) {
+                        msg.reactions = data.reactions;
+                    }
+                }
+            } catch (e) {
+                console.error('Error toggling reaction:', e);
             }
         },
 

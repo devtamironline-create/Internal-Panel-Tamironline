@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Chat\Conversation;
 use App\Models\Chat\Message;
+use App\Models\Chat\MessageReaction;
 use App\Models\Chat\Call;
 use App\Models\Chat\UserPresence;
 use App\Models\User;
@@ -176,7 +177,7 @@ class ChatController extends Controller
             ->toArray();
 
         $messages = $conversation->messages()
-            ->with(['user', 'replyTo.user', 'readBy'])
+            ->with(['user', 'replyTo.user', 'readBy', 'reactions.user'])
             ->latest()
             ->take($request->get('limit', 50))
             ->get()
@@ -190,6 +191,30 @@ class ChatController extends Controller
                     $isRead = !empty(array_intersect($otherParticipantIds, $readByIds));
                 }
 
+                // Group reactions by emoji
+                $reactions = $message->reactions->groupBy('emoji')->map(function ($group) use ($userId) {
+                    return [
+                        'emoji' => $group->first()->emoji,
+                        'count' => $group->count(),
+                        'users' => $group->map(fn($r) => [
+                            'id' => $r->user_id,
+                            'name' => $r->user->full_name,
+                        ])->values(),
+                        'has_reacted' => $group->contains('user_id', $userId),
+                    ];
+                })->values();
+
+                // Reply info
+                $replyTo = null;
+                if ($message->replyTo) {
+                    $replyTo = [
+                        'id' => $message->replyTo->id,
+                        'content' => mb_substr($message->replyTo->body ?? '', 0, 50) . (mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
+                        'sender_name' => $message->replyTo->user->full_name,
+                        'is_mine' => $message->replyTo->user_id === $userId,
+                    ];
+                }
+
                 return [
                     'id' => $message->id,
                     'content' => $message->body,
@@ -201,6 +226,8 @@ class ChatController extends Controller
                     'is_mine' => $message->user_id === $userId,
                     'is_read' => $isRead,
                     'time' => $message->created_at->format('H:i'),
+                    'reply_to' => $replyTo,
+                    'reactions' => $reactions,
                 ];
             });
 
@@ -240,6 +267,7 @@ class ChatController extends Controller
             'content' => 'required_without:file|string|max:5000',
             'type' => 'nullable|in:text,file,image,audio',
             'file' => 'nullable|file|max:10240', // 10MB max
+            'reply_to_id' => 'nullable|exists:messages,id',
         ]);
 
         $type = $request->type ?? 'text';
@@ -271,9 +299,21 @@ class ChatController extends Controller
             'file_path' => $filePath,
             'file_name' => $fileName,
             'file_size' => $fileSize,
+            'reply_to_id' => $request->reply_to_id,
         ]);
 
-        $message->load('user');
+        $message->load(['user', 'replyTo.user']);
+
+        // Prepare reply_to info
+        $replyTo = null;
+        if ($message->replyTo) {
+            $replyTo = [
+                'id' => $message->replyTo->id,
+                'content' => mb_substr($message->replyTo->body ?? '', 0, 50) . (mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
+                'sender_name' => $message->replyTo->user->full_name,
+                'is_mine' => $message->replyTo->user_id === $userId,
+            ];
+        }
 
         return response()->json([
             'message' => [
@@ -287,6 +327,8 @@ class ChatController extends Controller
                 'is_mine' => true,
                 'is_read' => false, // New message is not read yet
                 'time' => $message->created_at->format('H:i'),
+                'reply_to' => $replyTo,
+                'reactions' => [],
             ],
         ]);
     }
@@ -536,5 +578,136 @@ class ChatController extends Controller
         return response()->json([
             'unread_count' => $totalUnread,
         ]);
+    }
+
+    /**
+     * Add reaction to a message
+     */
+    public function addReaction(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user has access to this conversation
+        $conversation = $message->conversation;
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'emoji' => 'required|string|max:10',
+        ]);
+
+        // Add or update reaction
+        $reaction = MessageReaction::updateOrCreate(
+            [
+                'message_id' => $message->id,
+                'user_id' => $userId,
+                'emoji' => $request->emoji,
+            ]
+        );
+
+        // Get updated reactions for this message
+        $reactions = $this->getMessageReactions($message, $userId);
+
+        return response()->json([
+            'success' => true,
+            'reactions' => $reactions,
+        ]);
+    }
+
+    /**
+     * Remove reaction from a message
+     */
+    public function removeReaction(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user has access to this conversation
+        $conversation = $message->conversation;
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'emoji' => 'required|string|max:10',
+        ]);
+
+        // Remove reaction
+        MessageReaction::where([
+            'message_id' => $message->id,
+            'user_id' => $userId,
+            'emoji' => $request->emoji,
+        ])->delete();
+
+        // Get updated reactions for this message
+        $reactions = $this->getMessageReactions($message, $userId);
+
+        return response()->json([
+            'success' => true,
+            'reactions' => $reactions,
+        ]);
+    }
+
+    /**
+     * Toggle reaction on a message
+     */
+    public function toggleReaction(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user has access to this conversation
+        $conversation = $message->conversation;
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'emoji' => 'required|string|max:10',
+        ]);
+
+        // Check if reaction exists
+        $existing = MessageReaction::where([
+            'message_id' => $message->id,
+            'user_id' => $userId,
+            'emoji' => $request->emoji,
+        ])->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            MessageReaction::create([
+                'message_id' => $message->id,
+                'user_id' => $userId,
+                'emoji' => $request->emoji,
+            ]);
+        }
+
+        // Get updated reactions for this message
+        $reactions = $this->getMessageReactions($message, $userId);
+
+        return response()->json([
+            'success' => true,
+            'reactions' => $reactions,
+        ]);
+    }
+
+    /**
+     * Helper: Get formatted reactions for a message
+     */
+    private function getMessageReactions(Message $message, int $userId): array
+    {
+        $message->load('reactions.user');
+
+        return $message->reactions->groupBy('emoji')->map(function ($group) use ($userId) {
+            return [
+                'emoji' => $group->first()->emoji,
+                'count' => $group->count(),
+                'users' => $group->map(fn($r) => [
+                    'id' => $r->user_id,
+                    'name' => $r->user->full_name,
+                ])->values(),
+                'has_reacted' => $group->contains('user_id', $userId),
+            ];
+        })->values()->toArray();
     }
 }
