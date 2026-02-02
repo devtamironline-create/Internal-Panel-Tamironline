@@ -223,13 +223,17 @@
     </div>
 
     <!-- Chat Toggle Button -->
-    <button @click="toggleChat()" class="relative flex items-center justify-center w-14 h-14 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg transition-all hover:scale-105">
-        <svg x-show="!isOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-        <svg x-show="isOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    <button @click="toggleChat()" :class="{'animate-pulse': totalUnread > 0 && !isOpen}" class="relative flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg transition-all hover:scale-105 px-4 py-3">
         <template x-if="totalUnread > 0">
-            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center" x-text="totalUnread"></span>
+            <span class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center" x-text="totalUnread"></span>
         </template>
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
     </button>
+
+    <!-- Notification Sound -->
+    <audio x-ref="notificationSound" preload="auto">
+        <source src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYOAH2fAAAAAAD/+9DEAAAIAANIAAAAExswax8xIAAAJMEYGAAAQBAEHygIAgGP5QEHLg+D4Pg+XB8HwfB8uf/y4Pv/5c/6gIOXKAgGP+sEHwf/y7///+sEAQc/+XAgCAIOX/Lg/8uD/y4P/lAQ//9YIBAMf9Zz/rOc/1n//rP/9Z//Wf/+sEP/+sEAgEAwf/lz/rP/9Zz//////1nP/rP/9Z//+s5/1nOc/+sEH/+sEAgGAx/+XP+s//1nP/////rP/rP/9Z//rOf9ZznP/rBD//rBAIBgMf/lz/rP/9Zz//////rP+s//1nP/rOf/1nOf/WCH//WCAYDA==" type="audio/mp3">
+    </audio>
 
     <!-- Audio elements for WebRTC -->
     <audio x-ref="localAudio" muted></audio>
@@ -268,21 +272,57 @@ function chatWidget() {
             await this.loadUsers();
             this.updatePresence('online');
 
+            // Request notification permission
+            this.requestNotificationPermission();
+
             // Setup Echo listeners if available
             this.setupEchoListeners();
 
-            // Fallback: Poll for new messages every 5 seconds (when Echo not available)
-            setInterval(() => {
+            // Fallback: Poll for new messages every 3 seconds (when Echo not available)
+            setInterval(async () => {
+                const oldUnread = this.totalUnread;
+                await this.loadConversations();
+
+                // Check for new messages
+                if (this.totalUnread > oldUnread) {
+                    this.playNotificationSound();
+                    this.showNotification('پیام جدید', `شما ${this.totalUnread} پیام خوانده نشده دارید`);
+                }
+
                 if (this.currentView === 'chat' && this.currentConversation) {
                     this.loadMessages(this.currentConversation.id);
                 }
-                this.loadConversations();
-            }, 5000);
+            }, 3000);
 
             // Update presence every 30 seconds
             setInterval(() => {
                 this.updatePresence('online');
             }, 30000);
+        },
+
+        requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        },
+
+        playNotificationSound() {
+            const audio = this.$refs.notificationSound;
+            if (audio) {
+                audio.currentTime = 0;
+                audio.volume = 0.5;
+                audio.play().catch(() => {});
+            }
+        },
+
+        showNotification(title, body) {
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: '/favicon.ico',
+                    tag: 'chat-notification'
+                });
+            }
         },
 
         setupEchoListeners() {
