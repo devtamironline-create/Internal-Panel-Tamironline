@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Team extends Model
 {
@@ -24,6 +25,23 @@ class Team extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($team) {
+            if (empty($team->slug)) {
+                $team->slug = Str::slug($team->name);
+            }
+        });
+
+        static::updating(function ($team) {
+            if ($team->isDirty('name') && empty($team->slug)) {
+                $team->slug = Str::slug($team->name);
+            }
+        });
+    }
 
     public function leader(): BelongsTo
     {
