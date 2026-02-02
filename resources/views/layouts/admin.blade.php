@@ -930,5 +930,6 @@
 
     @stack('scripts')
     @include('components.call-notification')
+    @include('components.chat-widget')
 </body>
 </html>
