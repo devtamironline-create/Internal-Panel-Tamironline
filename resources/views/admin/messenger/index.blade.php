@@ -94,6 +94,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <p class="text-sm text-gray-500 truncate flex-1" x-text="conv.last_message || 'شروع گفتگو...'"></p>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full shrink-0" :class="`bg-${conv.status_color || 'gray'}-100 text-${conv.status_color || 'gray'}-700 dark:bg-${conv.status_color || 'gray'}-900/30 dark:text-${conv.status_color || 'gray'}-300`" x-text="conv.status_label || 'آفلاین'"></span>
                         </div>
                     </div>
                     <template x-if="conv.unread_count > 0">
