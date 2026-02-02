@@ -75,6 +75,19 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">تاریخ تولد</label>
+                    <input type="text" name="birth_date" id="birth_date_display" value="{{ old('birth_date', isset($staff) && $staff->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($staff->birth_date)->format('Y/m/d') : '') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500" dir="ltr" placeholder="1370/01/01" data-jdp>
+                    @error('birth_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">کد ملی</label>
+                    <input type="text" name="national_code" value="{{ old('national_code', $staff->national_code ?? '') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500" dir="ltr" placeholder="0123456789" maxlength="10">
+                    @error('national_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">رمز عبور {{ isset($staff) ? '' : '*' }}</label>
                     <input type="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500" {{ isset($staff) ? '' : 'required' }}>
                     @if(isset($staff))<p class="mt-1 text-xs text-gray-500">برای عدم تغییر خالی بگذارید</p>@endif
