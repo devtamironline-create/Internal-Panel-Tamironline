@@ -196,7 +196,7 @@
 
                             <!-- Emoji Picker Popup -->
                             <template x-if="showEmojiPicker === msg.id">
-                                <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 bottom-full mb-1' : 'right-0 bottom-full mb-1'" @click.stop>
+                                <div class="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 p-2 flex gap-1" :class="msg.is_mine ? 'left-0 top-full mt-1' : 'right-0 top-full mt-1'" @click.stop>
                                     <template x-for="emoji in quickEmojis" :key="emoji">
                                         <button @click.stop="toggleReaction(msg.id, emoji); showEmojiPicker = null" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg hover:scale-125 transition-transform" x-text="emoji"></button>
                                     </template>
