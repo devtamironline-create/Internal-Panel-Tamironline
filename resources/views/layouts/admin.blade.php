@@ -396,7 +396,7 @@
         <div x-show="sidebarToggle" @click="sidebarToggle = false" class="fixed inset-0 z-40 bg-black/50 lg:hidden" x-transition.opacity></div>
 
         <!-- Main Content -->
-        <div class="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        <div class="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
             <!-- Header -->
             <header class="sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white lg:border-b dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex grow flex-col items-center justify-between lg:flex-row lg:px-6">
