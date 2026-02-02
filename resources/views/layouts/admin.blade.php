@@ -381,8 +381,18 @@
             <!-- User Info at Bottom -->
             <div class="border-t border-white/10 py-4">
                 <div class="flex items-center gap-3 px-2">
-                    <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold">
-                        {{ mb_substr(auth()->user()->first_name ?? 'A', 0, 1) }}
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold overflow-hidden">
+                            @if(auth()->user()->avatar_url)
+                                <img src="{{ auth()->user()->avatar_url }}" class="w-full h-full object-cover" alt="{{ auth()->user()->full_name }}">
+                            @else
+                                {{ auth()->user()->initials }}
+                            @endif
+                        </div>
+                        @php
+                            $userStatusColor = auth()->user()->getPresenceStatusColor();
+                        @endphp
+                        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-800 bg-{{ $userStatusColor }}-500"></span>
                     </div>
                     <div class="flex-1">
                         <div class="text-sm font-medium text-white">{{ auth()->user()->full_name ?? 'کاربر' }}</div>
@@ -674,9 +684,9 @@
     function activityStatus() {
         return {
             open: false,
-            status: 'online',
-            statusLabel: 'آنلاین',
-            statusColor: 'green',
+            status: '{{ auth()->user()->getPresenceStatus() }}',
+            statusLabel: '{{ auth()->user()->getPresenceStatusLabel() }}',
+            statusColor: '{{ auth()->user()->getPresenceStatusColor() }}',
             async setStatus(status) {
                 try {
                     const response = await fetch('/admin/chat/activity-status', {
