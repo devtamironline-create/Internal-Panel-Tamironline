@@ -39,7 +39,19 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-medium">{{ mb_substr($member->first_name ?? 'U', 0, 1) }}</div>
+                            <div class="relative">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-medium overflow-hidden">
+                                    @if($member->avatar_url)
+                                        <img src="{{ $member->avatar_url }}" class="w-full h-full object-cover" alt="{{ $member->full_name }}">
+                                    @else
+                                        {{ $member->initials }}
+                                    @endif
+                                </div>
+                                @php
+                                    $statusColor = $member->getPresenceStatusColor();
+                                @endphp
+                                <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 bg-{{ $statusColor }}-500" title="{{ $member->getPresenceStatusLabel() }}"></span>
+                            </div>
                             <div>
                                 <p class="font-medium text-gray-900 dark:text-white">{{ $member->full_name }}</p>
                                 @if($member->email)<p class="text-sm text-gray-500 dark:text-gray-400">{{ $member->email }}</p>@endif
@@ -72,11 +84,19 @@
                         @endif
                     </td>
                     <td class="px-6 py-4">
-                        @if($member->is_active)
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">فعال</span>
-                        @else
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">غیرفعال</span>
-                        @endif
+                        @php
+                            $statusColor = $member->getPresenceStatusColor();
+                            $statusLabel = $member->getPresenceStatusLabel();
+                        @endphp
+                        <div class="flex flex-col gap-1">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $statusColor }}-100 text-{{ $statusColor }}-800 dark:bg-{{ $statusColor }}-900/30 dark:text-{{ $statusColor }}-400">
+                                <span class="w-1.5 h-1.5 rounded-full bg-{{ $statusColor }}-500"></span>
+                                {{ $statusLabel }}
+                            </span>
+                            @if(!$member->is_active)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">غیرفعال</span>
+                            @endif
+                        </div>
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">

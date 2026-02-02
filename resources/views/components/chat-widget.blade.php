@@ -121,10 +121,15 @@
                 <template x-for="conv in conversations" :key="conv.id">
                     <div @click="openConversation(conv)" class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700">
                         <div class="relative">
-                            <div class="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold" x-text="conv.display_name?.charAt(0)"></div>
-                            <template x-if="conv.is_online">
-                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
-                            </template>
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                                <template x-if="conv.avatar">
+                                    <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
+                                </template>
+                                <template x-if="!conv.avatar">
+                                    <span x-text="conv.initials || conv.display_name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${conv.status_color || 'gray'}-500`" :title="conv.status_label"></span>
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between">
@@ -145,14 +150,19 @@
                 <template x-for="user in users" :key="user.id">
                     <div @click="startConversation(user.id)" class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700">
                         <div class="relative">
-                            <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold" x-text="user.name?.charAt(0)"></div>
-                            <template x-if="user.is_online">
-                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
-                            </template>
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                                <template x-if="user.avatar">
+                                    <img :src="user.avatar" class="w-full h-full object-cover" :alt="user.name">
+                                </template>
+                                <template x-if="!user.avatar">
+                                    <span x-text="user.initials || user.name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${user.status_color || 'gray'}-500`" :title="user.status_label"></span>
                         </div>
                         <div class="flex-1">
                             <h4 class="font-medium text-gray-900 dark:text-white" x-text="user.name"></h4>
-                            <p class="text-sm text-gray-500" x-text="user.role"></p>
+                            <span class="text-xs px-2 py-0.5 rounded-full" :class="`bg-${user.status_color || 'gray'}-100 text-${user.status_color || 'gray'}-700 dark:bg-${user.status_color || 'gray'}-900/30 dark:text-${user.status_color || 'gray'}-300`" x-text="user.status_label"></span>
                         </div>
                         <button @click.stop="initiateCall(user.id)" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg" title="تماس">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -171,7 +181,17 @@
                 <template x-for="user in users" :key="user.id">
                     <label class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded-lg">
                         <input type="checkbox" :value="user.id" x-model="selectedGroupMembers" class="w-4 h-4 text-brand-500 rounded">
-                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold" x-text="user.name?.charAt(0)"></div>
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                                <template x-if="user.avatar">
+                                    <img :src="user.avatar" class="w-full h-full object-cover" :alt="user.name">
+                                </template>
+                                <template x-if="!user.avatar">
+                                    <span x-text="user.initials || user.name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border border-white dark:border-gray-800 rounded-full" :class="`bg-${user.status_color || 'gray'}-500`"></span>
+                        </div>
                         <span class="text-gray-900 dark:text-white" x-text="user.name"></span>
                     </label>
                 </template>

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'mobile',
         'mobile_verified_at',
         'email',
+        'avatar',
         'email_verified_at',
         'password',
         'national_code',
@@ -57,6 +58,21 @@ class User extends Authenticatable
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}") ?: 'کاربر';
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar) {
+            return asset('storage/' . $this->avatar);
+        }
+        return null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $first = mb_substr($this->first_name ?? '', 0, 1);
+        $last = mb_substr($this->last_name ?? '', 0, 1);
+        return $first . $last ?: '؟';
     }
 
     public function getBirthDateJalaliAttribute(): ?string
@@ -151,5 +167,15 @@ class User extends Authenticatable
     public function getPresenceStatus(): string
     {
         return $this->presence?->status ?? 'offline';
+    }
+
+    public function getPresenceStatusLabel(): string
+    {
+        return $this->presence?->getStatusLabel() ?? 'آفلاین';
+    }
+
+    public function getPresenceStatusColor(): string
+    {
+        return $this->presence?->getStatusColor() ?? 'gray';
     }
 }

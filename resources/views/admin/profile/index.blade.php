@@ -17,11 +17,26 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <div class="p-6 text-center border-b border-gray-200 dark:border-gray-700">
-            <div class="w-24 h-24 mx-auto rounded-full bg-brand-500 flex items-center justify-center text-white text-4xl font-bold">
-                {{ mb_substr($user->first_name ?? 'U', 0, 1) }}
+            <div class="relative inline-block">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden ring-4 ring-white dark:ring-gray-700 shadow-lg">
+                    @if($user->avatar_url)
+                        <img src="{{ $user->avatar_url }}" class="w-full h-full object-cover" alt="{{ $user->full_name }}">
+                    @else
+                        {{ $user->initials }}
+                    @endif
+                </div>
+                @php
+                    $statusColor = $user->getPresenceStatusColor();
+                    $statusLabel = $user->getPresenceStatusLabel();
+                @endphp
+                <span class="absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white dark:border-gray-700 bg-{{ $statusColor }}-500" title="{{ $statusLabel }}"></span>
             </div>
             <h2 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">{{ $user->full_name }}</h2>
             <p class="text-gray-500 dark:text-gray-400">{{ $user->roles->first()?->name ?? 'کاربر' }}</p>
+            <span class="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-{{ $statusColor }}-100 dark:bg-{{ $statusColor }}-900/30 text-{{ $statusColor }}-700 dark:text-{{ $statusColor }}-300 rounded-full text-sm">
+                <span class="w-2 h-2 rounded-full bg-{{ $statusColor }}-500"></span>
+                {{ $statusLabel }}
+            </span>
         </div>
 
         <div class="divide-y divide-gray-200 dark:divide-gray-700">

@@ -38,12 +38,21 @@
             <template x-for="user in filteredUsers" :key="user.id">
                 <div @click="startConversation(user.id)" class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700">
                     <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-lg" x-text="user.name?.charAt(0)"></div>
-                        <span x-show="user.is_online" class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                            <template x-if="user.avatar">
+                                <img :src="user.avatar" class="w-full h-full object-cover" :alt="user.name">
+                            </template>
+                            <template x-if="!user.avatar">
+                                <span x-text="user.initials || user.name?.charAt(0)"></span>
+                            </template>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${user.status_color}-500`" :title="user.status_label"></span>
                     </div>
                     <div class="flex-1">
                         <h4 class="font-medium text-gray-900 dark:text-white" x-text="user.name"></h4>
-                        <p class="text-sm text-gray-500" x-text="user.role || 'کاربر'"></p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs px-2 py-0.5 rounded-full" :class="`bg-${user.status_color}-100 text-${user.status_color}-700 dark:bg-${user.status_color}-900/30 dark:text-${user.status_color}-300`" x-text="user.status_label"></span>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -68,15 +77,24 @@
             <template x-for="conv in filteredConversations" :key="conv.id">
                 <div @click="openConversation(conv)" :class="currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700'" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700">
                     <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold text-lg" x-text="conv.display_name?.charAt(0)"></div>
-                        <span x-show="conv.is_online" class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                            <template x-if="conv.avatar">
+                                <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
+                            </template>
+                            <template x-if="!conv.avatar">
+                                <span x-text="conv.initials || conv.display_name?.charAt(0)"></span>
+                            </template>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${conv.status_color || 'gray'}-500`" :title="conv.status_label"></span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
                             <h4 class="font-medium text-gray-900 dark:text-white truncate" x-text="conv.display_name"></h4>
                             <span class="text-xs text-gray-400" x-text="conv.last_message_time"></span>
                         </div>
-                        <p class="text-sm text-gray-500 truncate" x-text="conv.last_message || 'شروع گفتگو...'"></p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm text-gray-500 truncate flex-1" x-text="conv.last_message || 'شروع گفتگو...'"></p>
+                        </div>
                     </div>
                     <template x-if="conv.unread_count > 0">
                         <span class="bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[24px] text-center" x-text="conv.unread_count"></span>
@@ -104,12 +122,22 @@
             <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <div class="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold" x-text="currentConversation?.display_name?.charAt(0)"></div>
-                        <span x-show="currentConversation?.is_online" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                            <template x-if="currentConversation?.avatar">
+                                <img :src="currentConversation.avatar" class="w-full h-full object-cover" :alt="currentConversation.display_name">
+                            </template>
+                            <template x-if="!currentConversation?.avatar">
+                                <span x-text="currentConversation?.initials || currentConversation?.display_name?.charAt(0)"></span>
+                            </template>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
                     </div>
                     <div>
                         <h3 class="font-medium text-gray-900 dark:text-white" x-text="currentConversation?.display_name"></h3>
-                        <p class="text-sm text-gray-500" x-text="currentConversation?.is_online ? 'آنلاین' : 'آفلاین'"></p>
+                        <span class="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" :class="`bg-${currentConversation?.status_color || 'gray'}-100 text-${currentConversation?.status_color || 'gray'}-700 dark:bg-${currentConversation?.status_color || 'gray'}-900/30 dark:text-${currentConversation?.status_color || 'gray'}-300`">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
+                            <span x-text="currentConversation?.status_label || 'آفلاین'"></span>
+                        </span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

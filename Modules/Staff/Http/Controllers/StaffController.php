@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -42,7 +43,7 @@ class StaffController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::staff()->with('roles');
+        $query = User::staff()->with(['roles', 'presence']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -74,9 +75,10 @@ class StaffController extends Controller
             'password' => 'required|min:8|confirmed',
             'is_active' => 'boolean',
             'role' => 'nullable|exists:roles,name',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
-        $user = User::create([
+        $userData = [
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'mobile' => $validated['mobile'],
@@ -85,7 +87,14 @@ class StaffController extends Controller
             'mobile_verified_at' => now(),
             'is_staff' => true,
             'is_active' => $validated['is_active'] ?? true,
-        ]);
+        ];
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            $userData['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $user = User::create($userData);
 
         // Assign role to user
         $user->syncRoles($validated['role'] ?? 'staff');
@@ -115,15 +124,27 @@ class StaffController extends Controller
             'password' => 'nullable|min:8|confirmed',
             'is_active' => 'boolean',
             'role' => 'nullable|exists:roles,name',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
-        $staff->update([
+        $updateData = [
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'mobile' => $validated['mobile'],
             'email' => $validated['email'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
-        ]);
+        ];
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($staff->avatar) {
+                Storage::disk('public')->delete($staff->avatar);
+            }
+            $updateData['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $staff->update($updateData);
 
         if (!empty($validated['password'])) {
             $staff->update(['password' => Hash::make($validated['password'])]);

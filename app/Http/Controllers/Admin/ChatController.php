@@ -30,9 +30,13 @@ class ChatController extends Controller
                 return [
                     'id' => $user->id,
                     'name' => $user->full_name,
-                    'avatar' => mb_substr($user->first_name ?? 'U', 0, 1),
+                    'avatar' => $user->avatar_url,
+                    'initials' => $user->initials,
                     'role' => $user->roles->first()?->name ?? 'کاربر',
                     'is_online' => $isOnline,
+                    'status' => $user->getPresenceStatus(),
+                    'status_label' => $user->getPresenceStatusLabel(),
+                    'status_color' => $user->getPresenceStatusColor(),
                     'last_seen' => $user->presence?->last_seen_at?->diffForHumans(),
                 ];
             });
@@ -55,16 +59,27 @@ class ChatController extends Controller
             ->map(function ($conversation) use ($userId) {
                 $other = $conversation->getOtherParticipant($userId);
                 $isOnline = false;
+                $status = 'offline';
+                $statusLabel = 'آفلاین';
+                $statusColor = 'gray';
                 if ($other && $other->presence) {
                     $isOnline = $other->presence->status === 'online'
                         && $other->presence->last_seen_at?->diffInMinutes() < 5;
+                    $status = $other->getPresenceStatus();
+                    $statusLabel = $other->getPresenceStatusLabel();
+                    $statusColor = $other->getPresenceStatusColor();
                 }
                 return [
                     'id' => $conversation->id,
                     'type' => $conversation->type,
                     'display_name' => $conversation->getDisplayName($userId),
                     'user_id' => $other?->id,
+                    'avatar' => $other?->avatar_url,
+                    'initials' => $other?->initials ?? '؟',
                     'is_online' => $isOnline,
+                    'status' => $status,
+                    'status_label' => $statusLabel,
+                    'status_color' => $statusColor,
                     'unread_count' => $conversation->getUnreadCount($userId),
                     'last_message' => $conversation->latestMessage?->body ?? '',
                     'last_message_time' => $conversation->latestMessage?->created_at?->diffForHumans() ?? '',
@@ -90,7 +105,7 @@ class ChatController extends Controller
             $request->user_id
         );
 
-        $other = User::find($request->user_id);
+        $other = User::with('presence')->find($request->user_id);
 
         return response()->json([
             'conversation' => [
@@ -98,6 +113,12 @@ class ChatController extends Controller
                 'type' => 'private',
                 'display_name' => $other->full_name,
                 'user_id' => $other->id,
+                'avatar' => $other->avatar_url,
+                'initials' => $other->initials,
+                'is_online' => $other->isOnline(),
+                'status' => $other->getPresenceStatus(),
+                'status_label' => $other->getPresenceStatusLabel(),
+                'status_color' => $other->getPresenceStatusColor(),
             ],
         ]);
     }
@@ -222,7 +243,10 @@ class ChatController extends Controller
                     'file_path' => $message->file_path,
                     'file_name' => $message->file_name,
                     'file_size' => $message->file_size,
+                    'sender_id' => $message->user_id,
                     'sender_name' => $message->user->full_name,
+                    'sender_avatar' => $message->user->avatar_url,
+                    'sender_initials' => $message->user->initials,
                     'is_mine' => $message->user_id === $userId,
                     'is_read' => $isRead,
                     'time' => $message->created_at->format('H:i'),
