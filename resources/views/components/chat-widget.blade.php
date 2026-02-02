@@ -1,9 +1,4 @@
 @if(auth()->check() && auth()->user()->is_staff)
-<!-- Notification Sound - MP3 format for best compatibility -->
-<audio id="chat-notification-sound" preload="auto" style="display:none;">
-    <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYNbRzYAAAAAAD/+9DEAAAGAAGn9AAAIiwnLP8zwBCIiJ5vUAGJv/zQfbqEBAMfg+D5+sHwfB8HwfB8/WD7+XD4fB8HwfD5//BwEH2bAAACJJlmbWGDEv/ygGEjE1Yj4PfG6N//6g6R32OQHEBNjOhHHK2MZWYVRZhQyZomPBQ8kXABBL4HsUA6pUGwgJIpIzMaJGSIySSExMQBGLjnxnZMEQRECAgIBcbMzRa2b/lvv8hv8mN7JBohMPMUMXM/NDNjAzAzfzBDLTAAYwMGJgMRk2Y2Zq0H////rMGdH///////ywDEUCAzEMBgGgYAwDAGAsBNIADQAAsAwWC4LhczK4LgsC4XAuC4LhcFwuBcFgWDYXMymCwLhcC4LguC4XBcLgXBYFwuC4LBcFgXC4FwXC4FwWBYLguC4XBcLgXBYFwuBcNhcy64LBcC4bC4FwXC4FwuC4FgXC4FwWBcLguFwLhsLgXBYFwuBcFgWC4XBcLguFwXC4FwWBYLhcC4LBcLguC4XAuCwLhcC4bC5mVwWBcLgXBYFwuBcFwXBYFwuC4LBcLgXBYFwuC4XAuCwLBcFwWBYLhcFwuBcFgWC4XAuGwuC4XAuCwLBcLgXBYFguFwXC4FwWBcNhcC4LguFwLgsC4XAuCwLBcLgXBYFwuBcFgWC4XAuGwuZlcFgXC4FwWBYLhcC4LguFwXC4FwWBYLhcC4LBcLguC4XAuCwLBcFwWBYLhcFwuBcFgWC4XAuGwuC4XAuCwLBcLgXBYFguFwXC4FwWBcNhcC4LguFwLgsC4XAuCwLBcLgXBYFwuBcFgXC4FwWBcLguFwXC4FwWBYLhcFwuC4XBcLgXBYFwuC4XAuGwuC4LguC4LhcC4LBcFwXBYFwuBcFgXC4FwWBcLguFwXC4FwWBYLhcFwuC4XBcLgXBYFwuC4XAuGwuC4LguC4LhcC4LAuFwLhsFwXC4FwWBcLguFwLhsLguFwXC4FwWBYLhcFwuC4XBcLgXBYFguFwXBcNhcy64LBcC4bC4FwXC4FwuC4FgXC4FwWBcLguFwLhsLgXBYFwuBcFgWC4XBcLguFwXC4FwWBYLhcC4LBcLguC4XAuCwLBcFwWBYLhcFwuBcFgWC4XAuGwuZlcFgXC4FwWBYLhcC4LguFwXC4FwWBYA==" type="audio/mpeg">
-</audio>
-
 <div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 left-6 z-50" @keydown.escape="closeChat()">
     <!-- Toast Notification Container - Above chat button -->
     <div id="chat-toast-container" class="absolute bottom-20 left-0 z-[200] flex flex-col-reverse gap-2 w-80 pointer-events-none"></div>
@@ -326,23 +321,11 @@ function chatWidget() {
             if (this.audioInitialized) return;
 
             try {
-                // Pre-load HTML audio element
-                const audioElement = document.getElementById('chat-notification-sound');
-                if (audioElement) {
-                    audioElement.load();
-                    // Play silent to unlock
-                    audioElement.volume = 0;
-                    audioElement.play().then(() => {
-                        audioElement.pause();
-                        audioElement.currentTime = 0;
-                        audioElement.volume = 0.5;
-                    }).catch(() => {});
-                }
-
-                // Also unlock Web Audio API
+                // Unlock Web Audio API on first user interaction
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (AudioContext) {
                     const ctx = new AudioContext();
+                    // Play a silent tone to unlock
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     gain.gain.value = 0;
@@ -350,10 +333,11 @@ function chatWidget() {
                     gain.connect(ctx.destination);
                     osc.start();
                     osc.stop(ctx.currentTime + 0.001);
+                    ctx.close();
                 }
 
                 this.audioInitialized = true;
-                console.log('🔊 Audio initialized successfully');
+                console.log('🔊 Audio unlocked');
             } catch (e) {
                 console.log('Audio init error:', e);
             }
@@ -421,58 +405,52 @@ function chatWidget() {
         playNotificationSound() {
             console.log('🔊 Playing notification sound...');
 
-            // Try HTML Audio element first (more reliable)
-            const audioElement = document.getElementById('chat-notification-sound');
-            if (audioElement) {
-                audioElement.currentTime = 0;
-                audioElement.volume = 0.5;
-                const playPromise = audioElement.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        console.log('✅ Audio played via HTML element');
-                    }).catch(e => {
-                        console.log('HTML audio failed, trying Web Audio API:', e);
-                        this.playWebAudioSound();
-                    });
-                }
-                return;
-            }
-
-            // Fallback to Web Audio API
-            this.playWebAudioSound();
-        },
-
-        playWebAudioSound() {
+            // Use Web Audio API for clear, loud sound
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) return;
+                if (!AudioContext) {
+                    console.log('Web Audio API not supported');
+                    return;
+                }
 
                 const audioContext = new AudioContext();
+
+                // Resume if suspended
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
 
-                const playTone = (frequency, startTime, duration, volume = 0.4) => {
+                // Create a clear "ding-dong" notification sound
+                const playTone = (frequency, startTime, duration, volume) => {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
+
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
+
                     oscillator.frequency.value = frequency;
                     oscillator.type = 'sine';
+
                     const now = audioContext.currentTime + startTime;
+
+                    // Quick attack, smooth decay for bell-like sound
                     gainNode.gain.setValueAtTime(0, now);
-                    gainNode.gain.linearRampToValueAtTime(volume, now + 0.01);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    gainNode.gain.linearRampToValueAtTime(volume, now + 0.005);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
                     oscillator.start(now);
                     oscillator.stop(now + duration);
                 };
 
-                // Pleasant two-tone ding
-                playTone(880, 0, 0.15, 0.4);
-                playTone(1108, 0.12, 0.2, 0.3);
-                console.log('✅ Audio played via Web Audio API');
+                // Clear two-tone notification (like iPhone)
+                // First tone - higher, louder
+                playTone(1318.5, 0, 0.15, 0.8);      // E6
+                // Second tone - even higher
+                playTone(1568, 0.1, 0.2, 0.6);       // G6
+
+                console.log('✅ Notification sound played');
             } catch (e) {
-                console.log('Web Audio API error:', e);
+                console.log('Audio error:', e);
             }
         },
 
