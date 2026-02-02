@@ -236,7 +236,11 @@
                 try {
                     const res = await fetch('{{ route("auth.send-otp") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
                         body: JSON.stringify({ mobile: this.mobile })
                     });
                     const data = await res.json();
@@ -263,7 +267,11 @@
                 try {
                     const res = await fetch('{{ route("auth.verify-otp") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
                         body: JSON.stringify({ mobile: this.mobile, code: this.code, is_admin: this.isAdmin })
                     });
                     const data = await res.json();
@@ -289,9 +297,25 @@
                 try {
                     const res = await fetch('{{ route("auth.login-password") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
                         body: JSON.stringify({ username: this.username, password: this.password, is_admin: this.isAdmin })
                     });
+
+                    // Check if response is JSON
+                    const contentType = res.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await res.text();
+                        console.error('Server error:', text);
+                        this.message = 'خطای سرور - لطفا با پشتیبانی تماس بگیرید';
+                        this.messageType = 'error';
+                        this.loading = false;
+                        return;
+                    }
+
                     const data = await res.json();
 
                     if (data.success) {
@@ -299,10 +323,14 @@
                         this.messageType = 'success';
                         setTimeout(() => window.location.href = data.redirect, 500);
                     } else {
-                        this.message = data.message;
+                        this.message = data.message || 'خطا در ورود';
                         this.messageType = 'error';
                     }
-                } catch (e) { this.message = 'خطا در برقراری ارتباط'; this.messageType = 'error'; }
+                } catch (e) {
+                    console.error('Login error:', e);
+                    this.message = 'خطا در برقراری ارتباط';
+                    this.messageType = 'error';
+                }
                 this.loading = false;
             }
         }
