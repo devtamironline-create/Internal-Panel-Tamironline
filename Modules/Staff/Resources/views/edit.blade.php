@@ -76,7 +76,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تاریخ تولد</label>
-                    <input type="text" name="birth_date" id="birth_date" value="{{ old('birth_date', isset($staff) && $staff->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($staff->birth_date)->format('Y/m/d') : '') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer" dir="ltr" placeholder="انتخاب تاریخ" readonly>
+                    <input type="text" name="birth_date" id="birth_date" value="{{ old('birth_date', isset($staff) && $staff->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($staff->birth_date)->format('Y/m/d') : '') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer" dir="ltr" placeholder="انتخاب تاریخ" data-jdp data-jdp-min-date="1330/01/01" data-jdp-max-date="1410/12/29">
                     @error('birth_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div></div>
@@ -148,11 +148,12 @@
 @push('scripts')
 <script src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
 <script>
-    jalaliDatepicker.startWatch({
-        minDate: "1330/01/01",
-        maxDate: "today",
-        selector: '#birth_date',
-        persianDigits: false
+    document.addEventListener('DOMContentLoaded', function() {
+        jalaliDatepicker.startWatch({
+            persianDigits: false,
+            autoClose: true,
+            time: false
+        });
     });
 </script>
 @endpush
