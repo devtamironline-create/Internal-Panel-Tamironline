@@ -308,7 +308,7 @@
     </div>
 
     <!-- Phone Modal -->
-    <div x-cloak x-show="showPhone" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showPhone = false">
+    <div x-cloak x-show="showPhone" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showPhone = false" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 shadow-2xl overflow-hidden">
             <div class="bg-brand-500 text-white p-6 text-center">
                 <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -339,94 +339,81 @@
     </div>
 
     <!-- New Group Modal -->
-    <div x-cloak x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[450px] max-w-[95vw] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 text-center shrink-0">
-                <!-- Group Avatar Upload -->
-                <div class="relative w-24 h-24 mx-auto mb-3">
-                    <div class="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold overflow-hidden border-4 border-white/30">
-                        <template x-if="groupAvatarPreview">
-                            <img :src="groupAvatarPreview" class="w-full h-full object-cover">
-                        </template>
-                        <template x-if="!groupAvatarPreview">
-                            <span x-text="newGroupName?.charAt(0) || '?'"></span>
-                        </template>
-                    </div>
-                    <label class="absolute -bottom-1 -right-1 w-9 h-9 bg-white text-brand-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-gray-100 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <input type="file" accept="image/*" class="hidden" @change="handleGroupAvatar($event)">
-                    </label>
-                </div>
+    <div x-cloak x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-5 text-center">
                 <h3 class="text-xl font-bold">گروه جدید</h3>
-                <p class="text-sm opacity-80 mt-1">یک گروه برای چت با همکاران بسازید</p>
             </div>
 
-            <!-- Group Info -->
-            <div class="p-4 space-y-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                <input x-model="newGroupName" type="text" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="نام گروه *">
-                <textarea x-model="newGroupDescription" rows="2" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none" placeholder="توضیحات گروه (اختیاری)"></textarea>
-            </div>
+            <!-- Content -->
+            <div class="p-5 space-y-4">
+                <!-- Group Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام گروه *</label>
+                    <input x-model="newGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="نام گروه را وارد کنید">
+                </div>
 
-            <!-- Group Settings -->
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3 shrink-0">
-                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    تنظیمات گروه
-                </h4>
-                <label class="flex items-center gap-3 p-3 bg-brand-50 dark:bg-brand-900/30 border-2 border-brand-200 dark:border-brand-700 rounded-lg cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-900/50 transition">
-                    <input type="checkbox" x-model="groupSettings.isPublic" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
-                    <div class="flex-1">
-                        <span class="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                            <svg class="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            گروه عمومی
-                        </span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">همه کاربران می‌توانند این گروه را ببینند و عضو شوند</p>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                    <input type="checkbox" x-model="groupSettings.onlyAdminsCanSend" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
-                    <div>
-                        <span class="text-gray-900 dark:text-white font-medium">فقط مدیران پیام بفرستند</span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">فقط مدیران گروه می‌توانند پیام ارسال کنند</p>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                    <input type="checkbox" x-model="groupSettings.membersCanAddOthers" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
-                    <div>
-                        <span class="text-gray-900 dark:text-white font-medium">اعضا می‌توانند عضو اضافه کنند</span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">همه اعضا می‌توانند افراد جدید دعوت کنند</p>
-                    </div>
-                </label>
-            </div>
-
-            <!-- Members Selection -->
-            <div class="flex-1 overflow-y-auto">
-                <div class="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            انتخاب اعضا
-                            <span x-show="selectedGroupMembers.length > 0" class="text-brand-500">(<span x-text="selectedGroupMembers.length"></span> نفر)</span>
-                        </h4>
-                        <button @click="selectedGroupMembers = users.map(u => u.id)" class="text-xs text-brand-500 hover:underline">انتخاب همه</button>
+                <!-- Group Avatar -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تصویر گروه</label>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300 overflow-hidden border-2 border-gray-300 dark:border-gray-500">
+                            <template x-if="groupAvatarPreview">
+                                <img :src="groupAvatarPreview" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!groupAvatarPreview">
+                                <span x-text="newGroupName?.charAt(0) || '؟'"></span>
+                            </template>
+                        </div>
+                        <label class="flex-1 px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">انتخاب تصویر</span>
+                            <input type="file" accept="image/*" class="hidden" @change="handleGroupAvatar($event)">
+                        </label>
                     </div>
                 </div>
-                <template x-for="user in users" :key="user.id">
-                    <label class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50">
-                        <input type="checkbox" :value="user.id" x-model="selectedGroupMembers" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
-                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300" x-text="user.name?.charAt(0)"></div>
-                        <div class="flex-1">
-                            <span class="text-gray-900 dark:text-white font-medium" x-text="user.name"></span>
-                            <p class="text-xs text-gray-500" x-text="user.role || ''"></p>
-                        </div>
-                        <button @click.prevent="toggleGroupAdmin(user.id)" :class="groupAdmins.includes(user.id) ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'" class="px-2 py-1 text-xs rounded-lg transition" x-show="selectedGroupMembers.includes(user.id)">
-                            <span x-text="groupAdmins.includes(user.id) ? 'مدیر' : 'عضو'"></span>
-                        </button>
+
+                <!-- Group Type Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع گروه</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="groupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="groupType" :checked="groupSettings.isPublic" @click="groupSettings.isPublic = true" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">گروه عمومی</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">همه می‌توانند ببینند و عضو شوند</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="!groupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="groupType" :checked="!groupSettings.isPublic" @click="groupSettings.isPublic = false" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">انتخاب اعضا</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">فقط اعضای انتخاب شده دسترسی دارند</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Members Selection (only if not public) -->
+                <div x-show="!groupSettings.isPublic" x-transition>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        اعضای گروه
+                        <span x-show="selectedGroupMembers.length > 0" class="text-brand-500 text-xs">(<span x-text="selectedGroupMembers.length"></span> نفر)</span>
                     </label>
-                </template>
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-40 overflow-y-auto">
+                        <template x-for="user in users" :key="user.id">
+                            <label class="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                                <input type="checkbox" :value="user.id" x-model="selectedGroupMembers" class="w-4 h-4 text-brand-500 rounded">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300" x-text="user.name?.charAt(0)"></div>
+                                <span class="text-sm text-gray-900 dark:text-white" x-text="user.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             <!-- Actions -->
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 shrink-0 bg-gray-50 dark:bg-gray-900">
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
                 <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
                 <button @click="createGroup()" :disabled="!newGroupName || selectedGroupMembers.length === 0" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
             </div>
@@ -434,7 +421,7 @@
     </div>
 
     <!-- Incoming Call Modal -->
-    <div x-cloak x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+    <div x-cloak x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full mx-4">
             <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse">
                 <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,7 +446,7 @@
     </div>
 
     <!-- Active Call Modal -->
-    <div x-cloak x-show="activeCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800">
+    <div x-cloak x-show="activeCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800" style="display: none;">
         <div class="text-center text-white">
             <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-white/20 flex items-center justify-center text-5xl font-bold" x-text="activeCall?.remote_name?.charAt(0)"></div>
             <h3 class="text-3xl font-bold mb-2" x-text="activeCall?.remote_name"></h3>
@@ -481,7 +468,7 @@
     </div>
 
     <!-- Lightbox Modal -->
-    <div x-cloak x-show="lightbox" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" @click="lightbox = null" @keydown.escape.window="lightbox = null">
+    <div x-cloak x-show="lightbox" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" @click="lightbox = null" @keydown.escape.window="lightbox = null" style="display: none;">
         <div class="relative max-w-4xl max-h-[90vh] w-full mx-4" @click.stop>
             <!-- Close button -->
             <button @click="lightbox = null" class="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition">
@@ -517,7 +504,7 @@
     </div>
 
     <!-- Forward Modal -->
-    <div x-cloak x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null">
+    <div x-cloak x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-h-[80vh] shadow-2xl overflow-hidden">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
