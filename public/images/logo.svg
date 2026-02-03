@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="200" height="50">
+  <defs>
+    <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#f97316"/>
+    </linearGradient>
+  </defs>
+  <!-- Curved Arrow -->
+  <g transform="translate(5, 5)">
+    <path d="M25 35 C5 35, 5 15, 25 10 L25 5 L35 15 L25 25 L25 20 C15 22, 15 30, 25 30 Z"
+          fill="url(#arrowGradient)"/>
+  </g>
+  <!-- Text -->
+  <text x="50" y="32" font-family="Vazirmatn, sans-serif" font-size="16" font-weight="700" fill="currentColor">
+    اتوماسیون اداری
+  </text>
+</svg>

@@ -3,7 +3,19 @@
 @section('page-title', 'پیام‌رسان')
 
 @section('main')
-<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+<style>
+    .messenger-loading { display: flex !important; }
+    [x-cloak].messenger-loading { display: flex !important; }
+</style>
+<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden relative">
+
+    <!-- Loading Overlay - Always visible until Alpine hides it -->
+    <div x-show="isLoading" :class="{ 'messenger-loading': isLoading }" class="messenger-loading absolute inset-0 z-[300] bg-white dark:bg-gray-800 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600 dark:text-gray-400">در حال بارگذاری...</p>
+        </div>
+    </div>
 
     <!-- Sidebar - Conversations List -->
     <div class="w-full md:w-72 border-l border-gray-200 dark:border-gray-700 flex-col" :class="mobileShowChat ? 'hidden md:flex' : 'flex'">
@@ -783,6 +795,7 @@
 <script>
 function messenger() {
     return {
+        isLoading: true,
         conversations: [],
         users: [],
         messages: [],
@@ -902,9 +915,13 @@ function messenger() {
         },
 
         async init() {
-            await this.loadConversations();
-            await this.loadUsers();
-            this.heartbeat();
+            try {
+                await this.loadConversations();
+                await this.loadUsers();
+                this.heartbeat();
+            } finally {
+                this.isLoading = false;
+            }
 
             // Request notification permission
             this.requestNotificationPermission();
