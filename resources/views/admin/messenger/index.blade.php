@@ -6,7 +6,7 @@
 <div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
 
     <!-- Sidebar - Conversations List -->
-    <div class="w-72 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <div class="w-full md:w-72 border-l border-gray-200 dark:border-gray-700 flex-col" :class="mobileShowChat ? 'hidden md:flex' : 'flex'">
         <!-- Header -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-3">
@@ -149,7 +149,7 @@
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col relative">
+    <div class="flex-1 flex-col relative" :class="mobileShowChat ? 'flex' : 'hidden md:flex'">
         <!-- No Chat Selected -->
         <template x-if="!currentConversation">
             <div class="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -166,6 +166,10 @@
             <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div class="p-4 flex items-center justify-between">
                     <div class="flex items-center gap-3">
+                        <!-- Mobile Back Button -->
+                        <button @click="closeMobileChat()" class="md:hidden p-2 -mr-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
                         <div class="relative">
                             <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
                                 <template x-if="currentConversation?.avatar">
@@ -740,6 +744,7 @@ function messenger() {
         newMessage: '',
         searchQuery: '',
         conversationFilter: 'all',
+        mobileShowChat: false,
         showUsers: false,
         showPhone: false,
         showNewGroup: false,
@@ -899,8 +904,13 @@ function messenger() {
 
         async openConversation(conv) {
             this.currentConversation = conv;
+            this.mobileShowChat = true;
             await this.loadMessages(conv.id);
             this.$nextTick(() => this.scrollToBottom());
+        },
+
+        closeMobileChat() {
+            this.mobileShowChat = false;
         },
 
         async loadMessages(conversationId) {
@@ -928,6 +938,7 @@ function messenger() {
                 if (data.conversation) {
                     this.currentConversation = data.conversation;
                     this.showUsers = false;
+                    this.mobileShowChat = true;
                     await this.loadMessages(data.conversation.id);
                     await this.loadConversations();
                 }
