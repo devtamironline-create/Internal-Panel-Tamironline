@@ -39,6 +39,9 @@
         strong, b { font-weight: 700; }
         input, select, textarea, button { font-family: inherit; }
         [x-cloak] { display: none !important; }
+        /* Page loading - show until Alpine hides it */
+        .page-loading-overlay { display: flex !important; }
+        [x-data] .page-loading-overlay[x-show="pageLoading"] { display: flex; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         /* Improved Typography */
@@ -169,11 +172,19 @@
     @stack('styles')
 </head>
 <body
-    x-data="{ sidebarToggle: false, darkMode: localStorage.getItem('darkMode') === 'true' }"
-    x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
+    x-data="{ sidebarToggle: false, darkMode: localStorage.getItem('darkMode') === 'true', pageLoading: true }"
+    x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val)); setTimeout(() => pageLoading = false, 100)"
     :class="{ 'dark': darkMode }"
     class="font-vazir bg-gray-50 dark:bg-gray-900"
 >
+    <!-- Global Page Loading Overlay -->
+    <div x-show="pageLoading" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="page-loading-overlay fixed inset-0 z-[9998] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-12 h-12 border-4 border-brand-200 dark:border-brand-800 border-t-brand-500 rounded-full animate-spin mx-auto mb-3"></div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">در حال بارگذاری...</p>
+        </div>
+    </div>
+
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside
