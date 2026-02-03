@@ -81,7 +81,7 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تاریخ تولد</label>
-            <input type="text" name="birth_date" value="{{ old('birth_date', $user->birth_date) }}"
+            <input type="text" name="birth_date" value="{{ old('birth_date', $user->birth_date_jalali) }}"
                 placeholder="مثال: 1370/05/15"
                 class="jalali-datepicker w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-brand-500 focus:ring-brand-500">
             @error('birth_date')
