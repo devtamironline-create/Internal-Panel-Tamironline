@@ -190,82 +190,97 @@ class ChatController extends Controller
      */
     public function createGroup(Request $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'type' => 'nullable|in:group,channel',
-            'member_ids' => 'nullable|string', // JSON string from FormData
-            'admin_ids' => 'nullable|string', // JSON string from FormData
-            'settings' => 'nullable|string', // JSON string from FormData
-            'avatar' => 'nullable|image|max:2048', // 2MB max for avatar
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:500',
+                'type' => 'nullable|in:group,channel',
+                'member_ids' => 'nullable|string', // JSON string from FormData
+                'admin_ids' => 'nullable|string', // JSON string from FormData
+                'settings' => 'nullable|string', // JSON string from FormData
+                'avatar' => 'nullable|image|max:2048', // 2MB max for avatar
+            ]);
 
-        // Parse JSON strings from FormData
-        $type = $request->type ?? 'group';
-        $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
-        $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
-        $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
+            // Parse JSON strings from FormData
+            $type = $request->type ?? 'group';
+            $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
+            $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
+            $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
 
-        // Prepare settings
-        $settings = [
-            'is_public' => $settingsData['isPublic'] ?? false,
-            'only_admins_can_send' => $type === 'channel' ? true : ($settingsData['onlyAdminsCanSend'] ?? false),
-            'members_can_add_others' => $settingsData['membersCanAddOthers'] ?? true,
-            'is_pinned_global' => $settingsData['isPinned'] ?? false,
-        ];
+            // Prepare settings - For channels, only admin (creator) can send messages
+            $settings = [
+                'is_public' => $settingsData['isPublic'] ?? false,
+                'only_admins_can_send' => $type === 'channel' ? true : ($settingsData['onlyAdminsCanSend'] ?? false),
+                'members_can_add_others' => $type === 'channel' ? false : ($settingsData['membersCanAddOthers'] ?? true),
+                'is_pinned_global' => $settingsData['isPinned'] ?? false,
+            ];
 
-        // If not public and no members selected
-        if (!$settings['is_public'] && empty($memberIds)) {
-            return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
-        }
+            // If not public and no members selected
+            if (!$settings['is_public'] && empty($memberIds)) {
+                return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
+            }
 
-        // Handle avatar upload
-        $avatarPath = null;
-        if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
-        }
+            // Handle avatar upload
+            $avatarPath = null;
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+            }
 
-        $conversation = Conversation::createGroup(
-            $request->name,
-            auth()->id(),
-            $memberIds,
-            $request->description,
-            $settings,
-            $type // Pass type directly: 'group' or 'channel'
-        );
+            // Create conversation with correct type
+            $conversation = Conversation::create([
+                'type' => $type, // 'group' or 'channel'
+                'name' => $request->name,
+                'description' => $request->description,
+                'created_by' => auth()->id(),
+                'avatar' => $avatarPath,
+                'settings' => $settings,
+            ]);
 
-        // Update avatar if uploaded
-        if ($avatarPath) {
-            $conversation->update(['avatar' => $avatarPath]);
-        }
+            // Add creator as admin
+            $participants = [auth()->id() => ['joined_at' => now(), 'is_admin' => true]];
 
-        // Set additional admins
-        if (!empty($adminIds)) {
-            foreach ($adminIds as $adminId) {
-                if ($conversation->participants()->where('user_id', $adminId)->exists()) {
-                    $conversation->participants()->updateExistingPivot($adminId, [
-                        'is_admin' => true,
-                    ]);
+            // Add other participants (for channels, they are subscribers)
+            foreach ($memberIds as $id) {
+                if ($id != auth()->id()) {
+                    $participants[$id] = ['joined_at' => now(), 'is_admin' => false];
                 }
             }
+
+            $conversation->participants()->attach($participants);
+
+            // Set additional admins
+            if (!empty($adminIds)) {
+                foreach ($adminIds as $adminId) {
+                    if ($conversation->participants()->where('user_id', $adminId)->exists()) {
+                        $conversation->participants()->updateExistingPivot($adminId, [
+                            'is_admin' => true,
+                        ]);
+                    }
+                }
+            }
+
+            // Create system message
+            $typeLabel = $type === 'channel' ? 'کانال' : 'گروه';
+            Message::createSystem(
+                $conversation->id,
+                $typeLabel . ' «' . $request->name . '» ایجاد شد'
+            );
+
+            return response()->json([
+                'success' => true,
+                'conversation' => [
+                    'id' => $conversation->id,
+                    'type' => $type,
+                    'display_name' => $request->name,
+                    'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
+                    'is_public' => $settings['is_public'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'خطا در ایجاد: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Create system message
-        $typeLabel = $type === 'channel' ? 'کانال' : 'گروه';
-        Message::createSystem(
-            $conversation->id,
-            $typeLabel . ' «' . $request->name . '» ایجاد شد'
-        );
-
-        return response()->json([
-            'conversation' => [
-                'id' => $conversation->id,
-                'type' => $type,
-                'display_name' => $request->name,
-                'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
-                'is_public' => $settings['is_public'],
-            ],
-        ]);
     }
 
     /**
