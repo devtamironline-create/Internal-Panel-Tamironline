@@ -342,23 +342,23 @@
 
                             <!-- Task Indicator -->
                             <template x-if="msg.task">
-                                <div class="mt-2 p-2 rounded-lg border" :class="msg.task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : msg.task.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'">
+                                <div class="mt-2 p-2 rounded-lg border" :class="msg.task.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : msg.task.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'">
                                     <div class="flex items-center gap-2">
-                                        <svg class="w-4 h-4 flex-shrink-0" :class="msg.task.status === 'completed' ? 'text-green-600 dark:text-green-400' : msg.task.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 flex-shrink-0" :class="msg.task.status === 'done' ? 'text-green-600 dark:text-green-400' : msg.task.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                         </svg>
-                                        <span class="text-xs font-medium" :class="msg.task.status === 'completed' ? 'text-green-700 dark:text-green-300' : msg.task.status === 'in_progress' ? 'text-blue-700 dark:text-blue-300' : 'text-yellow-700 dark:text-yellow-300'">
+                                        <span class="text-xs font-medium" :class="msg.task.status === 'done' ? 'text-green-700 dark:text-green-300' : msg.task.status === 'in_progress' ? 'text-blue-700 dark:text-blue-300' : 'text-yellow-700 dark:text-yellow-300'">
                                             تسک: <span x-text="getTaskStatusLabel(msg.task.status)"></span>
                                         </span>
-                                        <template x-if="msg.task.status !== 'completed' && msg.task.status !== 'cancelled'">
+                                        <template x-if="msg.task.status !== 'done'">
                                             <div class="flex gap-1 mr-auto">
-                                                <template x-if="msg.task.status === 'pending'">
+                                                <template x-if="msg.task.status === 'todo'">
                                                     <button @click.stop="updateTaskStatus(msg.task.id, 'in_progress')" class="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition">شروع</button>
                                                 </template>
-                                                <button @click.stop="updateTaskStatus(msg.task.id, 'completed')" class="text-xs px-2 py-0.5 bg-green-500 text-white rounded hover:bg-green-600 transition">تکمیل</button>
+                                                <button @click.stop="updateTaskStatus(msg.task.id, 'done')" class="text-xs px-2 py-0.5 bg-green-500 text-white rounded hover:bg-green-600 transition">تکمیل</button>
                                             </div>
                                         </template>
-                                        <template x-if="msg.task.status === 'completed'">
+                                        <template x-if="msg.task.status === 'done'">
                                             <span class="text-xs text-green-600 dark:text-green-400 mr-auto">✓ تکمیل شده</span>
                                         </template>
                                     </div>
@@ -2572,22 +2572,24 @@ function messenger() {
 
         getTaskStatusLabel(status) {
             const labels = {
-                'pending': 'در انتظار',
+                'backlog': 'بک‌لاگ',
+                'todo': 'در انتظار',
                 'in_progress': 'در حال انجام',
-                'completed': 'تکمیل شده',
-                'cancelled': 'لغو شده'
+                'review': 'بررسی',
+                'done': 'تکمیل شده'
             };
             return labels[status] || status;
         },
 
         getTaskStatusColor(status) {
             const colors = {
-                'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                'backlog': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                'todo': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
                 'in_progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-                'completed': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                'cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                'review': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                'done': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
             };
-            return colors[status] || colors['pending'];
+            return colors[status] || colors['todo'];
         }
     }
 }

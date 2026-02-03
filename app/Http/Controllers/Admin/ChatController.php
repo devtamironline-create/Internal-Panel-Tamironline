@@ -11,7 +11,7 @@ use App\Models\Chat\UserPresence;
 use App\Models\User;
 use App\Models\Announcement;
 use App\Models\AnnouncementView;
-use App\Models\MessageTask;
+use Modules\Task\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -1262,16 +1262,22 @@ class ChatController extends Controller
             'due_date' => 'nullable|date',
         ]);
 
-        $task = MessageTask::create([
-            'message_id' => $message->id,
-            'conversation_id' => $conversation->id,
+        // Create task in main tasks table
+        $task = Task::create([
             'title' => $request->title,
             'description' => $message->body,
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'source' => 'message',
             'created_by' => $userId,
             'assigned_to' => $request->assigned_to,
             'priority' => $request->priority ?? 'medium',
+            'status' => 'todo',
             'due_date' => $request->due_date,
         ]);
+
+        // Log activity
+        $task->logActivity('created', null, null, null, 'تسک از پیام ایجاد شد');
 
         // Create system message about task creation
         $user = auth()->user();
@@ -1302,7 +1308,8 @@ class ChatController extends Controller
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
-        $tasks = MessageTask::where('conversation_id', $conversation->id)
+        $tasks = Task::where('conversation_id', $conversation->id)
+            ->where('source', 'message')
             ->with(['creator', 'assignee', 'message'])
             ->latest()
             ->get()
@@ -1312,13 +1319,13 @@ class ChatController extends Controller
                     'title' => $task->title,
                     'description' => $task->description,
                     'status' => $task->status,
-                    'status_label' => $this->getTaskStatusLabel($task->status),
+                    'status_label' => $task->status_label,
                     'priority' => $task->priority,
-                    'priority_label' => $this->getTaskPriorityLabel($task->priority),
+                    'priority_label' => $task->priority_label,
                     'creator_name' => $task->creator->full_name,
                     'assignee_name' => $task->assignee?->full_name,
                     'message_id' => $task->message_id,
-                    'due_date' => $task->due_date?->format('Y/m/d'),
+                    'due_date' => $task->jalali_due_date,
                     'completed_at' => $task->completed_at?->diffForHumans(),
                     'created_at' => $task->created_at->diffForHumans(),
                 ];
@@ -1328,12 +1335,17 @@ class ChatController extends Controller
     }
 
     /**
-     * Update task status
+     * Update task status (for message tasks)
      */
-    public function updateTaskStatus(MessageTask $task, Request $request): JsonResponse
+    public function updateTaskStatus(Task $task, Request $request): JsonResponse
     {
         $userId = auth()->id();
         $conversation = $task->conversation;
+
+        // Only for message tasks with conversation
+        if (!$conversation || $task->source !== 'message') {
+            return response()->json(['error' => 'تسک نامعتبر'], 400);
+        }
 
         // Verify user is participant
         if (!$conversation->participants()->where('user_id', $userId)->exists()) {
@@ -1341,16 +1353,13 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'status' => 'required|in:todo,in_progress,done',
         ]);
 
         $oldStatus = $task->status;
-        $task->status = $request->status;
+        $task->updateStatus($request->status, $userId);
 
-        if ($request->status === 'completed') {
-            $task->completed_at = now();
-            $task->completed_by = $userId;
-
+        if ($request->status === 'done') {
             // Create system message about task completion
             $user = auth()->user();
             Message::createSystem(
@@ -1359,26 +1368,25 @@ class ChatController extends Controller
             );
         }
 
-        $task->save();
-
         return response()->json([
             'success' => true,
             'task' => [
                 'id' => $task->id,
                 'status' => $task->status,
-                'status_label' => $this->getTaskStatusLabel($task->status),
+                'status_label' => $task->status_label,
             ],
         ]);
     }
 
     /**
-     * Get all tasks for current user
+     * Get all message tasks for current user
      */
     public function getMyTasks(): JsonResponse
     {
         $userId = auth()->id();
 
-        $tasks = MessageTask::where(function ($q) use ($userId) {
+        $tasks = Task::where('source', 'message')
+            ->where(function ($q) use ($userId) {
                 $q->where('assigned_to', $userId)
                     ->orWhere('created_by', $userId);
             })
@@ -1391,15 +1399,15 @@ class ChatController extends Controller
                     'title' => $task->title,
                     'description' => $task->description,
                     'status' => $task->status,
-                    'status_label' => $this->getTaskStatusLabel($task->status),
+                    'status_label' => $task->status_label,
                     'priority' => $task->priority,
-                    'priority_label' => $this->getTaskPriorityLabel($task->priority),
+                    'priority_label' => $task->priority_label,
                     'conversation_id' => $task->conversation_id,
-                    'conversation_name' => $task->conversation->name ?? 'گفتگو',
+                    'conversation_name' => $task->conversation?->name ?? 'گفتگو',
                     'creator_name' => $task->creator->full_name,
                     'assignee_name' => $task->assignee?->full_name,
                     'is_assigned_to_me' => $task->assigned_to === $userId,
-                    'due_date' => $task->due_date?->format('Y/m/d'),
+                    'due_date' => $task->jalali_due_date,
                     'created_at' => $task->created_at->diffForHumans(),
                 ];
             });
@@ -1407,25 +1415,4 @@ class ChatController extends Controller
         return response()->json(['tasks' => $tasks]);
     }
 
-    private function getTaskStatusLabel(string $status): string
-    {
-        return match($status) {
-            'pending' => 'در انتظار',
-            'in_progress' => 'در حال انجام',
-            'completed' => 'تکمیل شده',
-            'cancelled' => 'لغو شده',
-            default => $status,
-        };
-    }
-
-    private function getTaskPriorityLabel(string $priority): string
-    {
-        return match($priority) {
-            'low' => 'کم',
-            'medium' => 'متوسط',
-            'high' => 'بالا',
-            'urgent' => 'فوری',
-            default => $priority,
-        };
-    }
 }

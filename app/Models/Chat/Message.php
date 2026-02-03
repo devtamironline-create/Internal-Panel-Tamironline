@@ -3,7 +3,7 @@
 namespace App\Models\Chat;
 
 use App\Models\User;
-use App\Models\MessageTask;
+use Modules\Task\Models\Task;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -69,7 +69,7 @@ class Message extends Model
 
     public function task(): HasOne
     {
-        return $this->hasOne(MessageTask::class);
+        return $this->hasOne(Task::class);
     }
 
     public function readBy(): BelongsToMany

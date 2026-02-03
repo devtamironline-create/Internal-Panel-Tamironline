@@ -21,6 +21,9 @@ class Task extends Model
         'created_by',
         'assigned_to',
         'parent_id',
+        'message_id',
+        'conversation_id',
+        'source',
         'status',
         'priority',
         'due_date',
@@ -68,6 +71,16 @@ class Task extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Task::class, 'parent_id');
+    }
+
+    public function message(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Chat\Message::class);
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Chat\Conversation::class);
     }
 
     public function subtasks(): HasMany
