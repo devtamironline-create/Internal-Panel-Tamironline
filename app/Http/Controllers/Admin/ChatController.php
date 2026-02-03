@@ -58,8 +58,8 @@ class ChatController extends Controller
             ->with(['latestMessage.user', 'activeParticipants.presence'])
             ->get();
 
-        // Get public groups that user is not a member of
-        $publicGroups = Conversation::where('type', 'group')
+        // Get public groups/channels that user is not a member of
+        $publicGroups = Conversation::whereIn('type', ['group', 'channel'])
             ->whereJsonContains('settings->is_public', true)
             ->whereDoesntHave('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId)->whereNull('left_at');
@@ -96,6 +96,22 @@ class ChatController extends Controller
 
                     if ($isPublic && !$isMember) {
                         $statusLabel = 'گروه عمومی • ' . $memberCount . ' عضو';
+                        $statusColor = 'green';
+                    }
+                }
+
+                // For channels, show member count as status
+                if ($conversation->type === 'channel') {
+                    $memberCount = $conversation->activeParticipants()->count();
+                    $statusLabel = $memberCount . ' عضو';
+                    $statusColor = 'purple';
+
+                    // Check if it's a public channel user is not a member of
+                    $isPublic = $conversation->settings['is_public'] ?? false;
+                    $isMember = $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists();
+
+                    if ($isPublic && !$isMember) {
+                        $statusLabel = 'کانال عمومی • ' . $memberCount . ' عضو';
                         $statusColor = 'green';
                     }
                 }
@@ -239,15 +255,16 @@ class ChatController extends Controller
         }
 
         // Create system message
+        $typeLabel = $type === 'channel' ? 'کانال' : 'گروه';
         Message::createSystem(
             $conversation->id,
-            'گروه «' . $request->name . '» ایجاد شد'
+            $typeLabel . ' «' . $request->name . '» ایجاد شد'
         );
 
         return response()->json([
             'conversation' => [
                 'id' => $conversation->id,
-                'type' => 'group',
+                'type' => $type,
                 'display_name' => $request->name,
                 'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
                 'is_public' => $settings['is_public'],
@@ -861,33 +878,34 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        // Verify it's a public group
-        if ($conversation->type !== 'group' || !($conversation->settings['is_public'] ?? false)) {
-            return response()->json(['error' => 'این گروه عمومی نیست'], 403);
+        // Verify it's a public group or channel
+        if (!in_array($conversation->type, ['group', 'channel']) || !($conversation->settings['is_public'] ?? false)) {
+            return response()->json(['error' => 'این گروه/کانال عمومی نیست'], 403);
         }
 
         // Check if already a member
         if ($conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists()) {
-            return response()->json(['error' => 'شما قبلا عضو این گروه هستید'], 422);
+            return response()->json(['error' => 'شما قبلا عضو هستید'], 422);
         }
 
-        // Add user to group
+        // Add user to group/channel
         $conversation->participants()->attach([
             $userId => ['joined_at' => now(), 'is_admin' => false]
         ]);
 
         // Create system message
         $user = User::find($userId);
+        $typeLabel = $conversation->type === 'channel' ? 'کانال' : 'گروه';
         Message::createSystem(
             $conversation->id,
-            $user->full_name . ' به گروه پیوست'
+            $user->full_name . ' به ' . $typeLabel . ' پیوست'
         );
 
         return response()->json([
             'success' => true,
             'conversation' => [
                 'id' => $conversation->id,
-                'type' => 'group',
+                'type' => $conversation->type,
                 'display_name' => $conversation->name,
                 'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
             ],
