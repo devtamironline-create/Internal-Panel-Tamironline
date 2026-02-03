@@ -9,21 +9,28 @@
     <div class="w-72 border-l border-gray-200 dark:border-gray-700 flex flex-col">
         <!-- Header -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">پیام‌ها</h2>
-                <div class="flex gap-2">
-                    <button @click="showNewGroup = true" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="گروه جدید">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </button>
-                    <button @click="showPhone = true" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="تماس">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    </button>
-                </div>
+                <button @click="showNewGroup = true" class="w-8 h-8 bg-brand-500 hover:bg-brand-600 text-white rounded-full flex items-center justify-center transition" title="گروه جدید">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
             </div>
             <!-- Search -->
-            <div class="relative">
-                <input type="text" x-model="searchQuery" placeholder="جستجو..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+            <div class="relative mb-3">
+                <input type="text" x-model="searchQuery" placeholder="جستجو در گفتگوها..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
                 <svg class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <!-- Filter Tabs -->
+            <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button @click="conversationFilter = 'all'" :class="conversationFilter === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    همه
+                </button>
+                <button @click="conversationFilter = 'private'" :class="conversationFilter === 'private' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    اعضا
+                </button>
+                <button @click="conversationFilter = 'group'" :class="conversationFilter === 'group' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    گروه‌ها
+                </button>
             </div>
         </div>
 
@@ -131,31 +138,54 @@
 
         <!-- Chat Header -->
         <template x-if="currentConversation">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
-                            <template x-if="currentConversation?.avatar">
-                                <img :src="currentConversation.avatar" class="w-full h-full object-cover" :alt="currentConversation.display_name">
-                            </template>
-                            <template x-if="!currentConversation?.avatar">
-                                <span x-text="currentConversation?.initials || currentConversation?.display_name?.charAt(0)"></span>
-                            </template>
+            <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                                <template x-if="currentConversation?.avatar">
+                                    <img :src="currentConversation.avatar" class="w-full h-full object-cover" :alt="currentConversation.display_name">
+                                </template>
+                                <template x-if="!currentConversation?.avatar">
+                                    <span x-text="currentConversation?.initials || currentConversation?.display_name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
                         </div>
-                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
+                        <div>
+                            <h3 class="font-medium text-gray-900 dark:text-white" x-text="currentConversation?.display_name"></h3>
+                            <span class="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" :class="`bg-${currentConversation?.status_color || 'gray'}-100 text-${currentConversation?.status_color || 'gray'}-700 dark:bg-${currentConversation?.status_color || 'gray'}-900/30 dark:text-${currentConversation?.status_color || 'gray'}-300`">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
+                                <span x-text="currentConversation?.status_label || 'آفلاین'"></span>
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="font-medium text-gray-900 dark:text-white" x-text="currentConversation?.display_name"></h3>
-                        <span class="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" :class="`bg-${currentConversation?.status_color || 'gray'}-100 text-${currentConversation?.status_color || 'gray'}-700 dark:bg-${currentConversation?.status_color || 'gray'}-900/30 dark:text-${currentConversation?.status_color || 'gray'}-300`">
-                            <span class="w-1.5 h-1.5 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
-                            <span x-text="currentConversation?.status_label || 'آفلاین'"></span>
-                        </span>
+                    <div class="flex items-center gap-2">
+                        <button @click="showMessageSearch = !showMessageSearch; if(!showMessageSearch) { messageSearchQuery = ''; clearMessageSearch(); }" :class="showMessageSearch ? 'bg-brand-100 dark:bg-brand-900 text-brand-600' : 'text-gray-500'" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="جستجو در پیام‌ها">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </button>
+                        <button @click="initiateCall(currentConversation?.user_id)" x-show="currentConversation?.type === 'private'" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="تماس صوتی">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        </button>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button @click="initiateCall(currentConversation?.user_id)" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="تماس صوتی">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    </button>
+                <!-- Message Search Bar -->
+                <div x-show="showMessageSearch" x-transition class="px-4 pb-3">
+                    <div class="relative">
+                        <input type="text" x-model="messageSearchQuery" @input.debounce.300ms="searchMessages()" placeholder="جستجو در پیام‌های این گفتگو..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                        <svg class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <template x-if="messageSearchResults.length > 0">
+                            <div class="absolute left-3 top-2.5 flex items-center gap-2 text-xs text-gray-500">
+                                <span x-text="currentSearchIndex + 1 + '/' + messageSearchResults.length"></span>
+                                <button @click="navigateSearch(-1)" class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                                </button>
+                                <button @click="navigateSearch(1)" class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </template>
@@ -567,6 +597,7 @@ function messenger() {
         currentConversation: null,
         newMessage: '',
         searchQuery: '',
+        conversationFilter: 'all',
         showUsers: false,
         showPhone: false,
         showNewGroup: false,
@@ -594,6 +625,12 @@ function messenger() {
         forwardingMessage: null,
         showForwardModal: false,
 
+        // Message search state
+        showMessageSearch: false,
+        messageSearchQuery: '',
+        messageSearchResults: [],
+        currentSearchIndex: 0,
+
         // Call state
         incomingCall: null,
         activeCall: null,
@@ -604,10 +641,23 @@ function messenger() {
         localStream: null,
 
         get filteredConversations() {
-            if (!this.searchQuery) return this.conversations;
-            return this.conversations.filter(c =>
-                c.display_name?.toLowerCase().includes(this.searchQuery.toLowerCase())
-            );
+            let filtered = this.conversations;
+
+            // Apply type filter
+            if (this.conversationFilter === 'private') {
+                filtered = filtered.filter(c => c.type === 'private');
+            } else if (this.conversationFilter === 'group') {
+                filtered = filtered.filter(c => c.type === 'group');
+            }
+
+            // Apply search filter
+            if (this.searchQuery) {
+                filtered = filtered.filter(c =>
+                    c.display_name?.toLowerCase().includes(this.searchQuery.toLowerCase())
+                );
+            }
+
+            return filtered;
         },
 
         get filteredUsers() {
@@ -888,6 +938,39 @@ function messenger() {
                     el.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30', 'rounded-lg');
                 }, 2000);
             }
+        },
+
+        // Message search functions
+        searchMessages() {
+            if (!this.messageSearchQuery || this.messageSearchQuery.length < 2) {
+                this.messageSearchResults = [];
+                this.currentSearchIndex = 0;
+                return;
+            }
+
+            const query = this.messageSearchQuery.toLowerCase();
+            this.messageSearchResults = this.messages
+                .filter(m => m.content && m.content.toLowerCase().includes(query))
+                .map(m => m.id);
+
+            this.currentSearchIndex = 0;
+
+            if (this.messageSearchResults.length > 0) {
+                this.scrollToMessage(this.messageSearchResults[0]);
+            }
+        },
+
+        navigateSearch(direction) {
+            if (this.messageSearchResults.length === 0) return;
+
+            this.currentSearchIndex = (this.currentSearchIndex + direction + this.messageSearchResults.length) % this.messageSearchResults.length;
+            this.scrollToMessage(this.messageSearchResults[this.currentSearchIndex]);
+        },
+
+        clearMessageSearch() {
+            this.messageSearchQuery = '';
+            this.messageSearchResults = [];
+            this.currentSearchIndex = 0;
         },
 
         // Reaction functions
