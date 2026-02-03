@@ -415,7 +415,7 @@
             <!-- Actions -->
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
                 <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
-                <button @click="createGroup()" :disabled="!newGroupName || selectedGroupMembers.length === 0" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
+                <button @click="createGroup()" :disabled="!newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
             </div>
         </div>
     </div>
