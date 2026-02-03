@@ -1174,12 +1174,12 @@
         <div class="flex items-start gap-3">
             <div class="w-12 h-12 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
             </div>
             <div class="flex-1">
-                <h4 class="font-bold text-gray-900 dark:text-white text-sm">دانلود اپلیکیشن اندروید</h4>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">برای تجربه بهتر و دریافت نوتیفیکیشن، اپلیکیشن را نصب کنید</p>
+                <h4 class="font-bold text-gray-900 dark:text-white text-sm">نصب اپلیکیشن</h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">برای دسترسی سریع‌تر، اپ را به صفحه اصلی اضافه کنید</p>
             </div>
             <button onclick="dismissAppPrompt()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1187,25 +1187,26 @@
         </div>
         <div class="flex gap-2 mt-3">
             <button onclick="dismissAppPrompt()" class="flex-1 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">بعداً</button>
-            <a href="/downloads/app-release.apk" download class="flex-1 px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition font-medium text-center flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                دانلود APK
-            </a>
+            <button onclick="installApp()" class="flex-1 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition font-medium text-center flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                نصب
+            </button>
         </div>
     </div>
 
     <script>
-    // App Download Prompt
+    // PWA Install Prompt
     const appPromptEl = document.getElementById('pwa-install-prompt');
-
-    // Check if Android device
-    function isAndroid() {
-        return /Android/i.test(navigator.userAgent);
-    }
+    let deferredPrompt = null;
 
     // Check if mobile device
     function isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Check if iOS
+    function isIOS() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent);
     }
 
     // Check if already installed (PWA or standalone)
@@ -1222,9 +1223,9 @@
         return daysSinceDismissed < 7;
     }
 
-    // Show the prompt (Android only)
+    // Show the prompt
     function showAppPrompt() {
-        if (appPromptEl && isAndroid() && !isAppInstalled() && !isAppPromptDismissed()) {
+        if (appPromptEl && isMobile() && !isAppInstalled() && !isAppPromptDismissed()) {
             appPromptEl.style.display = 'block';
         }
     }
@@ -1234,9 +1235,18 @@
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // Show prompt after 3 seconds on Android
-    if (isAndroid()) {
-        setTimeout(showAppPrompt, 3000);
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showAppPrompt();
+    });
+
+    // Show prompt after 3 seconds on mobile if no native prompt
+    if (isMobile()) {
+        setTimeout(() => {
+            if (!deferredPrompt) showAppPrompt();
+        }, 3000);
     }
 
     function dismissAppPrompt() {
@@ -1244,6 +1254,29 @@
         localStorage.setItem('app-prompt-dismissed', Date.now().toString());
     }
 
+    function installApp() {
+        if (deferredPrompt) {
+            // Use native install prompt
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    dismissAppPrompt();
+                }
+                deferredPrompt = null;
+            });
+        } else if (isIOS()) {
+            // Show iOS instructions
+            alert('برای نصب:\n\n1. روی دکمه Share (مربع با فلش) بزنید\n2. گزینه "Add to Home Screen" را انتخاب کنید');
+        } else {
+            // Show Android Chrome instructions
+            alert('برای نصب:\n\n1. روی منوی سه‌نقطه مرورگر بزنید\n2. گزینه "Add to Home screen" یا "Install app" را انتخاب کنید');
+        }
+    }
+
+    window.addEventListener('appinstalled', () => {
+        appPromptEl.style.display = 'none';
+        deferredPrompt = null;
+    });
     </script>
 </body>
 </html>
