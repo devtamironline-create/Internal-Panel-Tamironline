@@ -307,7 +307,7 @@ class ChatController extends Controller
             ->toArray();
 
         $messages = $conversation->messages()
-            ->with(['user', 'replyTo.user', 'readBy', 'reactions.user'])
+            ->with(['user', 'replyTo.user', 'readBy', 'reactions.user', 'task.assignee'])
             ->latest()
             ->take($request->get('limit', 50))
             ->get()
@@ -345,6 +345,19 @@ class ChatController extends Controller
                     ];
                 }
 
+                // Task info
+                $taskData = null;
+                if ($message->task) {
+                    $taskData = [
+                        'id' => $message->task->id,
+                        'title' => $message->task->title,
+                        'status' => $message->task->status,
+                        'priority' => $message->task->priority,
+                        'assignee_name' => $message->task->assignee?->full_name,
+                        'completed_at' => $message->task->completed_at?->format('Y-m-d H:i'),
+                    ];
+                }
+
                 return [
                     'id' => $message->id,
                     'content' => $message->body,
@@ -361,6 +374,7 @@ class ChatController extends Controller
                     'time' => $message->created_at->format('H:i'),
                     'reply_to' => $replyTo,
                     'reactions' => $reactions,
+                    'task' => $taskData,
                 ];
             });
 
@@ -1109,5 +1123,305 @@ class ChatController extends Controller
         $conversation->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    // ==================== ANNOUNCEMENTS ====================
+
+    /**
+     * Get all announcements
+     */
+    public function getAnnouncements(): JsonResponse
+    {
+        $announcements = Announcement::with(['creator', 'conversation'])
+            ->active()
+            ->latest()
+            ->get()
+            ->map(function ($announcement) {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'content' => $announcement->content,
+                    'type' => $announcement->type,
+                    'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
+                    'conversation_name' => $announcement->conversation?->name,
+                    'creator_name' => $announcement->creator->full_name,
+                    'created_at' => $announcement->created_at->diffForHumans(),
+                    'expires_at' => $announcement->expires_at?->format('Y/m/d'),
+                ];
+            });
+
+        return response()->json(['announcements' => $announcements]);
+    }
+
+    /**
+     * Get unread announcements for popup
+     */
+    public function getUnreadAnnouncements(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $announcements = Announcement::with(['creator', 'conversation'])
+            ->active()
+            ->where('show_popup', true)
+            ->unreadBy($userId)
+            ->latest()
+            ->get()
+            ->map(function ($announcement) {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'content' => $announcement->content,
+                    'type' => $announcement->type,
+                    'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
+                    'conversation_name' => $announcement->conversation?->name,
+                    'creator_name' => $announcement->creator->full_name,
+                    'created_at' => $announcement->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['announcements' => $announcements]);
+    }
+
+    /**
+     * Mark announcement as seen
+     */
+    public function markAnnouncementSeen(Announcement $announcement): JsonResponse
+    {
+        $userId = auth()->id();
+
+        AnnouncementView::firstOrCreate([
+            'announcement_id' => $announcement->id,
+            'user_id' => $userId,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Create announcement from message
+     */
+    public function createAnnouncement(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $message->conversation;
+
+        // Verify user is admin of the group/channel
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        if (!$participant || !$participant->pivot->is_admin) {
+            return response()->json(['error' => 'فقط مدیران می‌توانند اطلاعیه ایجاد کنند'], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:news,announcement',
+        ]);
+
+        $announcement = Announcement::create([
+            'title' => $request->title,
+            'content' => $message->body,
+            'type' => $request->type,
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'created_by' => $userId,
+            'show_popup' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'announcement' => [
+                'id' => $announcement->id,
+                'title' => $announcement->title,
+                'type' => $announcement->type,
+            ],
+        ]);
+    }
+
+    // ==================== MESSAGE TASKS ====================
+
+    /**
+     * Create task from message
+     */
+    public function createTask(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $message->conversation;
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'assigned_to' => 'nullable|exists:users,id',
+            'priority' => 'nullable|in:low,medium,high,urgent',
+            'due_date' => 'nullable|date',
+        ]);
+
+        $task = MessageTask::create([
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'title' => $request->title,
+            'description' => $message->body,
+            'created_by' => $userId,
+            'assigned_to' => $request->assigned_to,
+            'priority' => $request->priority ?? 'medium',
+            'due_date' => $request->due_date,
+        ]);
+
+        // Create system message about task creation
+        $user = auth()->user();
+        Message::createSystem(
+            $conversation->id,
+            '📋 تسک جدید: ' . $request->title . ' (توسط ' . $user->full_name . ')'
+        );
+
+        return response()->json([
+            'success' => true,
+            'task' => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'status' => $task->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Get tasks for a conversation
+     */
+    public function getConversationTasks(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $tasks = MessageTask::where('conversation_id', $conversation->id)
+            ->with(['creator', 'assignee', 'message'])
+            ->latest()
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'status_label' => $this->getTaskStatusLabel($task->status),
+                    'priority' => $task->priority,
+                    'priority_label' => $this->getTaskPriorityLabel($task->priority),
+                    'creator_name' => $task->creator->full_name,
+                    'assignee_name' => $task->assignee?->full_name,
+                    'message_id' => $task->message_id,
+                    'due_date' => $task->due_date?->format('Y/m/d'),
+                    'completed_at' => $task->completed_at?->diffForHumans(),
+                    'created_at' => $task->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['tasks' => $tasks]);
+    }
+
+    /**
+     * Update task status
+     */
+    public function updateTaskStatus(MessageTask $task, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $task->conversation;
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:pending,in_progress,completed,cancelled',
+        ]);
+
+        $oldStatus = $task->status;
+        $task->status = $request->status;
+
+        if ($request->status === 'completed') {
+            $task->completed_at = now();
+            $task->completed_by = $userId;
+
+            // Create system message about task completion
+            $user = auth()->user();
+            Message::createSystem(
+                $conversation->id,
+                '✅ تسک تکمیل شد: ' . $task->title . ' (توسط ' . $user->full_name . ')'
+            );
+        }
+
+        $task->save();
+
+        return response()->json([
+            'success' => true,
+            'task' => [
+                'id' => $task->id,
+                'status' => $task->status,
+                'status_label' => $this->getTaskStatusLabel($task->status),
+            ],
+        ]);
+    }
+
+    /**
+     * Get all tasks for current user
+     */
+    public function getMyTasks(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $tasks = MessageTask::where(function ($q) use ($userId) {
+                $q->where('assigned_to', $userId)
+                    ->orWhere('created_by', $userId);
+            })
+            ->with(['creator', 'assignee', 'conversation'])
+            ->latest()
+            ->get()
+            ->map(function ($task) use ($userId) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'status_label' => $this->getTaskStatusLabel($task->status),
+                    'priority' => $task->priority,
+                    'priority_label' => $this->getTaskPriorityLabel($task->priority),
+                    'conversation_id' => $task->conversation_id,
+                    'conversation_name' => $task->conversation->name ?? 'گفتگو',
+                    'creator_name' => $task->creator->full_name,
+                    'assignee_name' => $task->assignee?->full_name,
+                    'is_assigned_to_me' => $task->assigned_to === $userId,
+                    'due_date' => $task->due_date?->format('Y/m/d'),
+                    'created_at' => $task->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['tasks' => $tasks]);
+    }
+
+    private function getTaskStatusLabel(string $status): string
+    {
+        return match($status) {
+            'pending' => 'در انتظار',
+            'in_progress' => 'در حال انجام',
+            'completed' => 'تکمیل شده',
+            'cancelled' => 'لغو شده',
+            default => $status,
+        };
+    }
+
+    private function getTaskPriorityLabel(string $priority): string
+    {
+        return match($priority) {
+            'low' => 'کم',
+            'medium' => 'متوسط',
+            'high' => 'بالا',
+            'urgent' => 'فوری',
+            default => $priority,
+        };
     }
 }

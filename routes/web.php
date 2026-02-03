@@ -132,5 +132,17 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
         // Message reactions
         Route::post('/messages/{message}/reaction', [ChatController::class, 'toggleReaction'])->name('messages.reaction');
+
+        // Announcements
+        Route::get('/announcements', [ChatController::class, 'getAnnouncements'])->name('announcements');
+        Route::get('/announcements/unread', [ChatController::class, 'getUnreadAnnouncements'])->name('announcements.unread');
+        Route::post('/announcements/{announcement}/seen', [ChatController::class, 'markAnnouncementSeen'])->name('announcements.seen');
+        Route::post('/messages/{message}/announcement', [ChatController::class, 'createAnnouncement'])->name('messages.announcement');
+
+        // Message Tasks
+        Route::post('/messages/{message}/task', [ChatController::class, 'createTask'])->name('messages.task');
+        Route::get('/conversations/{conversation}/tasks', [ChatController::class, 'getConversationTasks'])->name('conversations.tasks');
+        Route::post('/tasks/{task}/status', [ChatController::class, 'updateTaskStatus'])->name('tasks.status');
+        Route::get('/tasks/my', [ChatController::class, 'getMyTasks'])->name('tasks.my');
     });
 });

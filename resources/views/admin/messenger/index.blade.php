@@ -300,6 +300,18 @@
                                             <button @click="copyMessage(msg.content)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="کپی">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                             </button>
+                                            <!-- Create Task -->
+                                            <template x-if="currentConversation?.type === 'group' || currentConversation?.type === 'channel'">
+                                                <button @click.stop="openCreateTaskModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="ایجاد تسک">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                                </button>
+                                            </template>
+                                            <!-- Create Announcement (Admin only) -->
+                                            <template x-if="(currentConversation?.type === 'group' || currentConversation?.type === 'channel') && isConversationAdmin">
+                                                <button @click.stop="openCreateAnnouncementModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="ارسال به اطلاعیه">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                                </button>
+                                            </template>
                                         </div>
                                         <!-- Read status ticks (only for my messages) -->
                                         <template x-if="msg.is_mine">
@@ -325,6 +337,31 @@
                                             <span class="text-gray-600 dark:text-gray-300" x-text="reaction.count"></span>
                                         </button>
                                     </template>
+                                </div>
+                            </template>
+
+                            <!-- Task Indicator -->
+                            <template x-if="msg.task">
+                                <div class="mt-2 p-2 rounded-lg border" :class="msg.task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : msg.task.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 flex-shrink-0" :class="msg.task.status === 'completed' ? 'text-green-600 dark:text-green-400' : msg.task.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                        </svg>
+                                        <span class="text-xs font-medium" :class="msg.task.status === 'completed' ? 'text-green-700 dark:text-green-300' : msg.task.status === 'in_progress' ? 'text-blue-700 dark:text-blue-300' : 'text-yellow-700 dark:text-yellow-300'">
+                                            تسک: <span x-text="getTaskStatusLabel(msg.task.status)"></span>
+                                        </span>
+                                        <template x-if="msg.task.status !== 'completed' && msg.task.status !== 'cancelled'">
+                                            <div class="flex gap-1 mr-auto">
+                                                <template x-if="msg.task.status === 'pending'">
+                                                    <button @click.stop="updateTaskStatus(msg.task.id, 'in_progress')" class="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition">شروع</button>
+                                                </template>
+                                                <button @click.stop="updateTaskStatus(msg.task.id, 'completed')" class="text-xs px-2 py-0.5 bg-green-500 text-white rounded hover:bg-green-600 transition">تکمیل</button>
+                                            </div>
+                                        </template>
+                                        <template x-if="msg.task.status === 'completed'">
+                                            <span class="text-xs text-green-600 dark:text-green-400 mr-auto">✓ تکمیل شده</span>
+                                        </template>
+                                    </div>
                                 </div>
                             </template>
 
@@ -888,6 +925,156 @@
         </div>
     </div>
 
+    <!-- Create Announcement Modal -->
+    <div x-cloak x-show="showAnnouncementModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showAnnouncementModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-w-[90vw] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-brand-500 to-brand-600 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        ارسال به اطلاعیه
+                    </h3>
+                    <button @click="showAnnouncementModal = false" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 max-h-24 overflow-y-auto">
+                    <p x-text="announcementMessage?.content || 'متن پیام'"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان اطلاعیه</label>
+                    <input type="text" x-model="announcementTitle" placeholder="عنوان را وارد کنید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع</label>
+                    <div class="flex gap-3">
+                        <label class="flex-1">
+                            <input type="radio" x-model="announcementType" value="announcement" class="sr-only peer">
+                            <div class="p-3 text-center border-2 rounded-lg cursor-pointer peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/20 transition">
+                                <span class="text-sm font-medium">اطلاعیه</span>
+                            </div>
+                        </label>
+                        <label class="flex-1">
+                            <input type="radio" x-model="announcementType" value="news" class="sr-only peer">
+                            <div class="p-3 text-center border-2 rounded-lg cursor-pointer peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/20 transition">
+                                <span class="text-sm font-medium">خبر</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showAnnouncementModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="submitAnnouncement()" :disabled="!announcementTitle || isCreatingAnnouncement" class="flex-1 py-3 bg-brand-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-brand-600 transition">
+                        <span x-show="!isCreatingAnnouncement">ارسال</span>
+                        <span x-show="isCreatingAnnouncement" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div x-cloak x-show="showTaskModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showTaskModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-w-[90vw] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-green-500 to-green-600 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        ایجاد تسک
+                    </h3>
+                    <button @click="showTaskModal = false" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 max-h-24 overflow-y-auto">
+                    <p x-text="taskMessage?.content || 'متن پیام'"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان تسک</label>
+                    <input type="text" x-model="taskTitle" placeholder="عنوان تسک را وارد کنید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اولویت</label>
+                    <select x-model="taskPriority" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                        <option value="low">کم</option>
+                        <option value="medium">متوسط</option>
+                        <option value="high">بالا</option>
+                        <option value="urgent">فوری</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ارجاع به</label>
+                    <select x-model="taskAssignee" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                        <option value="">بدون ارجاع</option>
+                        <template x-for="member in conversationMembers" :key="member.id">
+                            <option :value="member.id" x-text="member.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showTaskModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="submitTask()" :disabled="!taskTitle || isCreatingTask" class="flex-1 py-3 bg-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-green-600 transition">
+                        <span x-show="!isCreatingTask">ایجاد</span>
+                        <span x-show="isCreatingTask" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcement Popup -->
+    <div x-cloak x-show="showAnnouncementPopup && unreadAnnouncements.length > 0" x-transition class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[450px] max-w-[90vw] max-h-[80vh] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-yellow-500 to-orange-500 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        اخبار و اطلاعیه‌ها
+                    </h3>
+                    <button @click="closeAnnouncementPopup()" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="max-h-[50vh] overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+                <template x-for="ann in unreadAnnouncements" :key="ann.id">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div :class="ann.type === 'news' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg x-show="ann.type === 'news'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                                <svg x-show="ann.type === 'announcement'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span :class="ann.type === 'news' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'" class="text-xs px-2 py-0.5 rounded-full" x-text="ann.type_label"></span>
+                                    <span class="text-xs text-gray-500" x-text="ann.created_at"></span>
+                                </div>
+                                <h4 class="font-bold text-gray-900 dark:text-white mb-1" x-text="ann.title"></h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap" x-text="ann.content"></p>
+                                <p class="text-xs text-gray-400 mt-2" x-show="ann.conversation_name">
+                                    از: <span x-text="ann.conversation_name"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                <button @click="markAllAnnouncementsSeen()" class="w-full py-3 bg-brand-500 text-white rounded-lg font-medium hover:bg-brand-600 transition">
+                    متوجه شدم
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio Elements -->
     <audio x-ref="localAudio" muted></audio>
     <audio x-ref="remoteAudio" autoplay></audio>
@@ -971,6 +1158,25 @@ function messenger() {
         messageSearchResults: [],
         currentSearchIndex: 0,
 
+        // Announcement state
+        showAnnouncementModal: false,
+        announcementMessage: null,
+        announcementTitle: '',
+        announcementType: 'announcement',
+        isCreatingAnnouncement: false,
+        unreadAnnouncements: [],
+        showAnnouncementPopup: false,
+
+        // Task state
+        showTaskModal: false,
+        taskMessage: null,
+        taskTitle: '',
+        taskPriority: 'medium',
+        taskAssignee: '',
+        isCreatingTask: false,
+        conversationMembers: [],
+        isConversationAdmin: false,
+
         // Call state
         incomingCall: null,
         activeCall: null,
@@ -1032,6 +1238,7 @@ function messenger() {
                 await this.loadConversations();
                 await this.loadUsers();
                 this.heartbeat();
+                await this.checkUnreadAnnouncements();
             } finally {
                 this.isLoading = false;
             }
@@ -1090,6 +1297,17 @@ function messenger() {
             this.currentConversation = conv;
             this.mobileShowChat = true;
             await this.loadMessages(conv.id);
+
+            // Set admin status and members for groups/channels
+            if (conv.type === 'group' || conv.type === 'channel') {
+                this.isConversationAdmin = conv.member_ids?.includes({{ auth()->id() }}) ?? false;
+                // Load members for task assignment
+                this.conversationMembers = this.users.filter(u => conv.member_ids?.includes(u.id));
+            } else {
+                this.isConversationAdmin = false;
+                this.conversationMembers = [];
+            }
+
             this.$nextTick(() => this.scrollToBottom());
         },
 
@@ -2167,6 +2385,209 @@ function messenger() {
                 console.error('Error joining group:', e);
                 alert('خطا در پیوستن به گروه');
             }
+        },
+
+        // Announcement functions
+        async checkUnreadAnnouncements() {
+            try {
+                const response = await fetch('/admin/chat/announcements/unread');
+                const data = await response.json();
+                if (data.announcements && data.announcements.length > 0) {
+                    this.unreadAnnouncements = data.announcements;
+                    this.showAnnouncementPopup = true;
+                }
+            } catch (e) {
+                console.error('Error checking announcements:', e);
+            }
+        },
+
+        openCreateAnnouncementModal(msg) {
+            this.announcementMessage = msg;
+            this.announcementTitle = msg.content ? msg.content.substring(0, 100) : '';
+            this.announcementType = 'announcement';
+            this.showAnnouncementModal = true;
+        },
+
+        async submitAnnouncement() {
+            if (!this.announcementMessage || !this.announcementTitle) return;
+
+            this.isCreatingAnnouncement = true;
+            try {
+                const response = await fetch(`/admin/chat/messages/${this.announcementMessage.id}/announcement`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        title: this.announcementTitle,
+                        type: this.announcementType
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'اطلاعیه با موفقیت ایجاد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    this.showAnnouncementModal = false;
+                    this.announcementMessage = null;
+                    this.announcementTitle = '';
+                } else {
+                    alert(data.error || 'خطا در ایجاد اطلاعیه');
+                }
+            } catch (e) {
+                console.error('Error creating announcement:', e);
+                alert('خطا در ایجاد اطلاعیه');
+            } finally {
+                this.isCreatingAnnouncement = false;
+            }
+        },
+
+        async markAnnouncementSeen(announcementId) {
+            try {
+                await fetch(`/admin/chat/announcements/${announcementId}/seen`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                // Remove from unread list
+                this.unreadAnnouncements = this.unreadAnnouncements.filter(a => a.id !== announcementId);
+            } catch (e) {
+                console.error('Error marking announcement seen:', e);
+            }
+        },
+
+        async markAllAnnouncementsSeen() {
+            for (const announcement of this.unreadAnnouncements) {
+                await this.markAnnouncementSeen(announcement.id);
+            }
+            this.closeAnnouncementPopup();
+        },
+
+        closeAnnouncementPopup() {
+            this.showAnnouncementPopup = false;
+            this.unreadAnnouncements = [];
+        },
+
+        // Task functions
+        openCreateTaskModal(msg) {
+            this.taskMessage = msg;
+            this.taskTitle = msg.content ? msg.content.substring(0, 200) : '';
+            this.taskPriority = 'medium';
+            this.taskAssignee = '';
+            this.showTaskModal = true;
+        },
+
+        async submitTask() {
+            if (!this.taskMessage || !this.taskTitle) return;
+
+            this.isCreatingTask = true;
+            try {
+                const response = await fetch(`/admin/chat/messages/${this.taskMessage.id}/task`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        title: this.taskTitle,
+                        priority: this.taskPriority,
+                        assigned_to: this.taskAssignee || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'تسک با موفقیت ایجاد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    // Add task indicator to message
+                    const msg = this.messages.find(m => m.id === this.taskMessage.id);
+                    if (msg) {
+                        msg.has_task = true;
+                        msg.task = data.task;
+                    }
+
+                    this.showTaskModal = false;
+                    this.taskMessage = null;
+                    this.taskTitle = '';
+                } else {
+                    alert(data.error || 'خطا در ایجاد تسک');
+                }
+            } catch (e) {
+                console.error('Error creating task:', e);
+                alert('خطا در ایجاد تسک');
+            } finally {
+                this.isCreatingTask = false;
+            }
+        },
+
+        async updateTaskStatus(taskId, status) {
+            try {
+                const response = await fetch(`/admin/chat/tasks/${taskId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update the task in the message
+                    const msg = this.messages.find(m => m.task?.id === taskId);
+                    if (msg && msg.task) {
+                        msg.task.status = status;
+                        if (status === 'completed') {
+                            msg.task.completed_at = new Date().toISOString();
+                        }
+                    }
+
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = status === 'completed' ? 'تسک تکمیل شد' : 'وضعیت تسک بروزرسانی شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                } else {
+                    alert(data.error || 'خطا در بروزرسانی تسک');
+                }
+            } catch (e) {
+                console.error('Error updating task status:', e);
+                alert('خطا در بروزرسانی تسک');
+            }
+        },
+
+        getTaskStatusLabel(status) {
+            const labels = {
+                'pending': 'در انتظار',
+                'in_progress': 'در حال انجام',
+                'completed': 'تکمیل شده',
+                'cancelled': 'لغو شده'
+            };
+            return labels[status] || status;
+        },
+
+        getTaskStatusColor(status) {
+            const colors = {
+                'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                'in_progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                'completed': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                'cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+            };
+            return colors[status] || colors['pending'];
         }
     }
 }
