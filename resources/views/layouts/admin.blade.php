@@ -1170,7 +1170,7 @@
     @endif
 
     <!-- PWA Install Prompt (Mobile Only) -->
-    <div id="pwa-install-prompt" class="hidden fixed bottom-4 left-4 right-4 md:hidden bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-[9999]">
+    <div id="pwa-install-prompt" style="display: none;" class="fixed bottom-4 left-4 right-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-[9999]">
         <div class="flex items-start gap-3">
             <div class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1223,8 +1223,14 @@
 
     // Show the prompt
     function showPwaPrompt() {
+        console.log('PWA Check:', {
+            isMobile: isMobile(),
+            isInstalled: isPwaInstalled(),
+            isDismissed: isPwaPromptDismissed()
+        });
         if (pwaPromptEl && isMobile() && !isPwaInstalled() && !isPwaPromptDismissed()) {
-            pwaPromptEl.classList.remove('hidden');
+            pwaPromptEl.style.display = 'block';
+            console.log('PWA Prompt shown');
         }
     }
 
@@ -1254,7 +1260,7 @@
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((result) => {
                 deferredPrompt = null;
-                pwaPromptEl.classList.add('hidden');
+                pwaPromptEl.style.display = 'none';
             });
         } else if (isIos()) {
             // iOS - show instructions
@@ -1268,12 +1274,12 @@
     }
 
     window.addEventListener('appinstalled', () => {
-        pwaPromptEl.classList.add('hidden');
+        pwaPromptEl.style.display = 'none';
         deferredPrompt = null;
     });
 
     function dismissPwaPrompt() {
-        pwaPromptEl.classList.add('hidden');
+        pwaPromptEl.style.display = 'none';
         localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
     }
     </script>
