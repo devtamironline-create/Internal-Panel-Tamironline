@@ -54,6 +54,11 @@
                 <label for="is_active" class="text-gray-700">حساب فعال باشد</label>
             </div>
 
+            <div class="flex items-center gap-3">
+                <input type="checkbox" id="can_add_group_members" name="can_add_group_members" value="1" {{ old('can_add_group_members') ? 'checked' : '' }} class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                <label for="can_add_group_members" class="text-gray-700">امکان افزودن عضو به گروه‌ها</label>
+            </div>
+
             @if(isset($roles))
             <!-- Role Section -->
             <div class="pt-6 border-t border-gray-200">

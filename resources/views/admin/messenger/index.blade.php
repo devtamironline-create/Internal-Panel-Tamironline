@@ -282,7 +282,7 @@
                                         </template>
                                     </div>
                                 </template>
-                                <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
+                                <p class="text-sm leading-relaxed whitespace-pre-wrap" x-text="msg.content" x-show="msg.content"></p>
                                 <div class="flex items-center justify-between gap-2 mt-1">
                                     <span class="text-xs opacity-60" x-text="msg.time"></span>
                                     <div class="flex items-center gap-1">
