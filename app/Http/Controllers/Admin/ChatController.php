@@ -51,31 +51,69 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        $conversations = Conversation::whereHas('participants', function ($q) use ($userId) {
+        // Get user's conversations
+        $userConversations = Conversation::whereHas('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId)->whereNull('left_at');
             })
             ->with(['latestMessage.user', 'activeParticipants.presence'])
-            ->get()
+            ->get();
+
+        // Get public groups that user is not a member of
+        $publicGroups = Conversation::where('type', 'group')
+            ->whereJsonContains('settings->is_public', true)
+            ->whereDoesntHave('participants', function ($q) use ($userId) {
+                $q->where('user_id', $userId)->whereNull('left_at');
+            })
+            ->with(['latestMessage.user'])
+            ->get();
+
+        $conversations = $userConversations->merge($publicGroups)
             ->map(function ($conversation) use ($userId) {
                 $other = $conversation->getOtherParticipant($userId);
                 $isOnline = false;
                 $status = 'offline';
                 $statusLabel = 'آفلاین';
                 $statusColor = 'gray';
-                if ($other && $other->presence) {
+
+                // For private conversations
+                if ($conversation->type === 'private' && $other && $other->presence) {
                     $isOnline = $other->presence->status === 'online'
                         && $other->presence->last_seen_at?->diffInMinutes() < 5;
                     $status = $other->getPresenceStatus();
                     $statusLabel = $other->getPresenceStatusLabel();
                     $statusColor = $other->getPresenceStatusColor();
                 }
+
+                // For groups, show member count as status
+                if ($conversation->type === 'group') {
+                    $memberCount = $conversation->activeParticipants()->count();
+                    $statusLabel = $memberCount . ' عضو';
+                    $statusColor = 'blue';
+
+                    // Check if it's a public group user is not a member of
+                    $isPublic = $conversation->settings['is_public'] ?? false;
+                    $isMember = $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists();
+
+                    if ($isPublic && !$isMember) {
+                        $statusLabel = 'گروه عمومی • ' . $memberCount . ' عضو';
+                        $statusColor = 'green';
+                    }
+                }
+
+                // Group avatar
+                $avatar = $conversation->type === 'group'
+                    ? ($conversation->avatar ? asset('storage/' . $conversation->avatar) : null)
+                    : $other?->avatar_url;
+
                 return [
                     'id' => $conversation->id,
                     'type' => $conversation->type,
                     'display_name' => $conversation->getDisplayName($userId),
                     'user_id' => $other?->id,
-                    'avatar' => $other?->avatar_url,
-                    'initials' => $other?->initials ?? '؟',
+                    'avatar' => $avatar,
+                    'initials' => $conversation->type === 'group'
+                        ? mb_substr($conversation->name ?? 'گ', 0, 1)
+                        : ($other?->initials ?? '؟'),
                     'is_online' => $isOnline,
                     'status' => $status,
                     'status_label' => $statusLabel,
@@ -84,6 +122,8 @@ class ChatController extends Controller
                     'last_message' => $conversation->latestMessage?->body ?? '',
                     'last_message_time' => $conversation->latestMessage?->created_at?->diffForHumans() ?? '',
                     'last_message_id' => $conversation->latestMessage?->id ?? 0,
+                    'is_public' => $conversation->settings['is_public'] ?? false,
+                    'is_member' => $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists(),
                 ];
             })
             ->sortByDesc(fn($c) => $c['last_message_time']);
@@ -131,35 +171,57 @@ class ChatController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
-            'member_ids' => 'required|array|min:1',
-            'member_ids.*' => 'exists:users,id',
-            'admin_ids' => 'nullable|array',
-            'admin_ids.*' => 'exists:users,id',
-            'settings' => 'nullable|array',
-            'settings.onlyAdminsCanSend' => 'nullable|boolean',
-            'settings.membersCanAddOthers' => 'nullable|boolean',
+            'member_ids' => 'nullable|string', // JSON string from FormData
+            'admin_ids' => 'nullable|string', // JSON string from FormData
+            'settings' => 'nullable|string', // JSON string from FormData
+            'avatar' => 'nullable|image|max:2048', // 2MB max for avatar
         ]);
+
+        // Parse JSON strings from FormData
+        $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
+        $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
+        $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
 
         // Prepare settings
         $settings = [
-            'only_admins_can_send' => $request->input('settings.onlyAdminsCanSend', false),
-            'members_can_add_others' => $request->input('settings.membersCanAddOthers', true),
+            'is_public' => $settingsData['isPublic'] ?? false,
+            'only_admins_can_send' => $settingsData['onlyAdminsCanSend'] ?? false,
+            'members_can_add_others' => $settingsData['membersCanAddOthers'] ?? true,
         ];
+
+        // If group is public and no members selected, that's OK
+        // If group is not public, need at least 1 member
+        if (!$settings['is_public'] && empty($memberIds)) {
+            return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
+        }
+
+        // Handle avatar upload
+        $avatarPath = null;
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+        }
 
         $conversation = Conversation::createGroup(
             $request->name,
             auth()->id(),
-            $request->member_ids,
+            $memberIds,
             $request->description,
             $settings
         );
 
+        // Update avatar if uploaded
+        if ($avatarPath) {
+            $conversation->update(['avatar' => $avatarPath]);
+        }
+
         // Set additional admins
-        if ($request->filled('admin_ids')) {
-            foreach ($request->admin_ids as $adminId) {
-                $conversation->participants()->updateExistingPivot($adminId, [
-                    'is_admin' => true,
-                ]);
+        if (!empty($adminIds)) {
+            foreach ($adminIds as $adminId) {
+                if ($conversation->participants()->where('user_id', $adminId)->exists()) {
+                    $conversation->participants()->updateExistingPivot($adminId, [
+                        'is_admin' => true,
+                    ]);
+                }
             }
         }
 
@@ -174,6 +236,8 @@ class ChatController extends Controller
                 'id' => $conversation->id,
                 'type' => 'group',
                 'display_name' => $request->name,
+                'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
+                'is_public' => $settings['is_public'],
             ],
         ]);
     }
@@ -775,5 +839,45 @@ class ChatController extends Controller
                 'has_reacted' => $group->contains('user_id', $userId),
             ];
         })->values()->toArray();
+    }
+
+    /**
+     * Join a public group
+     */
+    public function joinGroup(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify it's a public group
+        if ($conversation->type !== 'group' || !($conversation->settings['is_public'] ?? false)) {
+            return response()->json(['error' => 'این گروه عمومی نیست'], 403);
+        }
+
+        // Check if already a member
+        if ($conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists()) {
+            return response()->json(['error' => 'شما قبلا عضو این گروه هستید'], 422);
+        }
+
+        // Add user to group
+        $conversation->participants()->attach([
+            $userId => ['joined_at' => now(), 'is_admin' => false]
+        ]);
+
+        // Create system message
+        $user = User::find($userId);
+        Message::createSystem(
+            $conversation->id,
+            $user->full_name . ' به گروه پیوست'
+        );
+
+        return response()->json([
+            'success' => true,
+            'conversation' => [
+                'id' => $conversation->id,
+                'type' => 'group',
+                'display_name' => $conversation->name,
+                'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
+            ],
+        ]);
     }
 }

@@ -75,9 +75,9 @@
             </template>
 
             <template x-for="conv in filteredConversations" :key="conv.id">
-                <div @click="openConversation(conv)" :class="currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700'" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700">
+                <div @click="conv.is_public && !conv.is_member ? null : openConversation(conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700', conv.is_public && !conv.is_member ? 'bg-green-50/50 dark:bg-green-900/10' : '']" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700">
                     <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                        <div :class="conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600'" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
                             <template x-if="conv.avatar">
                                 <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
                             </template>
@@ -89,7 +89,12 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
-                            <h4 class="font-medium text-gray-900 dark:text-white truncate" x-text="conv.display_name"></h4>
+                            <h4 class="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
+                                <span x-text="conv.display_name"></span>
+                                <template x-if="conv.is_public">
+                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </template>
+                            </h4>
                             <span class="text-xs text-gray-400" x-text="conv.last_message_time"></span>
                         </div>
                         <div class="flex items-center gap-2">
@@ -97,7 +102,13 @@
                             <span class="text-xs px-1.5 py-0.5 rounded-full shrink-0" :class="`bg-${conv.status_color || 'gray'}-100 text-${conv.status_color || 'gray'}-700 dark:bg-${conv.status_color || 'gray'}-900/30 dark:text-${conv.status_color || 'gray'}-300`" x-text="conv.status_label || 'آفلاین'"></span>
                         </div>
                     </div>
-                    <template x-if="conv.unread_count > 0">
+                    <!-- Join button for public groups -->
+                    <template x-if="conv.is_public && !conv.is_member">
+                        <button @click.stop="joinGroup(conv.id)" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg font-medium transition">
+                            عضویت
+                        </button>
+                    </template>
+                    <template x-if="conv.unread_count > 0 && conv.is_member">
                         <span class="bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[24px] text-center" x-text="conv.unread_count"></span>
                     </template>
                 </div>
@@ -297,7 +308,7 @@
     </div>
 
     <!-- Phone Modal -->
-    <div x-show="showPhone" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showPhone = false">
+    <div x-cloak x-show="showPhone" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showPhone = false">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 shadow-2xl overflow-hidden">
             <div class="bg-brand-500 text-white p-6 text-center">
                 <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -328,15 +339,21 @@
     </div>
 
     <!-- New Group Modal -->
-    <div x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false">
+    <div x-cloak x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-[450px] max-w-[95vw] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 text-center shrink-0">
                 <!-- Group Avatar Upload -->
-                <div class="relative w-20 h-20 mx-auto mb-3">
-                    <div class="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold" x-text="newGroupName?.charAt(0) || '?'">
+                <div class="relative w-24 h-24 mx-auto mb-3">
+                    <div class="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold overflow-hidden border-4 border-white/30">
+                        <template x-if="groupAvatarPreview">
+                            <img :src="groupAvatarPreview" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!groupAvatarPreview">
+                            <span x-text="newGroupName?.charAt(0) || '?'"></span>
+                        </template>
                     </div>
-                    <label class="absolute -bottom-1 -right-1 w-8 h-8 bg-white text-brand-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-gray-100 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <label class="absolute -bottom-1 -right-1 w-9 h-9 bg-white text-brand-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         <input type="file" accept="image/*" class="hidden" @change="handleGroupAvatar($event)">
                     </label>
                 </div>
@@ -356,6 +373,16 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     تنظیمات گروه
                 </h4>
+                <label class="flex items-center gap-3 p-3 bg-brand-50 dark:bg-brand-900/30 border-2 border-brand-200 dark:border-brand-700 rounded-lg cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-900/50 transition">
+                    <input type="checkbox" x-model="groupSettings.isPublic" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
+                    <div class="flex-1">
+                        <span class="text-gray-900 dark:text-white font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            گروه عمومی
+                        </span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">همه کاربران می‌توانند این گروه را ببینند و عضو شوند</p>
+                    </div>
+                </label>
                 <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                     <input type="checkbox" x-model="groupSettings.onlyAdminsCanSend" class="w-5 h-5 text-brand-500 rounded focus:ring-brand-500">
                     <div>
@@ -407,7 +434,7 @@
     </div>
 
     <!-- Incoming Call Modal -->
-    <div x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+    <div x-cloak x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
         <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full mx-4">
             <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse">
                 <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,7 +459,7 @@
     </div>
 
     <!-- Active Call Modal -->
-    <div x-show="activeCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800">
+    <div x-cloak x-show="activeCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800">
         <div class="text-center text-white">
             <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-white/20 flex items-center justify-center text-5xl font-bold" x-text="activeCall?.remote_name?.charAt(0)"></div>
             <h3 class="text-3xl font-bold mb-2" x-text="activeCall?.remote_name"></h3>
@@ -454,7 +481,7 @@
     </div>
 
     <!-- Lightbox Modal -->
-    <div x-show="lightbox" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" @click="lightbox = null" @keydown.escape.window="lightbox = null">
+    <div x-cloak x-show="lightbox" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" @click="lightbox = null" @keydown.escape.window="lightbox = null">
         <div class="relative max-w-4xl max-h-[90vh] w-full mx-4" @click.stop>
             <!-- Close button -->
             <button @click="lightbox = null" class="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition">
@@ -490,7 +517,7 @@
     </div>
 
     <!-- Forward Modal -->
-    <div x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null">
+    <div x-cloak x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-h-[80vh] shadow-2xl overflow-hidden">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
@@ -562,9 +589,11 @@ function messenger() {
         groupAdmins: [],
         groupAvatar: null,
         groupSettings: {
+            isPublic: false,
             onlyAdminsCanSend: false,
             membersCanAddOthers: true
         },
+        groupAvatarPreview: null,
 
         // Reply & Reaction state
         replyingTo: null,
@@ -696,21 +725,30 @@ function messenger() {
         },
 
         async createGroup() {
-            if (!this.newGroupName || this.selectedGroupMembers.length === 0) return;
+            if (!this.newGroupName) return;
+            // If not public group, need members
+            if (!this.groupSettings.isPublic && this.selectedGroupMembers.length === 0) {
+                alert('لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید');
+                return;
+            }
             try {
+                const formData = new FormData();
+                formData.append('name', this.newGroupName);
+                formData.append('description', this.newGroupDescription || '');
+                formData.append('member_ids', JSON.stringify(this.selectedGroupMembers));
+                formData.append('admin_ids', JSON.stringify(this.groupAdmins));
+                formData.append('settings', JSON.stringify(this.groupSettings));
+
+                if (this.groupAvatar) {
+                    formData.append('avatar', this.groupAvatar);
+                }
+
                 const response = await fetch('/admin/chat/conversations/group', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({
-                        name: this.newGroupName,
-                        description: this.newGroupDescription,
-                        member_ids: this.selectedGroupMembers,
-                        admin_ids: this.groupAdmins,
-                        settings: this.groupSettings
-                    })
+                    body: formData
                 });
                 const data = await response.json();
                 if (data.conversation) {
@@ -730,7 +768,9 @@ function messenger() {
             this.selectedGroupMembers = [];
             this.groupAdmins = [];
             this.groupAvatar = null;
+            this.groupAvatarPreview = null;
             this.groupSettings = {
+                isPublic: false,
                 onlyAdminsCanSend: false,
                 membersCanAddOthers: true
             };
@@ -748,6 +788,12 @@ function messenger() {
             const file = event.target.files[0];
             if (file) {
                 this.groupAvatar = file;
+                // Create preview URL
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.groupAvatarPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
             }
         },
 
@@ -1276,6 +1322,41 @@ function messenger() {
 
             this.showForwardModal = false;
             this.forwardingMessage = null;
+        },
+
+        async joinGroup(conversationId) {
+            try {
+                const response = await fetch(`/admin/chat/conversations/${conversationId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'به گروه پیوستید';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+
+                    // Reload conversations
+                    await this.loadConversations();
+
+                    // Open the conversation
+                    const conv = this.conversations.find(c => c.id === conversationId);
+                    if (conv) {
+                        this.openConversation(conv);
+                    }
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            } catch (e) {
+                console.error('Error joining group:', e);
+                alert('خطا در پیوستن به گروه');
+            }
         }
     }
 }

@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/conversations', [ChatController::class, 'conversations'])->name('conversations');
         Route::post('/conversations/start', [ChatController::class, 'startConversation'])->name('conversations.start');
         Route::post('/conversations/group', [ChatController::class, 'createGroup'])->name('conversations.group');
+        Route::post('/conversations/{conversation}/join', [ChatController::class, 'joinGroup'])->name('conversations.join');
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
