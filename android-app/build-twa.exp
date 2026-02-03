@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+
+set timeout 600
+
+spawn bubblewrap init --manifest=https://panel.tamironline.com/manifest.json
+
+# Main interaction loop
+expect {
+    "Do you want Bubblewrap to install the JDK" {
+        send "y\r"
+        exp_continue
+    }
+    "Do you want Bubblewrap to install the Android SDK" {
+        send "y\r"
+        exp_continue
+    }
+    "Project generated successfully" {
+        puts "\nInit completed successfully"
+    }
+    -re "Downloading.*" {
+        exp_continue
+    }
+    -re "Installing.*" {
+        exp_continue
+    }
+    -re "Fetching.*" {
+        exp_continue
+    }
+    eof {
+        puts "\nProcess completed"
+    }
+    timeout {
+        puts "\nTimeout - check output"
+    }
+}

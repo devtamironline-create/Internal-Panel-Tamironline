@@ -1,0 +1,29 @@
+{
+  "packageId": "com.tamironline.panel",
+  "host": "panel.tamironline.com",
+  "name": "اتوماسیون اداری",
+  "launcherName": "اتوماسیون",
+  "display": "standalone",
+  "themeColor": "#f97316",
+  "navigationColor": "#ffffff",
+  "navigationColorDark": "#1f2937",
+  "navigationDividerColor": "#e5e7eb",
+  "navigationDividerColorDark": "#374151",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "startUrl": "/admin/dashboard",
+  "iconUrl": "https://panel.tamironline.com/images/icons/icon-512x512.png",
+  "maskableIconUrl": "https://panel.tamironline.com/images/icons/icon-512x512.png",
+  "shortcuts": [],
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "splashScreenFadeOutDuration": 300,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "orientation": "portrait",
+  "fingerprints": []
+}
