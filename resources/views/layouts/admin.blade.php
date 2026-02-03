@@ -39,9 +39,6 @@
         strong, b { font-weight: 700; }
         input, select, textarea, button { font-family: inherit; }
         [x-cloak] { display: none !important; }
-        /* Page loading - show until Alpine hides it */
-        .page-loading-overlay { display: flex !important; }
-        [x-data] .page-loading-overlay[x-show="pageLoading"] { display: flex; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         /* Improved Typography */
@@ -172,18 +169,30 @@
     @stack('styles')
 </head>
 <body
-    x-data="{ sidebarToggle: false, darkMode: localStorage.getItem('darkMode') === 'true', pageLoading: true }"
-    x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val)); setTimeout(() => pageLoading = false, 100)"
+    x-data="{ sidebarToggle: false, darkMode: localStorage.getItem('darkMode') === 'true' }"
+    x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
     :class="{ 'dark': darkMode }"
     class="font-vazir bg-gray-50 dark:bg-gray-900"
 >
     <!-- Global Page Loading Overlay -->
-    <div x-show="pageLoading" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="page-loading-overlay fixed inset-0 z-[9998] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+    <div id="page-loader" class="fixed inset-0 z-[9998] bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-opacity duration-200">
         <div class="text-center">
-            <div class="w-12 h-12 border-4 border-brand-200 dark:border-brand-800 border-t-brand-500 rounded-full animate-spin mx-auto mb-3"></div>
+            <div class="w-12 h-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin mx-auto mb-3"></div>
             <p class="text-sm text-gray-500 dark:text-gray-400">در حال بارگذاری...</p>
         </div>
     </div>
+    <script>
+        // Hide loader when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(function() { loader.remove(); }, 200);
+                }
+            }, 50);
+        });
+    </script>
 
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
