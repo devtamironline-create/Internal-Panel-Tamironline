@@ -380,13 +380,13 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-end gap-3">
                     <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" multiple>
-                    <button @click="$refs.fileInput.click()" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
+                    <button @click="$refs.fileInput.click()" class="p-2 mb-1 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
-                    <input x-model="newMessage" @keydown.enter="sendMessage()" @keydown.escape="replyingTo = null" x-ref="messageInput" type="text" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="پیام خود را بنویسید...">
-                    <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition">
+                    <textarea x-model="newMessage" @keydown.enter="if(!$event.shiftKey) { $event.preventDefault(); sendMessage(); }" @keydown.escape="replyingTo = null" x-ref="messageInput" rows="1" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto" placeholder="پیام خود را بنویسید..." @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 128) + 'px'"></textarea>
+                    <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 mb-1 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition flex-shrink-0">
                         <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     </button>
                 </div>
@@ -990,13 +990,15 @@ function messenger() {
         get filteredConversations() {
             let filtered = this.conversations;
 
-            // Sort by pinned first
+            // Sort by pinned first, then by last message time
             filtered = [...filtered].sort((a, b) => {
+                // Pinned conversations first
                 if (a.is_pinned_global && !b.is_pinned_global) return -1;
                 if (!a.is_pinned_global && b.is_pinned_global) return 1;
                 if (a.is_pinned_personal && !b.is_pinned_personal) return -1;
                 if (!a.is_pinned_personal && b.is_pinned_personal) return 1;
-                return 0;
+                // Then sort by last message time (newest first)
+                return (b.last_message_at || 0) - (a.last_message_at || 0);
             });
 
             // Apply type filter
@@ -1445,6 +1447,7 @@ function messenger() {
                 const data = await response.json();
                 if (data.message) {
                     this.messages.push(data.message);
+                    this.updateConversationLastMessage(this.currentConversation.id, data.message);
                     this.$nextTick(() => this.scrollToBottom());
                 }
             } catch (e) {
@@ -1455,6 +1458,15 @@ function messenger() {
         scrollToBottom() {
             const container = this.$refs.messagesContainer;
             if (container) container.scrollTop = container.scrollHeight;
+        },
+
+        updateConversationLastMessage(conversationId, message) {
+            const conv = this.conversations.find(c => c.id === conversationId);
+            if (conv) {
+                conv.last_message = message.content || '';
+                conv.last_message_at = Math.floor(Date.now() / 1000);
+                conv.last_message_time = 'الان';
+            }
         },
 
         async sendFile(event) {
@@ -1580,6 +1592,7 @@ function messenger() {
                     const data = await response.json();
                     if (data.message) {
                         this.messages.push(data.message);
+                        this.updateConversationLastMessage(this.currentConversation.id, data.message);
                     }
                 }
 

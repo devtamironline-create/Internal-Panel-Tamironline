@@ -140,6 +140,7 @@ class ChatController extends Controller
                     'unread_count' => $conversation->getUnreadCount($userId),
                     'last_message' => $conversation->latestMessage?->body ?? '',
                     'last_message_time' => $conversation->latestMessage?->created_at?->diffForHumans() ?? '',
+                    'last_message_at' => $conversation->latestMessage?->created_at?->timestamp ?? 0,
                     'last_message_id' => $conversation->latestMessage?->id ?? 0,
                     'is_public' => $conversation->settings['is_public'] ?? false,
                     'is_member' => $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists(),
@@ -148,7 +149,7 @@ class ChatController extends Controller
                     'member_ids' => $conversation->activeParticipants->pluck('id')->toArray(),
                 ];
             })
-            ->sortByDesc(fn($c) => $c['last_message_time']);
+            ->sortByDesc(fn($c) => $c['last_message_at']);
 
         return response()->json(['conversations' => $conversations->values()]);
     }
