@@ -178,7 +178,7 @@
         <!-- Sidebar -->
         <aside
             :class="sidebarToggle ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'"
-            class="fixed right-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-[#1a2d48] px-5 lg:static transition-transform duration-300"
+            class="fixed right-0 top-0 z-50 flex h-screen w-60 flex-col overflow-y-hidden bg-[#1a2d48] px-4 lg:static transition-transform duration-300"
         >
             <!-- Header -->
             <div class="flex items-center justify-between pt-8 pb-7 border-b border-white/10">

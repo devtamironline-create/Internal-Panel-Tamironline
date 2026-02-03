@@ -6,7 +6,7 @@
 <div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
 
     <!-- Sidebar - Conversations List -->
-    <div class="w-80 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <div class="w-72 border-l border-gray-200 dark:border-gray-700 flex flex-col">
         <!-- Header -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
