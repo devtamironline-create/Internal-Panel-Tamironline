@@ -2,6 +2,10 @@
 
 @section('page-title', 'پیام‌رسان')
 
+@php
+    $notificationSound = \App\Models\Setting::get('notification_sound');
+@endphp
+
 @section('main')
 <style>
     .messenger-loading { display: flex !important; }
@@ -1716,7 +1720,11 @@ function messenger() {
         },
 
         playNotificationSound() {
+            @if($notificationSound)
+            const audio = new Audio('{{ asset("storage/" . $notificationSound) }}');
+            @else
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleAN1qeNzAACy9l0AAMz/LxMl3P8MACX8/wAA');
+            @endif
             audio.volume = 0.5;
             audio.play().catch(e => {});
         },
