@@ -1169,119 +1169,81 @@
     </script>
     @endif
 
-    <!-- PWA Install Prompt (Mobile Only) -->
+    <!-- App Install Prompt (Mobile Only) -->
     <div id="pwa-install-prompt" style="display: none;" class="fixed bottom-4 left-4 right-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-[9999]">
         <div class="flex items-start gap-3">
-            <div class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div class="w-12 h-12 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
             </div>
             <div class="flex-1">
-                <h4 class="font-bold text-gray-900 dark:text-white text-sm">نصب اپلیکیشن</h4>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">برای دسترسی سریع‌تر، اپلیکیشن را به صفحه اصلی گوشی اضافه کنید</p>
+                <h4 class="font-bold text-gray-900 dark:text-white text-sm">دانلود اپلیکیشن اندروید</h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">برای تجربه بهتر و دریافت نوتیفیکیشن، اپلیکیشن را نصب کنید</p>
             </div>
-            <button onclick="dismissPwaPrompt()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <button onclick="dismissAppPrompt()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
         <div class="flex gap-2 mt-3">
-            <button onclick="dismissPwaPrompt()" class="flex-1 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">بعداً</button>
-            <button onclick="installPwa()" class="flex-1 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition font-medium">نصب</button>
+            <button onclick="dismissAppPrompt()" class="flex-1 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">بعداً</button>
+            <a href="/downloads/app-release.apk" download class="flex-1 px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition font-medium text-center flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                دانلود APK
+            </a>
         </div>
     </div>
 
     <script>
-    // PWA Service Worker Registration & Install Prompt
-    let deferredPrompt = null;
-    const pwaPromptEl = document.getElementById('pwa-install-prompt');
+    // App Download Prompt
+    const appPromptEl = document.getElementById('pwa-install-prompt');
+
+    // Check if Android device
+    function isAndroid() {
+        return /Android/i.test(navigator.userAgent);
+    }
 
     // Check if mobile device
     function isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Check if iOS
-    function isIos() {
-        return /iPad|iPhone|iPod/.test(navigator.userAgent);
-    }
-
-    // Check if already installed
-    function isPwaInstalled() {
+    // Check if already installed (PWA or standalone)
+    function isAppInstalled() {
         return window.matchMedia('(display-mode: standalone)').matches ||
                window.navigator.standalone === true;
     }
 
     // Check if dismissed recently
-    function isPwaPromptDismissed() {
-        const dismissed = localStorage.getItem('pwa-prompt-dismissed');
+    function isAppPromptDismissed() {
+        const dismissed = localStorage.getItem('app-prompt-dismissed');
         if (!dismissed) return false;
-        const dismissedDate = new Date(parseInt(dismissed));
-        const daysSinceDismissed = (new Date() - dismissedDate) / (1000 * 60 * 60 * 24);
+        const daysSinceDismissed = (new Date() - new Date(parseInt(dismissed))) / (1000 * 60 * 60 * 24);
         return daysSinceDismissed < 7;
     }
 
-    // Show the prompt
-    function showPwaPrompt() {
-        console.log('PWA Check:', {
-            isMobile: isMobile(),
-            isInstalled: isPwaInstalled(),
-            isDismissed: isPwaPromptDismissed()
-        });
-        if (pwaPromptEl && isMobile() && !isPwaInstalled() && !isPwaPromptDismissed()) {
-            pwaPromptEl.style.display = 'block';
-            console.log('PWA Prompt shown');
+    // Show the prompt (Android only)
+    function showAppPrompt() {
+        if (appPromptEl && isAndroid() && !isAppInstalled() && !isAppPromptDismissed()) {
+            appPromptEl.style.display = 'block';
         }
     }
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('SW registered'))
-                .catch(err => console.log('SW failed:', err));
-        });
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // Listen for Android install prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-    });
-
-    // Show prompt after 3 seconds on mobile
-    if (isMobile()) {
-        setTimeout(showPwaPrompt, 3000);
+    // Show prompt after 3 seconds on Android
+    if (isAndroid()) {
+        setTimeout(showAppPrompt, 3000);
     }
 
-    function installPwa() {
-        if (deferredPrompt) {
-            // Android - use native prompt
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((result) => {
-                deferredPrompt = null;
-                pwaPromptEl.style.display = 'none';
-            });
-        } else if (isIos()) {
-            // iOS - show instructions
-            alert('برای نصب اپلیکیشن:\n\n۱. روی آیکون Share (مربع با فلش) در پایین صفحه بزنید\n۲. گزینه "Add to Home Screen" را انتخاب کنید');
-            dismissPwaPrompt();
-        } else {
-            // Other browsers
-            alert('برای نصب اپلیکیشن:\n\nاز منوی مرورگر گزینه "Add to Home Screen" یا "Install App" را انتخاب کنید');
-            dismissPwaPrompt();
-        }
+    function dismissAppPrompt() {
+        appPromptEl.style.display = 'none';
+        localStorage.setItem('app-prompt-dismissed', Date.now().toString());
     }
 
-    window.addEventListener('appinstalled', () => {
-        pwaPromptEl.style.display = 'none';
-        deferredPrompt = null;
-    });
-
-    function dismissPwaPrompt() {
-        pwaPromptEl.style.display = 'none';
-        localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
-    }
     </script>
 </body>
 </html>
