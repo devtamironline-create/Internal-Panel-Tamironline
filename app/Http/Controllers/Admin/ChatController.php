@@ -230,13 +230,9 @@ class ChatController extends Controller
             auth()->id(),
             $memberIds,
             $request->description,
-            $settings
+            $settings,
+            $type // Pass type directly: 'group' or 'channel'
         );
-
-        // Update type to channel if specified
-        if ($type === 'channel') {
-            $conversation->update(['type' => 'channel']);
-        }
 
         // Update avatar if uploaded
         if ($avatarPath) {

@@ -141,10 +141,10 @@ class Conversation extends Model
         return $conversation;
     }
 
-    public static function createGroup(string $name, int $creatorId, array $participantIds, ?string $description = null, ?array $settings = null): self
+    public static function createGroup(string $name, int $creatorId, array $participantIds, ?string $description = null, ?array $settings = null, string $type = 'group'): self
     {
         $conversation = self::create([
-            'type' => 'group',
+            'type' => $type, // 'group' or 'channel'
             'name' => $name,
             'description' => $description,
             'created_by' => $creatorId,
