@@ -68,6 +68,11 @@ class Conversation extends Model
         return $this->type === 'group';
     }
 
+    public function isChannel(): bool
+    {
+        return $this->type === 'channel';
+    }
+
     public function getOtherParticipant(int $userId): ?User
     {
         if (!$this->isPrivate()) {
@@ -79,8 +84,8 @@ class Conversation extends Model
 
     public function getDisplayName(int $userId): string
     {
-        if ($this->isGroup()) {
-            return $this->name ?? 'گروه بدون نام';
+        if ($this->isGroup() || $this->isChannel()) {
+            return $this->name ?? ($this->isChannel() ? 'کانال بدون نام' : 'گروه بدون نام');
         }
 
         $other = $this->getOtherParticipant($userId);

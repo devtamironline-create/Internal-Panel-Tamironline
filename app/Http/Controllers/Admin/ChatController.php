@@ -100,10 +100,13 @@ class ChatController extends Controller
                     }
                 }
 
-                // Group avatar
-                $avatar = $conversation->type === 'group'
+                // Group/Channel avatar
+                $avatar = in_array($conversation->type, ['group', 'channel'])
                     ? ($conversation->avatar ? asset('storage/' . $conversation->avatar) : null)
                     : $other?->avatar_url;
+
+                // Get personal pin status from cache or session
+                $personalPins = session('personal_pins', []);
 
                 return [
                     'id' => $conversation->id,
@@ -111,7 +114,7 @@ class ChatController extends Controller
                     'display_name' => $conversation->getDisplayName($userId),
                     'user_id' => $other?->id,
                     'avatar' => $avatar,
-                    'initials' => $conversation->type === 'group'
+                    'initials' => in_array($conversation->type, ['group', 'channel'])
                         ? mb_substr($conversation->name ?? 'گ', 0, 1)
                         : ($other?->initials ?? '؟'),
                     'is_online' => $isOnline,
@@ -124,6 +127,9 @@ class ChatController extends Controller
                     'last_message_id' => $conversation->latestMessage?->id ?? 0,
                     'is_public' => $conversation->settings['is_public'] ?? false,
                     'is_member' => $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists(),
+                    'is_pinned_global' => $conversation->settings['is_pinned_global'] ?? false,
+                    'is_pinned_personal' => in_array($conversation->id, $personalPins),
+                    'member_ids' => $conversation->activeParticipants->pluck('id')->toArray(),
                 ];
             })
             ->sortByDesc(fn($c) => $c['last_message_time']);
@@ -164,13 +170,14 @@ class ChatController extends Controller
     }
 
     /**
-     * Create a group conversation
+     * Create a group or channel conversation
      */
     public function createGroup(Request $request): JsonResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
+            'type' => 'nullable|in:group,channel',
             'member_ids' => 'nullable|string', // JSON string from FormData
             'admin_ids' => 'nullable|string', // JSON string from FormData
             'settings' => 'nullable|string', // JSON string from FormData
@@ -178,6 +185,7 @@ class ChatController extends Controller
         ]);
 
         // Parse JSON strings from FormData
+        $type = $request->type ?? 'group';
         $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
         $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
         $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
@@ -185,12 +193,12 @@ class ChatController extends Controller
         // Prepare settings
         $settings = [
             'is_public' => $settingsData['isPublic'] ?? false,
-            'only_admins_can_send' => $settingsData['onlyAdminsCanSend'] ?? false,
+            'only_admins_can_send' => $type === 'channel' ? true : ($settingsData['onlyAdminsCanSend'] ?? false),
             'members_can_add_others' => $settingsData['membersCanAddOthers'] ?? true,
+            'is_pinned_global' => $settingsData['isPinned'] ?? false,
         ];
 
-        // If group is public and no members selected, that's OK
-        // If group is not public, need at least 1 member
+        // If not public and no members selected
         if (!$settings['is_public'] && empty($memberIds)) {
             return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
         }
@@ -208,6 +216,11 @@ class ChatController extends Controller
             $request->description,
             $settings
         );
+
+        // Update type to channel if specified
+        if ($type === 'channel') {
+            $conversation->update(['type' => 'channel']);
+        }
 
         // Update avatar if uploaded
         if ($avatarPath) {
@@ -879,5 +892,123 @@ class ChatController extends Controller
                 'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
             ],
         ]);
+    }
+
+    /**
+     * Update a group or channel
+     */
+    public function updateGroup(Conversation $conversation, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user is admin of the group
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        if (!$participant || !$participant->pivot->is_admin) {
+            return response()->json(['error' => 'شما دسترسی به ویرایش این گروه ندارید'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'settings' => 'nullable|string',
+            'member_ids' => 'nullable|string',
+            'avatar' => 'nullable|image|max:2048',
+        ]);
+
+        $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
+        $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
+
+        // Update settings
+        $settings = $conversation->settings ?? [];
+        $settings['is_public'] = $settingsData['isPublic'] ?? ($settings['is_public'] ?? false);
+        $settings['is_pinned_global'] = $settingsData['isPinned'] ?? ($settings['is_pinned_global'] ?? false);
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($conversation->avatar) {
+                \Storage::disk('public')->delete($conversation->avatar);
+            }
+            $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+            $conversation->avatar = $avatarPath;
+        }
+
+        $conversation->name = $request->name;
+        $conversation->settings = $settings;
+        $conversation->save();
+
+        // Update members
+        if (!empty($memberIds)) {
+            $currentMembers = $conversation->activeParticipants->pluck('id')->toArray();
+
+            // Add new members
+            foreach ($memberIds as $memberId) {
+                if (!in_array($memberId, $currentMembers)) {
+                    $conversation->participants()->attach([
+                        $memberId => ['joined_at' => now(), 'is_admin' => false]
+                    ]);
+                }
+            }
+
+            // Remove members not in the list (except admins)
+            foreach ($currentMembers as $currentMemberId) {
+                if (!in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
+                    $conversation->participants()->updateExistingPivot($currentMemberId, ['left_at' => now()]);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'conversation' => [
+                'id' => $conversation->id,
+                'type' => $conversation->type,
+                'display_name' => $conversation->name,
+                'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Toggle personal pin for a conversation
+     */
+    public function togglePersonalPin(Conversation $conversation): JsonResponse
+    {
+        $personalPins = session('personal_pins', []);
+
+        if (in_array($conversation->id, $personalPins)) {
+            // Remove from pins
+            $personalPins = array_filter($personalPins, fn($id) => $id !== $conversation->id);
+        } else {
+            // Check limit (max 3)
+            if (count($personalPins) >= 3) {
+                return response()->json(['error' => 'حداکثر 3 گفتگو می‌توانید پین کنید'], 422);
+            }
+            $personalPins[] = $conversation->id;
+        }
+
+        session(['personal_pins' => array_values($personalPins)]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Toggle global pin for a group/channel (admin only)
+     */
+    public function toggleGlobalPin(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user is admin of the group
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        if (!$participant || !$participant->pivot->is_admin) {
+            return response()->json(['error' => 'شما دسترسی به این عملیات ندارید'], 403);
+        }
+
+        $settings = $conversation->settings ?? [];
+        $settings['is_pinned_global'] = !($settings['is_pinned_global'] ?? false);
+        $conversation->settings = $settings;
+        $conversation->save();
+
+        return response()->json(['success' => true]);
     }
 }

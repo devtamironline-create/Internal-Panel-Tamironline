@@ -11,9 +11,22 @@
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">پیام‌ها</h2>
-                <button @click="showNewGroup = true" class="w-8 h-8 bg-brand-500 hover:bg-brand-600 text-white rounded-full flex items-center justify-center transition" title="گروه جدید">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                </button>
+                <div class="relative" x-data="{ showCreateMenu: false }">
+                    <button @click="showCreateMenu = !showCreateMenu" class="w-8 h-8 bg-brand-500 hover:bg-brand-600 text-white rounded-full flex items-center justify-center transition" title="ایجاد">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </button>
+                    <!-- Create Menu Dropdown -->
+                    <div x-show="showCreateMenu" @click.away="showCreateMenu = false" x-transition class="absolute left-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                        <button @click="showNewGroup = true; createType = 'group'; showCreateMenu = false" class="w-full px-4 py-2.5 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            گروه جدید
+                        </button>
+                        <button @click="showNewGroup = true; createType = 'channel'; showCreateMenu = false" class="w-full px-4 py-2.5 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            کانال جدید
+                        </button>
+                    </div>
+                </div>
             </div>
             <!-- Search -->
             <div class="relative mb-3">
@@ -30,6 +43,9 @@
                 </button>
                 <button @click="conversationFilter = 'group'" :class="conversationFilter === 'group' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
                     گروه‌ها
+                </button>
+                <button @click="conversationFilter = 'channel'" :class="conversationFilter === 'channel' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    کانال‌ها
                 </button>
             </div>
         </div>
@@ -82,9 +98,15 @@
             </template>
 
             <template x-for="conv in filteredConversations" :key="conv.id">
-                <div @click="conv.is_public && !conv.is_member ? null : openConversation(conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700', conv.is_public && !conv.is_member ? 'bg-green-50/50 dark:bg-green-900/10' : '']" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700">
+                <div @click="conv.is_public && !conv.is_member ? null : openConversation(conv)" @contextmenu.prevent="openConvContextMenu($event, conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700', conv.is_public && !conv.is_member ? 'bg-green-50/50 dark:bg-green-900/10' : '', conv.is_pinned_global || conv.is_pinned_personal ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : '']" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700 relative group">
+                    <!-- Pin icon -->
+                    <template x-if="conv.is_pinned_global || conv.is_pinned_personal">
+                        <div class="absolute top-2 left-2">
+                            <svg :class="conv.is_pinned_global ? 'text-red-500' : 'text-yellow-500'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                        </div>
+                    </template>
                     <div class="relative">
-                        <div :class="conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600'" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                        <div :class="conv.type === 'channel' ? 'bg-gradient-to-br from-purple-400 to-purple-600' : (conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600')" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
                             <template x-if="conv.avatar">
                                 <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
                             </template>
@@ -97,9 +119,12 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
                             <h4 class="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
+                                <template x-if="conv.type === 'channel'">
+                                    <svg class="w-4 h-4 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                </template>
                                 <span x-text="conv.display_name"></span>
                                 <template x-if="conv.is_public">
-                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </template>
                             </h4>
                             <span class="text-xs text-gray-400" x-text="conv.last_message_time"></span>
@@ -368,25 +393,25 @@
         </div>
     </div>
 
-    <!-- New Group Modal -->
+    <!-- New Group/Channel Modal -->
     <div x-cloak x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-5 text-center">
-                <h3 class="text-xl font-bold">گروه جدید</h3>
+            <div :class="createType === 'channel' ? 'from-purple-500 to-purple-600' : 'from-brand-500 to-brand-600'" class="bg-gradient-to-r text-white p-5 text-center">
+                <h3 class="text-xl font-bold" x-text="createType === 'channel' ? 'کانال جدید' : 'گروه جدید'"></h3>
             </div>
 
             <!-- Content -->
             <div class="p-5 space-y-4">
-                <!-- Group Name -->
+                <!-- Name -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام گروه *</label>
-                    <input x-model="newGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="نام گروه را وارد کنید">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" x-text="createType === 'channel' ? 'نام کانال *' : 'نام گروه *'"></label>
+                    <input x-model="newGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" :placeholder="createType === 'channel' ? 'نام کانال را وارد کنید' : 'نام گروه را وارد کنید'">
                 </div>
 
-                <!-- Group Avatar -->
+                <!-- Avatar -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تصویر گروه</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" x-text="createType === 'channel' ? 'تصویر کانال' : 'تصویر گروه'"></label>
                     <div class="flex items-center gap-3">
                         <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300 overflow-hidden border-2 border-gray-300 dark:border-gray-500">
                             <template x-if="groupAvatarPreview">
@@ -403,14 +428,14 @@
                     </div>
                 </div>
 
-                <!-- Group Type Selection -->
+                <!-- Type Selection -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع گروه</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" x-text="createType === 'channel' ? 'نوع کانال' : 'نوع گروه'"></label>
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="groupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
                             <input type="radio" name="groupType" :checked="groupSettings.isPublic" @click="groupSettings.isPublic = true" class="w-4 h-4 text-brand-500">
                             <div>
-                                <span class="text-gray-900 dark:text-white font-medium">گروه عمومی</span>
+                                <span class="text-gray-900 dark:text-white font-medium" x-text="createType === 'channel' ? 'کانال عمومی' : 'گروه عمومی'"></span>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">همه می‌توانند ببینند و عضو شوند</p>
                             </div>
                         </label>
@@ -424,10 +449,16 @@
                     </div>
                 </div>
 
+                <!-- Pin for all -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" x-model="groupSettings.isPinned" id="pinForAll" class="w-4 h-4 text-brand-500 rounded">
+                    <label for="pinForAll" class="text-sm text-gray-700 dark:text-gray-300">پین برای همه کاربران</label>
+                </div>
+
                 <!-- Members Selection (only if not public) -->
                 <div x-show="!groupSettings.isPublic" x-transition>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        اعضای گروه
+                        <span x-text="createType === 'channel' ? 'اعضای کانال' : 'اعضای گروه'"></span>
                         <span x-show="selectedGroupMembers.length > 0" class="text-brand-500 text-xs">(<span x-text="selectedGroupMembers.length"></span> نفر)</span>
                     </label>
                     <div class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-40 overflow-y-auto">
@@ -445,7 +476,95 @@
             <!-- Actions -->
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
                 <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
-                <button @click="createGroup()" :disabled="!newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
+                <button @click="createGroup()" :disabled="!newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" :class="createType === 'channel' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-brand-500 hover:bg-brand-600'" class="flex-1 py-3 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition" x-text="createType === 'channel' ? 'ایجاد کانال' : 'ایجاد گروه'"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Group/Channel Modal -->
+    <div x-cloak x-show="showEditGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showEditGroup = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div :class="editingConversation?.type === 'channel' ? 'from-purple-500 to-purple-600' : 'from-brand-500 to-brand-600'" class="bg-gradient-to-r text-white p-5 text-center">
+                <h3 class="text-xl font-bold" x-text="editingConversation?.type === 'channel' ? 'ویرایش کانال' : 'ویرایش گروه'"></h3>
+            </div>
+
+            <!-- Content -->
+            <div class="p-5 space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام *</label>
+                    <input x-model="editGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <!-- Avatar -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تصویر</label>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300 overflow-hidden border-2 border-gray-300 dark:border-gray-500">
+                            <template x-if="editGroupAvatarPreview || editingConversation?.avatar">
+                                <img :src="editGroupAvatarPreview || editingConversation?.avatar" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!editGroupAvatarPreview && !editingConversation?.avatar">
+                                <span x-text="editGroupName?.charAt(0) || '؟'"></span>
+                            </template>
+                        </div>
+                        <label class="flex-1 px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">تغییر تصویر</span>
+                            <input type="file" accept="image/*" class="hidden" @change="handleEditGroupAvatar($event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Type Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دسترسی</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="editGroupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="editGroupType" :checked="editGroupSettings.isPublic" @click="editGroupSettings.isPublic = true" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">عمومی</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">همه می‌توانند ببینند و عضو شوند</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="!editGroupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="editGroupType" :checked="!editGroupSettings.isPublic" @click="editGroupSettings.isPublic = false" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">خصوصی</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">فقط اعضای انتخاب شده دسترسی دارند</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pin for all -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" x-model="editGroupSettings.isPinned" id="editPinForAll" class="w-4 h-4 text-brand-500 rounded">
+                    <label for="editPinForAll" class="text-sm text-gray-700 dark:text-gray-300">پین برای همه کاربران</label>
+                </div>
+
+                <!-- Members Management -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        مدیریت اعضا
+                        <span x-show="editGroupMembers.length > 0" class="text-brand-500 text-xs">(<span x-text="editGroupMembers.length"></span> نفر)</span>
+                    </label>
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-40 overflow-y-auto">
+                        <template x-for="user in users" :key="user.id">
+                            <label class="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                                <input type="checkbox" :value="user.id" x-model="editGroupMembers" class="w-4 h-4 text-brand-500 rounded">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300" x-text="user.name?.charAt(0)"></div>
+                                <span class="text-sm text-gray-900 dark:text-white" x-text="user.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
+                <button @click="showEditGroup = false" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
+                <button @click="updateGroup()" :disabled="!editGroupName" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ذخیره تغییرات</button>
             </div>
         </div>
     </div>
@@ -533,6 +652,29 @@
         </div>
     </div>
 
+    <!-- Conversation Context Menu -->
+    <div x-cloak x-show="convContextMenu.show" x-transition @click.away="convContextMenu.show = false" :style="`top: ${convContextMenu.y}px; left: ${convContextMenu.x}px;`" class="fixed z-[200] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 w-48" style="display: none;">
+        <!-- Pin Personal -->
+        <button @click="togglePersonalPin(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            <span x-text="convContextMenu.conv?.is_pinned_personal ? 'برداشتن پین شخصی' : 'پین شخصی'"></span>
+        </button>
+        <!-- Pin Global (Admin only) -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="toggleGlobalPin(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <svg class="w-4 h-4" :class="convContextMenu.conv?.is_pinned_global ? 'text-red-500' : ''" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                <span x-text="convContextMenu.conv?.is_pinned_global ? 'برداشتن پین همگانی' : 'پین برای همه'"></span>
+            </button>
+        </template>
+        <!-- Edit Group/Channel -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="openEditGroup(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span x-text="convContextMenu.conv?.type === 'channel' ? 'ویرایش کانال' : 'ویرایش گروه'"></span>
+            </button>
+        </template>
+    </div>
+
     <!-- Forward Modal -->
     <div x-cloak x-show="showForwardModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showForwardModal = false; forwardingMessage = null" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-h-[80vh] shadow-2xl overflow-hidden">
@@ -601,6 +743,7 @@ function messenger() {
         showUsers: false,
         showPhone: false,
         showNewGroup: false,
+        createType: 'group', // 'group' or 'channel'
         newGroupName: '',
         newGroupDescription: '',
         selectedGroupMembers: [],
@@ -609,9 +752,30 @@ function messenger() {
         groupSettings: {
             isPublic: false,
             onlyAdminsCanSend: false,
-            membersCanAddOthers: true
+            membersCanAddOthers: true,
+            isPinned: false
         },
         groupAvatarPreview: null,
+
+        // Edit group state
+        showEditGroup: false,
+        editingConversation: null,
+        editGroupName: '',
+        editGroupAvatar: null,
+        editGroupAvatarPreview: null,
+        editGroupMembers: [],
+        editGroupSettings: {
+            isPublic: false,
+            isPinned: false
+        },
+
+        // Context menu state
+        convContextMenu: {
+            show: false,
+            x: 0,
+            y: 0,
+            conv: null
+        },
 
         // Reply & Reaction state
         replyingTo: null,
@@ -643,11 +807,22 @@ function messenger() {
         get filteredConversations() {
             let filtered = this.conversations;
 
+            // Sort by pinned first
+            filtered = [...filtered].sort((a, b) => {
+                if (a.is_pinned_global && !b.is_pinned_global) return -1;
+                if (!a.is_pinned_global && b.is_pinned_global) return 1;
+                if (a.is_pinned_personal && !b.is_pinned_personal) return -1;
+                if (!a.is_pinned_personal && b.is_pinned_personal) return 1;
+                return 0;
+            });
+
             // Apply type filter
             if (this.conversationFilter === 'private') {
                 filtered = filtered.filter(c => c.type === 'private');
             } else if (this.conversationFilter === 'group') {
                 filtered = filtered.filter(c => c.type === 'group');
+            } else if (this.conversationFilter === 'channel') {
+                filtered = filtered.filter(c => c.type === 'channel');
             }
 
             // Apply search filter
@@ -772,6 +947,7 @@ function messenger() {
                 const formData = new FormData();
                 formData.append('name', this.newGroupName);
                 formData.append('description', this.newGroupDescription || '');
+                formData.append('type', this.createType); // 'group' or 'channel'
                 formData.append('member_ids', JSON.stringify(this.selectedGroupMembers));
                 formData.append('admin_ids', JSON.stringify(this.groupAdmins));
                 formData.append('settings', JSON.stringify(this.groupSettings));
@@ -800,6 +976,7 @@ function messenger() {
 
         resetGroupForm() {
             this.showNewGroup = false;
+            this.createType = 'group';
             this.newGroupName = '';
             this.newGroupDescription = '';
             this.selectedGroupMembers = [];
@@ -809,8 +986,120 @@ function messenger() {
             this.groupSettings = {
                 isPublic: false,
                 onlyAdminsCanSend: false,
-                membersCanAddOthers: true
+                membersCanAddOthers: true,
+                isPinned: false
             };
+        },
+
+        // Edit group functions
+        openEditGroup(conv) {
+            this.editingConversation = conv;
+            this.editGroupName = conv.display_name;
+            this.editGroupAvatarPreview = null;
+            this.editGroupAvatar = null;
+            this.editGroupSettings = {
+                isPublic: conv.is_public || false,
+                isPinned: conv.is_pinned_global || false
+            };
+            this.editGroupMembers = conv.member_ids || [];
+            this.showEditGroup = true;
+        },
+
+        handleEditGroupAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.editGroupAvatar = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.editGroupAvatarPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        async updateGroup() {
+            if (!this.editGroupName || !this.editingConversation) return;
+            try {
+                const formData = new FormData();
+                formData.append('name', this.editGroupName);
+                formData.append('settings', JSON.stringify(this.editGroupSettings));
+                formData.append('member_ids', JSON.stringify(this.editGroupMembers));
+
+                if (this.editGroupAvatar) {
+                    formData.append('avatar', this.editGroupAvatar);
+                }
+
+                const response = await fetch(`/admin/chat/conversations/${this.editingConversation.id}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.showEditGroup = false;
+                    await this.loadConversations();
+                    // Update current conversation if it's the one being edited
+                    if (this.currentConversation?.id === this.editingConversation.id) {
+                        const updated = this.conversations.find(c => c.id === this.editingConversation.id);
+                        if (updated) this.currentConversation = updated;
+                    }
+                }
+            } catch (e) {
+                console.error('Error updating group:', e);
+            }
+        },
+
+        // Context menu functions
+        openConvContextMenu(event, conv) {
+            this.convContextMenu = {
+                show: true,
+                x: event.clientX,
+                y: event.clientY,
+                conv: conv
+            };
+        },
+
+        // Pin functions
+        async togglePersonalPin(conv) {
+            if (!conv) return;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${conv.id}/pin/personal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadConversations();
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            } catch (e) {
+                console.error('Error toggling personal pin:', e);
+            }
+        },
+
+        async toggleGlobalPin(conv) {
+            if (!conv) return;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${conv.id}/pin/global`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadConversations();
+                }
+            } catch (e) {
+                console.error('Error toggling global pin:', e);
+            }
         },
 
         toggleGroupAdmin(userId) {
