@@ -147,6 +147,10 @@ class ChatController extends Controller
                     'last_message_id' => $conversation->latestMessage?->id ?? 0,
                     'is_public' => $conversation->settings['is_public'] ?? false,
                     'is_member' => $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists(),
+                    'is_admin' => $conversation->participants()
+                        ->where('user_id', $userId)
+                        ->whereNull('left_at')
+                        ->first()?->pivot?->is_admin ?? false,
                     'is_pinned_global' => $conversation->settings['is_pinned_global'] ?? false,
                     'is_pinned_personal' => in_array($conversation->id, $personalPins),
                     'member_ids' => $conversation->activeParticipants->pluck('id')->toArray(),

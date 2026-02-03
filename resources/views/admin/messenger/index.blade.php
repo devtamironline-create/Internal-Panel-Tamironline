@@ -1300,7 +1300,7 @@ function messenger() {
 
             // Set admin status and members for groups/channels
             if (conv.type === 'group' || conv.type === 'channel') {
-                this.isConversationAdmin = conv.member_ids?.includes({{ auth()->id() }}) ?? false;
+                this.isConversationAdmin = conv.is_admin ?? false;
                 // Load members for task assignment
                 this.conversationMembers = this.users.filter(u => conv.member_ids?.includes(u.id));
             } else {
