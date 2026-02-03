@@ -981,7 +981,9 @@
 
     @stack('scripts')
     @include('components.call-notification')
-    @include('components.chat-widget')
+    @if(!request()->routeIs('admin.messenger'))
+        @include('components.chat-widget')
+    @endif
 
     <!-- Mandatory Avatar Upload Modal -->
     @if(auth()->check() && !auth()->user()->avatar)

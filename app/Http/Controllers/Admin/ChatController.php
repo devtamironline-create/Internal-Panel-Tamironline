@@ -939,12 +939,19 @@ class ChatController extends Controller
     public function updateGroup(Conversation $conversation, Request $request): JsonResponse
     {
         $userId = auth()->id();
+        $user = auth()->user();
 
-        // Verify user is admin of the group
+        // Verify user is admin of the group or has permission to add members
         $participant = $conversation->participants()->where('user_id', $userId)->first();
-        if (!$participant || !$participant->pivot->is_admin) {
+        $isAdmin = $participant && $participant->pivot->is_admin;
+        $canAddMembers = $user->can_add_group_members ?? false;
+
+        if (!$participant || (!$isAdmin && !$canAddMembers)) {
             return response()->json(['error' => 'شما دسترسی به ویرایش این گروه ندارید'], 403);
         }
+
+        // Non-admins with can_add_group_members can only add members, not edit settings
+        $onlyAddingMembers = !$isAdmin && $canAddMembers;
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -956,24 +963,27 @@ class ChatController extends Controller
         $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
         $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
 
-        // Update settings
-        $settings = $conversation->settings ?? [];
-        $settings['is_public'] = $settingsData['isPublic'] ?? ($settings['is_public'] ?? false);
-        $settings['is_pinned_global'] = $settingsData['isPinned'] ?? ($settings['is_pinned_global'] ?? false);
+        // Only admins can update settings and name
+        if (!$onlyAddingMembers) {
+            // Update settings
+            $settings = $conversation->settings ?? [];
+            $settings['is_public'] = $settingsData['isPublic'] ?? ($settings['is_public'] ?? false);
+            $settings['is_pinned_global'] = $settingsData['isPinned'] ?? ($settings['is_pinned_global'] ?? false);
 
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
-            if ($conversation->avatar) {
-                \Storage::disk('public')->delete($conversation->avatar);
+            // Handle avatar upload
+            if ($request->hasFile('avatar')) {
+                // Delete old avatar if exists
+                if ($conversation->avatar) {
+                    \Storage::disk('public')->delete($conversation->avatar);
+                }
+                $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+                $conversation->avatar = $avatarPath;
             }
-            $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
-            $conversation->avatar = $avatarPath;
-        }
 
-        $conversation->name = $request->name;
-        $conversation->settings = $settings;
-        $conversation->save();
+            $conversation->name = $request->name;
+            $conversation->settings = $settings;
+            $conversation->save();
+        }
 
         // Update members
         if (!empty($memberIds)) {
@@ -988,10 +998,12 @@ class ChatController extends Controller
                 }
             }
 
-            // Remove members not in the list (except admins)
-            foreach ($currentMembers as $currentMemberId) {
-                if (!in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
-                    $conversation->participants()->updateExistingPivot($currentMemberId, ['left_at' => now()]);
+            // Only admins can remove members
+            if (!$onlyAddingMembers) {
+                foreach ($currentMembers as $currentMemberId) {
+                    if (!in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
+                        $conversation->participants()->updateExistingPivot($currentMemberId, ['left_at' => now()]);
+                    }
                 }
             }
         }

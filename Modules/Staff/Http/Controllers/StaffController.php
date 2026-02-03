@@ -74,6 +74,7 @@ class StaffController extends Controller
             'email' => 'nullable|email|unique:users',
             'password' => 'required|min:8|confirmed',
             'is_active' => 'boolean',
+            'can_add_group_members' => 'boolean',
             'role' => 'nullable|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
@@ -88,6 +89,7 @@ class StaffController extends Controller
             'mobile_verified_at' => now(),
             'is_staff' => true,
             'is_active' => $validated['is_active'] ?? true,
+            'can_add_group_members' => $request->boolean('can_add_group_members'),
         ];
 
         // Convert Jalali birth_date to Gregorian
@@ -129,6 +131,7 @@ class StaffController extends Controller
             'email' => 'nullable|email|unique:users,email,' . $staff->id,
             'password' => 'nullable|min:8|confirmed',
             'is_active' => 'boolean',
+            'can_add_group_members' => 'boolean',
             'role' => 'nullable|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
@@ -140,6 +143,7 @@ class StaffController extends Controller
             'mobile' => $validated['mobile'],
             'email' => $validated['email'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
+            'can_add_group_members' => $request->boolean('can_add_group_members'),
         ];
 
         // Convert Jalali birth_date to Gregorian

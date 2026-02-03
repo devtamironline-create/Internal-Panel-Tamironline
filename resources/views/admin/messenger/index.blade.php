@@ -11,7 +11,7 @@
     .messenger-loading { display: flex !important; }
     [x-cloak].messenger-loading { display: flex !important; }
 </style>
-<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden relative">
+<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] max-h-[calc(100dvh-120px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden relative">
 
     <!-- Loading Overlay - Always visible until Alpine hides it -->
     <div x-show="isLoading" :class="{ 'messenger-loading': isLoading }" class="messenger-loading absolute inset-0 z-[300] bg-white dark:bg-gray-800 flex items-center justify-center">
@@ -151,7 +151,7 @@
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex-col relative" :class="mobileShowChat ? 'flex' : 'hidden md:flex'">
+    <div class="flex-1 flex flex-col min-h-0 relative" :class="mobileShowChat ? 'flex' : 'hidden md:flex'">
         <!-- No Chat Selected -->
         <template x-if="!currentConversation">
             <div class="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -223,7 +223,7 @@
 
         <!-- Messages Area -->
         <template x-if="currentConversation">
-            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900" @click="showEmojiPicker = null">
+            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null">
                 <template x-for="msg in messages" :key="msg.id">
                     <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
                         <div class="relative max-w-md">
@@ -366,7 +366,7 @@
 
         <!-- Message Input -->
         <template x-if="currentConversation">
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+            <div class="p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0"
                  @dragover.prevent="isDragging = true"
                  @dragleave.prevent="isDragging = false"
                  @drop.prevent="handleDrop($event)"
