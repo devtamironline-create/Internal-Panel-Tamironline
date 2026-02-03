@@ -1193,85 +1193,88 @@
 
     <script>
     // PWA Service Worker Registration & Install Prompt
-    let deferredPrompt;
+    let deferredPrompt = null;
     const pwaPromptEl = document.getElementById('pwa-install-prompt');
 
-    // Check if already installed or dismissed
+    // Check if mobile device
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Check if iOS
+    function isIos() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent);
+    }
+
+    // Check if already installed
     function isPwaInstalled() {
         return window.matchMedia('(display-mode: standalone)').matches ||
                window.navigator.standalone === true;
     }
 
+    // Check if dismissed recently
     function isPwaPromptDismissed() {
         const dismissed = localStorage.getItem('pwa-prompt-dismissed');
         if (!dismissed) return false;
-        // Show again after 7 days
         const dismissedDate = new Date(parseInt(dismissed));
         const daysSinceDismissed = (new Date() - dismissedDate) / (1000 * 60 * 60 * 24);
         return daysSinceDismissed < 7;
+    }
+
+    // Show the prompt
+    function showPwaPrompt() {
+        if (pwaPromptEl && isMobile() && !isPwaInstalled() && !isPwaPromptDismissed()) {
+            pwaPromptEl.classList.remove('hidden');
+        }
     }
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('SW registered:', registration.scope);
-                })
-                .catch(error => {
-                    console.log('SW registration failed:', error);
-                });
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW failed:', err));
         });
     }
 
-    // Listen for install prompt
+    // Listen for Android install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-
-        // Only show on mobile and if not dismissed
-        if (window.innerWidth < 768 && !isPwaInstalled() && !isPwaPromptDismissed()) {
-            setTimeout(() => {
-                pwaPromptEl.classList.remove('hidden');
-            }, 3000);
-        }
     });
 
-    function installPwa() {
-        if (!deferredPrompt) {
-            // For iOS - show instructions
-            alert('برای نصب:\n\n۱. روی دکمه Share (اشتراک‌گذاری) بزنید\n۲. گزینه "Add to Home Screen" را انتخاب کنید');
-            dismissPwaPrompt();
-            return;
-        }
-
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('PWA installed');
-            }
-            deferredPrompt = null;
-            pwaPromptEl.classList.add('hidden');
-        });
+    // Show prompt after 3 seconds on mobile
+    if (isMobile()) {
+        setTimeout(showPwaPrompt, 3000);
     }
+
+    function installPwa() {
+        if (deferredPrompt) {
+            // Android - use native prompt
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((result) => {
+                deferredPrompt = null;
+                pwaPromptEl.classList.add('hidden');
+            });
+        } else if (isIos()) {
+            // iOS - show instructions
+            alert('برای نصب اپلیکیشن:\n\n۱. روی آیکون Share (مربع با فلش) در پایین صفحه بزنید\n۲. گزینه "Add to Home Screen" را انتخاب کنید');
+            dismissPwaPrompt();
+        } else {
+            // Other browsers
+            alert('برای نصب اپلیکیشن:\n\nاز منوی مرورگر گزینه "Add to Home Screen" یا "Install App" را انتخاب کنید');
+            dismissPwaPrompt();
+        }
+    }
+
+    window.addEventListener('appinstalled', () => {
+        pwaPromptEl.classList.add('hidden');
+        deferredPrompt = null;
+    });
 
     function dismissPwaPrompt() {
         pwaPromptEl.classList.add('hidden');
         localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
-    }
-
-    // Check for iOS
-    function isIos() {
-        return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-    }
-
-    // Show iOS prompt after delay
-    if (isIos() && !isPwaInstalled() && !isPwaPromptDismissed()) {
-        setTimeout(() => {
-            if (window.innerWidth < 768) {
-                pwaPromptEl.classList.remove('hidden');
-            }
-        }, 5000);
     }
     </script>
 </body>
