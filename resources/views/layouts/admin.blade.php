@@ -945,5 +945,182 @@
     @stack('scripts')
     @include('components.call-notification')
     @include('components.chat-widget')
+
+    <!-- Mandatory Avatar Upload Modal -->
+    @if(auth()->check() && !auth()->user()->avatar)
+    <div x-data="avatarUploadModal()" x-init="init()" class="fixed inset-0 z-[9999] overflow-y-auto" x-show="showModal" x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 py-6">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+
+            <!-- Modal -->
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+                <!-- Warning Icon -->
+                <div class="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-4">
+                    <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+
+                <h3 class="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
+                    تصویر پروفایل الزامی است
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+                    برای استفاده از پنل، لطفاً تصویر پروفایل خود را آپلود کنید.
+                </p>
+
+                <!-- Upload Area -->
+                <div class="mb-6">
+                    <label
+                        class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-all"
+                        :class="previewUrl ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-brand-400 bg-gray-50 dark:bg-gray-700/50'"
+                    >
+                        <template x-if="!previewUrl">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    <span class="font-medium text-brand-500">کلیک کنید</span> یا تصویر را بکشید
+                                </p>
+                                <p class="text-xs text-gray-400 mt-1">PNG, JPG, GIF (حداکثر 2MB)</p>
+                            </div>
+                        </template>
+                        <template x-if="previewUrl">
+                            <div class="relative w-full h-full flex items-center justify-center p-2">
+                                <img :src="previewUrl" class="max-h-full max-w-full object-contain rounded-lg">
+                                <button
+                                    @click.prevent="clearImage()"
+                                    class="absolute top-2 left-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                        <input
+                            type="file"
+                            class="hidden"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            @change="handleFileSelect($event)"
+                        >
+                    </label>
+                </div>
+
+                <!-- Error Message -->
+                <template x-if="errorMessage">
+                    <div class="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p class="text-sm text-red-600 dark:text-red-400 text-center" x-text="errorMessage"></p>
+                    </div>
+                </template>
+
+                <!-- Upload Button -->
+                <button
+                    @click="uploadAvatar()"
+                    :disabled="!selectedFile || uploading"
+                    class="w-full py-3 px-4 bg-brand-500 text-white rounded-xl font-medium transition-all hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    <template x-if="uploading">
+                        <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </template>
+                    <span x-text="uploading ? 'در حال آپلود...' : 'ذخیره تصویر پروفایل'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function avatarUploadModal() {
+        return {
+            showModal: true,
+            selectedFile: null,
+            previewUrl: null,
+            uploading: false,
+            errorMessage: null,
+
+            init() {
+                // Prevent page scroll when modal is open
+                document.body.style.overflow = 'hidden';
+            },
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    this.errorMessage = 'فرمت فایل نامعتبر است. فقط JPEG, PNG, GIF و WebP مجاز است.';
+                    return;
+                }
+
+                // Validate file size (2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    this.errorMessage = 'حجم فایل نباید بیشتر از 2 مگابایت باشد.';
+                    return;
+                }
+
+                this.errorMessage = null;
+                this.selectedFile = file;
+                this.previewUrl = URL.createObjectURL(file);
+            },
+
+            clearImage() {
+                this.selectedFile = null;
+                this.previewUrl = null;
+                this.errorMessage = null;
+            },
+
+            async uploadAvatar() {
+                if (!this.selectedFile) return;
+
+                this.uploading = true;
+                this.errorMessage = null;
+
+                const formData = new FormData();
+                formData.append('avatar', this.selectedFile);
+
+                try {
+                    const response = await fetch('{{ route("admin.profile.avatar") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        this.showModal = false;
+                        document.body.style.overflow = '';
+
+                        // Show success message using global toast
+                        if (window.Alpine && window.dispatchEvent) {
+                            window.dispatchEvent(new CustomEvent('toast', {
+                                detail: { type: 'success', message: data.message }
+                            }));
+                        }
+
+                        // Reload page to update avatar everywhere
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        this.errorMessage = data.message || 'خطا در آپلود تصویر';
+                    }
+                } catch (error) {
+                    this.errorMessage = 'خطا در ارتباط با سرور';
+                } finally {
+                    this.uploading = false;
+                }
+            }
+        };
+    }
+    </script>
+    @endif
 </body>
 </html>

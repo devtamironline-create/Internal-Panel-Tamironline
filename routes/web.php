@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
     Route::get('/profile/edit', [App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [App\Http\Controllers\Admin\ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
 
     // Global Search API
     Route::get('/search', [App\Http\Controllers\Admin\SearchController::class, 'search'])->name('search');
