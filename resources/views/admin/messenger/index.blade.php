@@ -1044,15 +1044,25 @@ function messenger() {
                     const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
                     const conversationId = data.conversation.id;
 
-                    // Reset form and close modal first
-                    this.resetGroupForm();
+                    // Close modal immediately
+                    this.showNewGroup = false;
 
-                    // Show success toast immediately
+                    // Show success toast
                     const toast = document.createElement('div');
                     toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
                     toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
                     document.body.appendChild(toast);
                     setTimeout(() => toast.remove(), 3000);
+
+                    // Reset form data
+                    this.createType = 'group';
+                    this.newGroupName = '';
+                    this.newGroupDescription = '';
+                    this.selectedGroupMembers = [];
+                    this.groupAdmins = [];
+                    this.groupAvatar = null;
+                    this.groupAvatarPreview = null;
+                    this.groupSettings = { isPublic: false, onlyAdminsCanSend: false, membersCanAddOthers: true, isPinned: false };
 
                     // Load conversations and open the new one
                     await this.loadConversations();
