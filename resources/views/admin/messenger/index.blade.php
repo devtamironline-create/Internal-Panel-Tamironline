@@ -1029,30 +1029,45 @@ function messenger() {
                     },
                     body: formData
                 });
+
                 const data = await response.json();
                 this.isCreatingGroup = false;
-                if (data.error) {
-                    alert(data.error);
+
+                // Handle errors
+                if (!response.ok || data.error) {
+                    const errorMsg = data.error || data.message || 'خطا در ایجاد';
+                    alert(errorMsg);
                     return;
                 }
+
                 if (data.conversation) {
                     const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
+                    const conversationId = data.conversation.id;
+
+                    // Reset form and close modal first
                     this.resetGroupForm();
-                    this.currentConversation = data.conversation;
-                    this.mobileShowChat = true;
-                    await this.loadConversations();
-                    await this.loadMessages(data.conversation.id);
-                    // Show success toast
+
+                    // Show success toast immediately
                     const toast = document.createElement('div');
                     toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
                     toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
                     document.body.appendChild(toast);
-                    setTimeout(() => toast.remove(), 2000);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    // Load conversations and open the new one
+                    await this.loadConversations();
+
+                    // Find and open the created conversation
+                    const newConv = this.conversations.find(c => c.id === conversationId);
+                    if (newConv) {
+                        this.currentConversation = newConv;
+                        this.mobileShowChat = true;
+                        await this.loadMessages(conversationId);
+                    }
                 }
             } catch (e) {
                 this.isCreatingGroup = false;
                 console.error('Error creating group:', e);
-                alert('خطا در ایجاد');
             }
         },
 

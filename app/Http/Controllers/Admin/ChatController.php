@@ -1031,20 +1031,25 @@ class ChatController extends Controller
     }
 
     /**
-     * Delete a group or channel (creator only)
+     * Delete a group or channel (admin only)
      */
     public function deleteGroup(Conversation $conversation): JsonResponse
     {
         $userId = auth()->id();
+        $user = auth()->user();
 
         // Only groups and channels can be deleted
         if (!in_array($conversation->type, ['group', 'channel'])) {
             return response()->json(['error' => 'فقط گروه‌ها و کانال‌ها قابل حذف هستند'], 403);
         }
 
-        // Only the creator can delete
-        if ($conversation->created_by !== $userId) {
-            return response()->json(['error' => 'فقط سازنده می‌تواند این گروه/کانال را حذف کند'], 403);
+        // Check if user is admin of the group OR has system admin permission
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        $isGroupAdmin = $participant && $participant->pivot->is_admin;
+        $isSystemAdmin = $user->can('manage-permissions');
+
+        if (!$isGroupAdmin && !$isSystemAdmin) {
+            return response()->json(['error' => 'فقط مدیر گروه/کانال می‌تواند آن را حذف کند'], 403);
         }
 
         // Delete avatar if exists
