@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::post('/conversations/group', [ChatController::class, 'createGroup'])->name('conversations.group');
         Route::post('/conversations/{conversation}/join', [ChatController::class, 'joinGroup'])->name('conversations.join');
         Route::post('/conversations/{conversation}/update', [ChatController::class, 'updateGroup'])->name('conversations.update');
+        Route::delete('/conversations/{conversation}/delete', [ChatController::class, 'deleteGroup'])->name('conversations.delete');
         Route::post('/conversations/{conversation}/pin/personal', [ChatController::class, 'togglePersonalPin'])->name('conversations.pin.personal');
         Route::post('/conversations/{conversation}/pin/global', [ChatController::class, 'toggleGlobalPin'])->name('conversations.pin.global');
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');

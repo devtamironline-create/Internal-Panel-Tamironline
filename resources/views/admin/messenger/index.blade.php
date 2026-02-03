@@ -480,7 +480,13 @@
             <!-- Actions -->
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
                 <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
-                <button @click="createGroup()" :disabled="!newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" :class="createType === 'channel' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-brand-500 hover:bg-brand-600'" class="flex-1 py-3 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition" x-text="createType === 'channel' ? 'ایجاد کانال' : 'ایجاد گروه'"></button>
+                <button @click="createGroup()" :disabled="isCreatingGroup || !newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" :class="createType === 'channel' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-brand-500 hover:bg-brand-600'" class="flex-1 py-3 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">
+                    <span x-show="!isCreatingGroup" x-text="createType === 'channel' ? 'ایجاد کانال' : 'ایجاد گروه'"></span>
+                    <span x-show="isCreatingGroup" class="flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        در حال ایجاد...
+                    </span>
+                </button>
             </div>
         </div>
     </div>
@@ -677,6 +683,13 @@
                 <span x-text="convContextMenu.conv?.type === 'channel' ? 'ویرایش کانال' : 'ویرایش گروه'"></span>
             </button>
         </template>
+        <!-- Delete Group/Channel (Creator only) -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="openDeleteModal(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span x-text="convContextMenu.conv?.type === 'channel' ? 'حذف کانال' : 'حذف گروه'"></span>
+            </button>
+        </template>
     </div>
 
     <!-- Forward Modal -->
@@ -726,6 +739,39 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div x-cloak x-show="showDeleteModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showDeleteModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 shadow-2xl overflow-hidden mx-4">
+            <div class="bg-red-500 text-white p-5 text-center">
+                <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <h3 class="text-xl font-bold" x-text="deleteConversation?.type === 'channel' ? 'حذف کانال' : 'حذف گروه'"></h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="text-center">
+                    <p class="text-gray-700 dark:text-gray-300 mb-2">آیا از حذف <span class="font-bold" x-text="deleteConversation?.display_name"></span> مطمئن هستید؟</p>
+                    <p class="text-sm text-red-500">این عمل قابل بازگشت نیست و تمام پیام‌ها حذف خواهند شد.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">برای تایید، کد زیر را وارد کنید:</label>
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 text-center mb-3">
+                        <span class="text-2xl font-mono font-bold tracking-widest text-red-600" x-text="expectedDeleteCode"></span>
+                    </div>
+                    <input type="text" x-model="deleteConfirmCode" placeholder="کد تایید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-red-500 text-center font-mono text-lg tracking-widest" maxlength="4">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showDeleteModal = false; deleteConfirmCode = ''" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="confirmDelete()" :disabled="isDeleting || deleteConfirmCode !== expectedDeleteCode" class="flex-1 py-3 bg-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-red-600 transition">
+                        <span x-show="!isDeleting">حذف</span>
+                        <span x-show="isDeleting" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            در حال حذف...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio Elements -->
     <audio x-ref="localAudio" muted></audio>
     <audio x-ref="remoteAudio" autoplay></audio>
@@ -761,6 +807,7 @@ function messenger() {
             isPinned: false
         },
         groupAvatarPreview: null,
+        isCreatingGroup: false,
 
         // Edit group state
         showEditGroup: false,
@@ -781,6 +828,13 @@ function messenger() {
             y: 0,
             conv: null
         },
+
+        // Delete confirmation state
+        showDeleteModal: false,
+        deleteConversation: null,
+        deleteConfirmCode: '',
+        expectedDeleteCode: '',
+        isDeleting: false,
 
         // Reply & Reaction state
         replyingTo: null,
@@ -967,6 +1021,7 @@ function messenger() {
                     formData.append('avatar', this.groupAvatar);
                 }
 
+                this.isCreatingGroup = true;
                 const response = await fetch('/admin/chat/conversations/group', {
                     method: 'POST',
                     headers: {
@@ -975,13 +1030,29 @@ function messenger() {
                     body: formData
                 });
                 const data = await response.json();
+                this.isCreatingGroup = false;
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
                 if (data.conversation) {
+                    const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
                     this.resetGroupForm();
                     this.currentConversation = data.conversation;
+                    this.mobileShowChat = true;
                     await this.loadConversations();
+                    await this.loadMessages(data.conversation.id);
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
                 }
             } catch (e) {
+                this.isCreatingGroup = false;
                 console.error('Error creating group:', e);
+                alert('خطا در ایجاد');
             }
         },
 
@@ -1059,6 +1130,63 @@ function messenger() {
                 }
             } catch (e) {
                 console.error('Error updating group:', e);
+            }
+        },
+
+        // Delete group/channel functions
+        openDeleteModal(conv) {
+            this.deleteConversation = conv;
+            this.deleteConfirmCode = '';
+            // Generate a random 4-digit code
+            this.expectedDeleteCode = Math.floor(1000 + Math.random() * 9000).toString();
+            this.showDeleteModal = true;
+        },
+
+        async confirmDelete() {
+            if (this.deleteConfirmCode !== this.expectedDeleteCode || !this.deleteConversation) return;
+
+            this.isDeleting = true;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${this.deleteConversation.id}/delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ confirmation_code: this.deleteConfirmCode })
+                });
+                const data = await response.json();
+                this.isDeleting = false;
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                if (data.success) {
+                    const typeLabel = this.deleteConversation.type === 'channel' ? 'کانال' : 'گروه';
+                    // Close modal and clear current conversation if it was the deleted one
+                    if (this.currentConversation?.id === this.deleteConversation.id) {
+                        this.currentConversation = null;
+                        this.messages = [];
+                        this.mobileShowChat = false;
+                    }
+                    this.showDeleteModal = false;
+                    this.deleteConversation = null;
+                    this.deleteConfirmCode = '';
+                    await this.loadConversations();
+
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = typeLabel + ' با موفقیت حذف شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                }
+            } catch (e) {
+                this.isDeleting = false;
+                console.error('Error deleting group:', e);
+                alert('خطا در حذف');
             }
         },
 

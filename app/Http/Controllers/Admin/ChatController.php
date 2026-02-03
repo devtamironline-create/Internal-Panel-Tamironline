@@ -1029,4 +1029,43 @@ class ChatController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Delete a group or channel (creator only)
+     */
+    public function deleteGroup(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Only groups and channels can be deleted
+        if (!in_array($conversation->type, ['group', 'channel'])) {
+            return response()->json(['error' => 'فقط گروه‌ها و کانال‌ها قابل حذف هستند'], 403);
+        }
+
+        // Only the creator can delete
+        if ($conversation->created_by !== $userId) {
+            return response()->json(['error' => 'فقط سازنده می‌تواند این گروه/کانال را حذف کند'], 403);
+        }
+
+        // Delete avatar if exists
+        if ($conversation->avatar) {
+            \Storage::disk('public')->delete($conversation->avatar);
+        }
+
+        // Delete all messages and their files
+        foreach ($conversation->messages as $message) {
+            if ($message->file_path) {
+                \Storage::disk('public')->delete($message->file_path);
+            }
+        }
+        $conversation->messages()->delete();
+
+        // Delete participants
+        $conversation->participants()->detach();
+
+        // Delete the conversation
+        $conversation->delete();
+
+        return response()->json(['success' => true]);
+    }
 }
