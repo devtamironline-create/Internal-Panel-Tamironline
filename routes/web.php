@@ -68,6 +68,12 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::put('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/avatar', [App\Http\Controllers\Admin\ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
 
+    // Settings
+    Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+    Route::get('/settings/delete-logo', [App\Http\Controllers\Admin\SettingController::class, 'deleteLogo'])->name('settings.delete-logo');
+    Route::get('/settings/delete-favicon', [App\Http\Controllers\Admin\SettingController::class, 'deleteFavicon'])->name('settings.delete-favicon');
+
     // Global Search API
     Route::get('/search', [App\Http\Controllers\Admin\SearchController::class, 'search'])->name('search');
 
