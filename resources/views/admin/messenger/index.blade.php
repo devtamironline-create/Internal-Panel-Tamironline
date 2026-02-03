@@ -110,15 +110,16 @@
             </template>
 
             <template x-for="conv in filteredConversations" :key="conv.id">
-                <div @click="conv.is_public && !conv.is_member ? null : openConversation(conv)" @contextmenu.prevent="openConvContextMenu($event, conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700', conv.is_public && !conv.is_member ? 'bg-green-50/50 dark:bg-green-900/10' : '', conv.is_pinned_global || conv.is_pinned_personal ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : '']" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700 relative group">
+                <div @click="openConversation(conv)" @contextmenu.prevent="openConvContextMenu($event, conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700']" class="flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 relative">
                     <!-- Pin icon -->
                     <template x-if="conv.is_pinned_global || conv.is_pinned_personal">
-                        <div class="absolute top-2 left-2">
-                            <svg :class="conv.is_pinned_global ? 'text-red-500' : 'text-yellow-500'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                        <div class="absolute top-1 left-1">
+                            <svg :class="conv.is_pinned_global ? 'text-red-400' : 'text-yellow-400'" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
                         </div>
                     </template>
-                    <div class="relative">
-                        <div :class="conv.type === 'channel' ? 'bg-gradient-to-br from-purple-400 to-purple-600' : (conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600')" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                    <!-- Avatar -->
+                    <div class="relative shrink-0">
+                        <div :class="conv.type === 'channel' ? 'bg-gradient-to-br from-purple-400 to-purple-600' : (conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600')" class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
                             <template x-if="conv.avatar">
                                 <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
                             </template>
@@ -126,34 +127,22 @@
                                 <span x-text="conv.initials || conv.display_name?.charAt(0)"></span>
                             </template>
                         </div>
-                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${conv.status_color || 'gray'}-500`" :title="conv.status_label"></span>
+                        <!-- Online status for private chats only -->
+                        <template x-if="conv.type === 'private'">
+                            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white dark:border-gray-800 rounded-full" :class="conv.status === 'online' ? 'bg-green-500' : 'bg-gray-400'"></span>
+                        </template>
                     </div>
+                    <!-- Content -->
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
-                                <template x-if="conv.type === 'channel'">
-                                    <svg class="w-4 h-4 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                                </template>
-                                <span x-text="conv.display_name"></span>
-                                <template x-if="conv.is_public">
-                                    <svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                </template>
-                            </h4>
-                            <span class="text-xs text-gray-400" x-text="conv.last_message_time"></span>
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-medium text-gray-900 dark:text-white truncate text-sm" x-text="conv.display_name"></h4>
+                            <span class="text-xs text-gray-400 shrink-0" x-text="conv.last_message_time"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm text-gray-500 truncate flex-1" x-text="conv.last_message || 'شروع گفتگو...'"></p>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full shrink-0" :class="`bg-${conv.status_color || 'gray'}-100 text-${conv.status_color || 'gray'}-700 dark:bg-${conv.status_color || 'gray'}-900/30 dark:text-${conv.status_color || 'gray'}-300`" x-text="conv.status_label || 'آفلاین'"></span>
-                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" x-text="conv.last_message || 'شروع گفتگو...'"></p>
                     </div>
-                    <!-- Join button for public groups -->
-                    <template x-if="conv.is_public && !conv.is_member">
-                        <button @click.stop="joinGroup(conv.id)" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg font-medium transition">
-                            عضویت
-                        </button>
-                    </template>
-                    <template x-if="conv.unread_count > 0 && conv.is_member">
-                        <span class="bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[24px] text-center" x-text="conv.unread_count"></span>
+                    <!-- Unread badge -->
+                    <template x-if="conv.unread_count > 0">
+                        <span class="bg-brand-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0" x-text="conv.unread_count > 9 ? '9+' : conv.unread_count"></span>
                     </template>
                 </div>
             </template>
