@@ -394,12 +394,13 @@ class ChatController extends Controller
 
         $request->validate([
             'content' => 'nullable|string|max:5000',
-            'type' => 'nullable|in:text,file,image,audio',
-            'file' => 'nullable|file|max:10240', // 10MB max
+            'type' => 'nullable|in:text,file,image,audio,video',
+            'file' => 'nullable|file|max:51200', // 50MB max for videos
             'reply_to_id' => 'nullable|exists:messages,id',
             'forwarded_from' => 'nullable|integer',
             'file_path' => 'nullable|string', // For forwarded files
             'file_name' => 'nullable|string', // For forwarded files
+            'caption' => 'nullable|string|max:1000', // Caption for media
         ]);
 
         $type = $request->type ?? 'text';
@@ -417,6 +418,8 @@ class ChatController extends Controller
             $mimeType = $file->getMimeType();
             if (str_starts_with($mimeType, 'image/')) {
                 $type = 'image';
+            } elseif (str_starts_with($mimeType, 'video/')) {
+                $type = 'video';
             } elseif (str_starts_with($mimeType, 'audio/')) {
                 $type = 'audio';
             } else {
@@ -432,11 +435,18 @@ class ChatController extends Controller
             }
         }
 
-        // Build message data
+        // Build message data - use caption for media files, content for text
+        $body = $request->content;
+        if ($request->filled('caption')) {
+            $body = $request->caption;
+        } elseif ($request->filled('file_path') && !$body) {
+            $body = 'فوروارد شده';
+        }
+
         $messageData = [
             'conversation_id' => $conversation->id,
             'user_id' => $userId,
-            'body' => $request->content ?: ($request->filled('file_path') ? 'فوروارد شده' : ''),
+            'body' => $body ?: '',
             'type' => $type,
             'file_path' => $filePath,
             'file_name' => $fileName,

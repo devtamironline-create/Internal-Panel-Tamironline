@@ -16,6 +16,7 @@ class SettingController extends Controller
             'site_subtitle' => 'تعمیرآنلاین',
             'logo' => null,
             'favicon' => null,
+            'notification_sound' => null,
         ]);
 
         return view('admin.settings.index', compact('settings'));
@@ -27,7 +28,8 @@ class SettingController extends Controller
             'site_name' => 'required|string|max:255',
             'site_subtitle' => 'nullable|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
-            'favicon' => 'nullable|image|mimes:ico,png,jpg,svg|max:1024',
+            'favicon' => 'nullable|mimes:ico,png,jpg,svg|max:1024',
+            'notification_sound' => 'nullable|mimes:mp3,wav,ogg|max:1024',
         ]);
 
         Setting::set('site_name', $request->site_name);
@@ -51,6 +53,16 @@ class SettingController extends Controller
             }
             $path = $request->file('favicon')->store('settings', 'public');
             Setting::set('favicon', $path);
+        }
+
+        // Handle notification sound upload
+        if ($request->hasFile('notification_sound')) {
+            $oldSound = Setting::get('notification_sound');
+            if ($oldSound) {
+                Storage::disk('public')->delete($oldSound);
+            }
+            $path = $request->file('notification_sound')->store('settings', 'public');
+            Setting::set('notification_sound', $path);
         }
 
         return redirect()->route('admin.settings.index')
@@ -77,5 +89,16 @@ class SettingController extends Controller
         }
         return redirect()->route('admin.settings.index')
             ->with('success', 'فاوآیکون حذف شد');
+    }
+
+    public function deleteSound()
+    {
+        $sound = Setting::get('notification_sound');
+        if ($sound) {
+            Storage::disk('public')->delete($sound);
+            Setting::set('notification_sound', null);
+        }
+        return redirect()->route('admin.settings.index')
+            ->with('success', 'صدای اعلان حذف شد');
     }
 }

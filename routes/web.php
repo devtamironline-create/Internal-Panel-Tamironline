@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
     Route::get('/settings/delete-logo', [App\Http\Controllers\Admin\SettingController::class, 'deleteLogo'])->name('settings.delete-logo');
     Route::get('/settings/delete-favicon', [App\Http\Controllers\Admin\SettingController::class, 'deleteFavicon'])->name('settings.delete-favicon');
+    Route::get('/settings/delete-sound', [App\Http\Controllers\Admin\SettingController::class, 'deleteSound'])->name('settings.delete-sound');
 
     // Global Search API
     Route::get('/search', [App\Http\Controllers\Admin\SearchController::class, 'search'])->name('search');

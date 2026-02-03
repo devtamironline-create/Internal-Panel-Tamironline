@@ -82,6 +82,32 @@
                 @enderror
             </div>
 
+            <!-- Notification Sound -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">صدای اعلان پیام جدید</label>
+                <div class="flex items-start gap-4">
+                    @if($settings['notification_sound'])
+                        <div class="flex items-center gap-2">
+                            <audio id="preview-sound" src="{{ asset('storage/' . $settings['notification_sound']) }}"></audio>
+                            <button type="button" onclick="document.getElementById('preview-sound').play()" class="px-3 py-2 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300 rounded-lg text-sm flex items-center gap-2 hover:bg-brand-200 dark:hover:bg-brand-900/50 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                پخش
+                            </button>
+                            <a href="{{ route('admin.settings.delete-sound') }}" onclick="return confirm('آیا مطمئن هستید؟')" class="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition">
+                                حذف
+                            </a>
+                        </div>
+                    @endif
+                    <div class="flex-1">
+                        <input type="file" name="notification_sound" accept="audio/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300">
+                        <p class="text-xs text-gray-400 mt-1">فرمت‌های مجاز: MP3, WAV, OGG (حداکثر 1MB)</p>
+                    </div>
+                </div>
+                @error('notification_sound')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
             <!-- Preview -->
             <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">پیش‌نمایش سایدبار:</p>

@@ -235,7 +235,7 @@
                                     <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
                                 </template>
                                 <!-- File attachment -->
-                                <template x-if="msg.type === 'file' || msg.type === 'image'">
+                                <template x-if="msg.type === 'file' || msg.type === 'image' || msg.type === 'video' || msg.type === 'audio'">
                                     <div class="mb-2">
                                         <template x-if="msg.type === 'image'">
                                             <div class="relative group/img">
@@ -252,6 +252,19 @@
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                                                     </button>
                                                 </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="msg.type === 'video'">
+                                            <div class="relative group/vid">
+                                                <video :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg" controls></video>
+                                            </div>
+                                        </template>
+                                        <template x-if="msg.type === 'audio'">
+                                            <div class="flex items-center gap-3 p-3 bg-white/10 dark:bg-gray-600 rounded-lg">
+                                                <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                                </div>
+                                                <audio :src="'/storage/' + msg.file_path" controls class="flex-1 h-8"></audio>
                                             </div>
                                         </template>
                                         <template x-if="msg.type === 'file'">
@@ -349,9 +362,22 @@
 
         <!-- Message Input -->
         <template x-if="currentConversation">
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                 @dragover.prevent="isDragging = true"
+                 @dragleave.prevent="isDragging = false"
+                 @drop.prevent="handleDrop($event)"
+                 :class="isDragging ? 'bg-brand-50 dark:bg-brand-900/20 border-2 border-dashed border-brand-500' : ''">
+
+                <!-- Drag overlay -->
+                <div x-show="isDragging" class="absolute inset-0 flex items-center justify-center bg-brand-500/10 z-10 pointer-events-none">
+                    <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto text-brand-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        <p class="text-brand-600 font-medium">فایل را رها کنید</p>
+                    </div>
+                </div>
+
                 <div class="flex items-center gap-3">
-                    <input type="file" x-ref="fileInput" @change="sendFile($event)" class="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar">
+                    <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" multiple>
                     <button @click="$refs.fileInput.click()" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
@@ -362,6 +388,78 @@
                 </div>
             </div>
         </template>
+    </div>
+
+    <!-- Media Preview Modal -->
+    <div x-cloak x-show="showMediaPreview" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70" @click.self="closeMediaPreview()" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-900 dark:text-white">ارسال فایل</h3>
+                <button @click="closeMediaPreview()" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <template x-for="(file, index) in selectedFiles" :key="index">
+                        <div class="relative group">
+                            <!-- Image Preview -->
+                            <template x-if="file.type.startsWith('image/')">
+                                <img :src="file.preview" class="w-full h-32 object-cover rounded-lg">
+                            </template>
+                            <!-- Video Preview -->
+                            <template x-if="file.type.startsWith('video/')">
+                                <div class="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                                    <video :src="file.preview" class="w-full h-full object-cover rounded-lg"></video>
+                                </div>
+                            </template>
+                            <!-- Audio Preview -->
+                            <template x-if="file.type.startsWith('audio/')">
+                                <div class="w-full h-32 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex flex-col items-center justify-center p-2">
+                                    <svg class="w-10 h-10 text-purple-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                    <span class="text-xs text-purple-600 dark:text-purple-300 truncate w-full text-center" x-text="file.name"></span>
+                                </div>
+                            </template>
+                            <!-- Other Files -->
+                            <template x-if="!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/')">
+                                <div class="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+                                    <svg class="w-10 h-10 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    <span class="text-xs text-gray-500 truncate w-full text-center" x-text="file.name"></span>
+                                </div>
+                            </template>
+                            <!-- Remove button -->
+                            <button @click="removeFile(index)" class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                            <!-- File size -->
+                            <span class="absolute bottom-1 left-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded" x-text="formatFileSize(file.size)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Caption Input -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <input x-model="mediaCaption" @keydown.enter="sendMediaFiles()" type="text" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="کپشن (اختیاری)...">
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <span class="text-sm text-gray-500" x-text="selectedFiles.length + ' فایل انتخاب شده'"></span>
+                <div class="flex gap-2">
+                    <button @click="closeMediaPreview()" class="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">انصراف</button>
+                    <button @click="sendMediaFiles()" :disabled="isSendingMedia" class="px-6 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-lg font-medium transition flex items-center gap-2">
+                        <template x-if="isSendingMedia">
+                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </template>
+                        <span x-text="isSendingMedia ? 'در حال ارسال...' : 'ارسال'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Phone Modal -->
@@ -637,6 +735,22 @@
                 <img :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl">
             </template>
 
+            <!-- Video -->
+            <template x-if="lightbox?.type === 'video'">
+                <video :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl" controls autoplay></video>
+            </template>
+
+            <!-- Audio -->
+            <template x-if="lightbox?.type === 'audio'">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-md mx-auto">
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-purple-500 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" x-text="lightbox.file_name"></h3>
+                    <audio :src="'/storage/' + lightbox.file_path" controls class="w-full"></audio>
+                </div>
+            </template>
+
             <!-- File preview -->
             <template x-if="lightbox?.type === 'file'">
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-md mx-auto">
@@ -861,6 +975,13 @@ function messenger() {
         isMuted: false,
         peerConnection: null,
         localStream: null,
+
+        // Media upload state
+        showMediaPreview: false,
+        selectedFiles: [],
+        mediaCaption: '',
+        isDragging: false,
+        isSendingMedia: false,
 
         get filteredConversations() {
             let filtered = this.conversations;
@@ -1361,6 +1482,132 @@ function messenger() {
             event.target.value = '';
         },
 
+        // Multi-media upload functions
+        handleDrop(event) {
+            event.preventDefault();
+            this.isDragging = false;
+            const files = Array.from(event.dataTransfer.files);
+            this.addFilesToSelection(files);
+        },
+
+        handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            this.addFilesToSelection(files);
+            event.target.value = '';
+        },
+
+        addFilesToSelection(files) {
+            files.forEach(file => {
+                // Create preview URL for images and videos
+                let preview = null;
+                if (file.type.startsWith('image/')) {
+                    preview = URL.createObjectURL(file);
+                } else if (file.type.startsWith('video/')) {
+                    preview = URL.createObjectURL(file);
+                }
+
+                this.selectedFiles.push({
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    preview: preview
+                });
+            });
+
+            if (this.selectedFiles.length > 0) {
+                this.showMediaPreview = true;
+            }
+        },
+
+        removeFile(index) {
+            // Revoke object URL to free memory
+            if (this.selectedFiles[index].preview) {
+                URL.revokeObjectURL(this.selectedFiles[index].preview);
+            }
+            this.selectedFiles.splice(index, 1);
+
+            if (this.selectedFiles.length === 0) {
+                this.closeMediaPreview();
+            }
+        },
+
+        closeMediaPreview() {
+            // Revoke all object URLs
+            this.selectedFiles.forEach(f => {
+                if (f.preview) URL.revokeObjectURL(f.preview);
+            });
+            this.selectedFiles = [];
+            this.mediaCaption = '';
+            this.showMediaPreview = false;
+        },
+
+        async sendMediaFiles() {
+            if (!this.currentConversation || this.selectedFiles.length === 0) return;
+
+            this.isSendingMedia = true;
+
+            try {
+                for (const fileData of this.selectedFiles) {
+                    const formData = new FormData();
+                    formData.append('file', fileData.file);
+
+                    // Determine type based on file mime type
+                    let type = 'file';
+                    if (fileData.type.startsWith('image/')) type = 'image';
+                    else if (fileData.type.startsWith('video/')) type = 'video';
+                    else if (fileData.type.startsWith('audio/')) type = 'audio';
+
+                    formData.append('type', type);
+
+                    // Add caption only to the last file
+                    if (this.mediaCaption && fileData === this.selectedFiles[this.selectedFiles.length - 1]) {
+                        formData.append('caption', this.mediaCaption);
+                    }
+
+                    const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.message) {
+                        this.messages.push(data.message);
+                    }
+                }
+
+                this.$nextTick(() => this.scrollToBottom());
+                this.closeMediaPreview();
+
+            } catch (e) {
+                console.error('Error sending media:', e);
+                alert('خطا در ارسال فایل‌ها');
+            } finally {
+                this.isSendingMedia = false;
+            }
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        },
+
+        getFileIcon(type) {
+            if (type.startsWith('image/')) return '🖼️';
+            if (type.startsWith('video/')) return '🎬';
+            if (type.startsWith('audio/')) return '🎵';
+            if (type.includes('pdf')) return '📄';
+            if (type.includes('word') || type.includes('document')) return '📝';
+            if (type.includes('excel') || type.includes('spreadsheet')) return '📊';
+            return '📎';
+        },
+
         copyMessage(content) {
             if (!content) return;
             navigator.clipboard.writeText(content).then(() => {
@@ -1381,6 +1628,10 @@ function messenger() {
             // For image/file messages, show appropriate placeholder
             if (msg.type === 'image') {
                 content = '📷 تصویر';
+            } else if (msg.type === 'video') {
+                content = '🎬 ویدیو';
+            } else if (msg.type === 'audio') {
+                content = '🎵 صوت';
             } else if (msg.type === 'file') {
                 content = '📎 ' + (msg.file_name || 'فایل');
             }
