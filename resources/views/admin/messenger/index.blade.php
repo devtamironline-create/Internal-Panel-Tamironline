@@ -1025,6 +1025,9 @@ function messenger() {
                 alert('لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید');
                 return;
             }
+
+            const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
+
             try {
                 const formData = new FormData();
                 formData.append('name', this.newGroupName);
@@ -1047,41 +1050,47 @@ function messenger() {
                     body: formData
                 });
 
-                const data = await response.json();
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonErr) {
+                    this.isCreatingGroup = false;
+                    alert('خطا در پردازش پاسخ سرور');
+                    return;
+                }
+
                 this.isCreatingGroup = false;
 
                 // Handle errors
-                if (!response.ok || data.error) {
-                    const errorMsg = data.error || data.message || 'خطا در ایجاد';
+                if (!response.ok) {
+                    const errorMsg = data.error || data.message || 'خطا در ایجاد ' + typeLabel;
                     alert(errorMsg);
                     return;
                 }
 
-                if (data.conversation) {
-                    const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
+                // Success - close modal and show message
+                this.showNewGroup = false;
+
+                // Show success toast
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg text-sm z-[200] shadow-lg';
+                toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+                // Reset form data
+                this.createType = 'group';
+                this.newGroupName = '';
+                this.newGroupDescription = '';
+                this.selectedGroupMembers = [];
+                this.groupAdmins = [];
+                this.groupAvatar = null;
+                this.groupAvatarPreview = null;
+                this.groupSettings = { isPublic: false, onlyAdminsCanSend: false, membersCanAddOthers: true, isPinned: false };
+
+                // Load conversations and open the new one
+                if (data.conversation && data.conversation.id) {
                     const conversationId = data.conversation.id;
-
-                    // Close modal immediately
-                    this.showNewGroup = false;
-
-                    // Show success toast
-                    const toast = document.createElement('div');
-                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
-                    toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
-                    document.body.appendChild(toast);
-                    setTimeout(() => toast.remove(), 3000);
-
-                    // Reset form data
-                    this.createType = 'group';
-                    this.newGroupName = '';
-                    this.newGroupDescription = '';
-                    this.selectedGroupMembers = [];
-                    this.groupAdmins = [];
-                    this.groupAvatar = null;
-                    this.groupAvatarPreview = null;
-                    this.groupSettings = { isPublic: false, onlyAdminsCanSend: false, membersCanAddOthers: true, isPinned: false };
-
-                    // Load conversations and open the new one
                     await this.loadConversations();
 
                     // Find and open the created conversation
@@ -1091,10 +1100,13 @@ function messenger() {
                         this.mobileShowChat = true;
                         await this.loadMessages(conversationId);
                     }
+                } else {
+                    await this.loadConversations();
                 }
             } catch (e) {
                 this.isCreatingGroup = false;
                 console.error('Error creating group:', e);
+                alert('خطا در ایجاد ' + typeLabel + ': ' + e.message);
             }
         },
 
