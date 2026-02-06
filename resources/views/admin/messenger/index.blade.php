@@ -223,7 +223,7 @@
 
         <!-- Messages Area -->
         <template x-if="currentConversation">
-            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null">
+            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null" @scroll="handleMessagesScroll()">
                 <template x-for="msg in messages" :key="msg.id">
                     <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
                         <div class="relative max-w-md">
@@ -1193,6 +1193,10 @@ function messenger() {
         isDragging: false,
         isSendingMedia: false,
 
+        // Scroll tracking
+        isUserNearBottom: true,
+        lastMessageCount: 0,
+
         get filteredConversations() {
             let filtered = this.conversations;
 
@@ -1296,7 +1300,9 @@ function messenger() {
         async openConversation(conv) {
             this.currentConversation = conv;
             this.mobileShowChat = true;
-            await this.loadMessages(conv.id);
+            this.lastMessageCount = 0; // Reset for new conversation
+            this.isUserNearBottom = true; // Reset scroll state
+            await this.loadMessages(conv.id, true); // Force scroll on open
 
             // Set admin status and members for groups/channels
             if (conv.type === 'group' || conv.type === 'channel') {
@@ -1315,12 +1321,22 @@ function messenger() {
             this.mobileShowChat = false;
         },
 
-        async loadMessages(conversationId) {
+        async loadMessages(conversationId, forceScroll = false) {
             try {
                 const response = await fetch(`/admin/chat/conversations/${conversationId}/messages`);
                 const data = await response.json();
-                this.messages = data.messages || [];
-                this.$nextTick(() => this.scrollToBottom());
+                const newMessages = data.messages || [];
+                const hadNewMessages = newMessages.length > this.lastMessageCount;
+
+                this.messages = newMessages;
+                this.lastMessageCount = newMessages.length;
+
+                // Only scroll to bottom if:
+                // 1. Force scroll (first load, opening conversation)
+                // 2. User is near bottom AND there are new messages
+                if (forceScroll || (this.isUserNearBottom && hadNewMessages)) {
+                    this.$nextTick(() => this.scrollToBottom());
+                }
             } catch (e) {
                 console.error('Error loading messages:', e);
             }
@@ -1341,7 +1357,9 @@ function messenger() {
                     this.currentConversation = data.conversation;
                     this.showUsers = false;
                     this.mobileShowChat = true;
-                    await this.loadMessages(data.conversation.id);
+                    this.lastMessageCount = 0;
+                    this.isUserNearBottom = true;
+                    await this.loadMessages(data.conversation.id, true);
                     await this.loadConversations();
                 }
             } catch (e) {
@@ -1429,7 +1447,9 @@ function messenger() {
                     if (newConv) {
                         this.currentConversation = newConv;
                         this.mobileShowChat = true;
-                        await this.loadMessages(conversationId);
+                        this.lastMessageCount = 0;
+                        this.isUserNearBottom = true;
+                        await this.loadMessages(conversationId, true);
                     }
                 } else {
                     await this.loadConversations();
@@ -1675,7 +1695,20 @@ function messenger() {
 
         scrollToBottom() {
             const container = this.$refs.messagesContainer;
-            if (container) container.scrollTop = container.scrollHeight;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+                this.isUserNearBottom = true;
+            }
+        },
+
+        handleMessagesScroll() {
+            const container = this.$refs.messagesContainer;
+            if (!container) return;
+
+            // Check if user is within 100px of the bottom
+            const threshold = 100;
+            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            this.isUserNearBottom = distanceFromBottom < threshold;
         },
 
         updateConversationLastMessage(conversationId, message) {
