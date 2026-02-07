@@ -81,7 +81,7 @@ class SettingsController extends Controller
     public function updateAmadast(Request $request)
     {
         $request->validate([
-            'amadast_client_code' => 'required|string|max:255',
+            'amadast_client_code' => 'required|string|max:2000',
             'amadast_enabled' => 'boolean',
             'amadast_default_city_id' => 'nullable|integer',
         ]);
@@ -100,7 +100,7 @@ class SettingsController extends Controller
     public function setupAmadast(Request $request)
     {
         $validated = $request->validate([
-            'amadast_client_code' => 'required|string|max:255',
+            'amadast_client_code' => 'required|string|max:2000',
             'sender_name' => 'required|string|max:255',
             'sender_mobile' => 'required|string|regex:/^09[0-9]{9}$/',
             'warehouse_title' => 'required|string|max:255',
