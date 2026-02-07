@@ -19,6 +19,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view-conversations', 'manage-conversations',
             // Attendance
             'manage-attendance',
+            // Warehouse
+            'view-warehouse', 'manage-warehouse',
         ];
 
         foreach ($permissions as $name) {
