@@ -331,6 +331,22 @@ class OrderController extends Controller
     }
 
     /**
+     * Print Amadast shipping label with tracking codes and barcodes
+     */
+    public function printAmadast(WooOrder $order)
+    {
+        $order->load('items');
+
+        // Try to fetch latest tracking info from Amadast
+        if ($order->amadast_order_id && !$order->courier_tracking_code) {
+            $order->updateAmadastTracking();
+            $order->refresh();
+        }
+
+        return view('warehouse::orders.print-amadast', compact('order'));
+    }
+
+    /**
      * Bulk update orders
      */
     public function bulkUpdate(Request $request): JsonResponse

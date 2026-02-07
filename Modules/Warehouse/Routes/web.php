@@ -23,6 +23,7 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
             Route::get('/', [OrderController::class, 'index'])->name('index');
             Route::get('/{order}', [OrderController::class, 'show'])->name('show');
             Route::get('/{order}/print', [OrderController::class, 'print'])->name('print');
+            Route::get('/{order}/print-amadast', [OrderController::class, 'printAmadast'])->name('print-amadast');
 
             // Sync actions
             Route::post('/sync', [OrderController::class, 'sync'])->name('sync');
