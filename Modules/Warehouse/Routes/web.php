@@ -53,5 +53,16 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
             Route::get('/', [SettingsController::class, 'index'])->name('index');
             Route::post('/', [SettingsController::class, 'update'])->name('update');
             Route::post('/test-connection', [SettingsController::class, 'testConnection'])->name('test-connection');
+
+            // Amadast settings
+            Route::post('/amadast', [SettingsController::class, 'updateAmadast'])->name('amadast.update');
+            Route::post('/amadast/setup', [SettingsController::class, 'setupAmadast'])->name('amadast.setup');
+            Route::post('/amadast/test', [SettingsController::class, 'testAmadastConnection'])->name('amadast.test');
+            Route::get('/amadast/provinces', [SettingsController::class, 'getAmadastProvinces'])->name('amadast.provinces');
+            Route::get('/amadast/cities', [SettingsController::class, 'getAmadastCities'])->name('amadast.cities');
         });
+
+        // Amadast actions on orders
+        Route::post('/orders/{order}/send-to-amadast', [OrderController::class, 'sendToAmadast'])->name('orders.send-to-amadast');
+        Route::post('/orders/{order}/update-tracking', [OrderController::class, 'updateAmadastTracking'])->name('orders.update-tracking');
     });

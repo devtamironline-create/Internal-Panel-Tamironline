@@ -58,6 +58,12 @@ class WooOrder extends Model
         'is_shipped',
         'tracking_code',
         'shipping_carrier',
+        'amadast_order_id',
+        'amadast_tracking_code',
+        'courier_tracking_code',
+        'courier_title',
+        'amadast_status',
+        'sent_to_amadast_at',
         'date_created',
         'date_modified',
         'date_paid',
@@ -77,6 +83,7 @@ class WooOrder extends Model
         'date_paid' => 'datetime',
         'date_completed' => 'datetime',
         'last_synced_at' => 'datetime',
+        'sent_to_amadast_at' => 'datetime',
         'total' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'total_tax' => 'decimal:2',
@@ -393,6 +400,136 @@ class WooOrder extends Model
             $order->items()->whereNotIn('id', $existingItemIds)->delete();
         }
 
+        // Auto-send to Amadast for new processing orders
+        if ($order->wasRecentlyCreated && $order->status === 'processing') {
+            $order->sendToAmadast();
+        }
+
         return $order;
+    }
+
+    /**
+     * Send order to Amadast shipping service
+     */
+    public function sendToAmadast(): array
+    {
+        // Skip if already sent
+        if ($this->amadast_order_id) {
+            return ['success' => false, 'message' => 'این سفارش قبلاً به آمادست ارسال شده است'];
+        }
+
+        $amadastService = app(\Modules\Warehouse\Services\AmadastService::class);
+
+        if (!$amadastService->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست'];
+        }
+
+        // Get recipient city ID from mapping or default
+        $recipientCityId = $this->getAmadastCityId();
+
+        if (!$recipientCityId) {
+            \Illuminate\Support\Facades\Log::warning('Amadast: Could not determine city ID for order', [
+                'order_id' => $this->id,
+                'city' => $this->shipping_city ?? $this->billing_city,
+            ]);
+            return ['success' => false, 'message' => 'شهر گیرنده در آمادست پیدا نشد'];
+        }
+
+        // Prepare products array
+        $products = $this->items->map(function ($item) {
+            return [
+                'external_product_id' => $item->product_id ?? $item->id,
+                'price' => (int) ($item->price * 10), // Convert to Rial
+                'quantity' => $item->quantity,
+                'weight' => 100, // Default weight per item in grams
+                'title' => $item->name,
+            ];
+        })->toArray();
+
+        // Calculate total weight
+        $totalWeight = max(100, count($products) * 100);
+
+        // Prepare order data
+        $orderData = [
+            'external_order_id' => $this->woo_order_id,
+            'recipient_name' => $this->shipping_first_name
+                ? trim($this->shipping_first_name . ' ' . $this->shipping_last_name)
+                : $this->customer_name,
+            'recipient_mobile' => $this->customer_phone ?? $this->billing_phone,
+            'recipient_city_id' => $recipientCityId,
+            'recipient_address' => $this->shipping_address_1
+                ? $this->shippingAddress
+                : $this->billingAddress,
+            'recipient_postal_code' => $this->shipping_postcode ?? $this->billing_postcode ?? '0000000000',
+            'weight' => $totalWeight,
+            'value' => (int) ($this->total * 10), // Convert to Rial
+            'product_type' => 1,
+            'package_type' => 1,
+            'products' => $products,
+            'description' => $this->customer_note,
+        ];
+
+        $result = $amadastService->createOrder($orderData);
+
+        if ($result['success'] ?? false) {
+            $this->update([
+                'amadast_order_id' => $result['data']['id'] ?? null,
+                'sent_to_amadast_at' => now(),
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Order sent to Amadast', [
+                'order_id' => $this->id,
+                'amadast_order_id' => $result['data']['id'] ?? null,
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Update tracking info from Amadast
+     */
+    public function updateAmadastTracking(): bool
+    {
+        if (!$this->amadast_order_id) {
+            return false;
+        }
+
+        $amadastService = app(\Modules\Warehouse\Services\AmadastService::class);
+        $phone = $this->customer_phone ?? $this->billing_phone;
+
+        if (!$phone) {
+            return false;
+        }
+
+        $trackingInfo = $amadastService->getTrackingInfo($phone, $this->woo_order_id);
+
+        if ($trackingInfo) {
+            $this->update([
+                'amadast_tracking_code' => $trackingInfo['amadast_tracking_code'] ?? null,
+                'courier_tracking_code' => $trackingInfo['courier_tracking_code'] ?? null,
+                'courier_title' => $trackingInfo['courier_title'] ?? null,
+            ]);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get Amadast city ID based on shipping/billing city
+     */
+    protected function getAmadastCityId(): ?int
+    {
+        // First check if we have a mapping in settings
+        $cityMappings = \App\Models\Setting::get('amadast_city_mappings', []);
+        $city = $this->shipping_city ?? $this->billing_city;
+
+        if ($city && isset($cityMappings[$city])) {
+            return $cityMappings[$city];
+        }
+
+        // Default city ID (Tehran = 360 usually)
+        return \App\Models\Setting::get('amadast_default_city_id', 360);
     }
 }

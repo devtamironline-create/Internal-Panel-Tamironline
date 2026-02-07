@@ -396,4 +396,39 @@ class OrderController extends Controller
 
         return view('warehouse::orders.sync-logs', compact('logs'));
     }
+
+    /**
+     * Send order to Amadast
+     */
+    public function sendToAmadast(WooOrder $order): JsonResponse
+    {
+        $result = $order->sendToAmadast();
+
+        return response()->json($result);
+    }
+
+    /**
+     * Update Amadast tracking info
+     */
+    public function updateAmadastTracking(WooOrder $order): JsonResponse
+    {
+        $success = $order->updateAmadastTracking();
+
+        if ($success) {
+            return response()->json([
+                'success' => true,
+                'message' => 'اطلاعات رهگیری بروزرسانی شد',
+                'data' => [
+                    'amadast_tracking_code' => $order->amadast_tracking_code,
+                    'courier_tracking_code' => $order->courier_tracking_code,
+                    'courier_title' => $order->courier_title,
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'خطا در دریافت اطلاعات رهگیری'
+        ]);
+    }
 }

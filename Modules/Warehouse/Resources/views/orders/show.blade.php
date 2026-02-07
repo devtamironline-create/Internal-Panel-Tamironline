@@ -259,6 +259,71 @@
                 </div>
             </div>
 
+            <!-- Amadast Shipping -->
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-slate-400">ارسال با آمادست</h3>
+                    @if($order->amadast_order_id)
+                    <span class="px-2 py-1 bg-green-900/50 text-green-400 text-xs rounded">ثبت شده</span>
+                    @endif
+                </div>
+
+                @if($order->amadast_order_id)
+                    <!-- Amadast tracking info -->
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">شناسه آمادست:</span>
+                            <span class="text-slate-300">{{ $order->amadast_order_id }}</span>
+                        </div>
+                        @if($order->amadast_tracking_code)
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">کد رهگیری آمادست:</span>
+                            <span class="text-slate-200 font-medium">{{ $order->amadast_tracking_code }}</span>
+                        </div>
+                        @endif
+                        @if($order->courier_tracking_code)
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">کد رهگیری پست:</span>
+                            <span class="text-slate-200 font-medium">{{ $order->courier_tracking_code }}</span>
+                        </div>
+                        @endif
+                        @if($order->courier_title)
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">شرکت حمل:</span>
+                            <span class="text-slate-300">{{ $order->courier_title }}</span>
+                        </div>
+                        @endif
+                        @if($order->sent_to_amadast_at)
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">تاریخ ارسال:</span>
+                            <span class="text-slate-300">{{ $order->sent_to_amadast_at->diffForHumans() }}</span>
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- Update tracking button -->
+                    <button type="button" @click="updateAmadastTracking()"
+                            :disabled="updatingTracking"
+                            class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition">
+                        <svg class="w-4 h-4" :class="updatingTracking && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span x-text="updatingTracking ? 'در حال بروزرسانی...' : 'بروزرسانی اطلاعات رهگیری'"></span>
+                    </button>
+                @else
+                    <!-- Send to Amadast button -->
+                    <button type="button" @click="sendToAmadast()"
+                            :disabled="sendingToAmadast"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition">
+                        <svg class="w-4 h-4" :class="sendingToAmadast && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        <span x-text="sendingToAmadast ? 'در حال ارسال...' : 'ارسال به آمادست'"></span>
+                    </button>
+                    <p class="text-xs text-slate-500 mt-2 text-center">سفارش برای حمل و نقل در آمادست ثبت می‌شود</p>
+                @endif
+            </div>
+
             <!-- Internal Note -->
             <div class="bg-slate-800 rounded-lg p-4">
                 <h3 class="text-sm font-medium text-slate-400 mb-4">یادداشت داخلی</h3>
@@ -326,6 +391,8 @@ function orderDetail() {
         showToast: false,
         toastMessage: '',
         toastSuccess: true,
+        sendingToAmadast: false,
+        updatingTracking: false,
 
         async syncOrder() {
             this.syncing = true;
@@ -393,6 +460,28 @@ function orderDetail() {
             this.toastSuccess = success;
             this.showToast = true;
             setTimeout(() => this.showToast = false, 4000);
+        },
+
+        async sendToAmadast() {
+            this.sendingToAmadast = true;
+            try {
+                const response = await this.request('{{ route("warehouse.orders.send-to-amadast", $order) }}', 'POST');
+                this.showNotification(response.message, response.success);
+                if (response.success) setTimeout(() => location.reload(), 1500);
+            } finally {
+                this.sendingToAmadast = false;
+            }
+        },
+
+        async updateAmadastTracking() {
+            this.updatingTracking = true;
+            try {
+                const response = await this.request('{{ route("warehouse.orders.update-tracking", $order) }}', 'POST');
+                this.showNotification(response.message, response.success);
+                if (response.success) setTimeout(() => location.reload(), 1500);
+            } finally {
+                this.updatingTracking = false;
+            }
         }
     }
 }
