@@ -319,23 +319,12 @@ class AmadastService
     }
 
     /**
-     * Setup Amadast (create user, location, store)
+     * Setup Amadast (create location and store)
+     * Note: User is already authenticated via JWT, no need to create user
      */
     public function setup(array $data): array
     {
-        // Step 1: Create user
-        $userResult = $this->createUser([
-            'full_name' => $data['sender_name'],
-            'mobile' => $data['sender_mobile'],
-            'province_id' => $data['province_id'],
-            'city_id' => $data['city_id'],
-        ]);
-
-        if (!($userResult['success'] ?? false)) {
-            return $userResult;
-        }
-
-        // Step 2: Create location
+        // Step 1: Create location
         $locationResult = $this->createLocation([
             'title' => $data['warehouse_title'] ?? 'انبار اصلی',
             'address' => $data['warehouse_address'],
@@ -348,7 +337,7 @@ class AmadastService
             return $locationResult;
         }
 
-        // Step 3: Create store
+        // Step 2: Create store
         $storeResult = $this->createStore([
             'title' => $data['store_title'] ?? 'فروشگاه اصلی',
             'location_id' => $locationResult['data']['id'],
