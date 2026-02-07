@@ -294,10 +294,10 @@ class OrderController extends Controller
     {
         $request->validate([
             'tracking_code' => 'required|string|max:100',
-            'shipping_company' => 'nullable|string|max:100',
+            'shipping_carrier' => 'nullable|string|max:100',
         ]);
 
-        $order->markAsShipped($request->tracking_code, $request->shipping_company);
+        $order->markAsShipped($request->tracking_code, $request->shipping_carrier);
 
         return response()->json([
             'success' => true,

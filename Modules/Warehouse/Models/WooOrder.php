@@ -57,7 +57,7 @@ class WooOrder extends Model
         'is_packed',
         'is_shipped',
         'tracking_code',
-        'shipping_company',
+        'shipping_carrier',
         'date_created',
         'date_modified',
         'date_paid',
@@ -287,12 +287,12 @@ class WooOrder extends Model
         return $this;
     }
 
-    public function markAsShipped(string $trackingCode, ?string $shippingCompany = null): self
+    public function markAsShipped(string $trackingCode, ?string $shippingCarrier = null): self
     {
         $this->update([
             'is_shipped' => true,
             'tracking_code' => $trackingCode,
-            'shipping_company' => $shippingCompany,
+            'shipping_carrier' => $shippingCarrier,
             'internal_status' => self::INTERNAL_SHIPPED,
         ]);
         return $this;

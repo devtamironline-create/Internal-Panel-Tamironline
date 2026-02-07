@@ -69,7 +69,7 @@ return new class extends Migration
             $table->boolean('is_packed')->default(false);
             $table->boolean('is_shipped')->default(false);
             $table->string('tracking_code')->nullable();
-            $table->string('shipping_company')->nullable();
+            $table->string('shipping_carrier')->nullable();
 
             $table->timestamp('date_created')->nullable();
             $table->timestamp('date_modified')->nullable();

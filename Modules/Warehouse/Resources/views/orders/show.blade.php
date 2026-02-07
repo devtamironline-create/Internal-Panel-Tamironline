@@ -252,8 +252,8 @@
                         @if($order->tracking_code)
                         <p class="text-sm text-slate-400">کد رهگیری: <span class="text-slate-200">{{ $order->tracking_code }}</span></p>
                         @endif
-                        @if($order->shipping_company)
-                        <p class="text-sm text-slate-400">شرکت پستی: <span class="text-slate-200">{{ $order->shipping_company }}</span></p>
+                        @if($order->shipping_carrier)
+                        <p class="text-sm text-slate-400">شرکت پستی: <span class="text-slate-200">{{ $order->shipping_carrier }}</span></p>
                         @endif
                     </div>
                 </div>
@@ -362,7 +362,7 @@ function orderDetail() {
         async markShipped() {
             const response = await this.request('{{ route('warehouse.orders.mark-shipped', $order) }}', 'POST', {
                 tracking_code: this.trackingCode,
-                shipping_company: this.shippingCompany
+                shipping_carrier: this.shippingCompany
             });
             if (response.success) this.isShipped = true;
             this.showNotification(response.message, response.success);
