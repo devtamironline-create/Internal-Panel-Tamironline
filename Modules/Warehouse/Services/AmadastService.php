@@ -10,15 +10,13 @@ use Illuminate\Support\Facades\Cache;
 class AmadastService
 {
     protected string $baseUrl = 'https://shop-integration.amadast.com';
-    protected ?string $clientCode;
-    protected ?string $accessToken;
+    protected ?string $apiKey;
     protected ?int $userId;
     protected ?int $storeId;
 
     public function __construct()
     {
-        $this->clientCode = Setting::get('amadast_client_code');
-        $this->accessToken = Setting::get('amadast_access_token');
+        $this->apiKey = Setting::get('amadast_client_code');
         $this->userId = Setting::get('amadast_user_id');
         $this->storeId = Setting::get('amadast_store_id');
     }
@@ -28,22 +26,22 @@ class AmadastService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->clientCode) && !empty($this->storeId);
+        return !empty($this->apiKey) && !empty($this->storeId);
     }
 
     /**
      * Get default headers for API requests
      */
-    protected function getHeaders(bool $withAuth = true): array
+    protected function getHeaders(): array
     {
         $headers = [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'X-Client-Code' => $this->clientCode,
         ];
 
-        if ($withAuth && $this->accessToken) {
-            $headers['Authorization'] = 'Bearer ' . $this->accessToken;
+        // Use the API key (JWT) directly as Bearer token
+        if ($this->apiKey) {
+            $headers['Authorization'] = 'Bearer ' . $this->apiKey;
         }
 
         return $headers;
@@ -55,7 +53,7 @@ class AmadastService
     public function createUser(array $data): array
     {
         try {
-            $response = Http::withHeaders($this->getHeaders(false))
+            $response = Http::withHeaders($this->getHeaders())
                 ->post("{$this->baseUrl}/v1/users", [
                     'full_name' => $data['full_name'],
                     'mobile' => $data['mobile'],
@@ -70,9 +68,6 @@ class AmadastService
                     // Save user ID
                     Setting::set('amadast_user_id', $result['data']['id']);
                     $this->userId = $result['data']['id'];
-
-                    // Get token for this user
-                    $this->getAuthToken($result['data']['id']);
                 }
                 return $result;
             }
@@ -85,60 +80,13 @@ class AmadastService
     }
 
     /**
-     * Get authentication token
-     */
-    public function getAuthToken(int $userId): array
-    {
-        try {
-            $response = Http::withHeaders($this->getHeaders(false))
-                ->post("{$this->baseUrl}/v1/auth/token/{$userId}");
-
-            if ($response->successful()) {
-                $result = $response->json();
-                if ($result['success'] ?? false) {
-                    Setting::set('amadast_access_token', $result['data']['access_token']);
-                    Setting::set('amadast_refresh_token', $result['data']['refresh_token']);
-                    Setting::set('amadast_token_expires_at', now()->addSeconds($result['data']['expires_in'])->toDateTimeString());
-                    $this->accessToken = $result['data']['access_token'];
-                }
-                return $result;
-            }
-
-            return ['success' => false, 'message' => 'خطا در دریافت توکن: ' . $response->body()];
-        } catch (\Exception $e) {
-            Log::error('Amadast getAuthToken error', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Refresh token if expired
-     */
-    protected function ensureValidToken(): bool
-    {
-        $expiresAt = Setting::get('amadast_token_expires_at');
-
-        if (!$expiresAt || now()->gte($expiresAt)) {
-            if ($this->userId) {
-                $result = $this->getAuthToken($this->userId);
-                return $result['success'] ?? false;
-            }
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * Get list of provinces
      */
     public function getProvinces(): array
     {
         return Cache::remember('amadast_provinces', 86400, function () {
             try {
-                $this->ensureValidToken();
-
-                $response = Http::withHeaders($this->getHeaders())
+                                $response = Http::withHeaders($this->getHeaders())
                     ->get("{$this->baseUrl}/v1/cities");
 
                 if ($response->successful()) {
@@ -159,9 +107,7 @@ class AmadastService
     {
         return Cache::remember("amadast_cities_{$provinceId}", 86400, function () use ($provinceId) {
             try {
-                $this->ensureValidToken();
-
-                $response = Http::withHeaders($this->getHeaders())
+                                $response = Http::withHeaders($this->getHeaders())
                     ->get("{$this->baseUrl}/v1/cities", ['province_id' => $provinceId]);
 
                 if ($response->successful()) {
@@ -181,9 +127,7 @@ class AmadastService
     public function createLocation(array $data): array
     {
         try {
-            $this->ensureValidToken();
-
-            $response = Http::withHeaders($this->getHeaders())
+                        $response = Http::withHeaders($this->getHeaders())
                 ->post("{$this->baseUrl}/v1/locations", [
                     'title' => $data['title'],
                     'address' => $data['address'],
@@ -215,9 +159,7 @@ class AmadastService
     public function createStore(array $data): array
     {
         try {
-            $this->ensureValidToken();
-
-            $response = Http::withHeaders($this->getHeaders())
+                        $response = Http::withHeaders($this->getHeaders())
                 ->post("{$this->baseUrl}/v1/stores", [
                     'title' => $data['title'],
                     'location_id' => $data['location_id'],
@@ -249,9 +191,7 @@ class AmadastService
                 return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست'];
             }
 
-            $this->ensureValidToken();
-
-            $senderName = Setting::get('amadast_sender_name');
+                        $senderName = Setting::get('amadast_sender_name');
             $senderMobile = Setting::get('amadast_sender_mobile');
 
             $payload = [
@@ -298,9 +238,7 @@ class AmadastService
     public function searchOrders(array $phoneNumbers): array
     {
         try {
-            $this->ensureValidToken();
-
-            $query = collect($phoneNumbers)->map(fn($p) => "phone_number={$p}")->implode('&');
+                        $query = collect($phoneNumbers)->map(fn($p) => "phone_number={$p}")->implode('&');
 
             $response = Http::withHeaders($this->getHeaders())
                 ->get("{$this->baseUrl}/v1/orders/search?{$query}");
@@ -362,18 +300,11 @@ class AmadastService
     public function testConnection(): array
     {
         try {
-            if (empty($this->clientCode)) {
-                return ['success' => false, 'message' => 'کد کلاینت تنظیم نشده است'];
+            if (empty($this->apiKey)) {
+                return ['success' => false, 'message' => 'API Key تنظیم نشده است'];
             }
 
-            // If no user yet, just check if client code works
-            if (!$this->userId) {
-                return ['success' => true, 'message' => 'کد کلاینت معتبر است. لطفاً تنظیمات را کامل کنید.'];
-            }
-
-            $this->ensureValidToken();
-
-            // Try to get provinces as a simple test
+            // Try to get cities as a simple test
             $response = Http::withHeaders($this->getHeaders())
                 ->get("{$this->baseUrl}/v1/cities");
 
@@ -381,7 +312,7 @@ class AmadastService
                 return ['success' => true, 'message' => 'اتصال به آمادست برقرار است'];
             }
 
-            return ['success' => false, 'message' => 'خطا در اتصال: ' . $response->status()];
+            return ['success' => false, 'message' => 'خطا در اتصال: ' . $response->status() . ' - ' . $response->body()];
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
         }
