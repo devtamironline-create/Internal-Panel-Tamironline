@@ -1,0 +1,28 @@
+{
+    "name": "nwidart/warehouse",
+    "description": "Warehouse management module with WooCommerce integration",
+    "authors": [
+        {
+            "name": "Tamir Team",
+            "email": "info@tamironline.ir"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Warehouse\\": "",
+            "Modules\\Warehouse\\Database\\Factories\\": "Database/factories/",
+            "Modules\\Warehouse\\Database\\Seeders\\": "Database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Warehouse\\Tests\\": "tests/"
+        }
+    }
+}
