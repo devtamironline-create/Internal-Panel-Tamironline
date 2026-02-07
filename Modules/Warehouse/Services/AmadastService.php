@@ -159,10 +159,12 @@ class AmadastService
     public function createStore(array $data): array
     {
         try {
-                        $response = Http::withHeaders($this->getHeaders())
+            $response = Http::withHeaders($this->getHeaders())
                 ->post("{$this->baseUrl}/v1/stores", [
                     'title' => $data['title'],
                     'location_id' => $data['location_id'],
+                    'admin_name' => $data['admin_name'],
+                    'phone' => $data['phone'],
                 ]);
 
             if ($response->successful()) {
@@ -341,6 +343,8 @@ class AmadastService
         $storeResult = $this->createStore([
             'title' => $data['store_title'] ?? 'فروشگاه اصلی',
             'location_id' => $locationResult['data']['id'],
+            'admin_name' => $data['sender_name'],
+            'phone' => $data['sender_mobile'],
         ]);
 
         if (!($storeResult['success'] ?? false)) {
