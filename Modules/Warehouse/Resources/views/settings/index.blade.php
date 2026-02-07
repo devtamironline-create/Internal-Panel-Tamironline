@@ -237,29 +237,16 @@
 
             @else
             <!-- Setup form -->
-            <form action="{{ route('warehouse.settings.amadast.setup') }}" method="POST" class="space-y-4">
-                @csrf
-
-                @if($errors->any())
-                <div class="bg-red-900/50 border border-red-700 text-red-300 rounded-lg p-4">
-                    <ul class="list-disc list-inside space-y-1">
-                        @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+            <form @submit.prevent="setupAmadast()" class="space-y-4">
+                <!-- Result Message -->
+                <div x-show="setupResult" x-transition class="p-4 rounded-lg"
+                     :class="setupSuccess ? 'bg-green-900/50 border border-green-700 text-green-300' : 'bg-red-900/50 border border-red-700 text-red-300'">
+                    <span x-text="setupResult"></span>
                 </div>
-                @endif
-
-                @if(session('error'))
-                <div class="bg-red-900/50 border border-red-700 text-red-300 rounded-lg p-4">
-                    {{ session('error') }}
-                </div>
-                @endif
 
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">کد کلاینت (X-Client-Code) *</label>
-                    <input type="text" name="amadast_client_code"
-                           value="{{ old('amadast_client_code', $settings['amadast_client_code']) }}"
+                    <input type="text" x-model="amadastForm.client_code"
                            required
                            class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     <p class="text-slate-500 text-sm mt-1">این کد را از آمادست دریافت کنید</p>
@@ -268,39 +255,36 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">نام فرستنده *</label>
-                        <input type="text" name="sender_name"
-                               value="{{ old('sender_name', $settings['amadast_sender_name']) }}"
+                        <input type="text" x-model="amadastForm.sender_name"
                                required
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">موبایل فرستنده *</label>
-                        <input type="text" name="sender_mobile"
-                               value="{{ old('sender_mobile', $settings['amadast_sender_mobile']) }}"
+                        <input type="text" x-model="amadastForm.sender_mobile"
                                placeholder="09123456789"
-                               required pattern="09[0-9]{9}"
+                               required
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">نام انبار *</label>
-                    <input type="text" name="warehouse_title"
-                           value="{{ old('warehouse_title', 'انبار اصلی') }}"
+                    <input type="text" x-model="amadastForm.warehouse_title"
                            required
                            class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">آدرس انبار *</label>
-                    <textarea name="warehouse_address" rows="2" required
-                              class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">{{ old('warehouse_address', $settings['amadast_warehouse_address']) }}</textarea>
+                    <textarea x-model="amadastForm.warehouse_address" rows="2" required
+                              class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">استان *</label>
-                        <select name="province_id" x-model="selectedProvince" @change="loadCities()" required
+                        <select x-model="amadastForm.province_id" required
                                 class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">انتخاب کنید</option>
                             <option value="8">تهران</option>
@@ -338,7 +322,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">شهر *</label>
-                        <input type="number" name="city_id" required placeholder="شناسه شهر"
+                        <input type="number" x-model="amadastForm.city_id" required placeholder="شناسه شهر"
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                         <p class="text-slate-500 text-xs mt-1">شناسه شهر در آمادست (مثلاً تهران = 360)</p>
                     </div>
@@ -347,23 +331,22 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">کد پستی انبار *</label>
-                        <input type="text" name="postal_code"
-                               value="{{ old('postal_code', $settings['amadast_postal_code']) }}"
-                               required pattern="[0-9]{10}" maxlength="10"
+                        <input type="text" x-model="amadastForm.postal_code"
+                               required maxlength="10"
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">نام فروشگاه *</label>
-                        <input type="text" name="store_title"
-                               value="{{ old('store_title', 'فروشگاه آنلاین') }}"
+                        <input type="text" x-model="amadastForm.store_title"
                                required
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
 
                 <div class="flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
-                        راه‌اندازی آمادست
+                    <button type="submit" :disabled="settingUp"
+                            class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white rounded-lg transition">
+                        <span x-text="settingUp ? 'در حال راه‌اندازی...' : 'راه‌اندازی آمادست'"></span>
                     </button>
                 </div>
             </form>
@@ -378,6 +361,20 @@ function warehouseSettings() {
         testing: false,
         testResult: '',
         testSuccess: false,
+        settingUp: false,
+        setupResult: '',
+        setupSuccess: false,
+        amadastForm: {
+            client_code: '{{ $settings['amadast_client_code'] ?? '' }}',
+            sender_name: '{{ $settings['amadast_sender_name'] ?? '' }}',
+            sender_mobile: '{{ $settings['amadast_sender_mobile'] ?? '09123456789' }}',
+            warehouse_title: 'انبار اصلی',
+            warehouse_address: '{{ $settings['amadast_warehouse_address'] ?? '' }}',
+            province_id: '',
+            city_id: '',
+            postal_code: '{{ $settings['amadast_postal_code'] ?? '' }}',
+            store_title: 'فروشگاه آنلاین'
+        },
 
         async testConnection() {
             this.testing = true;
@@ -404,6 +401,56 @@ function warehouseSettings() {
                 this.testResult = 'خطا در برقراری ارتباط';
             } finally {
                 this.testing = false;
+            }
+        },
+
+        async setupAmadast() {
+            this.settingUp = true;
+            this.setupResult = '';
+
+            try {
+                const response = await fetch('{{ route('warehouse.settings.amadast.setup') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        amadast_client_code: this.amadastForm.client_code,
+                        sender_name: this.amadastForm.sender_name,
+                        sender_mobile: this.amadastForm.sender_mobile,
+                        warehouse_title: this.amadastForm.warehouse_title,
+                        warehouse_address: this.amadastForm.warehouse_address,
+                        province_id: this.amadastForm.province_id,
+                        city_id: this.amadastForm.city_id,
+                        postal_code: this.amadastForm.postal_code,
+                        store_title: this.amadastForm.store_title
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Setup response:', data);
+
+                if (response.ok && data.success) {
+                    this.setupSuccess = true;
+                    this.setupResult = data.message || 'تنظیمات با موفقیت انجام شد';
+                    setTimeout(() => location.reload(), 2000);
+                } else if (data.errors) {
+                    // Validation errors
+                    this.setupSuccess = false;
+                    const errors = Object.values(data.errors).flat();
+                    this.setupResult = errors.join(' - ');
+                } else {
+                    this.setupSuccess = false;
+                    this.setupResult = data.message || data.error || 'خطا در راه‌اندازی';
+                }
+            } catch (error) {
+                console.error('Setup error:', error);
+                this.setupSuccess = false;
+                this.setupResult = 'خطا در برقراری ارتباط با سرور';
+            } finally {
+                this.settingUp = false;
             }
         }
     }

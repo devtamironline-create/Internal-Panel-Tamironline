@@ -99,7 +99,7 @@ class SettingsController extends Controller
      */
     public function setupAmadast(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'amadast_client_code' => 'required|string|max:255',
             'sender_name' => 'required|string|max:255',
             'sender_mobile' => 'required|string|regex:/^09[0-9]{9}$/',
@@ -107,7 +107,7 @@ class SettingsController extends Controller
             'warehouse_address' => 'required|string|max:500',
             'province_id' => 'required|integer',
             'city_id' => 'required|integer',
-            'postal_code' => 'required|string|size:10',
+            'postal_code' => 'required|string|min:10|max:10',
             'store_title' => 'required|string|max:255',
         ]);
 
@@ -130,8 +130,23 @@ class SettingsController extends Controller
 
         if ($result['success'] ?? false) {
             Setting::set('amadast_enabled', true);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $result['message'] ?? 'تنظیمات آمادست با موفقیت انجام شد'
+                ]);
+            }
+
             return redirect()->route('warehouse.settings.index')
                 ->with('success', $result['message']);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'خطا در تنظیم آمادست'
+            ], 422);
         }
 
         return redirect()->route('warehouse.settings.index')
