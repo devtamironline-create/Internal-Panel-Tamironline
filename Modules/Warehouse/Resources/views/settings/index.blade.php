@@ -239,6 +239,23 @@
             <!-- Setup form -->
             <form action="{{ route('warehouse.settings.amadast.setup') }}" method="POST" class="space-y-4">
                 @csrf
+
+                @if($errors->any())
+                <div class="bg-red-900/50 border border-red-700 text-red-300 rounded-lg p-4">
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
+
+                @if(session('error'))
+                <div class="bg-red-900/50 border border-red-700 text-red-300 rounded-lg p-4">
+                    {{ session('error') }}
+                </div>
+                @endif
+
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">کد کلاینت (X-Client-Code) *</label>
                     <input type="text" name="amadast_client_code"
@@ -343,12 +360,6 @@
                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
-
-                @if(session('error'))
-                <div class="bg-red-900/50 border border-red-700 text-red-300 rounded-lg p-4">
-                    {{ session('error') }}
-                </div>
-                @endif
 
                 <div class="flex justify-end">
                     <button type="submit" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
