@@ -240,10 +240,22 @@ class AmadastService
     public function searchOrders(array $phoneNumbers): array
     {
         try {
-                        $query = collect($phoneNumbers)->map(fn($p) => "phone_number={$p}")->implode('&');
+            // Format phone numbers before searching
+            $formattedPhones = collect($phoneNumbers)->map(fn($p) => $this->formatMobile($p))->filter()->toArray();
+            $query = collect($formattedPhones)->map(fn($p) => "phone_number={$p}")->implode('&');
+
+            Log::info('Amadast searchOrders request', [
+                'phones' => $formattedPhones,
+                'url' => "{$this->baseUrl}/v1/orders/search?{$query}",
+            ]);
 
             $response = Http::withHeaders($this->getHeaders())
                 ->get("{$this->baseUrl}/v1/orders/search?{$query}");
+
+            Log::info('Amadast searchOrders response', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -263,10 +275,22 @@ class AmadastService
     {
         $result = $this->searchOrders([$phoneNumber]);
 
+        Log::info('Amadast getTrackingInfo result', [
+            'phone' => $phoneNumber,
+            'external_order_id' => $externalOrderId,
+            'result' => $result,
+        ]);
+
         if ($result['success'] ?? false) {
             foreach ($result['data'] ?? [] as $order) {
                 if ($order['external_order_id'] == $externalOrderId) {
-                    return $order;
+                    // Map Amadast API field names to our internal field names
+                    return [
+                        'amadast_tracking_code' => $order['tracking_code'] ?? $order['barcode'] ?? null,
+                        'courier_tracking_code' => $order['post_tracking_code'] ?? $order['courier_tracking_code'] ?? null,
+                        'courier_title' => $order['courier_name'] ?? $order['courier_title'] ?? $order['courier'] ?? null,
+                        'status' => $order['status'] ?? null,
+                    ];
                 }
             }
         }
