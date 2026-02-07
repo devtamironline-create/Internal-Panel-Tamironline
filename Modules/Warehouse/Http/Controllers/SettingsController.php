@@ -100,6 +100,7 @@ class SettingsController extends Controller
     public function setupAmadast(Request $request)
     {
         $request->validate([
+            'amadast_client_code' => 'required|string|max:255',
             'sender_name' => 'required|string|max:255',
             'sender_mobile' => 'required|string|regex:/^09[0-9]{9}$/',
             'warehouse_title' => 'required|string|max:255',
@@ -110,7 +111,11 @@ class SettingsController extends Controller
             'store_title' => 'required|string|max:255',
         ]);
 
-        $amadastService = app(AmadastService::class);
+        // Save client code first (required for API calls)
+        Setting::set('amadast_client_code', $request->amadast_client_code);
+
+        // Create fresh instance after saving client code
+        $amadastService = new AmadastService();
 
         $result = $amadastService->setup([
             'sender_name' => $request->sender_name,
