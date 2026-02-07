@@ -129,6 +129,7 @@ class RoleController extends Controller
             if (str_contains($name, 'report')) return 'گزارش';
             if (str_contains($name, 'okr')) return 'OKR';
             if (str_contains($name, 'salary')) return 'حقوق';
+            if (str_contains($name, 'warehouse')) return 'انبار';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
