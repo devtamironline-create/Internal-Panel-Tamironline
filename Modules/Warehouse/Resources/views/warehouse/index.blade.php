@@ -68,100 +68,125 @@
 
         {{-- PENDING STATUS: Card Layout --}}
         @if($currentStatus === 'pending')
-        <div class="p-4">
+        <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
             @forelse($orders as $order)
-            <div class="bg-white border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow" data-order-id="{{ $order->id }}">
-                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    {{-- Order Info --}}
-                    <div class="flex-1 space-y-3">
-                        <div class="flex flex-wrap items-center gap-3">
-                            <span class="text-base font-bold text-brand-600" dir="ltr">{{ $order->order_number }}</span>
-                            <span class="text-sm font-medium text-gray-900">{{ $order->customer_name }}</span>
-                            @if($order->customer_mobile)
-                            <span class="text-xs text-gray-500" dir="ltr">{{ $order->customer_mobile }}</span>
-                            @endif
-                            @if($order->shipping_type)
-                                @php
-                                    $shippingTypeModel = $shippingTypes->firstWhere('slug', $order->shipping_type);
-                                    $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : $order->shipping_type;
-                                    $isPeyk = str_contains(mb_strtolower($order->shipping_type), 'peyk') || str_contains($shippingLabel, 'پیک');
-                                @endphp
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full {{ $isPeyk ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700' }}">
-                                    @if($isPeyk)
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                    @else
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                    @endif
-                                    {{ $shippingLabel }}
-                                </span>
-                            @endif
-                        </div>
+            @php
+                $shippingTypeModel = $order->shipping_type ? $shippingTypes->firstWhere('slug', $order->shipping_type) : null;
+                $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : ($order->shipping_type ?: '—');
+                $isPeyk = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
+                $isExpired = $order->is_timer_expired;
+                $remaining = $order->timer_remaining_seconds;
+                $timerPercent = 0;
+                if ($order->timer_deadline && $shippingTypeModel) {
+                    $totalSeconds = $shippingTypeModel->timer_minutes * 60;
+                    $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
+                }
+            @endphp
+            <div class="bg-white border {{ $isExpired ? 'border-red-300 shadow-red-100' : 'border-gray-200' }} rounded-xl overflow-hidden hover:shadow-lg transition-all" data-order-id="{{ $order->id }}">
 
-                        {{-- Timer --}}
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 {{ $order->is_timer_expired ? 'text-red-500' : 'text-blue-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="timer-display text-sm font-bold {{ $order->is_timer_expired ? 'text-red-600' : 'text-gray-700' }}"
-                                  data-remaining="{{ $order->timer_remaining_seconds }}"
-                                  data-expired="{{ $order->is_timer_expired ? 'true' : 'false' }}">
-                                @if($order->timer_remaining_seconds > 0)
-                                    {{ sprintf('%02d:%02d:%02d', intdiv($order->timer_remaining_seconds, 3600), intdiv($order->timer_remaining_seconds % 3600, 60), $order->timer_remaining_seconds % 60) }} باقی‌مانده
+                {{-- Timer Bar - Big & Eye-catching --}}
+                <div class="px-4 py-3 {{ $isExpired ? 'bg-red-600' : ($remaining <= 300 && $remaining > 0 ? 'bg-amber-500' : 'bg-gradient-to-l from-blue-600 to-indigo-600') }}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <span class="timer-display text-white text-lg font-extrabold tracking-wide" dir="ltr"
+                                  data-remaining="{{ $remaining }}"
+                                  data-expired="{{ $isExpired ? 'true' : 'false' }}">
+                                @if($remaining > 0)
+                                    {{ sprintf('%02d:%02d:%02d', intdiv($remaining, 3600), intdiv($remaining % 3600, 60), $remaining % 60) }}
                                 @elseif($order->timer_deadline)
-                                    منقضی شده
+                                    منقضی شده!
                                 @else
-                                    بدون تایمر
+                                    --:--:--
                                 @endif
                             </span>
                         </div>
+                        <span class="text-white/80 text-xs font-medium">
+                            @if($remaining > 0)
+                                باقی‌مانده
+                            @elseif($order->timer_deadline)
+                                زمان تمام شده
+                            @else
+                                بدون تایمر
+                            @endif
+                        </span>
+                    </div>
+                    @if($order->timer_deadline && !$isExpired)
+                    <div class="mt-2 w-full bg-white/20 rounded-full h-1.5">
+                        <div class="h-1.5 rounded-full bg-white/70 transition-all duration-1000" style="width: {{ $timerPercent }}%"></div>
+                    </div>
+                    @endif
+                </div>
 
-                        {{-- Products List --}}
-                        @if($order->items->count() > 0)
-                        <div class="mt-3">
-                            <p class="text-xs font-medium text-gray-500 mb-2">محصولات ({{ $order->items->count() }} قلم):</p>
-                            <div class="space-y-1.5">
-                                @foreach($order->items as $item)
-                                <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-5 h-5 flex items-center justify-center bg-gray-200 text-gray-600 rounded text-xs font-bold">{{ $item->quantity }}</span>
-                                        <span class="text-sm text-gray-800">{{ $item->product_name }}</span>
-                                    </div>
-                                    @if($item->product_sku)
-                                    <span class="text-xs text-gray-400" dir="ltr">{{ $item->product_sku }}</span>
+                {{-- Order Header --}}
+                <div class="px-4 pt-4 pb-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-sm font-bold text-brand-600 shrink-0" dir="ltr">{{ $order->order_number }}</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full {{ $isPeyk ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700' }}">
+                                    @if($isPeyk)
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                    @else
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     @endif
-                                </div>
-                                @endforeach
+                                    {{ $shippingLabel }}
+                                </span>
                             </div>
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $order->customer_name }}</p>
+                            @if($order->customer_mobile)
+                            <p class="text-xs text-gray-500 mt-0.5" dir="ltr">{{ $order->customer_mobile }}</p>
+                            @endif
+                        </div>
+                        <a href="{{ route('warehouse.show', $order) }}" class="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors shrink-0" title="مشاهده">
+                            <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                {{-- Products List - Compact --}}
+                @if($order->items->count() > 0)
+                <div class="px-4 pb-3">
+                    <div class="bg-gray-50 rounded-lg divide-y divide-gray-100">
+                        @foreach($order->items->take(4) as $item)
+                        <div class="flex items-center gap-2.5 px-3 py-2">
+                            <span class="w-6 h-6 flex items-center justify-center bg-brand-100 text-brand-700 rounded-md text-xs font-bold shrink-0">{{ $item->quantity }}</span>
+                            <span class="text-sm text-gray-800 truncate">{{ $item->product_name }}</span>
+                        </div>
+                        @endforeach
+                        @if($order->items->count() > 4)
+                        <div class="px-3 py-1.5 text-center">
+                            <span class="text-xs text-gray-400">و {{ $order->items->count() - 4 }} محصول دیگر...</span>
                         </div>
                         @endif
                     </div>
+                </div>
+                @endif
 
-                    {{-- Actions --}}
-                    <div class="flex flex-row lg:flex-col items-center gap-2 shrink-0">
-                        <a href="{{ route('warehouse.print.invoice', $order) }}" target="_blank"
-                           class="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                            پرینت فاکتور
-                        </a>
-                        <a href="{{ route('warehouse.show', $order) }}"
-                           class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                            مشاهده
-                        </a>
-                        @canany(['manage-warehouse', 'manage-permissions'])
-                        <form action="{{ route('warehouse.status', $order) }}" method="POST" class="inline">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="status" value="preparing">
-                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium" onclick="return confirm('انتقال به وضعیت «در حال آماده‌سازی»؟')">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                                شروع آماده‌سازی
-                            </button>
-                        </form>
-                        @endcanany
-                    </div>
+                {{-- Action Buttons - Bottom Bar --}}
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2">
+                    <a href="{{ route('warehouse.print.invoice', $order) }}" target="_blank"
+                       class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-xs font-medium">
+                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        پرینت
+                    </a>
+                    @canany(['manage-warehouse', 'manage-permissions'])
+                    <form action="{{ route('warehouse.status', $order) }}" method="POST" class="flex-1">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="preparing">
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-xs font-medium" onclick="return confirm('شروع آماده‌سازی؟')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                            شروع آماده‌سازی
+                        </button>
+                    </form>
+                    @endcanany
                 </div>
             </div>
             @empty
-            <div class="py-12 text-center text-gray-500">
+            <div class="lg:col-span-2 py-12 text-center text-gray-500">
                 <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 <p class="font-medium">سفارشی در صف وجود ندارد</p>
                 <p class="text-sm mt-1">سفارشات جدید از بخش «سفارش جدید» قابل ثبت هستند</p>
@@ -275,44 +300,40 @@ document.addEventListener('DOMContentLoaded', function() {
         let remaining = parseInt(el.dataset.remaining, 10);
         const isExpired = el.dataset.expired === 'true';
 
-        if (isNaN(remaining) || remaining <= 0) {
-            if (el.dataset.remaining === '0' && !isExpired) return;
-            return;
-        }
+        if (isNaN(remaining) || remaining <= 0) return;
+
+        const card = el.closest('[data-order-id]');
+        const timerBar = el.closest('div[class*="bg-gradient"], div[class*="bg-red"], div[class*="bg-amber"]');
+        const progressBar = timerBar ? timerBar.querySelector('div[style*="width"]') : null;
+        const statusText = timerBar ? timerBar.querySelector('span[class*="text-white/80"]') : null;
 
         const interval = setInterval(function() {
             remaining--;
 
             if (remaining <= 0) {
                 clearInterval(interval);
-                el.textContent = 'منقضی شده';
-                el.classList.remove('text-gray-700');
-                el.classList.add('text-red-600');
-
-                const icon = el.previousElementSibling;
-                if (icon) {
-                    icon.classList.remove('text-blue-500');
-                    icon.classList.add('text-red-500');
+                el.textContent = 'منقضی شده!';
+                if (statusText) statusText.textContent = 'زمان تمام شده';
+                if (timerBar) {
+                    timerBar.className = timerBar.className.replace(/bg-gradient-to-l\s+from-blue-600\s+to-indigo-600|bg-amber-500/g, 'bg-red-600');
                 }
+                if (card) {
+                    card.classList.add('border-red-300', 'shadow-red-100');
+                    card.classList.remove('border-gray-200');
+                }
+                if (progressBar) progressBar.style.width = '0%';
                 return;
             }
 
             const hours = Math.floor(remaining / 3600);
             const minutes = Math.floor((remaining % 3600) / 60);
             const seconds = remaining % 60;
-
             const pad = function(n) { return n.toString().padStart(2, '0'); };
-            el.textContent = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds) + ' باقی‌مانده';
+            el.textContent = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
 
-            // Turn red when less than 5 minutes remain
-            if (remaining <= 300) {
-                el.classList.remove('text-gray-700');
-                el.classList.add('text-red-600');
-                const icon = el.previousElementSibling;
-                if (icon) {
-                    icon.classList.remove('text-blue-500');
-                    icon.classList.add('text-red-500');
-                }
+            // Turn amber when less than 5 minutes
+            if (remaining <= 300 && timerBar && !timerBar.classList.contains('bg-amber-500')) {
+                timerBar.className = timerBar.className.replace(/bg-gradient-to-l\s+from-blue-600\s+to-indigo-600/, 'bg-amber-500');
             }
         }, 1000);
     });
