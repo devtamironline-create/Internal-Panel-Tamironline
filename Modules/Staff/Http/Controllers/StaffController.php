@@ -76,6 +76,7 @@ class StaffController extends Controller
             'is_active' => 'boolean',
             'can_add_group_members' => 'boolean',
             'role' => 'nullable|exists:roles,name',
+            'warehouse_role' => 'nullable|in:warehouse_manager,shipping_packing,preparation,packing,courier,viewer',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
         ]);
@@ -90,6 +91,7 @@ class StaffController extends Controller
             'is_staff' => true,
             'is_active' => $validated['is_active'] ?? true,
             'can_add_group_members' => $request->boolean('can_add_group_members'),
+            'warehouse_role' => $validated['warehouse_role'] ?? null,
         ];
 
         // Convert Jalali birth_date to Gregorian
@@ -133,6 +135,7 @@ class StaffController extends Controller
             'is_active' => 'boolean',
             'can_add_group_members' => 'boolean',
             'role' => 'nullable|exists:roles,name',
+            'warehouse_role' => 'nullable|in:warehouse_manager,shipping_packing,preparation,packing,courier,viewer',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'birth_date' => 'nullable|string',
         ]);
@@ -144,6 +147,7 @@ class StaffController extends Controller
             'email' => $validated['email'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
             'can_add_group_members' => $request->boolean('can_add_group_members'),
+            'warehouse_role' => $validated['warehouse_role'] ?? null,
         ];
 
         // Convert Jalali birth_date to Gregorian
