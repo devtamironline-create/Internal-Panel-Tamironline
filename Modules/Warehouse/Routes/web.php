@@ -39,6 +39,16 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
             Route::post('/{order}/mark-shipped', [OrderController::class, 'markShipped'])->name('mark-shipped');
             Route::post('/{order}/mark-printed', [OrderController::class, 'markPrinted'])->name('mark-printed');
 
+            // Weight management
+            Route::patch('/{order}/weight', [OrderController::class, 'updateWeight'])->name('update-weight');
+
+            // Courier management
+            Route::post('/{order}/assign-courier', [OrderController::class, 'assignCourier'])->name('assign-courier');
+
+            // Print management
+            Route::get('/{order}/check-print-status', [OrderController::class, 'checkPrintStatus'])->name('check-print-status');
+            Route::get('/{order}/print-logs', [OrderController::class, 'getPrintLogs'])->name('print-logs');
+
             // Bulk actions
             Route::post('/bulk-update', [OrderController::class, 'bulkUpdate'])->name('bulk-update');
         });
@@ -54,6 +64,7 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
             Route::get('/', [SettingsController::class, 'index'])->name('index');
             Route::post('/', [SettingsController::class, 'update'])->name('update');
             Route::post('/test-connection', [SettingsController::class, 'testConnection'])->name('test-connection');
+            Route::post('/warehouse', [SettingsController::class, 'updateWarehouseSettings'])->name('warehouse.update');
 
             // Amadast settings
             Route::post('/amadast', [SettingsController::class, 'updateAmadast'])->name('amadast.update');

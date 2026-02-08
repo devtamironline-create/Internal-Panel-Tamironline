@@ -64,6 +64,21 @@ class WooOrder extends Model
         'courier_title',
         'amadast_status',
         'sent_to_amadast_at',
+        // Weight fields
+        'package_weight',
+        'product_weight_woo',
+        'carton_weight',
+        'weight_verified',
+        'weight_difference_percent',
+        // Courier info
+        'courier_name',
+        'courier_mobile',
+        'courier_assigned_at',
+        'courier_notified_to_customer',
+        // Print tracking
+        'print_count',
+        'first_printed_at',
+        'last_printed_at',
         'date_created',
         'date_modified',
         'date_paid',
@@ -84,6 +99,15 @@ class WooOrder extends Model
         'date_completed' => 'datetime',
         'last_synced_at' => 'datetime',
         'sent_to_amadast_at' => 'datetime',
+        'courier_assigned_at' => 'datetime',
+        'courier_notified_to_customer' => 'boolean',
+        'first_printed_at' => 'datetime',
+        'last_printed_at' => 'datetime',
+        'weight_verified' => 'boolean',
+        'package_weight' => 'decimal:2',
+        'product_weight_woo' => 'decimal:2',
+        'carton_weight' => 'decimal:2',
+        'weight_difference_percent' => 'decimal:2',
         'total' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'total_tax' => 'decimal:2',
@@ -140,6 +164,11 @@ class WooOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(WooOrderItem::class, 'woo_order_id');
+    }
+
+    public function printLogs(): HasMany
+    {
+        return $this->hasMany(OrderPrintLog::class, 'woo_order_id');
     }
 
     public function assignedUser(): BelongsTo
@@ -531,5 +560,222 @@ class WooOrder extends Model
 
         // Default city ID (Tehran = 360 usually)
         return \App\Models\Setting::get('amadast_default_city_id', 360);
+    }
+
+    /**
+     * Get elapsed time since order creation
+     */
+    public function getElapsedTimeAttribute(): array
+    {
+        if (!$this->date_created) {
+            return ['hours' => 0, 'minutes' => 0, 'seconds' => 0, 'formatted' => '00:00:00'];
+        }
+
+        $now = now();
+        $diff = $this->date_created->diff($now);
+
+        $totalHours = ($diff->days * 24) + $diff->h;
+
+        return [
+            'days' => $diff->days,
+            'hours' => $diff->h,
+            'minutes' => $diff->i,
+            'seconds' => $diff->s,
+            'total_hours' => $totalHours,
+            'total_minutes' => ($totalHours * 60) + $diff->i,
+            'formatted' => sprintf('%02d:%02d:%02d', $totalHours, $diff->i, $diff->s),
+        ];
+    }
+
+    /**
+     * Set package weight and calculate difference
+     */
+    public function setPackageWeight(float $weight): self
+    {
+        $expectedWeight = $this->getExpectedWeight();
+        $tolerance = (float) \App\Models\Setting::get('weight_tolerance_percent', 10);
+
+        $differencePercent = 0;
+        if ($expectedWeight > 0) {
+            $differencePercent = abs(($weight - $expectedWeight) / $expectedWeight) * 100;
+        }
+
+        $verified = $differencePercent <= $tolerance;
+
+        $this->update([
+            'package_weight' => $weight,
+            'weight_difference_percent' => round($differencePercent, 2),
+            'weight_verified' => $verified,
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Get expected weight (product weight from WooCommerce + carton weight)
+     */
+    public function getExpectedWeight(): float
+    {
+        $productWeight = (float) $this->product_weight_woo;
+        $cartonWeight = (float) ($this->carton_weight ?? \App\Models\Setting::get('default_carton_weight', 0));
+
+        return $productWeight + $cartonWeight;
+    }
+
+    /**
+     * Record print action and handle duplicate warnings
+     */
+    public function recordPrint(int $userId, string $printType = 'invoice', ?string $ipAddress = null, ?string $userAgent = null): array
+    {
+        $existingCount = OrderPrintLog::getUserPrintCount($this->id, $userId, $printType);
+        $isDuplicate = $existingCount > 0;
+        $managerNotified = false;
+
+        // Create print log
+        $printLog = OrderPrintLog::create([
+            'woo_order_id' => $this->id,
+            'user_id' => $userId,
+            'print_type' => $printType,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'was_duplicate' => $isDuplicate,
+            'manager_notified' => false,
+        ]);
+
+        // Update order print count
+        $this->increment('print_count');
+
+        if (!$this->first_printed_at) {
+            $this->update(['first_printed_at' => now()]);
+        }
+        $this->update(['last_printed_at' => now(), 'is_printed' => true]);
+
+        // Send SMS to manager on duplicate print
+        if ($isDuplicate) {
+            $managerMobile = \App\Models\Setting::get('manager_mobile_for_alerts');
+            if ($managerMobile) {
+                $this->notifyManagerOfDuplicatePrint($userId, $existingCount + 1);
+                $printLog->update(['manager_notified' => true]);
+                $managerNotified = true;
+            }
+        }
+
+        return [
+            'is_duplicate' => $isDuplicate,
+            'previous_count' => $existingCount,
+            'current_count' => $existingCount + 1,
+            'manager_notified' => $managerNotified,
+            'show_warning' => $isDuplicate && $existingCount < 2, // Show warning for 2nd and 3rd print
+        ];
+    }
+
+    /**
+     * Notify manager of duplicate print via SMS
+     */
+    protected function notifyManagerOfDuplicatePrint(int $userId, int $printCount): void
+    {
+        $managerMobile = \App\Models\Setting::get('manager_mobile_for_alerts');
+        if (!$managerMobile) {
+            return;
+        }
+
+        $user = \App\Models\User::find($userId);
+        $userName = $user ? $user->full_name : 'کاربر ناشناس';
+
+        $message = "هشدار پرینت تکراری!\n";
+        $message .= "سفارش: #{$this->order_number}\n";
+        $message .= "کاربر: {$userName}\n";
+        $message .= "تعداد پرینت: {$printCount} بار";
+
+        try {
+            $smsService = app(\Modules\SMS\Services\KavenegarService::class);
+            $smsService->send($managerMobile, $message);
+
+            \Illuminate\Support\Facades\Log::info('Manager notified of duplicate print', [
+                'order_id' => $this->id,
+                'user_id' => $userId,
+                'print_count' => $printCount,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to notify manager of duplicate print', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Assign courier and notify customer
+     */
+    public function assignCourier(string $name, string $mobile, bool $notifyCustomer = true): array
+    {
+        $this->update([
+            'courier_name' => $name,
+            'courier_mobile' => $mobile,
+            'courier_assigned_at' => now(),
+            'internal_status' => self::INTERNAL_SHIPPED,
+            'is_shipped' => true,
+        ]);
+
+        $customerNotified = false;
+
+        if ($notifyCustomer) {
+            $customerNotified = $this->notifyCustomerOfCourier();
+            $this->update(['courier_notified_to_customer' => $customerNotified]);
+        }
+
+        return [
+            'success' => true,
+            'customer_notified' => $customerNotified,
+        ];
+    }
+
+    /**
+     * Notify customer about courier assignment via SMS
+     */
+    public function notifyCustomerOfCourier(): bool
+    {
+        $customerPhone = $this->customer_phone ?? $this->billing_phone;
+        if (!$customerPhone || !$this->courier_name || !$this->courier_mobile) {
+            return false;
+        }
+
+        $message = "سفارش #{$this->order_number}\n";
+        $message .= "سفارش شما توسط پیک ارسال شد.\n";
+        $message .= "نام پیک: {$this->courier_name}\n";
+        $message .= "شماره تماس پیک: {$this->courier_mobile}";
+
+        if ($this->tracking_code) {
+            $message .= "\nکد رهگیری: {$this->tracking_code}";
+        }
+
+        try {
+            $smsService = app(\Modules\SMS\Services\KavenegarService::class);
+            $result = $smsService->send($customerPhone, $message);
+
+            \Illuminate\Support\Facades\Log::info('Customer notified of courier assignment', [
+                'order_id' => $this->id,
+                'customer_phone' => $customerPhone,
+            ]);
+
+            return $result['success'] ?? false;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to notify customer of courier', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Check if weight is within tolerance
+     */
+    public function isWeightWithinTolerance(): bool
+    {
+        if (!$this->package_weight || !$this->product_weight_woo) {
+            return true; // Can't verify without data
+        }
+
+        $tolerance = (float) \App\Models\Setting::get('weight_tolerance_percent', 10);
+        return $this->weight_difference_percent <= $tolerance;
     }
 }

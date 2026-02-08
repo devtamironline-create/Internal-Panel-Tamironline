@@ -16,6 +16,14 @@
                 <h1 class="text-2xl font-bold text-slate-100">سفارش #{{ $order->order_number }}</h1>
                 <p class="text-slate-400 mt-1">{{ $order->date_created?->format('Y/m/d H:i') }}</p>
             </div>
+            <!-- Timer -->
+            <div class="flex items-center gap-2 bg-slate-700/50 rounded-lg px-3 py-2" x-data="orderTimer({{ $order->date_created?->timestamp ?? 0 }})" x-init="startTimer()">
+                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-slate-200 font-mono text-sm" x-text="formattedTime"></span>
+                <span class="text-slate-500 text-xs">زمان سپری شده</span>
+            </div>
         </div>
         <div class="flex items-center gap-3">
             <button @click="syncOrder()"
@@ -26,22 +34,23 @@
                 </svg>
                 بروزرسانی
             </button>
-            <a href="{{ route('warehouse.orders.print', $order) }}"
-               target="_blank"
-               class="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
+            <button @click="checkAndPrint('invoice')"
+                    class="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                 </svg>
                 چاپ فاکتور
-            </a>
-            <a href="{{ route('warehouse.orders.print-amadast', $order) }}"
-               target="_blank"
-               class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+                @if($order->print_count > 0)
+                <span class="bg-yellow-500 text-yellow-900 text-xs px-1.5 py-0.5 rounded">{{ $order->print_count }}</span>
+                @endif
+            </button>
+            <button @click="checkAndPrint('amadast')"
+                    class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
                 </svg>
                 فاکتور آمادست
-            </a>
+            </button>
         </div>
     </div>
 
@@ -267,6 +276,125 @@
                 </div>
             </div>
 
+            <!-- Weight Entry -->
+            <div class="bg-slate-800 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-slate-400 mb-4">وزن بسته</h3>
+                <div class="space-y-3">
+                    @if($order->product_weight_woo)
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500">وزن محصول (ووکامرس):</span>
+                        <span class="text-slate-300">{{ number_format($order->product_weight_woo) }} گرم</span>
+                    </div>
+                    @endif
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">وزن بسته (گرم)</label>
+                        <input type="number"
+                               x-model="packageWeight"
+                               placeholder="وزن بسته را وارد کنید"
+                               min="0"
+                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">وزن کارتن (گرم) - اختیاری</label>
+                        <input type="number"
+                               x-model="cartonWeight"
+                               placeholder="وزن کارتن"
+                               min="0"
+                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button @click="updateWeight()"
+                            :disabled="!packageWeight || savingWeight"
+                            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white text-sm rounded-lg transition">
+                        <span x-text="savingWeight ? 'در حال ثبت...' : 'ثبت وزن'"></span>
+                    </button>
+
+                    <!-- Weight verification result -->
+                    @if($order->package_weight)
+                    <div class="pt-3 border-t border-slate-700 mt-3">
+                        <div class="flex items-center gap-2 {{ $order->weight_verified ? 'text-green-400' : 'text-yellow-400' }}">
+                            @if($order->weight_verified)
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span class="text-sm">وزن تایید شده</span>
+                            @else
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span class="text-sm">اختلاف وزن: {{ $order->weight_difference_percent }}%</span>
+                            @endif
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">وزن ثبت شده: {{ number_format($order->package_weight) }} گرم</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Courier Assignment -->
+            <div class="bg-slate-800 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-slate-400 mb-4">اطلاعات پیک</h3>
+                @if($order->courier_name && $order->courier_mobile)
+                    <!-- Courier info already set -->
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">نام پیک:</span>
+                            <span class="text-slate-200">{{ $order->courier_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">موبایل پیک:</span>
+                            <span class="text-slate-200 font-mono">{{ $order->courier_mobile }}</span>
+                        </div>
+                        @if($order->courier_assigned_at)
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">تاریخ تخصیص:</span>
+                            <span class="text-slate-300">{{ $order->courier_assigned_at->diffForHumans() }}</span>
+                        </div>
+                        @endif
+                        <div class="flex items-center gap-2 pt-2 {{ $order->courier_notified_to_customer ? 'text-green-400' : 'text-yellow-400' }}">
+                            @if($order->courier_notified_to_customer)
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span class="text-xs">مشتری مطلع شد</span>
+                            @else
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-xs">مشتری مطلع نشده</span>
+                            @endif
+                        </div>
+                    </div>
+                @else
+                    <!-- Courier assignment form -->
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">نام و نام خانوادگی پیک</label>
+                            <input type="text"
+                                   x-model="courierName"
+                                   placeholder="نام پیک"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">شماره موبایل پیک</label>
+                            <input type="tel"
+                                   x-model="courierMobile"
+                                   placeholder="09123456789"
+                                   maxlength="11"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" x-model="notifyCustomer" id="notifyCustomer" class="rounded bg-slate-700 border-slate-600">
+                            <label for="notifyCustomer" class="text-sm text-slate-300">اطلاع‌رسانی به مشتری</label>
+                        </div>
+                        <button @click="assignCourier()"
+                                :disabled="!courierName || !courierMobile || assigningCourier"
+                                class="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 text-white text-sm rounded-lg transition">
+                            <span x-text="assigningCourier ? 'در حال ثبت...' : 'ثبت و ارسال'"></span>
+                        </button>
+                    </div>
+                @endif
+            </div>
+
             <!-- Amadast Shipping -->
             <div class="bg-slate-800 rounded-lg p-4">
                 <div class="flex items-center justify-between mb-4">
@@ -343,6 +471,46 @@
                 <p class="text-xs text-slate-500 mt-2">تغییرات به صورت خودکار ذخیره می‌شود</p>
             </div>
 
+            <!-- Print Logs -->
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-slate-400">تاریخچه پرینت</h3>
+                    <button @click="showPrintLogs = !showPrintLogs; if(showPrintLogs) loadPrintLogs()"
+                            class="text-xs text-blue-400 hover:text-blue-300">
+                        <span x-text="showPrintLogs ? 'بستن' : 'مشاهده'"></span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="text-slate-500">تعداد پرینت:</span>
+                    <span class="text-slate-200 font-medium">{{ $order->print_count }}</span>
+                    @if($order->first_printed_at)
+                    <span class="text-slate-500 text-xs">|</span>
+                    <span class="text-slate-500 text-xs">اولین: {{ $order->first_printed_at->diffForHumans() }}</span>
+                    @endif
+                </div>
+                <div x-show="showPrintLogs" x-transition class="mt-4 space-y-2">
+                    <template x-if="loadingPrintLogs">
+                        <div class="text-center text-slate-500 text-sm py-4">در حال بارگذاری...</div>
+                    </template>
+                    <template x-if="!loadingPrintLogs && printLogs.length === 0">
+                        <div class="text-center text-slate-500 text-sm py-4">پرینتی ثبت نشده</div>
+                    </template>
+                    <template x-for="log in printLogs" :key="log.id">
+                        <div class="bg-slate-700/50 rounded-lg p-3 text-sm">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="text-slate-200" x-text="log.user"></span>
+                                    <span class="text-slate-500 mx-1">-</span>
+                                    <span class="text-slate-400" x-text="log.print_type"></span>
+                                </div>
+                                <span x-show="log.was_duplicate" class="text-yellow-400 text-xs">تکراری</span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1" x-text="log.created_at_jalali"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Meta Info -->
             <div class="bg-slate-800 rounded-lg p-4">
                 <h3 class="text-sm font-medium text-slate-400 mb-4">اطلاعات تکمیلی</h3>
@@ -366,6 +534,33 @@
         </div>
     </div>
 
+    <!-- Print Warning Modal -->
+    <div x-show="showPrintWarning"
+         x-transition
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-md mx-4">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 bg-yellow-500/20 rounded-full">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-100">هشدار پرینت تکراری</h3>
+            </div>
+            <p class="text-slate-300 mb-6" x-text="printWarningMessage"></p>
+            <div class="flex gap-3 justify-end">
+                <button @click="showPrintWarning = false; pendingPrintType = null"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
+                    انصراف
+                </button>
+                <button @click="confirmPrint()"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition">
+                    ادامه پرینت
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div x-show="showToast"
          x-transition
@@ -385,6 +580,43 @@
 </div>
 
 <script>
+// Timer component
+function orderTimer(orderCreatedTimestamp) {
+    return {
+        formattedTime: '00:00:00',
+        interval: null,
+
+        startTimer() {
+            if (!orderCreatedTimestamp) {
+                this.formattedTime = '--:--:--';
+                return;
+            }
+
+            const updateTime = () => {
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now - orderCreatedTimestamp;
+
+                const hours = Math.floor(elapsed / 3600);
+                const minutes = Math.floor((elapsed % 3600) / 60);
+                const seconds = elapsed % 60;
+
+                this.formattedTime = [
+                    hours.toString().padStart(2, '0'),
+                    minutes.toString().padStart(2, '0'),
+                    seconds.toString().padStart(2, '0')
+                ].join(':');
+            };
+
+            updateTime();
+            this.interval = setInterval(updateTime, 1000);
+        },
+
+        destroy() {
+            if (this.interval) clearInterval(this.interval);
+        }
+    }
+}
+
 function orderDetail() {
     return {
         syncing: false,
@@ -395,12 +627,34 @@ function orderDetail() {
         isShipped: {{ $order->is_shipped ? 'true' : 'false' }},
         trackingCode: '',
         shippingCompany: '',
-        internalNote: '{{ $order->internal_note ?? '' }}',
+        internalNote: `{{ $order->internal_note ?? '' }}`,
         showToast: false,
         toastMessage: '',
         toastSuccess: true,
         sendingToAmadast: false,
         updatingTracking: false,
+
+        // Weight
+        packageWeight: '{{ $order->package_weight ?? '' }}',
+        cartonWeight: '{{ $order->carton_weight ?? '' }}',
+        savingWeight: false,
+
+        // Courier
+        courierName: '',
+        courierMobile: '',
+        notifyCustomer: true,
+        assigningCourier: false,
+
+        // Print
+        showPrintWarning: false,
+        printWarningMessage: '',
+        pendingPrintType: null,
+        printWarningCount: 0,
+
+        // Print logs
+        showPrintLogs: false,
+        printLogs: [],
+        loadingPrintLogs: false,
 
         async syncOrder() {
             this.syncing = true;
@@ -447,16 +701,101 @@ function orderDetail() {
             await this.request('{{ route('warehouse.orders.update-note', $order) }}', 'PATCH', { note: this.internalNote });
         },
 
+        // Weight management
+        async updateWeight() {
+            this.savingWeight = true;
+            try {
+                const response = await this.request('{{ route('warehouse.orders.update-weight', $order) }}', 'PATCH', {
+                    package_weight: parseFloat(this.packageWeight),
+                    carton_weight: this.cartonWeight ? parseFloat(this.cartonWeight) : null
+                });
+                this.showNotification(response.message, response.success);
+                if (response.success) setTimeout(() => location.reload(), 1500);
+            } finally {
+                this.savingWeight = false;
+            }
+        },
+
+        // Courier management
+        async assignCourier() {
+            if (!this.courierMobile.match(/^09[0-9]{9}$/)) {
+                this.showNotification('شماره موبایل نامعتبر است', false);
+                return;
+            }
+            this.assigningCourier = true;
+            try {
+                const response = await this.request('{{ route('warehouse.orders.assign-courier', $order) }}', 'POST', {
+                    courier_name: this.courierName,
+                    courier_mobile: this.courierMobile,
+                    notify_customer: this.notifyCustomer
+                });
+                this.showNotification(response.message, response.success);
+                if (response.success) setTimeout(() => location.reload(), 1500);
+            } finally {
+                this.assigningCourier = false;
+            }
+        },
+
+        // Print management
+        async checkAndPrint(printType) {
+            const response = await this.request('{{ route('warehouse.orders.check-print-status', $order) }}?print_type=' + printType, 'GET');
+
+            if (response.has_printed_before && response.show_warning) {
+                this.printWarningMessage = response.message + '\nآیا مطمئن هستید که می‌خواهید دوباره پرینت بگیرید؟';
+                this.pendingPrintType = printType;
+                this.printWarningCount = response.print_count;
+                this.showPrintWarning = true;
+            } else if (response.has_printed_before && response.print_count >= 2) {
+                // More than 2 prints - show final warning
+                this.printWarningMessage = `شما ${response.print_count} بار این سفارش را پرینت کرده‌اید. این عمل به مدیر گزارش می‌شود.`;
+                this.pendingPrintType = printType;
+                this.showPrintWarning = true;
+            } else {
+                this.openPrintWindow(printType);
+            }
+        },
+
+        confirmPrint() {
+            this.showPrintWarning = false;
+            if (this.pendingPrintType) {
+                this.openPrintWindow(this.pendingPrintType);
+                this.pendingPrintType = null;
+            }
+        },
+
+        openPrintWindow(printType) {
+            const url = printType === 'amadast'
+                ? '{{ route('warehouse.orders.print-amadast', $order) }}'
+                : '{{ route('warehouse.orders.print', $order) }}';
+            window.open(url, '_blank');
+        },
+
+        // Print logs
+        async loadPrintLogs() {
+            this.loadingPrintLogs = true;
+            try {
+                const response = await this.request('{{ route('warehouse.orders.print-logs', $order) }}', 'GET');
+                if (response.success) {
+                    this.printLogs = response.data;
+                }
+            } finally {
+                this.loadingPrintLogs = false;
+            }
+        },
+
         async request(url, method, data = {}) {
             try {
-                const response = await fetch(url, {
+                const options = {
                     method,
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: method !== 'GET' ? JSON.stringify(data) : undefined
-                });
+                    }
+                };
+                if (method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+                const response = await fetch(url, options);
                 return await response.json();
             } catch (error) {
                 return { success: false, message: 'خطا در برقراری ارتباط' };

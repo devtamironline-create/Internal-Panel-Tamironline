@@ -408,6 +408,23 @@
         <a href="{{ route('warehouse.orders.show', $order) }}" class="print-btn secondary">بازگشت</a>
     </div>
 
+    @if(isset($printResult) && $printResult['is_duplicate'])
+    <div class="no-print" style="position: fixed; top: 60px; left: 10px; background: #fef3cd; border: 1px solid #ffc107; padding: 15px 20px; border-radius: 8px; max-width: 350px; z-index: 100;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">⚠️</span>
+            <div>
+                <strong style="color: #856404;">پرینت تکراری</strong>
+                <p style="margin: 5px 0 0; color: #856404; font-size: 12px;">
+                    این سفارش {{ $printResult['current_count'] }} بار پرینت شده است.
+                    @if($printResult['manager_notified'])
+                    <br><span style="color: #dc3545;">مدیر مطلع شد.</span>
+                    @endif
+                </p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="shipping-label">
         <!-- Header -->
         <div class="header">

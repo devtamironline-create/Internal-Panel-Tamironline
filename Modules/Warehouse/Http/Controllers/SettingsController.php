@@ -24,6 +24,11 @@ class SettingsController extends Controller
             'warehouse_auto_sync' => Setting::get('warehouse_auto_sync', false),
             'warehouse_sync_interval' => Setting::get('warehouse_sync_interval', 15),
 
+            // Warehouse settings
+            'weight_tolerance_percent' => Setting::get('weight_tolerance_percent', 10),
+            'default_carton_weight' => Setting::get('default_carton_weight', 0),
+            'manager_mobile_for_alerts' => Setting::get('manager_mobile_for_alerts', ''),
+
             // Amadast settings
             'amadast_client_code' => Setting::get('amadast_client_code', ''),
             'amadast_enabled' => Setting::get('amadast_enabled', false),
@@ -73,6 +78,25 @@ class SettingsController extends Controller
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'تنظیمات با موفقیت ذخیره شد.');
+    }
+
+    /**
+     * Update warehouse operational settings
+     */
+    public function updateWarehouseSettings(Request $request)
+    {
+        $request->validate([
+            'weight_tolerance_percent' => 'required|numeric|min:0|max:100',
+            'default_carton_weight' => 'nullable|numeric|min:0',
+            'manager_mobile_for_alerts' => 'nullable|string|regex:/^09[0-9]{9}$/',
+        ]);
+
+        Setting::set('weight_tolerance_percent', $request->weight_tolerance_percent);
+        Setting::set('default_carton_weight', $request->default_carton_weight ?? 0);
+        Setting::set('manager_mobile_for_alerts', $request->manager_mobile_for_alerts);
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'تنظیمات عملیاتی انبار ذخیره شد.');
     }
 
     /**

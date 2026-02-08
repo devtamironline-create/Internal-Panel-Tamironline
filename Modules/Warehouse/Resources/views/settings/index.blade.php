@@ -134,6 +134,55 @@
         </div>
     </form>
 
+    <!-- Warehouse Operational Settings -->
+    <div class="max-w-2xl mt-8">
+        <form action="{{ route('warehouse.settings.warehouse.update') }}" method="POST">
+            @csrf
+            <div class="bg-slate-800 rounded-lg p-6">
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">تنظیمات عملیاتی انبار</h2>
+                <p class="text-slate-400 text-sm mb-6">
+                    تنظیمات مربوط به وزن، تلرانس و اعلان‌ها
+                </p>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">تلرانس وزن (درصد)</label>
+                            <input type="number" name="weight_tolerance_percent"
+                                   value="{{ old('weight_tolerance_percent', $settings['weight_tolerance_percent']) }}"
+                                   min="0" max="100" step="0.1"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-slate-500 text-sm mt-1">اختلاف مجاز بین وزن واقعی و وزن ثبت شده در سایت</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">وزن پیش‌فرض کارتن (گرم)</label>
+                            <input type="number" name="default_carton_weight"
+                                   value="{{ old('default_carton_weight', $settings['default_carton_weight']) }}"
+                                   min="0" step="1"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-slate-500 text-sm mt-1">وزن پیش‌فرض کارتن بسته‌بندی</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">موبایل مدیر برای هشدارها</label>
+                        <input type="text" name="manager_mobile_for_alerts"
+                               value="{{ old('manager_mobile_for_alerts', $settings['manager_mobile_for_alerts']) }}"
+                               placeholder="09123456789"
+                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-slate-500 text-sm mt-1">برای دریافت پیامک هشدار پرینت تکراری و سایر اعلان‌ها</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        ذخیره تنظیمات عملیاتی
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <!-- Plugin Download Section -->
     <div class="max-w-2xl mt-8">
         <div class="bg-slate-800 rounded-lg p-6">

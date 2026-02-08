@@ -320,20 +320,52 @@ class OrderController extends Controller
     }
 
     /**
+     * Check print status before printing (for warning)
+     */
+    public function checkPrintStatus(Request $request, WooOrder $order): JsonResponse
+    {
+        $printType = $request->get('print_type', 'invoice');
+        $userId = auth()->id();
+
+        $existingCount = \Modules\Warehouse\Models\OrderPrintLog::getUserPrintCount(
+            $order->id,
+            $userId,
+            $printType
+        );
+
+        return response()->json([
+            'success' => true,
+            'has_printed_before' => $existingCount > 0,
+            'print_count' => $existingCount,
+            'show_warning' => $existingCount > 0 && $existingCount < 2,
+            'message' => $existingCount > 0
+                ? "شما قبلاً {$existingCount} بار این سفارش را پرینت کرده‌اید."
+                : null,
+        ]);
+    }
+
+    /**
      * Print order (show printable view)
      */
-    public function print(WooOrder $order)
+    public function print(Request $request, WooOrder $order)
     {
         $order->load('items');
-        $order->markAsPrinted();
 
-        return view('warehouse::orders.print', compact('order'));
+        // Record print and get duplicate info
+        $printResult = $order->recordPrint(
+            auth()->id(),
+            'invoice',
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return view('warehouse::orders.print', compact('order', 'printResult'));
     }
 
     /**
      * Print Amadast shipping label with tracking codes and barcodes
      */
-    public function printAmadast(WooOrder $order)
+    public function printAmadast(Request $request, WooOrder $order)
     {
         $order->load('items');
 
@@ -343,7 +375,106 @@ class OrderController extends Controller
             $order->refresh();
         }
 
-        return view('warehouse::orders.print-amadast', compact('order'));
+        // Record print and get duplicate info
+        $printResult = $order->recordPrint(
+            auth()->id(),
+            'amadast',
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return view('warehouse::orders.print-amadast', compact('order', 'printResult'));
+    }
+
+    /**
+     * Update package weight
+     */
+    public function updateWeight(Request $request, WooOrder $order): JsonResponse
+    {
+        $request->validate([
+            'package_weight' => 'required|numeric|min:0',
+            'carton_weight' => 'nullable|numeric|min:0',
+        ]);
+
+        // Update carton weight if provided
+        if ($request->filled('carton_weight')) {
+            $order->update(['carton_weight' => $request->carton_weight]);
+        }
+
+        // Set package weight and calculate difference
+        $order->setPackageWeight($request->package_weight);
+        $order->refresh();
+
+        $isWithinTolerance = $order->isWeightWithinTolerance();
+        $expectedWeight = $order->getExpectedWeight();
+
+        return response()->json([
+            'success' => true,
+            'message' => $isWithinTolerance
+                ? 'وزن ثبت شد و در محدوده مجاز است.'
+                : 'وزن ثبت شد اما خارج از محدوده مجاز است!',
+            'data' => [
+                'package_weight' => $order->package_weight,
+                'expected_weight' => $expectedWeight,
+                'difference_percent' => $order->weight_difference_percent,
+                'is_within_tolerance' => $isWithinTolerance,
+                'weight_verified' => $order->weight_verified,
+            ],
+        ]);
+    }
+
+    /**
+     * Assign courier to order
+     */
+    public function assignCourier(Request $request, WooOrder $order): JsonResponse
+    {
+        $request->validate([
+            'courier_name' => 'required|string|max:100',
+            'courier_mobile' => 'required|string|regex:/^09[0-9]{9}$/',
+            'notify_customer' => 'boolean',
+        ]);
+
+        $result = $order->assignCourier(
+            $request->courier_name,
+            $request->courier_mobile,
+            $request->boolean('notify_customer', true)
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اطلاعات پیک ثبت شد.',
+            'customer_notified' => $result['customer_notified'],
+            'order' => $order->fresh(),
+        ]);
+    }
+
+    /**
+     * Get print logs for an order
+     */
+    public function getPrintLogs(WooOrder $order): JsonResponse
+    {
+        $logs = $order->printLogs()
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'user' => $log->user->full_name ?? 'کاربر ناشناس',
+                    'print_type' => $log->print_type_label,
+                    'was_duplicate' => $log->was_duplicate,
+                    'manager_notified' => $log->manager_notified,
+                    'ip_address' => $log->ip_address,
+                    'created_at' => $log->created_at->format('Y-m-d H:i:s'),
+                    'created_at_jalali' => jdate($log->created_at)->format('Y/m/d H:i'),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs,
+            'total_count' => $logs->count(),
+        ]);
     }
 
     /**
