@@ -61,6 +61,32 @@ class WooCommerceController extends Controller
         }
     }
 
+    public function fetchShippingMethods()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $service = new WooCommerceService();
+            return response()->json($service->fetchShippingMethods());
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage(), 'methods' => []]);
+        }
+    }
+
+    public function saveShippingMappings(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        $mappings = $request->input('mappings', []);
+        WarehouseSetting::set('wc_shipping_mappings', json_encode($mappings));
+
+        return response()->json(['success' => true, 'message' => 'نقشه‌برداری نوع ارسال ذخیره شد.']);
+    }
+
     public function sync(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

@@ -83,6 +83,80 @@
             </div>
         </div>
     </div>
+
+    <!-- WooCommerce Shipping Method Mapping -->
+    <div class="bg-white rounded-xl shadow-sm p-6" x-data="wcShippingMapping()">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-gray-900">نقشه‌برداری ارسال ووکامرس</h2>
+            <button @click="fetchMethods()" :disabled="fetching" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">
+                <span x-show="!fetching">دریافت از ووکامرس</span>
+                <span x-show="fetching">در حال دریافت...</span>
+            </button>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">روش‌های ارسال ووکامرس را به انواع ارسال داخلی متصل کنید. هر روش ووکامرس به یک نوع ارسال داخلی (پست، پیک و ...) مپ می‌شود.</p>
+
+        <!-- Fetch Status -->
+        <div x-show="fetchMessage" x-cloak class="mb-4 p-3 rounded-lg text-sm"
+             :class="fetchError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'">
+            <span x-text="fetchMessage"></span>
+        </div>
+
+        <!-- Mapping Table -->
+        <div x-show="methods.length > 0" x-cloak class="border rounded-lg overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-right font-medium text-gray-700">روش ووکامرس</th>
+                        <th class="px-4 py-2 text-right font-medium text-gray-700">منطقه</th>
+                        <th class="px-4 py-2 text-right font-medium text-gray-700">نوع ارسال داخلی</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <template x-for="(method, index) in methods" :key="index">
+                        <tr>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span x-text="method.method_title" class="font-medium text-gray-900"></span>
+                                    <span class="text-xs text-gray-400" x-text="method.method_id" dir="ltr"></span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-gray-500" x-text="method.zone_name"></td>
+                            <td class="px-4 py-3">
+                                <select x-model="mappings[method.method_id]" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">-- انتخاب نوع ارسال --</option>
+                                    @foreach($shippingTypes as $type)
+                                    <option value="{{ $type->slug }}">{{ $type->name }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Saved Mappings Display -->
+        @if(!empty($shippingMappings))
+        <div x-show="methods.length === 0" class="mb-4">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">نقشه‌برداری فعلی:</h3>
+            <div class="space-y-1">
+                @foreach($shippingMappings as $wcMethod => $internalType)
+                @if(!empty($internalType))
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                    <span class="text-gray-600" dir="ltr">{{ $wcMethod }}</span>
+                    <span class="font-medium text-gray-900">→ {{ $internalType }}</span>
+                </div>
+                @endif
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <button x-show="methods.length > 0" @click="saveMappings()" :disabled="saving" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-50">
+            <span x-show="!saving">ذخیره نقشه‌برداری</span>
+            <span x-show="saving">در حال ذخیره...</span>
+        </button>
+    </div>
 </div>
 
 @push('scripts')
@@ -102,6 +176,59 @@ function updateShipping(e, id) {
     .then(r => r.json())
     .then(d => { if (d.success) location.reload(); else alert(d.message); });
     return false;
+}
+
+function wcShippingMapping() {
+    return {
+        methods: [],
+        mappings: @json($shippingMappings ?? []),
+        fetching: false,
+        saving: false,
+        fetchMessage: '',
+        fetchError: false,
+
+        async fetchMethods() {
+            this.fetching = true;
+            this.fetchMessage = '';
+            try {
+                const res = await fetch('{{ route("warehouse.woocommerce.shipping-methods") }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.methods = data.methods;
+                    this.fetchMessage = data.methods.length + ' روش ارسال دریافت شد.';
+                    this.fetchError = false;
+                } else {
+                    this.fetchMessage = data.message || 'خطا در دریافت';
+                    this.fetchError = true;
+                }
+            } catch (e) {
+                this.fetchMessage = 'خطا در ارتباط با سرور';
+                this.fetchError = true;
+            }
+            this.fetching = false;
+        },
+
+        async saveMappings() {
+            this.saving = true;
+            try {
+                const res = await fetch('{{ route("warehouse.woocommerce.shipping-mappings") }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ mappings: this.mappings }),
+                });
+                const data = await res.json();
+                this.fetchMessage = data.message;
+                this.fetchError = !data.success;
+            } catch (e) {
+                this.fetchMessage = 'خطا در ذخیره';
+                this.fetchError = true;
+            }
+            this.saving = false;
+        }
+    };
 }
 </script>
 @endpush

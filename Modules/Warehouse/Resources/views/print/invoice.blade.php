@@ -129,7 +129,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert('وضعیت سفارش به "پرینت شده" تغییر کرد.');
+                    alert('سفارش به مرحله آماده‌سازی منتقل شد.');
                     window.print();
                 }
             });

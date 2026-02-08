@@ -17,8 +17,10 @@ class SettingsController extends Controller
 
         $shippingTypes = WarehouseShippingType::all();
         $weightTolerance = WarehouseSetting::get('weight_tolerance', '5');
+        $shippingMappingsJson = WarehouseSetting::get('wc_shipping_mappings', '{}');
+        $shippingMappings = json_decode($shippingMappingsJson, true) ?: [];
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance'));
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'shippingMappings'));
     }
 
     public function update(Request $request)

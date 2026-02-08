@@ -30,11 +30,11 @@ class PrintController extends Controller
             abort(403);
         }
 
-        if (in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PREPARING])) {
-            $order->updateStatus(WarehouseOrder::STATUS_PRINTED);
+        if ($order->status === WarehouseOrder::STATUS_PENDING) {
+            $order->updateStatus(WarehouseOrder::STATUS_PREPARING);
         }
 
-        return response()->json(['success' => true, 'message' => 'وضعیت به پرینت شده تغییر کرد.']);
+        return response()->json(['success' => true, 'message' => 'سفارش به مرحله آماده‌سازی منتقل شد.']);
     }
 
     public function label(WarehouseOrder $order)

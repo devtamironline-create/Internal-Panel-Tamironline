@@ -32,25 +32,26 @@ class PackingController extends Controller
             return response()->json(['success' => false, 'message' => 'سفارشی با این بارکد یافت نشد.']);
         }
 
-        if (!in_array($order->status, [WarehouseOrder::STATUS_PRINTED, WarehouseOrder::STATUS_PACKING])) {
+        if ($order->status !== WarehouseOrder::STATUS_PREPARING) {
             return response()->json([
                 'success' => false,
-                'message' => 'این سفارش در مرحله بسته‌بندی نیست. وضعیت فعلی: ' . $order->status_label,
+                'message' => 'این سفارش در مرحله آماده‌سازی نیست. وضعیت فعلی: ' . $order->status_label,
             ]);
         }
 
-        // Move to packing if it was printed
-        if ($order->status === WarehouseOrder::STATUS_PRINTED) {
-            $order->updateStatus(WarehouseOrder::STATUS_PACKING);
-        }
+        // Scan barcode moves order directly to packed (ready to ship)
+        $order->updateStatus(WarehouseOrder::STATUS_PACKED);
 
         return response()->json([
             'success' => true,
+            'message' => 'سفارش ' . $order->order_number . ' آماده ارسال شد.',
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'barcode' => $order->barcode,
                 'customer_name' => $order->customer_name,
+                'customer_mobile' => $order->customer_mobile,
+                'shipping_type' => $order->shipping_type,
                 'total_weight' => $order->total_weight,
                 'status' => $order->status,
                 'items' => $order->items->map(fn($item) => [
@@ -60,7 +61,6 @@ class PackingController extends Controller
                     'product_sku' => $item->product_sku,
                     'quantity' => $item->quantity,
                     'weight' => $item->weight,
-                    'scanned' => $item->scanned,
                 ]),
             ],
         ]);

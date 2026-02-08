@@ -233,17 +233,80 @@ class WooCommerceService
         ];
     }
 
+    public function fetchShippingMethods(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.', 'methods' => []];
+        }
+
+        try {
+            $methods = [];
+
+            // Fetch shipping zones
+            $zonesResponse = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones');
+
+            if ($zonesResponse->successful()) {
+                foreach ($zonesResponse->json() as $zone) {
+                    $zoneId = $zone['id'];
+                    $zoneName = $zone['name'] ?? 'Zone ' . $zoneId;
+
+                    // Fetch methods for each zone
+                    $methodsResponse = Http::timeout(15)
+                        ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                        ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones/' . $zoneId . '/methods');
+
+                    if ($methodsResponse->successful()) {
+                        foreach ($methodsResponse->json() as $method) {
+                            $methods[] = [
+                                'id' => $method['id'] ?? 0,
+                                'method_id' => $method['method_id'] ?? '',
+                                'method_title' => $method['title'] ?? $method['method_title'] ?? '',
+                                'zone_name' => $zoneName,
+                                'enabled' => $method['enabled'] ?? false,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            return ['success' => true, 'methods' => $methods];
+        } catch (\Exception $e) {
+            Log::error('WooCommerce fetch shipping methods failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage(), 'methods' => []];
+        }
+    }
+
     protected function detectShippingType(array $wcOrder): string
     {
         $shippingLines = $wcOrder['shipping_lines'] ?? [];
 
-        foreach ($shippingLines as $line) {
-            $methodId = strtolower($line['method_id'] ?? '');
-            $methodTitle = strtolower($line['method_title'] ?? '');
+        // Load saved mappings from settings
+        $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
+        $mappings = $mappingsJson ? json_decode($mappingsJson, true) : [];
 
-            // Check for courier/local delivery
-            if (str_contains($methodId, 'local') || str_contains($methodId, 'courier')
-                || str_contains($methodTitle, 'پیک') || str_contains($methodTitle, 'courier')) {
+        foreach ($shippingLines as $line) {
+            $methodId = $line['method_id'] ?? '';
+            $methodTitle = $line['method_title'] ?? '';
+
+            // Check saved mappings first (by method_id)
+            if (!empty($mappings[$methodId])) {
+                return $mappings[$methodId];
+            }
+
+            // Check saved mappings by method_title
+            foreach ($mappings as $key => $mappedType) {
+                if (mb_strtolower($key) === mb_strtolower($methodTitle) && !empty($mappedType)) {
+                    return $mappedType;
+                }
+            }
+
+            // Fallback: auto-detect courier/local delivery
+            $lowerMethodId = strtolower($methodId);
+            $lowerTitle = strtolower($methodTitle);
+            if (str_contains($lowerMethodId, 'local') || str_contains($lowerMethodId, 'courier')
+                || str_contains($lowerTitle, 'پیک') || str_contains($lowerTitle, 'courier')) {
                 return 'courier';
             }
         }
