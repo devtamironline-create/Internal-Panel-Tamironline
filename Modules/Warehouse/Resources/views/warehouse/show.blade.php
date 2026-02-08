@@ -400,12 +400,9 @@
 </div>
 
 @if($order->status === 'preparing')
-@push('scripts')
-<script>
-function preparingStation() {
-    return {
-        orderId: {{ $order->id }},
-        items: @json($order->items->map(fn($item) => [
+@php
+    $itemsJson = $order->items->map(function($item) {
+        return [
             'id' => $item->id,
             'product_name' => $item->product_name,
             'product_barcode' => $item->product_barcode,
@@ -413,7 +410,15 @@ function preparingStation() {
             'quantity' => $item->quantity,
             'weight' => $item->weight,
             'scanned' => (bool) $item->scanned,
-        ])),
+        ];
+    });
+@endphp
+@push('scripts')
+<script>
+function preparingStation() {
+    return {
+        orderId: {{ $order->id }},
+        items: @json($itemsJson),
         productBarcode: '',
         scanning: false,
         scanMessage: '',
