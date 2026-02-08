@@ -10,20 +10,38 @@ class CheckWarehouseRole
 {
     /**
      * Warehouse role hierarchy and permissions
+     *
+     * Roles:
+     * - admin: Full system access
+     * - warehouse_manager: مدیر انبار - Full warehouse access
+     * - shipping_packing: مسئول ارسال و بسته‌بندی - Orders, packing, shipping
+     * - preparation: آماده‌سازی - Queue and order preparation
+     * - packing: بسته‌بندی - Packing station only
+     * - courier: پیک - Courier management only
+     * - viewer: مشاهده - Read-only access
      */
     protected array $rolePermissions = [
         'admin' => ['*'], // All permissions
+        'warehouse_manager' => ['*'], // مدیر انبار - Full warehouse access
+        'shipping_packing' => [
+            // مسئول ارسال و بسته‌بندی - Full operational access
+            'dashboard', 'queue', 'orders.*', 'packing.*', 'courier.*',
+            'orders.index', 'orders.show', 'orders.print', 'orders.print-amadast',
+            'orders.update-internal-status', 'orders.mark-packed', 'orders.update-weight',
+            'orders.assign-courier', 'orders.mark-shipped', 'orders.send-to-amadast',
+            'orders.update-tracking', 'floating-orders'
+        ],
         'preparation' => [
             'dashboard', 'queue', 'orders.index', 'orders.show', 'orders.print',
-            'orders.print-amadast', 'orders.update-internal-status'
+            'orders.print-amadast', 'orders.update-internal-status', 'floating-orders'
         ],
         'packing' => [
             'dashboard', 'queue', 'packing.*', 'orders.show', 'orders.print',
-            'orders.print-amadast', 'orders.mark-packed', 'orders.update-weight'
+            'orders.print-amadast', 'orders.mark-packed', 'orders.update-weight', 'floating-orders'
         ],
         'courier' => [
             'dashboard', 'courier.*', 'orders.show', 'orders.assign-courier',
-            'orders.mark-shipped'
+            'orders.mark-shipped', 'floating-orders'
         ],
         'viewer' => [
             'dashboard', 'orders.index', 'orders.show'
@@ -46,8 +64,8 @@ class CheckWarehouseRole
         // Get user's warehouse role
         $userRole = $user->warehouse_role ?? 'viewer';
 
-        // Admin has access to everything
-        if ($userRole === 'admin' || $user->role === 'admin') {
+        // Admin and warehouse_manager have access to everything
+        if ($userRole === 'admin' || $userRole === 'warehouse_manager' || $user->role === 'admin') {
             return $next($request);
         }
 
@@ -110,5 +128,38 @@ class CheckWarehouseRole
 
         return redirect()->route('warehouse.dashboard')
             ->with('error', $message);
+    }
+
+    /**
+     * Check if user can see floating orders panel
+     */
+    public static function canSeeFloatingOrders($user): bool
+    {
+        if (!$user) return false;
+
+        $userRole = $user->warehouse_role ?? null;
+        if (!$userRole) return false;
+
+        // Roles that can see floating orders
+        $allowedRoles = ['admin', 'warehouse_manager', 'shipping_packing', 'preparation', 'packing', 'courier'];
+
+        return in_array($userRole, $allowedRoles) || $user->role === 'admin';
+    }
+
+    /**
+     * Get role label in Persian
+     */
+    public static function getRoleLabel(string $role): string
+    {
+        return match($role) {
+            'admin' => 'مدیر سیستم',
+            'warehouse_manager' => 'مدیر انبار',
+            'shipping_packing' => 'مسئول ارسال و بسته‌بندی',
+            'preparation' => 'آماده‌سازی',
+            'packing' => 'بسته‌بندی',
+            'courier' => 'پیک',
+            'viewer' => 'مشاهده‌کننده',
+            default => $role,
+        };
     }
 }

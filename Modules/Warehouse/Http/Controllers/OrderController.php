@@ -601,4 +601,67 @@ class OrderController extends Controller
             'message' => 'خطا در دریافت اطلاعات رهگیری'
         ]);
     }
+
+    /**
+     * Get orders for floating panel (API endpoint)
+     */
+    public function floatingOrders(): JsonResponse
+    {
+        // Get active orders (not shipped, not cancelled)
+        $orders = WooOrder::with('items')
+            ->whereIn('status', [
+                WooOrder::STATUS_PROCESSING,
+                WooOrder::STATUS_PENDING,
+                WooOrder::STATUS_ON_HOLD,
+            ])
+            ->whereIn('internal_status', [
+                WooOrder::INTERNAL_NEW,
+                WooOrder::INTERNAL_CONFIRMED,
+                WooOrder::INTERNAL_PICKING,
+                WooOrder::INTERNAL_PACKED,
+            ])
+            ->where('is_shipped', false)
+            ->orderByDesc('date_created')
+            ->limit(50)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->customer_full_name,
+                    'items_count' => $order->items_count,
+                    'total' => $order->formatted_total,
+                    'status' => $order->status,
+                    'status_label' => $order->status_label,
+                    'internal_status' => $order->internal_status,
+                    'internal_status_label' => $order->internal_status_label,
+                    'is_printed' => $order->is_printed,
+                    'is_packed' => $order->is_packed,
+                    'date' => $order->date_created?->format('m/d H:i'),
+                ];
+            });
+
+        // Count by internal status
+        $counts = [
+            'pending' => WooOrder::whereIn('internal_status', [WooOrder::INTERNAL_NEW, WooOrder::INTERNAL_CONFIRMED])
+                ->where('is_shipped', false)
+                ->whereIn('status', [WooOrder::STATUS_PROCESSING, WooOrder::STATUS_PENDING, WooOrder::STATUS_ON_HOLD])
+                ->count(),
+            'processing' => WooOrder::whereIn('internal_status', [WooOrder::INTERNAL_PICKING, WooOrder::INTERNAL_PACKED])
+                ->whereNot('internal_status', WooOrder::INTERNAL_PACKED)
+                ->where('is_shipped', false)
+                ->whereIn('status', [WooOrder::STATUS_PROCESSING, WooOrder::STATUS_PENDING, WooOrder::STATUS_ON_HOLD])
+                ->count(),
+            'packed' => WooOrder::where('internal_status', WooOrder::INTERNAL_PACKED)
+                ->where('is_shipped', false)
+                ->whereIn('status', [WooOrder::STATUS_PROCESSING, WooOrder::STATUS_PENDING, WooOrder::STATUS_ON_HOLD])
+                ->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'orders' => $orders,
+            'counts' => $counts,
+        ]);
+    }
 }

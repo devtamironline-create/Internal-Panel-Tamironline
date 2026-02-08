@@ -1025,6 +1025,9 @@
         @include('components.chat-widget')
     @endif
 
+    {{-- Floating Orders Panel for Warehouse Staff --}}
+    @include('components.floating-orders-panel')
+
     <!-- Mandatory Avatar Upload Modal -->
     @if(auth()->check() && !auth()->user()->avatar)
     <div x-data="avatarUploadModal()" x-init="init()" class="fixed inset-0 z-[9999] overflow-y-auto" x-show="showModal" x-cloak>

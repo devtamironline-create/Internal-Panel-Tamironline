@@ -20,6 +20,9 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
         // Dashboard
         Route::get('/', [OrderController::class, 'dashboard'])->name('dashboard');
 
+        // Floating Orders Panel API
+        Route::get('/floating-orders', [OrderController::class, 'floatingOrders'])->name('floating-orders');
+
         // Preparation Queue
         Route::get('/queue', [PackingController::class, 'queue'])->name('queue');
 
