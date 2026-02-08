@@ -134,7 +134,8 @@ function showResult(divId, success, message) {
     } else {
         div.classList.add('bg-red-50', 'text-red-800');
     }
-    div.innerHTML = message;
+    // Replace newlines with <br> for multi-line messages
+    div.innerHTML = message.replace(/\n/g, '<br>');
 }
 
 function testWcConnection() {

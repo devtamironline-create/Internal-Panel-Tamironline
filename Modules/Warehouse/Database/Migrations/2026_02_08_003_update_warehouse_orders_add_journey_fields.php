@@ -12,6 +12,10 @@ return new class extends Migration
         // Change status from enum to varchar to support more statuses
         DB::statement("ALTER TABLE warehouse_orders MODIFY COLUMN status VARCHAR(50) DEFAULT 'pending'");
 
+        // Migrate old status values to new ones
+        DB::table('warehouse_orders')->where('status', 'processing')->update(['status' => 'pending']);
+        DB::table('warehouse_orders')->where('status', 'ready_to_ship')->update(['status' => 'packed']);
+
         Schema::table('warehouse_orders', function (Blueprint $table) {
             $table->string('shipping_type', 50)->nullable()->after('status');
             $table->unsignedBigInteger('wc_order_id')->nullable()->after('order_number');

@@ -95,15 +95,35 @@ class WooCommerceService
 
     public function syncOrders(?string $wcStatus = 'processing'): array
     {
+        // Check if required DB columns exist (migration must be run first)
+        if (!\Schema::hasColumn('warehouse_orders', 'wc_order_id')) {
+            return [
+                'success' => false,
+                'message' => 'ابتدا باید مایگریشن اجرا شود. دستور php artisan migrate را روی سرور اجرا کنید.',
+            ];
+        }
+
         $result = $this->fetchOrders(1, 100, $wcStatus);
 
         if (!$result['success']) {
             return $result;
         }
 
+        if (empty($result['orders'])) {
+            WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
+            return [
+                'success' => true,
+                'message' => 'سفارشی با وضعیت انتخاب شده در ووکامرس یافت نشد.',
+                'imported' => 0,
+                'skipped' => 0,
+                'failed' => 0,
+            ];
+        }
+
         $imported = 0;
         $skipped = 0;
         $failed = 0;
+        $lastError = '';
 
         foreach ($result['orders'] as $wcOrder) {
             try {
@@ -160,15 +180,22 @@ class WooCommerceService
                     'wc_order_id' => $wcOrder['id'] ?? 'unknown',
                     'error' => $e->getMessage(),
                 ]);
+                $lastError = $e->getMessage();
                 $failed++;
             }
         }
 
         WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
 
+        $totalFound = count($result['orders']);
+        $message = "از {$totalFound} سفارش: وارد شده: {$imported} | تکراری: {$skipped} | خطا: {$failed}";
+        if ($failed > 0 && $lastError) {
+            $message .= "\nآخرین خطا: " . \Illuminate\Support\Str::limit($lastError, 150);
+        }
+
         return [
-            'success' => true,
-            'message' => "سینک انجام شد. وارد شده: {$imported} | تکراری: {$skipped} | خطا: {$failed}",
+            'success' => $imported > 0 || $failed === 0,
+            'message' => $message,
             'imported' => $imported,
             'skipped' => $skipped,
             'failed' => $failed,

@@ -68,7 +68,7 @@ class WooCommerceController extends Controller
         }
 
         try {
-            $wcStatus = $request->get('wc_status', 'processing');
+            $wcStatus = $request->input('wc_status', 'processing');
             if ($wcStatus === 'any') {
                 $wcStatus = null;
             }
