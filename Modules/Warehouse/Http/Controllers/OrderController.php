@@ -101,12 +101,22 @@ class OrderController extends Controller
 
         $orders = $query->paginate(config('warehouse.orders.per_page', 20));
 
+        // Get new orders for the sidebar queue
+        $newOrders = WooOrder::with('items')
+            ->whereIn('internal_status', [WooOrder::INTERNAL_NEW, null])
+            ->whereIn('status', [WooOrder::STATUS_PROCESSING, WooOrder::STATUS_PENDING, WooOrder::STATUS_ON_HOLD])
+            ->where('is_shipped', false)
+            ->orderByDesc('date_created')
+            ->limit(20)
+            ->get();
+
         $statuses = WooOrder::getStatuses();
         $internalStatuses = WooOrder::getInternalStatuses();
         $staff = User::staff()->active()->get();
 
         return view('warehouse::orders.index', compact(
             'orders',
+            'newOrders',
             'statuses',
             'internalStatuses',
             'staff'
