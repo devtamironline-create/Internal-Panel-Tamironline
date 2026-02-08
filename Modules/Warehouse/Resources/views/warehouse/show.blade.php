@@ -263,7 +263,126 @@
         $nextLabel = $nextStatus ? $statusLabels[$nextStatus] : null;
         $nextColor = $nextStatus ? $statusColors[$nextStatus] : null;
     @endphp
-    @if($nextStatus)
+
+    @if($order->status === 'preparing')
+    <!-- Preparing Stage: Scan Products + Verify Weight -->
+    <div class="bg-white rounded-xl shadow-sm" x-data="preparingStation()" x-init="init()">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-bold text-gray-900">اسکن محصولات و تایید وزن</h2>
+            <p class="text-sm text-gray-500 mt-1">ابتدا بارکد تمام محصولات را اسکن کنید، سپس وزن بسته را وارد نمایید.</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Step 1: Product Scanning -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-gray-700">مرحله ۱: اسکن محصولات</h3>
+                    <span class="text-sm font-medium" :class="allScanned ? 'text-green-600' : 'text-orange-600'">
+                        <span x-text="scannedCount"></span> / <span x-text="totalCount"></span> اسکن شده
+                    </span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+                    <div class="bg-green-500 h-2 rounded-full transition-all duration-500" :style="'width: ' + (totalCount > 0 ? (scannedCount / totalCount * 100) : 0) + '%'"></div>
+                </div>
+
+                <!-- Scan Input -->
+                <div class="relative mb-4" x-show="!allScanned">
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                    </svg>
+                    <input type="text"
+                           x-ref="productScanInput"
+                           x-model="productBarcode"
+                           @keydown.enter.prevent="scanProduct()"
+                           :disabled="scanning"
+                           placeholder="بارکد محصول را اسکن کنید..."
+                           class="w-full pr-12 pl-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base font-medium text-center transition-colors"
+                           :class="scanning ? 'bg-gray-100 cursor-not-allowed' : ''">
+                </div>
+
+                <!-- All Scanned Badge -->
+                <div x-show="allScanned" x-cloak class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl mb-4">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="text-sm font-medium text-green-700">تمام محصولات اسکن شدند</span>
+                </div>
+
+                <!-- Scan Message -->
+                <div x-show="scanMessage" x-cloak class="p-3 rounded-lg text-sm mb-3" :class="scanError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'">
+                    <span x-text="scanMessage"></span>
+                </div>
+
+                <!-- Items List with Scan Status -->
+                <div class="space-y-1.5">
+                    <template x-for="item in items" :key="item.id">
+                        <div class="flex items-center justify-between p-2.5 rounded-lg border text-sm transition-colors"
+                             :class="item.scanned ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 flex items-center justify-center rounded text-xs font-bold"
+                                      :class="item.scanned ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                                      x-text="item.quantity"></span>
+                                <span class="text-gray-900" x-text="item.product_name"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-400" dir="ltr" x-text="item.product_sku || item.product_barcode || ''"></span>
+                                <template x-if="item.scanned">
+                                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </template>
+                                <template x-if="!item.scanned">
+                                    <span class="text-xs text-gray-400">در انتظار</span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Step 2: Weight Verification -->
+            <div class="border-t pt-6" :class="allScanned ? '' : 'opacity-50 pointer-events-none'">
+                <h3 class="text-sm font-bold text-gray-700 mb-3">مرحله ۲: تایید وزن</h3>
+                <div class="flex items-end gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">وزن واقعی بسته (کیلوگرم)</label>
+                        <input type="number" x-model="actualWeight" step="0.01" min="0" dir="ltr" placeholder="0.00"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-lg font-medium text-center">
+                    </div>
+                    <button @click="verifyWeight()" :disabled="!actualWeight || verifying"
+                            class="px-6 py-3 bg-cyan-600 text-white rounded-xl hover:bg-cyan-700 font-medium text-sm disabled:opacity-50 transition-colors">
+                        <span x-show="!verifying">تایید وزن</span>
+                        <span x-show="verifying">در حال بررسی...</span>
+                    </button>
+                </div>
+                @if($order->total_weight)
+                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ $order->total_weight }} kg</p>
+                @endif
+
+                <!-- Weight Result -->
+                <div x-show="weightMessage" x-cloak class="mt-3 p-4 rounded-xl text-sm" :class="weightVerified ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                    <div class="flex items-center gap-2">
+                        <template x-if="weightVerified">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </template>
+                        <template x-if="!weightVerified && weightMessage">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                        </template>
+                        <span :class="weightVerified ? 'text-green-700 font-medium' : 'text-red-700 font-medium'" x-text="weightMessage"></span>
+                    </div>
+                    <!-- Force verify option on weight mismatch -->
+                    <template x-if="!weightVerified && weightMessage && !weightForced">
+                        <div class="mt-3 flex items-center gap-3">
+                            <p class="text-xs text-red-600">اختلاف وزن: <span x-text="weightDiff"></span>%</p>
+                            <button @click="forceVerify()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700 font-medium">
+                                تایید دستی و ادامه
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    @elseif($nextStatus)
+    <!-- Other statuses: simple status change button -->
     <div class="bg-white rounded-xl shadow-sm p-6">
         <h2 class="text-lg font-bold text-gray-900 mb-4">تغییر وضعیت</h2>
         <form action="{{ route('warehouse.status', $order) }}" method="POST" class="flex items-center gap-4">
@@ -279,4 +398,177 @@
     @endif
     @endcanany
 </div>
+
+@if($order->status === 'preparing')
+@push('scripts')
+<script>
+function preparingStation() {
+    return {
+        orderId: {{ $order->id }},
+        items: @json($order->items->map(fn($item) => [
+            'id' => $item->id,
+            'product_name' => $item->product_name,
+            'product_barcode' => $item->product_barcode,
+            'product_sku' => $item->product_sku,
+            'quantity' => $item->quantity,
+            'weight' => $item->weight,
+            'scanned' => (bool) $item->scanned,
+        ])),
+        productBarcode: '',
+        scanning: false,
+        scanMessage: '',
+        scanError: false,
+        actualWeight: '',
+        verifying: false,
+        weightMessage: '',
+        weightVerified: false,
+        weightForced: false,
+        weightDiff: 0,
+
+        get scannedCount() {
+            return this.items.filter(i => i.scanned).length;
+        },
+        get totalCount() {
+            return this.items.length;
+        },
+        get allScanned() {
+            return this.totalCount > 0 && this.scannedCount >= this.totalCount;
+        },
+
+        init() {
+            this.$nextTick(() => {
+                if (this.$refs.productScanInput) this.$refs.productScanInput.focus();
+            });
+        },
+
+        async scanProduct() {
+            if (!this.productBarcode.trim() || this.scanning) return;
+            this.scanning = true;
+            this.scanMessage = '';
+            this.scanError = false;
+
+            try {
+                const res = await fetch('{{ route("warehouse.packing.scan-product") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ order_id: this.orderId, barcode: this.productBarcode.trim() })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    this.scanMessage = data.message;
+                    this.scanError = false;
+                    // Mark item as scanned in local state
+                    if (data.item_id) {
+                        const item = this.items.find(i => i.id === data.item_id);
+                        if (item) item.scanned = true;
+                    }
+                    this.playBeep(true);
+                } else {
+                    this.scanMessage = data.message;
+                    this.scanError = true;
+                    this.playBeep(false);
+                }
+            } catch (e) {
+                this.scanMessage = 'خطا در ارتباط با سرور';
+                this.scanError = true;
+                this.playBeep(false);
+            }
+
+            this.productBarcode = '';
+            this.scanning = false;
+            this.$nextTick(() => {
+                if (this.$refs.productScanInput) this.$refs.productScanInput.focus();
+            });
+        },
+
+        async verifyWeight() {
+            if (!this.actualWeight || this.verifying) return;
+            this.verifying = true;
+            this.weightMessage = '';
+
+            try {
+                const res = await fetch('{{ route("warehouse.packing.verify-weight") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ order_id: this.orderId, actual_weight: parseFloat(this.actualWeight) })
+                });
+                const data = await res.json();
+
+                this.weightMessage = data.message;
+                this.weightVerified = data.verified || false;
+                this.weightDiff = data.difference || 0;
+
+                if (data.verified) {
+                    this.playBeep(true);
+                    setTimeout(() => { location.reload(); }, 1500);
+                } else {
+                    this.playBeep(false);
+                }
+            } catch (e) {
+                this.weightMessage = 'خطا در ارتباط با سرور';
+                this.weightVerified = false;
+                this.playBeep(false);
+            }
+
+            this.verifying = false;
+        },
+
+        async forceVerify() {
+            try {
+                const res = await fetch('{{ route("warehouse.packing.force-verify") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ order_id: this.orderId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    this.weightMessage = data.message;
+                    this.weightVerified = true;
+                    this.weightForced = true;
+                    this.playBeep(true);
+                    setTimeout(() => { location.reload(); }, 1500);
+                }
+            } catch (e) {
+                this.weightMessage = 'خطا در تایید دستی';
+                this.playBeep(false);
+            }
+        },
+
+        playBeep(success = true) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = success ? 800 : 300;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (success ? 0.15 : 0.4));
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + (success ? 0.15 : 0.4));
+            } catch (e) {}
+        }
+    };
+}
+</script>
+@endpush
+@endif
 @endsection

@@ -39,12 +39,12 @@ class PackingController extends Controller
             ]);
         }
 
-        // Scan barcode moves order directly to packed (ready to ship)
-        $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+        $scannedCount = $order->items()->where('scanned', true)->count();
+        $totalCount = $order->items()->count();
 
         return response()->json([
             'success' => true,
-            'message' => 'سفارش ' . $order->order_number . ' آماده ارسال شد.',
+            'message' => 'سفارش ' . $order->order_number . ' بارگذاری شد.',
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -54,6 +54,9 @@ class PackingController extends Controller
                 'shipping_type' => $order->shipping_type,
                 'total_weight' => $order->total_weight,
                 'status' => $order->status,
+                'scanned_count' => $scannedCount,
+                'total_count' => $totalCount,
+                'all_scanned' => $scannedCount >= $totalCount,
                 'items' => $order->items->map(fn($item) => [
                     'id' => $item->id,
                     'product_name' => $item->product_name,
@@ -61,6 +64,7 @@ class PackingController extends Controller
                     'product_sku' => $item->product_sku,
                     'quantity' => $item->quantity,
                     'weight' => $item->weight,
+                    'scanned' => $item->scanned,
                 ]),
             ],
         ]);
