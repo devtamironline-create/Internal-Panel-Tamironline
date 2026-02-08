@@ -126,6 +126,17 @@
 
 @push('scripts')
 <script>
+function showResult(divId, success, message) {
+    const div = document.getElementById(divId);
+    div.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800', 'bg-gray-50', 'text-gray-600');
+    if (success) {
+        div.classList.add('bg-green-50', 'text-green-800');
+    } else {
+        div.classList.add('bg-red-50', 'text-red-800');
+    }
+    div.innerHTML = message;
+}
+
 function testWcConnection() {
     const resultDiv = document.getElementById('wc-test-result');
     resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
@@ -137,26 +148,24 @@ function testWcConnection() {
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         },
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
     .then(data => {
-        resultDiv.classList.remove('bg-gray-50', 'text-gray-600');
         if (data.success) {
-            resultDiv.classList.add('bg-green-50', 'text-green-800');
-            resultDiv.innerHTML = '<strong>&#10003; ' + data.message + '</strong>';
-            if (data.wc_version) {
-                resultDiv.innerHTML += '<br>نسخه ووکامرس: ' + data.wc_version;
-            }
+            let msg = '<strong>&#10003; ' + data.message + '</strong>';
+            if (data.wc_version) msg += '<br>نسخه ووکامرس: ' + data.wc_version;
+            showResult('wc-test-result', true, msg);
         } else {
-            resultDiv.classList.add('bg-red-50', 'text-red-800');
-            resultDiv.textContent = data.message;
+            showResult('wc-test-result', false, data.message);
         }
     })
     .catch(err => {
-        resultDiv.classList.remove('bg-gray-50', 'text-gray-600');
-        resultDiv.classList.add('bg-red-50', 'text-red-800');
-        resultDiv.textContent = 'خطا در ارتباط با سرور';
+        showResult('wc-test-result', false, 'خطا: ' + err.message);
     });
 }
 
@@ -164,42 +173,45 @@ function syncOrders() {
     const btn = document.getElementById('sync-btn');
     const icon = document.getElementById('sync-icon');
     const text = document.getElementById('sync-text');
-    const resultDiv = document.getElementById('wc-sync-result');
     const status = document.getElementById('wc-sync-status').value;
 
     btn.disabled = true;
     icon.classList.add('animate-spin');
     text.textContent = 'در حال سینک...';
-    resultDiv.classList.add('hidden');
+    document.getElementById('wc-sync-result').classList.add('hidden');
 
-    fetch('{{ route("warehouse.woocommerce.sync") }}?wc_status=' + status, {
+    fetch('{{ route("warehouse.woocommerce.sync") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         },
+        body: JSON.stringify({ wc_status: status }),
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) {
+            return r.text().then(t => {
+                throw new Error('سرور خطا برگرداند (HTTP ' + r.status + ')');
+            });
+        }
+        return r.json();
+    })
     .then(data => {
         btn.disabled = false;
         icon.classList.remove('animate-spin');
         text.textContent = 'شروع سینک سفارشات';
-        resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
-
-        if (data.success) {
-            resultDiv.classList.add('bg-green-50', 'text-green-800');
-        } else {
-            resultDiv.classList.add('bg-red-50', 'text-red-800');
+        showResult('wc-sync-result', data.success, data.message);
+        if (data.success && data.imported > 0) {
+            setTimeout(() => location.reload(), 2000);
         }
-        resultDiv.textContent = data.message;
     })
     .catch(err => {
         btn.disabled = false;
         icon.classList.remove('animate-spin');
         text.textContent = 'شروع سینک سفارشات';
-        resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800');
-        resultDiv.classList.add('bg-red-50', 'text-red-800');
-        resultDiv.textContent = 'خطا در ارتباط با سرور';
+        showResult('wc-sync-result', false, 'خطا: ' + err.message);
     });
 }
 </script>

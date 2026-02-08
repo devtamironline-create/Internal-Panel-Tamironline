@@ -52,28 +52,37 @@ class WooCommerceController extends Controller
             abort(403);
         }
 
-        $service = new WooCommerceService();
-        $result = $service->testConnection();
-
-        return response()->json($result);
+        try {
+            $service = new WooCommerceService();
+            $result = $service->testConnection();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'خطای سرور: ' . $e->getMessage()]);
+        }
     }
 
     public function sync(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
-            abort(403);
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
         }
 
-        $wcStatus = $request->get('wc_status', 'processing');
+        try {
+            $wcStatus = $request->get('wc_status', 'processing');
+            if ($wcStatus === 'any') {
+                $wcStatus = null;
+            }
 
-        $service = new WooCommerceService();
-        $result = $service->syncOrders($wcStatus);
+            $service = new WooCommerceService();
+            $result = $service->syncOrders($wcStatus);
 
-        if ($request->ajax()) {
             return response()->json($result);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('WooCommerce sync error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'خطای سرور: ' . $e->getMessage(),
+            ]);
         }
-
-        return redirect()->route('warehouse.woocommerce.index')
-            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }

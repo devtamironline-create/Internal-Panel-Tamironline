@@ -67,11 +67,11 @@ class WooCommerceService
                 'order' => 'desc',
             ];
 
-            if ($status) {
+            if (!empty($status)) {
                 $params['status'] = $status;
             }
 
-            $response = Http::timeout(30)
+            $response = Http::timeout(60)
                 ->withBasicAuth($this->consumerKey, $this->consumerSecret)
                 ->get($this->siteUrl . '/wp-json/wc/v3/orders', $params);
 
