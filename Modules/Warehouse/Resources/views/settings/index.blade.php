@@ -7,20 +7,20 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-4">
-            <a href="{{ route('warehouse.dashboard') }}" class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition">
+            <a href="{{ route('warehouse.dashboard') }}" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </a>
             <div>
-                <h1 class="text-2xl font-bold text-slate-100">تنظیمات انبار</h1>
-                <p class="text-slate-400 mt-1">پیکربندی اتصال به ووکامرس</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تنظیمات انبار</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">پیکربندی اتصال به ووکامرس</p>
             </div>
         </div>
     </div>
 
     @if(session('success'))
-    <div class="bg-green-900/50 border border-green-700 text-green-300 rounded-lg p-4 mb-6">
+    <div class="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg p-4 mb-6">
         {{ session('success') }}
     </div>
     @endif
@@ -29,60 +29,60 @@
         @csrf
 
         <!-- WooCommerce Settings -->
-        <div class="bg-slate-800 rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-semibold text-slate-100 mb-4">تنظیمات WooCommerce</h2>
-            <p class="text-slate-400 text-sm mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">تنظیمات WooCommerce</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">
                 برای اتصال به ووکامرس، نیاز به کلیدهای API دارید.
                 این کلیدها را از بخش WooCommerce > تنظیمات > پیشرفته > REST API در پنل وردپرس دریافت کنید.
             </p>
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">آدرس فروشگاه</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">آدرس فروشگاه</label>
                     <input type="url" name="woocommerce_store_url"
                            value="{{ old('woocommerce_store_url', $settings['woocommerce_store_url']) }}"
                            placeholder="https://example.com"
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_store_url') border-red-500 @enderror">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_store_url') border-red-500 @enderror">
                     @error('woocommerce_store_url')
-                    <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Consumer Key</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Consumer Key</label>
                     <input type="text" name="woocommerce_consumer_key"
                            value="{{ old('woocommerce_consumer_key', $settings['woocommerce_consumer_key']) }}"
                            placeholder="ck_..."
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_consumer_key') border-red-500 @enderror">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_consumer_key') border-red-500 @enderror">
                     @error('woocommerce_consumer_key')
-                    <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Consumer Secret</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Consumer Secret</label>
                     <input type="password" name="woocommerce_consumer_secret"
                            value="{{ old('woocommerce_consumer_secret', $settings['woocommerce_consumer_secret']) }}"
                            placeholder="cs_..."
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_consumer_secret') border-red-500 @enderror">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500 @error('woocommerce_consumer_secret') border-red-500 @enderror">
                     @error('woocommerce_consumer_secret')
-                    <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Webhook Secret (اختیاری)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Webhook Secret (اختیاری)</label>
                     <input type="text" name="woocommerce_webhook_secret"
                            value="{{ old('woocommerce_webhook_secret', $settings['woocommerce_webhook_secret']) }}"
                            placeholder="برای دریافت اعلان‌های خودکار"
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <!-- Test Connection Button -->
                 <div class="pt-4">
                     <button type="button" @click="testConnection()"
                             :disabled="testing"
-                            class="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-lg transition">
                         <svg class="w-4 h-4" :class="testing && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
@@ -90,7 +90,7 @@
                     </button>
 
                     <div x-show="testResult" x-transition class="mt-3 p-3 rounded-lg"
-                         :class="testSuccess ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'">
+                         :class="testSuccess ? 'bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/50 text-red-700 dark:text-red-300'">
                         <span x-text="testResult"></span>
                     </div>
                 </div>
@@ -98,30 +98,30 @@
         </div>
 
         <!-- Sync Settings -->
-        <div class="bg-slate-800 rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-semibold text-slate-100 mb-4">تنظیمات همگام‌سازی</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">تنظیمات همگام‌سازی</h2>
 
             <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
-                        <div class="font-medium text-slate-200">همگام‌سازی خودکار</div>
-                        <div class="text-sm text-slate-400">سفارشات به صورت خودکار همگام‌سازی شوند</div>
+                        <div class="font-medium text-gray-900 dark:text-gray-200">همگام‌سازی خودکار</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">سفارشات به صورت خودکار همگام‌سازی شوند</div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="warehouse_auto_sync" value="1"
                                {{ old('warehouse_auto_sync', $settings['warehouse_auto_sync']) ? 'checked' : '' }}
                                class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">فاصله همگام‌سازی (دقیقه)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">فاصله همگام‌سازی (دقیقه)</label>
                     <input type="number" name="warehouse_sync_interval"
                            value="{{ old('warehouse_sync_interval', $settings['warehouse_sync_interval']) }}"
                            min="5" max="1440"
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-slate-500 text-sm mt-1">حداقل 5 دقیقه، حداکثر 1440 دقیقه (24 ساعت)</p>
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">حداقل 5 دقیقه، حداکثر 1440 دقیقه (24 ساعت)</p>
                 </div>
             </div>
         </div>
@@ -138,90 +138,90 @@
     <div class="max-w-2xl mt-8">
         <form action="{{ route('warehouse.settings.warehouse.update') }}" method="POST">
             @csrf
-            <div class="bg-slate-800 rounded-lg p-6">
-                <h2 class="text-lg font-semibold text-slate-100 mb-4">تنظیمات عملیاتی انبار</h2>
-                <p class="text-slate-400 text-sm mb-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">تنظیمات عملیاتی انبار</h2>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">
                     تنظیمات مربوط به وزن، تلرانس و اعلان‌ها
                 </p>
 
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">تلرانس وزن (درصد)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تلرانس وزن (درصد)</label>
                             <input type="number" name="weight_tolerance_percent"
                                    value="{{ old('weight_tolerance_percent', $settings['weight_tolerance_percent']) }}"
                                    min="0" max="100" step="0.1"
-                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-slate-500 text-sm mt-1">اختلاف مجاز بین وزن واقعی و وزن ثبت شده در سایت</p>
+                                   class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">اختلاف مجاز بین وزن واقعی و وزن ثبت شده در سایت</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">وزن پیش‌فرض کارتن (گرم)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وزن پیش‌فرض کارتن (گرم)</label>
                             <input type="number" name="default_carton_weight"
                                    value="{{ old('default_carton_weight', $settings['default_carton_weight']) }}"
                                    min="0" step="1"
-                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-slate-500 text-sm mt-1">وزن پیش‌فرض کارتن بسته‌بندی</p>
+                                   class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">وزن پیش‌فرض کارتن بسته‌بندی</p>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">موبایل مدیر برای هشدارها</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موبایل مدیر برای هشدارها</label>
                         <input type="text" name="manager_mobile_for_alerts"
                                value="{{ old('manager_mobile_for_alerts', $settings['manager_mobile_for_alerts']) }}"
                                placeholder="09123456789"
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                        <p class="text-slate-500 text-sm mt-1">برای دریافت پیامک هشدار پرینت تکراری و سایر اعلان‌ها</p>
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">برای دریافت پیامک هشدار پرینت تکراری و سایر اعلان‌ها</p>
                     </div>
                 </div>
 
                 <!-- Queue Timer Settings -->
-                <div class="border-t border-slate-700 pt-6 mt-6">
-                    <h3 class="text-md font-medium text-slate-200 mb-4">تنظیمات صف آماده‌سازی</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                    <h3 class="text-md font-medium text-gray-900 dark:text-gray-200 mb-4">تنظیمات صف آماده‌سازی</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">ددلاین پست (دقیقه)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ددلاین پست (دقیقه)</label>
                             <input type="number" name="queue_post_deadline_minutes"
                                    value="{{ old('queue_post_deadline_minutes', $settings['queue_post_deadline_minutes'] ?? 60) }}"
                                    min="1" max="1440"
-                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-slate-500 text-sm mt-1">پیش‌فرض: ۶۰ دقیقه (۱ ساعت)</p>
+                                   class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">پیش‌فرض: ۶۰ دقیقه (۱ ساعت)</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">ددلاین پیک (دقیقه)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ددلاین پیک (دقیقه)</label>
                             <input type="number" name="queue_courier_deadline_minutes"
                                    value="{{ old('queue_courier_deadline_minutes', $settings['queue_courier_deadline_minutes'] ?? 420) }}"
                                    min="1" max="1440"
-                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-slate-500 text-sm mt-1">پیش‌فرض: ۴۲۰ دقیقه (۷ ساعت)</p>
+                                   class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">پیش‌فرض: ۴۲۰ دقیقه (۷ ساعت)</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Auto Status Change Settings -->
-                <div class="border-t border-slate-700 pt-6 mt-6">
-                    <h3 class="text-md font-medium text-slate-200 mb-4">تغییر خودکار وضعیت</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                    <h3 class="text-md font-medium text-gray-900 dark:text-gray-200 mb-4">تغییر خودکار وضعیت</h3>
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                             <div>
-                                <div class="font-medium text-slate-200">تغییر وضعیت بعد از پرینت</div>
-                                <div class="text-sm text-slate-400">وقتی فاکتور پرینت شد، وضعیت خودکار عوض شود</div>
+                                <div class="font-medium text-gray-900 dark:text-gray-200">تغییر وضعیت بعد از پرینت</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">وقتی فاکتور پرینت شد، وضعیت خودکار عوض شود</div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" name="auto_status_on_print" value="1"
                                        {{ old('auto_status_on_print', $settings['auto_status_on_print'] ?? true) ? 'checked' : '' }}
                                        class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">وضعیت بعد از پرینت</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وضعیت بعد از پرینت</label>
                             <select name="print_status_change_to"
-                                    class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="confirmed" {{ ($settings['print_status_change_to'] ?? 'picking') === 'confirmed' ? 'selected' : '' }}>تایید شده</option>
                                 <option value="picking" {{ ($settings['print_status_change_to'] ?? 'picking') === 'picking' ? 'selected' : '' }}>در حال جمع‌آوری</option>
                                 <option value="packed" {{ ($settings['print_status_change_to'] ?? 'picking') === 'packed' ? 'selected' : '' }}>بسته‌بندی شده</option>
                             </select>
-                            <p class="text-slate-500 text-sm mt-1">وضعیتی که بعد از اولین پرینت اعمال شود</p>
+                            <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">وضعیتی که بعد از اولین پرینت اعمال شود</p>
                         </div>
                     </div>
                 </div>
@@ -237,9 +237,9 @@
 
     <!-- Plugin Download Section -->
     <div class="max-w-2xl mt-8">
-        <div class="bg-slate-800 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-100 mb-4">پلاگین وردپرس</h2>
-            <p class="text-slate-400 text-sm mb-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">پلاگین وردپرس</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-4">
                 برای ارتباط بهتر و دریافت اعلان‌های آنی، پلاگین زیر را در وردپرس نصب کنید.
                 این پلاگین امکان ارسال خودکار سفارشات جدید به پنل را فراهم می‌کند.
             </p>
@@ -251,49 +251,49 @@
                     </svg>
                     دانلود پلاگین
                 </a>
-                <span class="text-slate-500 text-sm">نسخه 1.0.0</span>
+                <span class="text-gray-400 dark:text-gray-500 text-sm">نسخه 1.0.0</span>
             </div>
         </div>
     </div>
 
     <!-- Amadast Settings -->
     <div class="max-w-2xl mt-8">
-        <div class="bg-slate-800 rounded-lg p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-lg font-semibold text-slate-100">تنظیمات آمادست</h2>
-                    <p class="text-slate-400 text-sm mt-1">سرویس حمل و نقل برای ارسال سفارشات</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">تنظیمات آمادست</h2>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">سرویس حمل و نقل برای ارسال سفارشات</p>
                 </div>
                 @if($settings['amadast_store_id'])
-                <span class="px-3 py-1 bg-green-900/50 text-green-400 rounded-full text-sm">فعال</span>
+                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 rounded-full text-sm">فعال</span>
                 @else
-                <span class="px-3 py-1 bg-yellow-900/50 text-yellow-400 rounded-full text-sm">نیاز به تنظیم</span>
+                <span class="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 rounded-full text-sm">نیاز به تنظیم</span>
                 @endif
             </div>
 
             @if($settings['amadast_store_id'])
             <!-- Already configured - show status -->
-            <div class="bg-slate-700/50 rounded-lg p-4 mb-4">
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span class="text-slate-400">نام فرستنده:</span>
-                        <span class="text-slate-200 mr-2">{{ $settings['amadast_sender_name'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">نام فرستنده:</span>
+                        <span class="text-gray-900 dark:text-gray-200 mr-2">{{ $settings['amadast_sender_name'] }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400">موبایل:</span>
-                        <span class="text-slate-200 mr-2">{{ $settings['amadast_sender_mobile'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">موبایل:</span>
+                        <span class="text-gray-900 dark:text-gray-200 mr-2">{{ $settings['amadast_sender_mobile'] }}</span>
                     </div>
                     <div class="col-span-2">
-                        <span class="text-slate-400">آدرس انبار:</span>
-                        <span class="text-slate-200 mr-2">{{ $settings['amadast_warehouse_address'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">آدرس انبار:</span>
+                        <span class="text-gray-900 dark:text-gray-200 mr-2">{{ $settings['amadast_warehouse_address'] }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400">Store ID:</span>
-                        <span class="text-slate-200 mr-2">{{ $settings['amadast_store_id'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">Store ID:</span>
+                        <span class="text-gray-900 dark:text-gray-200 mr-2">{{ $settings['amadast_store_id'] }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400">Location ID:</span>
-                        <span class="text-slate-200 mr-2">{{ $settings['amadast_location_id'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">Location ID:</span>
+                        <span class="text-gray-900 dark:text-gray-200 mr-2">{{ $settings['amadast_location_id'] }}</span>
                     </div>
                 </div>
             </div>
@@ -302,30 +302,30 @@
             <form action="{{ route('warehouse.settings.amadast.update') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">کد کلاینت (X-Client-Code)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">کد کلاینت (X-Client-Code)</label>
                     <input type="text" name="amadast_client_code"
                            value="{{ old('amadast_client_code', $settings['amadast_client_code']) }}"
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">شهر پیش‌فرض گیرنده (City ID)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">شهر پیش‌فرض گیرنده (City ID)</label>
                     <input type="number" name="amadast_default_city_id"
                            value="{{ old('amadast_default_city_id', $settings['amadast_default_city_id']) }}"
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-slate-500 text-sm mt-1">اگر شهر گیرنده پیدا نشد از این شهر استفاده می‌شود</p>
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">اگر شهر گیرنده پیدا نشد از این شهر استفاده می‌شود</p>
                 </div>
 
-                <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
-                        <div class="font-medium text-slate-200">فعال‌سازی ارسال خودکار</div>
-                        <div class="text-sm text-slate-400">سفارشات جدید خودکار به آمادست ارسال شوند</div>
+                        <div class="font-medium text-gray-900 dark:text-gray-200">فعال‌سازی ارسال خودکار</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">سفارشات جدید خودکار به آمادست ارسال شوند</div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="amadast_enabled" value="1"
                                {{ old('amadast_enabled', $settings['amadast_enabled']) ? 'checked' : '' }}
                                class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
 
@@ -341,52 +341,52 @@
             <form @submit.prevent="setupAmadast()" class="space-y-4">
                 <!-- Result Message -->
                 <div x-show="setupResult" x-transition class="p-4 rounded-lg"
-                     :class="setupSuccess ? 'bg-green-900/50 border border-green-700 text-green-300' : 'bg-red-900/50 border border-red-700 text-red-300'">
+                     :class="setupSuccess ? 'bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300'">
                     <span x-text="setupResult"></span>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">کد کلاینت (X-Client-Code) *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">کد کلاینت (X-Client-Code) *</label>
                     <input type="text" x-model="amadastForm.client_code"
                            required
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-slate-500 text-sm mt-1">این کد را از آمادست دریافت کنید</p>
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">این کد را از آمادست دریافت کنید</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">نام فرستنده *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام فرستنده *</label>
                         <input type="text" x-model="amadastForm.sender_name"
                                required
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">موبایل فرستنده *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موبایل فرستنده *</label>
                         <input type="text" x-model="amadastForm.sender_mobile"
                                placeholder="09123456789"
                                required
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">نام انبار *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام انبار *</label>
                     <input type="text" x-model="amadastForm.warehouse_title"
                            required
-                           class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                           class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">آدرس انبار *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">آدرس انبار *</label>
                     <textarea x-model="amadastForm.warehouse_address" rows="2" required
-                              class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                              class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">استان *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">استان *</label>
                         <select x-model="amadastForm.province_id" required
-                                class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">انتخاب کنید</option>
                             <option value="8">تهران</option>
                             <option value="10">اصفهان</option>
@@ -422,25 +422,25 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">شهر *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">شهر *</label>
                         <input type="number" x-model="amadastForm.city_id" required placeholder="شناسه شهر"
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
-                        <p class="text-slate-500 text-xs mt-1">شناسه شهر در آمادست (مثلاً تهران = 360)</p>
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">شناسه شهر در آمادست (مثلاً تهران = 360)</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">کد پستی انبار *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">کد پستی انبار *</label>
                         <input type="text" x-model="amadastForm.postal_code"
                                required maxlength="10"
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">نام فروشگاه *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام فروشگاه *</label>
                         <input type="text" x-model="amadastForm.store_title"
                                required
-                               class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                               class="w-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
 
