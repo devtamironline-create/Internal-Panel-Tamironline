@@ -33,6 +33,18 @@
                     @enderror
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">نوع ارسال</label>
+                    <select name="shipping_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        <option value="">انتخاب کنید</option>
+                        @foreach($shippingTypes as $type)
+                        <option value="{{ $type->slug }}" {{ old('shipping_type') == $type->slug ? 'selected' : '' }}>{{ $type->name }} ({{ $type->timer_label }})</option>
+                        @endforeach
+                    </select>
+                    @error('shipping_type')
+                        <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">مسئول انبار</label>
                     <select name="assigned_to" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                         <option value="">انتخاب کنید</option>

@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use Modules\Warehouse\Http\Controllers\WarehouseController;
 use Modules\Warehouse\Http\Controllers\WooCommerceController;
 use Modules\Warehouse\Http\Controllers\AmadestController;
+use Modules\Warehouse\Http\Controllers\PackingController;
+use Modules\Warehouse\Http\Controllers\PrintController;
+use Modules\Warehouse\Http\Controllers\DispatchController;
+use Modules\Warehouse\Http\Controllers\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +30,44 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::delete('/{order}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy')
         ->where('order', '[0-9]+');
+
+    // Packing Station
+    Route::prefix('packing')->group(function () {
+        Route::get('/', [PackingController::class, 'index'])->name('warehouse.packing.index');
+        Route::post('/scan-order', [PackingController::class, 'scanOrder'])->name('warehouse.packing.scan-order');
+        Route::post('/scan-product', [PackingController::class, 'scanProduct'])->name('warehouse.packing.scan-product');
+        Route::post('/verify-weight', [PackingController::class, 'verifyWeight'])->name('warehouse.packing.verify-weight');
+        Route::post('/force-verify', [PackingController::class, 'forceVerify'])->name('warehouse.packing.force-verify');
+    });
+
+    // Printing
+    Route::get('/{order}/print/invoice', [PrintController::class, 'invoice'])->name('warehouse.print.invoice')
+        ->where('order', '[0-9]+');
+    Route::post('/{order}/print/mark-printed', [PrintController::class, 'markPrinted'])->name('warehouse.print.mark-printed')
+        ->where('order', '[0-9]+');
+    Route::get('/{order}/print/label', [PrintController::class, 'label'])->name('warehouse.print.label')
+        ->where('order', '[0-9]+');
+
+    // Dispatch
+    Route::prefix('dispatch')->group(function () {
+        Route::get('/', [DispatchController::class, 'index'])->name('warehouse.dispatch.index');
+    });
+    Route::post('/{order}/ship-post', [DispatchController::class, 'shipViaPost'])->name('warehouse.dispatch.ship-post')
+        ->where('order', '[0-9]+');
+    Route::post('/{order}/ship-courier', [DispatchController::class, 'shipViaCourier'])->name('warehouse.dispatch.ship-courier')
+        ->where('order', '[0-9]+');
+    Route::post('/{order}/delivered', [DispatchController::class, 'markDelivered'])->name('warehouse.dispatch.delivered')
+        ->where('order', '[0-9]+');
+    Route::post('/{order}/returned', [DispatchController::class, 'markReturned'])->name('warehouse.dispatch.returned')
+        ->where('order', '[0-9]+');
+
+    // Settings
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('warehouse.settings.index');
+        Route::put('/', [SettingsController::class, 'update'])->name('warehouse.settings.update');
+        Route::post('/shipping-type', [SettingsController::class, 'storeShippingType'])->name('warehouse.settings.shipping-type.store');
+        Route::put('/shipping-type/{shippingType}', [SettingsController::class, 'updateShippingType'])->name('warehouse.settings.shipping-type.update');
+    });
 
     // WooCommerce Integration
     Route::prefix('woocommerce')->group(function () {

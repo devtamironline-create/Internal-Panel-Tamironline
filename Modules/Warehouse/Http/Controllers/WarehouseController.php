@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\Warehouse\Models\WarehouseShippingType;
 
 class WarehouseController extends Controller
 {
@@ -15,23 +16,28 @@ class WarehouseController extends Controller
             abort(403);
         }
 
-        $currentStatus = $request->get('status', 'processing');
+        $currentStatus = $request->get('status', 'pending');
         $search = $request->get('search');
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
-        $orders = WarehouseOrder::with(['creator', 'assignee'])
+        $query = WarehouseOrder::with(['creator', 'assignee', 'items'])
             ->byStatus($currentStatus)
-            ->search($search)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20)
-            ->appends($request->query());
+            ->search($search);
+
+        // For pending status, order by timer deadline (urgent first)
+        if ($currentStatus === WarehouseOrder::STATUS_PENDING) {
+            $query->orderByRaw('timer_deadline IS NULL, timer_deadline ASC');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $orders = $query->paginate(20)->appends($request->query());
+
+        $shippingTypes = WarehouseShippingType::getActiveTypes();
 
         return view('warehouse::warehouse.index', compact(
-            'orders',
-            'currentStatus',
-            'statusCounts',
-            'search',
+            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes',
         ));
     }
 
@@ -42,8 +48,9 @@ class WarehouseController extends Controller
         }
 
         $users = User::where('is_staff', true)->where('is_active', true)->get();
+        $shippingTypes = WarehouseShippingType::getActiveTypes();
 
-        return view('warehouse::warehouse.create', compact('users'));
+        return view('warehouse::warehouse.create', compact('users', 'shippingTypes'));
     }
 
     public function store(Request $request)
@@ -57,14 +64,17 @@ class WarehouseController extends Controller
             'customer_mobile' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'assigned_to' => 'nullable|exists:users,id',
+            'shipping_type' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
         ]);
 
         $validated['order_number'] = WarehouseOrder::generateOrderNumber();
+        $validated['barcode'] = WarehouseOrder::generateBarcode();
         $validated['created_by'] = auth()->id();
-        $validated['status'] = WarehouseOrder::STATUS_PROCESSING;
+        $validated['status'] = WarehouseOrder::STATUS_PENDING;
 
-        WarehouseOrder::create($validated);
+        $order = WarehouseOrder::create($validated);
+        $order->setTimerFromShippingType();
 
         return redirect()->route('warehouse.index')
             ->with('success', 'سفارش با موفقیت ثبت شد.');
@@ -76,7 +86,7 @@ class WarehouseController extends Controller
             abort(403);
         }
 
-        $order->load(['creator', 'assignee']);
+        $order->load(['creator', 'assignee', 'items']);
 
         return view('warehouse::warehouse.show', compact('order'));
     }
@@ -88,8 +98,9 @@ class WarehouseController extends Controller
         }
 
         $users = User::where('is_staff', true)->where('is_active', true)->get();
+        $shippingTypes = WarehouseShippingType::getActiveTypes();
 
-        return view('warehouse::warehouse.edit', compact('order', 'users'));
+        return view('warehouse::warehouse.edit', compact('order', 'users', 'shippingTypes'));
     }
 
     public function update(Request $request, WarehouseOrder $order)
@@ -103,6 +114,7 @@ class WarehouseController extends Controller
             'customer_mobile' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'assigned_to' => 'nullable|exists:users,id',
+            'shipping_type' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'tracking_code' => 'nullable|string|max:255',
         ]);
@@ -125,7 +137,7 @@ class WarehouseController extends Controller
 
         $order->updateStatus($request->status);
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'وضعیت با موفقیت تغییر کرد.']);
         }
 

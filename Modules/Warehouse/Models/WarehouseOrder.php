@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WarehouseOrder extends Model
@@ -12,71 +13,101 @@ class WarehouseOrder extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'order_number',
-        'customer_name',
-        'customer_mobile',
-        'description',
-        'status',
-        'assigned_to',
-        'created_by',
-        'status_changed_at',
-        'shipped_at',
-        'delivered_at',
-        'notes',
-        'tracking_code',
+        'order_number', 'customer_name', 'customer_mobile', 'description',
+        'status', 'shipping_type', 'assigned_to', 'created_by',
+        'wc_order_id', 'wc_order_data', 'barcode',
+        'total_weight', 'actual_weight', 'weight_verified',
+        'timer_deadline', 'printed_at', 'packed_at',
+        'status_changed_at', 'shipped_at', 'delivered_at',
+        'notes', 'tracking_code', 'driver_name', 'driver_phone',
     ];
 
     protected $casts = [
+        'wc_order_data' => 'array',
+        'weight_verified' => 'boolean',
+        'total_weight' => 'decimal:2',
+        'actual_weight' => 'decimal:2',
+        'timer_deadline' => 'datetime',
+        'printed_at' => 'datetime',
+        'packed_at' => 'datetime',
         'status_changed_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
     ];
 
-    const STATUS_PROCESSING = 'processing';
+    const STATUS_PENDING = 'pending';
     const STATUS_PREPARING = 'preparing';
-    const STATUS_READY_TO_SHIP = 'ready_to_ship';
+    const STATUS_PRINTED = 'printed';
+    const STATUS_PACKING = 'packing';
+    const STATUS_PACKED = 'packed';
     const STATUS_SHIPPED = 'shipped';
     const STATUS_DELIVERED = 'delivered';
+    const STATUS_RETURNED = 'returned';
 
     public static array $statuses = [
-        self::STATUS_PROCESSING,
+        self::STATUS_PENDING,
         self::STATUS_PREPARING,
-        self::STATUS_READY_TO_SHIP,
+        self::STATUS_PRINTED,
+        self::STATUS_PACKING,
+        self::STATUS_PACKED,
         self::STATUS_SHIPPED,
         self::STATUS_DELIVERED,
+        self::STATUS_RETURNED,
     ];
 
     public static function statusLabels(): array
     {
         return [
-            self::STATUS_PROCESSING => 'در حال پردازش',
+            self::STATUS_PENDING => 'در صف',
             self::STATUS_PREPARING => 'در حال آماده‌سازی',
-            self::STATUS_READY_TO_SHIP => 'آماده ارسال',
+            self::STATUS_PRINTED => 'پرینت شده',
+            self::STATUS_PACKING => 'بسته‌بندی',
+            self::STATUS_PACKED => 'آماده ارسال',
             self::STATUS_SHIPPED => 'ارسال شده',
-            self::STATUS_DELIVERED => 'تحویل داده شده',
+            self::STATUS_DELIVERED => 'تحویل شده',
+            self::STATUS_RETURNED => 'مرجوعی',
         ];
     }
 
     public static function statusColors(): array
     {
         return [
-            self::STATUS_PROCESSING => 'blue',
+            self::STATUS_PENDING => 'blue',
             self::STATUS_PREPARING => 'orange',
-            self::STATUS_READY_TO_SHIP => 'yellow',
+            self::STATUS_PRINTED => 'purple',
+            self::STATUS_PACKING => 'yellow',
+            self::STATUS_PACKED => 'cyan',
             self::STATUS_SHIPPED => 'indigo',
             self::STATUS_DELIVERED => 'green',
+            self::STATUS_RETURNED => 'red',
         ];
     }
 
     public static function statusIcons(): array
     {
         return [
-            self::STATUS_PROCESSING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+            self::STATUS_PENDING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
             self::STATUS_PREPARING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>',
-            self::STATUS_READY_TO_SHIP => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>',
+            self::STATUS_PRINTED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>',
+            self::STATUS_PACKING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>',
+            self::STATUS_PACKED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>',
             self::STATUS_SHIPPED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>',
             self::STATUS_DELIVERED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+            self::STATUS_RETURNED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>',
         ];
+    }
+
+    public static function nextStatus(string $current): ?string
+    {
+        $flow = [
+            self::STATUS_PENDING => self::STATUS_PREPARING,
+            self::STATUS_PREPARING => self::STATUS_PRINTED,
+            self::STATUS_PRINTED => self::STATUS_PACKING,
+            self::STATUS_PACKING => self::STATUS_PACKED,
+            self::STATUS_PACKED => self::STATUS_SHIPPED,
+            self::STATUS_SHIPPED => self::STATUS_DELIVERED,
+        ];
+        return $flow[$current] ?? null;
     }
 
     public function getStatusLabelAttribute(): string
@@ -94,6 +125,25 @@ class WarehouseOrder extends Model
         return self::statusIcons()[$this->status] ?? '';
     }
 
+    public function getIsTimerExpiredAttribute(): bool
+    {
+        return $this->timer_deadline && $this->timer_deadline->isPast();
+    }
+
+    public function getTimerRemainingSecondsAttribute(): int
+    {
+        if (!$this->timer_deadline) return 0;
+        $remaining = now()->diffInSeconds($this->timer_deadline, false);
+        return max(0, (int) $remaining);
+    }
+
+    public function getWeightDifferencePercentAttribute(): ?float
+    {
+        if (!$this->total_weight || $this->total_weight == 0 || !$this->actual_weight) return null;
+        return abs($this->actual_weight - $this->total_weight) / $this->total_weight * 100;
+    }
+
+    // Relations
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -104,6 +154,17 @@ class WarehouseOrder extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(WarehouseOrderItem::class);
+    }
+
+    public function shippingTypeRelation(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseShippingType::class, 'shipping_type', 'slug');
+    }
+
+    // Scopes
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);
@@ -112,29 +173,48 @@ class WarehouseOrder extends Model
     public function scopeSearch($query, ?string $search)
     {
         if (!$search) return $query;
-
         return $query->where(function ($q) use ($search) {
             $q->where('order_number', 'like', "%{$search}%")
               ->orWhere('customer_name', 'like', "%{$search}%")
               ->orWhere('customer_mobile', 'like', "%{$search}%")
-              ->orWhere('tracking_code', 'like', "%{$search}%");
+              ->orWhere('tracking_code', 'like', "%{$search}%")
+              ->orWhere('barcode', 'like', "%{$search}%");
         });
     }
 
+    // Methods
     public function updateStatus(string $newStatus): self
     {
         $this->status = $newStatus;
         $this->status_changed_at = now();
 
-        if ($newStatus === self::STATUS_SHIPPED) {
-            $this->shipped_at = now();
-        }
-        if ($newStatus === self::STATUS_DELIVERED) {
-            $this->delivered_at = now();
-        }
+        match ($newStatus) {
+            self::STATUS_PRINTED => $this->printed_at = now(),
+            self::STATUS_PACKED => $this->packed_at = now(),
+            self::STATUS_SHIPPED => $this->shipped_at = now(),
+            self::STATUS_DELIVERED => $this->delivered_at = now(),
+            default => null,
+        };
 
         $this->save();
         return $this;
+    }
+
+    public function setTimerFromShippingType(): void
+    {
+        $shippingType = WarehouseShippingType::where('slug', $this->shipping_type)->first();
+        if ($shippingType) {
+            $this->timer_deadline = now()->addMinutes($shippingType->timer_minutes);
+            $this->save();
+        }
+    }
+
+    public static function generateBarcode(): string
+    {
+        do {
+            $barcode = 'WH' . now()->format('ymd') . strtoupper(substr(md5(uniqid()), 0, 6));
+        } while (self::where('barcode', $barcode)->exists());
+        return $barcode;
     }
 
     public static function generateOrderNumber(): string
@@ -144,20 +224,14 @@ class WarehouseOrder extends Model
         $lastOrder = self::where('order_number', 'like', $prefix . '%')
             ->orderBy('order_number', 'desc')
             ->first();
-
-        if ($lastOrder) {
-            $lastNumber = (int) substr($lastOrder->order_number, -4);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
+        $newNumber = $lastOrder ? ((int) substr($lastOrder->order_number, -4)) + 1 : 1;
         return $prefix . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public static function getStatusCounts(): array
     {
         $counts = self::selectRaw('status, COUNT(*) as count')
+            ->whereNull('deleted_at')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
@@ -166,7 +240,6 @@ class WarehouseOrder extends Model
         foreach (self::$statuses as $status) {
             $result[$status] = $counts[$status] ?? 0;
         }
-
         return $result;
     }
 }

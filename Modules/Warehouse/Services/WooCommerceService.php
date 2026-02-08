@@ -5,7 +5,9 @@ namespace Modules\Warehouse\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\Warehouse\Models\WarehouseOrderItem;
 use Modules\Warehouse\Models\WarehouseSetting;
+use Modules\Warehouse\Models\WarehouseShippingType;
 
 class WooCommerceService
 {
@@ -105,9 +107,10 @@ class WooCommerceService
 
         foreach ($result['orders'] as $wcOrder) {
             try {
-                $orderNumber = 'WC-' . $wcOrder['id'];
+                $wcOrderId = $wcOrder['id'];
 
-                $exists = WarehouseOrder::where('order_number', $orderNumber)->exists();
+                // Skip if already synced
+                $exists = WarehouseOrder::where('wc_order_id', $wcOrderId)->exists();
                 if ($exists) {
                     $skipped++;
                     continue;
@@ -115,24 +118,41 @@ class WooCommerceService
 
                 $customerName = trim(($wcOrder['billing']['first_name'] ?? '') . ' ' . ($wcOrder['billing']['last_name'] ?? ''));
                 if (empty($customerName)) {
-                    $customerName = 'مشتری ووکامرس #' . $wcOrder['id'];
+                    $customerName = 'مشتری ووکامرس #' . $wcOrderId;
                 }
 
+                // Determine shipping type from WC shipping methods
+                $shippingType = $this->detectShippingType($wcOrder);
+
+                // Calculate total weight from line items
+                $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? []);
+
+                // Build description
                 $lineItems = collect($wcOrder['line_items'] ?? [])
                     ->map(fn($item) => ($item['name'] ?? '') . ' x' . ($item['quantity'] ?? 1))
                     ->implode("\n");
 
-                $status = $this->mapWcStatus($wcOrder['status'] ?? 'processing');
-
-                WarehouseOrder::create([
-                    'order_number' => $orderNumber,
+                // Create order
+                $order = WarehouseOrder::create([
+                    'order_number' => 'WC-' . $wcOrderId,
+                    'wc_order_id' => $wcOrderId,
+                    'wc_order_data' => $wcOrder,
                     'customer_name' => $customerName,
                     'customer_mobile' => $wcOrder['billing']['phone'] ?? null,
                     'description' => $lineItems ?: null,
-                    'status' => $status,
+                    'status' => WarehouseOrder::STATUS_PENDING,
+                    'shipping_type' => $shippingType,
+                    'barcode' => WarehouseOrder::generateBarcode(),
+                    'total_weight' => $totalWeight,
                     'created_by' => auth()->id(),
-                    'notes' => 'سینک از ووکامرس - مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان',
+                    'notes' => 'مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان',
                 ]);
+
+                // Set timer based on shipping type
+                $order->setTimerFromShippingType();
+
+                // Create order items
+                $this->createOrderItems($order, $wcOrder['line_items'] ?? []);
 
                 $imported++;
             } catch (\Exception $e) {
@@ -155,12 +175,49 @@ class WooCommerceService
         ];
     }
 
-    protected function mapWcStatus(string $wcStatus): string
+    protected function detectShippingType(array $wcOrder): string
     {
-        return match ($wcStatus) {
-            'pending', 'on-hold', 'processing' => WarehouseOrder::STATUS_PROCESSING,
-            'completed' => WarehouseOrder::STATUS_DELIVERED,
-            default => WarehouseOrder::STATUS_PROCESSING,
-        };
+        $shippingLines = $wcOrder['shipping_lines'] ?? [];
+
+        foreach ($shippingLines as $line) {
+            $methodId = strtolower($line['method_id'] ?? '');
+            $methodTitle = strtolower($line['method_title'] ?? '');
+
+            // Check for courier/local delivery
+            if (str_contains($methodId, 'local') || str_contains($methodId, 'courier')
+                || str_contains($methodTitle, 'پیک') || str_contains($methodTitle, 'courier')) {
+                return 'courier';
+            }
+        }
+
+        // Default to post
+        return 'post';
+    }
+
+    protected function calculateTotalWeight(array $lineItems): float
+    {
+        $totalWeight = 0;
+        foreach ($lineItems as $item) {
+            $weight = (float)($item['weight'] ?? 0);
+            $quantity = (int)($item['quantity'] ?? 1);
+            $totalWeight += $weight * $quantity;
+        }
+        return $totalWeight;
+    }
+
+    protected function createOrderItems(WarehouseOrder $order, array $lineItems): void
+    {
+        foreach ($lineItems as $item) {
+            WarehouseOrderItem::create([
+                'warehouse_order_id' => $order->id,
+                'product_name' => $item['name'] ?? 'محصول',
+                'product_sku' => $item['sku'] ?? null,
+                'product_barcode' => $item['sku'] ?? null,
+                'quantity' => (int)($item['quantity'] ?? 1),
+                'weight' => (float)($item['weight'] ?? 0),
+                'price' => (float)($item['total'] ?? 0),
+                'wc_product_id' => $item['product_id'] ?? null,
+            ]);
+        }
     }
 }
