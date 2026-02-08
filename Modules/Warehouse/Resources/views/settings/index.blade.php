@@ -174,6 +174,58 @@
                     </div>
                 </div>
 
+                <!-- Queue Timer Settings -->
+                <div class="border-t border-slate-700 pt-6 mt-6">
+                    <h3 class="text-md font-medium text-slate-200 mb-4">تنظیمات صف آماده‌سازی</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">ددلاین پست (دقیقه)</label>
+                            <input type="number" name="queue_post_deadline_minutes"
+                                   value="{{ old('queue_post_deadline_minutes', $settings['queue_post_deadline_minutes'] ?? 60) }}"
+                                   min="1" max="1440"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-slate-500 text-sm mt-1">پیش‌فرض: ۶۰ دقیقه (۱ ساعت)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">ددلاین پیک (دقیقه)</label>
+                            <input type="number" name="queue_courier_deadline_minutes"
+                                   value="{{ old('queue_courier_deadline_minutes', $settings['queue_courier_deadline_minutes'] ?? 420) }}"
+                                   min="1" max="1440"
+                                   class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-slate-500 text-sm mt-1">پیش‌فرض: ۴۲۰ دقیقه (۷ ساعت)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto Status Change Settings -->
+                <div class="border-t border-slate-700 pt-6 mt-6">
+                    <h3 class="text-md font-medium text-slate-200 mb-4">تغییر خودکار وضعیت</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+                            <div>
+                                <div class="font-medium text-slate-200">تغییر وضعیت بعد از پرینت</div>
+                                <div class="text-sm text-slate-400">وقتی فاکتور پرینت شد، وضعیت خودکار عوض شود</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="auto_status_on_print" value="1"
+                                       {{ old('auto_status_on_print', $settings['auto_status_on_print'] ?? true) ? 'checked' : '' }}
+                                       class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">وضعیت بعد از پرینت</label>
+                            <select name="print_status_change_to"
+                                    class="w-full bg-slate-700 border-slate-600 rounded-lg text-slate-200 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="confirmed" {{ ($settings['print_status_change_to'] ?? 'picking') === 'confirmed' ? 'selected' : '' }}>تایید شده</option>
+                                <option value="picking" {{ ($settings['print_status_change_to'] ?? 'picking') === 'picking' ? 'selected' : '' }}>در حال جمع‌آوری</option>
+                                <option value="packed" {{ ($settings['print_status_change_to'] ?? 'picking') === 'packed' ? 'selected' : '' }}>بسته‌بندی شده</option>
+                            </select>
+                            <p class="text-slate-500 text-sm mt-1">وضعیتی که بعد از اولین پرینت اعمال شود</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end mt-6">
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
                         ذخیره تنظیمات عملیاتی

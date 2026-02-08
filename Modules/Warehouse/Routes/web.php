@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Warehouse\Http\Controllers\OrderController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
+use Modules\Warehouse\Http\Controllers\PackingController;
+use Modules\Warehouse\Http\Controllers\CourierController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +19,24 @@ Route::middleware(['web', 'auth', 'verified.mobile'])
 
         // Dashboard
         Route::get('/', [OrderController::class, 'dashboard'])->name('dashboard');
+
+        // Preparation Queue
+        Route::get('/queue', [PackingController::class, 'queue'])->name('queue');
+
+        // Packing Station
+        Route::prefix('packing')->name('packing.')->group(function () {
+            Route::get('/', [PackingController::class, 'index'])->name('index');
+            Route::post('/scan', [PackingController::class, 'scan'])->name('scan');
+            Route::post('/complete', [PackingController::class, 'complete'])->name('complete');
+        });
+
+        // Courier Management
+        Route::prefix('courier')->name('courier.')->group(function () {
+            Route::get('/', [CourierController::class, 'index'])->name('index');
+            Route::post('/store', [CourierController::class, 'store'])->name('store');
+            Route::delete('/destroy', [CourierController::class, 'destroy'])->name('destroy');
+            Route::post('/{order}/delivered', [CourierController::class, 'markDelivered'])->name('delivered');
+        });
 
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {

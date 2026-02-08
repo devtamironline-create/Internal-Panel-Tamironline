@@ -359,7 +359,30 @@ class OrderController extends Controller
             $request->userAgent()
         );
 
+        // Auto change status on first print
+        if (!$printResult['is_duplicate']) {
+            $this->autoChangeStatusOnPrint($order);
+        }
+
         return view('warehouse::orders.print', compact('order', 'printResult'));
+    }
+
+    /**
+     * Auto change order status when printed
+     */
+    protected function autoChangeStatusOnPrint(WooOrder $order): void
+    {
+        $autoChange = \App\Models\Setting::get('auto_status_on_print', true);
+        if (!$autoChange) {
+            return;
+        }
+
+        $newStatus = \App\Models\Setting::get('print_status_change_to', 'picking');
+
+        // Only change if current status is 'new'
+        if ($order->internal_status === WooOrder::INTERNAL_NEW || !$order->internal_status) {
+            $order->updateInternalStatus($newStatus);
+        }
     }
 
     /**

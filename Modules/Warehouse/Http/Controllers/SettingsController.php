@@ -29,6 +29,14 @@ class SettingsController extends Controller
             'default_carton_weight' => Setting::get('default_carton_weight', 0),
             'manager_mobile_for_alerts' => Setting::get('manager_mobile_for_alerts', ''),
 
+            // Queue timer settings
+            'queue_post_deadline_minutes' => Setting::get('queue_post_deadline_minutes', 60),
+            'queue_courier_deadline_minutes' => Setting::get('queue_courier_deadline_minutes', 420),
+
+            // Auto status change settings
+            'auto_status_on_print' => Setting::get('auto_status_on_print', true),
+            'print_status_change_to' => Setting::get('print_status_change_to', 'picking'),
+
             // Amadast settings
             'amadast_client_code' => Setting::get('amadast_client_code', ''),
             'amadast_enabled' => Setting::get('amadast_enabled', false),
@@ -89,11 +97,23 @@ class SettingsController extends Controller
             'weight_tolerance_percent' => 'required|numeric|min:0|max:100',
             'default_carton_weight' => 'nullable|numeric|min:0',
             'manager_mobile_for_alerts' => 'nullable|string|regex:/^09[0-9]{9}$/',
+            'queue_post_deadline_minutes' => 'nullable|integer|min:1|max:1440',
+            'queue_courier_deadline_minutes' => 'nullable|integer|min:1|max:1440',
+            'auto_status_on_print' => 'boolean',
+            'print_status_change_to' => 'nullable|string|in:new,confirmed,picking,packed',
         ]);
 
         Setting::set('weight_tolerance_percent', $request->weight_tolerance_percent);
         Setting::set('default_carton_weight', $request->default_carton_weight ?? 0);
         Setting::set('manager_mobile_for_alerts', $request->manager_mobile_for_alerts);
+
+        // Queue timer settings
+        Setting::set('queue_post_deadline_minutes', $request->queue_post_deadline_minutes ?? 60);
+        Setting::set('queue_courier_deadline_minutes', $request->queue_courier_deadline_minutes ?? 420);
+
+        // Auto status change settings
+        Setting::set('auto_status_on_print', $request->boolean('auto_status_on_print'));
+        Setting::set('print_status_change_to', $request->print_status_change_to ?? 'picking');
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'تنظیمات عملیاتی انبار ذخیره شد.');
