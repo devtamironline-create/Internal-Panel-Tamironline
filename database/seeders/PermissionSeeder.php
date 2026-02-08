@@ -51,6 +51,10 @@ class PermissionSeeder extends Seeder
             // پیام‌رسان
             'use-messenger' => 'استفاده از پیام‌رسان',
 
+            // انبار
+            'view-warehouse' => 'مشاهده انبار',
+            'manage-warehouse' => 'مدیریت انبار',
+
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
