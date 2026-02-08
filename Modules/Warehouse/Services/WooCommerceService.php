@@ -128,11 +128,42 @@ class WooCommerceService
         foreach ($result['orders'] as $wcOrder) {
             try {
                 $wcOrderId = $wcOrder['id'];
+                $orderNumber = 'WC-' . $wcOrderId;
 
-                // Skip if already synced
-                $exists = WarehouseOrder::where('wc_order_id', $wcOrderId)->exists();
-                if ($exists) {
-                    $skipped++;
+                // Check if already synced (by wc_order_id OR order_number)
+                $existingOrder = WarehouseOrder::where('wc_order_id', $wcOrderId)
+                    ->orWhere('order_number', $orderNumber)
+                    ->first();
+
+                if ($existingOrder) {
+                    // If old order exists without wc_order_id, update it with journey fields
+                    if (!$existingOrder->wc_order_id) {
+                        $shippingType = $this->detectShippingType($wcOrder);
+                        $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? []);
+
+                        $existingOrder->update([
+                            'wc_order_id' => $wcOrderId,
+                            'wc_order_data' => $wcOrder,
+                            'shipping_type' => $shippingType,
+                            'barcode' => $existingOrder->barcode ?: WarehouseOrder::generateBarcode(),
+                            'total_weight' => $totalWeight,
+                            'customer_mobile' => $existingOrder->customer_mobile ?: ($wcOrder['billing']['phone'] ?? null),
+                        ]);
+
+                        // Create order items if not already created
+                        if ($existingOrder->items()->count() === 0) {
+                            $this->createOrderItems($existingOrder, $wcOrder['line_items'] ?? []);
+                        }
+
+                        // Set timer if not set
+                        if (!$existingOrder->timer_deadline) {
+                            $existingOrder->setTimerFromShippingType();
+                        }
+
+                        $imported++;
+                    } else {
+                        $skipped++;
+                    }
                     continue;
                 }
 
@@ -154,7 +185,7 @@ class WooCommerceService
 
                 // Create order
                 $order = WarehouseOrder::create([
-                    'order_number' => 'WC-' . $wcOrderId,
+                    'order_number' => $orderNumber,
                     'wc_order_id' => $wcOrderId,
                     'wc_order_data' => $wcOrder,
                     'customer_name' => $customerName,
