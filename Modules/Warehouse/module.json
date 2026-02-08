@@ -1,0 +1,11 @@
+{
+    "name": "Warehouse",
+    "alias": "warehouse",
+    "description": "مدیریت انبار و جرنی سفارشات",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Warehouse\\Providers\\WarehouseServiceProvider"
+    ],
+    "files": []
+}

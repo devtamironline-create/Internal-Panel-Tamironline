@@ -357,6 +357,14 @@
                 </div>
                 @endcanany
 
+                <!-- مدیریت انبار -->
+                @canany(['view-warehouse', 'manage-warehouse', 'manage-permissions'])
+                <a href="{{ route('warehouse.index') }}" class="sidebar-menu-item mt-2 {{ request()->routeIs('warehouse.*') ? 'sidebar-menu-item-active' : '' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    مدیریت انبار
+                </a>
+                @endcanany
+
                 <!-- مدیریت سیستم -->
                 @can('manage-permissions')
                 <div class="mt-6" x-data="{ open: {{ request()->routeIs('admin.roles.*') || request()->routeIs('admin.permissions.*') ? 'true' : 'false' }} }">
