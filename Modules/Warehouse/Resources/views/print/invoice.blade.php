@@ -13,9 +13,11 @@
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #fff; border-bottom: 1px solid #ddd; }
         .header-right { display: flex; align-items: center; }
         .header-logo { width: 140px; height: auto; max-height: 120px; object-fit: contain; }
-        .header-left { font-size: 11px; color: #444; line-height: 1.9; }
-        .header-left .info-row { display: flex; gap: 4px; }
-        .header-left .info-label { font-weight: bold; color: #666; }
+        .header-left { }
+        .info-table { border-collapse: collapse; font-size: 11px; color: #444; }
+        .info-table td { padding: 3px 8px; }
+        .info-table .info-label { font-weight: bold; color: #666; white-space: nowrap; }
+        .info-table .info-val { color: #222; }
         .store-name { text-align: center; padding: 6px 20px; font-size: 13px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
 
         /* Parties (Sender/Receiver) */
@@ -103,11 +105,12 @@
                 @endif
             </div>
             <div class="header-left">
-                <div class="info-row"><span class="info-label">شماره سفارش:</span> <span>{{ $order->order_number }}</span></div>
-                <div class="info-row"><span class="info-label">تاریخ:</span> <span>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span></div>
-                <div class="info-row"><span class="info-label">نوع ارسال:</span> <span>@switch($order->shipping_type)@case('courier') پیک @break @case('urgent') فوری @break @case('emergency') اضطراری @break @default پست @endswitch</span></div>
-                <div class="info-row"><span class="info-label">وزن کل:</span> <span>{{ $order->total_weight }} kg</span></div>
-                <div class="info-row"><span class="info-label">تعداد اقلام:</span> <span>{{ $order->items ? $order->items->sum('quantity') : 0 }}</span></div>
+                <table class="info-table">
+                    <tr><td class="info-label">شماره سفارش:</td><td class="info-val">{{ $order->order_number }}</td></tr>
+                    <tr><td class="info-label">تاریخ:</td><td class="info-val">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</td></tr>
+                    <tr><td class="info-label">نوع ارسال:</td><td class="info-val">@switch($order->shipping_type)@case('courier') پیک @break @case('urgent') فوری @break @case('emergency') اضطراری @break @default پست @endswitch</td></tr>
+                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ $order->total_weight }} kg</td></tr>
+                </table>
             </div>
         </div>
         <div class="store-name">{{ $invoiceSettings['store_name'] }}</div>
