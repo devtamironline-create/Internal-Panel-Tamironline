@@ -231,21 +231,34 @@ class AmadestService
         }
 
         try {
-            $senderName = WarehouseSetting::get('amadest_sender_name');
-            $senderMobile = WarehouseSetting::get('amadest_sender_mobile');
+            $senderName = WarehouseSetting::get('amadest_sender_name') ?: 'فروشگاه';
+            $senderMobile = WarehouseSetting::get('amadest_sender_mobile') ?: '09000000000';
+
+            // استخراج عدد از شماره سفارش (WC-35388 → 35388)
+            $externalId = $orderData['external_order_id'] ?? '0';
+            $externalIdInt = (int) preg_replace('/\D/', '', $externalId);
+
+            // وزن باید به گرم باشه (حداقل 10 گرم)
+            $weightGrams = ($orderData['weight'] ?? 500);
+            if ($weightGrams < 10) {
+                $weightGrams = (int) round($weightGrams * 1000); // kg → grams
+            }
+            $weightGrams = max($weightGrams, 10);
 
             $payload = [
-                'store_id' => $this->storeId,
-                'external_order_id' => $orderData['external_order_id'],
-                'recipient_name' => $orderData['recipient_name'],
+                'store_id' => (int) ($this->storeId ?: 0),
+                'external_order_id' => $externalIdInt,
+                'recipient_name' => $orderData['recipient_name'] ?: 'مشتری',
                 'sender_name' => $senderName,
                 'recipient_mobile' => $this->formatMobile($orderData['recipient_mobile']),
-                'sender_mobile' => $senderMobile,
-                'recipient_city_id' => $orderData['recipient_city_id'] ?? null,
-                'recipient_address' => $orderData['recipient_address'],
+                'sender_mobile' => $this->formatMobile($senderMobile),
+                'recipient_city_id' => (int) ($orderData['recipient_city_id'] ?? 0) ?: null,
+                'recipient_address' => $orderData['recipient_address'] ?: 'آدرس نامشخص',
                 'recipient_postal_code' => $orderData['recipient_postal_code'] ?? null,
-                'weight' => $orderData['weight'] ?? 500,
-                'value' => $orderData['value'] ?? 100000,
+                'weight' => $weightGrams,
+                'value' => (int) ($orderData['value'] ?? 100000),
+                'product_type' => $orderData['product_type'] ?? 1,
+                'package_type' => $orderData['package_type'] ?? 1,
                 'products' => $orderData['products'] ?? [],
                 'description' => $orderData['description'] ?? null,
             ];
