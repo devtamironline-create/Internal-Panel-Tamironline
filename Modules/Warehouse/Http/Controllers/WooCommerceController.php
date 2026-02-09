@@ -87,6 +87,22 @@ class WooCommerceController extends Controller
         return response()->json(['success' => true, 'message' => 'نقشه‌برداری نوع ارسال ذخیره شد.']);
     }
 
+    public function syncProducts()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $service = new WooCommerceService();
+            $result = $service->syncProducts();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Product sync error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
+
     public function sync(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

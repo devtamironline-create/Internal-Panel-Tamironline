@@ -80,6 +80,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/save', [WooCommerceController::class, 'saveSettings'])->name('warehouse.woocommerce.save');
         Route::post('/test', [WooCommerceController::class, 'testConnection'])->name('warehouse.woocommerce.test');
         Route::post('/sync', [WooCommerceController::class, 'sync'])->name('warehouse.woocommerce.sync');
+        Route::post('/sync-products', [WooCommerceController::class, 'syncProducts'])->name('warehouse.woocommerce.sync-products');
         Route::post('/shipping-methods', [WooCommerceController::class, 'fetchShippingMethods'])->name('warehouse.woocommerce.shipping-methods');
         Route::post('/shipping-mappings', [WooCommerceController::class, 'saveShippingMappings'])->name('warehouse.woocommerce.shipping-mappings');
     });

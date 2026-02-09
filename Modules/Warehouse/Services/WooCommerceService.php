@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseOrderItem;
+use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -125,9 +126,12 @@ class WooCommerceService
         $failed = 0;
         $lastError = '';
 
-        // جمع‌آوری همه product_id ها از همه سفارشات برای دریافت دسته‌ای وزن
-        $allLineItems = collect($result['orders'])->flatMap(fn($o) => $o['line_items'] ?? [])->toArray();
-        $productWeights = $this->fetchProductWeights($allLineItems);
+        // دریافت وزن محصولات از جدول محلی (warehouse_products)
+        $allLineItems = collect($result['orders'])->flatMap(fn($o) => $o['line_items'] ?? []);
+        $productIds = $allLineItems->pluck('product_id')->filter()->unique()->toArray();
+        $variationIds = $allLineItems->filter(fn($i) => !empty($i['variation_id']) && $i['variation_id'] > 0)
+            ->pluck('variation_id')->unique()->toArray();
+        $productWeights = WarehouseProduct::getWeightsMap($productIds, $variationIds);
 
         foreach ($result['orders'] as $wcOrder) {
             try {
@@ -320,121 +324,37 @@ class WooCommerceService
     }
 
     /**
-     * دریافت وزن محصولات از WooCommerce Products API
+     * تعیین وزن یک آیتم از جدول محلی محصولات
      */
-    protected function fetchProductWeights(array $lineItems): array
-    {
-        $weights = [];
-
-        $productIds = collect($lineItems)
-            ->pluck('product_id')
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-
-        if (empty($productIds)) {
-            return $weights;
-        }
-
-        // دریافت دسته‌ای محصولات (حداکثر 100 تا در هر درخواست)
-        foreach (array_chunk($productIds, 100) as $chunk) {
-            try {
-                $response = Http::timeout(30)
-                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
-                    ->get($this->siteUrl . '/wp-json/wc/v3/products', [
-                        'include' => implode(',', $chunk),
-                        'per_page' => 100,
-                    ]);
-
-                if ($response->successful()) {
-                    foreach ($response->json() as $product) {
-                        $weights[$product['id']] = (float)($product['weight'] ?? 0);
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Failed to fetch product weights from WooCommerce', [
-                    'product_ids' => $chunk,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        // بررسی محصولات متغیر (variation) — اگر variation_id داشت وزن variation رو بگیر
-        $variationIds = collect($lineItems)
-            ->filter(fn($item) => !empty($item['variation_id']) && $item['variation_id'] > 0)
-            ->pluck('variation_id')
-            ->unique()
-            ->values()
-            ->toArray();
-
-        if (!empty($variationIds)) {
-            // گروه‌بندی variation ها بر اساس product_id
-            $variationsByProduct = collect($lineItems)
-                ->filter(fn($item) => !empty($item['variation_id']) && $item['variation_id'] > 0)
-                ->groupBy('product_id');
-
-            foreach ($variationsByProduct as $productId => $items) {
-                foreach ($items as $item) {
-                    try {
-                        $response = Http::timeout(15)
-                            ->withBasicAuth($this->consumerKey, $this->consumerSecret)
-                            ->get($this->siteUrl . "/wp-json/wc/v3/products/{$productId}/variations/{$item['variation_id']}");
-
-                        if ($response->successful()) {
-                            $variation = $response->json();
-                            $varWeight = (float)($variation['weight'] ?? 0);
-                            if ($varWeight > 0) {
-                                // ذخیره با کلید variation_id
-                                $weights['var_' . $item['variation_id']] = $varWeight;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        Log::warning('Failed to fetch variation weight', [
-                            'product_id' => $productId,
-                            'variation_id' => $item['variation_id'],
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            }
-        }
-
-        return $weights;
-    }
-
-    /**
-     * تعیین وزن یک آیتم بر اساس وزن‌های دریافت شده
-     */
-    protected function getItemWeight(array $item, array $weights): float
+    protected function getItemWeight(array $item, array $weightsMap): float
     {
         // اول variation رو چک کن
         if (!empty($item['variation_id']) && $item['variation_id'] > 0) {
-            $varWeight = $weights['var_' . $item['variation_id']] ?? 0;
+            $varWeight = (float)($weightsMap[$item['variation_id']] ?? 0);
             if ($varWeight > 0) {
                 return $varWeight;
             }
         }
 
         // بعد وزن محصول اصلی
-        return $weights[$item['product_id'] ?? 0] ?? 0;
+        return (float)($weightsMap[$item['product_id'] ?? 0] ?? 0);
     }
 
-    protected function calculateTotalWeight(array $lineItems, array $weights = []): float
+    protected function calculateTotalWeight(array $lineItems, array $weightsMap = []): float
     {
         $totalWeight = 0;
         foreach ($lineItems as $item) {
-            $weight = !empty($weights) ? $this->getItemWeight($item, $weights) : (float)($item['weight'] ?? 0);
+            $weight = !empty($weightsMap) ? $this->getItemWeight($item, $weightsMap) : 0;
             $quantity = (int)($item['quantity'] ?? 1);
             $totalWeight += $weight * $quantity;
         }
         return round($totalWeight, 2);
     }
 
-    protected function createOrderItems(WarehouseOrder $order, array $lineItems, array $weights = []): void
+    protected function createOrderItems(WarehouseOrder $order, array $lineItems, array $weightsMap = []): void
     {
         foreach ($lineItems as $item) {
-            $weight = !empty($weights) ? $this->getItemWeight($item, $weights) : (float)($item['weight'] ?? 0);
+            $weight = !empty($weightsMap) ? $this->getItemWeight($item, $weightsMap) : 0;
 
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
@@ -447,5 +367,145 @@ class WooCommerceService
                 'wc_product_id' => $item['product_id'] ?? null,
             ]);
         }
+    }
+
+    /**
+     * سینک محصولات از ووکامرس و ذخیره در جدول محلی
+     */
+    public function syncProducts(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        if (!\Schema::hasTable('warehouse_products')) {
+            return ['success' => false, 'message' => 'ابتدا مایگریشن اجرا شود: php artisan migrate'];
+        }
+
+        $page = 1;
+        $perPage = 100;
+        $totalImported = 0;
+        $totalUpdated = 0;
+        $totalVariations = 0;
+
+        try {
+            do {
+                $response = Http::timeout(60)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . '/wp-json/wc/v3/products', [
+                        'page' => $page,
+                        'per_page' => $perPage,
+                        'status' => 'publish',
+                    ]);
+
+                if (!$response->successful()) {
+                    break;
+                }
+
+                $products = $response->json();
+                if (empty($products)) {
+                    break;
+                }
+
+                foreach ($products as $product) {
+                    $result = WarehouseProduct::updateOrCreate(
+                        ['wc_product_id' => $product['id']],
+                        [
+                            'name' => $product['name'] ?? '',
+                            'sku' => $product['sku'] ?? null,
+                            'weight' => (float)($product['weight'] ?? 0),
+                            'price' => (float)($product['price'] ?? 0),
+                            'type' => $product['type'] ?? 'simple',
+                            'parent_id' => null,
+                            'status' => $product['status'] ?? 'publish',
+                        ]
+                    );
+
+                    if ($result->wasRecentlyCreated) {
+                        $totalImported++;
+                    } else {
+                        $totalUpdated++;
+                    }
+
+                    // اگر محصول متغیر بود، variation ها رو هم بگیر
+                    if (($product['type'] ?? '') === 'variable') {
+                        $varCount = $this->syncProductVariations($product['id']);
+                        $totalVariations += $varCount;
+                    }
+                }
+
+                $totalPages = (int) $response->header('X-WP-TotalPages', 1);
+                $page++;
+            } while ($page <= $totalPages);
+
+            WarehouseSetting::set('wc_products_last_sync', now()->toDateTimeString());
+
+            $total = $totalImported + $totalUpdated;
+            return [
+                'success' => true,
+                'message' => "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع | مجموع: {$total}",
+                'imported' => $totalImported,
+                'updated' => $totalUpdated,
+                'variations' => $totalVariations,
+            ];
+        } catch (\Exception $e) {
+            Log::error('WooCommerce product sync failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * سینک variation های یک محصول متغیر
+     */
+    protected function syncProductVariations(int $productId): int
+    {
+        $count = 0;
+        $page = 1;
+
+        try {
+            do {
+                $response = Http::timeout(30)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . "/wp-json/wc/v3/products/{$productId}/variations", [
+                        'page' => $page,
+                        'per_page' => 100,
+                    ]);
+
+                if (!$response->successful()) {
+                    break;
+                }
+
+                $variations = $response->json();
+                if (empty($variations)) {
+                    break;
+                }
+
+                foreach ($variations as $variation) {
+                    WarehouseProduct::updateOrCreate(
+                        ['wc_product_id' => $variation['id']],
+                        [
+                            'name' => $variation['name'] ?? ('تنوع #' . $variation['id']),
+                            'sku' => $variation['sku'] ?? null,
+                            'weight' => (float)($variation['weight'] ?? 0),
+                            'price' => (float)($variation['price'] ?? 0),
+                            'type' => 'variation',
+                            'parent_id' => $productId,
+                            'status' => $variation['status'] ?? 'publish',
+                        ]
+                    );
+                    $count++;
+                }
+
+                $totalPages = (int) $response->header('X-WP-TotalPages', 1);
+                $page++;
+            } while ($page <= $totalPages);
+        } catch (\Exception $e) {
+            Log::warning('Failed to sync variations for product', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $count;
     }
 }

@@ -122,6 +122,56 @@
             </div>
         </div>
     </div>
+
+    <!-- Product Sync Card (Full Width) -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">کاتالوگ محصولات</h2>
+                    <p class="text-sm text-gray-500">محصولات و وزن آن‌ها را از ووکامرس دریافت کنید. وزن سفارشات بر اساس این اطلاعات محاسبه می‌شود.</p>
+                </div>
+            </div>
+            <button onclick="syncProducts()" id="product-sync-btn" class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" id="product-sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span id="product-sync-text">سینک محصولات</span>
+            </button>
+        </div>
+
+        @php
+            $productsLastSync = \Modules\Warehouse\Models\WarehouseSetting::get('wc_products_last_sync');
+            $productCount = \Schema::hasTable('warehouse_products') ? \Modules\Warehouse\Models\WarehouseProduct::count() : 0;
+            $zeroWeightCount = \Schema::hasTable('warehouse_products') ? \Modules\Warehouse\Models\WarehouseProduct::where('weight', 0)->count() : 0;
+        @endphp
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div class="p-3 bg-gray-50 rounded-lg text-center">
+                <div class="text-2xl font-bold text-gray-900">{{ number_format($productCount) }}</div>
+                <div class="text-xs text-gray-500 mt-1">محصول ذخیره شده</div>
+            </div>
+            <div class="p-3 {{ $zeroWeightCount > 0 ? 'bg-yellow-50' : 'bg-green-50' }} rounded-lg text-center">
+                <div class="text-2xl font-bold {{ $zeroWeightCount > 0 ? 'text-yellow-700' : 'text-green-700' }}">{{ number_format($zeroWeightCount) }}</div>
+                <div class="text-xs {{ $zeroWeightCount > 0 ? 'text-yellow-600' : 'text-green-600' }} mt-1">بدون وزن</div>
+            </div>
+            <div class="p-3 bg-blue-50 rounded-lg text-center">
+                <div class="text-sm font-medium text-blue-900">
+                    @if($productsLastSync)
+                        {{ \Morilog\Jalali\Jalalian::fromCarbon(\Carbon\Carbon::parse($productsLastSync))->format('Y/m/d H:i') }}
+                    @else
+                        هنوز سینک نشده
+                    @endif
+                </div>
+                <div class="text-xs text-blue-600 mt-1">آخرین سینک محصولات</div>
+            </div>
+        </div>
+
+        <div id="product-sync-result" class="hidden p-4 rounded-lg text-sm"></div>
+
+        <p class="text-xs text-gray-400 mt-3">نکته: ابتدا محصولات را سینک کنید، سپس سفارشات. وزن هر سفارش از جدول محصولات محاسبه می‌شود.</p>
+    </div>
 </div>
 
 @push('scripts')
@@ -167,6 +217,46 @@ function testWcConnection() {
     })
     .catch(err => {
         showResult('wc-test-result', false, 'خطا: ' + err.message);
+    });
+}
+
+function syncProducts() {
+    const btn = document.getElementById('product-sync-btn');
+    const icon = document.getElementById('product-sync-icon');
+    const text = document.getElementById('product-sync-text');
+
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+    text.textContent = 'در حال سینک محصولات...';
+    document.getElementById('product-sync-result').classList.add('hidden');
+
+    fetch('{{ route("warehouse.woocommerce.sync-products") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('سرور خطا برگرداند (HTTP ' + r.status + ')');
+        return r.json();
+    })
+    .then(data => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'سینک محصولات';
+        showResult('product-sync-result', data.success, data.message);
+        if (data.success) {
+            setTimeout(() => location.reload(), 2000);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'سینک محصولات';
+        showResult('product-sync-result', false, 'خطا: ' + err.message);
     });
 }
 
