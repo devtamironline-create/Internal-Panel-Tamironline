@@ -82,6 +82,10 @@ class AmadestController extends Controller
             abort(403);
         }
 
+        // Clear stale cache
+        \Illuminate\Support\Facades\Cache::forget('amadest_provinces');
+        \Illuminate\Support\Facades\Cache::forget('amadest_all_cities');
+
         $service = new AmadestService();
         $provinces = $service->getProvinces();
 

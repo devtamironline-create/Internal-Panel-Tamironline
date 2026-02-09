@@ -124,20 +124,22 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">استان <span class="text-red-500">*</span></label>
-                        <select id="setup-province" onchange="loadCities()"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white">
-                            <option value="">در حال بارگذاری...</option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">کد استان <span class="text-red-500">*</span></label>
+                        <input type="number" id="setup-province" dir="ltr"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                               placeholder="مثلا 8 برای تهران">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">شهر <span class="text-red-500">*</span></label>
-                        <select id="setup-city"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white">
-                            <option value="">ابتدا استان انتخاب کنید</option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">کد شهر <span class="text-red-500">*</span></label>
+                        <input type="number" id="setup-city" dir="ltr"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                               placeholder="مثلا 292 برای تهران">
                     </div>
                 </div>
+                <button type="button" onclick="fetchCityList()" class="text-sm text-emerald-600 hover:text-emerald-800 underline">
+                    نمایش لیست استان‌ها و شهرها از API
+                </button>
+                <div id="city-list-result" class="hidden mt-2 p-3 bg-gray-50 rounded-lg text-xs max-h-48 overflow-y-auto" dir="ltr"></div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -226,68 +228,26 @@
 
 @push('scripts')
 <script>
-// Load provinces on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadProvinces();
-});
-
-function loadProvinces() {
-    const select = document.getElementById('setup-province');
-    select.innerHTML = '<option value="">در حال بارگذاری...</option>';
+function fetchCityList() {
+    const resultDiv = document.getElementById('city-list-result');
+    resultDiv.classList.remove('hidden');
+    resultDiv.textContent = 'در حال دریافت لیست...';
 
     fetch('{{ route("warehouse.amadest.provinces") }}', {
         headers: { 'Accept': 'application/json' },
     })
     .then(r => r.json())
     .then(data => {
-        select.innerHTML = '<option value="">انتخاب استان...</option>';
         if (data.success && data.data && data.data.length > 0) {
-            data.data.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name || p.title;
-                select.appendChild(opt);
-            });
+            let html = '<strong>استان‌ها (provinces):</strong><br>';
+            html += '<pre>' + JSON.stringify(data.data, null, 2) + '</pre>';
+            resultDiv.innerHTML = html;
         } else {
-            select.innerHTML = '<option value="">استانی یافت نشد</option>';
+            resultDiv.innerHTML = '<strong>پاسخ API:</strong><br><pre>' + JSON.stringify(data, null, 2) + '</pre>';
         }
     })
-    .catch(() => {
-        select.innerHTML = '<option value="">خطا در بارگذاری</option>';
-    });
-}
-
-function loadCities() {
-    const provinceId = document.getElementById('setup-province').value;
-    const citySelect = document.getElementById('setup-city');
-
-    if (!provinceId) {
-        citySelect.innerHTML = '<option value="">ابتدا استان انتخاب کنید</option>';
-        return;
-    }
-
-    citySelect.innerHTML = '<option value="">در حال بارگذاری شهرها...</option>';
-
-    // Separate API call with province_id parameter
-    fetch('{{ route("warehouse.amadest.cities") }}?province_id=' + provinceId, {
-        headers: { 'Accept': 'application/json' },
-    })
-    .then(r => r.json())
-    .then(data => {
-        citySelect.innerHTML = '<option value="">انتخاب شهر...</option>';
-        if (data.success && data.data && data.data.length > 0) {
-            data.data.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name || c.title;
-                citySelect.appendChild(opt);
-            });
-        } else {
-            citySelect.innerHTML = '<option value="">شهری یافت نشد</option>';
-        }
-    })
-    .catch(() => {
-        citySelect.innerHTML = '<option value="">خطا در بارگذاری شهرها</option>';
+    .catch(err => {
+        resultDiv.textContent = 'خطا: ' + err.message;
     });
 }
 
