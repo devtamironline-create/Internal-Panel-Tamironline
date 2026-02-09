@@ -9,15 +9,15 @@
         .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
-        .header-right { display: flex; align-items: center; gap: 10px; }
-        .header-logo { width: 42px; height: 42px; object-fit: contain; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .header-logo { width: 60px; height: 60px; object-fit: contain; }
         .header-info { }
-        .header-title { font-size: 18px; font-weight: bold; color: #222; }
-        .header-subtitle { font-size: 10px; color: #888; margin-top: 2px; }
+        .header-title { font-size: 20px; font-weight: bold; color: #222; }
+        .header-subtitle { font-size: 10px; color: #999; margin-top: 3px; }
         .header-left { text-align: left; }
-        .header-order-num { font-size: 13px; font-weight: bold; color: #222; }
-        .header-date { font-size: 10px; color: #888; margin-top: 2px; }
+        .header-order-num { font-size: 12px; font-weight: bold; color: #444; }
+        .header-date { font-size: 10px; color: #999; margin-top: 2px; }
 
         /* Parties (Sender/Receiver) */
         .parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ddd; }
@@ -110,10 +110,6 @@
                     <div class="header-subtitle">{{ $invoiceSettings['subtitle'] }}</div>
                 </div>
             </div>
-            <div class="header-left">
-                <div class="header-order-num">{{ $order->order_number }}</div>
-                <div class="header-date">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</div>
-            </div>
         </div>
 
         {{-- Sender / Receiver --}}
@@ -166,6 +162,14 @@
 
         {{-- Order Info --}}
         <div class="order-info">
+            <div class="order-info-item">
+                <span class="order-info-label">شماره سفارش:</span>
+                <span>{{ $order->order_number }}</span>
+            </div>
+            <div class="order-info-item">
+                <span class="order-info-label">تاریخ:</span>
+                <span>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
+            </div>
             <div class="order-info-item">
                 <span class="order-info-label">نوع ارسال:</span>
                 <span>
