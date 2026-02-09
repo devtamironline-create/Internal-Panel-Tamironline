@@ -410,10 +410,10 @@
 
 {{-- Supply Limitation Modal --}}
 @canany(['manage-warehouse', 'manage-permissions'])
-<div id="supplyModal" class="fixed inset-0 z-50 hidden" x-data="{ show: false }" x-show="show" x-cloak>
-    <div class="fixed inset-0 bg-black/50" @click="show = false; document.getElementById('supplyModal').classList.add('hidden')"></div>
+<div id="supplyModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50" onclick="closeSupplyModal()"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg relative" @click.stop>
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg relative" onclick="event.stopPropagation()">
             <div class="p-6 border-b border-gray-100">
                 <h3 class="text-lg font-bold text-gray-900">محدودیت در تامین سفارش</h3>
                 <p class="text-sm text-gray-500 mt-1">محصولات ناموجود و زمان تامین را مشخص کنید</p>
