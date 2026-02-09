@@ -35,6 +35,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     Route::prefix('packing')->group(function () {
         Route::get('/', [PackingController::class, 'index'])->name('warehouse.packing.index');
         Route::post('/scan-order', [PackingController::class, 'scanOrder'])->name('warehouse.packing.scan-order');
+        Route::post('/verify-order-barcode', [PackingController::class, 'verifyOrderBarcode'])->name('warehouse.packing.verify-order-barcode');
         Route::post('/scan-product', [PackingController::class, 'scanProduct'])->name('warehouse.packing.scan-product');
         Route::post('/verify-weight', [PackingController::class, 'verifyWeight'])->name('warehouse.packing.verify-weight');
         Route::post('/force-verify', [PackingController::class, 'forceVerify'])->name('warehouse.packing.force-verify');

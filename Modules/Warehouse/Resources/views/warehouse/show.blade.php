@@ -265,81 +265,84 @@
     @endphp
 
     @if($order->status === 'preparing')
-    <!-- Preparing Stage: Scan Products + Verify Weight -->
+    <!-- Preparing Stage: Scan Order Barcode + Verify Weight -->
     <div class="bg-white rounded-xl shadow-sm" x-data="preparingStation()" x-init="init()">
         <div class="p-6 border-b border-gray-100">
-            <h2 class="text-lg font-bold text-gray-900">اسکن محصولات و تایید وزن</h2>
-            <p class="text-sm text-gray-500 mt-1">ابتدا بارکد تمام محصولات را اسکن کنید، سپس وزن بسته را وارد نمایید.</p>
+            <h2 class="text-lg font-bold text-gray-900">تایید سفارش و وزن</h2>
+            <p class="text-sm text-gray-500 mt-1">ابتدا بارکد سفارش را اسکن کنید، سپس وزن بسته را وارد نمایید.</p>
         </div>
 
         <div class="p-6 space-y-6">
-            <!-- Step 1: Product Scanning -->
+            <!-- Step 1: Order Barcode Scan -->
             <div>
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-bold text-gray-700">مرحله ۱: اسکن محصولات</h3>
-                    <span class="text-sm font-medium" :class="allScanned ? 'text-green-600' : 'text-orange-600'">
-                        <span x-text="scannedCount"></span> / <span x-text="totalCount"></span> اسکن شده
-                    </span>
-                </div>
+                <h3 class="text-sm font-bold text-gray-700 mb-3">مرحله ۱: اسکن بارکد سفارش</h3>
 
-                <!-- Progress Bar -->
-                <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
-                    <div class="bg-green-500 h-2 rounded-full transition-all duration-500" :style="'width: ' + (totalCount > 0 ? (scannedCount / totalCount * 100) : 0) + '%'"></div>
-                </div>
-
-                <!-- Scan Input -->
-                <div class="relative mb-4" x-show="!allScanned">
-                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                    </svg>
-                    <input type="text"
-                           x-ref="productScanInput"
-                           x-model="productBarcode"
-                           @keydown.enter.prevent="scanProduct()"
-                           :disabled="scanning"
-                           placeholder="بارکد محصول را اسکن کنید..."
-                           class="w-full pr-12 pl-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base font-medium text-center transition-colors"
-                           :class="scanning ? 'bg-gray-100 cursor-not-allowed' : ''">
-                </div>
-
-                <!-- All Scanned Badge -->
-                <div x-show="allScanned" x-cloak class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl mb-4">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span class="text-sm font-medium text-green-700">تمام محصولات اسکن شدند</span>
-                </div>
-
-                <!-- Scan Message -->
-                <div x-show="scanMessage" x-cloak class="p-3 rounded-lg text-sm mb-3" :class="scanError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'">
-                    <span x-text="scanMessage"></span>
-                </div>
-
-                <!-- Items List with Scan Status -->
-                <div class="space-y-1.5">
-                    <template x-for="item in items" :key="item.id">
-                        <div class="flex items-center justify-between p-2.5 rounded-lg border text-sm transition-colors"
-                             :class="item.scanned ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'">
-                            <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 flex items-center justify-center rounded text-xs font-bold"
-                                      :class="item.scanned ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
-                                      x-text="item.quantity"></span>
-                                <span class="text-gray-900" x-text="item.product_name"></span>
+                <template x-if="!barcodeVerified">
+                    <div>
+                        <!-- Scan Input + Camera Button -->
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="relative flex-1">
+                                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                                </svg>
+                                <input type="text"
+                                       x-ref="orderScanInput"
+                                       x-model="orderBarcode"
+                                       @keydown.enter.prevent="verifyBarcode()"
+                                       :disabled="scanning"
+                                       placeholder="بارکد سفارش را اسکن کنید..."
+                                       class="w-full pr-12 pl-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg font-medium text-center transition-colors"
+                                       :class="scanning ? 'bg-gray-100 cursor-not-allowed' : ''">
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400" dir="ltr" x-text="item.product_sku || item.product_barcode || ''"></span>
-                                <template x-if="item.scanned">
-                                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                </template>
-                                <template x-if="!item.scanned">
-                                    <span class="text-xs text-gray-400">در انتظار</span>
-                                </template>
-                            </div>
+                            <button @click="startCamera()" type="button"
+                                    class="flex items-center justify-center w-14 h-14 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors shrink-0"
+                                    title="اسکن با دوربین">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </button>
                         </div>
-                    </template>
+
+                        <!-- Camera Scanner -->
+                        <div x-show="cameraActive" x-cloak class="mb-3">
+                            <div id="barcode-reader" class="rounded-xl overflow-hidden border-2 border-orange-300"></div>
+                            <button @click="stopCamera()" type="button" class="mt-2 w-full py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">
+                                بستن دوربین
+                            </button>
+                        </div>
+
+                        <!-- Scan Message -->
+                        <div x-show="scanMessage" x-cloak class="p-3 rounded-lg text-sm" :class="scanError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'">
+                            <span x-text="scanMessage"></span>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Verified Badge -->
+                <template x-if="barcodeVerified">
+                    <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="text-sm font-medium text-green-700">بارکد سفارش تایید شد</span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Items List (read-only) -->
+            <div class="space-y-1.5">
+                @foreach($order->items as $item)
+                <div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 flex items-center justify-center rounded text-xs font-bold bg-gray-100 text-gray-500">{{ $item->quantity }}</span>
+                        <span class="text-gray-900">{{ $item->product_name }}</span>
+                    </div>
+                    <span class="text-xs text-gray-400" dir="ltr">{{ $item->product_sku ?? $item->product_barcode ?? '' }}</span>
                 </div>
+                @endforeach
             </div>
 
             <!-- Step 2: Weight Verification -->
-            <div class="border-t pt-6" :class="allScanned ? '' : 'opacity-50 pointer-events-none'">
+            <div class="border-t pt-6" :class="barcodeVerified ? '' : 'opacity-50 pointer-events-none'">
                 <h3 class="text-sm font-bold text-gray-700 mb-3">مرحله ۲: تایید وزن</h3>
                 <div class="flex items-end gap-3">
                     <div class="flex-1">
@@ -400,29 +403,19 @@
 </div>
 
 @if($order->status === 'preparing')
-@php
-    $itemsJson = $order->items->map(function($item) {
-        return [
-            'id' => $item->id,
-            'product_name' => $item->product_name,
-            'product_barcode' => $item->product_barcode,
-            'product_sku' => $item->product_sku,
-            'quantity' => $item->quantity,
-            'weight' => $item->weight,
-            'scanned' => (bool) $item->scanned,
-        ];
-    });
-@endphp
 @push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 function preparingStation() {
     return {
         orderId: {{ $order->id }},
-        items: @json($itemsJson),
-        productBarcode: '',
+        orderBarcode: '',
+        barcodeVerified: false,
         scanning: false,
         scanMessage: '',
         scanError: false,
+        cameraActive: false,
+        html5QrCode: null,
         actualWeight: '',
         verifying: false,
         weightMessage: '',
@@ -430,30 +423,20 @@ function preparingStation() {
         weightForced: false,
         weightDiff: 0,
 
-        get scannedCount() {
-            return this.items.filter(i => i.scanned).length;
-        },
-        get totalCount() {
-            return this.items.length;
-        },
-        get allScanned() {
-            return this.totalCount > 0 && this.scannedCount >= this.totalCount;
-        },
-
         init() {
             this.$nextTick(() => {
-                if (this.$refs.productScanInput) this.$refs.productScanInput.focus();
+                if (this.$refs.orderScanInput) this.$refs.orderScanInput.focus();
             });
         },
 
-        async scanProduct() {
-            if (!this.productBarcode.trim() || this.scanning) return;
+        async verifyBarcode() {
+            if (!this.orderBarcode.trim() || this.scanning) return;
             this.scanning = true;
             this.scanMessage = '';
             this.scanError = false;
 
             try {
-                const res = await fetch('{{ route("warehouse.packing.scan-product") }}', {
+                const res = await fetch('{{ route("warehouse.packing.verify-order-barcode") }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -461,18 +444,14 @@ function preparingStation() {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ order_id: this.orderId, barcode: this.productBarcode.trim() })
+                    body: JSON.stringify({ order_id: this.orderId, barcode: this.orderBarcode.trim() })
                 });
                 const data = await res.json();
 
                 if (data.success) {
-                    this.scanMessage = data.message;
-                    this.scanError = false;
-                    // Mark item as scanned in local state
-                    if (data.item_id) {
-                        const item = this.items.find(i => i.id === data.item_id);
-                        if (item) item.scanned = true;
-                    }
+                    this.barcodeVerified = true;
+                    this.scanMessage = '';
+                    this.stopCamera();
                     this.playBeep(true);
                 } else {
                     this.scanMessage = data.message;
@@ -485,11 +464,42 @@ function preparingStation() {
                 this.playBeep(false);
             }
 
-            this.productBarcode = '';
+            this.orderBarcode = '';
             this.scanning = false;
-            this.$nextTick(() => {
-                if (this.$refs.productScanInput) this.$refs.productScanInput.focus();
-            });
+        },
+
+        async startCamera() {
+            this.cameraActive = true;
+            await this.$nextTick();
+
+            try {
+                this.html5QrCode = new Html5Qrcode("barcode-reader");
+                await this.html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        this.orderBarcode = decodedText;
+                        this.stopCamera();
+                        this.verifyBarcode();
+                    },
+                    () => {}
+                );
+            } catch (err) {
+                this.scanMessage = 'دسترسی به دوربین ممکن نیست. لطفا دسترسی دوربین را فعال کنید.';
+                this.scanError = true;
+                this.cameraActive = false;
+            }
+        },
+
+        async stopCamera() {
+            if (this.html5QrCode) {
+                try {
+                    await this.html5QrCode.stop();
+                    this.html5QrCode.clear();
+                } catch (e) {}
+                this.html5QrCode = null;
+            }
+            this.cameraActive = false;
         },
 
         async verifyWeight() {

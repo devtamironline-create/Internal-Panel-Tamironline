@@ -70,6 +70,31 @@ class PackingController extends Controller
         ]);
     }
 
+    public function verifyOrderBarcode(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required|exists:warehouse_orders,id',
+            'barcode' => 'required|string',
+        ]);
+
+        $order = WarehouseOrder::findOrFail($request->input('order_id'));
+
+        if ($order->status !== WarehouseOrder::STATUS_PREPARING) {
+            return response()->json(['success' => false, 'message' => 'این سفارش در مرحله آماده‌سازی نیست.']);
+        }
+
+        // Check if barcode matches order barcode or order number
+        $barcode = trim($request->input('barcode'));
+        if ($order->barcode !== $barcode && $order->order_number !== $barcode) {
+            return response()->json(['success' => false, 'message' => 'بارکد با این سفارش مطابقت ندارد.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'بارکد سفارش تایید شد.',
+        ]);
+    }
+
     public function scanProduct(Request $request)
     {
         $request->validate([
