@@ -88,11 +88,11 @@ class AmadestService
     }
 
     /**
-     * Fetch all cities from Amadest API (cached)
+     * Get provinces list (= cities endpoint without province_id)
      */
-    protected function fetchAllCities(): array
+    public function getProvinces(): array
     {
-        return Cache::remember('amadest_all_cities', 86400, function () {
+        return Cache::remember('amadest_provinces', 86400, function () {
             try {
                 $response = Http::timeout(15)
                     ->withHeaders($this->getHeaders())
@@ -100,61 +100,44 @@ class AmadestService
 
                 if ($response->successful()) {
                     $data = $response->json()['data'] ?? $response->json();
-                    Log::info('Amadest cities response sample', ['count' => count($data), 'first' => $data[0] ?? null]);
+                    Log::info('Amadest provinces (cities without param)', ['count' => count($data), 'first' => $data[0] ?? null]);
                     return is_array($data) ? $data : [];
                 }
-                Log::error('Amadest fetchAllCities failed', ['status' => $response->status(), 'body' => $response->body()]);
+                Log::error('Amadest getProvinces failed', ['status' => $response->status()]);
                 return [];
             } catch (\Exception $e) {
-                Log::error('Amadest fetchAllCities error', ['error' => $e->getMessage()]);
+                Log::error('Amadest getProvinces error', ['error' => $e->getMessage()]);
                 return [];
             }
         });
     }
 
     /**
-     * Get provinces list (extracted from cities data)
-     */
-    public function getProvinces(): array
-    {
-        $cities = $this->fetchAllCities();
-        if (empty($cities)) return [];
-
-        $provinces = [];
-        $seen = [];
-        foreach ($cities as $city) {
-            // Try various field names for province
-            $provId = $city['province_id'] ?? $city['province'] ?? $city['state_id'] ?? null;
-            $provName = $city['province_name'] ?? $city['province_title'] ?? $city['state'] ?? $city['state_name'] ?? null;
-
-            if ($provId && !isset($seen[$provId])) {
-                $seen[$provId] = true;
-                $provinces[] = ['id' => $provId, 'name' => $provName ?? 'استان ' . $provId];
-            }
-        }
-
-        // If no province info in cities, return the cities as-is (they might BE provinces)
-        if (empty($provinces)) {
-            return $cities;
-        }
-
-        usort($provinces, fn($a, $b) => strcmp($a['name'], $b['name']));
-        return $provinces;
-    }
-
-    /**
-     * Get cities list, optionally filtered by province
+     * Get cities within a province (separate API call with province_id)
      */
     public function getCities(?int $provinceId = null): array
     {
-        $cities = $this->fetchAllCities();
-        if (empty($cities) || !$provinceId) return $cities;
+        if (!$provinceId) return $this->getProvinces();
 
-        // Filter by province_id
-        return array_values(array_filter($cities, function ($city) use ($provinceId) {
-            $cityProvId = $city['province_id'] ?? $city['province'] ?? $city['state_id'] ?? null;
-            return $cityProvId == $provinceId;
-        }));
+        $cacheKey = 'amadest_cities_prov_' . $provinceId;
+        return Cache::remember($cacheKey, 86400, function () use ($provinceId) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders($this->getHeaders())
+                    ->get($this->endpoint('cities'), ['province_id' => $provinceId]);
+
+                if ($response->successful()) {
+                    $data = $response->json()['data'] ?? $response->json();
+                    Log::info('Amadest cities for province', ['province_id' => $provinceId, 'count' => count($data), 'first' => $data[0] ?? null]);
+                    return is_array($data) ? $data : [];
+                }
+                Log::error('Amadest getCities failed', ['province_id' => $provinceId, 'status' => $response->status()]);
+                return [];
+            } catch (\Exception $e) {
+                Log::error('Amadest getCities error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
     }
 
     /**
@@ -164,10 +147,6 @@ class AmadestService
     {
         if (empty($city) && empty($state)) return null;
 
-        $cities = $this->getCities();
-        if (empty($cities)) return null;
-
-        // نرمال‌سازی نام شهر
         $normalize = fn($s) => trim(str_replace(['ي', 'ك', 'ة', ' '], ['ی', 'ک', 'ه', ''], $s ?? ''));
         $cityNorm = $normalize($city);
         $stateNorm = $normalize($state);
@@ -188,6 +167,36 @@ class AmadestService
             $stateNorm = $normalize($stateMap[$state]);
         }
 
+        // اول استان رو پیدا کن
+        $provinces = $this->getProvinces();
+        $provinceId = null;
+
+        foreach ($provinces as $p) {
+            $name = $normalize($p['name'] ?? $p['title'] ?? '');
+            if ($name === $stateNorm || $name === $cityNorm) {
+                $provinceId = (int) $p['id'];
+                break;
+            }
+        }
+        if (!$provinceId && !empty($stateNorm)) {
+            foreach ($provinces as $p) {
+                $name = $normalize($p['name'] ?? $p['title'] ?? '');
+                if (str_contains($name, $stateNorm) || str_contains($stateNorm, $name)) {
+                    $provinceId = (int) $p['id'];
+                    break;
+                }
+            }
+        }
+
+        if (!$provinceId) {
+            Log::warning('Amadest province not found', ['city' => $city, 'state' => $state]);
+            return null;
+        }
+
+        // حالا شهرهای اون استان رو بگیر
+        $cities = $this->getCities($provinceId);
+        if (empty($cities)) return null;
+
         // جستجوی دقیق
         foreach ($cities as $c) {
             $name = $normalize($c['name'] ?? $c['title'] ?? '');
@@ -204,14 +213,10 @@ class AmadestService
             }
         }
 
-        // جستجو با نام استان
-        if (!empty($stateNorm)) {
-            foreach ($cities as $c) {
-                $name = $normalize($c['name'] ?? $c['title'] ?? '');
-                if ($name === $stateNorm) {
-                    return (int) $c['id'];
-                }
-            }
+        // اگه شهر پیدا نشد، اولین شهر استان
+        if (!empty($cities)) {
+            Log::warning('Amadest city not found, using first city of province', ['city' => $city, 'province_id' => $provinceId]);
+            return (int) $cities[0]['id'];
         }
 
         Log::warning('Amadest city not found', ['city' => $city, 'state' => $state]);
