@@ -50,7 +50,6 @@ class PrintController extends Controller
             try {
                 $amadest = new AmadestService();
                 if ($amadest->isConfigured()) {
-                    // آدرس گیرنده از wc_order_data
                     $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
                     $shipping = $wcData['shipping'] ?? [];
                     $billing = $wcData['billing'] ?? [];
@@ -59,8 +58,6 @@ class PrintController extends Controller
                     $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
                     $fullAddress = implode('، ', array_filter([$state, $city, $address]));
                     $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
-
-                    // پیدا کردن شناسه شهر آمادست
                     $cityId = $amadest->findCityId($city, $state);
 
                     $result = $amadest->createShipment([
@@ -74,50 +71,49 @@ class PrintController extends Controller
                         'value' => (int)($wcData['total'] ?? 100000),
                     ]);
 
-                    Log::info('Amadest auto-register on print', [
-                        'order' => $order->order_number,
-                        'result' => $result,
-                    ]);
+                    Log::info('Amadest auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
 
-                    if ($result['success'] ?? false) {
-                        $data = $result['data'] ?? [];
-                        Log::info('Amadest registration success data', $data);
+                    $data = $result['data'] ?? [];
+                    $amadestId = $data['id'] ?? null;
+                    $isDuplicate = !($result['success'] ?? false) && str_contains($result['message'] ?? '', 'تکراری');
 
-                        // tracking_code / barcode از پاسخ آمادست
-                        $trackingCode = $data['tracking_code'] ?? $data['barcode'] ?? $data['amadest_barcode'] ?? null;
-                        $amadestBarcode = $data['barcode'] ?? $data['amadest_barcode'] ?? $data['tracking_code'] ?? null;
-                        $postTrack = $data['post_tracking_code'] ?? $data['courier_tracking_code'] ?? $data['postal_tracking_code'] ?? null;
-
-                        if (!empty($trackingCode)) {
-                            $order->tracking_code = $trackingCode;
-                        }
-                        if (!empty($amadestBarcode)) {
-                            $order->amadest_barcode = $amadestBarcode;
-                        }
-                        if (!empty($postTrack)) {
-                            $order->post_tracking_code = $postTrack;
-                        }
-
-                        // اگه هیچکدوم نبود، کل data رو بعنوان tracking_code ذخیره کن
-                        if (empty($trackingCode) && !empty($data['id'])) {
-                            $order->tracking_code = (string) $data['id'];
-                            $order->amadest_barcode = (string) $data['id'];
-                        }
-
+                    if (($result['success'] ?? false) && $amadestId) {
+                        // ثبت موفق - ذخیره شناسه آمادست
+                        $order->amadest_barcode = (string) $amadestId;
+                        $order->tracking_code = $order->tracking_code ?: (string) $amadestId;
                         $order->save();
-                        $order->refresh();
+                        Log::info('Amadest barcode saved', ['order' => $order->order_number, 'amadest_id' => $amadestId]);
+                    } elseif ($isDuplicate) {
+                        // سفارش قبلا ثبت شده - شناسه رو از جستجو بگیر
+                        Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);
+                        $searchResult = $amadest->searchOrders([$order->customer_mobile]);
+                        $externalId = (int) preg_replace('/\D/', '', $order->order_number);
+                        $found = false;
+                        foreach ($searchResult['data'] ?? [] as $existing) {
+                            if (($existing['external_order_id'] ?? null) == $externalId) {
+                                $order->amadest_barcode = (string) ($existing['id'] ?? $existing['tracking_code'] ?? $existing['barcode'] ?? '');
+                                $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
+                                $order->post_tracking_code = $existing['post_tracking_code'] ?? $existing['courier_tracking_code'] ?? null;
+                                $order->save();
+                                $found = true;
+                                Log::info('Amadest existing order found', ['order' => $order->order_number, 'amadest_id' => $order->amadest_barcode]);
+                                break;
+                            }
+                        }
+                        if (!$found) {
+                            // جستجو نتیجه نداد - از شماره سفارش بعنوان شناسه موقت استفاده کن
+                            $order->amadest_barcode = 'AMD-' . $externalId;
+                            $order->save();
+                            Log::warning('Amadest duplicate but search failed', ['order' => $order->order_number]);
+                        }
                     } else {
-                        Log::warning('Amadest auto-register failed', [
-                            'order' => $order->order_number,
-                            'error' => $result['message'] ?? 'unknown',
-                        ]);
+                        Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
                     }
+
+                    $order->refresh();
                 }
             } catch (\Exception $e) {
-                Log::error('Amadest auto-register error', [
-                    'order' => $order->order_number,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::error('Amadest auto-register error', ['order' => $order->order_number, 'error' => $e->getMessage()]);
             }
         }
 
