@@ -109,14 +109,22 @@
                     {{-- Left Side: Products --}}
                     <div class="lg:w-7/12 p-5">
                         @if($order->items->count() > 0)
-                        <div class="space-y-2">
-                            @foreach($order->items as $item)
-                            <div class="flex items-center gap-3">
-                                <span class="w-6 h-6 flex items-center justify-center bg-brand-50 text-brand-700 rounded-lg text-xs font-bold shrink-0">{{ $item->quantity }}</span>
-                                <span class="text-sm text-gray-700">{{ $item->product_name }}</span>
-                            </div>
-                            @endforeach
-                        </div>
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-100">
+                                    <th class="text-right py-2 pr-3 text-xs font-medium text-gray-400">نام محصول</th>
+                                    <th class="text-left py-2 pl-3 text-xs font-medium text-gray-400 w-20">تعداد</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                @foreach($order->items as $item)
+                                <tr>
+                                    <td class="py-2 pr-3 text-gray-700">{{ $item->product_name }}</td>
+                                    <td class="py-2 pl-3 text-gray-700 font-medium">{{ $item->quantity }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                         @else
                         <p class="text-sm text-gray-400">محصولی ثبت نشده</p>
                         @endif
