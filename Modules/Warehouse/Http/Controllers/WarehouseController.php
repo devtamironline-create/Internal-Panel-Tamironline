@@ -158,15 +158,17 @@ class WarehouseController extends Controller
         $request->validate([
             'unavailable_items' => 'required|array|min:1',
             'unavailable_items.*' => 'exists:warehouse_order_items,id',
-            'supply_deadline' => 'required|date|after:now',
+            'supply_days' => 'required|integer|min:1|max:365',
         ]);
+
+        $deadline = now()->addDays((int) $request->input('supply_days'));
 
         // Mark selected items as unavailable
         $order->items()->whereIn('id', $request->input('unavailable_items'))
-            ->update(['is_unavailable' => true, 'available_at' => $request->input('supply_deadline')]);
+            ->update(['is_unavailable' => true, 'available_at' => $deadline]);
 
         // Update order status and deadline
-        $order->supply_deadline = $request->input('supply_deadline');
+        $order->supply_deadline = $deadline;
         $order->status = WarehouseOrder::STATUS_SUPPLY_WAIT;
         $order->status_changed_at = now();
         $order->save();

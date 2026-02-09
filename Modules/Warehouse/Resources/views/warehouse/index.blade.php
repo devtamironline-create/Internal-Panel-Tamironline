@@ -426,9 +426,12 @@
                         <div id="supplyItemsList" class="space-y-2 max-h-48 overflow-y-auto"></div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">تاریخ و ساعت تامین:</label>
-                        <input type="datetime-local" name="supply_deadline" required
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm" dir="ltr">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">تامین ظرف چند روز؟</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" name="supply_days" min="1" max="365" required placeholder="مثلا ۳"
+                                   class="w-32 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-center text-lg font-bold" dir="ltr">
+                            <span class="text-sm text-gray-600 font-medium">روز</span>
+                        </div>
                     </div>
                 </div>
                 <div class="p-6 border-t border-gray-100 flex items-center gap-3 justify-end">
