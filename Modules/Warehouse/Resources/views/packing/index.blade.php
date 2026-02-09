@@ -24,21 +24,41 @@
                     </svg>
                 </div>
                 <h2 class="text-lg font-bold text-gray-900">اسکن بارکد فاکتور</h2>
-                <p class="text-sm text-gray-500 mt-1">بارکد یا شماره سفارش را اسکن کنید تا وارد مرحله آماده‌سازی شوید</p>
+                <p class="text-sm text-gray-500 mt-1">بارکد یا شماره سفارش را اسکن کنید تا سفارش پیدا شود</p>
             </div>
-            <div class="relative">
-                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                </svg>
-                <input type="text"
-                       x-ref="scanInput"
-                       x-model="barcode"
-                       @keydown.enter.prevent="scanOrder()"
-                       :disabled="loading"
-                       autofocus
-                       placeholder="بارکد سفارش را اسکن کنید..."
-                       class="w-full pr-12 pl-4 py-5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-xl font-medium text-center transition-colors"
-                       :class="loading ? 'bg-gray-100 cursor-not-allowed' : ''">
+
+            <!-- Scan Input + Camera Button -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                    </svg>
+                    <input type="text"
+                           x-ref="scanInput"
+                           x-model="barcode"
+                           @keydown.enter.prevent="scanOrder()"
+                           :disabled="loading"
+                           autofocus
+                           placeholder="بارکد سفارش را اسکن کنید..."
+                           class="w-full pr-12 pl-4 py-5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-xl font-medium text-center transition-colors"
+                           :class="loading ? 'bg-gray-100 cursor-not-allowed' : ''">
+                </div>
+                <button @click="startCamera()" type="button"
+                        class="flex items-center justify-center w-16 h-16 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors shrink-0"
+                        title="اسکن با دوربین">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Camera Scanner -->
+            <div x-show="cameraActive" x-cloak class="mt-4">
+                <div id="packing-barcode-reader" class="rounded-xl overflow-hidden border-2 border-orange-300"></div>
+                <button @click="stopCamera()" type="button" class="mt-2 w-full py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">
+                    بستن دوربین
+                </button>
             </div>
         </div>
 
@@ -58,53 +78,17 @@
                 </div>
             </template>
 
-            <!-- Success State -->
+            <!-- Success State - Redirecting -->
             <template x-if="!error && lastOrder">
-                <div>
-                    <div class="p-6">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            </div>
-                            <div>
-                                <p class="font-bold text-green-800" x-text="message"></p>
-                                <p class="text-xs text-green-600 mt-0.5">
-                                    اسکن محصولات: <span x-text="lastOrder.scanned_count"></span> / <span x-text="lastOrder.total_count"></span>
-                                </p>
-                            </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-green-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="bg-white rounded-lg p-3 border border-green-100">
-                                <p class="text-xs text-gray-500">شماره سفارش</p>
-                                <p class="text-sm font-bold text-gray-900 mt-0.5" x-text="lastOrder.order_number" dir="ltr"></p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3 border border-green-100">
-                                <p class="text-xs text-gray-500">مشتری</p>
-                                <p class="text-sm font-bold text-gray-900 mt-0.5" x-text="lastOrder.customer_name"></p>
-                            </div>
+                        <div>
+                            <p class="font-bold text-green-800" x-text="'سفارش ' + lastOrder.order_number + ' - ' + lastOrder.customer_name"></p>
+                            <p class="text-xs text-green-600 mt-0.5">در حال انتقال به صفحه سفارش...</p>
                         </div>
-
-                        <!-- Shipping Type Info -->
-                        <div class="bg-white rounded-lg p-3 border border-green-100 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs text-gray-500">نوع ارسال</p>
-                                <p class="text-sm font-bold text-gray-900 mt-0.5" x-text="lastOrder.shipping_type || 'مشخص نشده'"></p>
-                            </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-medium"
-                                  :class="lastOrder.shipping_type === 'courier' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'"
-                                  x-text="lastOrder.shipping_type === 'courier' ? 'پیک' : 'پست'"></span>
-                        </div>
-                    </div>
-
-                    <!-- Action Button: Go to order for scanning -->
-                    <div class="px-6 py-4 bg-green-100/50 border-t border-green-200">
-                        <a :href="'/warehouse/' + lastOrder.id" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-bold transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                            </svg>
-                            شروع اسکن محصولات و تایید وزن
-                        </a>
                     </div>
                 </div>
             </template>
@@ -119,6 +103,7 @@
 </div>
 
 @push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 function scanStation() {
     return {
@@ -128,7 +113,8 @@ function scanStation() {
         error: false,
         lastOrder: null,
         scanCount: 0,
-        audioCtx: null,
+        cameraActive: false,
+        html5QrCode: null,
 
         initStation() {
             this.$nextTick(() => {
@@ -138,10 +124,7 @@ function scanStation() {
 
         playBeep(success = true) {
             try {
-                if (!this.audioCtx) {
-                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                const ctx = this.audioCtx;
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.connect(gain);
@@ -182,6 +165,11 @@ function scanStation() {
                     this.error = false;
                     this.scanCount++;
                     this.playBeep(true);
+                    this.stopCamera();
+                    // Auto-redirect to order show page
+                    setTimeout(() => {
+                        window.location.href = '/warehouse/' + data.order.id;
+                    }, 800);
                 } else {
                     this.message = data.message;
                     this.error = true;
@@ -199,6 +187,40 @@ function scanStation() {
             this.$nextTick(() => {
                 if (this.$refs.scanInput) this.$refs.scanInput.focus();
             });
+        },
+
+        async startCamera() {
+            this.cameraActive = true;
+            await this.$nextTick();
+
+            try {
+                this.html5QrCode = new Html5Qrcode("packing-barcode-reader");
+                await this.html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        this.barcode = decodedText;
+                        this.stopCamera();
+                        this.scanOrder();
+                    },
+                    () => {}
+                );
+            } catch (err) {
+                this.message = 'دسترسی به دوربین ممکن نیست. لطفا دسترسی دوربین را فعال کنید.';
+                this.error = true;
+                this.cameraActive = false;
+            }
+        },
+
+        async stopCamera() {
+            if (this.html5QrCode) {
+                try {
+                    await this.html5QrCode.stop();
+                    this.html5QrCode.clear();
+                } catch (e) {}
+                this.html5QrCode = null;
+            }
+            this.cameraActive = false;
         }
     };
 }
