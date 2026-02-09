@@ -10,12 +10,10 @@
 
         /* Header */
         .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
-        .header-right { display: flex; align-items: center; gap: 12px; }
-        .header-logo { width: 60px; height: 60px; object-fit: contain; }
-        .header-info { }
-        .header-title { font-size: 20px; font-weight: bold; color: #222; }
-        .header-subtitle { font-size: 10px; color: #999; margin-top: 3px; }
-        .header-left { text-align: left; }
+        .header-right { display: flex; align-items: center; }
+        .header-logo { width: 100px; height: 100px; object-fit: contain; }
+        .header-left { display: flex; align-items: center; }
+        .header-title { font-size: 22px; font-weight: bold; color: #222; }
         .header-order-num { font-size: 12px; font-weight: bold; color: #444; }
         .header-date { font-size: 10px; color: #999; margin-top: 2px; }
 
@@ -101,14 +99,13 @@
     <div class="invoice">
         {{-- Header --}}
         <div class="header">
+            <div class="header-left">
+                <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
+            </div>
             <div class="header-right">
                 @if(!empty($invoiceSettings['logo']))
                     <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" class="header-logo">
                 @endif
-                <div class="header-info">
-                    <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
-                    <div class="header-subtitle">{{ $invoiceSettings['subtitle'] }}</div>
-                </div>
             </div>
         </div>
 
