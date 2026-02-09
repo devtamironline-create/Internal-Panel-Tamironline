@@ -88,6 +88,28 @@ class AmadestService
     }
 
     /**
+     * Get provinces list
+     */
+    public function getProvinces(): array
+    {
+        return Cache::remember('amadest_provinces', 86400, function () {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders($this->getHeaders())
+                    ->get($this->endpoint('provinces'));
+
+                if ($response->successful()) {
+                    return $response->json()['data'] ?? $response->json();
+                }
+                return [];
+            } catch (\Exception $e) {
+                Log::error('Amadest getProvinces error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
      * Get provinces/cities list
      */
     public function getCities(?int $provinceId = null): array
@@ -288,7 +310,11 @@ class AmadestService
     public function createOrder(array $orderData): array
     {
         if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست'];
+            return ['success' => false, 'message' => 'کلید API آمادست وارد نشده'];
+        }
+
+        if (empty($this->storeId)) {
+            return ['success' => false, 'message' => 'فروشگاه آمادست تنظیم نشده. ابتدا از صفحه تنظیمات آمادست، فروشگاه را راه‌اندازی کنید.'];
         }
 
         try {
