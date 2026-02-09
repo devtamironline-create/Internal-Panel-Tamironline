@@ -75,6 +75,7 @@
                 $isPeyk = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
                 $isExpired = $order->is_timer_expired;
                 $remaining = $order->timer_remaining_seconds;
+                $delaySec = ($isExpired && $order->timer_deadline) ? (int) $order->timer_deadline->diffInSeconds(now()) : 0;
                 $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
@@ -144,14 +145,23 @@
                         <div class="flex items-center gap-3 flex-1">
                             <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 border border-red-200">
                                 <svg class="w-5 h-5 text-red-500 {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="timer-display text-lg font-bold tabular-nums text-red-600" dir="ltr"
+                                <span class="timer-display text-lg font-bold tabular-nums text-red-600" dir="rtl"
                                       data-remaining="{{ $remaining }}"
                                       data-expired="{{ $isExpired ? 'true' : 'false' }}"
+                                      data-delay="{{ $delaySec }}"
                                       data-total="{{ $totalSeconds }}">
                                     @if($remaining > 0)
                                         {{ sprintf('%02d:%02d:%02d', intdiv($remaining, 3600), intdiv($remaining % 3600, 60), $remaining % 60) }}
                                     @elseif($order->timer_deadline)
-                                        منقضی!
+                                        @php
+                                            $delayH = intdiv($delaySec, 3600);
+                                            $delayM = intdiv($delaySec % 3600, 60);
+                                        @endphp
+                                        @if($delayH > 0)
+                                            {{ $delayH }} ساعت و {{ $delayM }} دقیقه تاخیر
+                                        @else
+                                            {{ $delayM }} دقیقه تاخیر
+                                        @endif
                                     @else
                                         --:--
                                     @endif
@@ -451,22 +461,50 @@ function closeSupplyModal() {
     document.getElementById('supplyModal').classList.add('hidden');
 }
 
+function formatDelay(totalSec) {
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    if (h > 0) return h + ' ساعت و ' + m + ' دقیقه تاخیر';
+    return m + ' دقیقه تاخیر';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var timerElements = document.querySelectorAll('.timer-display');
 
     timerElements.forEach(function(el) {
         var remaining = parseInt(el.dataset.remaining, 10);
-        if (isNaN(remaining) || remaining <= 0) return;
+        if (isNaN(remaining)) return;
 
         var card = el.closest('[data-order-id]');
         var totalSeconds = parseInt(el.dataset.total, 10) || 1;
+        var expired = el.dataset.expired === 'true';
+        var delaySec = parseInt(el.dataset.delay, 10) || 0;
+
+        // Already expired on page load - start counting delay up
+        if (expired) {
+            setInterval(function() {
+                delaySec++;
+                el.textContent = formatDelay(delaySec);
+            }, 1000);
+            return;
+        }
 
         var interval = setInterval(function() {
             remaining--;
 
             if (remaining <= 0) {
                 clearInterval(interval);
-                el.textContent = 'منقضی!';
+                // Switch to counting delay up
+                delaySec = 0;
+                el.textContent = formatDelay(0);
+                if (card) {
+                    var bar = card.querySelector('.timer-bar');
+                    if (bar) bar.style.width = '100%';
+                }
+                setInterval(function() {
+                    delaySec++;
+                    el.textContent = formatDelay(delaySec);
+                }, 1000);
                 return;
             }
 
