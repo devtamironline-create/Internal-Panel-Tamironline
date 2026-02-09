@@ -66,9 +66,9 @@
             </form>
         </div>
 
-        {{-- PENDING STATUS: Card Layout --}}
+        {{-- PENDING STATUS: Single Column Layout --}}
         @if($currentStatus === 'pending')
-        <div class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="p-5 space-y-4">
             @forelse($orders as $order)
             @php
                 $shippingTypeModel = $order->shipping_type ? $shippingTypes->firstWhere('slug', $order->shipping_type) : null;
@@ -76,105 +76,96 @@
                 $isPeyk = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
                 $isExpired = $order->is_timer_expired;
                 $remaining = $order->timer_remaining_seconds;
-                $timerPercent = 0;
-                if ($order->timer_deadline && $shippingTypeModel) {
-                    $totalSeconds = $shippingTypeModel->timer_minutes * 60;
-                    $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
-                }
-                $timerColor = $isExpired ? 'red' : ($remaining <= 300 && $remaining > 0 ? 'amber' : 'emerald');
+                $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
+                $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
-            <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}">
-
-                {{-- Card Body --}}
-                <div class="p-5">
-                    {{-- Top Row: Order number + Timer --}}
-                    <div class="flex items-center justify-between mb-4">
-                        <a href="{{ route('warehouse.show', $order) }}" class="text-sm font-bold text-gray-800 hover:text-brand-600 transition-colors" dir="ltr">{{ $order->order_number }}</a>
-                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                            {{ $timerColor === 'red' ? 'bg-red-50 text-red-600' : ($timerColor === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600') }}">
-                            <svg class="w-3.5 h-3.5 {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="timer-display text-xs font-bold tabular-nums" dir="ltr"
-                                  data-remaining="{{ $remaining }}"
-                                  data-expired="{{ $isExpired ? 'true' : 'false' }}">
-                                @if($remaining > 0)
-                                    {{ sprintf('%02d:%02d:%02d', intdiv($remaining, 3600), intdiv($remaining % 3600, 60), $remaining % 60) }}
-                                @elseif($order->timer_deadline)
-                                    منقضی!
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}">
+                <div class="flex flex-col lg:flex-row">
+                    {{-- Right Side: Order Info --}}
+                    <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md {{ $isPeyk ? 'bg-orange-50 text-orange-600' : 'bg-sky-50 text-sky-600' }}">
+                                @if($isPeyk)
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
                                 @else
-                                    --:--
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                 @endif
+                                {{ $shippingLabel }}
                             </span>
                         </div>
-                    </div>
-
-                    {{-- Customer Info --}}
-                    <div class="mb-4">
-                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $order->customer_name }}</p>
+                        <p class="text-base font-semibold text-gray-900">{{ $order->customer_name }}</p>
                         @if($order->customer_mobile)
-                        <p class="text-xs text-gray-400 mt-1" dir="ltr">{{ $order->customer_mobile }}</p>
-                        @endif
-                    </div>
-
-                    {{-- Products --}}
-                    @if($order->items->count() > 0)
-                    <div class="space-y-1.5 mb-4">
-                        @foreach($order->items->take(3) as $item)
-                        <div class="flex items-center gap-2">
-                            <span class="w-5 h-5 flex items-center justify-center bg-gray-100 text-gray-600 rounded text-[10px] font-bold shrink-0">{{ $item->quantity }}</span>
-                            <span class="text-xs text-gray-600 truncate">{{ $item->product_name }}</span>
+                        <div class="flex items-center gap-2 mt-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                            <span class="text-sm text-gray-500" dir="ltr">{{ $order->customer_mobile }}</span>
                         </div>
-                        @endforeach
-                        @if($order->items->count() > 3)
-                        <span class="text-[11px] text-gray-400 pr-7">+{{ $order->items->count() - 3 }} مورد دیگر</span>
+                        @endif
+                        <div class="flex items-center gap-2 mt-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="text-sm text-gray-500">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
+                        </div>
+                    </div>
+
+                    {{-- Left Side: Products --}}
+                    <div class="lg:w-7/12 p-5">
+                        @if($order->items->count() > 0)
+                        <div class="space-y-2">
+                            @foreach($order->items as $item)
+                            <div class="flex items-center gap-3">
+                                <span class="w-6 h-6 flex items-center justify-center bg-brand-50 text-brand-700 rounded-lg text-xs font-bold shrink-0">{{ $item->quantity }}</span>
+                                <span class="text-sm text-gray-700">{{ $item->product_name }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                        @else
+                        <p class="text-sm text-gray-400">محصولی ثبت نشده</p>
                         @endif
                     </div>
-                    @endif
-
-                    {{-- Shipping Badge --}}
-                    <div class="mb-4">
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md {{ $isPeyk ? 'bg-orange-50 text-orange-600' : 'bg-sky-50 text-sky-600' }}">
-                            @if($isPeyk)
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                            @else
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            @endif
-                            {{ $shippingLabel }}
-                        </span>
-                    </div>
-
-                    {{-- Timer Progress Bar (subtle) --}}
-                    @if($order->timer_deadline && !$isExpired)
-                    <div class="w-full bg-gray-100 rounded-full h-1 mb-4">
-                        <div class="h-1 rounded-full transition-all duration-1000
-                            {{ $timerColor === 'amber' ? 'bg-amber-400' : 'bg-emerald-400' }}"
-                            style="width: {{ $timerPercent }}%"></div>
-                    </div>
-                    @elseif($isExpired)
-                    <div class="w-full bg-red-100 rounded-full h-1 mb-4">
-                        <div class="h-1 rounded-full bg-red-400" style="width: 100%"></div>
-                    </div>
-                    @endif
                 </div>
 
-                {{-- Actions --}}
-                <div class="px-5 py-3 border-t border-gray-50 flex items-center gap-2">
-                    <a href="{{ route('warehouse.show', $order) }}"
-                       class="flex items-center justify-center gap-1.5 px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-xs font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        مشاهده
-                    </a>
-                    @canany(['manage-warehouse', 'manage-permissions'])
-                    <a href="{{ route('warehouse.print.invoice', $order) }}" target="_blank"
-                       class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors text-xs font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                        پرینت و آماده‌سازی
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                    </a>
-                    @endcanany
+                {{-- Bottom: Timer + Action --}}
+                <div class="border-t border-gray-100 px-5 py-3">
+                    <div class="flex items-center justify-between gap-4">
+                        {{-- Countdown Timer --}}
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 border border-red-200">
+                                <svg class="w-5 h-5 text-red-500 {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="timer-display text-lg font-bold tabular-nums text-red-600" dir="ltr"
+                                      data-remaining="{{ $remaining }}"
+                                      data-expired="{{ $isExpired ? 'true' : 'false' }}"
+                                      data-total="{{ $totalSeconds }}">
+                                    @if($remaining > 0)
+                                        {{ sprintf('%02d:%02d:%02d', intdiv($remaining, 3600), intdiv($remaining % 3600, 60), $remaining % 60) }}
+                                    @elseif($order->timer_deadline)
+                                        منقضی!
+                                    @else
+                                        --:--
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="flex-1 hidden sm:block">
+                                <div class="w-full bg-gray-100 rounded-full h-2">
+                                    <div class="timer-bar h-2 rounded-full transition-all duration-1000 bg-red-500"
+                                         style="width: {{ $isExpired ? '100' : $timerPercent }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Print & Prepare Button --}}
+                        @canany(['manage-warehouse', 'manage-permissions'])
+                        <a href="{{ route('warehouse.print.invoice', $order) }}" target="_blank"
+                           class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors text-sm font-medium whitespace-nowrap">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            پرینت و آماده‌سازی
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        </a>
+                        @endcanany
+                    </div>
                 </div>
             </div>
             @empty
-            <div class="md:col-span-2 xl:col-span-3 py-16 text-center text-gray-400">
+            <div class="py-16 text-center text-gray-400">
                 <svg class="w-16 h-16 mx-auto text-gray-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 <p class="font-medium text-gray-500">سفارشی در صف وجود ندارد</p>
                 <p class="text-sm mt-1">سفارشات جدید از بخش «سفارش جدید» قابل ثبت هستند</p>
@@ -289,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isNaN(remaining) || remaining <= 0) return;
 
         const card = el.closest('[data-order-id]');
-        const badge = el.closest('div[class*="rounded-full"]');
+        const totalSeconds = parseInt(el.dataset.total, 10) || 1;
 
         const interval = setInterval(function() {
             remaining--;
@@ -297,19 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (remaining <= 0) {
                 clearInterval(interval);
                 el.textContent = 'منقضی!';
-                // Switch badge to red
-                if (badge) {
-                    badge.className = badge.className
-                        .replace(/bg-emerald-50|bg-amber-50/g, 'bg-red-50')
-                        .replace(/text-emerald-600|text-amber-600/g, 'text-red-600');
-                }
-                // Switch progress bar to red
-                if (card) {
-                    var bars = card.querySelectorAll('div[class*="bg-emerald-400"], div[class*="bg-amber-400"]');
-                    bars.forEach(function(b) {
-                        b.className = b.className.replace(/bg-emerald-400|bg-amber-400/g, 'bg-red-400');
-                    });
-                }
                 return;
             }
 
@@ -319,16 +297,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const pad = function(n) { return n.toString().padStart(2, '0'); };
             el.textContent = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
 
-            // Turn amber when less than 5 minutes
-            if (remaining <= 300 && badge) {
-                badge.className = badge.className
-                    .replace(/bg-emerald-50/g, 'bg-amber-50')
-                    .replace(/text-emerald-600/g, 'text-amber-600');
-                if (card) {
-                    var bars = card.querySelectorAll('div[class*="bg-emerald-400"]');
-                    bars.forEach(function(b) {
-                        b.className = b.className.replace(/bg-emerald-400/g, 'bg-amber-400');
-                    });
+            // Update progress bar
+            if (card) {
+                const bar = card.querySelector('.timer-bar');
+                if (bar) {
+                    const percent = Math.max(0, Math.min(100, (remaining / totalSeconds) * 100));
+                    bar.style.width = percent + '%';
                 }
             }
         }, 1000);
