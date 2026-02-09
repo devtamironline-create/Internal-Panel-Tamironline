@@ -303,7 +303,8 @@ class AmadestService
     }
 
     /**
-     * Track shipment by tracking code
+     * Track shipment by tracking code or order number
+     * Tries multiple endpoints to find the order
      */
     public function trackShipment(string $trackingCode): array
     {
@@ -311,20 +312,39 @@ class AmadestService
             return ['success' => false, 'message' => 'کلید API آمادست وارد نشده.'];
         }
 
-        try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpoint('tracking/' . $trackingCode));
+        $endpoints = [
+            'orders/' . $trackingCode,
+            'tracking/' . $trackingCode,
+            'orders/search?tracking_code=' . $trackingCode,
+            'orders/search?external_order_id=' . $trackingCode,
+            'orders?tracking_code=' . $trackingCode,
+        ];
 
-            if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
-            }
-
-            return ['success' => false, 'message' => 'خطا: ' . $response->status()];
-        } catch (\Exception $e) {
-            Log::error('Amadest tracking failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        // If it looks like a phone number, also try phone search
+        if (preg_match('/^09\d{9}$/', $trackingCode) || preg_match('/^9\d{9}$/', $trackingCode)) {
+            $endpoints[] = 'orders/search?phone_number=' . $this->formatMobile($trackingCode);
         }
+
+        foreach ($endpoints as $ep) {
+            try {
+                $response = Http::timeout(10)
+                    ->withHeaders($this->getHeaders())
+                    ->get($this->endpoint($ep));
+
+                Log::info('Amadest track attempt', ['endpoint' => $ep, 'status' => $response->status()]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (!empty($data['data']) || !empty($data['success'])) {
+                        return ['success' => true, 'data' => $data];
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        return ['success' => false, 'message' => 'سفارش یافت نشد. کد رهگیری یا شماره سفارش را بررسی کنید.'];
     }
 
     /**
