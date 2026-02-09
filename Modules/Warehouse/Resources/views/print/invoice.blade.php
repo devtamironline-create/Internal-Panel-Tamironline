@@ -275,16 +275,5 @@
         }
     </script>
 
-    <!-- Debug: فقط در صفحه نمایش داده میشه، پرینت نمیشه -->
-    <div class="no-print" style="margin-top:20px; padding:15px; background:#f8f8f8; border:1px solid #ddd; border-radius:8px; font-size:11px; direction:ltr; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;">
-        <strong>Debug - WC Order Data (shipping/billing):</strong>
-        <pre style="white-space:pre-wrap; word-break:break-all; margin-top:8px;">
-shipping: {{ json_encode($shipping ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}
-
-billing: {{ json_encode($billing ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}
-
-meta_data keys: {{ collect($wcData['meta_data'] ?? [])->pluck('key')->implode(', ') }}
-        </pre>
-    </div>
 </body>
 </html>
