@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('page-title', 'مدیریت انبار')
+@section('page-title', 'لیست سفارشات')
 @section('main')
 @php
     $statusLabels = \Modules\Warehouse\Models\WarehouseOrder::statusLabels();
@@ -11,8 +11,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-gray-900">مدیریت انبار</h1>
-            <p class="text-gray-600 mt-1">جرنی سفارشات انبار</p>
+            <h1 class="text-xl font-bold text-gray-900">لیست سفارشات</h1>
         </div>
         @canany(['manage-warehouse', 'manage-permissions'])
         <a href="{{ route('warehouse.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors">
