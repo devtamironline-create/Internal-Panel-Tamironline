@@ -30,7 +30,7 @@ class AmadestController extends Controller
         }
 
         $validated = $request->validate([
-            'api_key' => 'required|string|max:500',
+            'api_key' => 'required|string|max:5000',
             'api_url' => 'nullable|url|max:500',
         ]);
 
