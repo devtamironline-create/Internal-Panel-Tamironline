@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\SMS\Services\KavenegarService;
 
@@ -18,6 +19,30 @@ class PrintController extends Controller
         }
 
         $order->load('items');
+
+        // اگر آیتم‌ها وزن ندارن، از جدول محصولات بگیر و آپدیت کن
+        $needsWeightUpdate = $order->items->contains(fn($item) => $item->weight == 0 && $item->wc_product_id);
+        if ($needsWeightUpdate) {
+            $productIds = $order->items->pluck('wc_product_id')->filter()->unique()->toArray();
+            $weightsMap = WarehouseProduct::getWeightsMap($productIds);
+
+            foreach ($order->items as $item) {
+                if ($item->weight == 0 && $item->wc_product_id) {
+                    $weight = (float)($weightsMap[$item->wc_product_id] ?? 0);
+                    if ($weight > 0) {
+                        $item->update(['weight' => $weight]);
+                    }
+                }
+            }
+
+            // آپدیت وزن کل سفارش
+            $order->refresh();
+            $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
+            if ($totalWeight > 0) {
+                $order->update(['total_weight' => round($totalWeight, 2)]);
+                $order->refresh();
+            }
+        }
 
         // Track print count
         $order->increment('print_count');

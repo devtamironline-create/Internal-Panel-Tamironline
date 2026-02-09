@@ -440,13 +440,22 @@ class WooCommerceService
 
             WarehouseSetting::set('wc_products_last_sync', now()->toDateTimeString());
 
+            // آپدیت وزن آیتم‌های سفارشات موجود که وزنشون 0 هست
+            $updatedItems = $this->updateExistingOrderWeights();
+
             $total = $totalImported + $totalUpdated;
+            $message = "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع | مجموع: {$total}";
+            if ($updatedItems > 0) {
+                $message .= "\n{$updatedItems} آیتم سفارش موجود آپدیت شد.";
+            }
+
             return [
                 'success' => true,
-                'message' => "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع | مجموع: {$total}",
+                'message' => $message,
                 'imported' => $totalImported,
                 'updated' => $totalUpdated,
                 'variations' => $totalVariations,
+                'updated_items' => $updatedItems,
             ];
         } catch (\Exception $e) {
             Log::error('WooCommerce product sync failed', ['error' => $e->getMessage()]);
@@ -507,5 +516,48 @@ class WooCommerceService
         }
 
         return $count;
+    }
+
+    /**
+     * آپدیت وزن آیتم‌های سفارشات موجود که وزنشون 0 هست
+     */
+    public function updateExistingOrderWeights(): int
+    {
+        $updatedCount = 0;
+
+        // آیتم‌هایی که وزنشون 0 هست و wc_product_id دارن
+        $items = WarehouseOrderItem::where('weight', 0)
+            ->whereNotNull('wc_product_id')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return 0;
+        }
+
+        // جمع‌آوری product_id ها
+        $productIds = $items->pluck('wc_product_id')->unique()->toArray();
+        $weightsMap = WarehouseProduct::getWeightsMap($productIds);
+
+        foreach ($items as $item) {
+            $weight = (float)($weightsMap[$item->wc_product_id] ?? 0);
+            if ($weight > 0) {
+                $item->update(['weight' => $weight]);
+                $updatedCount++;
+            }
+        }
+
+        // آپدیت وزن کل سفارشاتی که آیتمشون تغییر کرده
+        if ($updatedCount > 0) {
+            $orderIds = $items->pluck('warehouse_order_id')->unique();
+            foreach ($orderIds as $orderId) {
+                $order = WarehouseOrder::find($orderId);
+                if ($order) {
+                    $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
+                    $order->update(['total_weight' => round($totalWeight, 2)]);
+                }
+            }
+        }
+
+        return $updatedCount;
     }
 }
