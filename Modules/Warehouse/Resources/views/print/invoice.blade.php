@@ -10,12 +10,12 @@
         .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: stretch; justify-content: space-between; background: #fff; border-bottom: 1px solid #ddd; }
+        .header { display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #ddd; padding: 5px 0; }
         .header-right { display: flex; align-items: center; padding: 0 15px; }
         .header-logo { width: 140px; height: auto; max-height: 120px; object-fit: contain; }
-        .header-left { flex: 1; }
-        .info-table { border-collapse: collapse; font-size: 11px; color: #444; width: 100%; height: 100%; }
-        .info-table td { padding: 5px 10px; border: 1px solid #ddd; }
+        .header-left { }
+        .info-table { border-collapse: collapse; font-size: 11px; color: #444; }
+        .info-table td { padding: 4px 10px; border: 1px solid #ddd; }
         .info-table .info-label { font-weight: bold; color: #666; white-space: nowrap; width: 80px; }
         .info-table .info-val { color: #222; }
         .store-name { text-align: center; padding: 6px 20px; font-size: 13px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
