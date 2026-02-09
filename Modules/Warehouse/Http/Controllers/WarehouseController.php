@@ -149,6 +149,36 @@ class WarehouseController extends Controller
         return redirect()->back()->with('success', 'وضعیت با موفقیت تغییر کرد.');
     }
 
+    public function markSupplyWait(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'unavailable_items' => 'required|array|min:1',
+            'unavailable_items.*' => 'exists:warehouse_order_items,id',
+            'supply_deadline' => 'required|date|after:now',
+        ]);
+
+        // Mark selected items as unavailable
+        $order->items()->whereIn('id', $request->input('unavailable_items'))
+            ->update(['is_unavailable' => true, 'available_at' => $request->input('supply_deadline')]);
+
+        // Update order status and deadline
+        $order->supply_deadline = $request->input('supply_deadline');
+        $order->status = WarehouseOrder::STATUS_SUPPLY_WAIT;
+        $order->status_changed_at = now();
+        $order->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'سفارش به انتظار تامین منتقل شد.']);
+        }
+
+        return redirect()->route('warehouse.index', ['status' => 'supply_wait'])
+            ->with('success', 'سفارش به انتظار تامین منتقل شد.');
+    }
+
     public function destroy(WarehouseOrder $order)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

@@ -17,7 +17,7 @@ class WarehouseOrder extends Model
         'status', 'shipping_type', 'assigned_to', 'created_by',
         'wc_order_id', 'wc_order_data', 'barcode',
         'total_weight', 'actual_weight', 'weight_verified',
-        'timer_deadline', 'printed_at', 'packed_at',
+        'timer_deadline', 'supply_deadline', 'printed_at', 'packed_at',
         'status_changed_at', 'shipped_at', 'delivered_at',
         'notes', 'tracking_code', 'driver_name', 'driver_phone',
     ];
@@ -28,6 +28,7 @@ class WarehouseOrder extends Model
         'total_weight' => 'decimal:2',
         'actual_weight' => 'decimal:2',
         'timer_deadline' => 'datetime',
+        'supply_deadline' => 'datetime',
         'printed_at' => 'datetime',
         'packed_at' => 'datetime',
         'status_changed_at' => 'datetime',
@@ -36,6 +37,7 @@ class WarehouseOrder extends Model
     ];
 
     const STATUS_PENDING = 'pending';
+    const STATUS_SUPPLY_WAIT = 'supply_wait';
     const STATUS_PREPARING = 'preparing';
     const STATUS_PACKED = 'packed';
     const STATUS_SHIPPED = 'shipped';
@@ -44,6 +46,7 @@ class WarehouseOrder extends Model
 
     public static array $statuses = [
         self::STATUS_PENDING,
+        self::STATUS_SUPPLY_WAIT,
         self::STATUS_PREPARING,
         self::STATUS_PACKED,
         self::STATUS_SHIPPED,
@@ -55,6 +58,7 @@ class WarehouseOrder extends Model
     {
         return [
             self::STATUS_PENDING => 'در حال پردازش',
+            self::STATUS_SUPPLY_WAIT => 'در انتظار تامین',
             self::STATUS_PREPARING => 'در حال آماده‌سازی',
             self::STATUS_PACKED => 'آماده ارسال',
             self::STATUS_SHIPPED => 'ارسال شده',
@@ -67,6 +71,7 @@ class WarehouseOrder extends Model
     {
         return [
             self::STATUS_PENDING => 'blue',
+            self::STATUS_SUPPLY_WAIT => 'amber',
             self::STATUS_PREPARING => 'orange',
             self::STATUS_PACKED => 'cyan',
             self::STATUS_SHIPPED => 'indigo',
@@ -79,6 +84,7 @@ class WarehouseOrder extends Model
     {
         return [
             self::STATUS_PENDING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+            self::STATUS_SUPPLY_WAIT => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>',
             self::STATUS_PREPARING => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>',
             self::STATUS_PACKED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>',
             self::STATUS_SHIPPED => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>',

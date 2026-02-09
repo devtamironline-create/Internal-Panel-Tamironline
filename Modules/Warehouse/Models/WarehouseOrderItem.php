@@ -11,6 +11,7 @@ class WarehouseOrderItem extends Model
         'warehouse_order_id', 'product_name', 'product_sku',
         'product_barcode', 'quantity', 'weight', 'price',
         'wc_product_id', 'scanned', 'scanned_at',
+        'is_unavailable', 'available_at',
     ];
 
     protected $casts = [
@@ -18,6 +19,8 @@ class WarehouseOrderItem extends Model
         'price' => 'decimal:0',
         'scanned' => 'boolean',
         'scanned_at' => 'datetime',
+        'is_unavailable' => 'boolean',
+        'available_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
