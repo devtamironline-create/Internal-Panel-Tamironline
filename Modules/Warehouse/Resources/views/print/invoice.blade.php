@@ -103,9 +103,24 @@
 
         $receiverPostcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
         if (empty($receiverPostcode)) {
-            $meta = $metaData->firstWhere('key', '_shipping_postcode');
-            if (!$meta) $meta = $metaData->firstWhere('key', '_billing_postcode');
-            $receiverPostcode = $meta['value'] ?? '';
+            // جستجوی گسترده در meta_data برای کدپستی
+            $postcodeKeys = ['_shipping_postcode', '_billing_postcode', 'billing_postcode', 'shipping_postcode', '_postcode', 'postcode'];
+            foreach ($postcodeKeys as $key) {
+                $meta = $metaData->firstWhere('key', $key);
+                if ($meta && !empty($meta['value'])) {
+                    $receiverPostcode = $meta['value'];
+                    break;
+                }
+            }
+        }
+        // آخرین تلاش: جستجو در هر meta که مقدارش شبیه کدپستی باشه (۱۰ رقم)
+        if (empty($receiverPostcode)) {
+            $postcodeMeta = $metaData->first(function ($m) {
+                return str_contains($m['key'] ?? '', 'postcode') || str_contains($m['key'] ?? '', 'postal');
+            });
+            if ($postcodeMeta && !empty($postcodeMeta['value'])) {
+                $receiverPostcode = $postcodeMeta['value'];
+            }
         }
 
         $receiverPhone = $order->customer_mobile ?: ($billing['phone'] ?? '');
