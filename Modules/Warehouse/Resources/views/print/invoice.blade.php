@@ -14,8 +14,8 @@
         .header-right { display: flex; align-items: center; }
         .header-logo { width: 140px; height: auto; max-height: 120px; object-fit: contain; }
         .header-left { }
-        .info-table { border-collapse: collapse; font-size: 11px; color: #444; }
-        .info-table td { padding: 3px 8px; }
+        .info-table { border-collapse: collapse; font-size: 11px; color: #444; border: 1px solid #ddd; }
+        .info-table td { padding: 5px 10px; border: 1px solid #ddd; }
         .info-table .info-label { font-weight: bold; color: #666; white-space: nowrap; }
         .info-table .info-val { color: #222; }
         .store-name { text-align: center; padding: 6px 20px; font-size: 13px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
