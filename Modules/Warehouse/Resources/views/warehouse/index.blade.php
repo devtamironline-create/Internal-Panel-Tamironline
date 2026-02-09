@@ -109,22 +109,28 @@
                     {{-- Left Side: Products --}}
                     <div class="lg:w-7/12 p-5">
                         @if($order->items->count() > 0)
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-gray-100">
-                                    <th class="text-right py-2 pr-3 text-xs font-medium text-gray-400">نام محصول</th>
-                                    <th class="text-left py-2 pl-3 text-xs font-medium text-gray-400 w-20">تعداد</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-50">
-                                @foreach($order->items as $item)
-                                <tr>
-                                    <td class="py-2 pr-3 text-gray-700">{{ $item->product_name }}</td>
-                                    <td class="py-2 pl-3 text-gray-700 font-medium">{{ $item->quantity }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="text-right py-2.5 px-4 text-xs font-semibold text-gray-600 border-b border-gray-200">#</th>
+                                        <th class="text-right py-2.5 px-4 text-xs font-semibold text-gray-600 border-b border-gray-200">نام محصول</th>
+                                        <th class="text-center py-2.5 px-4 text-xs font-semibold text-gray-600 border-b border-gray-200 w-24">تعداد</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    @foreach($order->items as $index => $item)
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-2.5 px-4 text-gray-400 text-xs">{{ $index + 1 }}</td>
+                                        <td class="py-2.5 px-4 text-gray-800">{{ $item->product_name }}</td>
+                                        <td class="py-2.5 px-4 text-center">
+                                            <span class="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold">{{ $item->quantity }}</span>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                         @else
                         <p class="text-sm text-gray-400">محصولی ثبت نشده</p>
                         @endif
