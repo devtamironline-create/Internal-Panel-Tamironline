@@ -92,24 +92,27 @@ class AmadestService
      */
     public function getProvinces(): array
     {
-        return Cache::remember('amadest_provinces', 86400, function () {
-            try {
-                $response = Http::timeout(15)
-                    ->withHeaders($this->getHeaders())
-                    ->get($this->endpoint('cities'));
+        $cached = Cache::get('amadest_provinces');
+        if (!empty($cached)) return $cached;
 
-                if ($response->successful()) {
-                    $data = $response->json()['data'] ?? $response->json();
-                    Log::info('Amadest provinces (cities without param)', ['count' => count($data), 'first' => $data[0] ?? null]);
-                    return is_array($data) ? $data : [];
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('cities'));
+
+            if ($response->successful()) {
+                $data = $response->json()['data'] ?? $response->json();
+                if (!empty($data) && is_array($data)) {
+                    Cache::put('amadest_provinces', $data, 86400);
+                    return $data;
                 }
-                Log::error('Amadest getProvinces failed', ['status' => $response->status()]);
-                return [];
-            } catch (\Exception $e) {
-                Log::error('Amadest getProvinces error', ['error' => $e->getMessage()]);
-                return [];
             }
-        });
+            Log::error('Amadest getProvinces failed', ['status' => $response->status() ?? 'N/A']);
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Amadest getProvinces error', ['error' => $e->getMessage()]);
+            return [];
+        }
     }
 
     /**
@@ -120,24 +123,27 @@ class AmadestService
         if (!$provinceId) return $this->getProvinces();
 
         $cacheKey = 'amadest_cities_prov_' . $provinceId;
-        return Cache::remember($cacheKey, 86400, function () use ($provinceId) {
-            try {
-                $response = Http::timeout(15)
-                    ->withHeaders($this->getHeaders())
-                    ->get($this->endpoint('cities'), ['province_id' => $provinceId]);
+        $cached = Cache::get($cacheKey);
+        if (!empty($cached)) return $cached;
 
-                if ($response->successful()) {
-                    $data = $response->json()['data'] ?? $response->json();
-                    Log::info('Amadest cities for province', ['province_id' => $provinceId, 'count' => count($data), 'first' => $data[0] ?? null]);
-                    return is_array($data) ? $data : [];
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('cities'), ['province_id' => $provinceId]);
+
+            if ($response->successful()) {
+                $data = $response->json()['data'] ?? $response->json();
+                if (!empty($data) && is_array($data)) {
+                    Cache::put($cacheKey, $data, 86400);
+                    return $data;
                 }
-                Log::error('Amadest getCities failed', ['province_id' => $provinceId, 'status' => $response->status()]);
-                return [];
-            } catch (\Exception $e) {
-                Log::error('Amadest getCities error', ['error' => $e->getMessage()]);
-                return [];
             }
-        });
+            Log::error('Amadest getCities failed', ['province_id' => $provinceId, 'status' => $response->status() ?? 'N/A']);
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Amadest getCities error', ['error' => $e->getMessage()]);
+            return [];
+        }
     }
 
     /**

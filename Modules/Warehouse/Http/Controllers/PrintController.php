@@ -45,8 +45,8 @@ class PrintController extends Controller
             }
         }
 
-        // ثبت خودکار در آمادست برای سفارشات پستی
-        if ($order->shipping_type === 'post' && empty($order->tracking_code)) {
+        // ثبت خودکار در آمادست برای سفارشات پستی (اگه بارکد آمادست نداره)
+        if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
                 $amadest = new AmadestService();
                 if ($amadest->isConfigured()) {
@@ -81,16 +81,29 @@ class PrintController extends Controller
 
                     if ($result['success'] ?? false) {
                         $data = $result['data'] ?? [];
-                        if (!empty($data['tracking_code'])) {
-                            $order->tracking_code = $data['tracking_code'];
+                        Log::info('Amadest registration success data', $data);
+
+                        // tracking_code / barcode از پاسخ آمادست
+                        $trackingCode = $data['tracking_code'] ?? $data['barcode'] ?? $data['amadest_barcode'] ?? null;
+                        $amadestBarcode = $data['barcode'] ?? $data['amadest_barcode'] ?? $data['tracking_code'] ?? null;
+                        $postTrack = $data['post_tracking_code'] ?? $data['courier_tracking_code'] ?? $data['postal_tracking_code'] ?? null;
+
+                        if (!empty($trackingCode)) {
+                            $order->tracking_code = $trackingCode;
                         }
-                        if (!empty($data['barcode'])) {
-                            $order->amadest_barcode = $data['barcode'];
+                        if (!empty($amadestBarcode)) {
+                            $order->amadest_barcode = $amadestBarcode;
                         }
-                        $postTrack = $data['post_tracking_code'] ?? $data['courier_tracking_code'] ?? null;
                         if (!empty($postTrack)) {
                             $order->post_tracking_code = $postTrack;
                         }
+
+                        // اگه هیچکدوم نبود، کل data رو بعنوان tracking_code ذخیره کن
+                        if (empty($trackingCode) && !empty($data['id'])) {
+                            $order->tracking_code = (string) $data['id'];
+                            $order->amadest_barcode = (string) $data['id'];
+                        }
+
                         $order->save();
                         $order->refresh();
                     } else {
