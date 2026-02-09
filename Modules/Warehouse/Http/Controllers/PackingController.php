@@ -23,10 +23,25 @@ class PackingController extends Controller
     {
         $request->validate(['barcode' => 'required|string']);
 
+        $barcode = trim($request->barcode);
+
         $order = WarehouseOrder::with('items')
-            ->where('barcode', $request->barcode)
-            ->orWhere('order_number', $request->barcode)
+            ->where('barcode', $barcode)
+            ->orWhere('order_number', $barcode)
+            ->orWhere('amadest_barcode', $barcode)
+            ->orWhere('tracking_code', $barcode)
             ->first();
+
+        // Fallback: try numeric-only match
+        if (!$order) {
+            $numericBarcode = preg_replace('/\D/', '', $barcode);
+            if ($numericBarcode) {
+                $order = WarehouseOrder::with('items')
+                    ->where('order_number', 'like', '%' . $numericBarcode)
+                    ->orWhere('barcode', 'like', '%' . $numericBarcode)
+                    ->first();
+            }
+        }
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'سفارشی با این بارکد یافت نشد.']);

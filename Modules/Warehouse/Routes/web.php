@@ -55,6 +55,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     // Dispatch
     Route::prefix('dispatch')->group(function () {
         Route::get('/', [DispatchController::class, 'index'])->name('warehouse.dispatch.index');
+        Route::post('/scan-ship', [DispatchController::class, 'scanAndShip'])->name('warehouse.dispatch.scan-ship');
     });
     Route::post('/{order}/ship-post', [DispatchController::class, 'shipViaPost'])->name('warehouse.dispatch.ship-post')
         ->where('order', '[0-9]+');
