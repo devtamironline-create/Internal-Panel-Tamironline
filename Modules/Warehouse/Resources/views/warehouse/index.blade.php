@@ -143,9 +143,9 @@
                     <div class="flex items-center justify-between gap-4">
                         {{-- Countdown Timer --}}
                         <div class="flex items-center gap-3 flex-1">
-                            <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 border border-red-200">
-                                <svg class="w-5 h-5 text-red-500 {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="timer-display text-lg font-bold tabular-nums text-red-600" dir="rtl"
+                            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 border border-red-100">
+                                <svg class="w-3.5 h-3.5 text-red-400 {{ !$isExpired && $remaining > 0 ? 'animate-pulse' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="timer-display text-xs font-semibold tabular-nums text-red-500" dir="rtl"
                                       data-remaining="{{ $remaining }}"
                                       data-expired="{{ $isExpired ? 'true' : 'false' }}"
                                       data-delay="{{ $delaySec }}"
