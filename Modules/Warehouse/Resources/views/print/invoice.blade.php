@@ -251,14 +251,9 @@
         @endif
 
         {{-- Notes --}}
-        @if($order->description || $order->notes)
+        @if($order->description)
         <div class="notes-section">
-            @if($order->description)
             <div class="notes"><strong>توضیحات:</strong> {{ $order->description }}</div>
-            @endif
-            @if($order->notes)
-            <div class="notes"><strong>یادداشت:</strong> {{ $order->notes }}</div>
-            @endif
         </div>
         @endif
 
