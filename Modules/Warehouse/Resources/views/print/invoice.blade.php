@@ -45,8 +45,10 @@
         .notes { background: #fff; padding: 6px 10px; border-radius: 3px; margin-bottom: 5px; font-size: 11px; border-right: 3px solid #ccc; }
 
         /* Barcode */
-        .barcode-section { text-align: center; padding: 12px 20px; border-top: 1px solid #ddd; }
-        .barcode-section svg { max-width: 200px; }
+        .barcode-section { display: flex; justify-content: center; gap: 40px; padding: 12px 20px; border-top: 1px solid #ddd; }
+        .barcode-item { text-align: center; }
+        .barcode-item svg, .barcode-item canvas { max-width: 200px; }
+        .barcode-label { font-size: 11px; font-weight: bold; color: #444; margin-top: 5px; }
         .barcode-code { font-size: 9px; color: #aaa; margin-top: 3px; }
 
         /* Top bar (screen only) */
@@ -250,14 +252,28 @@
         </table>
         @endif
 
-        {{-- Barcode --}}
+        {{-- Barcodes Section --}}
         <div class="barcode-section">
-            <svg id="barcode"></svg>
-            <p class="barcode-code">{{ $order->barcode }}</p>
+            <div class="barcode-item">
+                <svg id="barcode"></svg>
+                <p class="barcode-label">بارکد سفارش</p>
+                <p class="barcode-code">{{ $order->barcode }}</p>
+            </div>
+
+            @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+            <div class="barcode-item">
+                <div id="qrcode"></div>
+                <p class="barcode-label">کد رهگیری پست</p>
+                <p class="barcode-code">{{ $order->tracking_code }}</p>
+            </div>
+            @endif
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    @endif
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", {
             format: "CODE128",
@@ -265,6 +281,15 @@
             height: 50,
             displayValue: false,
         });
+
+        @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{ $order->tracking_code }}",
+            width: 120,
+            height: 120,
+            correctLevel: QRCode.CorrectLevel.M,
+        });
+        @endif
 
         function handlePrint() {
             @if($order->print_count > 1)
