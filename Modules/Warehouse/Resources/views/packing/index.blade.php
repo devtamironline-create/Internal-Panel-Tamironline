@@ -116,16 +116,75 @@ function scanStation() {
         cameraActive: false,
         html5QrCode: null,
 
+        // USB barcode scanner support
+        usbBuffer: '',
+        usbTimer: null,
+        lastKeyTime: 0,
+
         initStation() {
             this.$nextTick(() => {
                 if (this.$refs.scanInput) this.$refs.scanInput.focus();
-                // USB scanner: redirect unfocused keystrokes to scan input
-                document.addEventListener('keydown', (e) => {
-                    const active = document.activeElement;
-                    if (!active || active === document.body) {
-                        if (this.$refs.scanInput) this.$refs.scanInput.focus();
+                this.setupUsbScanner();
+            });
+        },
+
+        setupUsbScanner() {
+            // USB scanners type very fast (< 50ms between keys) and end with Enter
+            document.addEventListener('keydown', (e) => {
+                const active = document.activeElement;
+                const isScanInput = active === this.$refs.scanInput;
+
+                // If typing in another input, don't intercept
+                const isOtherInput = active && active !== document.body && !isScanInput
+                    && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+                if (isOtherInput) return;
+
+                const now = Date.now();
+                const timeDiff = now - this.lastKeyTime;
+                this.lastKeyTime = now;
+
+                if (e.key === 'Enter') {
+                    if (this.usbBuffer.length >= 3) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.barcode = this.usbBuffer;
+                        this.usbBuffer = '';
+                        clearTimeout(this.usbTimer);
+                        this.scanOrder();
+                        return;
                     }
-                });
+                    if (isScanInput && this.barcode.trim()) {
+                        e.preventDefault();
+                        this.usbBuffer = '';
+                        this.scanOrder();
+                        return;
+                    }
+                    this.usbBuffer = '';
+                    return;
+                }
+
+                if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    if (timeDiff < 80 || this.usbBuffer.length === 0) {
+                        this.usbBuffer += e.key;
+                    } else {
+                        this.usbBuffer = e.key;
+                    }
+
+                    if (!isScanInput && this.$refs.scanInput) {
+                        this.$refs.scanInput.focus();
+                    }
+
+                    clearTimeout(this.usbTimer);
+                    this.usbTimer = setTimeout(() => { this.usbBuffer = ''; }, 200);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const active = document.activeElement;
+                const isOtherInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+                if (!isOtherInput && this.$refs.scanInput) {
+                    this.$refs.scanInput.focus();
+                }
             });
         },
 

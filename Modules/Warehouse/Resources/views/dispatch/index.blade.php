@@ -206,21 +206,79 @@ function dispatchScanner() {
             });
         },
 
-        // USB barcode scanner support: detect rapid keystrokes
+        // USB barcode scanner support
         usbBuffer: '',
         usbTimer: null,
+        lastKeyTime: 0,
 
         setupUsbScanner() {
-            // USB scanners type fast + end with Enter
+            // USB barcode scanners type very fast (< 50ms between keys) and end with Enter
+            // We capture keystrokes globally so even if input loses focus, scanner still works
             document.addEventListener('keydown', (e) => {
-                // Only if no input is focused (or dispatch input is focused)
                 const active = document.activeElement;
                 const isDispatchInput = active === this.$refs.dispatchScanInput;
-                const isNoInput = !active || active === document.body;
 
-                if (isNoInput) {
-                    // Redirect keystrokes to the scan input
-                    if (this.$refs.dispatchScanInput) {
+                // If typing in another input (like driver name), don't intercept
+                const isOtherInput = active && active !== document.body && !isDispatchInput
+                    && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+                if (isOtherInput) return;
+
+                const now = Date.now();
+                const timeDiff = now - this.lastKeyTime;
+                this.lastKeyTime = now;
+
+                // Enter key = submit the buffer
+                if (e.key === 'Enter') {
+                    if (this.usbBuffer.length >= 3) {
+                        // This is a USB scanner scan (rapid keys + Enter)
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.barcode = this.usbBuffer;
+                        this.usbBuffer = '';
+                        clearTimeout(this.usbTimer);
+                        this.scanAndShip();
+                        return;
+                    }
+                    // If input is focused and has value, also submit
+                    if (isDispatchInput && this.barcode.trim()) {
+                        e.preventDefault();
+                        this.usbBuffer = '';
+                        this.scanAndShip();
+                        return;
+                    }
+                    this.usbBuffer = '';
+                    return;
+                }
+
+                // Only capture printable characters
+                if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    // If fast typing (< 80ms) = scanner, if slow = human
+                    if (timeDiff < 80 || this.usbBuffer.length === 0) {
+                        this.usbBuffer += e.key;
+                    } else {
+                        // Slow typing - reset buffer
+                        this.usbBuffer = e.key;
+                    }
+
+                    // Also put it in the input for visual feedback
+                    if (!isDispatchInput && this.$refs.dispatchScanInput) {
+                        this.$refs.dispatchScanInput.focus();
+                    }
+
+                    // Clear buffer after 200ms of no input (scanner is done or user stopped)
+                    clearTimeout(this.usbTimer);
+                    this.usbTimer = setTimeout(() => {
+                        this.usbBuffer = '';
+                    }, 200);
+                }
+            });
+
+            // Keep focus on scan input when clicking empty areas
+            document.addEventListener('click', (e) => {
+                if (e.target === document.body || e.target.closest('.space-y-6')) {
+                    const active = document.activeElement;
+                    const isOtherInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+                    if (!isOtherInput && this.$refs.dispatchScanInput) {
                         this.$refs.dispatchScanInput.focus();
                     }
                 }
