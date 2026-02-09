@@ -250,13 +250,6 @@
         </table>
         @endif
 
-        {{-- Notes --}}
-        @if($order->description)
-        <div class="notes-section">
-            <div class="notes"><strong>توضیحات:</strong> {{ $order->description }}</div>
-        </div>
-        @endif
-
         {{-- Barcode --}}
         <div class="barcode-section">
             <svg id="barcode"></svg>
