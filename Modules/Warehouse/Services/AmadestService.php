@@ -2,6 +2,7 @@
 
 namespace Modules\Warehouse\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseSetting;
@@ -10,16 +11,40 @@ class AmadestService
 {
     protected ?string $apiKey;
     protected ?string $apiUrl;
+    protected ?string $storeId;
 
     public function __construct()
     {
         $this->apiKey = WarehouseSetting::get('amadest_api_key');
         $this->apiUrl = rtrim(WarehouseSetting::get('amadest_api_url', 'https://api.amadest.com'), '/');
+        $this->storeId = WarehouseSetting::get('amadest_store_id');
     }
 
     public function isConfigured(): bool
     {
         return !empty($this->apiKey);
+    }
+
+    protected function getHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    /**
+     * Detect which API path to use based on the configured URL
+     */
+    protected function endpoint(string $path): string
+    {
+        // shop-integration.amadast.com uses /v1/...
+        // api.amadest.com uses /api/v1/...
+        if (str_contains($this->apiUrl, 'shop-integration')) {
+            return $this->apiUrl . '/v1/' . ltrim($path, '/');
+        }
+        return $this->apiUrl . '/api/v1/' . ltrim($path, '/');
     }
 
     public function testConnection(): array
@@ -29,12 +54,10 @@ class AmadestService
         }
 
         try {
+            // Try cities endpoint first (works on both APIs)
             $response = Http::timeout(15)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Accept' => 'application/json',
-                ])
-                ->get($this->apiUrl . '/api/v1/profile');
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('cities'));
 
             if ($response->successful()) {
                 return [
@@ -44,45 +67,244 @@ class AmadestService
                 ];
             }
 
-            return ['success' => false, 'message' => 'خطا در اتصال: ' . $response->status()];
+            // Fallback: try profile endpoint
+            $response2 = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('profile'));
+
+            if ($response2->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'اتصال به آمادست برقرار است.',
+                    'data' => $response2->json(),
+                ];
+            }
+
+            return ['success' => false, 'message' => 'خطا در اتصال: HTTP ' . $response->status() . ' - ' . $response->body()];
         } catch (\Exception $e) {
             Log::error('Amadest connection test failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => 'خطا در اتصال: ' . $e->getMessage()];
         }
     }
 
-    public function createShipment(array $data): array
+    /**
+     * Get provinces/cities list
+     */
+    public function getCities(?int $provinceId = null): array
     {
-        if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'کلید API آمادست وارد نشده.'];
-        }
+        $cacheKey = 'amadest_cities_' . ($provinceId ?? 'all');
+        return Cache::remember($cacheKey, 86400, function () use ($provinceId) {
+            try {
+                $params = $provinceId ? ['province_id' => $provinceId] : [];
+                $response = Http::timeout(15)
+                    ->withHeaders($this->getHeaders())
+                    ->get($this->endpoint('cities'), $params);
 
+                if ($response->successful()) {
+                    return $response->json()['data'] ?? $response->json();
+                }
+                return [];
+            } catch (\Exception $e) {
+                Log::error('Amadest getCities error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Create a location (warehouse address)
+     */
+    public function createLocation(array $data): array
+    {
         try {
             $response = Http::timeout(30)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Accept' => 'application/json',
-                ])
-                ->post($this->apiUrl . '/api/v1/shipments', $data);
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('locations'), [
+                    'title' => $data['title'],
+                    'address' => $data['address'],
+                    'province_id' => $data['province_id'],
+                    'city_id' => $data['city_id'],
+                    'postal_code' => $data['postal_code'],
+                    'latitude' => $data['latitude'] ?? 35.6892,
+                    'longitude' => $data['longitude'] ?? 51.3890,
+                ]);
 
             if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'مرسوله با موفقیت ثبت شد.',
-                    'data' => $response->json(),
-                ];
+                $result = $response->json();
+                if ($result['success'] ?? $result['data'] ?? false) {
+                    $id = $result['data']['id'] ?? null;
+                    if ($id) WarehouseSetting::set('amadest_location_id', $id);
+                }
+                return $result;
             }
 
-            return [
-                'success' => false,
-                'message' => 'خطا: ' . ($response->json('message') ?? $response->status()),
-            ];
+            return ['success' => false, 'message' => 'خطا در ایجاد مکان: ' . $response->body()];
         } catch (\Exception $e) {
-            Log::error('Amadest create shipment failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+            Log::error('Amadest createLocation error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
+    /**
+     * Create a store
+     */
+    public function createStore(array $data): array
+    {
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('stores'), [
+                    'title' => $data['title'],
+                    'location_id' => $data['location_id'],
+                    'admin_name' => $data['admin_name'],
+                    'phone' => $data['phone'],
+                ]);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                $id = $result['data']['id'] ?? null;
+                if ($id) {
+                    WarehouseSetting::set('amadest_store_id', $id);
+                    $this->storeId = $id;
+                }
+                return $result;
+            }
+
+            return ['success' => false, 'message' => 'خطا در ایجاد فروشگاه: ' . $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Amadest createStore error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Setup: create location + store
+     */
+    public function setup(array $data): array
+    {
+        $locationResult = $this->createLocation([
+            'title' => $data['warehouse_title'] ?? 'انبار اصلی',
+            'address' => $data['warehouse_address'],
+            'province_id' => $data['province_id'],
+            'city_id' => $data['city_id'],
+            'postal_code' => $data['postal_code'],
+        ]);
+
+        if (!($locationResult['success'] ?? false) && !($locationResult['data']['id'] ?? false)) {
+            return $locationResult;
+        }
+
+        $locationId = $locationResult['data']['id'] ?? null;
+
+        $storeResult = $this->createStore([
+            'title' => $data['store_title'] ?? 'فروشگاه اصلی',
+            'location_id' => $locationId,
+            'admin_name' => $data['sender_name'],
+            'phone' => $data['sender_mobile'],
+        ]);
+
+        if (!($storeResult['success'] ?? false) && !($storeResult['data']['id'] ?? false)) {
+            return $storeResult;
+        }
+
+        WarehouseSetting::set('amadest_sender_name', $data['sender_name']);
+        WarehouseSetting::set('amadest_sender_mobile', $data['sender_mobile']);
+        WarehouseSetting::set('amadest_warehouse_address', $data['warehouse_address']);
+
+        return [
+            'success' => true,
+            'message' => 'تنظیمات آمادست با موفقیت انجام شد',
+            'data' => [
+                'location_id' => $locationId,
+                'store_id' => $this->storeId,
+            ]
+        ];
+    }
+
+    /**
+     * Create an order/shipment in Amadest
+     */
+    public function createOrder(array $orderData): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست'];
+        }
+
+        try {
+            $senderName = WarehouseSetting::get('amadest_sender_name');
+            $senderMobile = WarehouseSetting::get('amadest_sender_mobile');
+
+            $payload = [
+                'store_id' => $this->storeId,
+                'external_order_id' => $orderData['external_order_id'],
+                'recipient_name' => $orderData['recipient_name'],
+                'sender_name' => $senderName,
+                'recipient_mobile' => $this->formatMobile($orderData['recipient_mobile']),
+                'sender_mobile' => $senderMobile,
+                'recipient_city_id' => $orderData['recipient_city_id'] ?? null,
+                'recipient_address' => $orderData['recipient_address'],
+                'recipient_postal_code' => $orderData['recipient_postal_code'] ?? null,
+                'weight' => $orderData['weight'] ?? 500,
+                'value' => $orderData['value'] ?? 100000,
+                'products' => $orderData['products'] ?? [],
+                'description' => $orderData['description'] ?? null,
+            ];
+
+            Log::info('Amadest createOrder payload', $payload);
+
+            $response = Http::timeout(30)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('orders'), $payload);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                Log::info('Amadest createOrder response', $result);
+                return $result;
+            }
+
+            Log::error('Amadest createOrder failed', ['response' => $response->body()]);
+            return ['success' => false, 'message' => 'خطا در ثبت سفارش: ' . $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Amadest createOrder error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create shipment (alias for backward compat)
+     */
+    public function createShipment(array $data): array
+    {
+        return $this->createOrder($data);
+    }
+
+    /**
+     * Search orders by phone number
+     */
+    public function searchOrders(array $phoneNumbers): array
+    {
+        try {
+            $formattedPhones = collect($phoneNumbers)->map(fn($p) => $this->formatMobile($p))->filter()->toArray();
+            $query = collect($formattedPhones)->map(fn($p) => "phone_number={$p}")->implode('&');
+
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('orders/search') . '?' . $query);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return ['success' => false, 'message' => 'خطا در جستجو: ' . $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Amadest searchOrders error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Track shipment by tracking code
+     */
     public function trackShipment(string $trackingCode): array
     {
         if (!$this->isConfigured()) {
@@ -91,17 +313,11 @@ class AmadestService
 
         try {
             $response = Http::timeout(15)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Accept' => 'application/json',
-                ])
-                ->get($this->apiUrl . '/api/v1/tracking/' . $trackingCode);
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('tracking/' . $trackingCode));
 
             if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json(),
-                ];
+                return ['success' => true, 'data' => $response->json()];
             }
 
             return ['success' => false, 'message' => 'خطا: ' . $response->status()];
@@ -109,5 +325,43 @@ class AmadestService
             Log::error('Amadest tracking failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Get tracking info for an order by phone + external ID
+     */
+    public function getTrackingInfo(string $phoneNumber, $externalOrderId): ?array
+    {
+        $result = $this->searchOrders([$phoneNumber]);
+
+        if ($result['success'] ?? false) {
+            foreach ($result['data'] ?? [] as $order) {
+                if (($order['external_order_id'] ?? null) == $externalOrderId) {
+                    return [
+                        'amadest_tracking_code' => $order['tracking_code'] ?? $order['barcode'] ?? null,
+                        'courier_tracking_code' => $order['post_tracking_code'] ?? $order['courier_tracking_code'] ?? null,
+                        'courier_title' => $order['courier_name'] ?? $order['courier_title'] ?? null,
+                        'status' => $order['status'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Format mobile number to 09... format
+     */
+    protected function formatMobile(?string $mobile): string
+    {
+        if (!$mobile) return '';
+        $mobile = preg_replace('/\D/', '', $mobile);
+        if (str_starts_with($mobile, '98') && strlen($mobile) == 12) {
+            $mobile = '0' . substr($mobile, 2);
+        } elseif (!str_starts_with($mobile, '0') && strlen($mobile) == 10) {
+            $mobile = '0' . $mobile;
+        }
+        return $mobile;
     }
 }

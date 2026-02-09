@@ -28,13 +28,20 @@
             <form action="{{ route('warehouse.amadest.save') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">آدرس API</label>
-                    <input type="url" name="api_url" value="{{ old('api_url', $settings['api_url']) }}" dir="ltr"
-                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-                           placeholder="https://api.amadest.com">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">سرویس API</label>
+                    <select name="api_url" dir="ltr"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white">
+                        <option value="https://shop-integration.amadast.com" {{ ($settings['api_url'] ?? '') === 'https://shop-integration.amadast.com' ? 'selected' : '' }}>
+                            shop-integration.amadast.com (آمادست - نسخه فروشگاه)
+                        </option>
+                        <option value="https://api.amadest.com" {{ ($settings['api_url'] ?? '') === 'https://api.amadest.com' ? 'selected' : '' }}>
+                            api.amadest.com (آمادست - نسخه API)
+                        </option>
+                    </select>
                     @error('api_url')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                    <p class="text-gray-400 text-xs mt-1">هر دو رو تست کن، هر کدوم جواب داد همونو انتخاب کن</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">کلید API <span class="text-red-500">*</span></label>
