@@ -252,16 +252,26 @@ class AmadestService
                 'sender_name' => $senderName,
                 'recipient_mobile' => $this->formatMobile($orderData['recipient_mobile']),
                 'sender_mobile' => $this->formatMobile($senderMobile),
-                'recipient_city_id' => (int) ($orderData['recipient_city_id'] ?? 0) ?: null,
                 'recipient_address' => $orderData['recipient_address'] ?: 'آدرس نامشخص',
-                'recipient_postal_code' => $orderData['recipient_postal_code'] ?? null,
                 'weight' => $weightGrams,
                 'value' => (int) ($orderData['value'] ?? 100000),
                 'product_type' => $orderData['product_type'] ?? 1,
                 'package_type' => $orderData['package_type'] ?? 1,
-                'products' => $orderData['products'] ?? [],
-                'description' => $orderData['description'] ?? null,
             ];
+
+            // فیلدهای اختیاری - فقط اگه مقدار دارن اضافه شن
+            if (!empty($orderData['recipient_city_id'])) {
+                $payload['recipient_city_id'] = (int) $orderData['recipient_city_id'];
+            }
+            if (!empty($orderData['recipient_postal_code'])) {
+                $payload['recipient_postal_code'] = $orderData['recipient_postal_code'];
+            }
+            if (!empty($orderData['description'])) {
+                $payload['description'] = $orderData['description'];
+            }
+            if (!empty($orderData['products'])) {
+                $payload['products'] = $orderData['products'];
+            }
 
             Log::info('Amadest createOrder payload', $payload);
 
