@@ -23,8 +23,6 @@
         .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; z-index: 100; }
         .print-btn { padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Tahoma; }
         .print-btn:hover { background: #2563eb; }
-        .mark-printed-btn { padding: 8px 18px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Tahoma; }
-        .mark-printed-btn:hover { background: #059669; }
         .print-count-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-family: Tahoma; font-weight: bold; }
         .invoice { margin-top: 60px; }
         @media print { .top-bar, .no-print { display: none !important; } .invoice { margin-top: 0; } }
@@ -33,7 +31,6 @@
 <body>
     <div class="top-bar">
         <button class="print-btn" onclick="handlePrint()">چاپ فاکتور</button>
-        <button class="mark-printed-btn" onclick="markPrinted()">تایید پرینت شد</button>
         @if($order->print_count > 1)
         <span class="print-count-badge">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
@@ -138,23 +135,6 @@
             window.print();
         }
 
-        function markPrinted() {
-            fetch('{{ route("warehouse.print.mark-printed", $order) }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert('سفارش به مرحله آماده‌سازی منتقل شد.');
-                    window.print();
-                }
-            });
-        }
     </script>
 </body>
 </html>
