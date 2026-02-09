@@ -6,59 +6,88 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; font-size: 12px; color: #333; }
-        .invoice { max-width: 800px; margin: 0 auto; border: 2px solid #333; padding: 20px; }
+        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 15px; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
         .header-right { display: flex; align-items: center; gap: 10px; }
-        .header-logo { width: 50px; height: 50px; object-fit: contain; }
-        .header-title { font-size: 22px; font-weight: bold; }
-        .header-subtitle { font-size: 11px; color: #666; margin-top: 2px; }
-        .header-left { text-align: left; font-size: 11px; color: #555; }
-        .header-left .order-num { font-size: 14px; font-weight: bold; color: #333; }
+        .header-logo { width: 42px; height: 42px; object-fit: contain; }
+        .header-info { }
+        .header-title { font-size: 18px; font-weight: bold; color: #222; }
+        .header-subtitle { font-size: 10px; color: #888; margin-top: 2px; }
+        .header-left { text-align: left; }
+        .header-order-num { font-size: 13px; font-weight: bold; color: #222; }
+        .header-date { font-size: 10px; color: #888; margin-top: 2px; }
 
-        /* Sender / Receiver */
-        .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
-        .party { padding: 10px 12px; }
+        /* Parties (Sender/Receiver) */
+        .parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ddd; }
+        .party { padding: 12px 20px; }
         .party:first-child { border-left: 1px solid #ddd; }
-        .party-label { font-weight: bold; font-size: 12px; margin-bottom: 6px; color: #111; border-bottom: 1px solid #eee; padding-bottom: 4px; }
-        .party-row { display: flex; gap: 5px; margin-bottom: 3px; font-size: 11px; line-height: 1.6; }
-        .party-key { font-weight: bold; min-width: 50px; color: #555; }
+        .party-label { font-weight: bold; font-size: 13px; color: #222; margin-bottom: 8px; }
+        .party-row { display: flex; gap: 5px; margin-bottom: 4px; font-size: 11px; line-height: 1.7; }
+        .party-key { font-weight: bold; min-width: 45px; color: #666; }
         .party-val { color: #222; }
 
-        /* Order Info */
-        .order-info { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: #f5f5f5; border-radius: 4px; font-size: 11px; }
+        /* Order Info Bar */
+        .order-info { display: flex; justify-content: space-around; padding: 6px 20px; background: #fafafa; border-bottom: 1px solid #ddd; font-size: 11px; }
         .order-info-item { display: flex; gap: 4px; }
-        .order-info-label { font-weight: bold; color: #555; }
+        .order-info-label { font-weight: bold; color: #666; }
 
         /* Table */
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .items-table th, .items-table td { border: 1px solid #ddd; padding: 7px 10px; text-align: right; font-size: 11px; }
-        .items-table th { background: #f0f0f0; font-weight: bold; font-size: 11px; }
-        .items-table tr:nth-child(even) { background: #fafafa; }
-        .items-table .total-row { background: #f0f0f0; font-weight: bold; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th, .items-table td { border-bottom: 1px solid #eee; padding: 7px 12px; text-align: right; font-size: 11px; }
+        .items-table th { background: #f5f5f5; font-weight: bold; font-size: 10px; color: #555; border-bottom: 1px solid #ddd; }
+        .items-table tr:nth-child(even) { background: #fcfcfc; }
+        .items-table .total-row { background: #f5f5f5; font-weight: bold; border-top: 1px solid #ddd; }
+        .items-table .total-row td { padding: 8px 12px; }
 
         /* Notes */
-        .notes { background: #f9f9f9; padding: 8px 10px; border-radius: 4px; margin-top: 8px; font-size: 11px; border-right: 3px solid #999; }
+        .notes-section { padding: 10px 20px; border-top: 1px solid #eee; }
+        .notes { background: #fafafa; padding: 6px 10px; border-radius: 3px; margin-bottom: 5px; font-size: 11px; border-right: 3px solid #ccc; }
 
         /* Barcode */
-        .barcode-section { text-align: center; margin-top: 15px; padding-top: 12px; border-top: 2px solid #333; }
-        .barcode-section svg { max-width: 220px; }
+        .barcode-section { text-align: center; padding: 12px 20px; border-top: 1px solid #ddd; }
+        .barcode-section svg { max-width: 200px; }
+        .barcode-code { font-size: 9px; color: #aaa; margin-top: 3px; }
 
-        /* Top bar for screen */
+        /* Top bar (screen only) */
         .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; z-index: 100; }
         .print-btn { padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Tahoma; }
         .print-btn:hover { background: #2563eb; }
         .print-count-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-family: Tahoma; font-weight: bold; }
         .invoice { margin-top: 60px; }
+
         @media print {
             .top-bar, .no-print { display: none !important; }
-            .invoice { margin-top: 0; border: none; padding: 0; }
-            body { padding: 10px; }
+            .invoice { margin-top: 0; }
+            body { padding: 5px; }
         }
     </style>
 </head>
 <body>
+    @php
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        $shipping = $wcData['shipping'] ?? [];
+        $billing = $wcData['billing'] ?? [];
+
+        // Receiver address
+        $addrParts = array_filter([
+            $shipping['state'] ?? $billing['state'] ?? '',
+            $shipping['city'] ?? $billing['city'] ?? '',
+            $shipping['address_1'] ?? $billing['address_1'] ?? '',
+            $shipping['address_2'] ?? $billing['address_2'] ?? '',
+        ]);
+        $receiverAddress = implode('، ', $addrParts);
+
+        // Fallback to customer_note
+        if (empty($receiverAddress) && !empty($wcData['customer_note'])) {
+            $receiverAddress = $wcData['customer_note'];
+        }
+
+        $receiverPostcode = $shipping['postcode'] ?? $billing['postcode'] ?? '';
+        $receiverPhone = $order->customer_mobile ?: ($billing['phone'] ?? '');
+    @endphp
+
     <div class="top-bar">
         <button class="print-btn" onclick="handlePrint()">چاپ فاکتور</button>
         @if($order->print_count > 1)
@@ -70,20 +99,20 @@
     </div>
 
     <div class="invoice">
-        {{-- Header with logo and store name --}}
+        {{-- Header --}}
         <div class="header">
             <div class="header-right">
                 @if(!empty($invoiceSettings['logo']))
                     <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" class="header-logo">
                 @endif
-                <div>
+                <div class="header-info">
                     <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
                     <div class="header-subtitle">{{ $invoiceSettings['subtitle'] }}</div>
                 </div>
             </div>
             <div class="header-left">
-                <div class="order-num">{{ $order->order_number }}</div>
-                <div>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</div>
+                <div class="header-order-num">{{ $order->order_number }}</div>
+                <div class="header-date">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</div>
             </div>
         </div>
 
@@ -114,45 +143,28 @@
                     <span class="party-key">نام:</span>
                     <span class="party-val">{{ $order->customer_name }}</span>
                 </div>
-                @if($order->customer_mobile)
+                @if(!empty($receiverPhone))
                 <div class="party-row">
                     <span class="party-key">تلفن:</span>
-                    <span class="party-val" dir="ltr">{{ $order->customer_mobile }}</span>
+                    <span class="party-val" dir="ltr">{{ $receiverPhone }}</span>
                 </div>
                 @endif
-                @php
-                    $wcData = $order->wc_order_data;
-                    $receiverAddress = '';
-                    if (is_array($wcData)) {
-                        $shipping = $wcData['shipping'] ?? $wcData['billing'] ?? [];
-                        $parts = array_filter([
-                            $shipping['state'] ?? '',
-                            $shipping['city'] ?? '',
-                            $shipping['address_1'] ?? '',
-                            $shipping['address_2'] ?? '',
-                        ]);
-                        $receiverAddress = implode('، ', $parts);
-                        if (empty($receiverAddress) && !empty($wcData['customer_note'])) {
-                            $receiverAddress = $wcData['customer_note'];
-                        }
-                    }
-                @endphp
                 @if(!empty($receiverAddress))
                 <div class="party-row">
                     <span class="party-key">آدرس:</span>
                     <span class="party-val">{{ $receiverAddress }}</span>
                 </div>
                 @endif
-                @if(is_array($wcData) && !empty($wcData['shipping']['postcode'] ?? $wcData['billing']['postcode'] ?? ''))
+                @if(!empty($receiverPostcode))
                 <div class="party-row">
                     <span class="party-key">کدپستی:</span>
-                    <span class="party-val" dir="ltr">{{ $wcData['shipping']['postcode'] ?? $wcData['billing']['postcode'] ?? '' }}</span>
+                    <span class="party-val" dir="ltr">{{ $receiverPostcode }}</span>
                 </div>
                 @endif
             </div>
         </div>
 
-        {{-- Order Info Bar --}}
+        {{-- Order Info --}}
         <div class="order-info">
             <div class="order-info-item">
                 <span class="order-info-label">نوع ارسال:</span>
@@ -167,7 +179,7 @@
             </div>
             <div class="order-info-item">
                 <span class="order-info-label">وزن کل:</span>
-                <span>{{ $order->total_weight }} کیلوگرم</span>
+                <span>{{ $order->total_weight }} kg</span>
             </div>
             <div class="order-info-item">
                 <span class="order-info-label">تعداد اقلام:</span>
@@ -180,12 +192,12 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width:30px">#</th>
+                    <th style="width:28px">#</th>
                     <th>نام محصول</th>
-                    <th style="width:70px">SKU</th>
-                    <th style="width:50px">تعداد</th>
-                    <th style="width:65px">وزن (kg)</th>
-                    <th style="width:100px">مبلغ (تومان)</th>
+                    <th style="width:65px">SKU</th>
+                    <th style="width:45px">تعداد</th>
+                    <th style="width:55px">وزن</th>
+                    <th style="width:95px">مبلغ (تومان)</th>
                 </tr>
             </thead>
             <tbody>
@@ -209,21 +221,22 @@
         </table>
         @endif
 
-        @if($order->description)
-        <div class="notes">
-            <strong>توضیحات:</strong> {{ $order->description }}
+        {{-- Notes --}}
+        @if($order->description || $order->notes)
+        <div class="notes-section">
+            @if($order->description)
+            <div class="notes"><strong>توضیحات:</strong> {{ $order->description }}</div>
+            @endif
+            @if($order->notes)
+            <div class="notes"><strong>یادداشت:</strong> {{ $order->notes }}</div>
+            @endif
         </div>
         @endif
 
-        @if($order->notes)
-        <div class="notes" style="margin-top: 5px;">
-            <strong>یادداشت:</strong> {{ $order->notes }}
-        </div>
-        @endif
-
+        {{-- Barcode --}}
         <div class="barcode-section">
             <svg id="barcode"></svg>
-            <p style="margin-top: 4px; font-size: 10px; color: #888;">{{ $order->barcode }}</p>
+            <p class="barcode-code">{{ $order->barcode }}</p>
         </div>
     </div>
 
