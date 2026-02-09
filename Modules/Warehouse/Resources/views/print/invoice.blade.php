@@ -10,9 +10,9 @@
         .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: #fff; border-bottom: 1px solid #ddd; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #fff; border-bottom: 1px solid #ddd; }
         .header-right { display: flex; align-items: center; }
-        .header-logo { width: 96px; height: 96px; object-fit: contain; }
+        .header-logo { width: 140px; height: auto; max-height: 120px; object-fit: contain; }
         .header-left { font-size: 11px; color: #444; line-height: 1.9; }
         .header-left .info-row { display: flex; gap: 4px; }
         .header-left .info-label { font-weight: bold; color: #666; }
