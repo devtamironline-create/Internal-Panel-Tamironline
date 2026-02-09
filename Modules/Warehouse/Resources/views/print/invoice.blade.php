@@ -69,28 +69,28 @@
         $shipping = $wcData['shipping'] ?? [];
         $billing = $wcData['billing'] ?? [];
 
-        // Receiver address - اول shipping بعد billing
-        $state = $shipping['state'] ?? $billing['state'] ?? '';
-        $city = $shipping['city'] ?? $billing['city'] ?? '';
-        $address1 = $shipping['address_1'] ?? $billing['address_1'] ?? '';
-        $address2 = $shipping['address_2'] ?? $billing['address_2'] ?? '';
+        // Receiver address - اول shipping بعد billing (با ?: به‌جای ?? چون رشته خالی فالبک نمیزنه)
+        $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+        $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
+        $address1 = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
+        $address2 = ($shipping['address_2'] ?? '') ?: ($billing['address_2'] ?? '');
 
         // جستجو در meta_data اگه آدرس خالی بود
         $metaData = collect($wcData['meta_data'] ?? []);
         if (empty($address1)) {
-            $address1 = $metaData->firstWhere('key', '_shipping_address_1')['value']
-                ?? $metaData->firstWhere('key', '_billing_address_1')['value']
-                ?? '';
+            $meta = $metaData->firstWhere('key', '_shipping_address_1');
+            if (!$meta) $meta = $metaData->firstWhere('key', '_billing_address_1');
+            $address1 = $meta['value'] ?? '';
         }
         if (empty($city)) {
-            $city = $metaData->firstWhere('key', '_shipping_city')['value']
-                ?? $metaData->firstWhere('key', '_billing_city')['value']
-                ?? '';
+            $meta = $metaData->firstWhere('key', '_shipping_city');
+            if (!$meta) $meta = $metaData->firstWhere('key', '_billing_city');
+            $city = $meta['value'] ?? '';
         }
         if (empty($state)) {
-            $state = $metaData->firstWhere('key', '_shipping_state')['value']
-                ?? $metaData->firstWhere('key', '_billing_state')['value']
-                ?? '';
+            $meta = $metaData->firstWhere('key', '_shipping_state');
+            if (!$meta) $meta = $metaData->firstWhere('key', '_billing_state');
+            $state = $meta['value'] ?? '';
         }
 
         $addrParts = array_filter([$state, $city, $address1, $address2]);
@@ -101,11 +101,11 @@
             $receiverAddress = $wcData['customer_note'];
         }
 
-        $receiverPostcode = $shipping['postcode'] ?? $billing['postcode'] ?? '';
+        $receiverPostcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
         if (empty($receiverPostcode)) {
-            $receiverPostcode = $metaData->firstWhere('key', '_shipping_postcode')['value']
-                ?? $metaData->firstWhere('key', '_billing_postcode')['value']
-                ?? '';
+            $meta = $metaData->firstWhere('key', '_shipping_postcode');
+            if (!$meta) $meta = $metaData->firstWhere('key', '_billing_postcode');
+            $receiverPostcode = $meta['value'] ?? '';
         }
 
         $receiverPhone = $order->customer_mobile ?: ($billing['phone'] ?? '');
