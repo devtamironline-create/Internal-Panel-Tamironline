@@ -408,12 +408,15 @@ class WooCommerceService
                 }
 
                 foreach ($products as $product) {
+                    // تبدیل گرم به کیلوگرم
+                    $weightKg = round((float)($product['weight'] ?? 0) / 1000, 3);
+
                     $result = WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $product['id']],
                         [
                             'name' => $product['name'] ?? '',
                             'sku' => $product['sku'] ?? null,
-                            'weight' => (float)($product['weight'] ?? 0),
+                            'weight' => $weightKg,
                             'price' => (float)($product['price'] ?? 0),
                             'type' => $product['type'] ?? 'simple',
                             'parent_id' => null,
@@ -490,12 +493,15 @@ class WooCommerceService
                 }
 
                 foreach ($variations as $variation) {
+                    // تبدیل گرم به کیلوگرم
+                    $weightKg = round((float)($variation['weight'] ?? 0) / 1000, 3);
+
                     WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $variation['id']],
                         [
                             'name' => $variation['name'] ?? ('تنوع #' . $variation['id']),
                             'sku' => $variation['sku'] ?? null,
-                            'weight' => (float)($variation['weight'] ?? 0),
+                            'weight' => $weightKg,
                             'price' => (float)($variation['price'] ?? 0),
                             'type' => 'variation',
                             'parent_id' => $productId,
@@ -525,9 +531,11 @@ class WooCommerceService
     {
         $updatedCount = 0;
 
-        // آیتم‌هایی که وزنشون 0 هست و wc_product_id دارن
-        $items = WarehouseOrderItem::where('weight', 0)
-            ->whereNotNull('wc_product_id')
+        // آیتم‌هایی که وزنشون 0 یا به گرم ذخیره شده (بیشتر از 100 کیلو احتمالا گرم هست)
+        $items = WarehouseOrderItem::whereNotNull('wc_product_id')
+            ->where(function ($q) {
+                $q->where('weight', 0)->orWhere('weight', '>', 100);
+            })
             ->get();
 
         if ($items->isEmpty()) {
@@ -539,21 +547,21 @@ class WooCommerceService
         $weightsMap = WarehouseProduct::getWeightsMap($productIds);
 
         foreach ($items as $item) {
-            $weight = (float)($weightsMap[$item->wc_product_id] ?? 0);
-            if ($weight > 0) {
-                $item->update(['weight' => $weight]);
+            $newWeight = (float)($weightsMap[$item->wc_product_id] ?? 0);
+            if ($newWeight > 0 && $newWeight != $item->weight) {
+                $item->update(['weight' => $newWeight]);
                 $updatedCount++;
             }
         }
 
-        // آپدیت وزن کل سفارشاتی که آیتمشون تغییر کرده
+        // آپدیت وزن کل همه سفارشاتی که آیتمشون تغییر کرده
         if ($updatedCount > 0) {
             $orderIds = $items->pluck('warehouse_order_id')->unique();
             foreach ($orderIds as $orderId) {
-                $order = WarehouseOrder::find($orderId);
+                $order = WarehouseOrder::with('items')->find($orderId);
                 if ($order) {
                     $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
-                    $order->update(['total_weight' => round($totalWeight, 2)]);
+                    $order->update(['total_weight' => round($totalWeight, 3)]);
                 }
             }
         }
