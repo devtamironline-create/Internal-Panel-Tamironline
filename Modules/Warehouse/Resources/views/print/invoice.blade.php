@@ -69,13 +69,31 @@
         $shipping = $wcData['shipping'] ?? [];
         $billing = $wcData['billing'] ?? [];
 
-        // Receiver address
-        $addrParts = array_filter([
-            $shipping['state'] ?? $billing['state'] ?? '',
-            $shipping['city'] ?? $billing['city'] ?? '',
-            $shipping['address_1'] ?? $billing['address_1'] ?? '',
-            $shipping['address_2'] ?? $billing['address_2'] ?? '',
-        ]);
+        // Receiver address - اول shipping بعد billing
+        $state = $shipping['state'] ?? $billing['state'] ?? '';
+        $city = $shipping['city'] ?? $billing['city'] ?? '';
+        $address1 = $shipping['address_1'] ?? $billing['address_1'] ?? '';
+        $address2 = $shipping['address_2'] ?? $billing['address_2'] ?? '';
+
+        // جستجو در meta_data اگه آدرس خالی بود
+        $metaData = collect($wcData['meta_data'] ?? []);
+        if (empty($address1)) {
+            $address1 = $metaData->firstWhere('key', '_shipping_address_1')['value']
+                ?? $metaData->firstWhere('key', '_billing_address_1')['value']
+                ?? '';
+        }
+        if (empty($city)) {
+            $city = $metaData->firstWhere('key', '_shipping_city')['value']
+                ?? $metaData->firstWhere('key', '_billing_city')['value']
+                ?? '';
+        }
+        if (empty($state)) {
+            $state = $metaData->firstWhere('key', '_shipping_state')['value']
+                ?? $metaData->firstWhere('key', '_billing_state')['value']
+                ?? '';
+        }
+
+        $addrParts = array_filter([$state, $city, $address1, $address2]);
         $receiverAddress = implode('، ', $addrParts);
 
         // Fallback to customer_note
@@ -84,6 +102,12 @@
         }
 
         $receiverPostcode = $shipping['postcode'] ?? $billing['postcode'] ?? '';
+        if (empty($receiverPostcode)) {
+            $receiverPostcode = $metaData->firstWhere('key', '_shipping_postcode')['value']
+                ?? $metaData->firstWhere('key', '_billing_postcode')['value']
+                ?? '';
+        }
+
         $receiverPhone = $order->customer_mobile ?: ($billing['phone'] ?? '');
     @endphp
 
@@ -235,5 +259,17 @@
             window.print();
         }
     </script>
+
+    <!-- Debug: فقط در صفحه نمایش داده میشه، پرینت نمیشه -->
+    <div class="no-print" style="margin-top:20px; padding:15px; background:#f8f8f8; border:1px solid #ddd; border-radius:8px; font-size:11px; direction:ltr; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;">
+        <strong>Debug - WC Order Data (shipping/billing):</strong>
+        <pre style="white-space:pre-wrap; word-break:break-all; margin-top:8px;">
+shipping: {{ json_encode($shipping ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}
+
+billing: {{ json_encode($billing ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}
+
+meta_data keys: {{ collect($wcData['meta_data'] ?? [])->pluck('key')->implode(', ') }}
+        </pre>
+    </div>
 </body>
 </html>
