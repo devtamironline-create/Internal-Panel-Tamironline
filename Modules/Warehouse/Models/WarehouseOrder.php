@@ -17,7 +17,7 @@ class WarehouseOrder extends Model
         'status', 'shipping_type', 'assigned_to', 'created_by',
         'wc_order_id', 'wc_order_data', 'barcode',
         'total_weight', 'actual_weight', 'weight_verified',
-        'timer_deadline', 'supply_deadline', 'printed_at', 'packed_at',
+        'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
         'status_changed_at', 'shipped_at', 'delivered_at',
         'notes', 'tracking_code', 'driver_name', 'driver_phone',
     ];
