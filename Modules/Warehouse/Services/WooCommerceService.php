@@ -125,6 +125,10 @@ class WooCommerceService
         $failed = 0;
         $lastError = '';
 
+        // جمع‌آوری همه product_id ها از همه سفارشات برای دریافت دسته‌ای وزن
+        $allLineItems = collect($result['orders'])->flatMap(fn($o) => $o['line_items'] ?? [])->toArray();
+        $productWeights = $this->fetchProductWeights($allLineItems);
+
         foreach ($result['orders'] as $wcOrder) {
             try {
                 $wcOrderId = $wcOrder['id'];
@@ -139,7 +143,7 @@ class WooCommerceService
                     // If old order exists without wc_order_id, update it with journey fields
                     if (!$existingOrder->wc_order_id) {
                         $shippingType = $this->detectShippingType($wcOrder);
-                        $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? []);
+                        $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? [], $productWeights);
 
                         $existingOrder->update([
                             'wc_order_id' => $wcOrderId,
@@ -152,7 +156,7 @@ class WooCommerceService
 
                         // Create order items if not already created
                         if ($existingOrder->items()->count() === 0) {
-                            $this->createOrderItems($existingOrder, $wcOrder['line_items'] ?? []);
+                            $this->createOrderItems($existingOrder, $wcOrder['line_items'] ?? [], $productWeights);
                         }
 
                         // Set timer if not set
@@ -175,8 +179,8 @@ class WooCommerceService
                 // Determine shipping type from WC shipping methods
                 $shippingType = $this->detectShippingType($wcOrder);
 
-                // Calculate total weight from line items
-                $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? []);
+                // Calculate total weight from product weights
+                $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? [], $productWeights);
 
                 // Build description
                 $lineItems = collect($wcOrder['line_items'] ?? [])
@@ -202,8 +206,8 @@ class WooCommerceService
                 // Set timer based on shipping type
                 $order->setTimerFromShippingType();
 
-                // Create order items
-                $this->createOrderItems($order, $wcOrder['line_items'] ?? []);
+                // Create order items with product weights
+                $this->createOrderItems($order, $wcOrder['line_items'] ?? [], $productWeights);
 
                 $imported++;
             } catch (\Exception $e) {
@@ -315,27 +319,130 @@ class WooCommerceService
         return 'post';
     }
 
-    protected function calculateTotalWeight(array $lineItems): float
+    /**
+     * دریافت وزن محصولات از WooCommerce Products API
+     */
+    protected function fetchProductWeights(array $lineItems): array
+    {
+        $weights = [];
+
+        $productIds = collect($lineItems)
+            ->pluck('product_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($productIds)) {
+            return $weights;
+        }
+
+        // دریافت دسته‌ای محصولات (حداکثر 100 تا در هر درخواست)
+        foreach (array_chunk($productIds, 100) as $chunk) {
+            try {
+                $response = Http::timeout(30)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . '/wp-json/wc/v3/products', [
+                        'include' => implode(',', $chunk),
+                        'per_page' => 100,
+                    ]);
+
+                if ($response->successful()) {
+                    foreach ($response->json() as $product) {
+                        $weights[$product['id']] = (float)($product['weight'] ?? 0);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to fetch product weights from WooCommerce', [
+                    'product_ids' => $chunk,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // بررسی محصولات متغیر (variation) — اگر variation_id داشت وزن variation رو بگیر
+        $variationIds = collect($lineItems)
+            ->filter(fn($item) => !empty($item['variation_id']) && $item['variation_id'] > 0)
+            ->pluck('variation_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (!empty($variationIds)) {
+            // گروه‌بندی variation ها بر اساس product_id
+            $variationsByProduct = collect($lineItems)
+                ->filter(fn($item) => !empty($item['variation_id']) && $item['variation_id'] > 0)
+                ->groupBy('product_id');
+
+            foreach ($variationsByProduct as $productId => $items) {
+                foreach ($items as $item) {
+                    try {
+                        $response = Http::timeout(15)
+                            ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                            ->get($this->siteUrl . "/wp-json/wc/v3/products/{$productId}/variations/{$item['variation_id']}");
+
+                        if ($response->successful()) {
+                            $variation = $response->json();
+                            $varWeight = (float)($variation['weight'] ?? 0);
+                            if ($varWeight > 0) {
+                                // ذخیره با کلید variation_id
+                                $weights['var_' . $item['variation_id']] = $varWeight;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to fetch variation weight', [
+                            'product_id' => $productId,
+                            'variation_id' => $item['variation_id'],
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return $weights;
+    }
+
+    /**
+     * تعیین وزن یک آیتم بر اساس وزن‌های دریافت شده
+     */
+    protected function getItemWeight(array $item, array $weights): float
+    {
+        // اول variation رو چک کن
+        if (!empty($item['variation_id']) && $item['variation_id'] > 0) {
+            $varWeight = $weights['var_' . $item['variation_id']] ?? 0;
+            if ($varWeight > 0) {
+                return $varWeight;
+            }
+        }
+
+        // بعد وزن محصول اصلی
+        return $weights[$item['product_id'] ?? 0] ?? 0;
+    }
+
+    protected function calculateTotalWeight(array $lineItems, array $weights = []): float
     {
         $totalWeight = 0;
         foreach ($lineItems as $item) {
-            $weight = (float)($item['weight'] ?? 0);
+            $weight = !empty($weights) ? $this->getItemWeight($item, $weights) : (float)($item['weight'] ?? 0);
             $quantity = (int)($item['quantity'] ?? 1);
             $totalWeight += $weight * $quantity;
         }
-        return $totalWeight;
+        return round($totalWeight, 2);
     }
 
-    protected function createOrderItems(WarehouseOrder $order, array $lineItems): void
+    protected function createOrderItems(WarehouseOrder $order, array $lineItems, array $weights = []): void
     {
         foreach ($lineItems as $item) {
+            $weight = !empty($weights) ? $this->getItemWeight($item, $weights) : (float)($item['weight'] ?? 0);
+
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
                 'product_name' => $item['name'] ?? 'محصول',
                 'product_sku' => $item['sku'] ?? null,
                 'product_barcode' => $item['sku'] ?? null,
                 'quantity' => (int)($item['quantity'] ?? 1),
-                'weight' => (float)($item['weight'] ?? 0),
+                'weight' => $weight,
                 'price' => (float)($item['total'] ?? 0),
                 'wc_product_id' => $item['product_id'] ?? null,
             ]);
