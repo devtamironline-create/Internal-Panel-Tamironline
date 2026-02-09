@@ -51,7 +51,15 @@ class PrintController extends Controller
             $order->updateStatus(WarehouseOrder::STATUS_PREPARING);
         }
 
-        return view('warehouse::print.invoice', compact('order'));
+        $invoiceSettings = [
+            'store_name' => WarehouseSetting::get('invoice_store_name', 'گنجه'),
+            'subtitle' => WarehouseSetting::get('invoice_subtitle', 'فاکتور سفارش انبار'),
+            'logo' => WarehouseSetting::get('invoice_logo', ''),
+            'sender_phone' => WarehouseSetting::get('invoice_sender_phone', ''),
+            'sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
+        ];
+
+        return view('warehouse::print.invoice', compact('order', 'invoiceSettings'));
     }
 
     public function label(WarehouseOrder $order)

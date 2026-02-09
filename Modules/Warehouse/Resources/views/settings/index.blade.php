@@ -13,6 +13,55 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Invoice Settings -->
+        <div class="bg-white rounded-xl shadow-sm p-6 lg:col-span-2">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">تنظیمات فاکتور</h2>
+            <form action="{{ route('warehouse.settings.update') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="weight_tolerance" value="{{ $weightTolerance }}">
+                <input type="hidden" name="alert_mobile" value="{{ $alertMobile }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نام فروشگاه (روی فاکتور)</label>
+                        <input type="text" name="invoice_store_name" value="{{ $invoiceSettings['invoice_store_name'] ?? '' }}"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="مثلا: گنجه">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">زیرعنوان فاکتور</label>
+                        <input type="text" name="invoice_subtitle" value="{{ $invoiceSettings['invoice_subtitle'] ?? '' }}"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="مثلا: فاکتور سفارش انبار">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">لوگوی فاکتور</label>
+                        @if(!empty($invoiceSettings['invoice_logo']))
+                            <div class="flex items-center gap-3 mb-2">
+                                <img src="{{ asset('storage/' . $invoiceSettings['invoice_logo']) }}" alt="Logo" class="w-16 h-16 object-contain border rounded-lg">
+                                <a href="{{ route('warehouse.settings.delete-invoice-logo') }}" class="text-sm text-red-600 hover:text-red-800">حذف لوگو</a>
+                            </div>
+                        @endif
+                        <input type="file" name="invoice_logo" accept="image/*"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm file:ml-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">تلفن فرستنده</label>
+                        <input type="text" name="invoice_sender_phone" value="{{ $invoiceSettings['invoice_sender_phone'] ?? '' }}" dir="ltr"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="021-12345678">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">آدرس فرستنده</label>
+                        <textarea name="invoice_sender_address" rows="2"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                  placeholder="تهران، خیابان ...">{{ $invoiceSettings['invoice_sender_address'] ?? '' }}</textarea>
+                    </div>
+                </div>
+                <button type="submit" class="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">ذخیره تنظیمات فاکتور</button>
+            </form>
+        </div>
+
         <!-- Weight Tolerance -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-4">کنترل وزن</h2>

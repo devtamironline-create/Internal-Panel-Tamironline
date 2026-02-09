@@ -69,6 +69,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     Route::prefix('settings')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('warehouse.settings.index');
         Route::put('/', [SettingsController::class, 'update'])->name('warehouse.settings.update');
+        Route::get('/delete-invoice-logo', [SettingsController::class, 'deleteInvoiceLogo'])->name('warehouse.settings.delete-invoice-logo');
         Route::post('/shipping-type', [SettingsController::class, 'storeShippingType'])->name('warehouse.settings.shipping-type.store');
         Route::put('/shipping-type/{shippingType}', [SettingsController::class, 'updateShippingType'])->name('warehouse.settings.shipping-type.update');
     });

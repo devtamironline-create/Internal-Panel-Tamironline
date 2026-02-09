@@ -4,6 +4,7 @@ namespace Modules\Warehouse\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -21,7 +22,15 @@ class SettingsController extends Controller
         $shippingMappingsJson = WarehouseSetting::get('wc_shipping_mappings', '{}');
         $shippingMappings = json_decode($shippingMappingsJson, true) ?: [];
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings'));
+        $invoiceSettings = [
+            'invoice_store_name' => WarehouseSetting::get('invoice_store_name', ''),
+            'invoice_subtitle' => WarehouseSetting::get('invoice_subtitle', ''),
+            'invoice_logo' => WarehouseSetting::get('invoice_logo', ''),
+            'invoice_sender_phone' => WarehouseSetting::get('invoice_sender_phone', ''),
+            'invoice_sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
+        ];
+
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings'));
     }
 
     public function update(Request $request)
@@ -33,12 +42,33 @@ class SettingsController extends Controller
         $request->validate([
             'weight_tolerance' => 'required|numeric|min:0|max:100',
             'alert_mobile' => 'nullable|string|max:20',
+            'invoice_store_name' => 'nullable|string|max:255',
+            'invoice_subtitle' => 'nullable|string|max:255',
+            'invoice_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'invoice_sender_phone' => 'nullable|string|max:50',
+            'invoice_sender_address' => 'nullable|string|max:500',
         ]);
 
         WarehouseSetting::set('weight_tolerance', $request->weight_tolerance);
 
         if ($request->has('alert_mobile')) {
             WarehouseSetting::set('alert_mobile', $request->alert_mobile);
+        }
+
+        // Invoice settings
+        foreach (['invoice_store_name', 'invoice_subtitle', 'invoice_sender_phone', 'invoice_sender_address'] as $key) {
+            if ($request->has($key)) {
+                WarehouseSetting::set($key, $request->input($key));
+            }
+        }
+
+        if ($request->hasFile('invoice_logo')) {
+            $oldLogo = WarehouseSetting::get('invoice_logo');
+            if ($oldLogo) {
+                Storage::disk('public')->delete($oldLogo);
+            }
+            $path = $request->file('invoice_logo')->store('warehouse/invoice', 'public');
+            WarehouseSetting::set('invoice_logo', $path);
         }
 
         return redirect()->route('warehouse.settings.index')
@@ -60,6 +90,22 @@ class SettingsController extends Controller
         $shippingType->update($request->only('name', 'timer_minutes', 'is_active'));
 
         return response()->json(['success' => true, 'message' => 'نوع ارسال ویرایش شد.']);
+    }
+
+    public function deleteInvoiceLogo()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $logo = WarehouseSetting::get('invoice_logo');
+        if ($logo) {
+            Storage::disk('public')->delete($logo);
+            WarehouseSetting::set('invoice_logo', '');
+        }
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'لوگوی فاکتور حذف شد.');
     }
 
     public function storeShippingType(Request $request)
