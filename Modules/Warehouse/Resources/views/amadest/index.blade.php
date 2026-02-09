@@ -122,21 +122,12 @@
                               placeholder="آدرس کامل انبار">{{ $settings['warehouse_address'] ?? '' }}</textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">استان <span class="text-red-500">*</span></label>
-                        <select id="setup-province" onchange="loadCities()"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white">
-                            <option value="">انتخاب استان...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">شهر <span class="text-red-500">*</span></label>
-                        <select id="setup-city"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white">
-                            <option value="">ابتدا استان انتخاب کنید</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شهر <span class="text-red-500">*</span></label>
+                    <select id="setup-city"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white">
+                        <option value="">در حال بارگذاری...</option>
+                    </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -226,59 +217,13 @@
 
 @push('scripts')
 <script>
-let allCitiesData = [];
-
-// Load provinces on page load
+// Load cities on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadProvinces();
+    loadAllCities();
 });
 
-function loadProvinces() {
-    const select = document.getElementById('setup-province');
-    select.innerHTML = '<option value="">در حال بارگذاری...</option>';
-
-    fetch('{{ route("warehouse.amadest.provinces") }}', {
-        headers: { 'Accept': 'application/json' },
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success && data.data && data.data.length > 0) {
-            // Check if data has province_id field (meaning these are actual provinces)
-            const first = data.data[0];
-            const hasProvinceStructure = first.province_id || (first.id && first.name && !first.province_name);
-
-            if (hasProvinceStructure || (!first.province_id && !first.province_name)) {
-                // These look like provinces, use them
-                select.innerHTML = '<option value="">انتخاب استان...</option>';
-                data.data.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name || p.title;
-                    select.appendChild(opt);
-                });
-            } else {
-                // No province structure found, load all cities directly
-                loadAllCitiesDirect();
-            }
-        } else {
-            // No provinces, load all cities directly
-            loadAllCitiesDirect();
-        }
-    })
-    .catch(() => {
-        loadAllCitiesDirect();
-    });
-}
-
-function loadAllCitiesDirect() {
-    // Hide province, show city only
-    const provinceDiv = document.getElementById('setup-province').closest('.grid');
+function loadAllCities() {
     const citySelect = document.getElementById('setup-city');
-    const provinceSelect = document.getElementById('setup-province');
-
-    // Set a dummy province value so validation passes
-    provinceSelect.innerHTML = '<option value="1" selected>همه</option>';
-
     citySelect.innerHTML = '<option value="">در حال بارگذاری شهرها...</option>';
 
     fetch('{{ route("warehouse.amadest.cities") }}', {
@@ -287,44 +232,15 @@ function loadAllCitiesDirect() {
     .then(r => r.json())
     .then(data => {
         citySelect.innerHTML = '<option value="">انتخاب شهر...</option>';
-        if (data.success && data.data) {
-            allCitiesData = data.data;
+        if (data.success && data.data && data.data.length > 0) {
             data.data.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.textContent = c.name || c.title;
                 citySelect.appendChild(opt);
             });
-        }
-    })
-    .catch(() => {
-        citySelect.innerHTML = '<option value="">خطا در بارگذاری شهرها</option>';
-    });
-}
-
-function loadCities() {
-    const provinceId = document.getElementById('setup-province').value;
-    const citySelect = document.getElementById('setup-city');
-    citySelect.innerHTML = '<option value="">در حال بارگذاری...</option>';
-
-    if (!provinceId) {
-        citySelect.innerHTML = '<option value="">ابتدا استان انتخاب کنید</option>';
-        return;
-    }
-
-    fetch('{{ route("warehouse.amadest.cities") }}?province_id=' + provinceId, {
-        headers: { 'Accept': 'application/json' },
-    })
-    .then(r => r.json())
-    .then(data => {
-        citySelect.innerHTML = '<option value="">انتخاب شهر...</option>';
-        if (data.success && data.data) {
-            data.data.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name || c.title;
-                citySelect.appendChild(opt);
-            });
+        } else {
+            citySelect.innerHTML = '<option value="">شهری یافت نشد</option>';
         }
     })
     .catch(() => {
@@ -336,7 +252,6 @@ function setupAmadest() {
     const senderName = document.getElementById('setup-sender-name').value;
     const senderMobile = document.getElementById('setup-sender-mobile').value;
     const address = document.getElementById('setup-warehouse-address').value;
-    const provinceId = document.getElementById('setup-province').value;
     const cityId = document.getElementById('setup-city').value;
     const postalCode = document.getElementById('setup-postal-code').value;
     const storeTitle = document.getElementById('setup-store-title').value;
@@ -344,7 +259,7 @@ function setupAmadest() {
     const resultDiv = document.getElementById('setup-result');
     resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
 
-    if (!senderName || !senderMobile || !address || !provinceId || !cityId) {
+    if (!senderName || !senderMobile || !address || !cityId) {
         resultDiv.classList.add('bg-red-50', 'text-red-800');
         resultDiv.textContent = 'لطفا تمام فیلدهای ضروری (*) را پر کنید.';
         return;
@@ -368,7 +283,7 @@ function setupAmadest() {
             sender_name: senderName,
             sender_mobile: senderMobile,
             warehouse_address: address,
-            province_id: parseInt(provinceId),
+            province_id: parseInt(cityId),
             city_id: parseInt(cityId),
             postal_code: postalCode || null,
             store_title: storeTitle || 'فروشگاه اصلی',
