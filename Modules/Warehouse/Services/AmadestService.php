@@ -112,6 +112,67 @@ class AmadestService
     }
 
     /**
+     * Find city ID by city/state name
+     */
+    public function findCityId(?string $city, ?string $state = null): ?int
+    {
+        if (empty($city) && empty($state)) return null;
+
+        $cities = $this->getCities();
+        if (empty($cities)) return null;
+
+        // نرمال‌سازی نام شهر
+        $normalize = fn($s) => trim(str_replace(['ي', 'ك', 'ة', ' '], ['ی', 'ک', 'ه', ''], $s ?? ''));
+        $cityNorm = $normalize($city);
+        $stateNorm = $normalize($state);
+
+        // مپ استان‌های مخفف ووکامرس
+        $stateMap = [
+            'THR' => 'تهران', 'ESF' => 'اصفهان', 'FRS' => 'فارس', 'KHZ' => 'خوزستان',
+            'AZS' => 'آذربایجان شرقی', 'AZG' => 'آذربایجان غربی', 'KRN' => 'کرمان',
+            'KRS' => 'کرمانشاه', 'GIL' => 'گیلان', 'MZN' => 'مازندران', 'MKZ' => 'مرکزی',
+            'HMD' => 'همدان', 'QZV' => 'قزوین', 'QOM' => 'قم', 'GLS' => 'گلستان',
+            'ZJN' => 'زنجان', 'LRS' => 'لرستان', 'BHR' => 'بوشهر', 'KRD' => 'کردستان',
+            'ARD' => 'اردبیل', 'YZD' => 'یزد', 'SMN' => 'سمنان', 'SBN' => 'خراسان جنوبی',
+            'RKH' => 'خراسان رضوی', 'SKH' => 'خراسان شمالی', 'SBS' => 'سیستان و بلوچستان',
+            'CHB' => 'چهارمحال و بختیاری', 'ILM' => 'ایلام', 'KBD' => 'کهگیلویه و بویراحمد',
+            'HDN' => 'هرمزگان', 'ABZ' => 'البرز',
+        ];
+        if (isset($stateMap[$state])) {
+            $stateNorm = $normalize($stateMap[$state]);
+        }
+
+        // جستجوی دقیق
+        foreach ($cities as $c) {
+            $name = $normalize($c['name'] ?? $c['title'] ?? '');
+            if ($name === $cityNorm) {
+                return (int) $c['id'];
+            }
+        }
+
+        // جستجوی شامل بودن
+        foreach ($cities as $c) {
+            $name = $normalize($c['name'] ?? $c['title'] ?? '');
+            if (!empty($cityNorm) && (str_contains($name, $cityNorm) || str_contains($cityNorm, $name))) {
+                return (int) $c['id'];
+            }
+        }
+
+        // جستجو با نام استان
+        if (!empty($stateNorm)) {
+            foreach ($cities as $c) {
+                $name = $normalize($c['name'] ?? $c['title'] ?? '');
+                if ($name === $stateNorm) {
+                    return (int) $c['id'];
+                }
+            }
+        }
+
+        Log::warning('Amadest city not found', ['city' => $city, 'state' => $state]);
+        return null;
+    }
+
+    /**
      * Create a location (warehouse address)
      */
     public function createLocation(array $data): array

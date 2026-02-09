@@ -60,12 +60,16 @@ class PrintController extends Controller
                     $fullAddress = implode('، ', array_filter([$state, $city, $address]));
                     $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
 
+                    // پیدا کردن شناسه شهر آمادست
+                    $cityId = $amadest->findCityId($city, $state);
+
                     $result = $amadest->createShipment([
                         'external_order_id' => $order->order_number,
                         'recipient_name' => $order->customer_name,
                         'recipient_mobile' => $order->customer_mobile,
                         'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
                         'recipient_postal_code' => $postcode ?: null,
+                        'recipient_city_id' => $cityId,
                         'weight' => ($order->actual_weight ?? $order->total_weight) ?: 500,
                         'value' => (int)($wcData['total'] ?? 100000),
                     ]);
