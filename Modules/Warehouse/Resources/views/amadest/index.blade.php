@@ -217,6 +217,8 @@
 
 @push('scripts')
 <script>
+let citiesMap = {};
+
 // Load cities on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadAllCities();
@@ -233,11 +235,15 @@ function loadAllCities() {
     .then(data => {
         citySelect.innerHTML = '<option value="">انتخاب شهر...</option>';
         if (data.success && data.data && data.data.length > 0) {
+            // Log first item to see structure
+            console.log('Amadest cities sample:', data.data[0]);
             data.data.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.textContent = c.name || c.title;
                 citySelect.appendChild(opt);
+                // Store full city data for province_id lookup
+                citiesMap[c.id] = c;
             });
         } else {
             citySelect.innerHTML = '<option value="">شهری یافت نشد</option>';
@@ -283,7 +289,7 @@ function setupAmadest() {
             sender_name: senderName,
             sender_mobile: senderMobile,
             warehouse_address: address,
-            province_id: parseInt(cityId),
+            province_id: parseInt(citiesMap[cityId]?.province_id || citiesMap[cityId]?.province || citiesMap[cityId]?.state_id || cityId),
             city_id: parseInt(cityId),
             postal_code: postalCode || null,
             store_title: storeTitle || 'فروشگاه اصلی',
