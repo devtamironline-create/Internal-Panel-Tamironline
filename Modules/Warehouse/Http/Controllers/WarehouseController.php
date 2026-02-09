@@ -10,27 +10,9 @@ use Modules\Warehouse\Models\WarehouseShippingType;
 
 class WarehouseController extends Controller
 {
-    public function journey(Request $request)
+    public function journey()
     {
-        if (!auth()->user()->can('view-warehouse') && !auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
-            abort(403);
-        }
-
-        $search = $request->get('search');
-
-        $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
-            ->byStatus(WarehouseOrder::STATUS_PENDING)
-            ->search($search)
-            ->orderByRaw('timer_deadline IS NULL, timer_deadline ASC')
-            ->paginate(20)
-            ->appends($request->query());
-
-        $shippingTypes = WarehouseShippingType::getActiveTypes();
-        $pendingCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PENDING)->count();
-
-        return view('warehouse::warehouse.journey', compact(
-            'orders', 'search', 'shippingTypes', 'pendingCount',
-        ));
+        return redirect()->route('warehouse.index');
     }
 
     public function index(Request $request)
