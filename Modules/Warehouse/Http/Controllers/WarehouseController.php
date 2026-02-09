@@ -158,17 +158,22 @@ class WarehouseController extends Controller
         $request->validate([
             'unavailable_items' => 'required|array|min:1',
             'unavailable_items.*' => 'exists:warehouse_order_items,id',
-            'supply_days' => 'required|integer|min:1|max:365',
         ]);
-
-        $deadline = now()->addDays((int) $request->input('supply_days'));
 
         // Mark selected items as unavailable
         $order->items()->whereIn('id', $request->input('unavailable_items'))
-            ->update(['is_unavailable' => true, 'available_at' => $deadline]);
+            ->update(['is_unavailable' => true]);
 
-        // Update order status and deadline
-        $order->supply_deadline = $deadline;
+        // Change shipping type: post → urgent (فوری), courier → emergency (اضطراری)
+        $shippingMap = [
+            'post' => 'urgent',
+            'courier' => 'emergency',
+        ];
+        if (isset($shippingMap[$order->shipping_type])) {
+            $order->shipping_type = $shippingMap[$order->shipping_type];
+        }
+
+        // Update order status
         $order->status = WarehouseOrder::STATUS_SUPPLY_WAIT;
         $order->status_changed_at = now();
         $order->save();

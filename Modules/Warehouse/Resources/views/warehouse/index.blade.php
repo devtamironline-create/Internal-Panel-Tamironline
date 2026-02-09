@@ -193,24 +193,27 @@
             @endforelse
         </div>
 
-        {{-- SUPPLY WAIT STATUS: Single Column with supply countdown --}}
+        {{-- SUPPLY WAIT STATUS: Single Column --}}
         @elseif($currentStatus === 'supply_wait')
         <div class="p-5 space-y-4">
             @forelse($orders as $order)
             @php
-                $supplyRemaining = $order->supply_deadline ? max(0, (int) now()->diffInSeconds($order->supply_deadline, false)) : 0;
-                $supplyExpired = $order->supply_deadline && $order->supply_deadline->isPast();
-                $unavailableItems = $order->items->where('is_unavailable', true);
+                $shippingTypeModel = $order->shipping_type ? $shippingTypes->firstWhere('slug', $order->shipping_type) : null;
+                $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : ($order->shipping_type ?: '—');
+                $isUrgent = in_array($order->shipping_type, ['urgent', 'emergency']);
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border
+                                {{ $order->shipping_type === 'emergency' ? 'bg-red-50 text-red-700 border-red-300' : ($order->shipping_type === 'urgent' ? 'bg-orange-50 text-orange-700 border-orange-300' : 'bg-amber-50 text-amber-700 border-amber-200') }}">
+                                @if($isUrgent)
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                                در انتظار تامین
+                                @endif
+                                {{ $shippingLabel }}
                             </span>
                         </div>
                         <p class="text-base font-semibold text-gray-900">{{ $order->customer_name }}</p>
@@ -263,31 +266,13 @@
                     </div>
                 </div>
 
-                {{-- Bottom: Supply Countdown + Action --}}
+                {{-- Bottom: Action --}}
                 <div class="border-t border-gray-100 px-5 py-3">
                     <div class="flex items-center justify-between gap-4">
-                        <div class="flex items-center gap-3 flex-1">
-                            <div class="flex items-center gap-2 px-4 py-2 rounded-xl {{ $supplyExpired ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200' }}">
-                                <svg class="w-5 h-5 {{ $supplyExpired ? 'text-green-500' : 'text-amber-500 animate-pulse' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="timer-display text-lg font-bold tabular-nums {{ $supplyExpired ? 'text-green-600' : 'text-amber-600' }}" dir="ltr"
-                                      data-remaining="{{ $supplyRemaining }}"
-                                      data-expired="{{ $supplyExpired ? 'true' : 'false' }}"
-                                      data-total="{{ $supplyRemaining }}">
-                                    @if($supplyRemaining > 0)
-                                        {{ sprintf('%02d:%02d:%02d', intdiv($supplyRemaining, 3600), intdiv($supplyRemaining % 3600, 60), $supplyRemaining % 60) }}
-                                    @elseif($order->supply_deadline)
-                                        زمان تامین رسیده!
-                                    @else
-                                        --:--
-                                    @endif
-                                </span>
-                            </div>
-                            @if($supplyExpired)
-                            <span class="text-sm text-green-600 font-medium">آماده بازگشت به صف</span>
-                            @else
-                            <span class="text-sm text-amber-600">تامین تا: {{ $order->supply_deadline ? \Morilog\Jalali\Jalalian::fromCarbon($order->supply_deadline)->format('Y/m/d H:i') : '--' }}</span>
-                            @endif
-                        </div>
+                        <span class="text-sm text-amber-600 font-medium">
+                            <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                            در انتظار تامین محصولات
+                        </span>
 
                         @canany(['manage-warehouse', 'manage-permissions'])
                         <form action="{{ route('warehouse.status', $order) }}" method="POST">
@@ -416,22 +401,18 @@
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg relative" onclick="event.stopPropagation()">
             <div class="p-6 border-b border-gray-100">
                 <h3 class="text-lg font-bold text-gray-900">محدودیت در تامین سفارش</h3>
-                <p class="text-sm text-gray-500 mt-1">محصولات ناموجود و زمان تامین را مشخص کنید</p>
+                <p class="text-sm text-gray-500 mt-1">محصولات ناموجود را مشخص کنید</p>
             </div>
             <form id="supplyForm" method="POST">
                 @csrf
-                <div class="p-6 space-y-4">
+                <div class="p-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">محصولات ناموجود را انتخاب کنید:</label>
                         <div id="supplyItemsList" class="space-y-2 max-h-48 overflow-y-auto"></div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">تامین ظرف چند روز؟</label>
-                        <div class="flex items-center gap-3">
-                            <input type="number" name="supply_days" min="1" max="365" required placeholder="مثلا ۳"
-                                   class="w-32 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-center text-lg font-bold" dir="ltr">
-                            <span class="text-sm text-gray-600 font-medium">روز</span>
-                        </div>
+                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                        <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        نوع ارسال سفارشات پستی به <strong>فوری</strong> و پیک به <strong>اضطراری</strong> تغییر خواهد کرد.
                     </div>
                 </div>
                 <div class="p-6 border-t border-gray-100 flex items-center gap-3 justify-end">
