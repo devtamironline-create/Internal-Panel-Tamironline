@@ -226,29 +226,80 @@
 
 @push('scripts')
 <script>
+let allCitiesData = [];
+
 // Load provinces on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadProvinces();
 });
 
 function loadProvinces() {
+    const select = document.getElementById('setup-province');
+    select.innerHTML = '<option value="">در حال بارگذاری...</option>';
+
     fetch('{{ route("warehouse.amadest.provinces") }}', {
         headers: { 'Accept': 'application/json' },
     })
     .then(r => r.json())
     .then(data => {
-        const select = document.getElementById('setup-province');
-        select.innerHTML = '<option value="">انتخاب استان...</option>';
+        if (data.success && data.data && data.data.length > 0) {
+            // Check if data has province_id field (meaning these are actual provinces)
+            const first = data.data[0];
+            const hasProvinceStructure = first.province_id || (first.id && first.name && !first.province_name);
+
+            if (hasProvinceStructure || (!first.province_id && !first.province_name)) {
+                // These look like provinces, use them
+                select.innerHTML = '<option value="">انتخاب استان...</option>';
+                data.data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name || p.title;
+                    select.appendChild(opt);
+                });
+            } else {
+                // No province structure found, load all cities directly
+                loadAllCitiesDirect();
+            }
+        } else {
+            // No provinces, load all cities directly
+            loadAllCitiesDirect();
+        }
+    })
+    .catch(() => {
+        loadAllCitiesDirect();
+    });
+}
+
+function loadAllCitiesDirect() {
+    // Hide province, show city only
+    const provinceDiv = document.getElementById('setup-province').closest('.grid');
+    const citySelect = document.getElementById('setup-city');
+    const provinceSelect = document.getElementById('setup-province');
+
+    // Set a dummy province value so validation passes
+    provinceSelect.innerHTML = '<option value="1" selected>همه</option>';
+
+    citySelect.innerHTML = '<option value="">در حال بارگذاری شهرها...</option>';
+
+    fetch('{{ route("warehouse.amadest.cities") }}', {
+        headers: { 'Accept': 'application/json' },
+    })
+    .then(r => r.json())
+    .then(data => {
+        citySelect.innerHTML = '<option value="">انتخاب شهر...</option>';
         if (data.success && data.data) {
-            data.data.forEach(p => {
+            allCitiesData = data.data;
+            data.data.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name || p.title;
-                select.appendChild(opt);
+                opt.value = c.id;
+                opt.textContent = c.name || c.title;
+                citySelect.appendChild(opt);
             });
         }
     })
-    .catch(() => {});
+    .catch(() => {
+        citySelect.innerHTML = '<option value="">خطا در بارگذاری شهرها</option>';
+    });
 }
 
 function loadCities() {

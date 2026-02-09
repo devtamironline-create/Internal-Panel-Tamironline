@@ -88,49 +88,73 @@ class AmadestService
     }
 
     /**
-     * Get provinces list
+     * Fetch all cities from Amadest API (cached)
      */
-    public function getProvinces(): array
+    protected function fetchAllCities(): array
     {
-        return Cache::remember('amadest_provinces', 86400, function () {
+        return Cache::remember('amadest_all_cities', 86400, function () {
             try {
                 $response = Http::timeout(15)
                     ->withHeaders($this->getHeaders())
-                    ->get($this->endpoint('provinces'));
+                    ->get($this->endpoint('cities'));
 
                 if ($response->successful()) {
-                    return $response->json()['data'] ?? $response->json();
+                    $data = $response->json()['data'] ?? $response->json();
+                    Log::info('Amadest cities response sample', ['count' => count($data), 'first' => $data[0] ?? null]);
+                    return is_array($data) ? $data : [];
                 }
+                Log::error('Amadest fetchAllCities failed', ['status' => $response->status(), 'body' => $response->body()]);
                 return [];
             } catch (\Exception $e) {
-                Log::error('Amadest getProvinces error', ['error' => $e->getMessage()]);
+                Log::error('Amadest fetchAllCities error', ['error' => $e->getMessage()]);
                 return [];
             }
         });
     }
 
     /**
-     * Get provinces/cities list
+     * Get provinces list (extracted from cities data)
+     */
+    public function getProvinces(): array
+    {
+        $cities = $this->fetchAllCities();
+        if (empty($cities)) return [];
+
+        $provinces = [];
+        $seen = [];
+        foreach ($cities as $city) {
+            // Try various field names for province
+            $provId = $city['province_id'] ?? $city['province'] ?? $city['state_id'] ?? null;
+            $provName = $city['province_name'] ?? $city['province_title'] ?? $city['state'] ?? $city['state_name'] ?? null;
+
+            if ($provId && !isset($seen[$provId])) {
+                $seen[$provId] = true;
+                $provinces[] = ['id' => $provId, 'name' => $provName ?? 'استان ' . $provId];
+            }
+        }
+
+        // If no province info in cities, return the cities as-is (they might BE provinces)
+        if (empty($provinces)) {
+            return $cities;
+        }
+
+        usort($provinces, fn($a, $b) => strcmp($a['name'], $b['name']));
+        return $provinces;
+    }
+
+    /**
+     * Get cities list, optionally filtered by province
      */
     public function getCities(?int $provinceId = null): array
     {
-        $cacheKey = 'amadest_cities_' . ($provinceId ?? 'all');
-        return Cache::remember($cacheKey, 86400, function () use ($provinceId) {
-            try {
-                $params = $provinceId ? ['province_id' => $provinceId] : [];
-                $response = Http::timeout(15)
-                    ->withHeaders($this->getHeaders())
-                    ->get($this->endpoint('cities'), $params);
+        $cities = $this->fetchAllCities();
+        if (empty($cities) || !$provinceId) return $cities;
 
-                if ($response->successful()) {
-                    return $response->json()['data'] ?? $response->json();
-                }
-                return [];
-            } catch (\Exception $e) {
-                Log::error('Amadest getCities error', ['error' => $e->getMessage()]);
-                return [];
-            }
-        });
+        // Filter by province_id
+        return array_values(array_filter($cities, function ($city) use ($provinceId) {
+            $cityProvId = $city['province_id'] ?? $city['province'] ?? $city['state_id'] ?? null;
+            return $cityProvId == $provinceId;
+        }));
     }
 
     /**
