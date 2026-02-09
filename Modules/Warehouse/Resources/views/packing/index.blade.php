@@ -119,6 +119,13 @@ function scanStation() {
         initStation() {
             this.$nextTick(() => {
                 if (this.$refs.scanInput) this.$refs.scanInput.focus();
+                // USB scanner: redirect unfocused keystrokes to scan input
+                document.addEventListener('keydown', (e) => {
+                    const active = document.activeElement;
+                    if (!active || active === document.body) {
+                        if (this.$refs.scanInput) this.$refs.scanInput.focus();
+                    }
+                });
             });
         },
 
@@ -198,18 +205,30 @@ function scanStation() {
                     Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_128,
                     Html5QrcodeSupportedFormats.CODE_39,
-                    Html5QrcodeSupportedFormats.CODE_93,
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.ITF,
-                    Html5QrcodeSupportedFormats.CODABAR,
                 ];
-                this.html5QrCode = new Html5Qrcode("packing-barcode-reader", { formatsToSupport });
+                this.html5QrCode = new Html5Qrcode("packing-barcode-reader", {
+                    formatsToSupport,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                });
+
+                const container = document.getElementById('packing-barcode-reader');
+                const containerWidth = container ? container.offsetWidth : 400;
+                const qrboxWidth = Math.min(containerWidth - 40, 500);
+
                 await this.html5QrCode.start(
                     { facingMode: "environment" },
-                    { fps: 15, qrbox: { width: 300, height: 120 }, aspectRatio: 1.0 },
+                    {
+                        fps: 10,
+                        qrbox: { width: qrboxWidth, height: 150 },
+                        aspectRatio: 1.777,
+                        videoConstraints: {
+                            facingMode: "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                        }
+                    },
                     (decodedText) => {
                         this.barcode = decodedText;
                         this.stopCamera();

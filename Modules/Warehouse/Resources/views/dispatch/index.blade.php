@@ -24,7 +24,7 @@
             </div>
             <div>
                 <h2 class="font-bold text-gray-900">اسکن و ارسال سریع</h2>
-                <p class="text-xs text-gray-500">بارکد سفارش را اسکن کنید تا به مرحله ارسال شده منتقل شود</p>
+                <p class="text-xs text-gray-500">بارکد فاکتور را با بارکدخوان USB اسکن کنید یا دستی وارد کنید</p>
             </div>
             <div class="mr-auto text-sm text-gray-400">
                 <span x-text="shipCount"></span> ارسال شده در این نشست
@@ -202,6 +202,28 @@ function dispatchScanner() {
         init() {
             this.$nextTick(() => {
                 if (this.$refs.dispatchScanInput) this.$refs.dispatchScanInput.focus();
+                this.setupUsbScanner();
+            });
+        },
+
+        // USB barcode scanner support: detect rapid keystrokes
+        usbBuffer: '',
+        usbTimer: null,
+
+        setupUsbScanner() {
+            // USB scanners type fast + end with Enter
+            document.addEventListener('keydown', (e) => {
+                // Only if no input is focused (or dispatch input is focused)
+                const active = document.activeElement;
+                const isDispatchInput = active === this.$refs.dispatchScanInput;
+                const isNoInput = !active || active === document.body;
+
+                if (isNoInput) {
+                    // Redirect keystrokes to the scan input
+                    if (this.$refs.dispatchScanInput) {
+                        this.$refs.dispatchScanInput.focus();
+                    }
+                }
             });
         },
 
@@ -288,18 +310,31 @@ function dispatchScanner() {
                     Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_128,
                     Html5QrcodeSupportedFormats.CODE_39,
-                    Html5QrcodeSupportedFormats.CODE_93,
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.ITF,
-                    Html5QrcodeSupportedFormats.CODABAR,
                 ];
-                this.html5QrCode = new Html5Qrcode("dispatch-barcode-reader", { formatsToSupport });
+                this.html5QrCode = new Html5Qrcode("dispatch-barcode-reader", {
+                    formatsToSupport,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                });
+
+                // Get container width for responsive qrbox
+                const container = document.getElementById('dispatch-barcode-reader');
+                const containerWidth = container ? container.offsetWidth : 400;
+                const qrboxWidth = Math.min(containerWidth - 40, 500);
+
                 await this.html5QrCode.start(
                     { facingMode: "environment" },
-                    { fps: 15, qrbox: { width: 300, height: 120 }, aspectRatio: 1.0 },
+                    {
+                        fps: 10,
+                        qrbox: { width: qrboxWidth, height: 150 },
+                        aspectRatio: 1.777,
+                        videoConstraints: {
+                            facingMode: "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                        }
+                    },
                     (decodedText) => {
                         this.barcode = decodedText;
                         this.stopCamera();
