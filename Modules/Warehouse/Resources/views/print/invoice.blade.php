@@ -10,13 +10,13 @@
         .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: #fff; border-bottom: 1px solid #ddd; }
         .header-right { display: flex; align-items: center; }
-        .header-logo { width: 80px; height: 80px; object-fit: contain; }
-        .header-left { display: flex; align-items: center; }
-        .header-title { font-size: 13px; font-weight: 500; color: #555; }
-        .header-order-num { font-size: 12px; font-weight: bold; color: #444; }
-        .header-date { font-size: 10px; color: #999; margin-top: 2px; }
+        .header-logo { width: 96px; height: 96px; object-fit: contain; }
+        .header-left { font-size: 11px; color: #444; line-height: 1.9; }
+        .header-left .info-row { display: flex; gap: 4px; }
+        .header-left .info-label { font-weight: bold; color: #666; }
+        .store-name { text-align: center; padding: 6px 20px; font-size: 13px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
 
         /* Parties (Sender/Receiver) */
         .parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ddd; }
@@ -27,22 +27,19 @@
         .party-key { font-weight: bold; min-width: 45px; color: #666; }
         .party-val { color: #222; }
 
-        /* Order Info Bar */
-        .order-info { display: flex; justify-content: space-around; padding: 6px 20px; background: #fafafa; border-bottom: 1px solid #ddd; font-size: 11px; }
-        .order-info-item { display: flex; gap: 4px; }
-        .order-info-label { font-weight: bold; color: #666; }
+        /* Order Info Bar - removed, moved to header */
 
         /* Table */
         .items-table { width: 100%; border-collapse: collapse; }
         .items-table th, .items-table td { border-bottom: 1px solid #eee; padding: 7px 12px; text-align: right; font-size: 11px; }
-        .items-table th { background: #f5f5f5; font-weight: bold; font-size: 10px; color: #555; border-bottom: 1px solid #ddd; }
-        .items-table tr:nth-child(even) { background: #fcfcfc; }
-        .items-table .total-row { background: #f5f5f5; font-weight: bold; border-top: 1px solid #ddd; }
+        .items-table th { background: #fff; font-weight: bold; font-size: 10px; color: #555; border-bottom: 1px solid #ddd; }
+        .items-table tr:nth-child(even) { background: #fff; }
+        .items-table .total-row { background: #fff; font-weight: bold; border-top: 1px solid #ddd; }
         .items-table .total-row td { padding: 8px 12px; }
 
         /* Notes */
         .notes-section { padding: 10px 20px; border-top: 1px solid #eee; }
-        .notes { background: #fafafa; padding: 6px 10px; border-radius: 3px; margin-bottom: 5px; font-size: 11px; border-right: 3px solid #ccc; }
+        .notes { background: #fff; padding: 6px 10px; border-radius: 3px; margin-bottom: 5px; font-size: 11px; border-right: 3px solid #ccc; }
 
         /* Barcode */
         .barcode-section { text-align: center; padding: 12px 20px; border-top: 1px solid #ddd; }
@@ -106,9 +103,14 @@
                 @endif
             </div>
             <div class="header-left">
-                <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
+                <div class="info-row"><span class="info-label">شماره سفارش:</span> <span>{{ $order->order_number }}</span></div>
+                <div class="info-row"><span class="info-label">تاریخ:</span> <span>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span></div>
+                <div class="info-row"><span class="info-label">نوع ارسال:</span> <span>@switch($order->shipping_type)@case('courier') پیک @break @case('urgent') فوری @break @case('emergency') اضطراری @break @default پست @endswitch</span></div>
+                <div class="info-row"><span class="info-label">وزن کل:</span> <span>{{ $order->total_weight }} kg</span></div>
+                <div class="info-row"><span class="info-label">تعداد اقلام:</span> <span>{{ $order->items ? $order->items->sum('quantity') : 0 }}</span></div>
             </div>
         </div>
+        <div class="store-name">{{ $invoiceSettings['store_name'] }}</div>
 
         {{-- Sender / Receiver --}}
         <div class="parties">
@@ -155,37 +157,6 @@
                     <span class="party-val" dir="ltr">{{ $receiverPostcode }}</span>
                 </div>
                 @endif
-            </div>
-        </div>
-
-        {{-- Order Info --}}
-        <div class="order-info">
-            <div class="order-info-item">
-                <span class="order-info-label">شماره سفارش:</span>
-                <span>{{ $order->order_number }}</span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">تاریخ:</span>
-                <span>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">نوع ارسال:</span>
-                <span>
-                    @switch($order->shipping_type)
-                        @case('courier') پیک @break
-                        @case('urgent') فوری @break
-                        @case('emergency') اضطراری @break
-                        @default پست
-                    @endswitch
-                </span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">وزن کل:</span>
-                <span>{{ $order->total_weight }} kg</span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">تعداد اقلام:</span>
-                <span>{{ $order->items ? $order->items->sum('quantity') : 0 }}</span>
             </div>
         </div>
 
