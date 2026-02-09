@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>فاکتور سفارش {{ $order->order_number }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; font-size: 12px; color: #333; }
+        body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; font-size: 12px; color: #333; }
         .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: #f8f8f8; border-bottom: 2px solid #ddd; }
         .header-right { display: flex; align-items: center; }
-        .header-logo { width: 100px; height: 100px; object-fit: contain; }
+        .header-logo { width: 80px; height: 80px; object-fit: contain; }
         .header-left { display: flex; align-items: center; }
-        .header-title { font-size: 22px; font-weight: bold; color: #222; }
+        .header-title { font-size: 13px; font-weight: 500; color: #555; }
         .header-order-num { font-size: 12px; font-weight: bold; color: #444; }
         .header-date { font-size: 10px; color: #999; margin-top: 2px; }
 
@@ -50,9 +51,9 @@
 
         /* Top bar (screen only) */
         .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; z-index: 100; }
-        .print-btn { padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Tahoma; }
+        .print-btn { padding: 8px 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'Vazirmatn', Tahoma; }
         .print-btn:hover { background: #2563eb; }
-        .print-count-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-family: Tahoma; font-weight: bold; }
+        .print-count-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-family: 'Vazirmatn', Tahoma; font-weight: bold; }
         .invoice { margin-top: 60px; }
 
         @media print {
@@ -99,13 +100,13 @@
     <div class="invoice">
         {{-- Header --}}
         <div class="header">
-            <div class="header-left">
-                <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
-            </div>
             <div class="header-right">
                 @if(!empty($invoiceSettings['logo']))
                     <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" class="header-logo">
                 @endif
+            </div>
+            <div class="header-left">
+                <div class="header-title">{{ $invoiceSettings['store_name'] }}</div>
             </div>
         </div>
 
