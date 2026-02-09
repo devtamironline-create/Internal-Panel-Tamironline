@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
+use Modules\Warehouse\Services\AmadestService;
 use Modules\SMS\Services\KavenegarService;
 
 class PrintController extends Controller
@@ -41,6 +42,65 @@ class PrintController extends Controller
             if ($totalWeight > 0) {
                 $order->update(['total_weight' => round($totalWeight, 2)]);
                 $order->refresh();
+            }
+        }
+
+        // ثبت خودکار در آمادست برای سفارشات پستی
+        if ($order->shipping_type === 'post' && empty($order->tracking_code)) {
+            try {
+                $amadest = new AmadestService();
+                if ($amadest->isConfigured()) {
+                    // آدرس گیرنده از wc_order_data
+                    $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                    $shipping = $wcData['shipping'] ?? [];
+                    $billing = $wcData['billing'] ?? [];
+                    $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
+                    $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
+                    $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+                    $fullAddress = implode('، ', array_filter([$state, $city, $address]));
+                    $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
+
+                    $result = $amadest->createShipment([
+                        'external_order_id' => $order->order_number,
+                        'recipient_name' => $order->customer_name,
+                        'recipient_mobile' => $order->customer_mobile,
+                        'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
+                        'recipient_postal_code' => $postcode ?: null,
+                        'weight' => ($order->actual_weight ?? $order->total_weight) ?: 500,
+                        'value' => (int)($wcData['total'] ?? 100000),
+                    ]);
+
+                    Log::info('Amadest auto-register on print', [
+                        'order' => $order->order_number,
+                        'result' => $result,
+                    ]);
+
+                    if ($result['success'] ?? false) {
+                        $data = $result['data'] ?? [];
+                        if (!empty($data['tracking_code'])) {
+                            $order->tracking_code = $data['tracking_code'];
+                        }
+                        if (!empty($data['barcode'])) {
+                            $order->amadest_barcode = $data['barcode'];
+                        }
+                        $postTrack = $data['post_tracking_code'] ?? $data['courier_tracking_code'] ?? null;
+                        if (!empty($postTrack)) {
+                            $order->post_tracking_code = $postTrack;
+                        }
+                        $order->save();
+                        $order->refresh();
+                    } else {
+                        Log::warning('Amadest auto-register failed', [
+                            'order' => $order->order_number,
+                            'error' => $result['message'] ?? 'unknown',
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Amadest auto-register error', [
+                    'order' => $order->order_number,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
