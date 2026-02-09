@@ -217,7 +217,14 @@
                 </tr>
             </thead>
             <tbody>
-                @php $totalPrice = 0; @endphp
+                @php
+                    $totalPrice = 0;
+                    $shippingTotal = floatval($wcData['shipping_total'] ?? 0);
+                    $shippingMethod = '';
+                    if (!empty($wcData['shipping_lines'])) {
+                        $shippingMethod = $wcData['shipping_lines'][0]['method_title'] ?? '';
+                    }
+                @endphp
                 @foreach($order->items as $index => $item)
                 <tr>
                     <td>{{ $index + 1 }}</td>
@@ -229,9 +236,15 @@
                 </tr>
                 @php $totalPrice += $item->price * $item->quantity; @endphp
                 @endforeach
+                @if($shippingTotal > 0)
+                <tr style="border-top: 1px solid #ddd;">
+                    <td colspan="5" style="text-align: left;">هزینه ارسال{{ $shippingMethod ? ' (' . $shippingMethod . ')' : '' }}:</td>
+                    <td>{{ number_format($shippingTotal) }}</td>
+                </tr>
+                @endif
                 <tr class="total-row">
                     <td colspan="5" style="text-align: left;">جمع کل:</td>
-                    <td>{{ number_format($totalPrice) }}</td>
+                    <td>{{ number_format($totalPrice + $shippingTotal) }}</td>
                 </tr>
             </tbody>
         </table>
