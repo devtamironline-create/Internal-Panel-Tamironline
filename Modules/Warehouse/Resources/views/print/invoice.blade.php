@@ -260,18 +260,26 @@
                 <p class="barcode-code">{{ $order->barcode }}</p>
             </div>
 
-            @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+            @if(!empty($order->amadest_barcode))
+            <div class="barcode-item">
+                <svg id="amadest-barcode"></svg>
+                <p class="barcode-label">بارکد آماده</p>
+                <p class="barcode-code">{{ $order->amadest_barcode }}</p>
+            </div>
+            @endif
+
+            @if(!empty($order->post_tracking_code))
             <div class="barcode-item">
                 <div id="qrcode"></div>
                 <p class="barcode-label">کد رهگیری پست</p>
-                <p class="barcode-code">{{ $order->tracking_code }}</p>
+                <p class="barcode-code">{{ $order->post_tracking_code }}</p>
             </div>
             @endif
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-    @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+    @if(!empty($order->post_tracking_code))
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     @endif
     <script>
@@ -282,9 +290,18 @@
             displayValue: false,
         });
 
-        @if($order->shipping_type === 'post' && !empty($order->tracking_code))
+        @if(!empty($order->amadest_barcode))
+        JsBarcode("#amadest-barcode", "{{ $order->amadest_barcode }}", {
+            format: "CODE128",
+            width: 2,
+            height: 50,
+            displayValue: false,
+        });
+        @endif
+
+        @if(!empty($order->post_tracking_code))
         new QRCode(document.getElementById("qrcode"), {
-            text: "{{ $order->tracking_code }}",
+            text: "{{ $order->post_tracking_code }}",
             width: 120,
             height: 120,
             correctLevel: QRCode.CorrectLevel.M,

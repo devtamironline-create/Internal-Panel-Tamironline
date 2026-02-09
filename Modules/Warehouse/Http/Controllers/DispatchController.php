@@ -57,8 +57,22 @@ class DispatchController extends Controller
                     'weight' => $order->actual_weight ?? $order->total_weight,
                 ]);
 
-                if ($result['success'] && isset($result['data']['tracking_code'])) {
-                    $order->tracking_code = $result['data']['tracking_code'];
+                if ($result['success'] ?? false) {
+                    $data = $result['data'] ?? [];
+                    // کد رهگیری آمادست
+                    if (!empty($data['tracking_code'])) {
+                        $order->tracking_code = $data['tracking_code'];
+                    }
+                    // بارکد آماده
+                    if (!empty($data['barcode'])) {
+                        $order->amadest_barcode = $data['barcode'];
+                    }
+                    // کد رهگیری پست
+                    $postCode = $data['post_tracking_code'] ?? $data['courier_tracking_code'] ?? null;
+                    if (!empty($postCode)) {
+                        $order->post_tracking_code = $postCode;
+                    }
+                    $order->save();
                 }
             }
 

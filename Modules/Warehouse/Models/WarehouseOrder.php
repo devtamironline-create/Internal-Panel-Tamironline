@@ -19,7 +19,7 @@ class WarehouseOrder extends Model
         'total_weight', 'actual_weight', 'weight_verified',
         'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
         'status_changed_at', 'shipped_at', 'delivered_at',
-        'notes', 'tracking_code', 'driver_name', 'driver_phone',
+        'notes', 'tracking_code', 'amadest_barcode', 'post_tracking_code', 'driver_name', 'driver_phone',
     ];
 
     protected $casts = [
