@@ -17,10 +17,11 @@ class SettingsController extends Controller
 
         $shippingTypes = WarehouseShippingType::all();
         $weightTolerance = WarehouseSetting::get('weight_tolerance', '5');
+        $alertMobile = WarehouseSetting::get('alert_mobile', '');
         $shippingMappingsJson = WarehouseSetting::get('wc_shipping_mappings', '{}');
         $shippingMappings = json_decode($shippingMappingsJson, true) ?: [];
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'shippingMappings'));
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings'));
     }
 
     public function update(Request $request)
@@ -31,9 +32,14 @@ class SettingsController extends Controller
 
         $request->validate([
             'weight_tolerance' => 'required|numeric|min:0|max:100',
+            'alert_mobile' => 'nullable|string|max:20',
         ]);
 
         WarehouseSetting::set('weight_tolerance', $request->weight_tolerance);
+
+        if ($request->has('alert_mobile')) {
+            WarehouseSetting::set('alert_mobile', $request->alert_mobile);
+        }
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'تنظیمات ذخیره شد.');
