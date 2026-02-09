@@ -48,4 +48,30 @@ class ProfileController extends Controller
         return redirect()->route('admin.profile')
             ->with('success', 'پروفایل با موفقیت بروزرسانی شد');
     }
+
+    /**
+     * Upload avatar via AJAX (for mandatory avatar popup)
+     */
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        $user = auth()->user();
+
+        // Delete old avatar if exists
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->update(['avatar' => $path]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تصویر پروفایل با موفقیت آپلود شد',
+            'avatar_url' => asset('storage/' . $path)
+        ]);
+    }
 }

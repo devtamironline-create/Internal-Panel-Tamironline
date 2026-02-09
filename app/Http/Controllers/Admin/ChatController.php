@@ -9,6 +9,9 @@ use App\Models\Chat\MessageReaction;
 use App\Models\Chat\Call;
 use App\Models\Chat\UserPresence;
 use App\Models\User;
+use App\Models\Announcement;
+use App\Models\AnnouncementView;
+use Modules\Task\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -58,8 +61,8 @@ class ChatController extends Controller
             ->with(['latestMessage.user', 'activeParticipants.presence'])
             ->get();
 
-        // Get public groups that user is not a member of
-        $publicGroups = Conversation::where('type', 'group')
+        // Get public groups/channels that user is not a member of
+        $publicGroups = Conversation::whereIn('type', ['group', 'channel'])
             ->whereJsonContains('settings->is_public', true)
             ->whereDoesntHave('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId)->whereNull('left_at');
@@ -100,10 +103,29 @@ class ChatController extends Controller
                     }
                 }
 
-                // Group avatar
-                $avatar = $conversation->type === 'group'
+                // For channels, show member count as status
+                if ($conversation->type === 'channel') {
+                    $memberCount = $conversation->activeParticipants()->count();
+                    $statusLabel = $memberCount . ' عضو';
+                    $statusColor = 'purple';
+
+                    // Check if it's a public channel user is not a member of
+                    $isPublic = $conversation->settings['is_public'] ?? false;
+                    $isMember = $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists();
+
+                    if ($isPublic && !$isMember) {
+                        $statusLabel = 'کانال عمومی • ' . $memberCount . ' عضو';
+                        $statusColor = 'green';
+                    }
+                }
+
+                // Group/Channel avatar
+                $avatar = in_array($conversation->type, ['group', 'channel'])
                     ? ($conversation->avatar ? asset('storage/' . $conversation->avatar) : null)
                     : $other?->avatar_url;
+
+                // Get personal pin status from cache or session
+                $personalPins = session('personal_pins', []);
 
                 return [
                     'id' => $conversation->id,
@@ -111,7 +133,7 @@ class ChatController extends Controller
                     'display_name' => $conversation->getDisplayName($userId),
                     'user_id' => $other?->id,
                     'avatar' => $avatar,
-                    'initials' => $conversation->type === 'group'
+                    'initials' => in_array($conversation->type, ['group', 'channel'])
                         ? mb_substr($conversation->name ?? 'گ', 0, 1)
                         : ($other?->initials ?? '؟'),
                     'is_online' => $isOnline,
@@ -121,12 +143,20 @@ class ChatController extends Controller
                     'unread_count' => $conversation->getUnreadCount($userId),
                     'last_message' => $conversation->latestMessage?->body ?? '',
                     'last_message_time' => $conversation->latestMessage?->created_at?->diffForHumans() ?? '',
+                    'last_message_at' => $conversation->latestMessage?->created_at?->timestamp ?? 0,
                     'last_message_id' => $conversation->latestMessage?->id ?? 0,
                     'is_public' => $conversation->settings['is_public'] ?? false,
                     'is_member' => $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists(),
+                    'is_admin' => $conversation->participants()
+                        ->where('user_id', $userId)
+                        ->whereNull('left_at')
+                        ->first()?->pivot?->is_admin ?? false,
+                    'is_pinned_global' => $conversation->settings['is_pinned_global'] ?? false,
+                    'is_pinned_personal' => in_array($conversation->id, $personalPins),
+                    'member_ids' => $conversation->activeParticipants->pluck('id')->toArray(),
                 ];
             })
-            ->sortByDesc(fn($c) => $c['last_message_time']);
+            ->sortByDesc(fn($c) => $c['last_message_at']);
 
         return response()->json(['conversations' => $conversations->values()]);
     }
@@ -164,82 +194,101 @@ class ChatController extends Controller
     }
 
     /**
-     * Create a group conversation
+     * Create a group or channel conversation
      */
     public function createGroup(Request $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'member_ids' => 'nullable|string', // JSON string from FormData
-            'admin_ids' => 'nullable|string', // JSON string from FormData
-            'settings' => 'nullable|string', // JSON string from FormData
-            'avatar' => 'nullable|image|max:2048', // 2MB max for avatar
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:500',
+                'type' => 'nullable|in:group,channel',
+                'member_ids' => 'nullable|string', // JSON string from FormData
+                'admin_ids' => 'nullable|string', // JSON string from FormData
+                'settings' => 'nullable|string', // JSON string from FormData
+                'avatar' => 'nullable|image|max:2048', // 2MB max for avatar
+            ]);
 
-        // Parse JSON strings from FormData
-        $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
-        $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
-        $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
+            // Parse JSON strings from FormData
+            $type = $request->type ?? 'group';
+            $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
+            $adminIds = json_decode($request->admin_ids ?? '[]', true) ?: [];
+            $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
 
-        // Prepare settings
-        $settings = [
-            'is_public' => $settingsData['isPublic'] ?? false,
-            'only_admins_can_send' => $settingsData['onlyAdminsCanSend'] ?? false,
-            'members_can_add_others' => $settingsData['membersCanAddOthers'] ?? true,
-        ];
+            // Prepare settings - For channels, only admin (creator) can send messages
+            $settings = [
+                'is_public' => $settingsData['isPublic'] ?? false,
+                'only_admins_can_send' => $type === 'channel' ? true : ($settingsData['onlyAdminsCanSend'] ?? false),
+                'members_can_add_others' => $type === 'channel' ? false : ($settingsData['membersCanAddOthers'] ?? true),
+                'is_pinned_global' => $settingsData['isPinned'] ?? false,
+            ];
 
-        // If group is public and no members selected, that's OK
-        // If group is not public, need at least 1 member
-        if (!$settings['is_public'] && empty($memberIds)) {
-            return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
-        }
+            // If not public and no members selected
+            if (!$settings['is_public'] && empty($memberIds)) {
+                return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
+            }
 
-        // Handle avatar upload
-        $avatarPath = null;
-        if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
-        }
+            // Handle avatar upload
+            $avatarPath = null;
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+            }
 
-        $conversation = Conversation::createGroup(
-            $request->name,
-            auth()->id(),
-            $memberIds,
-            $request->description,
-            $settings
-        );
+            // Create conversation with correct type
+            $conversation = Conversation::create([
+                'type' => $type, // 'group' or 'channel'
+                'name' => $request->name,
+                'description' => $request->description,
+                'created_by' => auth()->id(),
+                'avatar' => $avatarPath,
+                'settings' => $settings,
+            ]);
 
-        // Update avatar if uploaded
-        if ($avatarPath) {
-            $conversation->update(['avatar' => $avatarPath]);
-        }
+            // Add creator as admin
+            $participants = [auth()->id() => ['joined_at' => now(), 'is_admin' => true]];
 
-        // Set additional admins
-        if (!empty($adminIds)) {
-            foreach ($adminIds as $adminId) {
-                if ($conversation->participants()->where('user_id', $adminId)->exists()) {
-                    $conversation->participants()->updateExistingPivot($adminId, [
-                        'is_admin' => true,
-                    ]);
+            // Add other participants (for channels, they are subscribers)
+            foreach ($memberIds as $id) {
+                if ($id != auth()->id()) {
+                    $participants[$id] = ['joined_at' => now(), 'is_admin' => false];
                 }
             }
+
+            $conversation->participants()->attach($participants);
+
+            // Set additional admins
+            if (!empty($adminIds)) {
+                foreach ($adminIds as $adminId) {
+                    if ($conversation->participants()->where('user_id', $adminId)->exists()) {
+                        $conversation->participants()->updateExistingPivot($adminId, [
+                            'is_admin' => true,
+                        ]);
+                    }
+                }
+            }
+
+            // Create system message
+            $typeLabel = $type === 'channel' ? 'کانال' : 'گروه';
+            Message::createSystem(
+                $conversation->id,
+                $typeLabel . ' «' . $request->name . '» ایجاد شد'
+            );
+
+            return response()->json([
+                'success' => true,
+                'conversation' => [
+                    'id' => $conversation->id,
+                    'type' => $type,
+                    'display_name' => $request->name,
+                    'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
+                    'is_public' => $settings['is_public'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'خطا در ایجاد: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Create system message
-        Message::createSystem(
-            $conversation->id,
-            'گروه «' . $request->name . '» ایجاد شد'
-        );
-
-        return response()->json([
-            'conversation' => [
-                'id' => $conversation->id,
-                'type' => 'group',
-                'display_name' => $request->name,
-                'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
-                'is_public' => $settings['is_public'],
-            ],
-        ]);
     }
 
     /**
@@ -262,7 +311,7 @@ class ChatController extends Controller
             ->toArray();
 
         $messages = $conversation->messages()
-            ->with(['user', 'replyTo.user', 'readBy', 'reactions.user'])
+            ->with(['user', 'replyTo.user', 'readBy', 'reactions.user', 'task.assignee'])
             ->latest()
             ->take($request->get('limit', 50))
             ->get()
@@ -300,6 +349,19 @@ class ChatController extends Controller
                     ];
                 }
 
+                // Task info
+                $taskData = null;
+                if ($message->task) {
+                    $taskData = [
+                        'id' => $message->task->id,
+                        'title' => $message->task->title,
+                        'status' => $message->task->status,
+                        'priority' => $message->task->priority,
+                        'assignee_name' => $message->task->assignee?->full_name,
+                        'completed_at' => $message->task->completed_at?->format('Y-m-d H:i'),
+                    ];
+                }
+
                 return [
                     'id' => $message->id,
                     'content' => $message->body,
@@ -316,6 +378,7 @@ class ChatController extends Controller
                     'time' => $message->created_at->format('H:i'),
                     'reply_to' => $replyTo,
                     'reactions' => $reactions,
+                    'task' => $taskData,
                 ];
             });
 
@@ -353,12 +416,13 @@ class ChatController extends Controller
 
         $request->validate([
             'content' => 'nullable|string|max:5000',
-            'type' => 'nullable|in:text,file,image,audio',
-            'file' => 'nullable|file|max:10240', // 10MB max
+            'type' => 'nullable|in:text,file,image,audio,video',
+            'file' => 'nullable|file|max:51200', // 50MB max for videos
             'reply_to_id' => 'nullable|exists:messages,id',
             'forwarded_from' => 'nullable|integer',
             'file_path' => 'nullable|string', // For forwarded files
             'file_name' => 'nullable|string', // For forwarded files
+            'caption' => 'nullable|string|max:1000', // Caption for media
         ]);
 
         $type = $request->type ?? 'text';
@@ -376,6 +440,8 @@ class ChatController extends Controller
             $mimeType = $file->getMimeType();
             if (str_starts_with($mimeType, 'image/')) {
                 $type = 'image';
+            } elseif (str_starts_with($mimeType, 'video/')) {
+                $type = 'video';
             } elseif (str_starts_with($mimeType, 'audio/')) {
                 $type = 'audio';
             } else {
@@ -391,11 +457,18 @@ class ChatController extends Controller
             }
         }
 
-        // Build message data
+        // Build message data - use caption for media files, content for text
+        $body = $request->content;
+        if ($request->filled('caption')) {
+            $body = $request->caption;
+        } elseif ($request->filled('file_path') && !$body) {
+            $body = 'فوروارد شده';
+        }
+
         $messageData = [
             'conversation_id' => $conversation->id,
             'user_id' => $userId,
-            'body' => $request->content ?: ($request->filled('file_path') ? 'فوروارد شده' : ''),
+            'body' => $body ?: '',
             'type' => $type,
             'file_path' => $filePath,
             'file_name' => $fileName,
@@ -848,36 +921,498 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        // Verify it's a public group
-        if ($conversation->type !== 'group' || !($conversation->settings['is_public'] ?? false)) {
-            return response()->json(['error' => 'این گروه عمومی نیست'], 403);
+        // Verify it's a public group or channel
+        if (!in_array($conversation->type, ['group', 'channel']) || !($conversation->settings['is_public'] ?? false)) {
+            return response()->json(['error' => 'این گروه/کانال عمومی نیست'], 403);
         }
 
         // Check if already a member
         if ($conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists()) {
-            return response()->json(['error' => 'شما قبلا عضو این گروه هستید'], 422);
+            return response()->json(['error' => 'شما قبلا عضو هستید'], 422);
         }
 
-        // Add user to group
+        // Add user to group/channel
         $conversation->participants()->attach([
             $userId => ['joined_at' => now(), 'is_admin' => false]
         ]);
 
         // Create system message
         $user = User::find($userId);
+        $typeLabel = $conversation->type === 'channel' ? 'کانال' : 'گروه';
         Message::createSystem(
             $conversation->id,
-            $user->full_name . ' به گروه پیوست'
+            $user->full_name . ' به ' . $typeLabel . ' پیوست'
         );
 
         return response()->json([
             'success' => true,
             'conversation' => [
                 'id' => $conversation->id,
-                'type' => 'group',
+                'type' => $conversation->type,
                 'display_name' => $conversation->name,
                 'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
             ],
         ]);
     }
+
+    /**
+     * Update a group or channel
+     */
+    public function updateGroup(Conversation $conversation, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $user = auth()->user();
+
+        // Verify user is admin of the group or has permission to add members
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        $isAdmin = $participant && $participant->pivot->is_admin;
+        $canAddMembers = $user->can_add_group_members ?? false;
+
+        if (!$participant || (!$isAdmin && !$canAddMembers)) {
+            return response()->json(['error' => 'شما دسترسی به ویرایش این گروه ندارید'], 403);
+        }
+
+        // Non-admins with can_add_group_members can only add members, not edit settings
+        $onlyAddingMembers = !$isAdmin && $canAddMembers;
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'settings' => 'nullable|string',
+            'member_ids' => 'nullable|string',
+            'avatar' => 'nullable|image|max:2048',
+        ]);
+
+        $settingsData = json_decode($request->settings ?? '{}', true) ?: [];
+        $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
+
+        // Only admins can update settings and name
+        if (!$onlyAddingMembers) {
+            // Update settings
+            $settings = $conversation->settings ?? [];
+            $settings['is_public'] = $settingsData['isPublic'] ?? ($settings['is_public'] ?? false);
+            $settings['is_pinned_global'] = $settingsData['isPinned'] ?? ($settings['is_pinned_global'] ?? false);
+
+            // Handle avatar upload
+            if ($request->hasFile('avatar')) {
+                // Delete old avatar if exists
+                if ($conversation->avatar) {
+                    \Storage::disk('public')->delete($conversation->avatar);
+                }
+                $avatarPath = $request->file('avatar')->store('group-avatars', 'public');
+                $conversation->avatar = $avatarPath;
+            }
+
+            $conversation->name = $request->name;
+            $conversation->settings = $settings;
+            $conversation->save();
+        }
+
+        // Update members
+        if (!empty($memberIds)) {
+            $currentMembers = $conversation->activeParticipants->pluck('id')->toArray();
+
+            // Add new members
+            foreach ($memberIds as $memberId) {
+                if (!in_array($memberId, $currentMembers)) {
+                    $conversation->participants()->attach([
+                        $memberId => ['joined_at' => now(), 'is_admin' => false]
+                    ]);
+                }
+            }
+
+            // Only admins can remove members
+            if (!$onlyAddingMembers) {
+                foreach ($currentMembers as $currentMemberId) {
+                    if (!in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
+                        $conversation->participants()->updateExistingPivot($currentMemberId, ['left_at' => now()]);
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'conversation' => [
+                'id' => $conversation->id,
+                'type' => $conversation->type,
+                'display_name' => $conversation->name,
+                'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Toggle personal pin for a conversation
+     */
+    public function togglePersonalPin(Conversation $conversation): JsonResponse
+    {
+        $personalPins = session('personal_pins', []);
+
+        if (in_array($conversation->id, $personalPins)) {
+            // Remove from pins
+            $personalPins = array_filter($personalPins, fn($id) => $id !== $conversation->id);
+        } else {
+            // Check limit (max 3)
+            if (count($personalPins) >= 3) {
+                return response()->json(['error' => 'حداکثر 3 گفتگو می‌توانید پین کنید'], 422);
+            }
+            $personalPins[] = $conversation->id;
+        }
+
+        session(['personal_pins' => array_values($personalPins)]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Toggle global pin for a group/channel (admin only)
+     */
+    public function toggleGlobalPin(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user is admin of the group
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        if (!$participant || !$participant->pivot->is_admin) {
+            return response()->json(['error' => 'شما دسترسی به این عملیات ندارید'], 403);
+        }
+
+        $settings = $conversation->settings ?? [];
+        $settings['is_pinned_global'] = !($settings['is_pinned_global'] ?? false);
+        $conversation->settings = $settings;
+        $conversation->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Delete a group or channel (admin only)
+     */
+    public function deleteGroup(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+        $user = auth()->user();
+
+        // Only groups and channels can be deleted
+        if (!in_array($conversation->type, ['group', 'channel'])) {
+            return response()->json(['error' => 'فقط گروه‌ها و کانال‌ها قابل حذف هستند'], 403);
+        }
+
+        // Check if user is admin of the group OR has system admin permission
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        $isGroupAdmin = $participant && $participant->pivot->is_admin;
+        $isSystemAdmin = $user->can('manage-permissions');
+
+        if (!$isGroupAdmin && !$isSystemAdmin) {
+            return response()->json(['error' => 'فقط مدیر گروه/کانال می‌تواند آن را حذف کند'], 403);
+        }
+
+        // Delete avatar if exists
+        if ($conversation->avatar) {
+            \Storage::disk('public')->delete($conversation->avatar);
+        }
+
+        // Delete all messages and their files
+        foreach ($conversation->messages as $message) {
+            if ($message->file_path) {
+                \Storage::disk('public')->delete($message->file_path);
+            }
+        }
+        $conversation->messages()->delete();
+
+        // Delete participants
+        $conversation->participants()->detach();
+
+        // Delete the conversation
+        $conversation->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    // ==================== ANNOUNCEMENTS ====================
+
+    /**
+     * Get all announcements
+     */
+    public function getAnnouncements(): JsonResponse
+    {
+        $announcements = Announcement::with(['creator', 'conversation'])
+            ->active()
+            ->latest()
+            ->get()
+            ->map(function ($announcement) {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'content' => $announcement->content,
+                    'type' => $announcement->type,
+                    'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
+                    'conversation_name' => $announcement->conversation?->name,
+                    'creator_name' => $announcement->creator->full_name,
+                    'created_at' => $announcement->created_at->diffForHumans(),
+                    'expires_at' => $announcement->expires_at?->format('Y/m/d'),
+                ];
+            });
+
+        return response()->json(['announcements' => $announcements]);
+    }
+
+    /**
+     * Get unread announcements for popup
+     */
+    public function getUnreadAnnouncements(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $announcements = Announcement::with(['creator', 'conversation'])
+            ->active()
+            ->where('show_popup', true)
+            ->unreadBy($userId)
+            ->latest()
+            ->get()
+            ->map(function ($announcement) {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'content' => $announcement->content,
+                    'type' => $announcement->type,
+                    'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
+                    'conversation_name' => $announcement->conversation?->name,
+                    'creator_name' => $announcement->creator->full_name,
+                    'created_at' => $announcement->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['announcements' => $announcements]);
+    }
+
+    /**
+     * Mark announcement as seen
+     */
+    public function markAnnouncementSeen(Announcement $announcement): JsonResponse
+    {
+        $userId = auth()->id();
+
+        AnnouncementView::firstOrCreate([
+            'announcement_id' => $announcement->id,
+            'user_id' => $userId,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Create announcement from message
+     */
+    public function createAnnouncement(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $message->conversation;
+
+        // Verify user is admin of the group/channel
+        $participant = $conversation->participants()->where('user_id', $userId)->first();
+        if (!$participant || !$participant->pivot->is_admin) {
+            return response()->json(['error' => 'فقط مدیران می‌توانند اطلاعیه ایجاد کنند'], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:news,announcement',
+        ]);
+
+        $announcement = Announcement::create([
+            'title' => $request->title,
+            'content' => $message->body,
+            'type' => $request->type,
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'created_by' => $userId,
+            'show_popup' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'announcement' => [
+                'id' => $announcement->id,
+                'title' => $announcement->title,
+                'type' => $announcement->type,
+            ],
+        ]);
+    }
+
+    // ==================== MESSAGE TASKS ====================
+
+    /**
+     * Create task from message
+     */
+    public function createTask(Message $message, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $message->conversation;
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'assigned_to' => 'nullable|exists:users,id',
+            'priority' => 'nullable|in:low,medium,high,urgent',
+            'due_date' => 'nullable|date',
+        ]);
+
+        // Create task in main tasks table
+        $task = Task::create([
+            'title' => $request->title,
+            'description' => $message->body,
+            'message_id' => $message->id,
+            'conversation_id' => $conversation->id,
+            'source' => 'message',
+            'created_by' => $userId,
+            'assigned_to' => $request->assigned_to,
+            'priority' => $request->priority ?? 'medium',
+            'status' => 'todo',
+            'due_date' => $request->due_date,
+        ]);
+
+        // Log activity
+        $task->logActivity('created', null, null, null, 'تسک از پیام ایجاد شد');
+
+        // Create system message about task creation
+        $user = auth()->user();
+        Message::createSystem(
+            $conversation->id,
+            '📋 تسک جدید: ' . $request->title . ' (توسط ' . $user->full_name . ')'
+        );
+
+        return response()->json([
+            'success' => true,
+            'task' => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'status' => $task->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Get tasks for a conversation
+     */
+    public function getConversationTasks(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $tasks = Task::where('conversation_id', $conversation->id)
+            ->where('source', 'message')
+            ->with(['creator', 'assignee', 'message'])
+            ->latest()
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'status_label' => $task->status_label,
+                    'priority' => $task->priority,
+                    'priority_label' => $task->priority_label,
+                    'creator_name' => $task->creator->full_name,
+                    'assignee_name' => $task->assignee?->full_name,
+                    'message_id' => $task->message_id,
+                    'due_date' => $task->jalali_due_date,
+                    'completed_at' => $task->completed_at?->diffForHumans(),
+                    'created_at' => $task->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['tasks' => $tasks]);
+    }
+
+    /**
+     * Update task status (for message tasks)
+     */
+    public function updateTaskStatus(Task $task, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $conversation = $task->conversation;
+
+        // Only for message tasks with conversation
+        if (!$conversation || $task->source !== 'message') {
+            return response()->json(['error' => 'تسک نامعتبر'], 400);
+        }
+
+        // Verify user is participant
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:todo,in_progress,done',
+        ]);
+
+        $oldStatus = $task->status;
+        $task->updateStatus($request->status, $userId);
+
+        if ($request->status === 'done') {
+            // Create system message about task completion
+            $user = auth()->user();
+            Message::createSystem(
+                $conversation->id,
+                '✅ تسک تکمیل شد: ' . $task->title . ' (توسط ' . $user->full_name . ')'
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'task' => [
+                'id' => $task->id,
+                'status' => $task->status,
+                'status_label' => $task->status_label,
+            ],
+        ]);
+    }
+
+    /**
+     * Get all message tasks for current user
+     */
+    public function getMyTasks(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $tasks = Task::where('source', 'message')
+            ->where(function ($q) use ($userId) {
+                $q->where('assigned_to', $userId)
+                    ->orWhere('created_by', $userId);
+            })
+            ->with(['creator', 'assignee', 'conversation'])
+            ->latest()
+            ->get()
+            ->map(function ($task) use ($userId) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'status_label' => $task->status_label,
+                    'priority' => $task->priority,
+                    'priority_label' => $task->priority_label,
+                    'conversation_id' => $task->conversation_id,
+                    'conversation_name' => $task->conversation?->name ?? 'گفتگو',
+                    'creator_name' => $task->creator->full_name,
+                    'assignee_name' => $task->assignee?->full_name,
+                    'is_assigned_to_me' => $task->assigned_to === $userId,
+                    'due_date' => $task->jalali_due_date,
+                    'created_at' => $task->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['tasks' => $tasks]);
+    }
+
 }

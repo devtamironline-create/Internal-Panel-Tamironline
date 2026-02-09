@@ -48,12 +48,12 @@ class PermissionSeeder extends Seeder
             'view-salary' => 'مشاهده حقوق خود',
             'manage-salary' => 'مدیریت حقوق',
 
+            // پیام‌رسان
+            'use-messenger' => 'استفاده از پیام‌رسان',
+
             // انبار
             'view-warehouse' => 'مشاهده انبار',
             'manage-warehouse' => 'مدیریت انبار',
-
-            // پیام‌رسان
-            'use-messenger' => 'استفاده از پیام‌رسان',
 
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',
@@ -94,17 +94,6 @@ class PermissionSeeder extends Seeder
                     'view-tasks', 'create-tasks', 'manage-tasks',
                     'view-teams',
                     'view-reports',
-                    'use-messenger',
-                ],
-            ],
-            'warehouse-manager' => [
-                'label' => 'مدیر انبار',
-                'permissions' => [
-                    'view-warehouse', 'manage-warehouse',
-                    'view-attendance',
-                    'view-leave', 'request-leave',
-                    'view-tasks', 'create-tasks',
-                    'view-teams',
                     'use-messenger',
                 ],
             ],

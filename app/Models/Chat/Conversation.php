@@ -68,6 +68,11 @@ class Conversation extends Model
         return $this->type === 'group';
     }
 
+    public function isChannel(): bool
+    {
+        return $this->type === 'channel';
+    }
+
     public function getOtherParticipant(int $userId): ?User
     {
         if (!$this->isPrivate()) {
@@ -79,8 +84,8 @@ class Conversation extends Model
 
     public function getDisplayName(int $userId): string
     {
-        if ($this->isGroup()) {
-            return $this->name ?? 'گروه بدون نام';
+        if ($this->isGroup() || $this->isChannel()) {
+            return $this->name ?? ($this->isChannel() ? 'کانال بدون نام' : 'گروه بدون نام');
         }
 
         $other = $this->getOtherParticipant($userId);
@@ -136,10 +141,10 @@ class Conversation extends Model
         return $conversation;
     }
 
-    public static function createGroup(string $name, int $creatorId, array $participantIds, ?string $description = null, ?array $settings = null): self
+    public static function createGroup(string $name, int $creatorId, array $participantIds, ?string $description = null, ?array $settings = null, string $type = 'group'): self
     {
         $conversation = self::create([
-            'type' => 'group',
+            'type' => $type, // 'group' or 'channel'
             'name' => $name,
             'description' => $description,
             'created_by' => $creatorId,

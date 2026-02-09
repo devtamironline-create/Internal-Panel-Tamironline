@@ -1,10 +1,19 @@
+@php
+    $siteName = \App\Models\Setting::get('site_name', 'اتوماسیون اداری');
+    $siteSubtitle = \App\Models\Setting::get('site_subtitle', 'تعمیرآنلاین');
+    $siteLogo = \App\Models\Setting::get('logo');
+    $siteFavicon = \App\Models\Setting::get('favicon');
+@endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('page-title', 'داشبورد') | تعمیرآنلاین</title>
+    <title>@yield('page-title', 'داشبورد') | {{ $siteSubtitle }}</title>
+    @if($siteFavicon)
+        <link rel="icon" href="{{ asset('storage/' . $siteFavicon) }}" type="image/png">
+    @endif
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/tailwind.min.js"></script>
     <script src="/vendor/js/apexcharts.min.js"></script>
@@ -183,12 +192,19 @@
             <!-- Header -->
             <div class="flex items-center justify-between pt-8 pb-7 border-b border-white/10">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
-                        </svg>
+                    @if($siteLogo)
+                        <img src="{{ asset('storage/' . $siteLogo) }}" alt="Logo" class="w-10 h-10 object-contain">
+                    @else
+                        <div class="flex items-center justify-center w-10 h-10">
+                            <svg class="w-8 h-8 text-white/80" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                            </svg>
+                        </div>
+                    @endif
+                    <div class="flex flex-col">
+                        <span class="text-base font-bold text-white leading-tight">{{ $siteName }}</span>
+                        <span class="text-xs text-white/60">{{ $siteSubtitle }}</span>
                     </div>
-                    <span class="text-xl font-bold text-white">تعمیرآنلاین</span>
                 </a>
                 <button @click="sidebarToggle = false" class="lg:hidden text-white/70 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -414,6 +430,10 @@
                         <a href="{{ route('admin.roles.index') }}" class="sidebar-menu-item {{ request()->routeIs('admin.roles.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             نقش‌ها
+                        </a>
+                        <a href="{{ route('admin.settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('admin.settings.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                            تنظیمات سایت
                         </a>
                     </div>
                 </div>
@@ -983,6 +1003,8 @@
 
     @stack('scripts')
     @include('components.call-notification')
-    @include('components.chat-widget')
+    @if(!request()->routeIs('admin.messenger'))
+        @include('components.chat-widget')
+    @endif
 </body>
 </html>

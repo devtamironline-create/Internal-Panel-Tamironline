@@ -2,28 +2,71 @@
 
 @section('page-title', 'پیام‌رسان')
 
+@php
+    $notificationSound = \App\Models\Setting::get('notification_sound');
+@endphp
+
 @section('main')
-<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+<style>
+    .messenger-loading { display: flex !important; }
+    [x-cloak].messenger-loading { display: flex !important; }
+</style>
+<div x-data="messenger()" x-init="init()" class="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] max-h-[calc(100dvh-120px)] flex bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden relative">
+
+    <!-- Loading Overlay - Always visible until Alpine hides it -->
+    <div x-show="isLoading" :class="{ 'messenger-loading': isLoading }" class="messenger-loading absolute inset-0 z-[300] bg-white dark:bg-gray-800 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600 dark:text-gray-400">در حال بارگذاری...</p>
+        </div>
+    </div>
 
     <!-- Sidebar - Conversations List -->
-    <div class="w-72 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <div class="w-full md:w-72 border-l border-gray-200 dark:border-gray-700 flex-col" :class="mobileShowChat ? 'hidden md:flex' : 'flex'">
         <!-- Header -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">پیام‌ها</h2>
-                <div class="flex gap-2">
-                    <button @click="showNewGroup = true" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="گروه جدید">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <div class="relative" x-data="{ showCreateMenu: false }">
+                    <button @click="showCreateMenu = !showCreateMenu" class="w-8 h-8 bg-brand-500 hover:bg-brand-600 text-white rounded-full flex items-center justify-center transition" title="ایجاد">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     </button>
-                    <button @click="showPhone = true" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="تماس">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    </button>
+                    <!-- Create Menu Dropdown -->
+                    <div x-show="showCreateMenu" @click.away="showCreateMenu = false" x-transition class="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                        <button @click="showUsers = true; showCreateMenu = false" class="w-full px-4 py-2.5 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            ارسال پیام به اشخاص
+                        </button>
+                        <button @click="showNewGroup = true; createType = 'group'; showCreateMenu = false" class="w-full px-4 py-2.5 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            گروه جدید
+                        </button>
+                        <button @click="showNewGroup = true; createType = 'channel'; showCreateMenu = false" class="w-full px-4 py-2.5 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            کانال جدید
+                        </button>
+                    </div>
                 </div>
             </div>
             <!-- Search -->
-            <div class="relative">
-                <input type="text" x-model="searchQuery" placeholder="جستجو..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+            <div class="relative mb-3">
+                <input type="text" x-model="searchQuery" placeholder="جستجو در گفتگوها..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
                 <svg class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <!-- Filter Tabs -->
+            <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button @click="conversationFilter = 'all'" :class="conversationFilter === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    همه
+                </button>
+                <button @click="conversationFilter = 'private'" :class="conversationFilter === 'private' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    اعضا
+                </button>
+                <button @click="conversationFilter = 'group'" :class="conversationFilter === 'group' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    گروه‌ها
+                </button>
+                <button @click="conversationFilter = 'channel'" :class="conversationFilter === 'channel' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-gray-700 dark:text-gray-300">
+                    کانال‌ها
+                </button>
             </div>
         </div>
 
@@ -60,13 +103,6 @@
 
         <!-- Conversations List -->
         <div x-show="!showUsers" class="flex-1 overflow-y-auto">
-            <button @click="showUsers = true" class="w-full p-4 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700">
-                <div class="w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                </div>
-                <span class="font-medium">گفتگوی جدید</span>
-            </button>
-
             <template x-if="conversations.length === 0">
                 <div class="p-8 text-center text-gray-400">
                     <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
@@ -75,9 +111,16 @@
             </template>
 
             <template x-for="conv in filteredConversations" :key="conv.id">
-                <div @click="conv.is_public && !conv.is_member ? null : openConversation(conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700', conv.is_public && !conv.is_member ? 'bg-green-50/50 dark:bg-green-900/10' : '']" class="flex items-center gap-3 p-4 cursor-pointer border-b border-gray-100 dark:border-gray-700">
-                    <div class="relative">
-                        <div :class="conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600'" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                <div @click="openConversation(conv)" @contextmenu.prevent="openConvContextMenu($event, conv)" :class="[currentConversation?.id === conv.id ? 'bg-brand-50 dark:bg-brand-900/20 border-r-4 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-700']" class="flex items-center gap-3 p-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 relative">
+                    <!-- Pin icon -->
+                    <template x-if="conv.is_pinned_global || conv.is_pinned_personal">
+                        <div class="absolute top-1 left-1">
+                            <svg :class="conv.is_pinned_global ? 'text-red-400' : 'text-yellow-400'" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                        </div>
+                    </template>
+                    <!-- Avatar -->
+                    <div class="relative shrink-0">
+                        <div :class="conv.type === 'channel' ? 'bg-gradient-to-br from-purple-400 to-purple-600' : (conv.type === 'group' ? 'bg-gradient-to-br from-brand-400 to-brand-600' : 'bg-gradient-to-br from-gray-400 to-gray-600')" class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
                             <template x-if="conv.avatar">
                                 <img :src="conv.avatar" class="w-full h-full object-cover" :alt="conv.display_name">
                             </template>
@@ -85,31 +128,22 @@
                                 <span x-text="conv.initials || conv.display_name?.charAt(0)"></span>
                             </template>
                         </div>
-                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${conv.status_color || 'gray'}-500`" :title="conv.status_label"></span>
+                        <!-- Online status for private chats only -->
+                        <template x-if="conv.type === 'private'">
+                            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white dark:border-gray-800 rounded-full" :class="conv.status === 'online' ? 'bg-green-500' : 'bg-gray-400'"></span>
+                        </template>
                     </div>
+                    <!-- Content -->
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
-                                <span x-text="conv.display_name"></span>
-                                <template x-if="conv.is_public">
-                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                </template>
-                            </h4>
-                            <span class="text-xs text-gray-400" x-text="conv.last_message_time"></span>
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-medium text-gray-900 dark:text-white truncate text-sm" x-text="conv.display_name"></h4>
+                            <span class="text-xs text-gray-400 shrink-0" x-text="conv.last_message_time"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm text-gray-500 truncate flex-1" x-text="conv.last_message || 'شروع گفتگو...'"></p>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full shrink-0" :class="`bg-${conv.status_color || 'gray'}-100 text-${conv.status_color || 'gray'}-700 dark:bg-${conv.status_color || 'gray'}-900/30 dark:text-${conv.status_color || 'gray'}-300`" x-text="conv.status_label || 'آفلاین'"></span>
-                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" x-text="conv.last_message || 'شروع گفتگو...'"></p>
                     </div>
-                    <!-- Join button for public groups -->
-                    <template x-if="conv.is_public && !conv.is_member">
-                        <button @click.stop="joinGroup(conv.id)" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg font-medium transition">
-                            عضویت
-                        </button>
-                    </template>
-                    <template x-if="conv.unread_count > 0 && conv.is_member">
-                        <span class="bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[24px] text-center" x-text="conv.unread_count"></span>
+                    <!-- Unread badge -->
+                    <template x-if="conv.unread_count > 0">
+                        <span class="bg-brand-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0" x-text="conv.unread_count > 9 ? '9+' : conv.unread_count"></span>
                     </template>
                 </div>
             </template>
@@ -117,7 +151,7 @@
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col relative">
+    <div class="flex-1 flex flex-col min-h-0 relative" :class="mobileShowChat ? 'flex' : 'hidden md:flex'">
         <!-- No Chat Selected -->
         <template x-if="!currentConversation">
             <div class="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -131,38 +165,65 @@
 
         <!-- Chat Header -->
         <template x-if="currentConversation">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
-                            <template x-if="currentConversation?.avatar">
-                                <img :src="currentConversation.avatar" class="w-full h-full object-cover" :alt="currentConversation.display_name">
-                            </template>
-                            <template x-if="!currentConversation?.avatar">
-                                <span x-text="currentConversation?.initials || currentConversation?.display_name?.charAt(0)"></span>
-                            </template>
+            <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <!-- Mobile Back Button -->
+                        <button @click="closeMobileChat()" class="md:hidden p-2 -mr-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                                <template x-if="currentConversation?.avatar">
+                                    <img :src="currentConversation.avatar" class="w-full h-full object-cover" :alt="currentConversation.display_name">
+                                </template>
+                                <template x-if="!currentConversation?.avatar">
+                                    <span x-text="currentConversation?.initials || currentConversation?.display_name?.charAt(0)"></span>
+                                </template>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
                         </div>
-                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-800 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
+                        <div>
+                            <h3 class="font-medium text-gray-900 dark:text-white" x-text="currentConversation?.display_name"></h3>
+                            <span class="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" :class="`bg-${currentConversation?.status_color || 'gray'}-100 text-${currentConversation?.status_color || 'gray'}-700 dark:bg-${currentConversation?.status_color || 'gray'}-900/30 dark:text-${currentConversation?.status_color || 'gray'}-300`">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
+                                <span x-text="currentConversation?.status_label || 'آفلاین'"></span>
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="font-medium text-gray-900 dark:text-white" x-text="currentConversation?.display_name"></h3>
-                        <span class="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" :class="`bg-${currentConversation?.status_color || 'gray'}-100 text-${currentConversation?.status_color || 'gray'}-700 dark:bg-${currentConversation?.status_color || 'gray'}-900/30 dark:text-${currentConversation?.status_color || 'gray'}-300`">
-                            <span class="w-1.5 h-1.5 rounded-full" :class="`bg-${currentConversation?.status_color || 'gray'}-500`"></span>
-                            <span x-text="currentConversation?.status_label || 'آفلاین'"></span>
-                        </span>
+                    <div class="flex items-center gap-2">
+                        <button @click="showMessageSearch = !showMessageSearch; if(!showMessageSearch) { messageSearchQuery = ''; clearMessageSearch(); }" :class="showMessageSearch ? 'bg-brand-100 dark:bg-brand-900 text-brand-600' : 'text-gray-500'" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="جستجو در پیام‌ها">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </button>
+                        <button @click="alert('این قابلیت به زودی فعال خواهد شد')" x-show="currentConversation?.type === 'private'" class="p-2 text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg opacity-50" title="تماس صوتی (به زودی)">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        </button>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button @click="initiateCall(currentConversation?.user_id)" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="تماس صوتی">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    </button>
+                <!-- Message Search Bar -->
+                <div x-show="showMessageSearch" x-transition class="px-4 pb-3">
+                    <div class="relative">
+                        <input type="text" x-model="messageSearchQuery" @input.debounce.300ms="searchMessages()" placeholder="جستجو در پیام‌های این گفتگو..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                        <svg class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <template x-if="messageSearchResults.length > 0">
+                            <div class="absolute left-3 top-2.5 flex items-center gap-2 text-xs text-gray-500">
+                                <span x-text="currentSearchIndex + 1 + '/' + messageSearchResults.length"></span>
+                                <button @click="navigateSearch(-1)" class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                                </button>
+                                <button @click="navigateSearch(1)" class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </template>
 
         <!-- Messages Area -->
         <template x-if="currentConversation">
-            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900" @click="showEmojiPicker = null">
+            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null" @scroll="handleMessagesScroll()">
                 <template x-for="msg in messages" :key="msg.id">
                     <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
                         <div class="relative max-w-md">
@@ -178,7 +239,7 @@
                                     <p class="text-xs font-medium mb-1 opacity-75" x-text="msg.sender_name"></p>
                                 </template>
                                 <!-- File attachment -->
-                                <template x-if="msg.type === 'file' || msg.type === 'image'">
+                                <template x-if="msg.type === 'file' || msg.type === 'image' || msg.type === 'video' || msg.type === 'audio'">
                                     <div class="mb-2">
                                         <template x-if="msg.type === 'image'">
                                             <div class="relative group/img">
@@ -197,6 +258,19 @@
                                                 </div>
                                             </div>
                                         </template>
+                                        <template x-if="msg.type === 'video'">
+                                            <div class="relative group/vid">
+                                                <video :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg" controls></video>
+                                            </div>
+                                        </template>
+                                        <template x-if="msg.type === 'audio'">
+                                            <div class="flex items-center gap-3 p-3 bg-white/10 dark:bg-gray-600 rounded-lg">
+                                                <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                                </div>
+                                                <audio :src="'/storage/' + msg.file_path" controls class="flex-1 h-8"></audio>
+                                            </div>
+                                        </template>
                                         <template x-if="msg.type === 'file'">
                                             <div @click.stop="openLightbox(msg)" class="flex items-center gap-2 p-3 bg-white/10 dark:bg-gray-600 rounded-lg cursor-pointer hover:bg-white/20 dark:hover:bg-gray-500 transition">
                                                 <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -208,7 +282,7 @@
                                         </template>
                                     </div>
                                 </template>
-                                <p class="text-sm leading-relaxed" x-text="msg.content" x-show="msg.content"></p>
+                                <p class="text-sm leading-relaxed whitespace-pre-wrap" x-text="msg.content" x-show="msg.content"></p>
                                 <div class="flex items-center justify-between gap-2 mt-1">
                                     <span class="text-xs opacity-60" x-text="msg.time"></span>
                                     <div class="flex items-center gap-1">
@@ -226,6 +300,18 @@
                                             <button @click="copyMessage(msg.content)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="کپی">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                             </button>
+                                            <!-- Create Task -->
+                                            <template x-if="currentConversation?.type === 'group' || currentConversation?.type === 'channel'">
+                                                <button @click.stop="openCreateTaskModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="ایجاد تسک">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                                </button>
+                                            </template>
+                                            <!-- Create Announcement (Admin only) -->
+                                            <template x-if="(currentConversation?.type === 'group' || currentConversation?.type === 'channel') && isConversationAdmin">
+                                                <button @click.stop="openCreateAnnouncementModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="ارسال به اطلاعیه">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                                </button>
+                                            </template>
                                         </div>
                                         <!-- Read status ticks (only for my messages) -->
                                         <template x-if="msg.is_mine">
@@ -251,6 +337,31 @@
                                             <span class="text-gray-600 dark:text-gray-300" x-text="reaction.count"></span>
                                         </button>
                                     </template>
+                                </div>
+                            </template>
+
+                            <!-- Task Indicator -->
+                            <template x-if="msg.task">
+                                <div class="mt-2 p-2 rounded-lg border" :class="msg.task.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : msg.task.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 flex-shrink-0" :class="msg.task.status === 'done' ? 'text-green-600 dark:text-green-400' : msg.task.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                        </svg>
+                                        <span class="text-xs font-medium" :class="msg.task.status === 'done' ? 'text-green-700 dark:text-green-300' : msg.task.status === 'in_progress' ? 'text-blue-700 dark:text-blue-300' : 'text-yellow-700 dark:text-yellow-300'">
+                                            تسک: <span x-text="getTaskStatusLabel(msg.task.status)"></span>
+                                        </span>
+                                        <template x-if="msg.task.status !== 'done'">
+                                            <div class="flex gap-1 mr-auto">
+                                                <template x-if="msg.task.status === 'todo'">
+                                                    <button @click.stop="updateTaskStatus(msg.task.id, 'in_progress')" class="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition">شروع</button>
+                                                </template>
+                                                <button @click.stop="updateTaskStatus(msg.task.id, 'done')" class="text-xs px-2 py-0.5 bg-green-500 text-white rounded hover:bg-green-600 transition">تکمیل</button>
+                                            </div>
+                                        </template>
+                                        <template x-if="msg.task.status === 'done'">
+                                            <span class="text-xs text-green-600 dark:text-green-400 mr-auto">✓ تکمیل شده</span>
+                                        </template>
+                                    </div>
                                 </div>
                             </template>
 
@@ -292,19 +403,104 @@
 
         <!-- Message Input -->
         <template x-if="currentConversation">
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <div class="flex items-center gap-3">
-                    <input type="file" x-ref="fileInput" @change="sendFile($event)" class="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar">
-                    <button @click="$refs.fileInput.click()" class="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
+            <div class="p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0"
+                 @dragover.prevent="isDragging = true"
+                 @dragleave.prevent="isDragging = false"
+                 @drop.prevent="handleDrop($event)"
+                 :class="isDragging ? 'bg-brand-50 dark:bg-brand-900/20 border-2 border-dashed border-brand-500' : ''">
+
+                <!-- Drag overlay -->
+                <div x-show="isDragging" class="absolute inset-0 flex items-center justify-center bg-brand-500/10 z-10 pointer-events-none">
+                    <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto text-brand-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        <p class="text-brand-600 font-medium">فایل را رها کنید</p>
+                    </div>
+                </div>
+
+                <div class="flex items-end gap-3">
+                    <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" multiple>
+                    <button @click="$refs.fileInput.click()" class="p-2 mb-1 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
-                    <input x-model="newMessage" @keydown.enter="sendMessage()" @keydown.escape="replyingTo = null" x-ref="messageInput" type="text" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="پیام خود را بنویسید...">
-                    <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition">
+                    <textarea x-model="newMessage" @keydown.enter="if(!$event.shiftKey) { $event.preventDefault(); sendMessage(); }" @keydown.escape="replyingTo = null" x-ref="messageInput" rows="1" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto" placeholder="پیام خود را بنویسید..." @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 128) + 'px'"></textarea>
+                    <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 mb-1 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition flex-shrink-0">
                         <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     </button>
                 </div>
             </div>
         </template>
+    </div>
+
+    <!-- Media Preview Modal -->
+    <div x-cloak x-show="showMediaPreview" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70" @click.self="closeMediaPreview()" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-900 dark:text-white">ارسال فایل</h3>
+                <button @click="closeMediaPreview()" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <template x-for="(file, index) in selectedFiles" :key="index">
+                        <div class="relative group">
+                            <!-- Image Preview -->
+                            <template x-if="file.type.startsWith('image/')">
+                                <img :src="file.preview" class="w-full h-32 object-cover rounded-lg">
+                            </template>
+                            <!-- Video Preview -->
+                            <template x-if="file.type.startsWith('video/')">
+                                <div class="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                                    <video :src="file.preview" class="w-full h-full object-cover rounded-lg"></video>
+                                </div>
+                            </template>
+                            <!-- Audio Preview -->
+                            <template x-if="file.type.startsWith('audio/')">
+                                <div class="w-full h-32 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex flex-col items-center justify-center p-2">
+                                    <svg class="w-10 h-10 text-purple-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                    <span class="text-xs text-purple-600 dark:text-purple-300 truncate w-full text-center" x-text="file.name"></span>
+                                </div>
+                            </template>
+                            <!-- Other Files -->
+                            <template x-if="!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/')">
+                                <div class="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+                                    <svg class="w-10 h-10 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    <span class="text-xs text-gray-500 truncate w-full text-center" x-text="file.name"></span>
+                                </div>
+                            </template>
+                            <!-- Remove button -->
+                            <button @click="removeFile(index)" class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                            <!-- File size -->
+                            <span class="absolute bottom-1 left-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded" x-text="formatFileSize(file.size)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Caption Input -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <input x-model="mediaCaption" @keydown.enter="sendMediaFiles()" type="text" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="کپشن (اختیاری)...">
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <span class="text-sm text-gray-500" x-text="selectedFiles.length + ' فایل انتخاب شده'"></span>
+                <div class="flex gap-2">
+                    <button @click="closeMediaPreview()" class="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">انصراف</button>
+                    <button @click="sendMediaFiles()" :disabled="isSendingMedia" class="px-6 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-lg font-medium transition flex items-center gap-2">
+                        <template x-if="isSendingMedia">
+                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </template>
+                        <span x-text="isSendingMedia ? 'در حال ارسال...' : 'ارسال'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Phone Modal -->
@@ -338,25 +534,25 @@
         </div>
     </div>
 
-    <!-- New Group Modal -->
+    <!-- New Group/Channel Modal -->
     <div x-cloak x-show="showNewGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewGroup = false" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-brand-500 to-brand-600 text-white p-5 text-center">
-                <h3 class="text-xl font-bold">گروه جدید</h3>
+            <div :class="createType === 'channel' ? 'from-purple-500 to-purple-600' : 'from-brand-500 to-brand-600'" class="bg-gradient-to-r text-white p-5 text-center">
+                <h3 class="text-xl font-bold" x-text="createType === 'channel' ? 'کانال جدید' : 'گروه جدید'"></h3>
             </div>
 
             <!-- Content -->
             <div class="p-5 space-y-4">
-                <!-- Group Name -->
+                <!-- Name -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام گروه *</label>
-                    <input x-model="newGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" placeholder="نام گروه را وارد کنید">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" x-text="createType === 'channel' ? 'نام کانال *' : 'نام گروه *'"></label>
+                    <input x-model="newGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500" :placeholder="createType === 'channel' ? 'نام کانال را وارد کنید' : 'نام گروه را وارد کنید'">
                 </div>
 
-                <!-- Group Avatar -->
+                <!-- Avatar -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تصویر گروه</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" x-text="createType === 'channel' ? 'تصویر کانال' : 'تصویر گروه'"></label>
                     <div class="flex items-center gap-3">
                         <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300 overflow-hidden border-2 border-gray-300 dark:border-gray-500">
                             <template x-if="groupAvatarPreview">
@@ -373,14 +569,14 @@
                     </div>
                 </div>
 
-                <!-- Group Type Selection -->
+                <!-- Type Selection -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع گروه</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" x-text="createType === 'channel' ? 'نوع کانال' : 'نوع گروه'"></label>
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="groupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
                             <input type="radio" name="groupType" :checked="groupSettings.isPublic" @click="groupSettings.isPublic = true" class="w-4 h-4 text-brand-500">
                             <div>
-                                <span class="text-gray-900 dark:text-white font-medium">گروه عمومی</span>
+                                <span class="text-gray-900 dark:text-white font-medium" x-text="createType === 'channel' ? 'کانال عمومی' : 'گروه عمومی'"></span>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">همه می‌توانند ببینند و عضو شوند</p>
                             </div>
                         </label>
@@ -394,10 +590,16 @@
                     </div>
                 </div>
 
+                <!-- Pin for all -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" x-model="groupSettings.isPinned" id="pinForAll" class="w-4 h-4 text-brand-500 rounded">
+                    <label for="pinForAll" class="text-sm text-gray-700 dark:text-gray-300">پین برای همه کاربران</label>
+                </div>
+
                 <!-- Members Selection (only if not public) -->
                 <div x-show="!groupSettings.isPublic" x-transition>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        اعضای گروه
+                        <span x-text="createType === 'channel' ? 'اعضای کانال' : 'اعضای گروه'"></span>
                         <span x-show="selectedGroupMembers.length > 0" class="text-brand-500 text-xs">(<span x-text="selectedGroupMembers.length"></span> نفر)</span>
                     </label>
                     <div class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-40 overflow-y-auto">
@@ -415,7 +617,101 @@
             <!-- Actions -->
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
                 <button @click="showNewGroup = false; resetGroupForm()" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
-                <button @click="createGroup()" :disabled="!newGroupName || selectedGroupMembers.length === 0" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ایجاد گروه</button>
+                <button @click="createGroup()" :disabled="isCreatingGroup || !newGroupName || (!groupSettings.isPublic && selectedGroupMembers.length === 0)" :class="createType === 'channel' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-brand-500 hover:bg-brand-600'" class="flex-1 py-3 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">
+                    <span x-show="!isCreatingGroup" x-text="createType === 'channel' ? 'ایجاد کانال' : 'ایجاد گروه'"></span>
+                    <span x-show="isCreatingGroup" class="flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        در حال ایجاد...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Group/Channel Modal -->
+    <div x-cloak x-show="showEditGroup" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showEditGroup = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div :class="editingConversation?.type === 'channel' ? 'from-purple-500 to-purple-600' : 'from-brand-500 to-brand-600'" class="bg-gradient-to-r text-white p-5 text-center">
+                <h3 class="text-xl font-bold" x-text="editingConversation?.type === 'channel' ? 'ویرایش کانال' : 'ویرایش گروه'"></h3>
+            </div>
+
+            <!-- Content -->
+            <div class="p-5 space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام *</label>
+                    <input x-model="editGroupName" type="text" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <!-- Avatar -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تصویر</label>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300 overflow-hidden border-2 border-gray-300 dark:border-gray-500">
+                            <template x-if="editGroupAvatarPreview || editingConversation?.avatar">
+                                <img :src="editGroupAvatarPreview || editingConversation?.avatar" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!editGroupAvatarPreview && !editingConversation?.avatar">
+                                <span x-text="editGroupName?.charAt(0) || '؟'"></span>
+                            </template>
+                        </div>
+                        <label class="flex-1 px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">تغییر تصویر</span>
+                            <input type="file" accept="image/*" class="hidden" @change="handleEditGroupAvatar($event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Type Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دسترسی</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="editGroupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="editGroupType" :checked="editGroupSettings.isPublic" @click="editGroupSettings.isPublic = true" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">عمومی</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">همه می‌توانند ببینند و عضو شوند</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition" :class="!editGroupSettings.isPublic ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                            <input type="radio" name="editGroupType" :checked="!editGroupSettings.isPublic" @click="editGroupSettings.isPublic = false" class="w-4 h-4 text-brand-500">
+                            <div>
+                                <span class="text-gray-900 dark:text-white font-medium">خصوصی</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">فقط اعضای انتخاب شده دسترسی دارند</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pin for all -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" x-model="editGroupSettings.isPinned" id="editPinForAll" class="w-4 h-4 text-brand-500 rounded">
+                    <label for="editPinForAll" class="text-sm text-gray-700 dark:text-gray-300">پین برای همه کاربران</label>
+                </div>
+
+                <!-- Members Management -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        مدیریت اعضا
+                        <span x-show="editGroupMembers.length > 0" class="text-brand-500 text-xs">(<span x-text="editGroupMembers.length"></span> نفر)</span>
+                    </label>
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-40 overflow-y-auto">
+                        <template x-for="user in users" :key="user.id">
+                            <label class="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                                <input type="checkbox" :value="user.id" x-model="editGroupMembers" class="w-4 h-4 text-brand-500 rounded">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300" x-text="user.name?.charAt(0)"></div>
+                                <span class="text-sm text-gray-900 dark:text-white" x-text="user.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-gray-900">
+                <button @click="showEditGroup = false" class="flex-1 py-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">انصراف</button>
+                <button @click="updateGroup()" :disabled="!editGroupName" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition">ذخیره تغییرات</button>
             </div>
         </div>
     </div>
@@ -480,6 +776,22 @@
                 <img :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl">
             </template>
 
+            <!-- Video -->
+            <template x-if="lightbox?.type === 'video'">
+                <video :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl" controls autoplay></video>
+            </template>
+
+            <!-- Audio -->
+            <template x-if="lightbox?.type === 'audio'">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-md mx-auto">
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-purple-500 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" x-text="lightbox.file_name"></h3>
+                    <audio :src="'/storage/' + lightbox.file_path" controls class="w-full"></audio>
+                </div>
+            </template>
+
             <!-- File preview -->
             <template x-if="lightbox?.type === 'file'">
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-md mx-auto">
@@ -501,6 +813,36 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Conversation Context Menu -->
+    <div x-cloak x-show="convContextMenu.show" x-transition @click.away="convContextMenu.show = false" :style="`top: ${convContextMenu.y}px; left: ${convContextMenu.x}px;`" class="fixed z-[200] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 w-48" style="display: none;">
+        <!-- Pin Personal -->
+        <button @click="togglePersonalPin(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            <span x-text="convContextMenu.conv?.is_pinned_personal ? 'برداشتن پین شخصی' : 'پین شخصی'"></span>
+        </button>
+        <!-- Pin Global (Admin only) -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="toggleGlobalPin(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <svg class="w-4 h-4" :class="convContextMenu.conv?.is_pinned_global ? 'text-red-500' : ''" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                <span x-text="convContextMenu.conv?.is_pinned_global ? 'برداشتن پین همگانی' : 'پین برای همه'"></span>
+            </button>
+        </template>
+        <!-- Edit Group/Channel -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="openEditGroup(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span x-text="convContextMenu.conv?.type === 'channel' ? 'ویرایش کانال' : 'ویرایش گروه'"></span>
+            </button>
+        </template>
+        <!-- Delete Group/Channel (Creator only) -->
+        <template x-if="convContextMenu.conv?.type === 'group' || convContextMenu.conv?.type === 'channel'">
+            <button @click="openDeleteModal(convContextMenu.conv); convContextMenu.show = false" class="w-full px-4 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span x-text="convContextMenu.conv?.type === 'channel' ? 'حذف کانال' : 'حذف گروه'"></span>
+            </button>
+        </template>
     </div>
 
     <!-- Forward Modal -->
@@ -550,6 +892,189 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div x-cloak x-show="showDeleteModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showDeleteModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 shadow-2xl overflow-hidden mx-4">
+            <div class="bg-red-500 text-white p-5 text-center">
+                <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <h3 class="text-xl font-bold" x-text="deleteConversation?.type === 'channel' ? 'حذف کانال' : 'حذف گروه'"></h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="text-center">
+                    <p class="text-gray-700 dark:text-gray-300 mb-2">آیا از حذف <span class="font-bold" x-text="deleteConversation?.display_name"></span> مطمئن هستید؟</p>
+                    <p class="text-sm text-red-500">این عمل قابل بازگشت نیست و تمام پیام‌ها حذف خواهند شد.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">برای تایید، کد زیر را وارد کنید:</label>
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 text-center mb-3">
+                        <span class="text-2xl font-mono font-bold tracking-widest text-red-600" x-text="expectedDeleteCode"></span>
+                    </div>
+                    <input type="text" x-model="deleteConfirmCode" placeholder="کد تایید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-red-500 text-center font-mono text-lg tracking-widest" maxlength="4">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showDeleteModal = false; deleteConfirmCode = ''" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="confirmDelete()" :disabled="isDeleting || deleteConfirmCode !== expectedDeleteCode" class="flex-1 py-3 bg-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-red-600 transition">
+                        <span x-show="!isDeleting">حذف</span>
+                        <span x-show="isDeleting" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            در حال حذف...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Announcement Modal -->
+    <div x-cloak x-show="showAnnouncementModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showAnnouncementModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-w-[90vw] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-brand-500 to-brand-600 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        ارسال به اطلاعیه
+                    </h3>
+                    <button @click="showAnnouncementModal = false" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 max-h-24 overflow-y-auto">
+                    <p x-text="announcementMessage?.content || 'متن پیام'"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان اطلاعیه</label>
+                    <input type="text" x-model="announcementTitle" placeholder="عنوان را وارد کنید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع</label>
+                    <div class="flex gap-3">
+                        <label class="flex-1">
+                            <input type="radio" x-model="announcementType" value="announcement" class="sr-only peer">
+                            <div class="p-3 text-center border-2 rounded-lg cursor-pointer peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/20 transition">
+                                <span class="text-sm font-medium">اطلاعیه</span>
+                            </div>
+                        </label>
+                        <label class="flex-1">
+                            <input type="radio" x-model="announcementType" value="news" class="sr-only peer">
+                            <div class="p-3 text-center border-2 rounded-lg cursor-pointer peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/20 transition">
+                                <span class="text-sm font-medium">خبر</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showAnnouncementModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="submitAnnouncement()" :disabled="!announcementTitle || isCreatingAnnouncement" class="flex-1 py-3 bg-brand-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-brand-600 transition">
+                        <span x-show="!isCreatingAnnouncement">ارسال</span>
+                        <span x-show="isCreatingAnnouncement" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div x-cloak x-show="showTaskModal" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" @click.self="showTaskModal = false" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-96 max-w-[90vw] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-green-500 to-green-600 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        ایجاد تسک
+                    </h3>
+                    <button @click="showTaskModal = false" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 max-h-24 overflow-y-auto">
+                    <p x-text="taskMessage?.content || 'متن پیام'"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان تسک</label>
+                    <input type="text" x-model="taskTitle" placeholder="عنوان تسک را وارد کنید" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اولویت</label>
+                    <select x-model="taskPriority" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                        <option value="low">کم</option>
+                        <option value="medium">متوسط</option>
+                        <option value="high">بالا</option>
+                        <option value="urgent">فوری</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ارجاع به</label>
+                    <select x-model="taskAssignee" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500">
+                        <option value="">بدون ارجاع</option>
+                        <template x-for="member in conversationMembers" :key="member.id">
+                            <option :value="member.id" x-text="member.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button @click="showTaskModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">انصراف</button>
+                    <button @click="submitTask()" :disabled="!taskTitle || isCreatingTask" class="flex-1 py-3 bg-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium hover:bg-green-600 transition">
+                        <span x-show="!isCreatingTask">ایجاد</span>
+                        <span x-show="isCreatingTask" class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcement Popup -->
+    <div x-cloak x-show="showAnnouncementPopup && unreadAnnouncements.length > 0" x-transition class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-[450px] max-w-[90vw] max-h-[80vh] shadow-2xl overflow-hidden mx-4">
+            <div class="bg-gradient-to-l from-yellow-500 to-orange-500 text-white p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        اخبار و اطلاعیه‌ها
+                    </h3>
+                    <button @click="closeAnnouncementPopup()" class="p-1 text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="max-h-[50vh] overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+                <template x-for="ann in unreadAnnouncements" :key="ann.id">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div :class="ann.type === 'news' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg x-show="ann.type === 'news'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                                <svg x-show="ann.type === 'announcement'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span :class="ann.type === 'news' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'" class="text-xs px-2 py-0.5 rounded-full" x-text="ann.type_label"></span>
+                                    <span class="text-xs text-gray-500" x-text="ann.created_at"></span>
+                                </div>
+                                <h4 class="font-bold text-gray-900 dark:text-white mb-1" x-text="ann.title"></h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap" x-text="ann.content"></p>
+                                <p class="text-xs text-gray-400 mt-2" x-show="ann.conversation_name">
+                                    از: <span x-text="ann.conversation_name"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                <button @click="markAllAnnouncementsSeen()" class="w-full py-3 bg-brand-500 text-white rounded-lg font-medium hover:bg-brand-600 transition">
+                    متوجه شدم
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio Elements -->
     <audio x-ref="localAudio" muted></audio>
     <audio x-ref="remoteAudio" autoplay></audio>
@@ -561,15 +1086,19 @@
 <script>
 function messenger() {
     return {
+        isLoading: true,
         conversations: [],
         users: [],
         messages: [],
         currentConversation: null,
         newMessage: '',
         searchQuery: '',
+        conversationFilter: 'all',
+        mobileShowChat: false,
         showUsers: false,
         showPhone: false,
         showNewGroup: false,
+        createType: 'group', // 'group' or 'channel'
         newGroupName: '',
         newGroupDescription: '',
         selectedGroupMembers: [],
@@ -578,9 +1107,38 @@ function messenger() {
         groupSettings: {
             isPublic: false,
             onlyAdminsCanSend: false,
-            membersCanAddOthers: true
+            membersCanAddOthers: true,
+            isPinned: false
         },
         groupAvatarPreview: null,
+        isCreatingGroup: false,
+
+        // Edit group state
+        showEditGroup: false,
+        editingConversation: null,
+        editGroupName: '',
+        editGroupAvatar: null,
+        editGroupAvatarPreview: null,
+        editGroupMembers: [],
+        editGroupSettings: {
+            isPublic: false,
+            isPinned: false
+        },
+
+        // Context menu state
+        convContextMenu: {
+            show: false,
+            x: 0,
+            y: 0,
+            conv: null
+        },
+
+        // Delete confirmation state
+        showDeleteModal: false,
+        deleteConversation: null,
+        deleteConfirmCode: '',
+        expectedDeleteCode: '',
+        isDeleting: false,
 
         // Reply & Reaction state
         replyingTo: null,
@@ -594,6 +1152,31 @@ function messenger() {
         forwardingMessage: null,
         showForwardModal: false,
 
+        // Message search state
+        showMessageSearch: false,
+        messageSearchQuery: '',
+        messageSearchResults: [],
+        currentSearchIndex: 0,
+
+        // Announcement state
+        showAnnouncementModal: false,
+        announcementMessage: null,
+        announcementTitle: '',
+        announcementType: 'announcement',
+        isCreatingAnnouncement: false,
+        unreadAnnouncements: [],
+        showAnnouncementPopup: false,
+
+        // Task state
+        showTaskModal: false,
+        taskMessage: null,
+        taskTitle: '',
+        taskPriority: 'medium',
+        taskAssignee: '',
+        isCreatingTask: false,
+        conversationMembers: [],
+        isConversationAdmin: false,
+
         // Call state
         incomingCall: null,
         activeCall: null,
@@ -603,11 +1186,48 @@ function messenger() {
         peerConnection: null,
         localStream: null,
 
+        // Media upload state
+        showMediaPreview: false,
+        selectedFiles: [],
+        mediaCaption: '',
+        isDragging: false,
+        isSendingMedia: false,
+
+        // Scroll tracking
+        isUserNearBottom: true,
+        lastMessageCount: 0,
+
         get filteredConversations() {
-            if (!this.searchQuery) return this.conversations;
-            return this.conversations.filter(c =>
-                c.display_name?.toLowerCase().includes(this.searchQuery.toLowerCase())
-            );
+            let filtered = this.conversations;
+
+            // Sort by pinned first, then by last message time
+            filtered = [...filtered].sort((a, b) => {
+                // Pinned conversations first
+                if (a.is_pinned_global && !b.is_pinned_global) return -1;
+                if (!a.is_pinned_global && b.is_pinned_global) return 1;
+                if (a.is_pinned_personal && !b.is_pinned_personal) return -1;
+                if (!a.is_pinned_personal && b.is_pinned_personal) return 1;
+                // Then sort by last message time (newest first)
+                return (b.last_message_at || 0) - (a.last_message_at || 0);
+            });
+
+            // Apply type filter
+            if (this.conversationFilter === 'private') {
+                filtered = filtered.filter(c => c.type === 'private');
+            } else if (this.conversationFilter === 'group') {
+                filtered = filtered.filter(c => c.type === 'group');
+            } else if (this.conversationFilter === 'channel') {
+                filtered = filtered.filter(c => c.type === 'channel');
+            }
+
+            // Apply search filter
+            if (this.searchQuery) {
+                filtered = filtered.filter(c =>
+                    c.display_name?.toLowerCase().includes(this.searchQuery.toLowerCase())
+                );
+            }
+
+            return filtered;
         },
 
         get filteredUsers() {
@@ -618,9 +1238,14 @@ function messenger() {
         },
 
         async init() {
-            await this.loadConversations();
-            await this.loadUsers();
-            this.heartbeat();
+            try {
+                await this.loadConversations();
+                await this.loadUsers();
+                this.heartbeat();
+                await this.checkUnreadAnnouncements();
+            } finally {
+                this.isLoading = false;
+            }
 
             // Request notification permission
             this.requestNotificationPermission();
@@ -674,16 +1299,44 @@ function messenger() {
 
         async openConversation(conv) {
             this.currentConversation = conv;
-            await this.loadMessages(conv.id);
+            this.mobileShowChat = true;
+            this.lastMessageCount = 0; // Reset for new conversation
+            this.isUserNearBottom = true; // Reset scroll state
+            await this.loadMessages(conv.id, true); // Force scroll on open
+
+            // Set admin status and members for groups/channels
+            if (conv.type === 'group' || conv.type === 'channel') {
+                this.isConversationAdmin = conv.is_admin ?? false;
+                // Load members for task assignment
+                this.conversationMembers = this.users.filter(u => conv.member_ids?.includes(u.id));
+            } else {
+                this.isConversationAdmin = false;
+                this.conversationMembers = [];
+            }
+
             this.$nextTick(() => this.scrollToBottom());
         },
 
-        async loadMessages(conversationId) {
+        closeMobileChat() {
+            this.mobileShowChat = false;
+        },
+
+        async loadMessages(conversationId, forceScroll = false) {
             try {
                 const response = await fetch(`/admin/chat/conversations/${conversationId}/messages`);
                 const data = await response.json();
-                this.messages = data.messages || [];
-                this.$nextTick(() => this.scrollToBottom());
+                const newMessages = data.messages || [];
+                const hadNewMessages = newMessages.length > this.lastMessageCount;
+
+                this.messages = newMessages;
+                this.lastMessageCount = newMessages.length;
+
+                // Only scroll to bottom if:
+                // 1. Force scroll (first load, opening conversation)
+                // 2. User is near bottom AND there are new messages
+                if (forceScroll || (this.isUserNearBottom && hadNewMessages)) {
+                    this.$nextTick(() => this.scrollToBottom());
+                }
             } catch (e) {
                 console.error('Error loading messages:', e);
             }
@@ -703,7 +1356,10 @@ function messenger() {
                 if (data.conversation) {
                     this.currentConversation = data.conversation;
                     this.showUsers = false;
-                    await this.loadMessages(data.conversation.id);
+                    this.mobileShowChat = true;
+                    this.lastMessageCount = 0;
+                    this.isUserNearBottom = true;
+                    await this.loadMessages(data.conversation.id, true);
                     await this.loadConversations();
                 }
             } catch (e) {
@@ -718,10 +1374,14 @@ function messenger() {
                 alert('لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید');
                 return;
             }
+
+            const typeLabel = this.createType === 'channel' ? 'کانال' : 'گروه';
+
             try {
                 const formData = new FormData();
                 formData.append('name', this.newGroupName);
                 formData.append('description', this.newGroupDescription || '');
+                formData.append('type', this.createType); // 'group' or 'channel'
                 formData.append('member_ids', JSON.stringify(this.selectedGroupMembers));
                 formData.append('admin_ids', JSON.stringify(this.groupAdmins));
                 formData.append('settings', JSON.stringify(this.groupSettings));
@@ -730,6 +1390,7 @@ function messenger() {
                     formData.append('avatar', this.groupAvatar);
                 }
 
+                this.isCreatingGroup = true;
                 const response = await fetch('/admin/chat/conversations/group', {
                     method: 'POST',
                     headers: {
@@ -737,19 +1398,72 @@ function messenger() {
                     },
                     body: formData
                 });
-                const data = await response.json();
-                if (data.conversation) {
-                    this.resetGroupForm();
-                    this.currentConversation = data.conversation;
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonErr) {
+                    this.isCreatingGroup = false;
+                    alert('خطا در پردازش پاسخ سرور');
+                    return;
+                }
+
+                this.isCreatingGroup = false;
+
+                // Handle errors
+                if (!response.ok) {
+                    const errorMsg = data.error || data.message || 'خطا در ایجاد ' + typeLabel;
+                    alert(errorMsg);
+                    return;
+                }
+
+                // Success - close modal and show message
+                this.showNewGroup = false;
+
+                // Show success toast
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg text-sm z-[200] shadow-lg';
+                toast.textContent = typeLabel + ' با موفقیت ایجاد شد';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+                // Reset form data
+                this.createType = 'group';
+                this.newGroupName = '';
+                this.newGroupDescription = '';
+                this.selectedGroupMembers = [];
+                this.groupAdmins = [];
+                this.groupAvatar = null;
+                this.groupAvatarPreview = null;
+                this.groupSettings = { isPublic: false, onlyAdminsCanSend: false, membersCanAddOthers: true, isPinned: false };
+
+                // Load conversations and open the new one
+                if (data.conversation && data.conversation.id) {
+                    const conversationId = data.conversation.id;
+                    await this.loadConversations();
+
+                    // Find and open the created conversation
+                    const newConv = this.conversations.find(c => c.id === conversationId);
+                    if (newConv) {
+                        this.currentConversation = newConv;
+                        this.mobileShowChat = true;
+                        this.lastMessageCount = 0;
+                        this.isUserNearBottom = true;
+                        await this.loadMessages(conversationId, true);
+                    }
+                } else {
                     await this.loadConversations();
                 }
             } catch (e) {
+                this.isCreatingGroup = false;
                 console.error('Error creating group:', e);
+                alert('خطا در ایجاد ' + typeLabel + ': ' + e.message);
             }
         },
 
         resetGroupForm() {
             this.showNewGroup = false;
+            this.createType = 'group';
             this.newGroupName = '';
             this.newGroupDescription = '';
             this.selectedGroupMembers = [];
@@ -759,8 +1473,177 @@ function messenger() {
             this.groupSettings = {
                 isPublic: false,
                 onlyAdminsCanSend: false,
-                membersCanAddOthers: true
+                membersCanAddOthers: true,
+                isPinned: false
             };
+        },
+
+        // Edit group functions
+        openEditGroup(conv) {
+            this.editingConversation = conv;
+            this.editGroupName = conv.display_name;
+            this.editGroupAvatarPreview = null;
+            this.editGroupAvatar = null;
+            this.editGroupSettings = {
+                isPublic: conv.is_public || false,
+                isPinned: conv.is_pinned_global || false
+            };
+            this.editGroupMembers = conv.member_ids || [];
+            this.showEditGroup = true;
+        },
+
+        handleEditGroupAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.editGroupAvatar = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.editGroupAvatarPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        async updateGroup() {
+            if (!this.editGroupName || !this.editingConversation) return;
+            try {
+                const formData = new FormData();
+                formData.append('name', this.editGroupName);
+                formData.append('settings', JSON.stringify(this.editGroupSettings));
+                formData.append('member_ids', JSON.stringify(this.editGroupMembers));
+
+                if (this.editGroupAvatar) {
+                    formData.append('avatar', this.editGroupAvatar);
+                }
+
+                const response = await fetch(`/admin/chat/conversations/${this.editingConversation.id}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.showEditGroup = false;
+                    await this.loadConversations();
+                    // Update current conversation if it's the one being edited
+                    if (this.currentConversation?.id === this.editingConversation.id) {
+                        const updated = this.conversations.find(c => c.id === this.editingConversation.id);
+                        if (updated) this.currentConversation = updated;
+                    }
+                }
+            } catch (e) {
+                console.error('Error updating group:', e);
+            }
+        },
+
+        // Delete group/channel functions
+        openDeleteModal(conv) {
+            this.deleteConversation = conv;
+            this.deleteConfirmCode = '';
+            // Generate a random 4-digit code
+            this.expectedDeleteCode = Math.floor(1000 + Math.random() * 9000).toString();
+            this.showDeleteModal = true;
+        },
+
+        async confirmDelete() {
+            if (this.deleteConfirmCode !== this.expectedDeleteCode || !this.deleteConversation) return;
+
+            this.isDeleting = true;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${this.deleteConversation.id}/delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ confirmation_code: this.deleteConfirmCode })
+                });
+                const data = await response.json();
+                this.isDeleting = false;
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                if (data.success) {
+                    const typeLabel = this.deleteConversation.type === 'channel' ? 'کانال' : 'گروه';
+                    // Close modal and clear current conversation if it was the deleted one
+                    if (this.currentConversation?.id === this.deleteConversation.id) {
+                        this.currentConversation = null;
+                        this.messages = [];
+                        this.mobileShowChat = false;
+                    }
+                    this.showDeleteModal = false;
+                    this.deleteConversation = null;
+                    this.deleteConfirmCode = '';
+                    await this.loadConversations();
+
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = typeLabel + ' با موفقیت حذف شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                }
+            } catch (e) {
+                this.isDeleting = false;
+                console.error('Error deleting group:', e);
+                alert('خطا در حذف');
+            }
+        },
+
+        // Context menu functions
+        openConvContextMenu(event, conv) {
+            this.convContextMenu = {
+                show: true,
+                x: event.clientX,
+                y: event.clientY,
+                conv: conv
+            };
+        },
+
+        // Pin functions
+        async togglePersonalPin(conv) {
+            if (!conv) return;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${conv.id}/pin/personal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadConversations();
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            } catch (e) {
+                console.error('Error toggling personal pin:', e);
+            }
+        },
+
+        async toggleGlobalPin(conv) {
+            if (!conv) return;
+            try {
+                const response = await fetch(`/admin/chat/conversations/${conv.id}/pin/global`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadConversations();
+                }
+            } catch (e) {
+                console.error('Error toggling global pin:', e);
+            }
         },
 
         toggleGroupAdmin(userId) {
@@ -802,6 +1685,7 @@ function messenger() {
                 const data = await response.json();
                 if (data.message) {
                     this.messages.push(data.message);
+                    this.updateConversationLastMessage(this.currentConversation.id, data.message);
                     this.$nextTick(() => this.scrollToBottom());
                 }
             } catch (e) {
@@ -811,7 +1695,29 @@ function messenger() {
 
         scrollToBottom() {
             const container = this.$refs.messagesContainer;
-            if (container) container.scrollTop = container.scrollHeight;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+                this.isUserNearBottom = true;
+            }
+        },
+
+        handleMessagesScroll() {
+            const container = this.$refs.messagesContainer;
+            if (!container) return;
+
+            // Check if user is within 100px of the bottom
+            const threshold = 100;
+            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            this.isUserNearBottom = distanceFromBottom < threshold;
+        },
+
+        updateConversationLastMessage(conversationId, message) {
+            const conv = this.conversations.find(c => c.id === conversationId);
+            if (conv) {
+                conv.last_message = message.content || '';
+                conv.last_message_at = Math.floor(Date.now() / 1000);
+                conv.last_message_time = 'الان';
+            }
         },
 
         async sendFile(event) {
@@ -843,6 +1749,133 @@ function messenger() {
             event.target.value = '';
         },
 
+        // Multi-media upload functions
+        handleDrop(event) {
+            event.preventDefault();
+            this.isDragging = false;
+            const files = Array.from(event.dataTransfer.files);
+            this.addFilesToSelection(files);
+        },
+
+        handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            this.addFilesToSelection(files);
+            event.target.value = '';
+        },
+
+        addFilesToSelection(files) {
+            files.forEach(file => {
+                // Create preview URL for images and videos
+                let preview = null;
+                if (file.type.startsWith('image/')) {
+                    preview = URL.createObjectURL(file);
+                } else if (file.type.startsWith('video/')) {
+                    preview = URL.createObjectURL(file);
+                }
+
+                this.selectedFiles.push({
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    preview: preview
+                });
+            });
+
+            if (this.selectedFiles.length > 0) {
+                this.showMediaPreview = true;
+            }
+        },
+
+        removeFile(index) {
+            // Revoke object URL to free memory
+            if (this.selectedFiles[index].preview) {
+                URL.revokeObjectURL(this.selectedFiles[index].preview);
+            }
+            this.selectedFiles.splice(index, 1);
+
+            if (this.selectedFiles.length === 0) {
+                this.closeMediaPreview();
+            }
+        },
+
+        closeMediaPreview() {
+            // Revoke all object URLs
+            this.selectedFiles.forEach(f => {
+                if (f.preview) URL.revokeObjectURL(f.preview);
+            });
+            this.selectedFiles = [];
+            this.mediaCaption = '';
+            this.showMediaPreview = false;
+        },
+
+        async sendMediaFiles() {
+            if (!this.currentConversation || this.selectedFiles.length === 0) return;
+
+            this.isSendingMedia = true;
+
+            try {
+                for (const fileData of this.selectedFiles) {
+                    const formData = new FormData();
+                    formData.append('file', fileData.file);
+
+                    // Determine type based on file mime type
+                    let type = 'file';
+                    if (fileData.type.startsWith('image/')) type = 'image';
+                    else if (fileData.type.startsWith('video/')) type = 'video';
+                    else if (fileData.type.startsWith('audio/')) type = 'audio';
+
+                    formData.append('type', type);
+
+                    // Add caption only to the last file
+                    if (this.mediaCaption && fileData === this.selectedFiles[this.selectedFiles.length - 1]) {
+                        formData.append('caption', this.mediaCaption);
+                    }
+
+                    const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.message) {
+                        this.messages.push(data.message);
+                        this.updateConversationLastMessage(this.currentConversation.id, data.message);
+                    }
+                }
+
+                this.$nextTick(() => this.scrollToBottom());
+                this.closeMediaPreview();
+
+            } catch (e) {
+                console.error('Error sending media:', e);
+                alert('خطا در ارسال فایل‌ها');
+            } finally {
+                this.isSendingMedia = false;
+            }
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        },
+
+        getFileIcon(type) {
+            if (type.startsWith('image/')) return '🖼️';
+            if (type.startsWith('video/')) return '🎬';
+            if (type.startsWith('audio/')) return '🎵';
+            if (type.includes('pdf')) return '📄';
+            if (type.includes('word') || type.includes('document')) return '📝';
+            if (type.includes('excel') || type.includes('spreadsheet')) return '📊';
+            return '📎';
+        },
+
         copyMessage(content) {
             if (!content) return;
             navigator.clipboard.writeText(content).then(() => {
@@ -863,6 +1896,10 @@ function messenger() {
             // For image/file messages, show appropriate placeholder
             if (msg.type === 'image') {
                 content = '📷 تصویر';
+            } else if (msg.type === 'video') {
+                content = '🎬 ویدیو';
+            } else if (msg.type === 'audio') {
+                content = '🎵 صوت';
             } else if (msg.type === 'file') {
                 content = '📎 ' + (msg.file_name || 'فایل');
             }
@@ -890,6 +1927,39 @@ function messenger() {
             }
         },
 
+        // Message search functions
+        searchMessages() {
+            if (!this.messageSearchQuery || this.messageSearchQuery.length < 2) {
+                this.messageSearchResults = [];
+                this.currentSearchIndex = 0;
+                return;
+            }
+
+            const query = this.messageSearchQuery.toLowerCase();
+            this.messageSearchResults = this.messages
+                .filter(m => m.content && m.content.toLowerCase().includes(query))
+                .map(m => m.id);
+
+            this.currentSearchIndex = 0;
+
+            if (this.messageSearchResults.length > 0) {
+                this.scrollToMessage(this.messageSearchResults[0]);
+            }
+        },
+
+        navigateSearch(direction) {
+            if (this.messageSearchResults.length === 0) return;
+
+            this.currentSearchIndex = (this.currentSearchIndex + direction + this.messageSearchResults.length) % this.messageSearchResults.length;
+            this.scrollToMessage(this.messageSearchResults[this.currentSearchIndex]);
+        },
+
+        clearMessageSearch() {
+            this.messageSearchQuery = '';
+            this.messageSearchResults = [];
+            this.currentSearchIndex = 0;
+        },
+
         // Reaction functions
         async toggleReaction(messageId, emoji) {
             try {
@@ -914,7 +1984,11 @@ function messenger() {
         },
 
         playNotificationSound() {
+            @if($notificationSound)
+            const audio = new Audio('{{ asset("storage/" . $notificationSound) }}');
+            @else
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleAN1qeNzAACy9l0AAMz/LxMl3P8MACX8/wAA');
+            @endif
             audio.volume = 0.5;
             audio.play().catch(e => {});
         },
@@ -1344,6 +2418,211 @@ function messenger() {
                 console.error('Error joining group:', e);
                 alert('خطا در پیوستن به گروه');
             }
+        },
+
+        // Announcement functions
+        async checkUnreadAnnouncements() {
+            try {
+                const response = await fetch('/admin/chat/announcements/unread');
+                const data = await response.json();
+                if (data.announcements && data.announcements.length > 0) {
+                    this.unreadAnnouncements = data.announcements;
+                    this.showAnnouncementPopup = true;
+                }
+            } catch (e) {
+                console.error('Error checking announcements:', e);
+            }
+        },
+
+        openCreateAnnouncementModal(msg) {
+            this.announcementMessage = msg;
+            this.announcementTitle = msg.content ? msg.content.substring(0, 100) : '';
+            this.announcementType = 'announcement';
+            this.showAnnouncementModal = true;
+        },
+
+        async submitAnnouncement() {
+            if (!this.announcementMessage || !this.announcementTitle) return;
+
+            this.isCreatingAnnouncement = true;
+            try {
+                const response = await fetch(`/admin/chat/messages/${this.announcementMessage.id}/announcement`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        title: this.announcementTitle,
+                        type: this.announcementType
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'اطلاعیه با موفقیت ایجاد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    this.showAnnouncementModal = false;
+                    this.announcementMessage = null;
+                    this.announcementTitle = '';
+                } else {
+                    alert(data.error || 'خطا در ایجاد اطلاعیه');
+                }
+            } catch (e) {
+                console.error('Error creating announcement:', e);
+                alert('خطا در ایجاد اطلاعیه');
+            } finally {
+                this.isCreatingAnnouncement = false;
+            }
+        },
+
+        async markAnnouncementSeen(announcementId) {
+            try {
+                await fetch(`/admin/chat/announcements/${announcementId}/seen`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                // Remove from unread list
+                this.unreadAnnouncements = this.unreadAnnouncements.filter(a => a.id !== announcementId);
+            } catch (e) {
+                console.error('Error marking announcement seen:', e);
+            }
+        },
+
+        async markAllAnnouncementsSeen() {
+            for (const announcement of this.unreadAnnouncements) {
+                await this.markAnnouncementSeen(announcement.id);
+            }
+            this.closeAnnouncementPopup();
+        },
+
+        closeAnnouncementPopup() {
+            this.showAnnouncementPopup = false;
+            this.unreadAnnouncements = [];
+        },
+
+        // Task functions
+        openCreateTaskModal(msg) {
+            this.taskMessage = msg;
+            this.taskTitle = msg.content ? msg.content.substring(0, 200) : '';
+            this.taskPriority = 'medium';
+            this.taskAssignee = '';
+            this.showTaskModal = true;
+        },
+
+        async submitTask() {
+            if (!this.taskMessage || !this.taskTitle) return;
+
+            this.isCreatingTask = true;
+            try {
+                const response = await fetch(`/admin/chat/messages/${this.taskMessage.id}/task`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        title: this.taskTitle,
+                        priority: this.taskPriority,
+                        assigned_to: this.taskAssignee || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = 'تسک با موفقیت ایجاد شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    // Add task indicator to message
+                    const msg = this.messages.find(m => m.id === this.taskMessage.id);
+                    if (msg) {
+                        msg.has_task = true;
+                        msg.task = data.task;
+                    }
+
+                    this.showTaskModal = false;
+                    this.taskMessage = null;
+                    this.taskTitle = '';
+                } else {
+                    alert(data.error || 'خطا در ایجاد تسک');
+                }
+            } catch (e) {
+                console.error('Error creating task:', e);
+                alert('خطا در ایجاد تسک');
+            } finally {
+                this.isCreatingTask = false;
+            }
+        },
+
+        async updateTaskStatus(taskId, status) {
+            try {
+                const response = await fetch(`/admin/chat/tasks/${taskId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update the task in the message
+                    const msg = this.messages.find(m => m.task?.id === taskId);
+                    if (msg && msg.task) {
+                        msg.task.status = status;
+                        if (status === 'completed') {
+                            msg.task.completed_at = new Date().toISOString();
+                        }
+                    }
+
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm z-[200]';
+                    toast.textContent = status === 'completed' ? 'تسک تکمیل شد' : 'وضعیت تسک بروزرسانی شد';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                } else {
+                    alert(data.error || 'خطا در بروزرسانی تسک');
+                }
+            } catch (e) {
+                console.error('Error updating task status:', e);
+                alert('خطا در بروزرسانی تسک');
+            }
+        },
+
+        getTaskStatusLabel(status) {
+            const labels = {
+                'backlog': 'بک‌لاگ',
+                'todo': 'در انتظار',
+                'in_progress': 'در حال انجام',
+                'review': 'بررسی',
+                'done': 'تکمیل شده'
+            };
+            return labels[status] || status;
+        },
+
+        getTaskStatusColor(status) {
+            const colors = {
+                'backlog': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                'todo': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                'in_progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                'review': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                'done': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            };
+            return colors[status] || colors['todo'];
         }
     }
 }

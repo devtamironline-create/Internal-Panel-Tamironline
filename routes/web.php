@@ -66,6 +66,14 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
     Route::get('/profile/edit', [App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [App\Http\Controllers\Admin\ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
+
+    // Settings
+    Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+    Route::get('/settings/delete-logo', [App\Http\Controllers\Admin\SettingController::class, 'deleteLogo'])->name('settings.delete-logo');
+    Route::get('/settings/delete-favicon', [App\Http\Controllers\Admin\SettingController::class, 'deleteFavicon'])->name('settings.delete-favicon');
+    Route::get('/settings/delete-sound', [App\Http\Controllers\Admin\SettingController::class, 'deleteSound'])->name('settings.delete-sound');
 
     // Global Search API
     Route::get('/search', [App\Http\Controllers\Admin\SearchController::class, 'search'])->name('search');
@@ -104,6 +112,10 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::post('/conversations/start', [ChatController::class, 'startConversation'])->name('conversations.start');
         Route::post('/conversations/group', [ChatController::class, 'createGroup'])->name('conversations.group');
         Route::post('/conversations/{conversation}/join', [ChatController::class, 'joinGroup'])->name('conversations.join');
+        Route::post('/conversations/{conversation}/update', [ChatController::class, 'updateGroup'])->name('conversations.update');
+        Route::delete('/conversations/{conversation}/delete', [ChatController::class, 'deleteGroup'])->name('conversations.delete');
+        Route::post('/conversations/{conversation}/pin/personal', [ChatController::class, 'togglePersonalPin'])->name('conversations.pin.personal');
+        Route::post('/conversations/{conversation}/pin/global', [ChatController::class, 'toggleGlobalPin'])->name('conversations.pin.global');
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
@@ -120,5 +132,17 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
         // Message reactions
         Route::post('/messages/{message}/reaction', [ChatController::class, 'toggleReaction'])->name('messages.reaction');
+
+        // Announcements
+        Route::get('/announcements', [ChatController::class, 'getAnnouncements'])->name('announcements');
+        Route::get('/announcements/unread', [ChatController::class, 'getUnreadAnnouncements'])->name('announcements.unread');
+        Route::post('/announcements/{announcement}/seen', [ChatController::class, 'markAnnouncementSeen'])->name('announcements.seen');
+        Route::post('/messages/{message}/announcement', [ChatController::class, 'createAnnouncement'])->name('messages.announcement');
+
+        // Message Tasks
+        Route::post('/messages/{message}/task', [ChatController::class, 'createTask'])->name('messages.task');
+        Route::get('/conversations/{conversation}/tasks', [ChatController::class, 'getConversationTasks'])->name('conversations.tasks');
+        Route::post('/tasks/{task}/status', [ChatController::class, 'updateTaskStatus'])->name('tasks.status');
+        Route::get('/tasks/my', [ChatController::class, 'getMyTasks'])->name('tasks.my');
     });
 });

@@ -33,6 +33,7 @@ class User extends Authenticatable
         'address',
         'is_active',
         'is_staff',
+        'can_add_group_members',
         'last_login_at',
         'last_login_ip',
     ];

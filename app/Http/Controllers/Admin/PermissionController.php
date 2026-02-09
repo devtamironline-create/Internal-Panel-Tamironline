@@ -31,6 +31,9 @@ class PermissionController extends Controller
             if (str_contains($name, 'task')) return 'تسک';
             if (str_contains($name, 'team')) return 'تیم';
             if (str_contains($name, 'report')) return 'گزارش';
+            if (str_contains($name, 'okr')) return 'OKR';
+            if (str_contains($name, 'salary')) return 'حقوق';
+            if (str_contains($name, 'warehouse')) return 'انبار';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
@@ -53,6 +56,9 @@ class PermissionController extends Controller
             if (str_contains($name, 'task')) return 'تسک';
             if (str_contains($name, 'team')) return 'تیم';
             if (str_contains($name, 'report')) return 'گزارش';
+            if (str_contains($name, 'okr')) return 'OKR';
+            if (str_contains($name, 'salary')) return 'حقوق';
+            if (str_contains($name, 'warehouse')) return 'انبار';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
@@ -110,6 +116,8 @@ class PermissionController extends Controller
             'view-salary' => 'مشاهده حقوق',
             'manage-salary' => 'مدیریت حقوق',
             'use-messenger' => 'پیام‌رسان',
+            'view-warehouse' => 'مشاهده انبار',
+            'manage-warehouse' => 'مدیریت انبار',
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
         ];

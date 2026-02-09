@@ -3,10 +3,12 @@
 namespace App\Models\Chat;
 
 use App\Models\User;
+use Modules\Task\Models\Task;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Message extends Model
@@ -63,6 +65,11 @@ class Message extends Model
     public function reactions(): HasMany
     {
         return $this->hasMany(MessageReaction::class);
+    }
+
+    public function task(): HasOne
+    {
+        return $this->hasOne(Task::class);
     }
 
     public function readBy(): BelongsToMany

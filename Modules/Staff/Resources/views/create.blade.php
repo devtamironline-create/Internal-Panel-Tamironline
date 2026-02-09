@@ -54,6 +54,11 @@
                 <label for="is_active" class="text-gray-700">حساب فعال باشد</label>
             </div>
 
+            <div class="flex items-center gap-3">
+                <input type="checkbox" id="can_add_group_members" name="can_add_group_members" value="1" {{ old('can_add_group_members') ? 'checked' : '' }} class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                <label for="can_add_group_members" class="text-gray-700">امکان افزودن عضو به گروه‌ها</label>
+            </div>
+
             @if(isset($roles))
             <!-- Role Section -->
             <div class="pt-6 border-t border-gray-200">
@@ -83,6 +88,52 @@
                 </div>
             </div>
             @endif
+
+            <!-- Warehouse Role Section -->
+            <div class="pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">نقش انبار</h3>
+                <p class="text-sm text-gray-500 mb-4">دسترسی کاربر در بخش انبار و سفارشات</p>
+
+                @php
+                    $warehouseRoles = [
+                        '' => 'بدون دسترسی انبار',
+                        'warehouse_manager' => 'مدیر انبار',
+                        'shipping_packing' => 'مسئول ارسال و بسته‌بندی',
+                        'preparation' => 'آماده‌سازی',
+                        'packing' => 'بسته‌بندی',
+                        'courier' => 'پیک',
+                        'viewer' => 'مشاهده‌کننده',
+                    ];
+                @endphp
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    @foreach($warehouseRoles as $value => $label)
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="warehouse_role" value="{{ $value }}"
+                            class="peer sr-only"
+                            {{ old('warehouse_role', '') === $value ? 'checked' : '' }}>
+                        <div class="p-4 border-2 rounded-xl transition peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50">
+                            <div class="font-medium text-gray-900">{{ $label }}</div>
+                            @if($value === 'warehouse_manager')
+                                <div class="text-xs text-gray-500 mt-1">دسترسی کامل</div>
+                            @elseif($value === 'shipping_packing')
+                                <div class="text-xs text-gray-500 mt-1">سفارشات، بسته‌بندی، ارسال</div>
+                            @elseif($value === 'preparation')
+                                <div class="text-xs text-gray-500 mt-1">صف و آماده‌سازی</div>
+                            @elseif($value === 'packing')
+                                <div class="text-xs text-gray-500 mt-1">فقط بسته‌بندی</div>
+                            @elseif($value === 'courier')
+                                <div class="text-xs text-gray-500 mt-1">مدیریت پیک</div>
+                            @elseif($value === 'viewer')
+                                <div class="text-xs text-gray-500 mt-1">فقط مشاهده</div>
+                            @else
+                                <div class="text-xs text-gray-500 mt-1">بدون دسترسی</div>
+                            @endif
+                        </div>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
 
             <div class="flex items-center gap-4 pt-6 border-t border-gray-100">
                 <button type="submit" class="px-6 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition">
