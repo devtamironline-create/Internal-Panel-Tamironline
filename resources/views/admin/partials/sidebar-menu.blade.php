@@ -16,6 +16,23 @@
         <span x-show="sidebarOpen">پیام‌رسان</span>
     </a>
 </li>
+<li x-data="{ warehouseOpen: {{ request()->is('warehouse*') ? 'true' : 'false' }} }">
+    <button @click="warehouseOpen = !warehouseOpen" class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->is('warehouse*') ? 'bg-slate-700 text-white' : '' }}">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <span x-show="sidebarOpen">مدیریت انبار</span>
+        </div>
+        <svg x-show="sidebarOpen" class="w-4 h-4 transition-transform" :class="warehouseOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+    <ul x-show="warehouseOpen && sidebarOpen" x-collapse class="mt-1 mr-4 space-y-1 border-r border-slate-600 pr-3">
+        <li>
+            <a href="{{ route('warehouse.journey') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-700 hover:text-white {{ request()->routeIs('warehouse.journey') ? 'bg-slate-700 text-white' : '' }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>جرنی سفارشات</span>
+            </a>
+        </li>
+    </ul>
+</li>
 <li class="my-4 border-t border-slate-700"></li>
 <li>
     <a href="{{ route('admin.staff.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('admin.staff.*') ? 'bg-slate-700 text-white' : '' }}">

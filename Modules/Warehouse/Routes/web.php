@@ -17,6 +17,7 @@ use Modules\Warehouse\Http\Controllers\SettingsController;
 
 Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     // Order Journey
+    Route::get('/journey', [WarehouseController::class, 'journey'])->name('warehouse.journey');
     Route::get('/', [WarehouseController::class, 'index'])->name('warehouse.index');
     Route::get('/create', [WarehouseController::class, 'create'])->name('warehouse.create');
     Route::post('/', [WarehouseController::class, 'store'])->name('warehouse.store');
