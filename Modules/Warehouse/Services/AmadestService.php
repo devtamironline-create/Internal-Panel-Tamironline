@@ -360,11 +360,8 @@ class AmadestService
             $externalId = $orderData['external_order_id'] ?? '0';
             $externalIdInt = (int) preg_replace('/\D/', '', $externalId);
 
-            // وزن باید به گرم باشه (حداقل 10 گرم)
-            $weightGrams = ($orderData['weight'] ?? 500);
-            if ($weightGrams < 10) {
-                $weightGrams = (int) round($weightGrams * 1000); // kg → grams
-            }
+            // وزن به گرم (حداقل 10 گرم)
+            $weightGrams = (int) ($orderData['weight'] ?? 500);
             $weightGrams = max($weightGrams, 10);
 
             $payload = [

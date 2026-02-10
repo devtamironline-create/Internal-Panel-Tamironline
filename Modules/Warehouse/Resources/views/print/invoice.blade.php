@@ -154,7 +154,7 @@
                     <tr><td class="info-label">شماره سفارش:</td><td class="info-val">{{ $order->order_number }}</td></tr>
                     <tr><td class="info-label">تاریخ:</td><td class="info-val">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</td></tr>
                     <tr><td class="info-label">نوع ارسال:</td><td class="info-val">@switch($order->shipping_type)@case('courier') پیک @break @case('urgent') فوری @break @case('emergency') اضطراری @break @default پست @endswitch</td></tr>
-                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ $order->total_weight }} kg</td></tr>
+                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($order->total_weight) }} گرم</td></tr>
                 </table>
             </div>
         </div>
@@ -217,7 +217,7 @@
                     <th>نام محصول</th>
                     <th style="width:65px">SKU</th>
                     <th style="width:45px">تعداد</th>
-                    <th style="width:55px">وزن</th>
+                    <th style="width:55px">وزن(g)</th>
                     <th style="width:95px">مبلغ (تومان)</th>
                 </tr>
             </thead>
@@ -236,7 +236,7 @@
                     <td>{{ $item->product_name }}</td>
                     <td dir="ltr">{{ $item->product_sku ?? '-' }}</td>
                     <td>{{ $item->quantity }}</td>
-                    <td>{{ $item->weight }}</td>
+                    <td>{{ number_format($item->weight) }}</td>
                     <td>{{ number_format($item->price) }}</td>
                 </tr>
                 @php $totalPrice += $item->price * $item->quantity; @endphp

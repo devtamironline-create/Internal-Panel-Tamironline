@@ -25,8 +25,8 @@ class WarehouseOrder extends Model
     protected $casts = [
         'wc_order_data' => 'array',
         'weight_verified' => 'boolean',
-        'total_weight' => 'decimal:2',
-        'actual_weight' => 'decimal:2',
+        'total_weight' => 'integer',
+        'actual_weight' => 'integer',
         'timer_deadline' => 'datetime',
         'supply_deadline' => 'datetime',
         'printed_at' => 'datetime',

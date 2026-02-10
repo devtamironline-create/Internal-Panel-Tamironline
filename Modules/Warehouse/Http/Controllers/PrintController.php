@@ -40,7 +40,7 @@ class PrintController extends Controller
             $order->refresh();
             $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
             if ($totalWeight > 0) {
-                $order->update(['total_weight' => round($totalWeight, 2)]);
+                $order->update(['total_weight' => round($totalWeight)]);
                 $order->refresh();
             }
         }

@@ -15,7 +15,7 @@ class WarehouseOrderItem extends Model
     ];
 
     protected $casts = [
-        'weight' => 'decimal:2',
+        'weight' => 'integer',
         'price' => 'decimal:0',
         'scanned' => 'boolean',
         'scanned_at' => 'datetime',

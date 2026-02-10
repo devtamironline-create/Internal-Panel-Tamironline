@@ -153,13 +153,13 @@
                 @if($order->total_weight)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">وزن کل (سیستمی)</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $order->total_weight }} kg</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ number_format($order->total_weight) }} گرم</dd>
                 </div>
                 @endif
                 @if($order->actual_weight)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">وزن واقعی</dt>
-                    <dd class="text-sm font-medium {{ $order->weight_verified ? 'text-green-600' : 'text-red-600' }}">{{ $order->actual_weight }} kg</dd>
+                    <dd class="text-sm font-medium {{ $order->weight_verified ? 'text-green-600' : 'text-red-600' }}">{{ number_format($order->actual_weight) }} گرم</dd>
                 </div>
                 @endif
                 @if($order->weight_verified !== null)
@@ -236,7 +236,7 @@
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_sku ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_barcode ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-900 font-medium">{{ $item->quantity }}</td>
-                        <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? $item->weight . ' kg' : '—' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? number_format($item->weight) . ' گرم' : '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600">{{ $item->price ? number_format($item->price) . ' تومان' : '—' }}</td>
                         <td class="px-6 py-3">
                             @if($item->scanned)
@@ -346,8 +346,8 @@
                 <h3 class="text-sm font-bold text-gray-700 mb-3">مرحله ۲: تایید وزن</h3>
                 <div class="flex items-end gap-3">
                     <div class="flex-1">
-                        <label class="block text-xs text-gray-500 mb-1">وزن واقعی بسته (کیلوگرم)</label>
-                        <input type="number" x-model="actualWeight" step="0.01" min="0" dir="ltr" placeholder="0.00"
+                        <label class="block text-xs text-gray-500 mb-1">وزن واقعی بسته (گرم)</label>
+                        <input type="number" x-model="actualWeight" step="1" min="0" dir="ltr" placeholder="0"
                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-lg font-medium text-center">
                     </div>
                     <button @click="verifyWeight()" :disabled="!actualWeight || verifying"
@@ -357,7 +357,7 @@
                     </button>
                 </div>
                 @if($order->total_weight)
-                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ $order->total_weight }} kg</p>
+                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ number_format($order->total_weight) }} گرم</p>
                 @endif
 
                 <!-- Weight Result -->
