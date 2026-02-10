@@ -105,20 +105,7 @@ class WarehouseBoxSize extends Model
             $maxDims[2] = max($maxDims[2], $dims[2]);
         }
 
-        // فالبک: اگه ابعاد نداریم، بر اساس وزن تخمین حجم بزنیم
-        // فرض: چگالی متوسط محصولات بسته‌بندی شده ~0.5g/cm³
-        if ($totalVolume <= 0 && $totalWeightGrams > 0) {
-            $totalVolume = $totalWeightGrams * 2; // تخمین حجم از روی وزن
-
-            // پیدا کردن کوچک‌ترین کارتنی که حجمش کافی باشه
-            foreach ($boxes as $box) {
-                if ($box->volume >= $totalVolume * 0.9) {
-                    return $box;
-                }
-            }
-            return $boxes->last();
-        }
-
+        // اگه ابعاد نداریم، نمی‌تونیم کارتن پیشنهاد بدیم
         if ($totalVolume <= 0) return null;
 
         // پیدا کردن کوچک‌ترین کارتنی که جا بشه

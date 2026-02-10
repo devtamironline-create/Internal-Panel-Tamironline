@@ -39,6 +39,28 @@ class PrintController extends Controller
             $order->load('items');
         }
 
+        // اگر آیتم‌ها ابعاد ندارن، از جدول محصولات بگیر و آپدیت کن
+        $needsDimensionsUpdate = $order->items->contains(fn($item) => ($item->length == 0 || $item->width == 0 || $item->height == 0) && $item->wc_product_id);
+        if ($needsDimensionsUpdate) {
+            $productIds = $order->items->pluck('wc_product_id')->filter()->unique()->toArray();
+            $dimensionsMap = WarehouseProduct::getDimensionsMap($productIds);
+
+            foreach ($order->items as $item) {
+                if (($item->length == 0 || $item->width == 0 || $item->height == 0) && $item->wc_product_id) {
+                    $dims = $dimensionsMap[$item->wc_product_id] ?? null;
+                    if ($dims && ($dims['length'] ?? 0) > 0) {
+                        $item->update([
+                            'length' => (float)($dims['length'] ?? 0),
+                            'width' => (float)($dims['width'] ?? 0),
+                            'height' => (float)($dims['height'] ?? 0),
+                        ]);
+                    }
+                }
+            }
+            $order->refresh();
+            $order->load(['items', 'boxSize']);
+        }
+
         // همیشه وزن کل رو از روی آیتم‌ها محاسبه و آپدیت کن
         $totalWeightGrams = $order->items->sum(fn($i) => WarehouseOrder::toGrams($i->weight) * $i->quantity);
         if ($totalWeightGrams > 0) {

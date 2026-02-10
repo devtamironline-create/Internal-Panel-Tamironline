@@ -466,13 +466,17 @@ class WooCommerceService
 
             WarehouseSetting::set('wc_products_last_sync', now()->toDateTimeString());
 
-            // آپدیت وزن آیتم‌های سفارشات موجود که وزنشون 0 هست
-            $updatedItems = $this->updateExistingOrderWeights();
+            // آپدیت وزن و ابعاد آیتم‌های سفارشات موجود
+            $updatedWeights = $this->updateExistingOrderWeights();
+            $updatedDimensions = $this->updateExistingOrderDimensions();
 
             $total = $totalImported + $totalUpdated;
             $message = "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع | مجموع: {$total}";
-            if ($updatedItems > 0) {
-                $message .= "\n{$updatedItems} آیتم سفارش موجود آپدیت شد.";
+            if ($updatedWeights > 0) {
+                $message .= "\n{$updatedWeights} آیتم: وزن آپدیت شد.";
+            }
+            if ($updatedDimensions > 0) {
+                $message .= "\n{$updatedDimensions} آیتم: ابعاد آپدیت شد.";
             }
 
             return [
@@ -588,6 +592,45 @@ class WooCommerceService
                     $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
                     $order->update(['total_weight' => round($totalWeight)]);
                 }
+            }
+        }
+
+        return $updatedCount;
+    }
+
+    /**
+     * آپدیت ابعاد آیتم‌های سفارشات موجود که ابعادشون 0 هست
+     */
+    public function updateExistingOrderDimensions(): int
+    {
+        $updatedCount = 0;
+
+        // آیتم‌هایی که ابعادشون 0 هست
+        $items = WarehouseOrderItem::whereNotNull('wc_product_id')
+            ->where(function ($q) {
+                $q->where('length', 0)->orWhereNull('length')
+                  ->orWhere('width', 0)->orWhereNull('width')
+                  ->orWhere('height', 0)->orWhereNull('height');
+            })
+            ->get();
+
+        if ($items->isEmpty()) {
+            return 0;
+        }
+
+        // جمع‌آوری product_id ها
+        $productIds = $items->pluck('wc_product_id')->unique()->toArray();
+        $dimensionsMap = WarehouseProduct::getDimensionsMap($productIds);
+
+        foreach ($items as $item) {
+            $dims = $dimensionsMap[$item->wc_product_id] ?? null;
+            if ($dims && ($dims['length'] ?? 0) > 0) {
+                $item->update([
+                    'length' => (float)($dims['length'] ?? 0),
+                    'width' => (float)($dims['width'] ?? 0),
+                    'height' => (float)($dims['height'] ?? 0),
+                ]);
+                $updatedCount++;
             }
         }
 
