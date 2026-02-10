@@ -44,13 +44,23 @@
                     <p class="text-gray-400 text-xs mt-1">هر دو رو تست کن، هر کدوم جواب داد همونو انتخاب کن</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">کلید API <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">کلید API (Bearer Token) <span class="text-red-500">*</span></label>
                     <input type="password" name="api_key" value="{{ old('api_key', $settings['api_key']) }}" required dir="ltr"
                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-mono"
-                           placeholder="کلید API آمادست">
+                           placeholder="توکن احراز هویت آمادست">
                     @error('api_key')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">کد کلاینت (X-Client-Code) <span class="text-red-500">*</span></label>
+                    <input type="text" name="client_code" value="{{ old('client_code', $settings['client_code'] ?? '') }}" dir="ltr"
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-mono"
+                           placeholder="abcdef-1234-5678">
+                    @error('client_code')
+                        <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-gray-400 text-xs mt-1">کد کلاینت منحصر به فرد که در ایمیل آمادست ارسال شده</p>
                 </div>
 
                 <div class="flex items-center gap-3 pt-4 border-t">
@@ -75,26 +85,28 @@
                 </div>
             </div>
 
-            @if(!empty($settings['store_id']))
-                <!-- Already configured -->
+            @if(!empty($settings['store_id']) && $settings['store_id'] != '0')
+                <!-- Store mode configured -->
                 <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-                    <div class="flex items-center gap-2 text-emerald-700 font-medium text-sm mb-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        فروشگاه تنظیم شده است
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2 text-emerald-700 font-medium text-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            حالت فروشگاه (store_id: {{ $settings['store_id'] }})
+                        </div>
+                        <button type="button" onclick="switchToNormalMode()" class="text-xs text-red-600 hover:text-red-800 underline">تغییر به حالت عادی</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                        <div>شناسه فروشگاه: <strong class="text-gray-900">{{ $settings['store_id'] }}</strong></div>
                         <div>شناسه مکان: <strong class="text-gray-900">{{ $settings['location_id'] ?? '-' }}</strong></div>
                         <div>فرستنده: <strong class="text-gray-900">{{ $settings['sender_name'] ?? '-' }}</strong></div>
                         <div>موبایل: <strong class="text-gray-900" dir="ltr">{{ $settings['sender_mobile'] ?? '-' }}</strong></div>
                     </div>
                 </div>
-                <p class="text-gray-500 text-xs mb-4">برای تغییر تنظیمات، فرم زیر را دوباره پر کنید.</p>
             @else
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                    <div class="flex items-center gap-2 text-amber-700 font-medium text-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                        فروشگاه هنوز تنظیم نشده - ابتدا فرم زیر را پر کنید
+                <!-- Normal mode (no store) -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center gap-2 text-purple-700 font-medium text-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        حالت عادی (بدون فروشگاه) - سفارشات مستقیم در آمادست ثبت می‌شوند
                     </div>
                 </div>
             @endif
@@ -392,6 +404,27 @@ function trackShipment() {
         resultDiv.classList.add('bg-red-50', 'text-red-800');
         resultDiv.textContent = 'خطا در ارتباط با سرور';
     });
+}
+
+function switchToNormalMode() {
+    if (!confirm('آیا مطمئنید؟ حالت فروشگاه حذف شده و سفارشات به صورت عادی در آمادست ثبت می‌شوند.')) return;
+
+    fetch('{{ route("warehouse.amadest.save") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            api_key: document.querySelector('input[name="api_key"]').value,
+            api_url: document.querySelector('select[name="api_url"]').value,
+            client_code: document.querySelector('input[name="client_code"]').value,
+            store_id: '0',
+        }),
+    })
+    .then(r => { location.reload(); })
+    .catch(err => { alert('خطا: ' + err.message); });
 }
 </script>
 @endpush

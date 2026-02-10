@@ -115,9 +115,9 @@ class PrintController extends Controller
                         $found = false;
                         foreach ($searchResult['data'] ?? [] as $existing) {
                             if (($existing['external_order_id'] ?? null) == $externalId) {
-                                $order->amadest_barcode = (string) ($existing['id'] ?? $existing['tracking_code'] ?? $existing['barcode'] ?? '');
+                                $order->amadest_barcode = (string) ($existing['amadast_tracking_code'] ?? '');
                                 $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
-                                $order->post_tracking_code = $existing['post_tracking_code'] ?? $existing['courier_tracking_code'] ?? null;
+                                $order->post_tracking_code = $existing['courier_tracking_code'] ?? null;
                                 $order->save();
                                 $found = true;
                                 Log::info('Amadest existing order found', ['order' => $order->order_number, 'amadest_id' => $order->amadest_barcode]);

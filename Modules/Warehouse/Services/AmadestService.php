@@ -12,12 +12,14 @@ class AmadestService
     protected ?string $apiKey;
     protected ?string $apiUrl;
     protected ?string $storeId;
+    protected ?string $clientCode;
 
     public function __construct()
     {
         $this->apiKey = WarehouseSetting::get('amadest_api_key');
-        $this->apiUrl = rtrim(WarehouseSetting::get('amadest_api_url', 'https://api.amadest.com'), '/');
+        $this->apiUrl = rtrim(WarehouseSetting::get('amadest_api_url', 'https://shop-integration.amadast.com'), '/');
         $this->storeId = WarehouseSetting::get('amadest_store_id');
+        $this->clientCode = WarehouseSetting::get('amadest_client_code');
     }
 
     public function isConfigured(): bool
@@ -27,11 +29,17 @@ class AmadestService
 
     protected function getHeaders(): array
     {
-        return [
+        $headers = [
             'Authorization' => 'Bearer ' . $this->apiKey,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ];
+
+        if (!empty($this->clientCode)) {
+            $headers['X-Client-Code'] = $this->clientCode;
+        }
+
+        return $headers;
     }
 
     /**
@@ -348,10 +356,6 @@ class AmadestService
             return ['success' => false, 'message' => 'کلید API آمادست وارد نشده'];
         }
 
-        if (empty($this->storeId)) {
-            return ['success' => false, 'message' => 'فروشگاه آمادست تنظیم نشده. ابتدا از صفحه تنظیمات آمادست، فروشگاه را راه‌اندازی کنید.'];
-        }
-
         try {
             $senderName = WarehouseSetting::get('amadest_sender_name') ?: 'فروشگاه';
             $senderMobile = WarehouseSetting::get('amadest_sender_mobile') ?: '09000000000';
@@ -364,6 +368,7 @@ class AmadestService
             $weightGrams = (int) ($orderData['weight'] ?? 500);
             $weightGrams = max($weightGrams, 10);
 
+            // store_id: 0 = حالت عادی (آمادست)، عدد مثبت = حالت فروشگاه
             $payload = [
                 'store_id' => (int) ($this->storeId ?: 0),
                 'external_order_id' => $externalIdInt,
@@ -378,13 +383,14 @@ class AmadestService
                 'package_type' => $orderData['package_type'] ?? 1,
             ];
 
-            // فیلدهای اختیاری - فقط اگه مقدار دارن اضافه شن
+            // فیلدهای ضروری طبق داکیومنت
             if (!empty($orderData['recipient_city_id'])) {
                 $payload['recipient_city_id'] = (int) $orderData['recipient_city_id'];
             }
             if (!empty($orderData['recipient_postal_code'])) {
                 $payload['recipient_postal_code'] = $orderData['recipient_postal_code'];
             }
+            // فیلدهای اختیاری
             if (!empty($orderData['description'])) {
                 $payload['description'] = $orderData['description'];
             }
@@ -500,10 +506,10 @@ class AmadestService
             foreach ($result['data'] ?? [] as $order) {
                 if (($order['external_order_id'] ?? null) == $externalOrderId) {
                     return [
-                        'amadest_tracking_code' => $order['tracking_code'] ?? $order['barcode'] ?? null,
-                        'courier_tracking_code' => $order['post_tracking_code'] ?? $order['courier_tracking_code'] ?? null,
-                        'courier_title' => $order['courier_name'] ?? $order['courier_title'] ?? null,
-                        'status' => $order['status'] ?? null,
+                        'amadest_tracking_code' => $order['amadast_tracking_code'] ?? null,
+                        'courier_tracking_code' => $order['courier_tracking_code'] ?? null,
+                        'courier_title' => $order['courier_title'] ?? null,
+                        'postal_code' => $order['postal_code'] ?? null,
                     ];
                 }
             }

@@ -17,7 +17,8 @@ class AmadestController extends Controller
 
         $settings = [
             'api_key' => WarehouseSetting::get('amadest_api_key'),
-            'api_url' => WarehouseSetting::get('amadest_api_url', 'https://api.amadest.com'),
+            'api_url' => WarehouseSetting::get('amadest_api_url', 'https://shop-integration.amadast.com'),
+            'client_code' => WarehouseSetting::get('amadest_client_code'),
             'store_id' => WarehouseSetting::get('amadest_store_id'),
             'location_id' => WarehouseSetting::get('amadest_location_id'),
             'sender_name' => WarehouseSetting::get('amadest_sender_name'),
@@ -37,11 +38,24 @@ class AmadestController extends Controller
         $validated = $request->validate([
             'api_key' => 'required|string|max:5000',
             'api_url' => 'nullable|url|max:500',
+            'client_code' => 'nullable|string|max:500',
+            'store_id' => 'nullable|string|max:50',
         ]);
 
         WarehouseSetting::set('amadest_api_key', $validated['api_key']);
         if (!empty($validated['api_url'])) {
             WarehouseSetting::set('amadest_api_url', $validated['api_url']);
+        }
+        if (isset($validated['client_code'])) {
+            WarehouseSetting::set('amadest_client_code', $validated['client_code']);
+        }
+        // اگه store_id=0 ارسال شد → حالت عادی (بدون فروشگاه)
+        if (isset($validated['store_id']) && $validated['store_id'] === '0') {
+            WarehouseSetting::set('amadest_store_id', '0');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تنظیمات ذخیره شد.']);
         }
 
         return redirect()->route('warehouse.amadest.index')
