@@ -76,6 +76,9 @@ function callNotification() {
         lastSignalTime: 0,
 
         async init() {
+            // Skip on messenger page (messenger has its own call handling)
+            if (window.location.pathname.includes('/messenger')) return;
+
             // Request notification permission
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();

@@ -741,8 +741,47 @@
         </div>
     </div>
 
+    <!-- Outgoing Call Modal (Waiting/Ringing) -->
+    <div x-cloak x-show="outgoingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" style="display: none;">
+        <div class="text-center text-white">
+            <div class="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-5xl font-bold"
+                 :class="callStatus === 'ringing' ? 'bg-green-500/30 animate-pulse' : 'bg-white/20'">
+                <span x-text="outgoingCall?.remote_name?.charAt(0)"></span>
+            </div>
+            <h3 class="text-3xl font-bold mb-2" x-text="outgoingCall?.remote_name"></h3>
+
+            <!-- Status indicator -->
+            <div class="mb-8">
+                <template x-if="callStatus === 'waiting'">
+                    <div class="flex items-center justify-center gap-2 text-xl text-gray-300">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>در انتظار پاسخ...</span>
+                    </div>
+                </template>
+                <template x-if="callStatus === 'ringing'">
+                    <div class="flex items-center justify-center gap-2 text-xl text-green-400">
+                        <svg class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        <span>در حال زنگ خوردن...</span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Cancel button -->
+            <button @click="cancelOutgoingCall()" class="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition mx-auto">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <!-- Active Call Modal -->
-    <div x-cloak x-show="activeCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800" style="display: none;">
+    <div x-cloak x-show="activeCall && !outgoingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800" style="display: none;">
         <div class="text-center text-white">
             <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-white/20 flex items-center justify-center text-5xl font-bold" x-text="activeCall?.remote_name?.charAt(0)"></div>
             <h3 class="text-3xl font-bold mb-2" x-text="activeCall?.remote_name"></h3>
@@ -1180,6 +1219,9 @@ function messenger() {
         // Call state
         incomingCall: null,
         activeCall: null,
+        outgoingCall: null, // { id, remote_name, receiver_id }
+        callStatus: 'waiting', // 'waiting' | 'ringing'
+        callStatusPollTimer: null,
         callDuration: '00:00',
         callTimer: null,
         isMuted: false,
@@ -2021,7 +2063,7 @@ function messenger() {
         },
 
         async checkIncomingCalls() {
-            if (this.incomingCall || this.activeCall) return; // Already in a call
+            if (this.incomingCall || this.activeCall || this.outgoingCall) return; // Already in a call
 
             try {
                 const response = await fetch('/admin/chat/calls/incoming');
@@ -2064,6 +2106,13 @@ function messenger() {
         async initiateCall(userId) {
             if (!userId) return;
             try {
+                // Check microphone first
+                const permCheck = await this.checkMicrophonePermission();
+                if (!permCheck.granted) {
+                    this.showMicrophoneError(permCheck.error);
+                    return;
+                }
+
                 const response = await fetch('/admin/chat/calls/initiate', {
                     method: 'POST',
                     headers: {
@@ -2074,13 +2123,74 @@ function messenger() {
                 });
                 const data = await response.json();
                 if (data.call) {
+                    // Show outgoing call screen (waiting/ringing)
+                    this.outgoingCall = {
+                        id: data.call.id,
+                        remote_name: data.call.remote_name,
+                        receiver_id: userId,
+                    };
+                    this.callStatus = 'waiting';
+
+                    // Start polling for call status (waiting → ringing → answered)
+                    this.callStatusPollTimer = setInterval(() => this.pollCallStatus(), 1500);
+
+                    // Setup WebRTC in the background
                     this.activeCall = data.call;
                     await this.setupWebRTC(true, userId);
-                    this.startCallTimer();
                 }
             } catch (e) {
                 console.error('Error initiating call:', e);
             }
+        },
+
+        async pollCallStatus() {
+            if (!this.outgoingCall) return;
+            try {
+                const response = await fetch(`/admin/chat/calls/${this.outgoingCall.id}/status`);
+                const data = await response.json();
+
+                if (data.status === 'answered') {
+                    // Call was answered - switch to active call view
+                    this.outgoingCall = null;
+                    if (this.callStatusPollTimer) {
+                        clearInterval(this.callStatusPollTimer);
+                        this.callStatusPollTimer = null;
+                    }
+                    this.startCallTimer();
+                } else if (data.status === 'rejected' || data.status === 'ended' || data.status === 'missed') {
+                    // Call was rejected/ended/missed
+                    this.outgoingCall = null;
+                    if (this.callStatusPollTimer) {
+                        clearInterval(this.callStatusPollTimer);
+                        this.callStatusPollTimer = null;
+                    }
+                    this.cleanupCall();
+                } else if (data.seen) {
+                    // Receiver saw the call - show ringing
+                    this.callStatus = 'ringing';
+                } else {
+                    this.callStatus = 'waiting';
+                }
+            } catch (e) {}
+        },
+
+        cancelOutgoingCall() {
+            if (this.outgoingCall) {
+                // End the call on the server
+                fetch(`/admin/chat/calls/${this.outgoingCall.id}/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                }).catch(() => {});
+                this.outgoingCall = null;
+            }
+            if (this.callStatusPollTimer) {
+                clearInterval(this.callStatusPollTimer);
+                this.callStatusPollTimer = null;
+            }
+            this.cleanupCall();
         },
 
         async answerCall() {
@@ -2096,6 +2206,7 @@ function messenger() {
                 const data = await response.json();
                 if (data.call) {
                     this.activeCall = data.call;
+                    this.outgoingCall = null; // Clear any outgoing state
                     const callerId = this.incomingCall.caller_id;
                     this.incomingCall = null;
                     this.$refs.ringtone.pause();
@@ -2153,7 +2264,13 @@ function messenger() {
                 clearInterval(this.signalPollTimer);
                 this.signalPollTimer = null;
             }
+            if (this.callStatusPollTimer) {
+                clearInterval(this.callStatusPollTimer);
+                this.callStatusPollTimer = null;
+            }
             this.activeCall = null;
+            this.outgoingCall = null;
+            this.callStatus = 'waiting';
             this.callDuration = '00:00';
             this.isMuted = false;
             this.lastSignalTime = 0;

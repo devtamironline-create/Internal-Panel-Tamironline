@@ -793,6 +793,9 @@ class ChatController extends Controller
             ->first();
 
         if ($call) {
+            // Mark that receiver has seen the call (for caller's ringing status)
+            Cache::put("call_seen_{$call->id}", true, 120);
+
             return response()->json([
                 'has_call' => true,
                 'call' => [
@@ -806,6 +809,23 @@ class ChatController extends Controller
         }
 
         return response()->json(['has_call' => false]);
+    }
+
+    /**
+     * Check outgoing call status (for caller to know if receiver saw the call)
+     */
+    public function checkCallStatus(Call $call): JsonResponse
+    {
+        if ($call->caller_id !== auth()->id()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $seen = Cache::get("call_seen_{$call->id}", false);
+
+        return response()->json([
+            'status' => $call->status,
+            'seen' => $seen, // true = receiver's panel is open and ringing
+        ]);
     }
 
     /**
