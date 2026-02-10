@@ -728,21 +728,23 @@
         });
     </script>
 
-    <script src="/vendor/tinymce/tinymce.min.js"></script>
+    <script src="/vendor/tinymce/js/tinymce/tinymce.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            tinymce.init({
-                selector: '.rich-editor',
-                height: 300,
-                directionality: 'rtl',
-                language: 'fa',
-                plugins: 'lists link image code table',
-                toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
-                menubar: false,
-                branding: false,
-                content_style: 'body { font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; }',
-                setup: function(editor) { editor.on('change', function() { editor.save(); }); }
-            });
+            if (typeof tinymce !== 'undefined' && document.querySelector('.rich-editor')) {
+                tinymce.init({
+                    selector: '.rich-editor',
+                    height: 300,
+                    directionality: 'rtl',
+                    language: 'fa',
+                    plugins: 'lists link image code table',
+                    toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
+                    menubar: false,
+                    branding: false,
+                    content_style: 'body { font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; }',
+                    setup: function(editor) { editor.on('change', function() { editor.save(); }); }
+                });
+            }
         });
     </script>
 

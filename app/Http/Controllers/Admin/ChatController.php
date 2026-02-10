@@ -1213,28 +1213,32 @@ class ChatController extends Controller
      */
     public function getUnreadAnnouncements(): JsonResponse
     {
-        $userId = auth()->id();
+        try {
+            $userId = auth()->id();
 
-        $announcements = Announcement::with(['creator', 'conversation'])
-            ->active()
-            ->where('show_popup', true)
-            ->unreadBy($userId)
-            ->latest()
-            ->get()
-            ->map(function ($announcement) {
-                return [
-                    'id' => $announcement->id,
-                    'title' => $announcement->title,
-                    'content' => $announcement->content,
-                    'type' => $announcement->type,
-                    'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
-                    'conversation_name' => $announcement->conversation?->name,
-                    'creator_name' => $announcement->creator->full_name,
-                    'created_at' => $announcement->created_at->diffForHumans(),
-                ];
-            });
+            $announcements = Announcement::with(['creator', 'conversation'])
+                ->active()
+                ->where('show_popup', true)
+                ->unreadBy($userId)
+                ->latest()
+                ->get()
+                ->map(function ($announcement) {
+                    return [
+                        'id' => $announcement->id,
+                        'title' => $announcement->title,
+                        'content' => $announcement->content,
+                        'type' => $announcement->type,
+                        'type_label' => $announcement->type === 'news' ? 'خبر' : 'اطلاعیه',
+                        'conversation_name' => $announcement->conversation?->name,
+                        'creator_name' => $announcement->creator->full_name,
+                        'created_at' => $announcement->created_at->diffForHumans(),
+                    ];
+                });
 
-        return response()->json(['announcements' => $announcements]);
+            return response()->json(['announcements' => $announcements]);
+        } catch (\Exception $e) {
+            return response()->json(['announcements' => []]);
+        }
     }
 
     /**
