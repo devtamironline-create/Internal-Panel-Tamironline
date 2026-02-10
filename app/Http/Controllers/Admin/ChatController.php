@@ -14,6 +14,7 @@ use App\Models\AnnouncementView;
 use Modules\Task\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class ChatController extends Controller
 {
@@ -720,16 +721,61 @@ class ChatController extends Controller
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
-        // Broadcast WebRTC signal
-        event(new \App\Events\Chat\WebRTCSignalEvent(
-            $request->call_id,
-            auth()->id(),
-            $request->receiver_id,
-            $request->type,
-            $request->data
-        ));
+        // Broadcast WebRTC signal (for WebSocket)
+        try {
+            event(new \App\Events\Chat\WebRTCSignalEvent(
+                $request->call_id,
+                auth()->id(),
+                $request->receiver_id,
+                $request->type,
+                $request->data
+            ));
+        } catch (\Exception $e) {
+            // WebSocket may not be available
+        }
+
+        // Store signal in cache for polling fallback
+        $cacheKey = "webrtc_signals_{$request->receiver_id}";
+        $signals = Cache::get($cacheKey, []);
+        $signals[] = [
+            'call_id' => $request->call_id,
+            'sender_id' => auth()->id(),
+            'type' => $request->type,
+            'data' => $request->data,
+            'time' => now()->timestamp,
+        ];
+        // Keep only last 30 seconds of signals
+        $cutoff = now()->timestamp - 30;
+        $signals = array_values(array_filter($signals, fn($s) => $s['time'] >= $cutoff));
+        Cache::put($cacheKey, $signals, 60);
 
         return response()->json(['status' => 'sent']);
+    }
+
+    /**
+     * Get pending WebRTC signals (polling fallback)
+     */
+    public function getPendingSignals(Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $cacheKey = "webrtc_signals_{$userId}";
+        $lastPoll = (int) $request->get('since', 0);
+
+        $signals = Cache::get($cacheKey, []);
+
+        // Only return signals newer than last poll
+        $newSignals = array_values(array_filter($signals, fn($s) => $s['time'] > $lastPoll));
+
+        // Clean up retrieved signals
+        if (!empty($newSignals)) {
+            $remaining = array_values(array_filter($signals, fn($s) => $s['time'] > now()->timestamp));
+            Cache::put($cacheKey, $remaining, 60);
+        }
+
+        return response()->json([
+            'signals' => $newSignals,
+            'time' => now()->timestamp,
+        ]);
     }
 
     /**

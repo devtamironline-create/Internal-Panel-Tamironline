@@ -129,6 +129,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/calls/history', [ChatController::class, 'callHistory'])->name('calls.history');
         Route::get('/calls/incoming', [ChatController::class, 'checkIncomingCall'])->name('calls.incoming');
         Route::post('/signal', [ChatController::class, 'sendSignal'])->name('signal');
+        Route::get('/signals/pending', [ChatController::class, 'getPendingSignals'])->name('signals.pending');
         Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
         // Message reactions
         Route::post('/messages/{message}/reaction', [ChatController::class, 'toggleReaction'])->name('messages.reaction');

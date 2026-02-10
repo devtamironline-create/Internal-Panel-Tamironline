@@ -195,7 +195,7 @@
                         <button @click="showMessageSearch = !showMessageSearch; if(!showMessageSearch) { messageSearchQuery = ''; clearMessageSearch(); }" :class="showMessageSearch ? 'bg-brand-100 dark:bg-brand-900 text-brand-600' : 'text-gray-500'" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="جستجو در پیام‌ها">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         </button>
-                        <button @click="alert('این قابلیت به زودی فعال خواهد شد')" x-show="currentConversation?.type === 'private'" class="p-2 text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg opacity-50" title="تماس صوتی (به زودی)">
+                        <button @click="initiateCall(currentConversation?.user_id)" x-show="currentConversation?.type === 'private'" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="تماس صوتی">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                         </button>
                     </div>
@@ -1185,6 +1185,8 @@ function messenger() {
         isMuted: false,
         peerConnection: null,
         localStream: null,
+        signalPollTimer: null,
+        lastSignalTime: 0,
 
         // Media upload state
         showMediaPreview: false,
@@ -2147,9 +2149,14 @@ function messenger() {
                 clearInterval(this.callTimer);
                 this.callTimer = null;
             }
+            if (this.signalPollTimer) {
+                clearInterval(this.signalPollTimer);
+                this.signalPollTimer = null;
+            }
             this.activeCall = null;
             this.callDuration = '00:00';
             this.isMuted = false;
+            this.lastSignalTime = 0;
         },
 
         startCallTimer() {
@@ -2303,10 +2310,45 @@ function messenger() {
                     await this.peerConnection.setLocalDescription(offer);
                     await this.sendSignal('offer', remoteUserId, offer);
                 }
+
+                // Start polling for WebRTC signals (fallback for when WebSocket is unavailable)
+                this.lastSignalTime = Math.floor(Date.now() / 1000);
+                this.signalPollTimer = setInterval(() => this.pollSignals(), 500);
             } catch (e) {
                 console.error('Error setting up WebRTC:', e);
                 this.showMicrophoneError('خطا در برقراری تماس. لطفا دوباره تلاش کنید.');
                 this.cleanupCall();
+            }
+        },
+
+        async pollSignals() {
+            if (!this.activeCall && !this.incomingCall) return;
+            try {
+                const response = await fetch(`/admin/chat/signals/pending?since=${this.lastSignalTime}`);
+                const data = await response.json();
+                this.lastSignalTime = data.time || this.lastSignalTime;
+
+                for (const signal of (data.signals || [])) {
+                    await this.handleSignal(signal);
+                }
+            } catch (e) {}
+        },
+
+        async handleSignal(signal) {
+            if (!this.peerConnection) return;
+            try {
+                if (signal.type === 'offer') {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    const answer = await this.peerConnection.createAnswer();
+                    await this.peerConnection.setLocalDescription(answer);
+                    await this.sendSignal('answer', signal.sender_id, answer);
+                } else if (signal.type === 'answer') {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                } else if (signal.type === 'ice-candidate') {
+                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                }
+            } catch (e) {
+                console.error('Error handling signal:', signal.type, e);
             }
         },
 

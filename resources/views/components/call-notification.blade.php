@@ -72,6 +72,8 @@ function callNotification() {
         unreadCount: 0,
         peerConnection: null,
         localStream: null,
+        signalPollTimer: null,
+        lastSignalTime: 0,
 
         async init() {
             // Request notification permission
@@ -191,9 +193,14 @@ function callNotification() {
                 clearInterval(this.callTimer);
                 this.callTimer = null;
             }
+            if (this.signalPollTimer) {
+                clearInterval(this.signalPollTimer);
+                this.signalPollTimer = null;
+            }
             this.activeCall = null;
             this.callDuration = '00:00';
             this.isMuted = false;
+            this.lastSignalTime = 0;
         },
 
         startCallTimer() {
@@ -246,10 +253,44 @@ function callNotification() {
                     await this.peerConnection.setLocalDescription(offer);
                     await this.sendSignal('offer', remoteUserId, offer);
                 }
+
+                // Start polling for WebRTC signals
+                this.lastSignalTime = Math.floor(Date.now() / 1000);
+                this.signalPollTimer = setInterval(() => this.pollSignals(), 500);
             } catch (e) {
                 console.error('Error setting up WebRTC:', e);
                 alert('خطا در دسترسی به میکروفون');
                 this.cleanupCall();
+            }
+        },
+
+        async pollSignals() {
+            if (!this.activeCall) return;
+            try {
+                const response = await fetch(`/admin/chat/signals/pending?since=${this.lastSignalTime}`);
+                const data = await response.json();
+                this.lastSignalTime = data.time || this.lastSignalTime;
+                for (const signal of (data.signals || [])) {
+                    await this.handleSignal(signal);
+                }
+            } catch (e) {}
+        },
+
+        async handleSignal(signal) {
+            if (!this.peerConnection) return;
+            try {
+                if (signal.type === 'offer') {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    const answer = await this.peerConnection.createAnswer();
+                    await this.peerConnection.setLocalDescription(answer);
+                    await this.sendSignal('answer', signal.sender_id, answer);
+                } else if (signal.type === 'answer') {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                } else if (signal.type === 'ice-candidate') {
+                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                }
+            } catch (e) {
+                console.error('Error handling signal:', signal.type, e);
             }
         },
 
