@@ -98,10 +98,27 @@ class PackingController extends Controller
             return response()->json(['success' => false, 'message' => 'این سفارش در مرحله آماده‌سازی نیست.']);
         }
 
-        // Check if barcode matches order barcode or order number
+        // Check if barcode matches order barcode, order number, or tracking codes
         $barcode = trim($request->input('barcode'));
-        if ($order->barcode !== $barcode && $order->order_number !== $barcode) {
-            return response()->json(['success' => false, 'message' => 'بارکد با این سفارش مطابقت ندارد.']);
+        $barcodeUpper = strtoupper($barcode);
+        $matched = (
+            strtoupper($order->barcode ?? '') === $barcodeUpper
+            || strtoupper($order->order_number ?? '') === $barcodeUpper
+            || strtoupper($order->amadest_barcode ?? '') === $barcodeUpper
+            || strtoupper($order->tracking_code ?? '') === $barcodeUpper
+        );
+
+        // فالبک: مقایسه عددی (بارکدخوان ممکنه prefix/suffix اضافه کنه)
+        if (!$matched) {
+            $numericBarcode = preg_replace('/\D/', '', $barcode);
+            $numericOrder = preg_replace('/\D/', '', $order->barcode ?? '');
+            if ($numericBarcode && $numericOrder && str_contains($numericBarcode, $numericOrder)) {
+                $matched = true;
+            }
+        }
+
+        if (!$matched) {
+            return response()->json(['success' => false, 'message' => 'بارکد با این سفارش مطابقت ندارد. اسکن شده: ' . $barcode]);
         }
 
         return response()->json([

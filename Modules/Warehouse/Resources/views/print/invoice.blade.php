@@ -301,17 +301,19 @@
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", {
             format: "CODE128",
-            width: 1.5,
-            height: 40,
+            width: 2.5,
+            height: 50,
             displayValue: false,
+            margin: 5,
         });
 
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
-            width: 1.5,
-            height: 40,
+            width: 2.5,
+            height: 50,
             displayValue: false,
+            margin: 5,
         });
         @endif
 
