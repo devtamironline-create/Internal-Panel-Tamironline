@@ -174,8 +174,19 @@ function callNotification() {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' }
-                    ]
+                        { urls: 'stun:stun.relay.metered.ca:80' },
+                        {
+                            urls: [
+                                'turn:global.relay.metered.ca:80',
+                                'turn:global.relay.metered.ca:80?transport=tcp',
+                                'turn:global.relay.metered.ca:443',
+                                'turn:global.relay.metered.ca:443?transport=tcp'
+                            ],
+                            username: 'e8c3e705a8d5137831f47e84',
+                            credential: 'oWHXs9rATWVVhEOw'
+                        }
+                    ],
+                    iceCandidatePoolSize: 2
                 });
                 this.localStream.getTracks().forEach(track => {
                     this.peerConnection.addTrack(track, this.localStream);

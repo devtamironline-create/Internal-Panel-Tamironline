@@ -749,6 +749,7 @@
             <div class="min-w-0">
                 <h3 class="font-bold truncate" x-text="outgoingCall?.remote_name"></h3>
                 <p class="text-sm opacity-70" x-text="callStatus === 'connecting' ? 'در حال اتصال...' : (callStatus === 'ringing' ? 'در حال زنگ خوردن...' : 'در انتظار پاسخ...')"></p>
+                <p x-show="callDebug" class="text-xs opacity-50 mt-1 font-mono" x-text="callDebug"></p>
             </div>
         </div>
         <div class="flex justify-end">
@@ -1196,7 +1197,7 @@ function messenger() {
         incomingCall: null,
         activeCall: null,
         outgoingCall: null,
-        callStatus: null,       // 'waiting' | 'ringing' | 'connected'
+        callStatus: null,       // 'waiting' | 'ringing' | 'connecting' | 'connected'
         callDuration: '00:00',
         callTimer: null,
         callSignalTimer: null,
@@ -1206,6 +1207,7 @@ function messenger() {
         localStream: null,
         lastSignalSeq: -1,
         pendingIceCandidates: [],
+        callDebug: '',          // Debug info shown on call card
 
         // Media upload state
         showMediaPreview: false,
@@ -2259,6 +2261,7 @@ function messenger() {
             this.isMuted = false;
             this.lastSignalSeq = -1;
             this.pendingIceCandidates = [];
+            this.callDebug = '';
         },
 
         startCallTimer() {
@@ -2332,9 +2335,22 @@ function messenger() {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
-                ]
+                    { urls: 'stun:stun.relay.metered.ca:80' },
+                    {
+                        urls: [
+                            'turn:global.relay.metered.ca:80',
+                            'turn:global.relay.metered.ca:80?transport=tcp',
+                            'turn:global.relay.metered.ca:443',
+                            'turn:global.relay.metered.ca:443?transport=tcp'
+                        ],
+                        username: 'e8c3e705a8d5137831f47e84',
+                        credential: 'oWHXs9rATWVVhEOw'
+                    }
+                ],
+                iceCandidatePoolSize: 2
             });
+
+            let iceCount = 0;
 
             // Add local audio tracks
             if (this.localStream) {
@@ -2348,27 +2364,33 @@ function messenger() {
                 console.log('[CALL] Remote track received!', event.streams.length, 'streams');
                 this.$refs.remoteAudio.srcObject = event.streams[0];
                 this.$refs.remoteAudio.play().catch(e => console.log('[CALL] Remote audio play error:', e));
+                this.callDebug = 'track OK';
             };
 
             // Send ICE candidates to other party
             this.peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    console.log('[CALL] ICE candidate generated, sending...');
+                    iceCount++;
+                    console.log('[CALL] ICE #' + iceCount + ':', event.candidate.type, event.candidate.protocol);
                     this.sendSignal('ice-candidate', event.candidate);
                 } else {
-                    console.log('[CALL] ICE gathering complete');
+                    console.log('[CALL] ICE gathering complete, total:', iceCount);
+                    this.callDebug = 'ICE:' + iceCount;
                 }
             };
 
             // Monitor ICE connection state
             this.peerConnection.oniceconnectionstatechange = () => {
-                console.log('[CALL] ICE state:', this.peerConnection?.iceConnectionState);
+                const s = this.peerConnection?.iceConnectionState;
+                console.log('[CALL] ICE state:', s);
+                this.callDebug = 'ICE:' + iceCount + ' ' + s;
             };
 
             // Monitor connection state
             this.peerConnection.onconnectionstatechange = () => {
                 const state = this.peerConnection?.connectionState;
                 console.log('[CALL] Connection state:', state);
+                this.callDebug = 'ICE:' + iceCount + ' ' + state;
                 if (state === 'connected') {
                     console.log('[CALL] === CONNECTED! Audio should flow now ===');
                     if (this.outgoingCall) {
@@ -2439,6 +2461,7 @@ function messenger() {
             console.log('[CALL] Handling signal:', signal.type, 'seq:', signal.seq);
             try {
                 if (signal.type === 'offer') {
+                    this.callDebug = 'got offer';
                     console.log('[CALL] Setting remote description (offer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
                     console.log('[CALL] Remote description set. Flushing', this.pendingIceCandidates.length, 'buffered ICE candidates');
@@ -2450,8 +2473,10 @@ function messenger() {
                     await this.peerConnection.setLocalDescription(answer);
                     console.log('[CALL] Answer created, sending...');
                     await this.sendSignal('answer', answer);
+                    this.callDebug = 'answer sent';
                     console.log('[CALL] Answer sent!');
                 } else if (signal.type === 'answer') {
+                    this.callDebug = 'got answer';
                     console.log('[CALL] Setting remote description (answer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
                     console.log('[CALL] Remote description set (answer). Flushing', this.pendingIceCandidates.length, 'ICE');
@@ -2459,6 +2484,7 @@ function messenger() {
                         try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
                     }
                     this.pendingIceCandidates = [];
+                    this.callDebug = 'answer set, waiting ICE...';
                 } else if (signal.type === 'ice-candidate') {
                     if (this.peerConnection.remoteDescription) {
                         await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
@@ -2469,6 +2495,7 @@ function messenger() {
                 }
             } catch (e) {
                 console.error('[CALL] Signal ERROR:', signal.type, e.message);
+                this.callDebug = 'ERR: ' + signal.type + ' ' + e.message;
             }
         },
 
