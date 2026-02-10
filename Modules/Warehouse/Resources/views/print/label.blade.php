@@ -40,7 +40,7 @@
         </div>
         <div class="label-row">
             <span>وزن:</span>
-            <strong>{{ number_format($order->actual_weight ?? $order->total_weight) }} گرم</strong>
+            <strong>{{ number_format($order->actual_weight ?? $order->total_weight) }}g</strong>
         </div>
         @if($order->tracking_code)
         <div class="label-row">
