@@ -26,29 +26,35 @@ class WarehouseController extends Controller
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
-        $query = WarehouseOrder::with(['creator', 'assignee', 'items'])
-            ->byStatus($currentStatus)
-            ->search($search);
+        $query = WarehouseOrder::with(['creator', 'assignee', 'items']);
 
-        // For pending status, order by timer deadline (urgent first)
-        if ($currentStatus === WarehouseOrder::STATUS_PENDING) {
-            $query->orderByRaw('timer_deadline IS NULL, timer_deadline ASC');
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
-
-        // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
-        $noPaginationStatuses = [
-            WarehouseOrder::STATUS_PENDING,
-            WarehouseOrder::STATUS_SUPPLY_WAIT,
-            WarehouseOrder::STATUS_PREPARING,
-            WarehouseOrder::STATUS_PACKED,
-        ];
-
-        if (in_array($currentStatus, $noPaginationStatuses)) {
+        // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
+        if (!empty($search)) {
+            $query->search($search)->orderBy('created_at', 'desc');
             $orders = $query->get();
         } else {
-            $orders = $query->paginate(20)->appends($request->query());
+            $query->byStatus($currentStatus);
+
+            // For pending status, order by timer deadline (urgent first)
+            if ($currentStatus === WarehouseOrder::STATUS_PENDING) {
+                $query->orderByRaw('timer_deadline IS NULL, timer_deadline ASC');
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+
+            // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
+            $noPaginationStatuses = [
+                WarehouseOrder::STATUS_PENDING,
+                WarehouseOrder::STATUS_SUPPLY_WAIT,
+                WarehouseOrder::STATUS_PREPARING,
+                WarehouseOrder::STATUS_PACKED,
+            ];
+
+            if (in_array($currentStatus, $noPaginationStatuses)) {
+                $orders = $query->get();
+            } else {
+                $orders = $query->paginate(20)->appends($request->query());
+            }
         }
 
         $shippingTypes = WarehouseShippingType::getActiveTypes();
