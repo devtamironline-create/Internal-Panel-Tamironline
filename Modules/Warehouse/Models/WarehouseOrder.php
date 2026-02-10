@@ -160,12 +160,13 @@ class WarehouseOrder extends Model
     public function getTotalWeightWithBoxGramsAttribute(): int
     {
         $itemsWeight = $this->total_weight_grams;
-        $boxWeight = $this->boxSize ? $this->boxSize->weight : 0;
+        $box = $this->boxSize ?? $this->recommended_box;
+        $boxWeight = $box ? $box->weight : 0;
         return $itemsWeight + $boxWeight;
     }
 
     /**
-     * پیشنهاد کارتن مناسب بر اساس ابعاد آیتم‌ها
+     * پیشنهاد کارتن مناسب بر اساس ابعاد آیتم‌ها (یا وزن به عنوان فالبک)
      */
     public function getRecommendedBoxAttribute(): ?WarehouseBoxSize
     {
@@ -178,7 +179,7 @@ class WarehouseOrder extends Model
             'quantity' => $item->quantity,
         ])->toArray();
 
-        return WarehouseBoxSize::recommend($items);
+        return WarehouseBoxSize::recommend($items, $this->total_weight_grams);
     }
 
     public function getWeightDifferencePercentAttribute(): ?float

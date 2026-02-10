@@ -72,9 +72,10 @@ class WarehouseBoxSize extends Model
      * پیشنهاد کارتن مناسب برای مجموعه آیتم‌ها
      *
      * @param array $items  آرایه‌ای از ['length', 'width', 'height', 'quantity']
+     * @param int $totalWeightGrams  وزن کل آیتم‌ها (برای فالبک وقتی ابعاد نداریم)
      * @return self|null
      */
-    public static function recommend(array $items): ?self
+    public static function recommend(array $items, int $totalWeightGrams = 0): ?self
     {
         $boxes = self::where('is_active', true)
             ->orderBy('sort_order')
@@ -104,6 +105,20 @@ class WarehouseBoxSize extends Model
             $maxDims[2] = max($maxDims[2], $dims[2]);
         }
 
+        // فالبک: اگه ابعاد نداریم، بر اساس وزن تخمین حجم بزنیم
+        // فرض: چگالی متوسط محصولات بسته‌بندی شده ~0.5g/cm³
+        if ($totalVolume <= 0 && $totalWeightGrams > 0) {
+            $totalVolume = $totalWeightGrams * 2; // تخمین حجم از روی وزن
+
+            // پیدا کردن کوچک‌ترین کارتنی که حجمش کافی باشه
+            foreach ($boxes as $box) {
+                if ($box->volume >= $totalVolume * 0.9) {
+                    return $box;
+                }
+            }
+            return $boxes->last();
+        }
+
         if ($totalVolume <= 0) return null;
 
         // پیدا کردن کوچک‌ترین کارتنی که جا بشه
@@ -115,7 +130,7 @@ class WarehouseBoxSize extends Model
                 continue;
             }
 
-            // ۲) حجم کل آیتم‌ها باید در کارتن جا بشه (با ضریب ۱.۱ برای فضای خالی)
+            // ۲) حجم کل آیتم‌ها باید در کارتن جا بشه
             if ($box->volume >= $totalVolume * 0.9) {
                 return $box;
             }

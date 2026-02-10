@@ -168,6 +168,8 @@ class PrintController extends Controller
             abort(403);
         }
 
+        $order->load(['items', 'boxSize']);
+
         return view('warehouse::print.label', compact('order'));
     }
 }
