@@ -9,11 +9,15 @@ class WarehouseProduct extends Model
 {
     protected $fillable = [
         'wc_product_id', 'name', 'sku', 'weight',
+        'length', 'width', 'height',
         'price', 'type', 'parent_id', 'status',
     ];
 
     protected $casts = [
         'weight' => 'float',
+        'length' => 'float',
+        'width' => 'float',
+        'height' => 'float',
         'price' => 'decimal:0',
         'wc_product_id' => 'integer',
         'parent_id' => 'integer',
@@ -51,6 +55,19 @@ class WarehouseProduct extends Model
 
         return self::whereIn('wc_product_id', $allIds)
             ->pluck('weight', 'wc_product_id')
+            ->toArray();
+    }
+
+    /**
+     * دریافت ابعاد محصولات به صورت دسته‌ای
+     */
+    public static function getDimensionsMap(array $productIds, array $variationIds = []): array
+    {
+        $allIds = array_unique(array_merge($productIds, $variationIds));
+
+        return self::whereIn('wc_product_id', $allIds)
+            ->get(['wc_product_id', 'length', 'width', 'height'])
+            ->keyBy('wc_product_id')
             ->toArray();
     }
 }

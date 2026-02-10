@@ -19,7 +19,7 @@ class PrintController extends Controller
             abort(403);
         }
 
-        $order->load('items');
+        $order->load(['items', 'boxSize']);
 
         // اگر آیتم‌ها وزن ندارن، از جدول محصولات بگیر و آپدیت کن
         $needsWeightUpdate = $order->items->contains(fn($item) => $item->weight == 0 && $item->wc_product_id);
@@ -69,7 +69,7 @@ class PrintController extends Controller
                         'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
                         'recipient_postal_code' => $postcode ?: null,
                         'recipient_city_id' => $cityId,
-                        'weight' => ($order->actual_weight ?? $order->total_weight) ?: 500,
+                        'weight' => $order->total_weight_with_box_grams ?: 500,
                         'value' => (int)($wcData['total'] ?? 100000),
                     ]);
 

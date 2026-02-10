@@ -16,7 +16,7 @@ class WarehouseOrder extends Model
         'order_number', 'customer_name', 'customer_mobile', 'description',
         'status', 'shipping_type', 'assigned_to', 'created_by',
         'wc_order_id', 'wc_order_data', 'barcode',
-        'total_weight', 'actual_weight', 'weight_verified',
+        'total_weight', 'actual_weight', 'weight_verified', 'box_size_id',
         'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
         'status_changed_at', 'shipped_at', 'delivered_at',
         'notes', 'tracking_code', 'amadest_barcode', 'post_tracking_code', 'driver_name', 'driver_phone',
@@ -154,6 +154,33 @@ class WarehouseOrder extends Model
         return self::toGrams($this->actual_weight);
     }
 
+    /**
+     * وزن کل شامل وزن کارتن
+     */
+    public function getTotalWeightWithBoxGramsAttribute(): int
+    {
+        $itemsWeight = $this->total_weight_grams;
+        $boxWeight = $this->boxSize ? $this->boxSize->weight : 0;
+        return $itemsWeight + $boxWeight;
+    }
+
+    /**
+     * پیشنهاد کارتن مناسب بر اساس ابعاد آیتم‌ها
+     */
+    public function getRecommendedBoxAttribute(): ?WarehouseBoxSize
+    {
+        if (!$this->relationLoaded('items')) return null;
+
+        $items = $this->items->map(fn($item) => [
+            'length' => $item->length,
+            'width' => $item->width,
+            'height' => $item->height,
+            'quantity' => $item->quantity,
+        ])->toArray();
+
+        return WarehouseBoxSize::recommend($items);
+    }
+
     public function getWeightDifferencePercentAttribute(): ?float
     {
         if (!$this->total_weight || $this->total_weight == 0 || !$this->actual_weight) return null;
@@ -174,6 +201,11 @@ class WarehouseOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(WarehouseOrderItem::class);
+    }
+
+    public function boxSize(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseBoxSize::class, 'box_size_id');
     }
 
     public function shippingTypeRelation(): BelongsTo

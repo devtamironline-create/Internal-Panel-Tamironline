@@ -152,6 +152,120 @@
         </div>
     </div>
 
+    <!-- Box Sizes Management -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">سایز کارتن‌ها</h2>
+                <p class="text-sm text-gray-500 mt-1">تعریف سایزهای مختلف کارتن برای بسته‌بندی سفارشات. سیستم بر اساس ابعاد محصولات، کارتن مناسب را پیشنهاد می‌دهد.</p>
+            </div>
+        </div>
+
+        <!-- Box Sizes Table -->
+        <div class="border rounded-lg overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">سایز</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">ابعاد (cm)</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">حجم (cm³)</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">وزن (g)</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">وضعیت</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @foreach($boxSizes as $box)
+                    <tr x-data="{ editing: false }">
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 font-bold text-gray-900">{{ $box->name }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600" dir="ltr">{{ $box->dimensions_label }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600" dir="ltr">{{ number_format($box->volume) }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600">{{ $box->weight_label }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 rounded text-xs {{ $box->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ $box->is_active ? 'فعال' : 'غیرفعال' }}
+                                </span>
+                            </td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <button @click="editing = true" class="text-sm text-blue-600 hover:text-blue-800">ویرایش</button>
+                                    <form action="{{ route('warehouse.settings.box-size.delete', $box) }}" method="POST" class="inline" onsubmit="return confirm('حذف سایز {{ $box->name }}؟')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm text-red-600 hover:text-red-800">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </template>
+
+                        <!-- Edit Mode -->
+                        <template x-if="editing">
+                            <td colspan="6" class="px-4 py-3">
+                                <form onsubmit="return updateBoxSize(event, {{ $box->id }})" class="flex items-center gap-2 flex-wrap">
+                                    <input type="text" name="name" value="{{ $box->name }}" class="w-16 px-2 py-1.5 border rounded text-sm text-center" placeholder="سایز">
+                                    <input type="number" name="length" value="{{ $box->length }}" step="0.1" class="w-16 px-2 py-1.5 border rounded text-sm" dir="ltr" placeholder="طول">
+                                    <span class="text-gray-400">×</span>
+                                    <input type="number" name="width" value="{{ $box->width }}" step="0.1" class="w-16 px-2 py-1.5 border rounded text-sm" dir="ltr" placeholder="عرض">
+                                    <span class="text-gray-400">×</span>
+                                    <input type="number" name="height" value="{{ $box->height }}" step="0.1" class="w-16 px-2 py-1.5 border rounded text-sm" dir="ltr" placeholder="ارتفاع">
+                                    <span class="text-xs text-gray-400">cm</span>
+                                    <input type="number" name="weight" value="{{ $box->weight }}" class="w-20 px-2 py-1.5 border rounded text-sm" dir="ltr" placeholder="وزن">
+                                    <span class="text-xs text-gray-400">g</span>
+                                    <label class="flex items-center gap-1 text-sm">
+                                        <input type="checkbox" name="is_active" {{ $box->is_active ? 'checked' : '' }}> فعال
+                                    </label>
+                                    <button type="submit" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm">ذخیره</button>
+                                    <button type="button" @click="editing = false" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm">لغو</button>
+                                </form>
+                            </td>
+                        </template>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add New Box Size -->
+        <div class="pt-4 border-t">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">افزودن سایز جدید</h3>
+            <form action="{{ route('warehouse.settings.box-size.store') }}" method="POST" class="flex items-end gap-2 flex-wrap">
+                @csrf
+                <div>
+                    <label class="block text-xs text-gray-500">سایز</label>
+                    <input type="text" name="name" required class="w-20 px-3 py-2 border rounded-lg text-sm text-center" placeholder="10">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">طول (cm)</label>
+                    <input type="number" name="length" required step="0.1" dir="ltr" class="w-20 px-3 py-2 border rounded-lg text-sm" placeholder="30">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">عرض (cm)</label>
+                    <input type="number" name="width" required step="0.1" dir="ltr" class="w-20 px-3 py-2 border rounded-lg text-sm" placeholder="20">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">ارتفاع (cm)</label>
+                    <input type="number" name="height" required step="0.1" dir="ltr" class="w-20 px-3 py-2 border rounded-lg text-sm" placeholder="15">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">وزن (g)</label>
+                    <input type="number" name="weight" required dir="ltr" class="w-20 px-3 py-2 border rounded-lg text-sm" placeholder="200">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">افزودن</button>
+            </form>
+        </div>
+    </div>
+
     <!-- WooCommerce Shipping Method Mapping -->
     <div class="bg-white rounded-xl shadow-sm p-6" x-data="wcShippingMapping()">
         <div class="flex items-center justify-between mb-4">
@@ -238,6 +352,26 @@ function updateShipping(e, id) {
         body: JSON.stringify({
             name: form.name.value,
             timer_minutes: parseInt(form.timer_minutes.value),
+            is_active: form.is_active.checked,
+        }),
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) location.reload(); else alert(d.message); });
+    return false;
+}
+
+function updateBoxSize(e, id) {
+    e.preventDefault();
+    const form = e.target;
+    fetch('/warehouse/settings/box-size/' + id, {
+        method: 'PUT',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+            name: form.name.value,
+            length: parseFloat(form.length.value),
+            width: parseFloat(form.width.value),
+            height: parseFloat(form.height.value),
+            weight: parseInt(form.weight.value),
             is_active: form.is_active.checked,
         }),
     })

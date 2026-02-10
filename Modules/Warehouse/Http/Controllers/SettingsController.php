@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Modules\Warehouse\Models\WarehouseBoxSize;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -30,7 +31,9 @@ class SettingsController extends Controller
             'invoice_sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
         ];
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings'));
+        $boxSizes = WarehouseBoxSize::orderBy('sort_order')->get();
+
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings', 'boxSizes'));
     }
 
     public function update(Request $request)
@@ -124,5 +127,66 @@ class SettingsController extends Controller
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'نوع ارسال جدید اضافه شد.');
+    }
+
+    public function storeBoxSize(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:50',
+            'length' => 'required|numeric|min:0.1',
+            'width' => 'required|numeric|min:0.1',
+            'height' => 'required|numeric|min:0.1',
+            'weight' => 'required|integer|min:1',
+        ]);
+
+        $maxSort = WarehouseBoxSize::max('sort_order') ?? 0;
+
+        WarehouseBoxSize::create([
+            'name' => $request->name,
+            'length' => $request->length,
+            'width' => $request->width,
+            'height' => $request->height,
+            'weight' => $request->weight,
+            'sort_order' => $maxSort + 1,
+        ]);
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'سایز کارتن جدید اضافه شد.');
+    }
+
+    public function updateBoxSize(Request $request, WarehouseBoxSize $boxSize)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:50',
+            'length' => 'required|numeric|min:0.1',
+            'width' => 'required|numeric|min:0.1',
+            'height' => 'required|numeric|min:0.1',
+            'weight' => 'required|integer|min:1',
+            'is_active' => 'boolean',
+        ]);
+
+        $boxSize->update($request->only('name', 'length', 'width', 'height', 'weight', 'is_active'));
+
+        return response()->json(['success' => true, 'message' => 'سایز کارتن ویرایش شد.']);
+    }
+
+    public function deleteBoxSize(WarehouseBoxSize $boxSize)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $boxSize->delete();
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'سایز کارتن حذف شد.');
     }
 }

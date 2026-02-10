@@ -38,10 +38,21 @@
             <span>شماره سفارش:</span>
             <strong>{{ $order->order_number }}</strong>
         </div>
+        @php
+            $labelBox = $order->boxSize ?? $order->recommended_box;
+            $labelBoxWeight = $labelBox ? $labelBox->weight : 0;
+            $labelWeight = ($order->actual_weight_grams ?: $order->total_weight_grams) + $labelBoxWeight;
+        @endphp
         <div class="label-row">
             <span>وزن:</span>
-            <strong>{{ number_format($order->actual_weight_grams ?: $order->total_weight_grams) }}g</strong>
+            <strong>{{ number_format($labelWeight) }}g</strong>
         </div>
+        @if($labelBox)
+        <div class="label-row">
+            <span>کارتن:</span>
+            <strong>سایز {{ $labelBox->name }}</strong>
+        </div>
+        @endif
         @if($order->tracking_code)
         <div class="label-row">
             <span>کد رهگیری:</span>

@@ -180,6 +180,28 @@
                     </dd>
                 </div>
                 @endif
+                @php
+                    $selectedBox = $order->boxSize;
+                    $recommendedBox = $order->recommended_box;
+                    $displayBox = $selectedBox ?? $recommendedBox;
+                @endphp
+                @if($displayBox)
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">کارتن {{ $selectedBox ? '' : '(پیشنهادی)' }}</dt>
+                    <dd class="text-sm font-medium text-gray-900">
+                        <span class="inline-flex items-center gap-2 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg">
+                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                            سایز {{ $displayBox->name }} — {{ $displayBox->dimensions_label }}cm — {{ $displayBox->weight_label }}
+                        </span>
+                    </dd>
+                </div>
+                @if($displayBox && $order->total_weight_grams)
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">وزن کل + کارتن</dt>
+                    <dd class="text-sm font-bold text-gray-900">{{ number_format($order->total_weight_grams + $displayBox->weight) }}g</dd>
+                </div>
+                @endif
+                @endif
                 @if($order->driver_name)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">نام پیک</dt>
@@ -224,6 +246,7 @@
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">بارکد</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">تعداد</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">وزن</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">ابعاد (cm)</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">قیمت</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">اسکن</th>
                     </tr>
@@ -237,6 +260,7 @@
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_barcode ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-900 font-medium">{{ $item->quantity }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? number_format($item->weight_grams) . 'g' : '—' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ ($item->length && $item->width && $item->height) ? "{$item->length}×{$item->width}×{$item->height}" : '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600">{{ $item->price ? number_format($item->price) . ' تومان' : '—' }}</td>
                         <td class="px-6 py-3">
                             @if($item->scanned)

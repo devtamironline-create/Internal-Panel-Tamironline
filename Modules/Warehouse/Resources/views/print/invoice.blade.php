@@ -154,7 +154,14 @@
                     <tr><td class="info-label">شماره سفارش:</td><td class="info-val">{{ $order->order_number }}</td></tr>
                     <tr><td class="info-label">تاریخ:</td><td class="info-val">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</td></tr>
                     <tr><td class="info-label">نوع ارسال:</td><td class="info-val">@switch($order->shipping_type)@case('courier') پیک @break @case('urgent') فوری @break @case('emergency') اضطراری @break @default پست @endswitch</td></tr>
-                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($order->total_weight_grams) }}g</td></tr>
+                    @php
+                        $invoiceBox = $order->boxSize ?? $order->recommended_box;
+                        $boxWeight = $invoiceBox ? $invoiceBox->weight : 0;
+                    @endphp
+                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($order->total_weight_grams + $boxWeight) }}g</td></tr>
+                    @if($invoiceBox)
+                    <tr><td class="info-label">کارتن:</td><td class="info-val">سایز {{ $invoiceBox->name }} ({{ $invoiceBox->weight_label }})</td></tr>
+                    @endif
                 </table>
             </div>
         </div>

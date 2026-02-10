@@ -91,7 +91,7 @@ class WarehouseController extends Controller
             abort(403);
         }
 
-        $order->load(['creator', 'assignee', 'items']);
+        $order->load(['creator', 'assignee', 'items', 'boxSize']);
 
         return view('warehouse::warehouse.show', compact('order'));
     }

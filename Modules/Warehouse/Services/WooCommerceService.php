@@ -353,8 +353,24 @@ class WooCommerceService
 
     protected function createOrderItems(WarehouseOrder $order, array $lineItems, array $weightsMap = []): void
     {
+        // دریافت ابعاد محصولات
+        $productIds = collect($lineItems)->pluck('product_id')->filter()->unique()->toArray();
+        $variationIds = collect($lineItems)->filter(fn($i) => !empty($i['variation_id']) && $i['variation_id'] > 0)
+            ->pluck('variation_id')->unique()->toArray();
+        $dimensionsMap = WarehouseProduct::getDimensionsMap($productIds, $variationIds);
+
         foreach ($lineItems as $item) {
             $weight = !empty($weightsMap) ? $this->getItemWeight($item, $weightsMap) : 0;
+
+            // ابعاد: اول variation بعد محصول اصلی
+            $dims = ['length' => 0, 'width' => 0, 'height' => 0];
+            $varId = $item['variation_id'] ?? 0;
+            $prodId = $item['product_id'] ?? 0;
+            if ($varId > 0 && isset($dimensionsMap[$varId]) && ($dimensionsMap[$varId]['length'] ?? 0) > 0) {
+                $dims = $dimensionsMap[$varId];
+            } elseif ($prodId > 0 && isset($dimensionsMap[$prodId])) {
+                $dims = $dimensionsMap[$prodId];
+            }
 
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
@@ -363,6 +379,9 @@ class WooCommerceService
                 'product_barcode' => $item['sku'] ?? null,
                 'quantity' => (int)($item['quantity'] ?? 1),
                 'weight' => $weight,
+                'length' => (float)($dims['length'] ?? 0),
+                'width' => (float)($dims['width'] ?? 0),
+                'height' => (float)($dims['height'] ?? 0),
                 'price' => (float)($item['total'] ?? 0),
                 'wc_product_id' => $item['product_id'] ?? null,
             ]);
@@ -410,6 +429,7 @@ class WooCommerceService
                 foreach ($products as $product) {
                     // وزن به گرم (ووکامرس به گرم ارسال میکنه)
                     $weightGrams = (int) round((float)($product['weight'] ?? 0));
+                    $dims = $product['dimensions'] ?? [];
 
                     $result = WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $product['id']],
@@ -417,6 +437,9 @@ class WooCommerceService
                             'name' => $product['name'] ?? '',
                             'sku' => $product['sku'] ?? null,
                             'weight' => $weightGrams,
+                            'length' => (float)($dims['length'] ?? 0),
+                            'width' => (float)($dims['width'] ?? 0),
+                            'height' => (float)($dims['height'] ?? 0),
                             'price' => (float)($product['price'] ?? 0),
                             'type' => $product['type'] ?? 'simple',
                             'parent_id' => null,
@@ -495,6 +518,7 @@ class WooCommerceService
                 foreach ($variations as $variation) {
                     // وزن به گرم
                     $weightGrams = (int) round((float)($variation['weight'] ?? 0));
+                    $dims = $variation['dimensions'] ?? [];
 
                     WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $variation['id']],
@@ -502,6 +526,9 @@ class WooCommerceService
                             'name' => $variation['name'] ?? ('تنوع #' . $variation['id']),
                             'sku' => $variation['sku'] ?? null,
                             'weight' => $weightGrams,
+                            'length' => (float)($dims['length'] ?? 0),
+                            'width' => (float)($dims['width'] ?? 0),
+                            'height' => (float)($dims['height'] ?? 0),
                             'price' => (float)($variation['price'] ?? 0),
                             'type' => 'variation',
                             'parent_id' => $productId,

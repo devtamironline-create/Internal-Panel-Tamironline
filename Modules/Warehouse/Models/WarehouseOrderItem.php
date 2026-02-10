@@ -9,13 +9,16 @@ class WarehouseOrderItem extends Model
 {
     protected $fillable = [
         'warehouse_order_id', 'product_name', 'product_sku',
-        'product_barcode', 'quantity', 'weight', 'price',
-        'wc_product_id', 'scanned', 'scanned_at',
+        'product_barcode', 'quantity', 'weight', 'length', 'width', 'height',
+        'price', 'wc_product_id', 'scanned', 'scanned_at',
         'is_unavailable', 'available_at',
     ];
 
     protected $casts = [
         'weight' => 'float',
+        'length' => 'float',
+        'width' => 'float',
+        'height' => 'float',
         'price' => 'decimal:0',
         'scanned' => 'boolean',
         'scanned_at' => 'datetime',

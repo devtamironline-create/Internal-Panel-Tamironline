@@ -73,6 +73,10 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::get('/delete-invoice-logo', [SettingsController::class, 'deleteInvoiceLogo'])->name('warehouse.settings.delete-invoice-logo');
         Route::post('/shipping-type', [SettingsController::class, 'storeShippingType'])->name('warehouse.settings.shipping-type.store');
         Route::put('/shipping-type/{shippingType}', [SettingsController::class, 'updateShippingType'])->name('warehouse.settings.shipping-type.update');
+        // Box Sizes
+        Route::post('/box-size', [SettingsController::class, 'storeBoxSize'])->name('warehouse.settings.box-size.store');
+        Route::put('/box-size/{boxSize}', [SettingsController::class, 'updateBoxSize'])->name('warehouse.settings.box-size.update');
+        Route::delete('/box-size/{boxSize}', [SettingsController::class, 'deleteBoxSize'])->name('warehouse.settings.box-size.delete');
     });
 
     // WooCommerce Integration
