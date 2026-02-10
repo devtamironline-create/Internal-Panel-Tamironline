@@ -25,8 +25,8 @@ class WarehouseOrder extends Model
     protected $casts = [
         'wc_order_data' => 'array',
         'weight_verified' => 'boolean',
-        'total_weight' => 'integer',
-        'actual_weight' => 'integer',
+        'total_weight' => 'float',
+        'actual_weight' => 'float',
         'timer_deadline' => 'datetime',
         'supply_deadline' => 'datetime',
         'printed_at' => 'datetime',
@@ -129,6 +129,25 @@ class WarehouseOrder extends Model
         if (!$this->timer_deadline) return 0;
         $remaining = now()->diffInSeconds($this->timer_deadline, false);
         return max(0, (int) $remaining);
+    }
+
+    /**
+     * تبدیل وزن به گرم - اگه کمتر از 100 باشه یعنی kg هست
+     */
+    public static function toGrams($weight): int
+    {
+        if (!$weight || $weight == 0) return 0;
+        return (int) round($weight < 100 ? $weight * 1000 : $weight);
+    }
+
+    public function getTotalWeightGramsAttribute(): int
+    {
+        return self::toGrams($this->total_weight);
+    }
+
+    public function getActualWeightGramsAttribute(): int
+    {
+        return self::toGrams($this->actual_weight);
     }
 
     public function getWeightDifferencePercentAttribute(): ?float

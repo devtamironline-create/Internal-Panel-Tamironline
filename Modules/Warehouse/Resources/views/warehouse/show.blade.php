@@ -153,13 +153,13 @@
                 @if($order->total_weight)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">وزن کل (سیستمی)</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ number_format($order->total_weight) }}g</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ number_format($order->total_weight_grams) }}g</dd>
                 </div>
                 @endif
                 @if($order->actual_weight)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">وزن واقعی</dt>
-                    <dd class="text-sm font-medium {{ $order->weight_verified ? 'text-green-600' : 'text-red-600' }}">{{ number_format($order->actual_weight) }}g</dd>
+                    <dd class="text-sm font-medium {{ $order->weight_verified ? 'text-green-600' : 'text-red-600' }}">{{ number_format($order->actual_weight_grams) }}g</dd>
                 </div>
                 @endif
                 @if($order->weight_verified !== null)
@@ -236,7 +236,7 @@
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_sku ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_barcode ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-900 font-medium">{{ $item->quantity }}</td>
-                        <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? number_format($item->weight) . 'g' : '—' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? number_format($item->weight_grams) . 'g' : '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600">{{ $item->price ? number_format($item->price) . ' تومان' : '—' }}</td>
                         <td class="px-6 py-3">
                             @if($item->scanned)
@@ -357,7 +357,7 @@
                     </button>
                 </div>
                 @if($order->total_weight)
-                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ number_format($order->total_weight) }}g</p>
+                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ number_format($order->total_weight_grams) }}g</p>
                 @endif
 
                 <!-- Weight Result -->

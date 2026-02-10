@@ -13,7 +13,7 @@ class WarehouseProduct extends Model
     ];
 
     protected $casts = [
-        'weight' => 'integer',
+        'weight' => 'float',
         'price' => 'decimal:0',
         'wc_product_id' => 'integer',
         'parent_id' => 'integer',

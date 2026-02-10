@@ -133,7 +133,7 @@
                                 <span class="px-2 py-1 rounded-full text-xs font-medium {{ $order->shipping_type === 'courier' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
                                     {{ $order->shipping_type === 'courier' ? 'پیک' : 'پست' }}
                                 </span>
-                                <span class="text-sm text-gray-500">{{ number_format($order->actual_weight ?? $order->total_weight) }}g</span>
+                                <span class="text-sm text-gray-500">{{ number_format($order->actual_weight_grams ?: $order->total_weight_grams) }}g</span>
                             </div>
 
                             <div class="flex items-center gap-2">

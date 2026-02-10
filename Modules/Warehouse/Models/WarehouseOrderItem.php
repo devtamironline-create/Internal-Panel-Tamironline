@@ -15,7 +15,7 @@ class WarehouseOrderItem extends Model
     ];
 
     protected $casts = [
-        'weight' => 'integer',
+        'weight' => 'float',
         'price' => 'decimal:0',
         'scanned' => 'boolean',
         'scanned_at' => 'datetime',
@@ -26,6 +26,11 @@ class WarehouseOrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(WarehouseOrder::class, 'warehouse_order_id');
+    }
+
+    public function getWeightGramsAttribute(): int
+    {
+        return \Modules\Warehouse\Models\WarehouseOrder::toGrams($this->weight);
     }
 
     public function getTotalWeightAttribute(): float
