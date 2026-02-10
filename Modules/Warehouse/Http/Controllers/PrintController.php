@@ -35,14 +35,16 @@ class PrintController extends Controller
                     }
                 }
             }
-
-            // آپدیت وزن کل سفارش
             $order->refresh();
-            $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
-            if ($totalWeight > 0) {
-                $order->update(['total_weight' => round($totalWeight)]);
-                $order->refresh();
-            }
+            $order->load('items');
+        }
+
+        // همیشه وزن کل رو از روی آیتم‌ها محاسبه و آپدیت کن
+        $totalWeightGrams = $order->items->sum(fn($i) => WarehouseOrder::toGrams($i->weight) * $i->quantity);
+        if ($totalWeightGrams > 0) {
+            $order->update(['total_weight' => $totalWeightGrams]);
+            $order->refresh();
+            $order->load('items');
         }
 
         // ثبت خودکار در آمادست برای سفارشات پستی (اگه بارکد آمادست نداره)
