@@ -49,10 +49,8 @@ class AmadestController extends Controller
         if (isset($validated['client_code'])) {
             WarehouseSetting::set('amadest_client_code', $validated['client_code']);
         }
-        // اگه store_id=0 ارسال شد → حالت عادی (بدون فروشگاه)
-        if (isset($validated['store_id']) && $validated['store_id'] === '0') {
-            WarehouseSetting::set('amadest_store_id', '0');
-        }
+        // همیشه حالت عادی (بدون فروشگاه)
+        WarehouseSetting::set('amadest_store_id', '0');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'تنظیمات ذخیره شد.']);
@@ -119,7 +117,7 @@ class AmadestController extends Controller
         return response()->json(['success' => true, 'data' => $cities]);
     }
 
-    public function setup(Request $request)
+    public function saveSenderInfo(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
             abort(403);
@@ -128,17 +126,19 @@ class AmadestController extends Controller
         $validated = $request->validate([
             'sender_name' => 'required|string|max:255',
             'sender_mobile' => 'required|string|max:20',
-            'warehouse_address' => 'required|string|max:1000',
-            'province_id' => 'required|integer',
-            'city_id' => 'required|integer',
-            'postal_code' => 'nullable|string|max:20',
-            'warehouse_title' => 'nullable|string|max:255',
-            'store_title' => 'nullable|string|max:255',
+            'warehouse_address' => 'nullable|string|max:1000',
         ]);
 
-        $service = new AmadestService();
-        $result = $service->setup($validated);
+        WarehouseSetting::set('amadest_sender_name', $validated['sender_name']);
+        WarehouseSetting::set('amadest_sender_mobile', $validated['sender_mobile']);
+        if (!empty($validated['warehouse_address'])) {
+            WarehouseSetting::set('amadest_warehouse_address', $validated['warehouse_address']);
+        }
 
-        return response()->json($result);
+        // همیشه حالت عادی (بدون فروشگاه)
+        WarehouseSetting::set('amadest_store_id', '0');
+
+        return redirect()->route('warehouse.amadest.index')
+            ->with('success', 'اطلاعات فرستنده ذخیره شد.');
     }
 }

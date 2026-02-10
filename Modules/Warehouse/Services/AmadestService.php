@@ -368,9 +368,10 @@ class AmadestService
             $weightGrams = (int) ($orderData['weight'] ?? 500);
             $weightGrams = max($weightGrams, 10);
 
-            // store_id: 0 = حالت عادی (آمادست)، عدد مثبت = حالت فروشگاه
+            // store_id: 0 = حالت عادی (آمادست)، بدون فروشگاه
+            // همیشه 0 ارسال میشه تا سفارش به صورت عادی ثبت بشه، نه از طریق فروشگاه
             $payload = [
-                'store_id' => (int) ($this->storeId ?: 0),
+                'store_id' => 0,
                 'external_order_id' => $externalIdInt,
                 'recipient_name' => $orderData['recipient_name'] ?: 'مشتری',
                 'sender_name' => $senderName,

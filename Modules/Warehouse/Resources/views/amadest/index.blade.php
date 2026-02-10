@@ -73,112 +73,58 @@
             <div id="amadest-test-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
         </div>
 
-        <!-- Store Setup Card -->
+        <!-- Sender Info Card -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-bold text-gray-900">راه‌اندازی فروشگاه</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">اطلاعات فرستنده و انبار برای ثبت مرسوله</p>
+                    <h2 class="text-lg font-bold text-gray-900">اطلاعات فرستنده</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">اطلاعات فرستنده برای ثبت مرسوله در آمادست</p>
                 </div>
             </div>
 
-            @if(!empty($settings['store_id']) && $settings['store_id'] != '0')
-                <!-- Store mode configured -->
-                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2 text-emerald-700 font-medium text-sm">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            حالت فروشگاه (store_id: {{ $settings['store_id'] }})
-                        </div>
-                        <button type="button" onclick="switchToNormalMode()" class="text-xs text-red-600 hover:text-red-800 underline">تغییر به حالت عادی</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                        <div>شناسه مکان: <strong class="text-gray-900">{{ $settings['location_id'] ?? '-' }}</strong></div>
-                        <div>فرستنده: <strong class="text-gray-900">{{ $settings['sender_name'] ?? '-' }}</strong></div>
-                        <div>موبایل: <strong class="text-gray-900" dir="ltr">{{ $settings['sender_mobile'] ?? '-' }}</strong></div>
-                    </div>
+            <!-- Normal mode info -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                <div class="flex items-center gap-2 text-purple-700 font-medium text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    حالت عادی - سفارشات مستقیم در آمادست ثبت می‌شوند (بدون فروشگاه)
                 </div>
-            @else
-                <!-- Normal mode (no store) -->
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                    <div class="flex items-center gap-2 text-purple-700 font-medium text-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        حالت عادی (بدون فروشگاه) - سفارشات مستقیم در آمادست ثبت می‌شوند
-                    </div>
-                </div>
-            @endif
+            </div>
 
-            <div class="space-y-4">
+            <form action="{{ route('warehouse.amadest.save-sender') }}" method="POST" class="space-y-4">
+                @csrf
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">نام فرستنده <span class="text-red-500">*</span></label>
-                        <input type="text" id="setup-sender-name" value="{{ $settings['sender_name'] ?? '' }}"
+                        <input type="text" name="sender_name" value="{{ $settings['sender_name'] ?? '' }}"
                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="نام فرستنده روی بسته">
+                               placeholder="نام فرستنده روی بسته" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">موبایل فرستنده <span class="text-red-500">*</span></label>
-                        <input type="text" id="setup-sender-mobile" value="{{ $settings['sender_mobile'] ?? '' }}" dir="ltr"
+                        <input type="text" name="sender_mobile" value="{{ $settings['sender_mobile'] ?? '' }}" dir="ltr"
                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="09123456789">
+                               placeholder="09123456789" required>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">آدرس انبار <span class="text-red-500">*</span></label>
-                    <textarea id="setup-warehouse-address" rows="2"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">آدرس انبار</label>
+                    <textarea name="warehouse_address" rows="2"
                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
                               placeholder="آدرس کامل انبار">{{ $settings['warehouse_address'] ?? '' }}</textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">کد استان <span class="text-red-500">*</span></label>
-                        <input type="number" id="setup-province" dir="ltr"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="مثلا 8 برای تهران">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">کد شهر <span class="text-red-500">*</span></label>
-                        <input type="number" id="setup-city" dir="ltr"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="مثلا 292 برای تهران">
-                    </div>
-                </div>
-                <button type="button" onclick="fetchCityList()" class="text-sm text-emerald-600 hover:text-emerald-800 underline">
-                    نمایش لیست استان‌ها و شهرها از API
-                </button>
-                <div id="city-list-result" class="hidden mt-2 p-3 bg-gray-50 rounded-lg text-xs max-h-48 overflow-y-auto" dir="ltr"></div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">کد پستی انبار</label>
-                        <input type="text" id="setup-postal-code" dir="ltr"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="1234567890">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">عنوان فروشگاه</label>
-                        <input type="text" id="setup-store-title"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                               placeholder="فروشگاه اصلی" value="فروشگاه اصلی">
-                    </div>
-                </div>
-
                 <div class="pt-4 border-t">
-                    <button type="button" onclick="setupAmadest()" id="setup-btn"
+                    <button type="submit"
                             class="w-full px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        {{ !empty($settings['store_id']) ? 'بروزرسانی تنظیمات' : 'راه‌اندازی فروشگاه در آمادست' }}
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        ذخیره اطلاعات فرستنده
                     </button>
                 </div>
-            </div>
-
-            <!-- Setup Result -->
-            <div id="setup-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
+            </form>
         </div>
     </div>
 
@@ -240,99 +186,6 @@
 
 @push('scripts')
 <script>
-function fetchCityList() {
-    const resultDiv = document.getElementById('city-list-result');
-    resultDiv.classList.remove('hidden');
-    resultDiv.textContent = 'در حال دریافت لیست...';
-
-    fetch('{{ route("warehouse.amadest.provinces") }}', {
-        headers: { 'Accept': 'application/json' },
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success && data.data && data.data.length > 0) {
-            let html = '<strong>استان‌ها (provinces):</strong><br>';
-            html += '<pre>' + JSON.stringify(data.data, null, 2) + '</pre>';
-            resultDiv.innerHTML = html;
-        } else {
-            resultDiv.innerHTML = '<strong>پاسخ API:</strong><br><pre>' + JSON.stringify(data, null, 2) + '</pre>';
-        }
-    })
-    .catch(err => {
-        resultDiv.textContent = 'خطا: ' + err.message;
-    });
-}
-
-function setupAmadest() {
-    const senderName = document.getElementById('setup-sender-name').value;
-    const senderMobile = document.getElementById('setup-sender-mobile').value;
-    const address = document.getElementById('setup-warehouse-address').value;
-    const provinceId = document.getElementById('setup-province').value;
-    const cityId = document.getElementById('setup-city').value;
-    const postalCode = document.getElementById('setup-postal-code').value;
-    const storeTitle = document.getElementById('setup-store-title').value;
-
-    const resultDiv = document.getElementById('setup-result');
-    resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
-
-    if (!senderName || !senderMobile || !address || !provinceId || !cityId) {
-        resultDiv.classList.add('bg-red-50', 'text-red-800');
-        resultDiv.textContent = 'لطفا تمام فیلدهای ضروری (*) را پر کنید.';
-        return;
-    }
-
-    resultDiv.classList.add('bg-gray-50', 'text-gray-600');
-    resultDiv.textContent = 'در حال راه‌اندازی...';
-
-    const btn = document.getElementById('setup-btn');
-    btn.disabled = true;
-    btn.classList.add('opacity-50');
-
-    fetch('{{ route("warehouse.amadest.setup") }}', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            sender_name: senderName,
-            sender_mobile: senderMobile,
-            warehouse_address: address,
-            province_id: parseInt(provinceId),
-            city_id: parseInt(cityId),
-            postal_code: postalCode || null,
-            store_title: storeTitle || 'فروشگاه اصلی',
-        }),
-    })
-    .then(r => r.json())
-    .then(data => {
-        resultDiv.classList.remove('bg-gray-50', 'text-gray-600');
-        if (data.success) {
-            resultDiv.classList.add('bg-green-50', 'text-green-800');
-            let msg = '<strong>&#10003; ' + data.message + '</strong>';
-            if (data.data) {
-                msg += '<br>شناسه فروشگاه: ' + (data.data.store_id || '-');
-                msg += ' | شناسه مکان: ' + (data.data.location_id || '-');
-            }
-            resultDiv.innerHTML = msg;
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            resultDiv.classList.add('bg-red-50', 'text-red-800');
-            resultDiv.textContent = data.message || 'خطا در راه‌اندازی';
-        }
-    })
-    .catch(err => {
-        resultDiv.classList.remove('bg-gray-50', 'text-gray-600');
-        resultDiv.classList.add('bg-red-50', 'text-red-800');
-        resultDiv.textContent = 'خطا در ارتباط با سرور';
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.classList.remove('opacity-50');
-    });
-}
-
 function testAmadestConnection() {
     const resultDiv = document.getElementById('amadest-test-result');
     resultDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
@@ -406,26 +259,6 @@ function trackShipment() {
     });
 }
 
-function switchToNormalMode() {
-    if (!confirm('آیا مطمئنید؟ حالت فروشگاه حذف شده و سفارشات به صورت عادی در آمادست ثبت می‌شوند.')) return;
-
-    fetch('{{ route("warehouse.amadest.save") }}', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            api_key: document.querySelector('input[name="api_key"]').value,
-            api_url: document.querySelector('select[name="api_url"]').value,
-            client_code: document.querySelector('input[name="client_code"]').value,
-            store_id: '0',
-        }),
-    })
-    .then(r => { location.reload(); })
-    .catch(err => { alert('خطا: ' + err.message); });
-}
 </script>
 @endpush
 @endsection

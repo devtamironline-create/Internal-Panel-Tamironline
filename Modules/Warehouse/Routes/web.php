@@ -97,10 +97,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     Route::prefix('amadest')->group(function () {
         Route::get('/', [AmadestController::class, 'index'])->name('warehouse.amadest.index');
         Route::post('/save', [AmadestController::class, 'saveSettings'])->name('warehouse.amadest.save');
+        Route::post('/save-sender', [AmadestController::class, 'saveSenderInfo'])->name('warehouse.amadest.save-sender');
         Route::post('/test', [AmadestController::class, 'testConnection'])->name('warehouse.amadest.test');
         Route::post('/track', [AmadestController::class, 'track'])->name('warehouse.amadest.track');
-        Route::get('/provinces', [AmadestController::class, 'getProvinces'])->name('warehouse.amadest.provinces');
-        Route::get('/cities', [AmadestController::class, 'getCities'])->name('warehouse.amadest.cities');
-        Route::post('/setup', [AmadestController::class, 'setup'])->name('warehouse.amadest.setup');
     });
 });
