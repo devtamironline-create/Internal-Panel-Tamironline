@@ -68,23 +68,21 @@ function callNotification() {
         activeCall: null,
         callDuration: '00:00',
         callTimer: null,
+        callSignalTimer: null,
         isMuted: false,
         unreadCount: 0,
         peerConnection: null,
         localStream: null,
-        signalPollTimer: null,
-        lastSignalTime: 0,
+        lastSignalSeq: -1,
+        pendingIceCandidates: [],
 
         async init() {
-            // Skip on messenger page (messenger has its own call handling)
             if (window.location.pathname.includes('/messenger')) return;
 
-            // Request notification permission
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
 
-            // Poll for incoming calls and unread messages
             setInterval(() => {
                 this.checkIncomingCalls();
                 this.checkUnreadMessages();
@@ -93,15 +91,12 @@ function callNotification() {
 
         async checkIncomingCalls() {
             if (this.incomingCall || this.activeCall) return;
-
             try {
                 const response = await fetch('/admin/chat/calls/incoming');
                 const data = await response.json();
-
                 if (data.has_call && data.call) {
                     this.incomingCall = data.call;
                     this.$refs.ringtone.play().catch(() => {});
-
                     if (Notification.permission === 'granted') {
                         new Notification('تماس ورودی', {
                             body: `${data.call.caller_name} در حال تماس است...`,
@@ -119,7 +114,6 @@ function callNotification() {
                 const response = await fetch('/admin/chat/unread-count');
                 const data = await response.json();
                 const newCount = data.unread_count || 0;
-
                 if (newCount > this.unreadCount && this.unreadCount > 0) {
                     if (Notification.permission === 'granted') {
                         new Notification('پیام جدید', {
@@ -134,8 +128,26 @@ function callNotification() {
 
         async answerCall() {
             if (!this.incomingCall) return;
+            const callId = this.incomingCall.id;
+            const callerId = this.incomingCall.caller_id;
+            const callerName = this.incomingCall.caller_name;
+
+            this.incomingCall = null;
+            this.$refs.ringtone.pause();
+
             try {
-                const response = await fetch(`/admin/chat/calls/${this.incomingCall.id}/answer`, {
+                this.localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                    video: false
+                });
+                this.$refs.localAudio.srcObject = this.localStream;
+            } catch (e) {
+                alert('خطا در دسترسی به میکروفون. لطفا از HTTPS استفاده کنید.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/chat/calls/${callId}/answer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -143,15 +155,37 @@ function callNotification() {
                     }
                 });
                 const data = await response.json();
-                if (data.call) {
-                    this.activeCall = data.call;
-                    const callerId = this.incomingCall.caller_id;
-                    this.incomingCall = null;
-                    this.$refs.ringtone.pause();
-                    await this.setupWebRTC(false, callerId);
-                    this.startCallTimer();
-                }
-            } catch (e) {}
+                if (!data.call) return;
+
+                this.activeCall = { id: callId, remote_name: callerName };
+                this.lastSignalSeq = -1;
+                this.pendingIceCandidates = [];
+
+                this.peerConnection = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                });
+                this.localStream.getTracks().forEach(track => {
+                    this.peerConnection.addTrack(track, this.localStream);
+                });
+                this.peerConnection.ontrack = (event) => {
+                    this.$refs.remoteAudio.srcObject = event.streams[0];
+                };
+                this.peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) this.sendSignal('ice-candidate', event.candidate);
+                };
+                this.peerConnection.onconnectionstatechange = () => {
+                    const state = this.peerConnection?.connectionState;
+                    if (state === 'failed' || state === 'disconnected') this.endCall();
+                };
+
+                this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
+                this.startCallTimer();
+            } catch (e) {
+                this.cleanupCall();
+            }
         },
 
         async rejectCall() {
@@ -164,117 +198,68 @@ function callNotification() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     }
                 });
-                this.incomingCall = null;
-                this.$refs.ringtone.pause();
             } catch (e) {}
+            this.incomingCall = null;
+            this.$refs.ringtone.pause();
         },
 
         async endCall() {
-            if (!this.activeCall) return;
-            try {
-                await fetch(`/admin/chat/calls/${this.activeCall.id}/end`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-            } catch (e) {}
+            const callId = this.activeCall?.id;
+            if (callId) {
+                try {
+                    await fetch(`/admin/chat/calls/${callId}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                } catch (e) {}
+            }
             this.cleanupCall();
         },
 
         cleanupCall() {
-            if (this.peerConnection) {
-                this.peerConnection.close();
-                this.peerConnection = null;
-            }
-            if (this.localStream) {
-                this.localStream.getTracks().forEach(track => track.stop());
-                this.localStream = null;
-            }
-            if (this.callTimer) {
-                clearInterval(this.callTimer);
-                this.callTimer = null;
-            }
-            if (this.signalPollTimer) {
-                clearInterval(this.signalPollTimer);
-                this.signalPollTimer = null;
-            }
+            if (this.peerConnection) { this.peerConnection.close(); this.peerConnection = null; }
+            if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
+            if (this.callTimer) { clearInterval(this.callTimer); this.callTimer = null; }
+            if (this.callSignalTimer) { clearInterval(this.callSignalTimer); this.callSignalTimer = null; }
             this.activeCall = null;
             this.callDuration = '00:00';
             this.isMuted = false;
-            this.lastSignalTime = 0;
+            this.lastSignalSeq = -1;
+            this.pendingIceCandidates = [];
         },
 
         startCallTimer() {
             let seconds = 0;
             this.callTimer = setInterval(() => {
                 seconds++;
-                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const secs = (seconds % 60).toString().padStart(2, '0');
-                this.callDuration = `${mins}:${secs}`;
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                this.callDuration = `${m}:${s}`;
             }, 1000);
         },
 
         toggleMute() {
             this.isMuted = !this.isMuted;
             if (this.localStream) {
-                this.localStream.getAudioTracks().forEach(track => {
-                    track.enabled = !this.isMuted;
-                });
+                this.localStream.getAudioTracks().forEach(t => { t.enabled = !this.isMuted; });
             }
         },
 
-        async setupWebRTC(isInitiator, remoteUserId) {
+        async pollCallSignals() {
+            const callId = this.activeCall?.id;
+            if (!callId) return;
             try {
-                this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                this.$refs.localAudio.srcObject = this.localStream;
-
-                this.peerConnection = new RTCPeerConnection({
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                });
-
-                this.localStream.getTracks().forEach(track => {
-                    this.peerConnection.addTrack(track, this.localStream);
-                });
-
-                this.peerConnection.ontrack = (event) => {
-                    this.$refs.remoteAudio.srcObject = event.streams[0];
-                };
-
-                this.peerConnection.onicecandidate = async (event) => {
-                    if (event.candidate && remoteUserId) {
-                        await this.sendSignal('ice-candidate', remoteUserId, event.candidate);
-                    }
-                };
-
-                if (isInitiator && remoteUserId) {
-                    const offer = await this.peerConnection.createOffer();
-                    await this.peerConnection.setLocalDescription(offer);
-                    await this.sendSignal('offer', remoteUserId, offer);
-                }
-
-                // Start polling for WebRTC signals
-                this.lastSignalTime = Math.floor(Date.now() / 1000);
-                this.signalPollTimer = setInterval(() => this.pollSignals(), 500);
-            } catch (e) {
-                console.error('Error setting up WebRTC:', e);
-                alert('خطا در دسترسی به میکروفون');
-                this.cleanupCall();
-            }
-        },
-
-        async pollSignals() {
-            if (!this.activeCall) return;
-            try {
-                const response = await fetch(`/admin/chat/signals/pending?since=${this.lastSignalTime}`);
+                const response = await fetch(`/admin/chat/signals/poll?call_id=${callId}&last_seq=${this.lastSignalSeq}`);
                 const data = await response.json();
-                this.lastSignalTime = data.time || this.lastSignalTime;
                 for (const signal of (data.signals || [])) {
                     await this.handleSignal(signal);
+                    if (signal.seq > this.lastSignalSeq) this.lastSignalSeq = signal.seq;
+                }
+                if (data.status === 'ended' || data.status === 'rejected') {
+                    this.cleanupCall();
                 }
             } catch (e) {}
         },
@@ -284,20 +269,34 @@ function callNotification() {
             try {
                 if (signal.type === 'offer') {
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    for (const c of this.pendingIceCandidates) {
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+                    }
+                    this.pendingIceCandidates = [];
                     const answer = await this.peerConnection.createAnswer();
                     await this.peerConnection.setLocalDescription(answer);
-                    await this.sendSignal('answer', signal.sender_id, answer);
+                    await this.sendSignal('answer', answer);
                 } else if (signal.type === 'answer') {
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    for (const c of this.pendingIceCandidates) {
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+                    }
+                    this.pendingIceCandidates = [];
                 } else if (signal.type === 'ice-candidate') {
-                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                    if (this.peerConnection.remoteDescription) {
+                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                    } else {
+                        this.pendingIceCandidates.push(signal.data);
+                    }
                 }
             } catch (e) {
-                console.error('Error handling signal:', signal.type, e);
+                console.error('Signal error:', signal.type, e);
             }
         },
 
-        async sendSignal(type, receiverId, data) {
+        async sendSignal(type, data) {
+            const callId = this.activeCall?.id;
+            if (!callId) return;
             try {
                 await fetch('/admin/chat/signal', {
                     method: 'POST',
@@ -305,12 +304,7 @@ function callNotification() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({
-                        call_id: this.activeCall?.id,
-                        receiver_id: receiverId,
-                        type: type,
-                        data: data
-                    })
+                    body: JSON.stringify({ call_id: callId, type, data })
                 });
             } catch (e) {}
         }

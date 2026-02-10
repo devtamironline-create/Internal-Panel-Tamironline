@@ -1219,16 +1219,17 @@ function messenger() {
         // Call state
         incomingCall: null,
         activeCall: null,
-        outgoingCall: null, // { id, remote_name, receiver_id }
-        callStatus: 'waiting', // 'waiting' | 'ringing'
-        callStatusPollTimer: null,
+        outgoingCall: null,
+        callStatus: null,       // 'waiting' | 'ringing' | 'connected'
         callDuration: '00:00',
         callTimer: null,
+        callSignalTimer: null,
+        callTimeoutTimer: null,
         isMuted: false,
         peerConnection: null,
         localStream: null,
-        signalPollTimer: null,
-        lastSignalTime: 0,
+        lastSignalSeq: -1,
+        pendingIceCandidates: [],
 
         // Media upload state
         showMediaPreview: false,
@@ -2062,8 +2063,12 @@ function messenger() {
             } catch (e) {}
         },
 
+        // ============================
+        // CALL SYSTEM (Rewritten for stability)
+        // ============================
+
         async checkIncomingCalls() {
-            if (this.incomingCall || this.activeCall || this.outgoingCall) return; // Already in a call
+            if (this.incomingCall || this.activeCall || this.outgoingCall) return;
 
             try {
                 const response = await fetch('/admin/chat/calls/incoming');
@@ -2073,7 +2078,6 @@ function messenger() {
                     this.incomingCall = data.call;
                     this.$refs.ringtone.play().catch(() => {});
 
-                    // Request notification permission and show notification
                     if (Notification.permission === 'granted') {
                         new Notification('تماس ورودی', {
                             body: `${data.call.caller_name} در حال تماس است...`,
@@ -2083,9 +2087,7 @@ function messenger() {
                         });
                     }
                 }
-            } catch (e) {
-                console.error('Error checking incoming calls:', e);
-            }
+            } catch (e) {}
         },
 
         async requestNotificationPermission() {
@@ -2096,23 +2098,22 @@ function messenger() {
 
         showNotification(title, body) {
             if (Notification.permission === 'granted') {
-                new Notification(title, {
-                    body: body,
-                    icon: '/favicon.ico'
-                });
+                new Notification(title, { body, icon: '/favicon.ico' });
             }
         },
 
+        /**
+         * CALLER: Initiate an outgoing call
+         */
         async initiateCall(userId) {
-            if (!userId) return;
-            try {
-                // Check microphone first
-                const permCheck = await this.checkMicrophonePermission();
-                if (!permCheck.granted) {
-                    this.showMicrophoneError(permCheck.error);
-                    return;
-                }
+            if (!userId || this.outgoingCall || this.activeCall) return;
 
+            // 1. Check microphone before anything
+            const micOk = await this.acquireMicrophone();
+            if (!micOk) return;
+
+            try {
+                // 2. Create call on server
                 const response = await fetch('/admin/chat/calls/initiate', {
                     method: 'POST',
                     headers: {
@@ -2122,81 +2123,81 @@ function messenger() {
                     body: JSON.stringify({ receiver_id: userId, type: 'audio' })
                 });
                 const data = await response.json();
-                if (data.call) {
-                    // Show outgoing call screen (waiting/ringing)
-                    this.outgoingCall = {
-                        id: data.call.id,
-                        remote_name: data.call.remote_name,
-                        receiver_id: userId,
-                    };
-                    this.callStatus = 'waiting';
+                if (!data.call) return;
 
-                    // Start polling for call status (waiting → ringing → answered)
-                    this.callStatusPollTimer = setInterval(() => this.pollCallStatus(), 1500);
+                // 3. Show outgoing call UI
+                this.outgoingCall = {
+                    id: data.call.id,
+                    remote_name: data.call.remote_name,
+                    receiver_id: userId,
+                };
+                this.activeCall = { id: data.call.id, remote_name: data.call.remote_name };
+                this.callStatus = 'waiting';
+                this.lastSignalSeq = -1;
+                this.pendingIceCandidates = [];
 
-                    // Setup WebRTC in the background
-                    this.activeCall = data.call;
-                    await this.setupWebRTC(true, userId);
-                }
+                // 4. Create PeerConnection and offer
+                this.createPeerConnection();
+                const offer = await this.peerConnection.createOffer();
+                await this.peerConnection.setLocalDescription(offer);
+                await this.sendSignal('offer', offer);
+
+                // 5. Start signal polling (handles both signals AND call status)
+                this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
+
+                // 6. Auto-cancel after 45 seconds if no answer
+                this.callTimeoutTimer = setTimeout(() => {
+                    if (this.outgoingCall) {
+                        this.showMicrophoneError('پاسخی دریافت نشد. تماس لغو شد.');
+                        this.cancelOutgoingCall();
+                    }
+                }, 45000);
+
             } catch (e) {
                 console.error('Error initiating call:', e);
+                this.showMicrophoneError('خطا در برقراری تماس.');
+                this.cleanupCall();
             }
         },
 
-        async pollCallStatus() {
-            if (!this.outgoingCall) return;
-            try {
-                const response = await fetch(`/admin/chat/calls/${this.outgoingCall.id}/status`);
-                const data = await response.json();
-
-                if (data.status === 'answered') {
-                    // Call was answered - switch to active call view
-                    this.outgoingCall = null;
-                    if (this.callStatusPollTimer) {
-                        clearInterval(this.callStatusPollTimer);
-                        this.callStatusPollTimer = null;
-                    }
-                    this.startCallTimer();
-                } else if (data.status === 'rejected' || data.status === 'ended' || data.status === 'missed') {
-                    // Call was rejected/ended/missed
-                    this.outgoingCall = null;
-                    if (this.callStatusPollTimer) {
-                        clearInterval(this.callStatusPollTimer);
-                        this.callStatusPollTimer = null;
-                    }
-                    this.cleanupCall();
-                } else if (data.seen) {
-                    // Receiver saw the call - show ringing
-                    this.callStatus = 'ringing';
-                } else {
-                    this.callStatus = 'waiting';
-                }
-            } catch (e) {}
-        },
-
+        /**
+         * CALLER: Cancel outgoing call
+         */
         cancelOutgoingCall() {
-            if (this.outgoingCall) {
-                // End the call on the server
-                fetch(`/admin/chat/calls/${this.outgoingCall.id}/end`, {
+            const callId = this.outgoingCall?.id || this.activeCall?.id;
+            if (callId) {
+                fetch(`/admin/chat/calls/${callId}/end`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     }
                 }).catch(() => {});
-                this.outgoingCall = null;
-            }
-            if (this.callStatusPollTimer) {
-                clearInterval(this.callStatusPollTimer);
-                this.callStatusPollTimer = null;
             }
             this.cleanupCall();
         },
 
+        /**
+         * RECEIVER: Answer incoming call
+         */
         async answerCall() {
             if (!this.incomingCall) return;
+
+            const callId = this.incomingCall.id;
+            const callerId = this.incomingCall.caller_id;
+            const callerName = this.incomingCall.caller_name;
+
+            // 1. Stop ringtone immediately
+            this.incomingCall = null;
+            this.$refs.ringtone.pause();
+
+            // 2. Acquire microphone
+            const micOk = await this.acquireMicrophone();
+            if (!micOk) return;
+
             try {
-                const response = await fetch(`/admin/chat/calls/${this.incomingCall.id}/answer`, {
+                // 3. Tell server we answered
+                const response = await fetch(`/admin/chat/calls/${callId}/answer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2204,20 +2205,33 @@ function messenger() {
                     }
                 });
                 const data = await response.json();
-                if (data.call) {
-                    this.activeCall = data.call;
-                    this.outgoingCall = null; // Clear any outgoing state
-                    const callerId = this.incomingCall.caller_id;
-                    this.incomingCall = null;
-                    this.$refs.ringtone.pause();
-                    await this.setupWebRTC(false, callerId);
-                    this.startCallTimer();
-                }
+                if (!data.call) return;
+
+                // 4. Set active call state
+                this.activeCall = { id: callId, remote_name: callerName };
+                this.outgoingCall = null;
+                this.callStatus = 'connected';
+                this.lastSignalSeq = -1; // Get ALL signals from start (crucial!)
+                this.pendingIceCandidates = [];
+
+                // 5. Create PeerConnection (will receive offer via polling)
+                this.createPeerConnection();
+
+                // 6. Start signal polling (will receive offer → create answer)
+                this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
+
+                // 7. Start call duration timer
+                this.startCallTimer();
             } catch (e) {
                 console.error('Error answering call:', e);
+                this.showMicrophoneError('خطا در پاسخ به تماس.');
+                this.cleanupCall();
             }
         },
 
+        /**
+         * RECEIVER: Reject incoming call
+         */
         async rejectCall() {
             if (!this.incomingCall) return;
             try {
@@ -2228,25 +2242,33 @@ function messenger() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     }
                 });
-                this.incomingCall = null;
-                this.$refs.ringtone.pause();
             } catch (e) {}
+            this.incomingCall = null;
+            this.$refs.ringtone.pause();
         },
 
+        /**
+         * BOTH: End active call
+         */
         async endCall() {
-            if (!this.activeCall) return;
-            try {
-                await fetch(`/admin/chat/calls/${this.activeCall.id}/end`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-            } catch (e) {}
+            const callId = this.activeCall?.id;
+            if (callId) {
+                try {
+                    await fetch(`/admin/chat/calls/${callId}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                } catch (e) {}
+            }
             this.cleanupCall();
         },
 
+        /**
+         * Clean up all call state
+         */
         cleanupCall() {
             if (this.peerConnection) {
                 this.peerConnection.close();
@@ -2260,20 +2282,21 @@ function messenger() {
                 clearInterval(this.callTimer);
                 this.callTimer = null;
             }
-            if (this.signalPollTimer) {
-                clearInterval(this.signalPollTimer);
-                this.signalPollTimer = null;
+            if (this.callSignalTimer) {
+                clearInterval(this.callSignalTimer);
+                this.callSignalTimer = null;
             }
-            if (this.callStatusPollTimer) {
-                clearInterval(this.callStatusPollTimer);
-                this.callStatusPollTimer = null;
+            if (this.callTimeoutTimer) {
+                clearTimeout(this.callTimeoutTimer);
+                this.callTimeoutTimer = null;
             }
             this.activeCall = null;
             this.outgoingCall = null;
-            this.callStatus = 'waiting';
+            this.callStatus = null;
             this.callDuration = '00:00';
             this.isMuted = false;
-            this.lastSignalTime = 0;
+            this.lastSignalSeq = -1;
+            this.pendingIceCandidates = [];
         },
 
         startCallTimer() {
@@ -2295,181 +2318,184 @@ function messenger() {
             }
         },
 
-        async checkMicrophonePermission() {
+        /**
+         * Acquire microphone with proper error handling
+         */
+        async acquireMicrophone() {
             try {
-                // Check if mediaDevices is supported
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    return { granted: false, error: 'مرورگر شما از تماس صوتی پشتیبانی نمی‌کند' };
+                    this.showMicrophoneError('مرورگر شما از تماس صوتی پشتیبانی نمی‌کند. لطفا از HTTPS استفاده کنید.');
+                    return false;
                 }
 
-                // Check permission status if available
-                if (navigator.permissions) {
-                    try {
-                        const permission = await navigator.permissions.query({ name: 'microphone' });
-                        if (permission.state === 'denied') {
-                            return { granted: false, error: 'دسترسی به میکروفون مسدود شده است. لطفا از تنظیمات مرورگر دسترسی را فعال کنید.' };
-                        }
-                    } catch (e) {
-                        // permissions.query not supported for microphone in some browsers
-                    }
-                }
-
-                return { granted: true };
+                this.localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                    video: false
+                });
+                this.$refs.localAudio.srcObject = this.localStream;
+                return true;
             } catch (e) {
-                return { granted: false, error: 'خطا در بررسی دسترسی میکروفون' };
-            }
-        },
-
-        async requestMicrophoneAccess() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                // Immediately stop the test stream
-                stream.getTracks().forEach(track => track.stop());
-                return { granted: true };
-            } catch (e) {
-                if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-                    return { granted: false, error: 'دسترسی به میکروفون رد شد. برای برقراری تماس نیاز به اجازه میکروفون است.' };
-                } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
-                    return { granted: false, error: 'میکروفونی یافت نشد. لطفا میکروفون خود را بررسی کنید.' };
-                } else if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
-                    return { granted: false, error: 'میکروفون در دسترس نیست. ممکن است برنامه دیگری از آن استفاده کند.' };
-                }
-                return { granted: false, error: 'خطا در دسترسی به میکروفون: ' + e.message };
+                let msg = 'خطا در دسترسی به میکروفون';
+                if (e.name === 'NotAllowedError') msg = 'دسترسی به میکروفون رد شد. لطفا از تنظیمات مرورگر اجازه دهید.';
+                else if (e.name === 'NotFoundError') msg = 'میکروفونی یافت نشد.';
+                else if (e.name === 'NotReadableError') msg = 'میکروفون در دسترس نیست.';
+                this.showMicrophoneError(msg);
+                return false;
             }
         },
 
         showMicrophoneError(message) {
-            // Create toast notification for microphone error
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-red-600 text-white p-4 rounded-xl shadow-lg z-[200] animate-pulse';
+            toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-red-600 text-white p-4 rounded-xl shadow-lg z-[200]';
             toast.innerHTML = `
                 <div class="flex items-start gap-3">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                     <div>
-                        <p class="font-bold">خطای میکروفون</p>
-                        <p class="text-sm opacity-90">${message}</p>
+                        <p class="font-bold text-sm">${message}</p>
                     </div>
-                    <button onclick="this.parentElement.parentElement.remove()" class="mr-auto text-white/80 hover:text-white">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+                    <button onclick="this.parentElement.parentElement.remove()" class="mr-auto text-white/80 hover:text-white">✕</button>
                 </div>
             `;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 8000);
+            setTimeout(() => toast.remove(), 6000);
         },
 
-        async setupWebRTC(isInitiator, remoteUserId) {
-            try {
-                // Check microphone permission first
-                const permCheck = await this.checkMicrophonePermission();
-                if (!permCheck.granted) {
-                    this.showMicrophoneError(permCheck.error);
-                    this.cleanupCall();
-                    return;
-                }
+        /**
+         * Create RTCPeerConnection with proper handlers
+         */
+        createPeerConnection() {
+            this.peerConnection = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            });
 
-                // Request microphone access with error handling
-                try {
-                    this.localStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        },
-                        video: false
-                    });
-                } catch (e) {
-                    const accessResult = await this.requestMicrophoneAccess();
-                    if (!accessResult.granted) {
-                        this.showMicrophoneError(accessResult.error);
-                        this.cleanupCall();
-                        return;
-                    }
-                    // Retry after permission check
-                    this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                }
-
-                this.$refs.localAudio.srcObject = this.localStream;
-
-                this.peerConnection = new RTCPeerConnection({
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' }
-                    ]
-                });
-
+            // Add local audio tracks
+            if (this.localStream) {
                 this.localStream.getTracks().forEach(track => {
                     this.peerConnection.addTrack(track, this.localStream);
                 });
-
-                this.peerConnection.ontrack = (event) => {
-                    this.$refs.remoteAudio.srcObject = event.streams[0];
-                };
-
-                this.peerConnection.onicecandidate = async (event) => {
-                    if (event.candidate && remoteUserId) {
-                        await this.sendSignal('ice-candidate', remoteUserId, event.candidate);
-                    }
-                };
-
-                this.peerConnection.onconnectionstatechange = () => {
-                    if (this.peerConnection.connectionState === 'failed') {
-                        this.showMicrophoneError('اتصال قطع شد. لطفا دوباره تلاش کنید.');
-                        this.cleanupCall();
-                    }
-                };
-
-                if (isInitiator && remoteUserId) {
-                    const offer = await this.peerConnection.createOffer();
-                    await this.peerConnection.setLocalDescription(offer);
-                    await this.sendSignal('offer', remoteUserId, offer);
-                }
-
-                // Start polling for WebRTC signals (fallback for when WebSocket is unavailable)
-                this.lastSignalTime = Math.floor(Date.now() / 1000);
-                this.signalPollTimer = setInterval(() => this.pollSignals(), 500);
-            } catch (e) {
-                console.error('Error setting up WebRTC:', e);
-                this.showMicrophoneError('خطا در برقراری تماس. لطفا دوباره تلاش کنید.');
-                this.cleanupCall();
             }
+
+            // Receive remote audio
+            this.peerConnection.ontrack = (event) => {
+                this.$refs.remoteAudio.srcObject = event.streams[0];
+            };
+
+            // Send ICE candidates to other party
+            this.peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    this.sendSignal('ice-candidate', event.candidate);
+                }
+            };
+
+            // Monitor connection state
+            this.peerConnection.onconnectionstatechange = () => {
+                const state = this.peerConnection?.connectionState;
+                console.log('WebRTC connection state:', state);
+                if (state === 'connected') {
+                    // Call is fully connected
+                    if (this.outgoingCall) {
+                        this.outgoingCall = null;
+                        this.callStatus = 'connected';
+                        this.startCallTimer();
+                        if (this.callTimeoutTimer) {
+                            clearTimeout(this.callTimeoutTimer);
+                            this.callTimeoutTimer = null;
+                        }
+                    }
+                } else if (state === 'failed' || state === 'disconnected') {
+                    this.showMicrophoneError('اتصال قطع شد.');
+                    this.endCall();
+                }
+            };
         },
 
-        async pollSignals() {
-            if (!this.activeCall && !this.incomingCall) return;
-            try {
-                const response = await fetch(`/admin/chat/signals/pending?since=${this.lastSignalTime}`);
-                const data = await response.json();
-                this.lastSignalTime = data.time || this.lastSignalTime;
+        /**
+         * Combined polling: signals + call status in one request
+         */
+        async pollCallSignals() {
+            const callId = this.activeCall?.id;
+            if (!callId) return;
 
+            try {
+                const response = await fetch(`/admin/chat/signals/poll?call_id=${callId}&last_seq=${this.lastSignalSeq}`);
+                const data = await response.json();
+
+                // Process signals in order
                 for (const signal of (data.signals || [])) {
                     await this.handleSignal(signal);
+                    if (signal.seq > this.lastSignalSeq) {
+                        this.lastSignalSeq = signal.seq;
+                    }
+                }
+
+                // Update call status for outgoing call UI
+                if (this.outgoingCall) {
+                    if (data.status === 'answered') {
+                        this.callStatus = 'ringing'; // Will switch to connected when WebRTC connects
+                    } else if (data.status === 'rejected' || data.status === 'ended' || data.status === 'missed') {
+                        this.showMicrophoneError(data.status === 'rejected' ? 'تماس رد شد.' : 'تماس پایان یافت.');
+                        this.cleanupCall();
+                    } else if (data.seen) {
+                        this.callStatus = 'ringing';
+                    }
+                }
+
+                // Check if other side ended the call
+                if (!this.outgoingCall && (data.status === 'ended' || data.status === 'rejected')) {
+                    this.cleanupCall();
                 }
             } catch (e) {}
         },
 
+        /**
+         * Handle received WebRTC signal with ICE buffering
+         */
         async handleSignal(signal) {
             if (!this.peerConnection) return;
             try {
                 if (signal.type === 'offer') {
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    // Flush buffered ICE candidates
+                    for (const candidate of this.pendingIceCandidates) {
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+                    }
+                    this.pendingIceCandidates = [];
+                    // Create and send answer
                     const answer = await this.peerConnection.createAnswer();
                     await this.peerConnection.setLocalDescription(answer);
-                    await this.sendSignal('answer', signal.sender_id, answer);
+                    await this.sendSignal('answer', answer);
                 } else if (signal.type === 'answer') {
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    // Flush buffered ICE candidates
+                    for (const candidate of this.pendingIceCandidates) {
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+                    }
+                    this.pendingIceCandidates = [];
                 } else if (signal.type === 'ice-candidate') {
-                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                    if (this.peerConnection.remoteDescription) {
+                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
+                    } else {
+                        // Buffer until remote description is set
+                        this.pendingIceCandidates.push(signal.data);
+                    }
                 }
             } catch (e) {
-                console.error('Error handling signal:', signal.type, e);
+                console.error('Signal error:', signal.type, e);
             }
         },
 
-        async sendSignal(type, receiverId, data) {
+        /**
+         * Send WebRTC signal via server
+         */
+        async sendSignal(type, data) {
+            const callId = this.activeCall?.id;
+            if (!callId) return;
             try {
                 await fetch('/admin/chat/signal', {
                     method: 'POST',
@@ -2477,12 +2503,7 @@ function messenger() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({
-                        call_id: this.activeCall?.id,
-                        receiver_id: receiverId,
-                        type: type,
-                        data: data
-                    })
+                    body: JSON.stringify({ call_id: callId, type, data })
                 });
             } catch (e) {}
         },

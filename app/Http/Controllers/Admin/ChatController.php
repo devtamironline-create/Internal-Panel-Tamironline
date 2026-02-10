@@ -703,13 +703,12 @@ class ChatController extends Controller
     }
 
     /**
-     * Send WebRTC signaling data
+     * Send WebRTC signaling data (per-call storage with sequence numbers)
      */
     public function sendSignal(Request $request): JsonResponse
     {
         $request->validate([
             'call_id' => 'required|exists:calls,id',
-            'receiver_id' => 'required|exists:users,id',
             'type' => 'required|in:offer,answer,ice-candidate',
             'data' => 'required',
         ]);
@@ -721,60 +720,46 @@ class ChatController extends Controller
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
-        // Broadcast WebRTC signal (for WebSocket)
-        try {
-            event(new \App\Events\Chat\WebRTCSignalEvent(
-                $request->call_id,
-                auth()->id(),
-                $request->receiver_id,
-                $request->type,
-                $request->data
-            ));
-        } catch (\Exception $e) {
-            // WebSocket may not be available
-        }
-
-        // Store signal in cache for polling fallback
-        $cacheKey = "webrtc_signals_{$request->receiver_id}";
+        // Store signal per call with sequence number (never lost, never cleaned prematurely)
+        $cacheKey = "call_signals_{$request->call_id}";
         $signals = Cache::get($cacheKey, []);
         $signals[] = [
-            'call_id' => $request->call_id,
+            'seq' => count($signals),
             'sender_id' => auth()->id(),
             'type' => $request->type,
             'data' => $request->data,
-            'time' => now()->timestamp,
         ];
-        // Keep only last 30 seconds of signals
-        $cutoff = now()->timestamp - 30;
-        $signals = array_values(array_filter($signals, fn($s) => $s['time'] >= $cutoff));
-        Cache::put($cacheKey, $signals, 60);
+        Cache::put($cacheKey, $signals, 300); // 5 minutes TTL
 
         return response()->json(['status' => 'sent']);
     }
 
     /**
-     * Get pending WebRTC signals (polling fallback)
+     * Poll WebRTC signals + call status in one request (per-call, sequence-based)
      */
-    public function getPendingSignals(Request $request): JsonResponse
+    public function pollCallSignals(Request $request): JsonResponse
     {
-        $userId = auth()->id();
-        $cacheKey = "webrtc_signals_{$userId}";
-        $lastPoll = (int) $request->get('since', 0);
+        $callId = (int) $request->get('call_id');
+        $lastSeq = (int) $request->get('last_seq', -1);
 
+        $call = Call::find($callId);
+        if (!$call || !in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
+            return response()->json(['signals' => [], 'status' => 'ended']);
+        }
+
+        $cacheKey = "call_signals_{$callId}";
         $signals = Cache::get($cacheKey, []);
 
-        // Only return signals newer than last poll
-        $newSignals = array_values(array_filter($signals, fn($s) => $s['time'] > $lastPoll));
-
-        // Clean up retrieved signals
-        if (!empty($newSignals)) {
-            $remaining = array_values(array_filter($signals, fn($s) => $s['time'] > now()->timestamp));
-            Cache::put($cacheKey, $remaining, 60);
-        }
+        // Return signals from OTHER party that are newer than lastSeq
+        $myId = auth()->id();
+        $newSignals = array_values(array_filter($signals, fn($s) =>
+            $s['seq'] > $lastSeq && $s['sender_id'] !== $myId
+        ));
 
         return response()->json([
             'signals' => $newSignals,
-            'time' => now()->timestamp,
+            'status' => $call->fresh()->status,
+            'seen' => Cache::get("call_seen_{$callId}", false),
         ]);
     }
 
@@ -788,12 +773,12 @@ class ChatController extends Controller
         // Find ringing call where current user is receiver
         $call = Call::where('receiver_id', $userId)
             ->where('status', 'ringing')
-            ->where('created_at', '>=', now()->subMinutes(1)) // Only calls in last minute
+            ->where('created_at', '>=', now()->subMinutes(1))
             ->with('caller')
             ->first();
 
         if ($call) {
-            // Mark that receiver has seen the call (for caller's ringing status)
+            // Mark that receiver has seen the call (for caller to know it's ringing)
             Cache::put("call_seen_{$call->id}", true, 120);
 
             return response()->json([
@@ -809,23 +794,6 @@ class ChatController extends Controller
         }
 
         return response()->json(['has_call' => false]);
-    }
-
-    /**
-     * Check outgoing call status (for caller to know if receiver saw the call)
-     */
-    public function checkCallStatus(Call $call): JsonResponse
-    {
-        if ($call->caller_id !== auth()->id()) {
-            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
-        }
-
-        $seen = Cache::get("call_seen_{$call->id}", false);
-
-        return response()->json([
-            'status' => $call->status,
-            'seen' => $seen, // true = receiver's panel is open and ringing
-        ]);
     }
 
     /**
