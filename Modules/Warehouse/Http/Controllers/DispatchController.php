@@ -41,6 +41,118 @@ class DispatchController extends Controller
         return view('warehouse::dispatch.index', compact('orders', 'tab', 'readyCount', 'shippedCount'));
     }
 
+    /**
+     * ایستگاه ارسال پیک - فقط سفارشات پیکی آماده ارسال
+     */
+    public function courierStation(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $tab = $request->get('tab', 'ready');
+
+        // Auto-ship courier orders that were dispatched more than 4 hours ago
+        $this->autoShipCourierOrders();
+
+        if ($tab === 'ready') {
+            // سفارشات پیکی آماده ارسال (بدون اطلاعات پیک)
+            $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
+                ->byStatus(WarehouseOrder::STATUS_PACKED)
+                ->where('shipping_type', 'courier')
+                ->whereNull('courier_dispatched_at')
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+        } elseif ($tab === 'dispatched') {
+            // سفارشاتی که پیک گرفته ولی هنوز ارسال نشده
+            $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
+                ->byStatus(WarehouseOrder::STATUS_PACKED)
+                ->where('shipping_type', 'courier')
+                ->whereNotNull('courier_dispatched_at')
+                ->whereNotNull('driver_name')
+                ->orderBy('courier_dispatched_at', 'desc')
+                ->paginate(20);
+        } else {
+            // سفارشات پیکی ارسال شده
+            $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
+                ->byStatus(WarehouseOrder::STATUS_SHIPPED)
+                ->where('shipping_type', 'courier')
+                ->orderBy('shipped_at', 'desc')
+                ->paginate(20);
+        }
+
+        $readyCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
+            ->where('shipping_type', 'courier')
+            ->whereNull('courier_dispatched_at')
+            ->count();
+        $dispatchedCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
+            ->where('shipping_type', 'courier')
+            ->whereNotNull('courier_dispatched_at')
+            ->count();
+        $shippedCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_SHIPPED)
+            ->where('shipping_type', 'courier')
+            ->count();
+
+        return view('warehouse::dispatch.courier', compact('orders', 'tab', 'readyCount', 'dispatchedCount', 'shippedCount'));
+    }
+
+    /**
+     * ثبت اطلاعات پیک برای سفارش
+     */
+    public function assignCourier(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        $request->validate([
+            'driver_name' => 'required|string|max:255',
+            'driver_phone' => 'required|string|max:20',
+        ]);
+
+        $order->driver_name = $request->driver_name;
+        $order->driver_phone = $request->driver_phone;
+        $order->courier_dispatched_at = now();
+        $order->save();
+
+        Log::channel('daily')->info('پیک تخصیص داده شد', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'driver_name' => $request->driver_name,
+            'driver_phone' => $request->driver_phone,
+            'user_id' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'پیک برای سفارش ' . $order->order_number . ' ثبت شد. سفارش بعد از ۴ ساعت به ارسال شده تغییر می‌کند.',
+        ]);
+    }
+
+    /**
+     * تغییر خودکار سفارشات پیکی به ارسال شده بعد از ۴ ساعت
+     */
+    protected function autoShipCourierOrders(): int
+    {
+        $orders = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
+            ->where('shipping_type', 'courier')
+            ->whereNotNull('courier_dispatched_at')
+            ->where('courier_dispatched_at', '<=', now()->subHours(4))
+            ->get();
+
+        foreach ($orders as $order) {
+            $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
+            Log::channel('daily')->info('سفارش پیکی به‌صورت خودکار ارسال شد (۴ ساعت)', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'driver_name' => $order->driver_name,
+                'courier_dispatched_at' => $order->courier_dispatched_at->toDateTimeString(),
+            ]);
+        }
+
+        return $orders->count();
+    }
+
     public function scanAndShip(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

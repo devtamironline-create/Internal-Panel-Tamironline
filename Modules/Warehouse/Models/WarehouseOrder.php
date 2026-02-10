@@ -18,7 +18,7 @@ class WarehouseOrder extends Model
         'wc_order_id', 'wc_order_data', 'barcode',
         'total_weight', 'actual_weight', 'weight_verified', 'box_size_id',
         'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
-        'status_changed_at', 'shipped_at', 'delivered_at',
+        'status_changed_at', 'shipped_at', 'delivered_at', 'courier_dispatched_at',
         'notes', 'tracking_code', 'amadest_barcode', 'post_tracking_code', 'driver_name', 'driver_phone',
     ];
 
@@ -34,6 +34,7 @@ class WarehouseOrder extends Model
         'status_changed_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'courier_dispatched_at' => 'datetime',
     ];
 
     const STATUS_PENDING = 'pending';
