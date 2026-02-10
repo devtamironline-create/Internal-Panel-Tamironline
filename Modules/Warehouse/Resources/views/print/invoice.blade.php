@@ -43,12 +43,12 @@
         .notes { background: #fff; padding: 4px 8px; border-radius: 3px; margin-bottom: 3px; font-size: 9px; border-right: 3px solid #ccc; }
 
         /* Barcode */
-        .barcode-section { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #ddd; gap: 10px; }
-        .barcode-list { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .barcode-section { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #ddd; gap: 8px; overflow: hidden; }
+        .barcode-list { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
         .barcode-item { display: flex; align-items: center; gap: 6px; }
-        .barcode-item svg { flex-shrink: 0; }
-        .barcode-meta { display: flex; flex-direction: column; }
-        .barcode-label { font-size: 9px; font-weight: bold; color: #444; }
+        .barcode-item svg { flex-shrink: 0; max-width: 280px; height: auto; }
+        .barcode-meta { display: flex; flex-direction: column; flex-shrink: 0; }
+        .barcode-label { font-size: 8px; font-weight: bold; color: #444; }
         .barcode-code { font-size: 7px; color: #aaa; }
         .qr-side { flex-shrink: 0; text-align: center; }
         .qr-side .barcode-label { margin-top: 3px; }
@@ -312,8 +312,8 @@
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", {
             format: "CODE128",
-            width: 3,
-            height: 55,
+            width: 2,
+            height: 45,
             displayValue: false,
             margin: 2,
         });
@@ -321,8 +321,8 @@
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
-            width: 3,
-            height: 55,
+            width: 2,
+            height: 45,
             displayValue: false,
             margin: 2,
         });
