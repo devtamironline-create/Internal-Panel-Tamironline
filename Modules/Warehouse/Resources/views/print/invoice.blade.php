@@ -6,50 +6,48 @@
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; font-size: 12px; color: #333; }
-        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
+        body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl; padding: 10px; font-size: 11px; color: #333; }
+        .invoice { max-width: 148mm; margin: 0 auto; border: 1px solid #ccc; }
 
         /* Header */
-        .header { display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #ddd; padding: 5px 0; }
-        .header-right { display: flex; align-items: center; padding: 0 15px; }
-        .header-logo { width: 140px; height: auto; max-height: 120px; object-fit: contain; }
+        .header { display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #ddd; padding: 4px 0; }
+        .header-right { display: flex; align-items: center; padding: 0 10px; }
+        .header-logo { width: 100px; height: auto; max-height: 70px; object-fit: contain; }
         .header-left { }
-        .info-table { border-collapse: collapse; font-size: 11px; color: #444; }
-        .info-table td { padding: 0 10px; }
+        .info-table { border-collapse: collapse; font-size: 9px; color: #444; }
+        .info-table td { padding: 0 6px; }
         .info-table tr:not(:last-child) td { border-bottom: 1px solid #ddd; }
-        .info-table .info-label { font-weight: bold; color: #666; white-space: nowrap; width: 80px; border-left: 1px solid #ddd; }
+        .info-table .info-label { font-weight: bold; color: #666; white-space: nowrap; width: 65px; border-left: 1px solid #ddd; }
         .info-table .info-val { color: #222; }
-        .store-name { text-align: center; padding: 6px 20px; font-size: 13px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
+        .store-name { text-align: center; padding: 4px 10px; font-size: 11px; font-weight: 500; color: #555; border-bottom: 1px solid #ddd; }
 
         /* Parties (Sender/Receiver) */
         .parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ddd; }
-        .party { padding: 12px 20px; }
+        .party { padding: 6px 10px; }
         .party:first-child { border-left: 1px solid #ddd; }
-        .party-label { font-weight: bold; font-size: 13px; color: #222; margin-bottom: 8px; }
-        .party-row { display: flex; gap: 5px; margin-bottom: 4px; font-size: 11px; line-height: 1.7; }
-        .party-key { font-weight: bold; min-width: 45px; color: #666; }
+        .party-label { font-weight: bold; font-size: 11px; color: #222; margin-bottom: 4px; }
+        .party-row { display: flex; gap: 4px; margin-bottom: 2px; font-size: 9px; line-height: 1.6; }
+        .party-key { font-weight: bold; min-width: 35px; color: #666; }
         .party-val { color: #222; }
-
-        /* Order Info Bar - removed, moved to header */
 
         /* Table */
         .items-table { width: 100%; border-collapse: collapse; }
-        .items-table th, .items-table td { border-bottom: 1px solid #eee; padding: 7px 12px; text-align: right; font-size: 11px; }
-        .items-table th { background: #fff; font-weight: bold; font-size: 10px; color: #555; border-bottom: 1px solid #ddd; }
+        .items-table th, .items-table td { border-bottom: 1px solid #eee; padding: 4px 6px; text-align: right; font-size: 9px; }
+        .items-table th { background: #fff; font-weight: bold; font-size: 8px; color: #555; border-bottom: 1px solid #ddd; }
         .items-table tr:nth-child(even) { background: #fff; }
         .items-table .total-row { background: #fff; font-weight: bold; border-top: 1px solid #ddd; }
-        .items-table .total-row td { padding: 8px 12px; }
+        .items-table .total-row td { padding: 5px 6px; }
 
         /* Notes */
-        .notes-section { padding: 10px 20px; border-top: 1px solid #eee; }
-        .notes { background: #fff; padding: 6px 10px; border-radius: 3px; margin-bottom: 5px; font-size: 11px; border-right: 3px solid #ccc; }
+        .notes-section { padding: 6px 10px; border-top: 1px solid #eee; }
+        .notes { background: #fff; padding: 4px 8px; border-radius: 3px; margin-bottom: 3px; font-size: 9px; border-right: 3px solid #ccc; }
 
         /* Barcode */
-        .barcode-section { display: flex; justify-content: center; gap: 40px; padding: 12px 20px; border-top: 1px solid #ddd; }
+        .barcode-section { display: flex; justify-content: center; gap: 20px; padding: 8px 10px; border-top: 1px solid #ddd; }
         .barcode-item { text-align: center; }
-        .barcode-item svg, .barcode-item canvas { max-width: 200px; }
-        .barcode-label { font-size: 11px; font-weight: bold; color: #444; margin-top: 5px; }
-        .barcode-code { font-size: 9px; color: #aaa; margin-top: 3px; }
+        .barcode-item svg, .barcode-item canvas { max-width: 140px; }
+        .barcode-label { font-size: 9px; font-weight: bold; color: #444; margin-top: 3px; }
+        .barcode-code { font-size: 7px; color: #aaa; margin-top: 2px; }
 
         /* Top bar (screen only) */
         .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; z-index: 100; }
@@ -60,8 +58,13 @@
 
         @media print {
             .top-bar, .no-print { display: none !important; }
-            .invoice { margin-top: 0; }
-            body { padding: 5px; }
+            .invoice { margin-top: 0; border: none; }
+            body { padding: 0; }
+
+            @page {
+                size: A5 portrait;
+                margin: 5mm;
+            }
         }
     </style>
 </head>
@@ -291,16 +294,16 @@
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", {
             format: "CODE128",
-            width: 2,
-            height: 50,
+            width: 1.5,
+            height: 40,
             displayValue: false,
         });
 
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
-            width: 2,
-            height: 50,
+            width: 1.5,
+            height: 40,
             displayValue: false,
         });
         @endif
@@ -308,8 +311,8 @@
         @if($showPostQR)
         new QRCode(document.getElementById("qrcode"), {
             text: "{{ $postCode }}",
-            width: 120,
-            height: 120,
+            width: 90,
+            height: 90,
             correctLevel: QRCode.CorrectLevel.M,
         });
         @endif
