@@ -168,14 +168,9 @@ class PrintController extends Controller
             }
         }
 
-        // Mark as printed and move to appropriate status
+        // Mark as printed and move to preparing
         if ($order->status === WarehouseOrder::STATUS_PENDING) {
-            // اگر در آمادست ثبت شده → وضعیت آمادست، وگرنه → آماده‌سازی فروشگاه
-            if (!empty($order->amadest_barcode)) {
-                $order->updateStatus(WarehouseOrder::STATUS_AMADEST);
-            } else {
-                $order->updateStatus(WarehouseOrder::STATUS_PREPARING);
-            }
+            $order->updateStatus(WarehouseOrder::STATUS_PREPARING);
         }
 
         $invoiceSettings = [

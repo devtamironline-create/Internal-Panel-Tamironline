@@ -288,62 +288,6 @@
         $nextColor = $nextStatus ? $statusColors[$nextStatus] : null;
     @endphp
 
-    @if($order->status === 'amadest')
-    <!-- Amadest Status: Show tracking info -->
-    <div class="bg-white rounded-xl shadow-sm">
-        <div class="p-6 border-b border-gray-100">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                </div>
-                <div>
-                    <h2 class="text-lg font-bold text-gray-900">وضعیت آمادست</h2>
-                    <p class="text-sm text-gray-500 mt-0.5">این سفارش در سیستم آمادست ثبت شده و در انتظار پردازش است.</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 space-y-4">
-            @if($order->amadest_barcode)
-            <div class="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                <div class="flex items-center gap-3">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
-                    <div>
-                        <span class="text-xs text-purple-600 font-medium">شناسه آمادست</span>
-                        <p class="text-sm font-bold text-purple-900" dir="ltr">{{ $order->amadest_barcode }}</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-            @if($order->tracking_code)
-            <div class="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                <div class="flex items-center gap-3">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <div>
-                        <span class="text-xs text-gray-500 font-medium">کد رهگیری</span>
-                        <p class="text-sm font-bold text-gray-900" dir="ltr">{{ $order->tracking_code }}</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-            @if($order->post_tracking_code)
-            <div class="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                <div class="flex items-center gap-3">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    <div>
-                        <span class="text-xs text-gray-500 font-medium">کد رهگیری پستی</span>
-                        <p class="text-sm font-bold text-gray-900" dir="ltr">{{ $order->post_tracking_code }}</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                سفارش در آمادست ثبت شده و نیازی به آماده‌سازی فروشگاه ندارد. پس از بسته‌بندی، وضعیت را به «آماده ارسال» تغییر دهید.
-            </div>
-        </div>
-    </div>
-    @endif
-
     @if($order->status === 'preparing')
     <!-- Preparing Stage: Scan Order Barcode + Verify Weight -->
     <div class="bg-white rounded-xl shadow-sm" x-data="preparingStation()" x-init="init()">
