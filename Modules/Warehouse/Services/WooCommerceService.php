@@ -485,7 +485,7 @@ class WooCommerceService
                 'imported' => $totalImported,
                 'updated' => $totalUpdated,
                 'variations' => $totalVariations,
-                'updated_items' => $updatedItems,
+                'updated_items' => $updatedWeights + $updatedDimensions,
             ];
         } catch (\Exception $e) {
             Log::error('WooCommerce product sync failed', ['error' => $e->getMessage()]);
