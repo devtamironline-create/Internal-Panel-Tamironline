@@ -398,7 +398,7 @@
         @endif
     </div>
 
-    @if($orders->hasPages())
+    @if(method_exists($orders, 'hasPages') && $orders->hasPages())
     <div class="flex justify-center">{{ $orders->links() }}</div>
     @endif
 </div>

@@ -37,7 +37,19 @@ class WarehouseController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $orders = $query->paginate(20)->appends($request->query());
+        // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
+        $noPaginationStatuses = [
+            WarehouseOrder::STATUS_PENDING,
+            WarehouseOrder::STATUS_SUPPLY_WAIT,
+            WarehouseOrder::STATUS_PREPARING,
+            WarehouseOrder::STATUS_PACKED,
+        ];
+
+        if (in_array($currentStatus, $noPaginationStatuses)) {
+            $orders = $query->get();
+        } else {
+            $orders = $query->paginate(20)->appends($request->query());
+        }
 
         $shippingTypes = WarehouseShippingType::getActiveTypes();
 
