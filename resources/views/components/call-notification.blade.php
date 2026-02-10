@@ -1,49 +1,45 @@
 @if(auth()->check() && auth()->user()->is_staff)
 <div x-data="callNotification()" x-init="init()" class="fixed z-[200]">
-    <!-- Incoming Call Modal -->
-    <div x-show="incomingCall" x-transition class="fixed inset-0 z-[200] flex items-center justify-center bg-black/70">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full mx-4">
-            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse">
-                <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Incoming Call - Small floating card -->
+    <div x-show="incomingCall" x-transition class="fixed top-4 right-4 z-[200] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-80">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse shrink-0">
+                <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                 </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2" x-text="incomingCall?.caller_name"></h3>
-            <p class="text-gray-500 dark:text-gray-400 mb-8">تماس ورودی...</p>
-            <div class="flex gap-6 justify-center">
-                <button @click="rejectCall()" class="w-16 h-16 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition transform hover:scale-105">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-                <button @click="answerCall()" class="w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition transform hover:scale-105 animate-bounce">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                    </svg>
-                </button>
+            <div class="min-w-0">
+                <h3 class="font-bold text-gray-900 dark:text-white truncate" x-text="incomingCall?.caller_name"></h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">تماس ورودی...</p>
             </div>
+        </div>
+        <div class="flex gap-3 justify-end">
+            <button @click="rejectCall()" class="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <button @click="answerCall()" class="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition animate-bounce">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            </button>
         </div>
     </div>
 
-    <!-- Active Call Modal -->
-    <div x-show="activeCall" x-transition class="fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800">
-        <div class="text-center text-white">
-            <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-white/20 flex items-center justify-center text-5xl font-bold" x-text="activeCall?.remote_name?.charAt(0)"></div>
-            <h3 class="text-3xl font-bold mb-2" x-text="activeCall?.remote_name"></h3>
-            <p class="text-xl opacity-80 mb-8" x-text="callDuration"></p>
-            <div class="flex gap-6 justify-center">
-                <button @click="toggleMute()" :class="isMuted ? 'bg-red-500' : 'bg-white/20'" class="w-14 h-14 rounded-full flex items-center justify-center transition hover:opacity-80">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path x-show="!isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                        <path x-show="isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
-                    </svg>
-                </button>
-                <button @click="endCall()" class="w-14 h-14 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/>
-                    </svg>
-                </button>
+    <!-- Active Call - Small floating bar -->
+    <div x-show="activeCall" x-transition class="fixed top-4 right-4 z-[200] bg-green-600 text-white rounded-2xl shadow-2xl p-4 w-80">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold shrink-0" x-text="activeCall?.remote_name?.charAt(0)"></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="font-bold text-sm truncate" x-text="activeCall?.remote_name"></h3>
+                <p class="text-xs opacity-80" x-text="callDuration"></p>
             </div>
+            <button @click="toggleMute()" :class="isMuted ? 'bg-red-500' : 'bg-white/20'" class="w-10 h-10 rounded-full flex items-center justify-center transition shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path x-show="!isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    <path x-show="isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                </svg>
+            </button>
+            <button @click="endCall()" class="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+            </button>
         </div>
     </div>
 
@@ -95,6 +91,7 @@ function callNotification() {
                 const response = await fetch('/admin/chat/calls/incoming');
                 const data = await response.json();
                 if (data.has_call && data.call) {
+                    console.log('[CALL-NOTIF] Incoming call detected:', data.call.id, 'from', data.call.caller_name);
                     this.incomingCall = data.call;
                     this.$refs.ringtone.play().catch(() => {});
                     if (Notification.permission === 'granted') {
@@ -106,7 +103,9 @@ function callNotification() {
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('[CALL-NOTIF] Check incoming error:', e);
+            }
         },
 
         async checkUnreadMessages() {
@@ -128,6 +127,8 @@ function callNotification() {
 
         async answerCall() {
             if (!this.incomingCall) return;
+            console.log('[CALL-NOTIF] === ANSWERING CALL id:', this.incomingCall.id);
+
             const callId = this.incomingCall.id;
             const callerId = this.incomingCall.caller_id;
             const callerName = this.incomingCall.caller_name;
@@ -136,12 +137,19 @@ function callNotification() {
             this.$refs.ringtone.pause();
 
             try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    console.error('[CALL-NOTIF] No getUserMedia support');
+                    alert('مرورگر شما از تماس صوتی پشتیبانی نمی‌کند. لطفا از HTTPS استفاده کنید.');
+                    return;
+                }
                 this.localStream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
                     video: false
                 });
                 this.$refs.localAudio.srcObject = this.localStream;
+                console.log('[CALL-NOTIF] Mic acquired, tracks:', this.localStream.getAudioTracks().length);
             } catch (e) {
+                console.error('[CALL-NOTIF] Mic error:', e.name, e.message);
                 alert('خطا در دسترسی به میکروفون. لطفا از HTTPS استفاده کنید.');
                 return;
             }
@@ -155,7 +163,8 @@ function callNotification() {
                     }
                 });
                 const data = await response.json();
-                if (!data.call) return;
+                console.log('[CALL-NOTIF] Answer server response:', JSON.stringify(data));
+                if (!data.call) { console.error('[CALL-NOTIF] No call in answer response'); return; }
 
                 this.activeCall = { id: callId, remote_name: callerName };
                 this.lastSignalSeq = -1;
@@ -164,32 +173,54 @@ function callNotification() {
                 this.peerConnection = new RTCPeerConnection({
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
                     ]
                 });
                 this.localStream.getTracks().forEach(track => {
                     this.peerConnection.addTrack(track, this.localStream);
                 });
+                console.log('[CALL-NOTIF] PeerConnection created, local tracks added');
+
                 this.peerConnection.ontrack = (event) => {
+                    console.log('[CALL-NOTIF] Remote track received!', event.streams.length, 'streams');
                     this.$refs.remoteAudio.srcObject = event.streams[0];
+                    this.$refs.remoteAudio.play().catch(e => console.log('[CALL-NOTIF] Audio play error:', e));
                 };
                 this.peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) this.sendSignal('ice-candidate', event.candidate);
+                    if (event.candidate) {
+                        console.log('[CALL-NOTIF] ICE candidate generated, sending...');
+                        this.sendSignal('ice-candidate', event.candidate);
+                    } else {
+                        console.log('[CALL-NOTIF] ICE gathering complete');
+                    }
+                };
+                this.peerConnection.oniceconnectionstatechange = () => {
+                    console.log('[CALL-NOTIF] ICE state:', this.peerConnection?.iceConnectionState);
                 };
                 this.peerConnection.onconnectionstatechange = () => {
                     const state = this.peerConnection?.connectionState;
-                    if (state === 'failed' || state === 'disconnected') this.endCall();
+                    console.log('[CALL-NOTIF] Connection state:', state);
+                    if (state === 'connected') {
+                        console.log('[CALL-NOTIF] === CONNECTED! Audio should flow now ===');
+                    } else if (state === 'failed') {
+                        console.log('[CALL-NOTIF] Connection FAILED');
+                        this.endCall();
+                    }
                 };
 
                 this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
                 this.startCallTimer();
+                console.log('[CALL-NOTIF] Polling started, waiting for offer...');
             } catch (e) {
+                console.error('[CALL-NOTIF] ERROR answering:', e);
                 this.cleanupCall();
             }
         },
 
         async rejectCall() {
             if (!this.incomingCall) return;
+            console.log('[CALL-NOTIF] Rejecting call:', this.incomingCall.id);
             try {
                 await fetch(`/admin/chat/calls/${this.incomingCall.id}/reject`, {
                     method: 'POST',
@@ -204,6 +235,7 @@ function callNotification() {
         },
 
         async endCall() {
+            console.log('[CALL-NOTIF] Ending call');
             const callId = this.activeCall?.id;
             if (callId) {
                 try {
@@ -220,6 +252,7 @@ function callNotification() {
         },
 
         cleanupCall() {
+            console.log('[CALL-NOTIF] Cleanup');
             if (this.peerConnection) { this.peerConnection.close(); this.peerConnection = null; }
             if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
             if (this.callTimer) { clearInterval(this.callTimer); this.callTimer = null; }
@@ -253,31 +286,48 @@ function callNotification() {
             if (!callId) return;
             try {
                 const response = await fetch(`/admin/chat/signals/poll?call_id=${callId}&last_seq=${this.lastSignalSeq}`);
+                if (!response.ok) { console.log('[CALL-NOTIF] Poll HTTP error:', response.status); return; }
                 const data = await response.json();
+
+                if (data.signals && data.signals.length > 0) {
+                    console.log('[CALL-NOTIF] Got', data.signals.length, 'new signals, status:', data.status);
+                }
+
                 for (const signal of (data.signals || [])) {
                     await this.handleSignal(signal);
                     if (signal.seq > this.lastSignalSeq) this.lastSignalSeq = signal.seq;
                 }
+
                 if (data.status === 'ended' || data.status === 'rejected') {
+                    console.log('[CALL-NOTIF] Call ended/rejected:', data.status);
                     this.cleanupCall();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('[CALL-NOTIF] Poll error:', e);
+            }
         },
 
         async handleSignal(signal) {
-            if (!this.peerConnection) return;
+            if (!this.peerConnection) { console.log('[CALL-NOTIF] No PC for signal:', signal.type); return; }
+            console.log('[CALL-NOTIF] Handling signal:', signal.type, 'seq:', signal.seq);
             try {
                 if (signal.type === 'offer') {
+                    console.log('[CALL-NOTIF] Setting remote description (offer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    console.log('[CALL-NOTIF] Remote desc set. Flushing', this.pendingIceCandidates.length, 'buffered ICE');
                     for (const c of this.pendingIceCandidates) {
-                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) { console.log('[CALL-NOTIF] Buffered ICE error:', e.message); }
                     }
                     this.pendingIceCandidates = [];
                     const answer = await this.peerConnection.createAnswer();
                     await this.peerConnection.setLocalDescription(answer);
+                    console.log('[CALL-NOTIF] Answer created, sending...');
                     await this.sendSignal('answer', answer);
+                    console.log('[CALL-NOTIF] Answer sent!');
                 } else if (signal.type === 'answer') {
+                    console.log('[CALL-NOTIF] Setting remote description (answer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    console.log('[CALL-NOTIF] Remote desc set (answer). Flushing', this.pendingIceCandidates.length, 'ICE');
                     for (const c of this.pendingIceCandidates) {
                         try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
                     }
@@ -286,19 +336,20 @@ function callNotification() {
                     if (this.peerConnection.remoteDescription) {
                         await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
                     } else {
+                        console.log('[CALL-NOTIF] Buffering ICE candidate (no remote desc yet)');
                         this.pendingIceCandidates.push(signal.data);
                     }
                 }
             } catch (e) {
-                console.error('Signal error:', signal.type, e);
+                console.error('[CALL-NOTIF] Signal ERROR:', signal.type, e.message);
             }
         },
 
         async sendSignal(type, data) {
             const callId = this.activeCall?.id;
-            if (!callId) return;
+            if (!callId) { console.log('[CALL-NOTIF] Cannot send signal, no callId'); return; }
             try {
-                await fetch('/admin/chat/signal', {
+                const resp = await fetch('/admin/chat/signal', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -306,7 +357,10 @@ function callNotification() {
                     },
                     body: JSON.stringify({ call_id: callId, type, data })
                 });
-            } catch (e) {}
+                if (!resp.ok) console.log('[CALL-NOTIF] Signal send HTTP error:', resp.status);
+            } catch (e) {
+                console.error('[CALL-NOTIF] Signal send error:', e);
+            }
         }
     }
 }

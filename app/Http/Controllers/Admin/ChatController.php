@@ -604,7 +604,7 @@ class ChatController extends Controller
         $receiver = User::find($request->receiver_id);
         $call = Call::initiate(auth()->id(), $request->receiver_id, $request->type ?? 'audio');
 
-        // TODO: Broadcast call notification via WebSocket
+        \Log::info("[CALL] Initiated: call={$call->id} caller=" . auth()->id() . " receiver={$request->receiver_id}");
 
         return response()->json([
             'call' => [
@@ -626,6 +626,8 @@ class ChatController extends Controller
 
         $call->answer();
         $call->load('caller');
+
+        \Log::info("[CALL] Answered: call={$call->id} by=" . auth()->id() . " status={$call->status}");
 
         return response()->json([
             'call' => [
@@ -723,15 +725,18 @@ class ChatController extends Controller
         // Store signal per call with sequence number (never lost, never cleaned prematurely)
         $cacheKey = "call_signals_{$request->call_id}";
         $signals = Cache::get($cacheKey, []);
+        $seq = count($signals);
         $signals[] = [
-            'seq' => count($signals),
+            'seq' => $seq,
             'sender_id' => auth()->id(),
             'type' => $request->type,
             'data' => $request->data,
         ];
         Cache::put($cacheKey, $signals, 300); // 5 minutes TTL
 
-        return response()->json(['status' => 'sent']);
+        \Log::info("[CALL] Signal stored: call={$request->call_id} type={$request->type} seq={$seq} from=" . auth()->id());
+
+        return response()->json(['status' => 'sent', 'seq' => $seq]);
     }
 
     /**
@@ -756,10 +761,17 @@ class ChatController extends Controller
             $s['seq'] > $lastSeq && $s['sender_id'] !== $myId
         ));
 
+        $status = $call->fresh()->status;
+        $seen = Cache::get("call_seen_{$callId}", false);
+
+        if (count($newSignals) > 0) {
+            \Log::info("[CALL] Poll: call={$callId} user={$myId} lastSeq={$lastSeq} totalSignals=" . count($signals) . " newForUser=" . count($newSignals) . " status={$status}");
+        }
+
         return response()->json([
             'signals' => $newSignals,
-            'status' => $call->fresh()->status,
-            'seen' => Cache::get("call_seen_{$callId}", false),
+            'status' => $status,
+            'seen' => $seen,
         ]);
     }
 

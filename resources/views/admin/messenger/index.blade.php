@@ -716,89 +716,65 @@
         </div>
     </div>
 
-    <!-- Incoming Call Modal -->
-    <div x-cloak x-show="incomingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70" style="display: none;">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full mx-4">
-            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse">
-                <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Incoming Call - Small floating card -->
+    <div x-cloak x-show="incomingCall" x-transition class="fixed top-4 left-4 z-[100] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-80" style="display: none;">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center animate-pulse shrink-0">
+                <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                 </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2" x-text="incomingCall?.caller_name"></h3>
-            <p class="text-gray-500 dark:text-gray-400 mb-8">تماس ورودی...</p>
-            <div class="flex gap-6 justify-center">
-                <button @click="rejectCall()" class="w-16 h-16 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition transform hover:scale-105">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-                <button @click="answerCall()" class="w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition transform hover:scale-105 animate-bounce">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                    </svg>
-                </button>
+            <div class="min-w-0">
+                <h3 class="font-bold text-gray-900 dark:text-white truncate" x-text="incomingCall?.caller_name"></h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">تماس ورودی...</p>
             </div>
         </div>
-    </div>
-
-    <!-- Outgoing Call Modal (Waiting/Ringing) -->
-    <div x-cloak x-show="outgoingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" style="display: none;">
-        <div class="text-center text-white">
-            <div class="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-5xl font-bold"
-                 :class="callStatus === 'ringing' ? 'bg-green-500/30 animate-pulse' : 'bg-white/20'">
-                <span x-text="outgoingCall?.remote_name?.charAt(0)"></span>
-            </div>
-            <h3 class="text-3xl font-bold mb-2" x-text="outgoingCall?.remote_name"></h3>
-
-            <!-- Status indicator -->
-            <div class="mb-8">
-                <template x-if="callStatus === 'waiting'">
-                    <div class="flex items-center justify-center gap-2 text-xl text-gray-300">
-                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        <span>در انتظار پاسخ...</span>
-                    </div>
-                </template>
-                <template x-if="callStatus === 'ringing'">
-                    <div class="flex items-center justify-center gap-2 text-xl text-green-400">
-                        <svg class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                        <span>در حال زنگ خوردن...</span>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Cancel button -->
-            <button @click="cancelOutgoingCall()" class="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition mx-auto">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/>
-                </svg>
+        <div class="flex gap-3 justify-end">
+            <button @click="rejectCall()" class="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <button @click="answerCall()" class="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition animate-bounce">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
             </button>
         </div>
     </div>
 
-    <!-- Active Call Modal -->
-    <div x-cloak x-show="activeCall && !outgoingCall" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800" style="display: none;">
-        <div class="text-center text-white">
-            <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-white/20 flex items-center justify-center text-5xl font-bold" x-text="activeCall?.remote_name?.charAt(0)"></div>
-            <h3 class="text-3xl font-bold mb-2" x-text="activeCall?.remote_name"></h3>
-            <p class="text-xl opacity-80 mb-8" x-text="callDuration"></p>
-            <div class="flex gap-6 justify-center">
-                <button @click="toggleMute()" :class="isMuted ? 'bg-red-500' : 'bg-white/20'" class="w-14 h-14 rounded-full flex items-center justify-center transition hover:opacity-80">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path x-show="!isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                        <path x-show="isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
-                    </svg>
-                </button>
-                <button @click="endCall()" class="w-14 h-14 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/>
-                    </svg>
-                </button>
+    <!-- Outgoing Call - Small floating card -->
+    <div x-cloak x-show="outgoingCall" x-transition class="fixed top-4 left-4 z-[100] bg-gray-800 text-white rounded-2xl shadow-2xl p-5 w-80" style="display: none;">
+        <div class="flex items-center gap-4 mb-3">
+            <div class="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
+                 :class="callStatus === 'ringing' ? 'bg-green-500/30 animate-pulse' : 'bg-white/20'">
+                <span x-text="outgoingCall?.remote_name?.charAt(0)"></span>
             </div>
+            <div class="min-w-0">
+                <h3 class="font-bold truncate" x-text="outgoingCall?.remote_name"></h3>
+                <p class="text-sm opacity-70" x-text="callStatus === 'ringing' ? 'در حال زنگ خوردن...' : 'در انتظار پاسخ...'"></p>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button @click="cancelOutgoingCall()" class="w-12 h-12 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Call - Small floating bar -->
+    <div x-cloak x-show="activeCall && !outgoingCall" x-transition class="fixed top-4 left-4 z-[100] bg-green-600 text-white rounded-2xl shadow-2xl p-4 w-80" style="display: none;">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold shrink-0" x-text="activeCall?.remote_name?.charAt(0)"></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="font-bold text-sm truncate" x-text="activeCall?.remote_name"></h3>
+                <p class="text-xs opacity-80" x-text="callDuration"></p>
+            </div>
+            <button @click="toggleMute()" :class="isMuted ? 'bg-red-500' : 'bg-white/20'" class="w-10 h-10 rounded-full flex items-center justify-center transition shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path x-show="!isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    <path x-show="isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                </svg>
+            </button>
+            <button @click="endCall()" class="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+            </button>
         </div>
     </div>
 
@@ -2075,6 +2051,7 @@ function messenger() {
                 const data = await response.json();
 
                 if (data.has_call && data.call) {
+                    console.log('[CALL] Incoming call detected:', data.call.id, 'from', data.call.caller_name);
                     this.incomingCall = data.call;
                     this.$refs.ringtone.play().catch(() => {});
 
@@ -2087,7 +2064,9 @@ function messenger() {
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('[CALL] Check incoming error:', e);
+            }
         },
 
         async requestNotificationPermission() {
@@ -2107,124 +2086,107 @@ function messenger() {
          */
         async initiateCall(userId) {
             if (!userId || this.outgoingCall || this.activeCall) return;
+            console.log('[CALL] === INITIATING CALL to user:', userId);
 
-            // 1. Check microphone before anything
             const micOk = await this.acquireMicrophone();
-            if (!micOk) return;
+            if (!micOk) { console.log('[CALL] Mic failed'); return; }
+            console.log('[CALL] Mic OK');
 
             try {
-                // 2. Create call on server
                 const response = await fetch('/admin/chat/calls/initiate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
                     body: JSON.stringify({ receiver_id: userId, type: 'audio' })
                 });
                 const data = await response.json();
-                if (!data.call) return;
+                console.log('[CALL] Server response:', JSON.stringify(data));
+                if (!data.call) { console.log('[CALL] No call in response'); return; }
 
-                // 3. Show outgoing call UI
-                this.outgoingCall = {
-                    id: data.call.id,
-                    remote_name: data.call.remote_name,
-                    receiver_id: userId,
-                };
+                this.outgoingCall = { id: data.call.id, remote_name: data.call.remote_name, receiver_id: userId };
                 this.activeCall = { id: data.call.id, remote_name: data.call.remote_name };
                 this.callStatus = 'waiting';
                 this.lastSignalSeq = -1;
                 this.pendingIceCandidates = [];
 
-                // 4. Create PeerConnection and offer
                 this.createPeerConnection();
+                console.log('[CALL] PeerConnection created');
+
                 const offer = await this.peerConnection.createOffer();
                 await this.peerConnection.setLocalDescription(offer);
-                await this.sendSignal('offer', offer);
+                console.log('[CALL] Offer created, SDP length:', offer.sdp.length);
 
-                // 5. Start signal polling (handles both signals AND call status)
+                await this.sendSignal('offer', offer);
+                console.log('[CALL] Offer sent to server');
+
                 this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
 
-                // 6. Auto-cancel after 45 seconds if no answer
                 this.callTimeoutTimer = setTimeout(() => {
                     if (this.outgoingCall) {
+                        console.log('[CALL] Timeout - no answer after 45s');
                         this.showMicrophoneError('پاسخی دریافت نشد. تماس لغو شد.');
                         this.cancelOutgoingCall();
                     }
                 }, 45000);
 
             } catch (e) {
-                console.error('Error initiating call:', e);
-                this.showMicrophoneError('خطا در برقراری تماس.');
+                console.error('[CALL] ERROR initiating:', e);
+                this.showMicrophoneError('خطا در برقراری تماس: ' + e.message);
                 this.cleanupCall();
             }
         },
 
-        /**
-         * CALLER: Cancel outgoing call
-         */
         cancelOutgoingCall() {
+            console.log('[CALL] Cancelling outgoing call');
             const callId = this.outgoingCall?.id || this.activeCall?.id;
             if (callId) {
                 fetch(`/admin/chat/calls/${callId}/end`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
                 }).catch(() => {});
             }
             this.cleanupCall();
         },
 
-        /**
-         * RECEIVER: Answer incoming call
-         */
         async answerCall() {
             if (!this.incomingCall) return;
+            console.log('[CALL] === ANSWERING CALL id:', this.incomingCall.id);
 
             const callId = this.incomingCall.id;
             const callerId = this.incomingCall.caller_id;
             const callerName = this.incomingCall.caller_name;
 
-            // 1. Stop ringtone immediately
             this.incomingCall = null;
             this.$refs.ringtone.pause();
 
-            // 2. Acquire microphone
             const micOk = await this.acquireMicrophone();
-            if (!micOk) return;
+            if (!micOk) { console.log('[CALL] Mic failed on answer'); return; }
+            console.log('[CALL] Mic OK for answering');
 
             try {
-                // 3. Tell server we answered
                 const response = await fetch(`/admin/chat/calls/${callId}/answer`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
                 });
                 const data = await response.json();
-                if (!data.call) return;
+                console.log('[CALL] Answer server response:', JSON.stringify(data));
+                if (!data.call) { console.log('[CALL] No call in answer response'); return; }
 
-                // 4. Set active call state
                 this.activeCall = { id: callId, remote_name: callerName };
                 this.outgoingCall = null;
                 this.callStatus = 'connected';
-                this.lastSignalSeq = -1; // Get ALL signals from start (crucial!)
+                this.lastSignalSeq = -1;
                 this.pendingIceCandidates = [];
 
-                // 5. Create PeerConnection (will receive offer via polling)
                 this.createPeerConnection();
+                console.log('[CALL] PeerConnection created (receiver)');
 
-                // 6. Start signal polling (will receive offer → create answer)
                 this.callSignalTimer = setInterval(() => this.pollCallSignals(), 600);
+                console.log('[CALL] Signal polling started, waiting for offer...');
 
-                // 7. Start call duration timer
                 this.startCallTimer();
             } catch (e) {
-                console.error('Error answering call:', e);
-                this.showMicrophoneError('خطا در پاسخ به تماس.');
+                console.error('[CALL] ERROR answering:', e);
+                this.showMicrophoneError('خطا در پاسخ به تماس: ' + e.message);
                 this.cleanupCall();
             }
         },
@@ -2383,22 +2345,32 @@ function messenger() {
 
             // Receive remote audio
             this.peerConnection.ontrack = (event) => {
+                console.log('[CALL] Remote track received!', event.streams.length, 'streams');
                 this.$refs.remoteAudio.srcObject = event.streams[0];
+                this.$refs.remoteAudio.play().catch(e => console.log('[CALL] Remote audio play error:', e));
             };
 
             // Send ICE candidates to other party
             this.peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
+                    console.log('[CALL] ICE candidate generated, sending...');
                     this.sendSignal('ice-candidate', event.candidate);
+                } else {
+                    console.log('[CALL] ICE gathering complete');
                 }
+            };
+
+            // Monitor ICE connection state
+            this.peerConnection.oniceconnectionstatechange = () => {
+                console.log('[CALL] ICE state:', this.peerConnection?.iceConnectionState);
             };
 
             // Monitor connection state
             this.peerConnection.onconnectionstatechange = () => {
                 const state = this.peerConnection?.connectionState;
-                console.log('WebRTC connection state:', state);
+                console.log('[CALL] Connection state:', state);
                 if (state === 'connected') {
-                    // Call is fully connected
+                    console.log('[CALL] === CONNECTED! Audio should flow now ===');
                     if (this.outgoingCall) {
                         this.outgoingCall = null;
                         this.callStatus = 'connected';
@@ -2408,25 +2380,30 @@ function messenger() {
                             this.callTimeoutTimer = null;
                         }
                     }
-                } else if (state === 'failed' || state === 'disconnected') {
-                    this.showMicrophoneError('اتصال قطع شد.');
+                } else if (state === 'failed') {
+                    console.log('[CALL] Connection FAILED');
+                    this.showMicrophoneError('اتصال ناموفق بود.');
                     this.endCall();
                 }
             };
         },
 
-        /**
-         * Combined polling: signals + call status in one request
-         */
         async pollCallSignals() {
             const callId = this.activeCall?.id;
             if (!callId) return;
 
             try {
                 const response = await fetch(`/admin/chat/signals/poll?call_id=${callId}&last_seq=${this.lastSignalSeq}`);
+                if (!response.ok) {
+                    console.log('[CALL] Poll error HTTP:', response.status);
+                    return;
+                }
                 const data = await response.json();
 
-                // Process signals in order
+                if (data.signals && data.signals.length > 0) {
+                    console.log('[CALL] Got', data.signals.length, 'new signals, status:', data.status);
+                }
+
                 for (const signal of (data.signals || [])) {
                     await this.handleSignal(signal);
                     if (signal.seq > this.lastSignalSeq) {
@@ -2437,8 +2414,10 @@ function messenger() {
                 // Update call status for outgoing call UI
                 if (this.outgoingCall) {
                     if (data.status === 'answered') {
-                        this.callStatus = 'ringing'; // Will switch to connected when WebRTC connects
+                        console.log('[CALL] Call answered by receiver!');
+                        this.callStatus = 'ringing';
                     } else if (data.status === 'rejected' || data.status === 'ended' || data.status === 'missed') {
+                        console.log('[CALL] Call ended/rejected:', data.status);
                         this.showMicrophoneError(data.status === 'rejected' ? 'تماس رد شد.' : 'تماس پایان یافت.');
                         this.cleanupCall();
                     } else if (data.seen) {
@@ -2446,33 +2425,36 @@ function messenger() {
                     }
                 }
 
-                // Check if other side ended the call
                 if (!this.outgoingCall && (data.status === 'ended' || data.status === 'rejected')) {
+                    console.log('[CALL] Other side ended call');
                     this.cleanupCall();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('[CALL] Poll error:', e);
+            }
         },
 
-        /**
-         * Handle received WebRTC signal with ICE buffering
-         */
         async handleSignal(signal) {
-            if (!this.peerConnection) return;
+            if (!this.peerConnection) { console.log('[CALL] No PC for signal:', signal.type); return; }
+            console.log('[CALL] Handling signal:', signal.type, 'seq:', signal.seq);
             try {
                 if (signal.type === 'offer') {
+                    console.log('[CALL] Setting remote description (offer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
-                    // Flush buffered ICE candidates
+                    console.log('[CALL] Remote description set. Flushing', this.pendingIceCandidates.length, 'buffered ICE candidates');
                     for (const candidate of this.pendingIceCandidates) {
-                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+                        try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.log('[CALL] Buffered ICE error:', e.message); }
                     }
                     this.pendingIceCandidates = [];
-                    // Create and send answer
                     const answer = await this.peerConnection.createAnswer();
                     await this.peerConnection.setLocalDescription(answer);
+                    console.log('[CALL] Answer created, sending...');
                     await this.sendSignal('answer', answer);
+                    console.log('[CALL] Answer sent!');
                 } else if (signal.type === 'answer') {
+                    console.log('[CALL] Setting remote description (answer)...');
                     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.data));
-                    // Flush buffered ICE candidates
+                    console.log('[CALL] Remote description set (answer). Flushing', this.pendingIceCandidates.length, 'ICE');
                     for (const candidate of this.pendingIceCandidates) {
                         try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
                     }
@@ -2481,31 +2463,28 @@ function messenger() {
                     if (this.peerConnection.remoteDescription) {
                         await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data));
                     } else {
-                        // Buffer until remote description is set
+                        console.log('[CALL] Buffering ICE candidate (no remote desc yet)');
                         this.pendingIceCandidates.push(signal.data);
                     }
                 }
             } catch (e) {
-                console.error('Signal error:', signal.type, e);
+                console.error('[CALL] Signal ERROR:', signal.type, e.message);
             }
         },
 
-        /**
-         * Send WebRTC signal via server
-         */
         async sendSignal(type, data) {
             const callId = this.activeCall?.id;
-            if (!callId) return;
+            if (!callId) { console.log('[CALL] Cannot send signal, no callId'); return; }
             try {
-                await fetch('/admin/chat/signal', {
+                const resp = await fetch('/admin/chat/signal', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
                     body: JSON.stringify({ call_id: callId, type, data })
                 });
-            } catch (e) {}
+                if (!resp.ok) console.log('[CALL] Signal send HTTP error:', resp.status);
+            } catch (e) {
+                console.error('[CALL] Signal send error:', e);
+            }
         },
 
         // Lightbox functions
