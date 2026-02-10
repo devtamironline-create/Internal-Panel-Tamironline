@@ -408,21 +408,27 @@
             </div>
         </div>
     </div>
-    @elseif($nextStatus)
-    <!-- Other statuses: simple status change button -->
+    @endif
+
+    <!-- Status Change Section -->
     <div class="bg-white rounded-xl shadow-sm p-6">
         <h2 class="text-lg font-bold text-gray-900 mb-4">تغییر وضعیت</h2>
-        <form action="{{ route('warehouse.status', $order) }}" method="POST" class="flex items-center gap-4">
+        <form action="{{ route('warehouse.status', $order) }}" method="POST" class="flex flex-wrap items-center gap-3">
             @csrf
             @method('PATCH')
-            <input type="hidden" name="status" value="{{ $nextStatus }}">
-            <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 bg-{{ $nextColor }}-600 text-white rounded-lg hover:bg-{{ $nextColor }}-700 font-medium" onclick="return confirm('انتقال به وضعیت «{{ $nextLabel }}»؟')">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                انتقال به «{{ $nextLabel }}»
-            </button>
+            @foreach($allStatuses as $status)
+                @if($status !== $order->status)
+                    @php $sColor = $statusColors[$status]; @endphp
+                    <button type="submit" name="status" value="{{ $status }}"
+                            class="inline-flex items-center gap-2 px-4 py-2 border-2 border-{{ $sColor }}-200 bg-{{ $sColor }}-50 text-{{ $sColor }}-700 rounded-lg hover:bg-{{ $sColor }}-100 hover:border-{{ $sColor }}-300 font-medium text-sm transition-colors"
+                            onclick="return confirm('تغییر وضعیت به «{{ $statusLabels[$status] }}»؟')">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! \Modules\Warehouse\Models\WarehouseOrder::statusIcons()[$status] ?? '' !!}</svg>
+                        {{ $statusLabels[$status] }}
+                    </button>
+                @endif
+            @endforeach
         </form>
     </div>
-    @endif
     @endcanany
 </div>
 
