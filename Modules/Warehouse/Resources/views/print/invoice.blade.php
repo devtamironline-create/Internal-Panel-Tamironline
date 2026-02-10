@@ -43,11 +43,16 @@
         .notes { background: #fff; padding: 4px 8px; border-radius: 3px; margin-bottom: 3px; font-size: 9px; border-right: 3px solid #ccc; }
 
         /* Barcode */
-        .barcode-section { display: flex; justify-content: center; gap: 20px; padding: 8px 10px; border-top: 1px solid #ddd; }
-        .barcode-item { text-align: center; }
-        .barcode-item svg, .barcode-item canvas { max-width: 140px; }
-        .barcode-label { font-size: 9px; font-weight: bold; color: #444; margin-top: 3px; }
-        .barcode-code { font-size: 7px; color: #aaa; margin-top: 2px; }
+        .barcode-section { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #ddd; gap: 10px; }
+        .barcode-list { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .barcode-item { display: flex; align-items: center; gap: 6px; }
+        .barcode-item svg { flex-shrink: 0; }
+        .barcode-meta { display: flex; flex-direction: column; }
+        .barcode-label { font-size: 9px; font-weight: bold; color: #444; }
+        .barcode-code { font-size: 7px; color: #aaa; }
+        .qr-side { flex-shrink: 0; text-align: center; }
+        .qr-side .barcode-label { margin-top: 3px; }
+        .qr-side .barcode-code { margin-top: 1px; }
 
         /* Top bar (screen only) */
         .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; z-index: 100; }
@@ -270,22 +275,28 @@
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
         @endphp
         <div class="barcode-section">
-            <div class="barcode-item">
-                <svg id="barcode"></svg>
-                <p class="barcode-label">بارکد سفارش</p>
-                <p class="barcode-code">{{ $order->barcode }}</p>
-            </div>
+            <div class="barcode-list">
+                <div class="barcode-item">
+                    <svg id="barcode"></svg>
+                    <div class="barcode-meta">
+                        <span class="barcode-label">بارکد سفارش</span>
+                        <span class="barcode-code">{{ $order->barcode }}</span>
+                    </div>
+                </div>
 
-            @if($showAmadest)
-            <div class="barcode-item">
-                <svg id="amadest-barcode"></svg>
-                <p class="barcode-label">بارکد آماده</p>
-                <p class="barcode-code">{{ $amadestCode }}</p>
+                @if($showAmadest)
+                <div class="barcode-item">
+                    <svg id="amadest-barcode"></svg>
+                    <div class="barcode-meta">
+                        <span class="barcode-label">بارکد آمادست</span>
+                        <span class="barcode-code">{{ $amadestCode }}</span>
+                    </div>
+                </div>
+                @endif
             </div>
-            @endif
 
             @if($showPostQR)
-            <div class="barcode-item">
+            <div class="qr-side">
                 <div id="qrcode"></div>
                 <p class="barcode-label">کد رهگیری پست</p>
                 <p class="barcode-code">{{ $postCode }}</p>
@@ -301,19 +312,19 @@
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", {
             format: "CODE128",
-            width: 2.5,
-            height: 50,
+            width: 3,
+            height: 55,
             displayValue: false,
-            margin: 5,
+            margin: 2,
         });
 
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
-            width: 2.5,
-            height: 50,
+            width: 3,
+            height: 55,
             displayValue: false,
-            margin: 5,
+            margin: 2,
         });
         @endif
 
