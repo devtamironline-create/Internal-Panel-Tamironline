@@ -47,6 +47,7 @@ class WarehouseController extends Controller
                 WarehouseOrder::STATUS_PENDING,
                 WarehouseOrder::STATUS_SUPPLY_WAIT,
                 WarehouseOrder::STATUS_PREPARING,
+                WarehouseOrder::STATUS_AMADEST,
                 WarehouseOrder::STATUS_PACKED,
             ];
 
