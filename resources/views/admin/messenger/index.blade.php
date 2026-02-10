@@ -748,7 +748,7 @@
             </div>
             <div class="min-w-0">
                 <h3 class="font-bold truncate" x-text="outgoingCall?.remote_name"></h3>
-                <p class="text-sm opacity-70" x-text="callStatus === 'ringing' ? 'در حال زنگ خوردن...' : 'در انتظار پاسخ...'"></p>
+                <p class="text-sm opacity-70" x-text="callStatus === 'connecting' ? 'در حال اتصال...' : (callStatus === 'ringing' ? 'در حال زنگ خوردن...' : 'در انتظار پاسخ...')"></p>
             </div>
         </div>
         <div class="flex justify-end">
@@ -2414,8 +2414,8 @@ function messenger() {
                 // Update call status for outgoing call UI
                 if (this.outgoingCall) {
                     if (data.status === 'answered') {
-                        console.log('[CALL] Call answered by receiver!');
-                        this.callStatus = 'ringing';
+                        console.log('[CALL] Call answered by receiver! Waiting for WebRTC signals...');
+                        this.callStatus = 'connecting';
                     } else if (data.status === 'rejected' || data.status === 'ended' || data.status === 'missed') {
                         console.log('[CALL] Call ended/rejected:', data.status);
                         this.showMicrophoneError(data.status === 'rejected' ? 'تماس رد شد.' : 'تماس پایان یافت.');

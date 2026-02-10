@@ -705,7 +705,8 @@ class ChatController extends Controller
     }
 
     /**
-     * Send WebRTC signaling data (per-call storage with sequence numbers)
+     * Send WebRTC signaling data
+     * Each party writes to its OWN cache key to prevent race conditions
      */
     public function sendSignal(Request $request): JsonResponse
     {
@@ -716,31 +717,33 @@ class ChatController extends Controller
         ]);
 
         $call = Call::find($request->call_id);
+        $senderId = auth()->id();
 
         // Verify user is part of the call
-        if (!in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
+        if (!in_array($senderId, [$call->caller_id, $call->receiver_id])) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
-        // Store signal per call with sequence number (never lost, never cleaned prematurely)
-        $cacheKey = "call_signals_{$request->call_id}";
+        // Store in per-sender key: each party only writes to their own key
+        // This prevents race conditions (concurrent writes don't overwrite each other)
+        $cacheKey = "call_signals_{$request->call_id}_{$senderId}";
         $signals = Cache::get($cacheKey, []);
         $seq = count($signals);
         $signals[] = [
             'seq' => $seq,
-            'sender_id' => auth()->id(),
             'type' => $request->type,
             'data' => $request->data,
         ];
         Cache::put($cacheKey, $signals, 300); // 5 minutes TTL
 
-        \Log::info("[CALL] Signal stored: call={$request->call_id} type={$request->type} seq={$seq} from=" . auth()->id());
+        \Log::info("[CALL] Signal stored: call={$request->call_id} type={$request->type} seq={$seq} from={$senderId}");
 
         return response()->json(['status' => 'sent', 'seq' => $seq]);
     }
 
     /**
-     * Poll WebRTC signals + call status in one request (per-call, sequence-based)
+     * Poll WebRTC signals + call status in one request
+     * Reads from the OTHER party's cache key
      */
     public function pollCallSignals(Request $request): JsonResponse
     {
@@ -748,24 +751,26 @@ class ChatController extends Controller
         $lastSeq = (int) $request->get('last_seq', -1);
 
         $call = Call::find($callId);
-        if (!$call || !in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
+        $myId = auth()->id();
+        if (!$call || !in_array($myId, [$call->caller_id, $call->receiver_id])) {
             return response()->json(['signals' => [], 'status' => 'ended']);
         }
 
-        $cacheKey = "call_signals_{$callId}";
+        // Read from the OTHER party's cache key
+        $otherId = ($myId === $call->caller_id) ? $call->receiver_id : $call->caller_id;
+        $cacheKey = "call_signals_{$callId}_{$otherId}";
         $signals = Cache::get($cacheKey, []);
 
-        // Return signals from OTHER party that are newer than lastSeq
-        $myId = auth()->id();
+        // Return signals newer than lastSeq
         $newSignals = array_values(array_filter($signals, fn($s) =>
-            $s['seq'] > $lastSeq && $s['sender_id'] !== $myId
+            $s['seq'] > $lastSeq
         ));
 
         $status = $call->fresh()->status;
         $seen = Cache::get("call_seen_{$callId}", false);
 
         if (count($newSignals) > 0) {
-            \Log::info("[CALL] Poll: call={$callId} user={$myId} lastSeq={$lastSeq} totalSignals=" . count($signals) . " newForUser=" . count($newSignals) . " status={$status}");
+            \Log::info("[CALL] Poll: call={$callId} user={$myId} reading from={$otherId} lastSeq={$lastSeq} total=" . count($signals) . " new=" . count($newSignals) . " status={$status}");
         }
 
         return response()->json([
