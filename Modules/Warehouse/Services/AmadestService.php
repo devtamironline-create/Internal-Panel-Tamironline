@@ -9,37 +9,44 @@ use Modules\Warehouse\Models\WarehouseSetting;
 
 class AmadestService
 {
-    protected ?string $apiKey;
     protected ?string $apiUrl;
-    protected ?string $storeId;
     protected ?string $clientCode;
 
     public function __construct()
     {
-        $this->apiKey = WarehouseSetting::get('amadest_api_key');
         $this->apiUrl = rtrim(WarehouseSetting::get('amadest_api_url', 'https://shop-integration.amadast.com'), '/');
-        $this->storeId = WarehouseSetting::get('amadest_store_id');
         $this->clientCode = WarehouseSetting::get('amadest_client_code');
     }
 
     public function isConfigured(): bool
     {
-        return !empty($this->apiKey);
+        return !empty($this->clientCode) && !empty($this->getAccessToken());
     }
 
-    protected function getHeaders(): array
+    /**
+     * هدرهای بدون توکن (برای ساخت کاربر و گرفتن توکن)
+     */
+    protected function getPublicHeaders(): array
     {
-        $headers = [
-            'Authorization' => 'Bearer ' . $this->apiKey,
+        return [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
+            'X-Client-Code' => $this->clientCode ?? '',
         ];
+    }
 
-        if (!empty($this->clientCode)) {
-            $headers['X-Client-Code'] = $this->clientCode;
-        }
-
-        return $headers;
+    /**
+     * هدرهای با توکن (برای بقیه درخواست‌ها)
+     */
+    protected function getHeaders(): array
+    {
+        $token = $this->getAccessToken();
+        return [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'X-Client-Code' => $this->clientCode ?? '',
+        ];
     }
 
     /**
@@ -47,22 +54,146 @@ class AmadestService
      */
     protected function endpoint(string $path): string
     {
-        // shop-integration.amadast.com uses /v1/...
-        // api.amadest.com uses /api/v1/...
         if (str_contains($this->apiUrl, 'shop-integration')) {
             return $this->apiUrl . '/v1/' . ltrim($path, '/');
         }
         return $this->apiUrl . '/api/v1/' . ltrim($path, '/');
     }
 
-    public function testConnection(): array
+    // ==========================================
+    // احراز هویت (Authentication)
+    // ==========================================
+
+    /**
+     * ساخت کاربر جدید در آمادست
+     * POST /v1/users
+     */
+    public function createUser(string $fullName, string $mobile, ?string $nationalCode = null): array
     {
-        if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'کلید API آمادست وارد نشده.'];
+        try {
+            $payload = [
+                'full_name' => $fullName,
+                'mobile' => $this->formatMobile($mobile),
+            ];
+            if ($nationalCode) {
+                $payload['national_code'] = $nationalCode;
+            }
+
+            $response = Http::timeout(15)
+                ->withHeaders($this->getPublicHeaders())
+                ->post($this->endpoint('users'), $payload);
+
+            $result = $response->json();
+            Log::info('Amadest createUser response', ['status' => $response->status(), 'body' => $result]);
+
+            if ($response->successful() && ($result['success'] ?? false)) {
+                $userId = $result['data']['id'] ?? null;
+                if ($userId) {
+                    WarehouseSetting::set('amadest_user_id', (string) $userId);
+                }
+                return $result;
+            }
+
+            return ['success' => false, 'message' => 'خطا در ساخت کاربر: ' . ($result['message'] ?? $response->body())];
+        } catch (\Exception $e) {
+            Log::error('Amadest createUser error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * دریافت توکن با user_id
+     * POST /v1/auth/token/{user_id}
+     */
+    public function fetchToken(?int $userId = null): array
+    {
+        $userId = $userId ?: (int) WarehouseSetting::get('amadest_user_id');
+        if (!$userId) {
+            return ['success' => false, 'message' => 'شناسه کاربر آمادست (user_id) وارد نشده.'];
         }
 
         try {
-            // Try cities endpoint first (works on both APIs)
+            $response = Http::timeout(15)
+                ->withHeaders($this->getPublicHeaders())
+                ->post($this->endpoint("auth/token/{$userId}"));
+
+            $result = $response->json();
+            Log::info('Amadest fetchToken response', ['status' => $response->status(), 'user_id' => $userId]);
+
+            if ($response->successful() && ($result['success'] ?? false)) {
+                $data = $result['data'] ?? [];
+                $accessToken = $data['access_token'] ?? null;
+                $refreshToken = $data['refresh_token'] ?? null;
+                $expiresIn = $data['expires_in'] ?? 3600;
+
+                if ($accessToken) {
+                    // ذخیره توکن و زمان انقضا
+                    WarehouseSetting::set('amadest_api_key', $accessToken);
+                    WarehouseSetting::set('amadest_refresh_token', $refreshToken ?? '');
+                    WarehouseSetting::set('amadest_token_expires_at', (string) (time() + $expiresIn - 60)); // 60 ثانیه زودتر
+
+                    // کش هم آپدیت کن
+                    Cache::put('amadest_access_token', $accessToken, $expiresIn - 60);
+                }
+
+                return ['success' => true, 'message' => 'توکن با موفقیت دریافت شد.', 'data' => $data];
+            }
+
+            return ['success' => false, 'message' => 'خطا در دریافت توکن: ' . ($result['message'] ?? $response->body())];
+        } catch (\Exception $e) {
+            Log::error('Amadest fetchToken error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * گرفتن access token معتبر (با auto-refresh)
+     */
+    public function getAccessToken(): ?string
+    {
+        // اول از کش بخون (سریعتره)
+        $cached = Cache::get('amadest_access_token');
+        if ($cached) {
+            return $cached;
+        }
+
+        // چک کن آیا توکن ذخیره‌شده هنوز معتبره
+        $token = WarehouseSetting::get('amadest_api_key');
+        $expiresAt = (int) WarehouseSetting::get('amadest_token_expires_at', '0');
+
+        if ($token && $expiresAt > time()) {
+            // هنوز معتبره - بذار تو کش
+            Cache::put('amadest_access_token', $token, $expiresAt - time());
+            return $token;
+        }
+
+        // توکن منقضی شده - سعی کن تمدید کنی
+        $userId = (int) WarehouseSetting::get('amadest_user_id');
+        if ($userId) {
+            Log::info('Amadest token expired, auto-refreshing', ['user_id' => $userId]);
+            $result = $this->fetchToken($userId);
+            if ($result['success'] ?? false) {
+                return WarehouseSetting::get('amadest_api_key');
+            }
+            Log::warning('Amadest token refresh failed', ['error' => $result['message'] ?? 'unknown']);
+        }
+
+        // اگه هیچ‌کدوم کار نکرد، توکن قدیمی رو برگردون (شاید هنوز کار کنه)
+        return $token;
+    }
+
+    // ==========================================
+    // تست اتصال
+    // ==========================================
+
+    public function testConnection(): array
+    {
+        $token = $this->getAccessToken();
+        if (empty($token)) {
+            return ['success' => false, 'message' => 'توکن احراز هویت آمادست موجود نیست. لطفا ابتدا کاربر بسازید و توکن بگیرید.'];
+        }
+
+        try {
             $response = Http::timeout(15)
                 ->withHeaders($this->getHeaders())
                 ->get($this->endpoint('cities'));
@@ -75,17 +206,20 @@ class AmadestService
                 ];
             }
 
-            // Fallback: try profile endpoint
-            $response2 = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpoint('profile'));
-
-            if ($response2->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'اتصال به آمادست برقرار است.',
-                    'data' => $response2->json(),
-                ];
+            // اگه 401 بود، توکن منقضی شده
+            if ($response->status() === 401) {
+                // سعی کن توکن رو تمدید کنی
+                $refreshResult = $this->fetchToken();
+                if ($refreshResult['success'] ?? false) {
+                    // دوباره تست کن با توکن جدید
+                    $response2 = Http::timeout(15)
+                        ->withHeaders($this->getHeaders())
+                        ->get($this->endpoint('cities'));
+                    if ($response2->successful()) {
+                        return ['success' => true, 'message' => 'اتصال برقرار است (توکن تمدید شد).', 'data' => $response2->json()];
+                    }
+                }
+                return ['success' => false, 'message' => 'توکن منقضی شده و تمدید نشد. لطفا دوباره توکن بگیرید.'];
             }
 
             return ['success' => false, 'message' => 'خطا در اتصال: HTTP ' . $response->status() . ' - ' . $response->body()];
@@ -95,9 +229,10 @@ class AmadestService
         }
     }
 
-    /**
-     * Get provinces list (= cities endpoint without province_id)
-     */
+    // ==========================================
+    // شهرها و استان‌ها
+    // ==========================================
+
     public function getProvinces(): array
     {
         $cached = Cache::get('amadest_provinces');
@@ -123,9 +258,6 @@ class AmadestService
         }
     }
 
-    /**
-     * Get cities within a province (separate API call with province_id)
-     */
     public function getCities(?int $provinceId = null): array
     {
         if (!$provinceId) return $this->getProvinces();
@@ -165,7 +297,6 @@ class AmadestService
         $cityNorm = $normalize($city);
         $stateNorm = $normalize($state);
 
-        // مپ استان‌های مخفف ووکامرس
         $stateMap = [
             'THR' => 'تهران', 'ESF' => 'اصفهان', 'FRS' => 'فارس', 'KHZ' => 'خوزستان',
             'AZS' => 'آذربایجان شرقی', 'AZG' => 'آذربایجان غربی', 'KRN' => 'کرمان',
@@ -181,7 +312,6 @@ class AmadestService
             $stateNorm = $normalize($stateMap[$state]);
         }
 
-        // اول استان رو پیدا کن
         $provinces = $this->getProvinces();
         $provinceId = null;
 
@@ -207,11 +337,9 @@ class AmadestService
             return null;
         }
 
-        // حالا شهرهای اون استان رو بگیر
         $cities = $this->getCities($provinceId);
         if (empty($cities)) return null;
 
-        // جستجوی دقیق
         foreach ($cities as $c) {
             $name = $normalize($c['name'] ?? $c['title'] ?? '');
             if ($name === $cityNorm) {
@@ -219,7 +347,6 @@ class AmadestService
             }
         }
 
-        // جستجوی شامل بودن
         foreach ($cities as $c) {
             $name = $normalize($c['name'] ?? $c['title'] ?? '');
             if (!empty($cityNorm) && (str_contains($name, $cityNorm) || str_contains($cityNorm, $name))) {
@@ -227,7 +354,6 @@ class AmadestService
             }
         }
 
-        // اگه شهر پیدا نشد، اولین شهر استان
         if (!empty($cities)) {
             Log::warning('Amadest city not found, using first city of province', ['city' => $city, 'province_id' => $provinceId]);
             return (int) $cities[0]['id'];
@@ -237,9 +363,10 @@ class AmadestService
         return null;
     }
 
-    /**
-     * Create a location (warehouse address)
-     */
+    // ==========================================
+    // مکان و فروشگاه
+    // ==========================================
+
     public function createLocation(array $data): array
     {
         try {
@@ -271,9 +398,6 @@ class AmadestService
         }
     }
 
-    /**
-     * Create a store
-     */
     public function createStore(array $data): array
     {
         try {
@@ -288,11 +412,6 @@ class AmadestService
 
             if ($response->successful()) {
                 $result = $response->json();
-                $id = $result['data']['id'] ?? null;
-                if ($id) {
-                    WarehouseSetting::set('amadest_store_id', $id);
-                    $this->storeId = $id;
-                }
                 return $result;
             }
 
@@ -303,79 +422,40 @@ class AmadestService
         }
     }
 
-    /**
-     * Setup: create location + store
-     */
-    public function setup(array $data): array
-    {
-        $locationResult = $this->createLocation([
-            'title' => $data['warehouse_title'] ?? 'انبار اصلی',
-            'address' => $data['warehouse_address'],
-            'province_id' => $data['province_id'],
-            'city_id' => $data['city_id'],
-            'postal_code' => $data['postal_code'],
-        ]);
-
-        if (!($locationResult['success'] ?? false) && !($locationResult['data']['id'] ?? false)) {
-            return $locationResult;
-        }
-
-        $locationId = $locationResult['data']['id'] ?? null;
-
-        $storeResult = $this->createStore([
-            'title' => $data['store_title'] ?? 'فروشگاه اصلی',
-            'location_id' => $locationId,
-            'admin_name' => $data['sender_name'],
-            'phone' => $data['sender_mobile'],
-        ]);
-
-        if (!($storeResult['success'] ?? false) && !($storeResult['data']['id'] ?? false)) {
-            return $storeResult;
-        }
-
-        WarehouseSetting::set('amadest_sender_name', $data['sender_name']);
-        WarehouseSetting::set('amadest_sender_mobile', $data['sender_mobile']);
-        WarehouseSetting::set('amadest_warehouse_address', $data['warehouse_address']);
-
-        return [
-            'success' => true,
-            'message' => 'تنظیمات آمادست با موفقیت انجام شد',
-            'data' => [
-                'location_id' => $locationId,
-                'store_id' => $this->storeId,
-            ]
-        ];
-    }
+    // ==========================================
+    // سفارش‌ها
+    // ==========================================
 
     /**
-     * Create an order/shipment in Amadest
+     * ثبت سفارش جدید در آمادست
+     * POST /v1/orders
+     *
+     * بعد از ثبت، خودکار جستجو میکنه تا کد پیگیری آمادست و پست رو بگیره
      */
     public function createOrder(array $orderData): array
     {
         if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'کلید API آمادست وارد نشده'];
+            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست (توکن یا کد کلاینت وارد نشده)'];
         }
 
         try {
             $senderName = WarehouseSetting::get('amadest_sender_name') ?: 'فروشگاه';
             $senderMobile = WarehouseSetting::get('amadest_sender_mobile') ?: '09000000000';
 
-            // استخراج عدد از شماره سفارش (WC-35388 → 35388)
             $externalId = $orderData['external_order_id'] ?? '0';
             $externalIdInt = (int) preg_replace('/\D/', '', $externalId);
 
-            // وزن به گرم (حداقل 10 گرم)
             $weightGrams = (int) ($orderData['weight'] ?? 500);
             $weightGrams = max($weightGrams, 10);
 
-            // store_id: 0 = حالت عادی (آمادست)، بدون فروشگاه
-            // همیشه 0 ارسال میشه تا سفارش به صورت عادی ثبت بشه، نه از طریق فروشگاه
+            $recipientMobile = $this->formatMobile($orderData['recipient_mobile']);
+
             $payload = [
                 'store_id' => 0,
                 'external_order_id' => $externalIdInt,
                 'recipient_name' => $orderData['recipient_name'] ?: 'مشتری',
                 'sender_name' => $senderName,
-                'recipient_mobile' => $this->formatMobile($orderData['recipient_mobile']),
+                'recipient_mobile' => $recipientMobile,
                 'sender_mobile' => $this->formatMobile($senderMobile),
                 'recipient_address' => $orderData['recipient_address'] ?: 'آدرس نامشخص',
                 'weight' => $weightGrams,
@@ -384,14 +464,12 @@ class AmadestService
                 'package_type' => $orderData['package_type'] ?? 1,
             ];
 
-            // فیلدهای ضروری طبق داکیومنت
             if (!empty($orderData['recipient_city_id'])) {
                 $payload['recipient_city_id'] = (int) $orderData['recipient_city_id'];
             }
             if (!empty($orderData['recipient_postal_code'])) {
                 $payload['recipient_postal_code'] = $orderData['recipient_postal_code'];
             }
-            // فیلدهای اختیاری
             if (!empty($orderData['description'])) {
                 $payload['description'] = $orderData['description'];
             }
@@ -405,14 +483,61 @@ class AmadestService
                 ->withHeaders($this->getHeaders())
                 ->post($this->endpoint('orders'), $payload);
 
-            if ($response->successful()) {
-                $result = $response->json();
-                Log::info('Amadest createOrder response', $result);
-                return $result;
+            $result = $response->json() ?? [];
+            Log::info('Amadest createOrder response', ['status' => $response->status(), 'body' => $result]);
+
+            if ($response->successful() && ($result['success'] ?? false)) {
+                $amadestOrderId = $result['data']['id'] ?? null;
+
+                // بلافاصله جستجو کن تا کد پیگیری آمادست و پست رو بگیری
+                $trackingInfo = $this->fetchTrackingCodes($recipientMobile, $externalIdInt);
+
+                return [
+                    'success' => true,
+                    'message' => $result['message'] ?? 'سفارش ثبت شد',
+                    'data' => array_merge($result['data'] ?? [], [
+                        'amadest_order_id' => $amadestOrderId,
+                        'amadast_tracking_code' => $trackingInfo['amadast_tracking_code'] ?? null,
+                        'courier_tracking_code' => $trackingInfo['courier_tracking_code'] ?? null,
+                        'courier_title' => $trackingInfo['courier_title'] ?? null,
+                    ]),
+                ];
             }
 
-            Log::error('Amadest createOrder failed', ['response' => $response->body()]);
-            return ['success' => false, 'message' => 'خطا در ثبت سفارش: ' . $response->body()];
+            // اگه 401 بود، توکن منقضی شده - یه بار refresh کن و دوباره تلاش کن
+            if ($response->status() === 401) {
+                Log::info('Amadest createOrder got 401, trying token refresh');
+                $refreshResult = $this->fetchToken();
+                if ($refreshResult['success'] ?? false) {
+                    // دوباره بفرست
+                    $response2 = Http::timeout(30)
+                        ->withHeaders($this->getHeaders())
+                        ->post($this->endpoint('orders'), $payload);
+
+                    $result2 = $response2->json() ?? [];
+                    Log::info('Amadest createOrder retry response', ['status' => $response2->status(), 'body' => $result2]);
+
+                    if ($response2->successful() && ($result2['success'] ?? false)) {
+                        $amadestOrderId = $result2['data']['id'] ?? null;
+                        $trackingInfo = $this->fetchTrackingCodes($recipientMobile, $externalIdInt);
+
+                        return [
+                            'success' => true,
+                            'message' => $result2['message'] ?? 'سفارش ثبت شد (توکن تمدید شد)',
+                            'data' => array_merge($result2['data'] ?? [], [
+                                'amadest_order_id' => $amadestOrderId,
+                                'amadast_tracking_code' => $trackingInfo['amadast_tracking_code'] ?? null,
+                                'courier_tracking_code' => $trackingInfo['courier_tracking_code'] ?? null,
+                                'courier_title' => $trackingInfo['courier_title'] ?? null,
+                            ]),
+                        ];
+                    }
+                    return ['success' => false, 'message' => 'خطا در ثبت سفارش (بعد از تمدید توکن): ' . ($result2['message'] ?? $response2->body())];
+                }
+                return ['success' => false, 'message' => 'توکن منقضی شده و تمدید نشد. لطفا دوباره توکن بگیرید.'];
+            }
+
+            return ['success' => false, 'message' => 'خطا در ثبت سفارش: ' . ($result['message'] ?? $response->body())];
         } catch (\Exception $e) {
             Log::error('Amadest createOrder error', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
@@ -420,7 +545,7 @@ class AmadestService
     }
 
     /**
-     * Create shipment (alias for backward compat)
+     * Alias for backward compat
      */
     public function createShipment(array $data): array
     {
@@ -428,7 +553,45 @@ class AmadestService
     }
 
     /**
-     * Search orders by phone number
+     * بعد از ثبت سفارش، کدهای پیگیری رو جستجو کن
+     */
+    protected function fetchTrackingCodes(string $recipientMobile, int $externalOrderId): array
+    {
+        try {
+            // یه لحظه صبر کن تا آمادست سفارش رو پردازش کنه
+            usleep(500000); // 0.5 ثانیه
+
+            $result = $this->searchOrders([$recipientMobile]);
+
+            if ($result['success'] ?? false) {
+                foreach ($result['data'] ?? [] as $order) {
+                    if (($order['external_order_id'] ?? null) == $externalOrderId) {
+                        Log::info('Amadest tracking codes found', [
+                            'external_order_id' => $externalOrderId,
+                            'amadast_tracking_code' => $order['amadast_tracking_code'] ?? null,
+                            'courier_tracking_code' => $order['courier_tracking_code'] ?? null,
+                        ]);
+                        return [
+                            'amadast_tracking_code' => $order['amadast_tracking_code'] ?? null,
+                            'courier_tracking_code' => $order['courier_tracking_code'] ?? null,
+                            'courier_title' => $order['courier_title'] ?? null,
+                            'postal_code' => $order['postal_code'] ?? null,
+                        ];
+                    }
+                }
+            }
+
+            Log::info('Amadest tracking codes not yet available', ['external_order_id' => $externalOrderId]);
+            return [];
+        } catch (\Exception $e) {
+            Log::warning('Amadest fetchTrackingCodes error', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * جستجوی سفارش با شماره موبایل
+     * GET /v1/orders/search
      */
     public function searchOrders(array $phoneNumbers): array
     {
@@ -452,35 +615,33 @@ class AmadestService
     }
 
     /**
-     * Track shipment by tracking code or order number
-     * Tries multiple endpoints to find the order
+     * رهگیری مرسوله
      */
     public function trackShipment(string $trackingCode): array
     {
         if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'کلید API آمادست وارد نشده.'];
+            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست.'];
         }
 
-        $endpoints = [
-            'orders/' . $trackingCode,
-            'tracking/' . $trackingCode,
-            'orders/search?tracking_code=' . $trackingCode,
-            'orders/search?external_order_id=' . $trackingCode,
-            'orders?tracking_code=' . $trackingCode,
-        ];
-
-        // If it looks like a phone number, also try phone search
+        // اگه شماره موبایل هست، جستجو با موبایل
         if (preg_match('/^09\d{9}$/', $trackingCode) || preg_match('/^9\d{9}$/', $trackingCode)) {
-            $endpoints[] = 'orders/search?phone_number=' . $this->formatMobile($trackingCode);
+            $result = $this->searchOrders([$trackingCode]);
+            if (($result['success'] ?? false) && !empty($result['data'])) {
+                return ['success' => true, 'data' => $result];
+            }
         }
+
+        // جستجو با شماره سفارش
+        $endpoints = [
+            'orders/search?phone_number=' . $this->formatMobile($trackingCode),
+            'orders/' . $trackingCode,
+        ];
 
         foreach ($endpoints as $ep) {
             try {
                 $response = Http::timeout(10)
                     ->withHeaders($this->getHeaders())
                     ->get($this->endpoint($ep));
-
-                Log::info('Amadest track attempt', ['endpoint' => $ep, 'status' => $response->status()]);
 
                 if ($response->successful()) {
                     $data = $response->json();
@@ -493,11 +654,11 @@ class AmadestService
             }
         }
 
-        return ['success' => false, 'message' => 'سفارش یافت نشد. کد رهگیری یا شماره سفارش را بررسی کنید.'];
+        return ['success' => false, 'message' => 'سفارش یافت نشد.'];
     }
 
     /**
-     * Get tracking info for an order by phone + external ID
+     * دریافت کدهای پیگیری سفارش
      */
     public function getTrackingInfo(string $phoneNumber, $externalOrderId): ?array
     {

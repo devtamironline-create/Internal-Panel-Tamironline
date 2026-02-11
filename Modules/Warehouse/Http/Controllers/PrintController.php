@@ -98,15 +98,24 @@ class PrintController extends Controller
                     Log::info('Amadest auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
 
                     $data = $result['data'] ?? [];
-                    $amadestId = $data['id'] ?? null;
+                    $amadestId = $data['amadest_order_id'] ?? $data['id'] ?? null;
+                    $amadestTrackingCode = $data['amadast_tracking_code'] ?? null;
+                    $courierTrackingCode = $data['courier_tracking_code'] ?? null;
                     $isDuplicate = !($result['success'] ?? false) && str_contains($result['message'] ?? '', 'تکراری');
 
-                    if (($result['success'] ?? false) && $amadestId) {
-                        // ثبت موفق - ذخیره شناسه آمادست
-                        $order->amadest_barcode = (string) $amadestId;
-                        $order->tracking_code = $order->tracking_code ?: (string) $amadestId;
+                    if ($result['success'] ?? false) {
+                        // ثبت موفق - ذخیره کد پیگیری آمادست
+                        $order->amadest_barcode = $amadestTrackingCode ?: (string) $amadestId;
+                        $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
+                        if ($courierTrackingCode) {
+                            $order->post_tracking_code = $courierTrackingCode;
+                        }
                         $order->save();
-                        Log::info('Amadest barcode saved', ['order' => $order->order_number, 'amadest_id' => $amadestId]);
+                        Log::info('Amadest barcode saved', [
+                            'order' => $order->order_number,
+                            'amadest_barcode' => $order->amadest_barcode,
+                            'courier_tracking_code' => $courierTrackingCode,
+                        ]);
                     } elseif ($isDuplicate) {
                         // سفارش قبلا ثبت شده - شناسه رو از جستجو بگیر
                         Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);

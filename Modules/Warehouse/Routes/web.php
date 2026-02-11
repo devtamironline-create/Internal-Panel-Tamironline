@@ -98,6 +98,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::get('/', [AmadestController::class, 'index'])->name('warehouse.amadest.index');
         Route::post('/save', [AmadestController::class, 'saveSettings'])->name('warehouse.amadest.save');
         Route::post('/save-sender', [AmadestController::class, 'saveSenderInfo'])->name('warehouse.amadest.save-sender');
+        Route::post('/register-user', [AmadestController::class, 'registerUser'])->name('warehouse.amadest.register-user');
+        Route::post('/refresh-token', [AmadestController::class, 'refreshToken'])->name('warehouse.amadest.refresh-token');
         Route::post('/test', [AmadestController::class, 'testConnection'])->name('warehouse.amadest.test');
         Route::post('/track', [AmadestController::class, 'track'])->name('warehouse.amadest.track');
     });

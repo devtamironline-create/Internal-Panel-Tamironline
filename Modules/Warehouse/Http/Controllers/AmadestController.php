@@ -16,19 +16,22 @@ class AmadestController extends Controller
         }
 
         $settings = [
-            'api_key' => WarehouseSetting::get('amadest_api_key'),
             'api_url' => WarehouseSetting::get('amadest_api_url', 'https://shop-integration.amadast.com'),
             'client_code' => WarehouseSetting::get('amadest_client_code'),
-            'store_id' => WarehouseSetting::get('amadest_store_id'),
-            'location_id' => WarehouseSetting::get('amadest_location_id'),
+            'user_id' => WarehouseSetting::get('amadest_user_id'),
             'sender_name' => WarehouseSetting::get('amadest_sender_name'),
             'sender_mobile' => WarehouseSetting::get('amadest_sender_mobile'),
             'warehouse_address' => WarehouseSetting::get('amadest_warehouse_address'),
+            'token_expires_at' => WarehouseSetting::get('amadest_token_expires_at'),
+            'has_token' => !empty(WarehouseSetting::get('amadest_api_key')),
         ];
 
         return view('warehouse::amadest.index', compact('settings'));
     }
 
+    /**
+     * ذخیره تنظیمات API (کد کلاینت و URL)
+     */
     public function saveSettings(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
@@ -36,20 +39,14 @@ class AmadestController extends Controller
         }
 
         $validated = $request->validate([
-            'api_key' => 'required|string|max:5000',
             'api_url' => 'nullable|url|max:500',
-            'client_code' => 'nullable|string|max:500',
-            'store_id' => 'nullable|string|max:50',
+            'client_code' => 'required|string|max:500',
         ]);
 
-        WarehouseSetting::set('amadest_api_key', $validated['api_key']);
         if (!empty($validated['api_url'])) {
             WarehouseSetting::set('amadest_api_url', $validated['api_url']);
         }
-        if (isset($validated['client_code'])) {
-            WarehouseSetting::set('amadest_client_code', $validated['client_code']);
-        }
-        // همیشه حالت عادی (بدون فروشگاه)
+        WarehouseSetting::set('amadest_client_code', $validated['client_code']);
         WarehouseSetting::set('amadest_store_id', '0');
 
         if ($request->wantsJson()) {
@@ -58,6 +55,75 @@ class AmadestController extends Controller
 
         return redirect()->route('warehouse.amadest.index')
             ->with('success', 'تنظیمات آمادست ذخیره شد.');
+    }
+
+    /**
+     * ساخت کاربر در آمادست و دریافت توکن
+     */
+    public function registerUser(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'full_name' => 'required|string|max:255',
+            'mobile' => 'required|string|max:20',
+            'national_code' => 'nullable|string|max:10',
+        ]);
+
+        $service = new AmadestService();
+
+        // مرحله ۱: ساخت کاربر
+        $userResult = $service->createUser(
+            $validated['full_name'],
+            $validated['mobile'],
+            $validated['national_code'] ?? null
+        );
+
+        if (!($userResult['success'] ?? false)) {
+            return response()->json($userResult);
+        }
+
+        $userId = $userResult['data']['id'] ?? null;
+        if (!$userId) {
+            return response()->json(['success' => false, 'message' => 'شناسه کاربر از آمادست دریافت نشد.']);
+        }
+
+        // مرحله ۲: دریافت توکن
+        $tokenResult = $service->fetchToken($userId);
+
+        if ($tokenResult['success'] ?? false) {
+            return response()->json([
+                'success' => true,
+                'message' => 'کاربر ساخته شد و توکن دریافت شد.',
+                'data' => [
+                    'user_id' => $userId,
+                    'token_received' => true,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کاربر ساخته شد ولی دریافت توکن ناموفق بود: ' . ($tokenResult['message'] ?? ''),
+            'data' => ['user_id' => $userId, 'token_received' => false],
+        ]);
+    }
+
+    /**
+     * تمدید/دریافت مجدد توکن
+     */
+    public function refreshToken()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new AmadestService();
+        $result = $service->fetchToken();
+
+        return response()->json($result);
     }
 
     public function testConnection()
@@ -88,35 +154,6 @@ class AmadestController extends Controller
         return response()->json($result);
     }
 
-    public function getProvinces()
-    {
-        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
-            abort(403);
-        }
-
-        // Clear stale cache
-        \Illuminate\Support\Facades\Cache::forget('amadest_provinces');
-        \Illuminate\Support\Facades\Cache::forget('amadest_all_cities');
-
-        $service = new AmadestService();
-        $provinces = $service->getProvinces();
-
-        return response()->json(['success' => true, 'data' => $provinces]);
-    }
-
-    public function getCities(Request $request)
-    {
-        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
-            abort(403);
-        }
-
-        $provinceId = $request->get('province_id') ? (int) $request->get('province_id') : null;
-        $service = new AmadestService();
-        $cities = $service->getCities($provinceId);
-
-        return response()->json(['success' => true, 'data' => $cities]);
-    }
-
     public function saveSenderInfo(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
@@ -135,7 +172,6 @@ class AmadestController extends Controller
             WarehouseSetting::set('amadest_warehouse_address', $validated['warehouse_address']);
         }
 
-        // همیشه حالت عادی (بدون فروشگاه)
         WarehouseSetting::set('amadest_store_id', '0');
 
         return redirect()->route('warehouse.amadest.index')
