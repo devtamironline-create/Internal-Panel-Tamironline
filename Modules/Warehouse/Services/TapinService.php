@@ -687,7 +687,7 @@ class TapinService
                 $products[] = [
                     'title' => mb_substr($p['title'] ?? $p['name'] ?? 'کالا', 0, 50),
                     'count' => (int) ($p['count'] ?? $p['quantity'] ?? 1),
-                    'price' => (int) ($p['price'] ?? 0) * 10, // تومان → ریال
+                    'price' => 0, // ارزش مرسوله صفر (کاهش هزینه ارسال)
                     'weight' => max($productWeight, 50), // حداقل 50g (الزام تاپین)
                     'discount' => (int) ($p['discount'] ?? 0),
                     'product_id' => $p['product_id'] ?? null,
@@ -697,7 +697,7 @@ class TapinService
             $products[] = [
                 'title' => mb_substr($orderData['product_name'] ?? 'کالا', 0, 50),
                 'count' => 1,
-                'price' => (int) ($orderData['value'] ?? 100000) * 10, // تومان → ریال
+                'price' => 0, // ارزش مرسوله صفر (کاهش هزینه ارسال)
                 'weight' => max($weightGrams, 50),
                 'discount' => 0,
                 'product_id' => null,
@@ -732,7 +732,7 @@ class TapinService
             'kiosk_id' => null,
             'package_weight' => $weightGrams,
             'manual_id' => $manualId,
-            'has_insurance' => $orderData['has_insurance'] ?? 'false',
+            'has_insurance' => false,
             'content_type' => 1,
             'products' => $products,
         ];
