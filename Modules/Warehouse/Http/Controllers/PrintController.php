@@ -354,6 +354,7 @@ class PrintController extends Controller
             $tapinOrderId = $data['order_id'] ?? null;
 
             // اگه بارکد نداریم، change-status(1) بزن تا بارکد بگیریم
+            $changeStatusError = null;
             if (empty($barcode) && $tapinOrderId) {
                 $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
                 Log::info('Tapin change-status(1) result', [
@@ -364,6 +365,8 @@ class PrintController extends Controller
                 ]);
                 if ($statusResult['success'] ?? false) {
                     $barcode = $statusResult['data']['barcode'] ?? null;
+                } else {
+                    $changeStatusError = $statusResult['message'] ?? 'خطای نامشخص';
                 }
             }
 
@@ -387,6 +390,10 @@ class PrintController extends Controller
                     'tapin_order_id' => $tapinOrderId,
                     'saved_ref' => $trackingRef,
                 ]);
+                // اگه بارکد پست نگرفتیم، خطا رو برگردون (ولی سفارش ثبت شده)
+                if (empty($barcode) && $changeStatusError) {
+                    return 'تاپین: ثبت شد (TAPIN-' . $tapinOrderId . ') ولی بارکد پست نیومد: ' . $changeStatusError;
+                }
                 return null; // موفق
             }
             return 'تاپین: ثبت شد ولی بارکد/شناسه دریافت نشد';

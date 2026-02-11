@@ -681,13 +681,17 @@ class TapinService
 
         // ساخت لیست محصولات
         $products = [];
+        $productCount = count($orderData['products'] ?? []) ?: 1;
+        // ارزش ثابت کل: ۱۰۰,۰۰۰ ریال تقسیم بر تعداد محصولات (حداقل تاپین ۵۰,۰۰۰ ریال)
+        $pricePerProduct = (int) ceil(100000 / $productCount);
+
         if (!empty($orderData['products'])) {
             foreach ($orderData['products'] as $p) {
                 $productWeight = (int) ($p['weight'] ?? $weightGrams);
                 $products[] = [
                     'title' => mb_substr($p['title'] ?? $p['name'] ?? 'کالا', 0, 50),
                     'count' => (int) ($p['count'] ?? $p['quantity'] ?? 1),
-                    'price' => 1000000, // ثابت ۱۰۰,۰۰۰ تومان = ۱,۰۰۰,۰۰۰ ریال (حداقل تاپین ۵۰,۰۰۰ ریال)
+                    'price' => $pricePerProduct,
                     'weight' => max($productWeight, 50), // حداقل 50g (الزام تاپین)
                     'discount' => (int) ($p['discount'] ?? 0),
                     'product_id' => $p['product_id'] ?? null,
@@ -697,7 +701,7 @@ class TapinService
             $products[] = [
                 'title' => mb_substr($orderData['product_name'] ?? 'کالا', 0, 50),
                 'count' => 1,
-                'price' => 1000000, // ثابت ۱۰۰,۰۰۰ تومان = ۱,۰۰۰,۰۰۰ ریال
+                'price' => 100000, // ۱۰۰,۰۰۰ ریال
                 'weight' => max($weightGrams, 50),
                 'discount' => 0,
                 'product_id' => null,
