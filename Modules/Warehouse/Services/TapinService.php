@@ -13,40 +13,39 @@ class TapinService
     protected ?string $apiKey;
     protected ?string $shopId;
 
-    // نگاشت کد استان ووکامرس به نام فارسی
-    // هر دو فرمت رایج ایرانی (SBL و SBN برای سیستان و بلوچستان و غیره)
+    // نگاشت کد استان ووکامرس (سایت گنجه مارکت) به نام فارسی
     protected static array $wcStateMap = [
-        'THR' => 'تهران', 'TEH' => 'تهران',
-        'IS' => 'اصفهان', 'ESF' => 'اصفهان',
-        'KHZ' => 'خوزستان',
-        'FRS' => 'فارس', 'FAR' => 'فارس',
-        'KHRZ' => 'خراسان رضوی', 'KHR' => 'خراسان رضوی', 'RKH' => 'خراسان رضوی',
-        'AZAR' => 'آذربایجان شرقی', 'EAZ' => 'آذربایجان شرقی',
-        'AZARGH' => 'آذربایجان غربی', 'WAZ' => 'آذربایجان غربی',
-        'ARD' => 'اردبیل',
-        'ILM' => 'ایلام',
-        'BSH' => 'بوشهر', 'BUS' => 'بوشهر',
-        'CHBK' => 'چهارمحال و بختیاری', 'CHB' => 'چهارمحال و بختیاری',
-        'KHRJ' => 'خراسان جنوبی', 'SKH' => 'خراسان جنوبی',
-        'KHRSH' => 'خراسان شمالی', 'NKH' => 'خراسان شمالی',
-        'ZNJ' => 'زنجان',
-        'SMN' => 'سمنان',
-        'SBL' => 'سیستان و بلوچستان', 'SBN' => 'سیستان و بلوچستان',
-        'QZV' => 'قزوین',
-        'QOM' => 'قم',
-        'KRD' => 'کردستان',
-        'KRM' => 'کرمان',
-        'KRMSH' => 'کرمانشاه', 'KSH' => 'کرمانشاه',
-        'KHGB' => 'کهگیلویه و بویراحمد', 'KBD' => 'کهگیلویه و بویراحمد',
-        'GLS' => 'گلستان', 'GOL' => 'گلستان',
+        'ABZ' => 'البرز',
+        'ADL' => 'اردبیل',
+        'EAZ' => 'آذربایجان شرقی',
+        'WAZ' => 'آذربایجان غربی',
+        'BHR' => 'بوشهر',
+        'CHB' => 'چهارمحال و بختیاری',
+        'FRS' => 'فارس',
         'GIL' => 'گیلان',
-        'LRS' => 'لرستان', 'LOR' => 'لرستان',
-        'MZN' => 'مازندران', 'MAZ' => 'مازندران',
-        'MRK' => 'مرکزی',
-        'HRM' => 'هرمزگان', 'HOR' => 'هرمزگان',
-        'HMD' => 'همدان', 'HAM' => 'همدان',
+        'GLS' => 'گلستان',
+        'HDN' => 'همدان',
+        'HRZ' => 'هرمزگان',
+        'ILM' => 'ایلام',
+        'ESF' => 'اصفهان',
+        'KRN' => 'کرمان',
+        'KRH' => 'کرمانشاه',
+        'NKH' => 'خراسان شمالی',
+        'RKH' => 'خراسان رضوی',
+        'SKH' => 'خراسان جنوبی',
+        'KHZ' => 'خوزستان',
+        'KBD' => 'کهگیلویه و بویراحمد',
+        'KRD' => 'کردستان',
+        'LRS' => 'لرستان',
+        'MKZ' => 'مرکزی',
+        'MZN' => 'مازندران',
+        'GZN' => 'قزوین',
+        'QHM' => 'قم',
+        'SMN' => 'سمنان',
+        'SBN' => 'سیستان و بلوچستان',
+        'THR' => 'تهران',
         'YZD' => 'یزد',
-        'ALB' => 'البرز',
+        'ZJN' => 'زنجان',
     ];
 
     public static function getWcStateMap(): array
@@ -151,6 +150,23 @@ class TapinService
     }
 
     /**
+     * نرمال‌سازی متن فارسی برای مقایسه
+     * ی/ي → ی، ک/ك → ک، ة → ه، حذف فاصله اضافی و \r\n
+     */
+    public static function normalizePersian(string $text): string
+    {
+        $text = trim($text);
+        $text = str_replace(["\r\n", "\r", "\n"], '', $text);
+        // یکسان‌سازی کاراکترهای عربی/فارسی
+        $text = str_replace(['ي', 'ى'], 'ی', $text);
+        $text = str_replace('ك', 'ک', $text);
+        $text = str_replace('ة', 'ه', $text);
+        $text = str_replace('‌', ' ', $text); // نیم‌فاصله به فاصله
+        $text = preg_replace('/\s+/', ' ', $text);
+        return trim($text);
+    }
+
+    /**
      * پیدا کردن province_code از نام استان یا کد ووکامرس
      */
     public function findProvinceCode(?string $stateNameOrCode): ?int
@@ -159,45 +175,66 @@ class TapinService
 
         // اگه کد ووکامرس هست، به نام فارسی تبدیل کن
         $persianName = self::$wcStateMap[strtoupper($stateNameOrCode)] ?? $stateNameOrCode;
+        $normalizedName = self::normalizePersian($persianName);
 
         $stateTree = $this->getStateTree();
+
+        // مرحله 1: تطابق دقیق (با نرمال‌سازی)
         foreach ($stateTree as $province) {
-            $title = trim($province['title'] ?? '');
+            $title = self::normalizePersian($province['title'] ?? '');
             $code = $province['code'] ?? null;
-            if ($code !== null && ($title === $persianName || str_contains($title, $persianName) || str_contains($persianName, $title))) {
+            if ($code !== null && $title === $normalizedName) {
                 return (int) $code;
             }
         }
 
-        Log::warning('Tapin province not found', ['input' => $stateNameOrCode, 'persian' => $persianName]);
+        // مرحله 2: تطابق جزئی (یکی شامل دیگری باشه)
+        foreach ($stateTree as $province) {
+            $title = self::normalizePersian($province['title'] ?? '');
+            $code = $province['code'] ?? null;
+            if ($code !== null && (str_contains($title, $normalizedName) || str_contains($normalizedName, $title))) {
+                return (int) $code;
+            }
+        }
+
+        Log::warning('Tapin province not found', ['input' => $stateNameOrCode, 'persian' => $persianName, 'normalized' => $normalizedName]);
         return null;
     }
 
     /**
      * پیدا کردن city_code از نام شهر و کد استان
-     * از state/tree استفاده می‌کنه که شهرها رو هم داره
      */
     public function findCityCode(?string $cityName, $provinceCode): ?int
     {
-        if (!$provinceCode) return 1;
+        if (!$provinceCode) return null;
 
         $stateTree = $this->getStateTree();
 
-        // پیدا کردن استان و لیست شهراش
         foreach ($stateTree as $province) {
             if (($province['code'] ?? null) == $provinceCode) {
                 $cities = $province['cities'] ?? [];
 
                 // اگه نام شهر داریم جستجو کن
                 if ($cityName) {
-                    $cityName = trim($cityName);
+                    $normalizedCity = self::normalizePersian($cityName);
+
+                    // تطابق دقیق
                     foreach ($cities as $city) {
-                        $title = trim($city['title'] ?? '');
-                        $code = $city['code'] ?? null;
-                        if ($code !== null && ($title === $cityName || str_contains($title, $cityName) || str_contains($cityName, $title))) {
-                            return (int) $code;
+                        $title = self::normalizePersian($city['title'] ?? '');
+                        if ($title === $normalizedCity && ($city['code'] ?? null) !== null) {
+                            return (int) $city['code'];
                         }
                     }
+
+                    // تطابق جزئی
+                    foreach ($cities as $city) {
+                        $title = self::normalizePersian($city['title'] ?? '');
+                        if (($city['code'] ?? null) !== null && (str_contains($title, $normalizedCity) || str_contains($normalizedCity, $title))) {
+                            return (int) $city['code'];
+                        }
+                    }
+
+                    Log::info('Tapin city not found, using first city', ['city' => $cityName, 'province_code' => $provinceCode]);
                 }
 
                 // اگه شهر پیدا نشد، اولین شهر (مرکز استان)
@@ -208,7 +245,7 @@ class TapinService
             }
         }
 
-        return 1;
+        return null;
     }
 
     // ==========================================
@@ -615,16 +652,29 @@ class TapinService
         $weightGrams = (int) ($orderData['weight'] ?? 500);
         $weightGrams = max($weightGrams, 50); // حداقل 50 گرم (الزام تاپین)
 
-        // پیدا کردن کد استان و شهر از state/tree API
-        $state = $orderData['recipient_province'] ?? $orderData['recipient_state'] ?? '';
-        $city = $orderData['recipient_city_name'] ?? $orderData['recipient_city'] ?? '';
+        // پیدا کردن کد استان و شهر
+        // اولویت: کدهای مستقیم تاپین (اگه تو سفارش ذخیره شده) → سپس مپ از WC
+        $provinceCode = $orderData['tapin_province_code'] ?? null;
+        $cityCode = $orderData['tapin_city_code'] ?? null;
 
-        $provinceCode = $this->findProvinceCode($state);
-        $cityCode = $this->findCityCode($city, $provinceCode);
+        if (!$provinceCode) {
+            $state = $orderData['recipient_province'] ?? $orderData['recipient_state'] ?? '';
+            $city = $orderData['recipient_city_name'] ?? $orderData['recipient_city'] ?? '';
+
+            $provinceCode = $this->findProvinceCode($state);
+            $cityCode = $this->findCityCode($city, $provinceCode);
+        }
+
+        if (!$provinceCode) {
+            Log::error('Tapin province code NOT FOUND - cannot register', [
+                'state' => $state ?? '',
+                'city' => $city ?? '',
+            ]);
+        }
 
         Log::info('Tapin location lookup', [
-            'state_input' => $state,
-            'city_input' => $city,
+            'state_input' => $state ?? 'direct',
+            'city_input' => $city ?? 'direct',
             'province_code' => $provinceCode,
             'city_code' => $cityCode,
         ]);
@@ -672,8 +722,8 @@ class TapinService
             'email' => null,
             'address' => $orderData['recipient_address'] ?? 'آدرس نامشخص',
             'postal_code' => $orderData['recipient_postal_code'] ?? '0000000000',
-            'province_code' => $provinceCode ?: 1,
-            'city_code' => $cityCode ?: 1,
+            'province_code' => $provinceCode,
+            'city_code' => $cityCode ?: ($provinceCode ? 1 : null),
             'description' => null,
             'employee_code' => -1,
             'pay_type' => (int) ($orderData['pay_type'] ?? 1),

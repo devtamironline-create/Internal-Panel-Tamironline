@@ -230,6 +230,76 @@
         </div>
     </div>
 
+    <!-- Tapin Province/City Selection (for post orders) -->
+    @if($order->shipping_type === 'post')
+    @canany(['manage-warehouse', 'manage-permissions'])
+    @php
+        $tapinData = is_array($order->wc_order_data) ? ($order->wc_order_data['tapin'] ?? []) : [];
+        $wcShipping = is_array($order->wc_order_data) ? ($order->wc_order_data['shipping'] ?? []) : [];
+        $wcBilling = is_array($order->wc_order_data) ? ($order->wc_order_data['billing'] ?? []) : [];
+        $wcState = ($wcShipping['state'] ?? '') ?: ($wcBilling['state'] ?? '');
+        $wcCity = ($wcShipping['city'] ?? '') ?: ($wcBilling['city'] ?? '');
+    @endphp
+    <div class="bg-white rounded-xl shadow-sm p-6" x-data="tapinLocation()" x-init="init()">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-gray-900">استان و شهر تاپین</h2>
+            @if($wcState || $wcCity)
+            <span class="text-xs text-gray-400">ووکامرس: {{ $wcState }} — {{ $wcCity }}</span>
+            @endif
+        </div>
+
+        @if(!empty($tapinData['province_name']))
+        <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span><span class="font-medium">ذخیره شده:</span> {{ $tapinData['province_name'] }} — {{ $tapinData['city_name'] ?? '' }} <span class="text-green-500">(کد: {{ $tapinData['province_code'] ?? '?' }}/{{ $tapinData['city_code'] ?? '?' }})</span></span>
+        </div>
+        @endif
+
+        <div class="space-y-4">
+            <div x-show="loading" class="flex items-center gap-2 text-sm text-gray-500">
+                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                در حال دریافت لیست استان‌ها...
+            </div>
+
+            <div x-show="error" x-cloak class="p-3 bg-red-50 text-red-700 rounded-lg text-sm" x-text="error"></div>
+
+            <div x-show="!loading && provinces.length > 0" x-cloak class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">استان</label>
+                    <select x-model="selectedProvince" @change="onProvinceChange()"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
+                        <option value="">انتخاب استان...</option>
+                        <template x-for="p in provinces" :key="p.code">
+                            <option :value="p.code" x-text="p.title" :selected="p.code == selectedProvince"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شهر</label>
+                    <select x-model="selectedCity"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm"
+                            :disabled="!selectedProvince || cities.length === 0">
+                        <option value="">انتخاب شهر...</option>
+                        <template x-for="c in cities" :key="c.code">
+                            <option :value="c.code" x-text="c.title" :selected="c.code == selectedCity"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div x-show="selectedProvince && selectedCity" x-cloak class="flex items-center gap-3">
+                <button @click="save()" :disabled="saving"
+                        class="px-6 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm disabled:opacity-50 transition-colors">
+                    <span x-show="!saving">ذخیره استان و شهر</span>
+                    <span x-show="saving">در حال ذخیره...</span>
+                </button>
+                <span x-show="successMessage" x-cloak class="text-sm text-green-600 font-medium" x-text="successMessage"></span>
+            </div>
+        </div>
+    </div>
+    @endcanany
+    @endif
+
     <!-- Order Items -->
     @if($order->items->count() > 0)
     <div class="bg-white rounded-xl shadow-sm">
@@ -622,6 +692,102 @@ function preparingStation() {
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + (success ? 0.15 : 0.4));
             } catch (e) {}
+        }
+    };
+}
+</script>
+@endpush
+@endif
+
+@if($order->shipping_type === 'post')
+@push('scripts')
+<script>
+function tapinLocation() {
+    return {
+        loading: false,
+        error: '',
+        provinces: [],
+        cities: [],
+        selectedProvince: '{{ $tapinData["province_code"] ?? "" }}',
+        selectedCity: '{{ $tapinData["city_code"] ?? "" }}',
+        saving: false,
+        successMessage: '',
+
+        async init() {
+            this.loading = true;
+            try {
+                const res = await fetch('{{ route("warehouse.tapin.wc-states") }}', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (data.success && data.tapin_state_tree) {
+                    this.provinces = data.tapin_state_tree.map(p => ({
+                        code: p.code,
+                        title: (p.title || '').trim(),
+                        cities: (p.cities || []).map(c => ({
+                            code: c.code,
+                            title: (c.title || '').replace(/[\r\n]/g, '').trim()
+                        }))
+                    }));
+                    if (this.selectedProvince) {
+                        this.loadCities();
+                    }
+                } else {
+                    this.error = data.message || 'خطا در دریافت لیست استان‌ها';
+                }
+            } catch (e) {
+                this.error = 'خطا در ارتباط با سرور';
+            }
+            this.loading = false;
+        },
+
+        loadCities() {
+            const province = this.provinces.find(p => p.code == this.selectedProvince);
+            this.cities = province ? province.cities : [];
+        },
+
+        onProvinceChange() {
+            this.selectedCity = '';
+            this.successMessage = '';
+            this.loadCities();
+        },
+
+        async save() {
+            if (!this.selectedProvince || !this.selectedCity) return;
+            this.saving = true;
+            this.successMessage = '';
+            this.error = '';
+
+            const province = this.provinces.find(p => p.code == this.selectedProvince);
+            const city = this.cities.find(c => c.code == this.selectedCity);
+
+            try {
+                const res = await fetch('{{ route("warehouse.save-tapin-location", $order) }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        province_code: parseInt(this.selectedProvince),
+                        city_code: parseInt(this.selectedCity),
+                        province_name: province ? province.title : '',
+                        city_name: city ? city.title : ''
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    this.successMessage = data.message || 'ذخیره شد!';
+                } else {
+                    this.error = data.message || 'خطا در ذخیره';
+                }
+            } catch (e) {
+                this.error = 'خطا در ارتباط با سرور';
+            }
+            this.saving = false;
         }
     };
 }

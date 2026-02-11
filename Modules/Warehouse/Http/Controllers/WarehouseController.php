@@ -237,6 +237,38 @@ class WarehouseController extends Controller
         return redirect()->back()->with('success', "{$count} سفارش تغییر وضعیت داده شد.");
     }
 
+    /**
+     * ذخیره استان و شهر تاپین برای سفارش
+     */
+    public function saveTapinLocation(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'province_code' => 'required|integer',
+            'city_code' => 'required|integer',
+            'province_name' => 'nullable|string|max:100',
+            'city_name' => 'nullable|string|max:100',
+        ]);
+
+        // ذخیره در wc_order_data.tapin
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        $wcData['tapin'] = [
+            'province_code' => (int) $validated['province_code'],
+            'city_code' => (int) $validated['city_code'],
+            'province_name' => $validated['province_name'] ?? '',
+            'city_name' => $validated['city_name'] ?? '',
+        ];
+        $order->update(['wc_order_data' => $wcData]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'استان و شهر تاپین ذخیره شد: ' . ($validated['province_name'] ?? '') . ' - ' . ($validated['city_name'] ?? ''),
+        ]);
+    }
+
     public function destroy(WarehouseOrder $order)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

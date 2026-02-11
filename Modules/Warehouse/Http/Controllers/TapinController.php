@@ -228,6 +228,61 @@ class TapinController extends Controller
     }
 
     /**
+     * لیست استان و شهر تاپین - فرمت آماده برای سایت ووکامرس
+     */
+    public function tapinStatesForWc()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $tapin = new TapinService();
+        $stateTree = $tapin->getStateTree();
+
+        if (empty($stateTree)) {
+            return response()->json(['success' => false, 'message' => 'دریافت لیست استان‌ها از تاپین ناموفق بود']);
+        }
+
+        // ساخت لیست استان‌ها برای select ووکامرس
+        $wcStates = [];
+        $wcCities = [];
+
+        foreach ($stateTree as $province) {
+            $code = $province['code'] ?? null;
+            $title = trim($province['title'] ?? '');
+            if (!$code || !$title) continue;
+
+            // کد ووکامرس: TP + کد تاپین (مثلاً TP1 = تهران)
+            $wcCode = 'TP' . $code;
+            $wcStates[$wcCode] = $title;
+
+            $cities = $province['cities'] ?? [];
+            foreach ($cities as $city) {
+                $cityCode = $city['code'] ?? null;
+                $cityTitle = trim(str_replace(["\r\n", "\r", "\n"], '', $city['title'] ?? ''));
+                if (!$cityCode || !$cityTitle) continue;
+                $wcCities[$wcCode][$cityCode] = $cityTitle;
+            }
+        }
+
+        // خروجی HTML برای copy/paste
+        $stateHtml = "<select name=\"state\">\n    <option value=\"\">انتخاب استان</option>\n";
+        foreach ($wcStates as $code => $title) {
+            $stateHtml .= "    <option value=\"{$code}\">{$title}</option>\n";
+        }
+        $stateHtml .= "</select>";
+
+        return response()->json([
+            'success' => true,
+            'states' => $wcStates,
+            'cities' => $wcCities,
+            'state_html' => $stateHtml,
+            'tapin_state_tree' => $stateTree,
+            'message' => count($wcStates) . ' استان و ' . collect($wcCities)->flatten()->count() . ' شهر دریافت شد',
+        ]);
+    }
+
+    /**
      * تشخیص تفاوت کدهای استان ووکامرس و تاپین
      */
     public function diagnosticStates()
@@ -355,6 +410,9 @@ class TapinController extends Controller
                     ];
                 }
 
+                // خواندن لوکیشن تاپین اگه قبلاً ذخیره شده
+                $tapinData = $wcData['tapin'] ?? [];
+
                 $result = $tapin->createShipment([
                     'external_order_id' => $order->order_number,
                     'recipient_name' => $order->customer_name,
@@ -363,6 +421,8 @@ class TapinController extends Controller
                     'recipient_postal_code' => $postcode ?: '0000000000',
                     'recipient_city_name' => $city,
                     'recipient_province' => $state,
+                    'tapin_province_code' => $tapinData['province_code'] ?? null,
+                    'tapin_city_code' => $tapinData['city_code'] ?? null,
                     'weight' => $order->total_weight_with_box_grams ?: 500,
                     'value' => (int)($wcData['total'] ?? 100000),
                     'products' => $products,

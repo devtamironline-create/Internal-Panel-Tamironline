@@ -55,6 +55,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::post('/{order}/retry-register', [PrintController::class, 'retryRegister'])->name('warehouse.retry-register')
         ->where('order', '[0-9]+');
+    Route::post('/{order}/save-tapin-location', [WarehouseController::class, 'saveTapinLocation'])->name('warehouse.save-tapin-location')
+        ->where('order', '[0-9]+');
 
     // Dispatch
     Route::prefix('dispatch')->group(function () {
@@ -124,5 +126,6 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/clear-barcodes', [TapinController::class, 'clearBarcodes'])->name('warehouse.tapin.clear-barcodes');
         Route::post('/bulk-register', [TapinController::class, 'bulkRegister'])->name('warehouse.tapin.bulk-register');
         Route::get('/diagnostic-states', [TapinController::class, 'diagnosticStates'])->name('warehouse.tapin.diagnostic-states');
+        Route::get('/wc-states', [TapinController::class, 'tapinStatesForWc'])->name('warehouse.tapin.wc-states');
     });
 });

@@ -317,6 +317,9 @@ class PrintController extends Controller
             ];
         }
 
+        // خواندن لوکیشن تاپین اگه قبلاً ذخیره شده
+        $tapinData = $wcData['tapin'] ?? [];
+
         $result = $tapin->createShipment([
             'external_order_id' => $order->order_number,
             'recipient_name' => $order->customer_name,
@@ -325,6 +328,8 @@ class PrintController extends Controller
             'recipient_postal_code' => $postcode ?: '0000000000',
             'recipient_city_name' => $city,
             'recipient_province' => $state,
+            'tapin_province_code' => $tapinData['province_code'] ?? null,
+            'tapin_city_code' => $tapinData['city_code'] ?? null,
             'weight' => $order->total_weight_with_box_grams ?: 500,
             'value' => (int)($wcData['total'] ?? 100000),
             'products' => $products,
