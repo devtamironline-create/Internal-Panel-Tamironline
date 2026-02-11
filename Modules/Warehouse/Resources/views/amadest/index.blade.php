@@ -44,11 +44,29 @@
                            placeholder="abcdef-1234-5678">
                     <p class="text-gray-400 text-xs mt-1">کد کلاینت منحصر به فرد که در ایمیل آمادست ارسال شده</p>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">توکن (Bearer Token)</label>
+                    <input type="password" name="api_key" dir="ltr"
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-mono"
+                           placeholder="{{ $settings['has_token'] ? 'توکن ذخیره شده - برای تغییر مقدار جدید وارد کنید' : 'اختیاری - اگه توکن دارید اینجا وارد کنید' }}">
+                    <p class="text-gray-400 text-xs mt-1">اگه توکن رو از قبل دارید اینجا وارد کنید. در غیر این صورت از بخش احراز هویت بگیرید.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شناسه کاربر (user_id)</label>
+                    <input type="text" name="user_id" value="{{ old('user_id', $settings['user_id'] ?? '') }}" dir="ltr"
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-mono"
+                           placeholder="مثلا 157320">
+                    <p class="text-gray-400 text-xs mt-1">برای تمدید خودکار توکن لازمه. اگه ندارید از بخش احراز هویت بسازید.</p>
+                </div>
 
-                <div class="pt-4 border-t">
+                <div class="flex items-center gap-3 pt-4 border-t">
                     <button type="submit" class="px-6 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm">ذخیره تنظیمات</button>
+                    <button type="button" onclick="testAmadestConnection()" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">تست اتصال</button>
                 </div>
             </form>
+
+            <!-- Connection Test Result -->
+            <div id="amadest-test-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
         </div>
 
         <!-- Step 2: Authentication Card -->
@@ -115,7 +133,6 @@
                 </div>
             </div>
             <div id="auth-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
-            <div id="amadest-test-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
         </div>
     </div>
 

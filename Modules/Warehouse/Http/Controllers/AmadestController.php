@@ -41,12 +41,24 @@ class AmadestController extends Controller
         $validated = $request->validate([
             'api_url' => 'nullable|url|max:500',
             'client_code' => 'required|string|max:500',
+            'api_key' => 'nullable|string|max:5000',
+            'user_id' => 'nullable|string|max:50',
         ]);
 
         if (!empty($validated['api_url'])) {
             WarehouseSetting::set('amadest_api_url', $validated['api_url']);
         }
         WarehouseSetting::set('amadest_client_code', $validated['client_code']);
+        // ذخیره توکن دستی اگه وارد شده باشه
+        if (!empty($validated['api_key'])) {
+            WarehouseSetting::set('amadest_api_key', $validated['api_key']);
+            // توکن دستی رو ۱ سال معتبر بذار (شاید long-lived باشه)
+            WarehouseSetting::set('amadest_token_expires_at', (string) (time() + 86400 * 365));
+            \Illuminate\Support\Facades\Cache::put('amadest_access_token', $validated['api_key'], 86400 * 365);
+        }
+        if (!empty($validated['user_id'])) {
+            WarehouseSetting::set('amadest_user_id', $validated['user_id']);
+        }
         WarehouseSetting::set('amadest_store_id', '0');
 
         if ($request->wantsJson()) {
