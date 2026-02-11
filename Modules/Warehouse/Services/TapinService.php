@@ -28,7 +28,7 @@ class TapinService
     protected function getHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Authorization' => 'Token ' . $this->apiKey,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ];
@@ -55,18 +55,27 @@ class TapinService
         }
 
         try {
+            // تست واقعی با اعتبار فروشگاه - اگه توکن معتبر نباشه خطا میده
             $response = Http::timeout(15)
                 ->withHeaders($this->getHeaders())
-                ->get($this->endpoint('public/provinces/'));
+                ->post($this->endpoint('public/transaction/credit/'), [
+                    'shop_id' => $this->shopId,
+                ]);
 
-            if ($response->successful()) {
+            $data = $response->json() ?? [];
+            $status = $data['returns']['status'] ?? 0;
+
+            if ($response->successful() && $status === 200) {
+                $credit = $data['entries']['credit'] ?? null;
+                $creditFormatted = $credit !== null ? number_format($credit) . ' ریال' : '';
                 return [
                     'success' => true,
-                    'message' => 'اتصال به تاپین برقرار است.',
+                    'message' => 'اتصال به تاپین برقرار است.' . ($creditFormatted ? ' اعتبار: ' . $creditFormatted : ''),
                 ];
             }
 
-            return ['success' => false, 'message' => 'خطا در اتصال: HTTP ' . $response->status() . ' - ' . $response->body()];
+            $message = $data['returns']['message'] ?? $response->body();
+            return ['success' => false, 'message' => 'خطا در اتصال: ' . $message];
         } catch (\Exception $e) {
             Log::error('Tapin connection test failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => 'خطا در اتصال: ' . $e->getMessage()];
