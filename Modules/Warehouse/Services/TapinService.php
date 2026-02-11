@@ -107,20 +107,39 @@ class TapinService
                 ->withHeaders($this->getHeaders())
                 ->get($this->endpoint('public/provinces/'));
 
-            if ($response->successful()) {
-                $json = $response->json();
-                $data = $json['entries'] ?? $json['results'] ?? $json['data'] ?? $json;
+            $json = $response->json() ?? [];
 
-                Log::info('Tapin provinces response sample', [
-                    'count' => is_array($data) ? count($data) : 0,
-                    'first' => is_array($data) && !empty($data) ? $data[0] ?? $data : 'empty',
-                ]);
+            // لاگ ساختار پاسخ برای دیباگ
+            Log::info('Tapin provinces raw response', [
+                'http_status' => $response->status(),
+                'keys' => is_array($json) ? array_keys($json) : 'not_array',
+                'returns_status' => $json['returns']['status'] ?? 'N/A',
+            ]);
+
+            if ($response->successful()) {
+                // ساختار پاسخ تاپین: {"returns": {...}, "entries": [...]}
+                $data = $json['entries'] ?? $json['results'] ?? $json['data'] ?? [];
+
+                // اگه entries خالی بود ولی json آرایه‌ای از استان‌ها بود
+                if (empty($data) && isset($json[0])) {
+                    $data = $json;
+                }
 
                 if (!empty($data) && is_array($data)) {
+                    // لاگ اولین آیتم برای دیدن ساختار
+                    $first = is_array($data) ? (reset($data) ?: []) : [];
+                    Log::info('Tapin provinces parsed', [
+                        'count' => count($data),
+                        'first_item_keys' => is_array($first) ? array_keys($first) : 'not_array',
+                        'first_item' => $first,
+                    ]);
+
                     Cache::put('tapin_provinces', $data, 86400);
                     return $data;
                 }
             }
+
+            Log::warning('Tapin provinces empty or failed', ['body' => mb_substr($response->body(), 0, 500)]);
             return [];
         } catch (\Exception $e) {
             Log::error('Tapin getProvinces error', ['error' => $e->getMessage()]);
@@ -322,7 +341,12 @@ class TapinService
                 $errorDetails = [];
                 foreach ($fieldErrors as $field => $errors) {
                     if (is_array($errors)) {
-                        $errorDetails[] = $field . ': ' . implode(', ', $errors);
+                        // ممکنه nested باشه (مثل products: [{title: [...]}])
+                        $flat = [];
+                        array_walk_recursive($errors, function ($v) use (&$flat) { $flat[] = $v; });
+                        $errorDetails[] = $field . ': ' . implode(', ', $flat);
+                    } elseif (is_string($errors)) {
+                        $errorDetails[] = $field . ': ' . $errors;
                     }
                 }
                 if (!empty($errorDetails)) {
@@ -400,7 +424,7 @@ class TapinService
         if (!empty($orderData['products'])) {
             foreach ($orderData['products'] as $p) {
                 $products[] = [
-                    'title' => $p['title'] ?? $p['name'] ?? 'کالا',
+                    'title' => mb_substr($p['title'] ?? $p['name'] ?? 'کالا', 0, 50),
                     'count' => (int) ($p['count'] ?? $p['quantity'] ?? 1),
                     'price' => (int) ($p['price'] ?? 0),
                     'weight' => (int) ($p['weight'] ?? $weightGrams),
@@ -410,7 +434,7 @@ class TapinService
             }
         } else {
             $products[] = [
-                'title' => $orderData['product_name'] ?? 'کالا',
+                'title' => mb_substr($orderData['product_name'] ?? 'کالا', 0, 50),
                 'count' => 1,
                 'price' => (int) ($orderData['value'] ?? 100000),
                 'weight' => $weightGrams,
@@ -436,9 +460,9 @@ class TapinService
             'city_code' => $cityCode ?: 1,
             'description' => null,
             'employee_code' => -1,
-            'pay_type' => (int) ($orderData['pay_type'] ?? 0), // 0 = آنلاین پرداخت شده
-            'order_type' => 0,
-            'box_id' => (int) ($orderData['box_id'] ?? 0),
+            'pay_type' => (int) ($orderData['pay_type'] ?? 1), // 1 = آنلاین پرداخت شده
+            'order_type' => 1, // 1 = پستی
+            'box_id' => (int) ($orderData['box_id'] ?? 10),
             'kiosk_id' => null,
             'package_weight' => $weightGrams,
             'manual_id' => $manualId,
