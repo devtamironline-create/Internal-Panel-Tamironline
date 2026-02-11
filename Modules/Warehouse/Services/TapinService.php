@@ -227,7 +227,8 @@ class TapinService
     }
 
     /**
-     * پیدا کردن city_code - فعلا province_code رو برمیگردونه (مرکز استان)
+     * پیدا کردن city_code از نام شهر و کد استان
+     * fallback: 1 = معمولا مرکز استان
      */
     public function findCityCode(?string $cityName, $provinceCode): ?int
     {
@@ -243,8 +244,8 @@ class TapinService
             }
         }
 
-        // fallback: کد استان = مرکز استان
-        return (int) $provinceCode;
+        // fallback: 1 = اولین شهر (معمولا مرکز استان)
+        return 1;
     }
 
     // ==========================================
@@ -331,11 +332,13 @@ class TapinService
 
             $apiStatus = $result['returns']['status'] ?? 0;
 
-            if ($apiStatus === 200) {
+            // 200 = موفق، 770 = تکراری (ولی اطلاعات سفارش رو برمیگردونه)
+            if ($apiStatus === 200 || $apiStatus === 770) {
                 $entries = $result['entries'] ?? [];
                 return [
                     'success' => true,
                     'message' => $result['returns']['message'] ?? 'سفارش ثبت شد',
+                    'duplicate' => $apiStatus === 770,
                     'data' => [
                         'order_id' => $entries['order_id'] ?? null,
                         'barcode' => $entries['barcode'] ?? null,
