@@ -347,6 +347,19 @@ class TapinService
 
             $apiStatus = $result['returns']['status'] ?? 0;
 
+            // اگه order_type خطا داد، با مقدار 1 (پیشتاز) دوباره تلاش کن
+            if ($apiStatus === 300 && isset($result['entries']['order_type'])) {
+                $usedType = $payload['order_type'];
+                Log::warning('Tapin order_type invalid, retrying with 1', ['tried' => $usedType]);
+                $payload['order_type'] = 1;
+                $response = Http::timeout(30)
+                    ->withHeaders($this->getHeaders())
+                    ->post($this->endpoint('public/order/post/register/'), $payload);
+                $result = $response->json() ?? [];
+                $apiStatus = $result['returns']['status'] ?? 0;
+                Log::info('Tapin createOrder retry response', ['status' => $response->status(), 'body' => $result]);
+            }
+
             // 200 = موفق، 770 = تکراری
             if ($apiStatus === 200 || $apiStatus === 770) {
                 $entries = $result['entries'] ?? [];
@@ -586,8 +599,8 @@ class TapinService
         $orderNumber = $orderData['external_order_id'] ?? '';
         $manualId = preg_replace('/\D/', '', $orderNumber) ?: (string) time();
 
-        // order_type از تنظیمات (پیش‌فرض 2 = عادی، 1 = پیشتاز)
-        $orderType = (int) WarehouseSetting::get('tapin_order_type', 2);
+        // order_type از تنظیمات (پیش‌فرض 1 = پیشتاز، 2 = عادی)
+        $orderType = (int) WarehouseSetting::get('tapin_order_type', 1);
 
         $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
 

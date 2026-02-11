@@ -27,7 +27,7 @@ class TapinController extends Controller
             'has_key' => !empty($apiKey),
             'key_preview' => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
             'shipping_provider' => WarehouseSetting::get('shipping_provider', 'amadest'),
-            'order_type' => WarehouseSetting::get('tapin_order_type', '2'),
+            'order_type' => WarehouseSetting::get('tapin_order_type', '1'),
             'box_id' => WarehouseSetting::get('tapin_box_id', '10'),
         ];
 

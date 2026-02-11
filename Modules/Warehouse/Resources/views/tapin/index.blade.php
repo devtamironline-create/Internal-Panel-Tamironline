@@ -110,8 +110,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">نوع سفارش</label>
                         <select name="order_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                            <option value="2" {{ ($settings['order_type'] ?? '2') == '2' ? 'selected' : '' }}>عادی (ارزان‌تر)</option>
-                            <option value="1" {{ ($settings['order_type'] ?? '2') == '1' ? 'selected' : '' }}>پیشتاز (سریع‌تر)</option>
+                            <option value="1" {{ ($settings['order_type'] ?? '1') == '1' ? 'selected' : '' }}>پیشتاز</option>
+                            <option value="2" {{ ($settings['order_type'] ?? '1') == '2' ? 'selected' : '' }}>عادی</option>
                         </select>
                     </div>
                     <div>
