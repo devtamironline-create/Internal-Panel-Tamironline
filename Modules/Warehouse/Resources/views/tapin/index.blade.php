@@ -183,7 +183,7 @@ function checkCredit() {
     .then(data => {
         if (data.success) {
             const d = data.data || {};
-            showResult('credit-result', true, '<strong>اعتبار:</strong> ' + JSON.stringify(d, null, 2));
+            showResult('credit-result', true, '<strong>اعتبار فروشگاه:</strong> ' + (d.formatted || d.credit || 'نامشخص'));
         } else {
             showResult('credit-result', false, data.message || 'خطا');
         }

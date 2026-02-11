@@ -179,15 +179,27 @@ class TapinService
         }
 
         try {
+            // POST /api/v2/public/transaction/credit/
             $response = Http::timeout(15)
                 ->withHeaders($this->getHeaders())
-                ->get($this->endpoint("public/shops/{$this->shopId}/credit/"));
+                ->post($this->endpoint('public/transaction/credit/'), [
+                    'shop_id' => $this->shopId,
+                ]);
 
-            if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
+            $data = $response->json() ?? [];
+
+            if ($response->successful() && ($data['returns']['status'] ?? 0) === 200) {
+                $credit = $data['entries']['credit'] ?? null;
+                return [
+                    'success' => true,
+                    'data' => [
+                        'credit' => $credit,
+                        'formatted' => $credit !== null ? number_format($credit) . ' ریال' : 'نامشخص',
+                    ],
+                ];
             }
 
-            return ['success' => false, 'message' => 'خطا: ' . $response->body()];
+            return ['success' => false, 'message' => $data['returns']['message'] ?? 'خطا: ' . $response->body()];
         } catch (\Exception $e) {
             Log::error('Tapin getShopCredit error', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
