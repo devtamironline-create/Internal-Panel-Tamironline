@@ -140,6 +140,30 @@
     </div>
 </div>
 
+{{-- پردازش دسته‌ای --}}
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">پردازش دسته‌ای سفارشات</h2>
+                <p class="text-xs text-gray-500">سفارشات پستی در مرحله «آماده‌سازی» بدون بارکد</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="loadPendingOrders()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">بارگذاری لیست</button>
+            <button onclick="bulkRegister()" id="btn-bulk" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium hidden">ثبت همه در تاپین</button>
+        </div>
+    </div>
+    <div id="pending-orders" class="hidden">
+        <div id="pending-count" class="mb-3 text-sm text-gray-600"></div>
+        <div id="pending-list" class="max-h-96 overflow-y-auto border rounded-lg"></div>
+    </div>
+    <div id="bulk-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
+</div>
+
 @push('scripts')
 <script>
 const csrfToken = '{{ csrf_token() }}';
@@ -212,6 +236,72 @@ function trackTapin() {
         }
     })
     .catch(() => showResult('tracking-result', false, 'خطا در ارتباط'));
+}
+
+function loadPendingOrders() {
+    const container = document.getElementById('pending-orders');
+    const list = document.getElementById('pending-list');
+    const countEl = document.getElementById('pending-count');
+    const btnBulk = document.getElementById('btn-bulk');
+    container.classList.remove('hidden');
+    list.innerHTML = '<div class="p-4 text-center text-gray-500">در حال بارگذاری...</div>';
+    btnBulk.classList.add('hidden');
+
+    fetch('{{ route("warehouse.tapin.pending-orders") }}', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+        if (data.count === 0) {
+            countEl.textContent = 'سفارشی در صف نیست.';
+            list.innerHTML = '<div class="p-4 text-center text-gray-400">همه سفارشات ثبت شده‌اند</div>';
+            return;
+        }
+        countEl.textContent = data.count + ' سفارش در صف ثبت';
+        btnBulk.classList.remove('hidden');
+        let html = '<table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-2 text-right">شماره</th><th class="p-2 text-right">مشتری</th><th class="p-2 text-right">موبایل</th><th class="p-2 text-right">وزن</th></tr></thead><tbody>';
+        data.orders.forEach(o => {
+            html += `<tr class="border-t"><td class="p-2 font-mono text-xs">${o.order_number}</td><td class="p-2">${o.customer_name}</td><td class="p-2 font-mono text-xs" dir="ltr">${o.customer_mobile||'-'}</td><td class="p-2">${o.total_weight||0}g</td></tr>`;
+        });
+        html += '</tbody></table>';
+        list.innerHTML = html;
+    })
+    .catch(() => { list.innerHTML = '<div class="p-4 text-center text-red-500">خطا در بارگذاری</div>'; });
+}
+
+function bulkRegister() {
+    if (!confirm('آیا همه سفارشات در صف رو در تاپین ثبت کنم؟')) return;
+    const btn = document.getElementById('btn-bulk');
+    btn.disabled = true;
+    btn.textContent = 'در حال ثبت...';
+    showLoading('bulk-result', 'در حال ثبت دسته‌ای سفارشات... لطفا صبر کنید');
+
+    fetch('{{ route("warehouse.tapin.bulk-register") }}', {
+        method: 'POST', headers: defaultHeaders, body: '{}',
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = 'ثبت همه در تاپین';
+        if (!data.results || data.results.length === 0) {
+            showResult('bulk-result', true, data.message || 'سفارشی نبود');
+            return;
+        }
+        let html = '<strong>' + data.message + '</strong><br><br>';
+        html += '<table class="w-full text-xs mt-2"><thead class="bg-gray-50"><tr><th class="p-1 text-right">سفارش</th><th class="p-1 text-right">مشتری</th><th class="p-1 text-right">وضعیت</th><th class="p-1 text-right">بارکد/پیام</th></tr></thead><tbody>';
+        data.results.forEach(r => {
+            const color = r.status === 'success' ? 'text-green-600' : 'text-red-600';
+            const statusText = r.status === 'success' ? 'موفق' : 'خطا';
+            const info = r.barcode || r.order_id || r.message || '-';
+            html += `<tr class="border-t"><td class="p-1 font-mono">${r.order_number}</td><td class="p-1">${r.customer}</td><td class="p-1 ${color} font-bold">${statusText}</td><td class="p-1 text-xs">${info}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        showResult('bulk-result', true, html);
+        loadPendingOrders();
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'ثبت همه در تاپین';
+        showResult('bulk-result', false, 'خطا در ارتباط');
+    });
 }
 </script>
 @endpush
