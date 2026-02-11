@@ -206,29 +206,43 @@
                     </div>
                 </div>
 
-                {{-- مرحله ۲: تایید نهایی با لیست محصولات (فقط پستی) --}}
-                    @if(!$isPeyk)
-                    <div x-show="showConfirm" x-transition class="border-t border-orange-200 bg-orange-50 px-5 py-4" style="display: none;">
-                        <div class="mb-3">
-                            <h4 class="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                                آیا مطمئن هستید محصولات موجود هستند؟
-                            </h4>
-                            <div class="border border-orange-200 rounded-lg overflow-hidden bg-white mb-3">
+                {{-- پاپ‌آپ تایید موجودی (فقط پستی) --}}
+                @if(!$isPeyk)
+                <div x-show="showConfirm" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
+                    {{-- بک‌دراپ --}}
+                    <div class="absolute inset-0 bg-black/50" @click="showConfirm = false"></div>
+                    {{-- محتوای مودال --}}
+                    <div x-show="showConfirm" x-transition.scale.origin.center class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" @click.stop>
+                        {{-- هدر --}}
+                        <div class="bg-orange-50 border-b border-orange-200 px-5 py-4">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-bold text-orange-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                    آیا مطمئن هستید محصولات موجود هستند؟
+                                </h4>
+                                <button @click="showConfirm = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                            <p class="text-xs text-orange-600 mt-1">سفارش {{ $order->order_number }} - {{ $order->customer_name }}</p>
+                        </div>
+                        {{-- لیست محصولات --}}
+                        <div class="px-5 py-4">
+                            <div class="border border-orange-200 rounded-xl overflow-hidden mb-4">
                                 <table class="w-full text-sm">
                                     <thead>
-                                        <tr class="bg-orange-100/50">
-                                            <th class="text-right py-2 px-3 text-xs font-semibold text-orange-700">#</th>
-                                            <th class="text-right py-2 px-3 text-xs font-semibold text-orange-700">نام محصول</th>
-                                            <th class="text-center py-2 px-3 text-xs font-semibold text-orange-700 w-20">تعداد</th>
+                                        <tr class="bg-orange-50">
+                                            <th class="text-right py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200">#</th>
+                                            <th class="text-right py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200">نام محصول</th>
+                                            <th class="text-center py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200 w-20">تعداد</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-orange-100">
                                         @foreach($order->items as $index => $item)
-                                        <tr>
-                                            <td class="py-2 px-3 text-gray-500 text-xs">{{ $index + 1 }}</td>
-                                            <td class="py-2 px-3 text-gray-800 font-medium">{{ $item->product_name }}</td>
-                                            <td class="py-2 px-3 text-center">
+                                        <tr class="hover:bg-orange-50/50">
+                                            <td class="py-2.5 px-3 text-gray-400 text-xs">{{ $index + 1 }}</td>
+                                            <td class="py-2.5 px-3 text-gray-800 font-medium">{{ $item->product_name }}</td>
+                                            <td class="py-2.5 px-3 text-center">
                                                 <span class="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 bg-orange-100 text-orange-800 rounded-md text-xs font-bold">{{ $item->quantity }}</span>
                                             </td>
                                         </tr>
@@ -236,13 +250,14 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="text-xs text-red-600 font-medium leading-relaxed">
+                            <p class="text-sm text-red-600 font-medium leading-relaxed">
                                 بعد از تایید شما بارکد پستی تولید خواهد شد و هزینه کسر می‌شود و قابلیت لغو ندارد.
                             </p>
                         </div>
-                        <div class="flex items-center gap-2 justify-end">
+                        {{-- دکمه‌ها --}}
+                        <div class="bg-gray-50 border-t border-gray-100 px-5 py-3 flex items-center gap-2 justify-end">
                             <button @click="showConfirm = false" type="button"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium">
+                                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors text-sm font-medium">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 انصراف
                             </button>
@@ -254,7 +269,8 @@
                             </a>
                         </div>
                     </div>
-                    @endif
+                </div>
+                @endif
             </div>
             @empty
             <div class="py-16 text-center text-gray-400">
