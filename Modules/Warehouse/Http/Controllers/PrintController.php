@@ -258,16 +258,23 @@ class PrintController extends Controller
         if ($result['success'] ?? false) {
             $data = $result['data'] ?? [];
             $barcode = $data['barcode'] ?? null;
+            $tapinOrderId = $data['order_id'] ?? null;
 
-            if ($barcode) {
-                $order->amadest_barcode = $barcode;
-                $order->tracking_code = $order->tracking_code ?: $barcode;
-                $order->post_tracking_code = $barcode;
+            // بارکد پستی یا شناسه سفارش تاپین
+            $trackingRef = $barcode ?: ($tapinOrderId ? 'TAPIN-' . $tapinOrderId : null);
+
+            if ($trackingRef) {
+                $order->amadest_barcode = $trackingRef;
+                $order->tracking_code = $order->tracking_code ?: $trackingRef;
+                if ($barcode) {
+                    $order->post_tracking_code = $barcode;
+                }
                 $order->save();
-                Log::info('Tapin barcode saved', [
+                Log::info('Tapin order saved', [
                     'order' => $order->order_number,
                     'barcode' => $barcode,
-                    'tapin_order_id' => $data['order_id'] ?? null,
+                    'tapin_order_id' => $tapinOrderId,
+                    'saved_ref' => $trackingRef,
                 ]);
             }
         } else {

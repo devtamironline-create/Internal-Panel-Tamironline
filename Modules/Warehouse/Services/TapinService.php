@@ -176,6 +176,20 @@ class TapinService
         }
     }
 
+    // نگاشت استان فارسی به province_code تاپین
+    protected static array $provinceCodeMap = [
+        'آذربایجان شرقی' => 3, 'آذربایجان غربی' => 4, 'اردبیل' => 24,
+        'اصفهان' => 10, 'البرز' => 30, 'ایلام' => 16,
+        'بوشهر' => 18, 'تهران' => 8, 'چهارمحال و بختیاری' => 14,
+        'خراسان جنوبی' => 29, 'خراسان رضوی' => 9, 'خراسان شمالی' => 28,
+        'خوزستان' => 6, 'زنجان' => 19, 'سمنان' => 20,
+        'سیستان و بلوچستان' => 11, 'فارس' => 7, 'قزوین' => 26,
+        'قم' => 25, 'کردستان' => 12, 'کرمان' => 15,
+        'کرمانشاه' => 5, 'کهگیلویه و بویراحمد' => 17, 'گلستان' => 27,
+        'گیلان' => 1, 'لرستان' => 23, 'مازندران' => 2,
+        'مرکزی' => 22, 'هرمزگان' => 21, 'همدان' => 13, 'یزد' => 31,
+    ];
+
     /**
      * پیدا کردن province_code از نام استان یا کد ووکامرس
      */
@@ -186,20 +200,24 @@ class TapinService
         // اگه کد ووکامرس هست، به نام فارسی تبدیل کن
         $persianName = self::$wcStateMap[strtoupper($stateNameOrCode)] ?? $stateNameOrCode;
 
-        $provinces = $this->getProvinces();
-        if (empty($provinces)) return null;
+        // اول از mapping ثابت چک کن
+        if (isset(self::$provinceCodeMap[$persianName])) {
+            return self::$provinceCodeMap[$persianName];
+        }
 
+        // جستجوی fuzzy در mapping ثابت
+        foreach (self::$provinceCodeMap as $name => $code) {
+            if (str_contains($name, $persianName) || str_contains($persianName, $name)) {
+                return $code;
+            }
+        }
+
+        // fallback: تلاش از API
+        $provinces = $this->getProvinces();
         foreach ($provinces as $province) {
             $name = $province['name'] ?? $province['title'] ?? '';
-            $code = $province['id'] ?? $province['code'] ?? $province['province_code'] ?? null;
-
-            if (!$code || !$name) continue;
-
-            // تطبیق دقیق
-            if ($name === $persianName) return (int) $code;
-
-            // تطبیق شامل (مثلا "تهران" در "استان تهران")
-            if (str_contains($name, $persianName) || str_contains($persianName, $name)) {
+            $code = $province['id'] ?? $province['code'] ?? null;
+            if ($code && ($name === $persianName || str_contains($name, $persianName))) {
                 return (int) $code;
             }
         }
@@ -209,29 +227,24 @@ class TapinService
     }
 
     /**
-     * پیدا کردن city_code از نام شهر و کد استان
+     * پیدا کردن city_code - فعلا province_code رو برمیگردونه (مرکز استان)
      */
     public function findCityCode(?string $cityName, $provinceCode): ?int
     {
         if (!$cityName || !$provinceCode) return null;
 
+        // تلاش از API
         $cities = $this->getCities($provinceCode);
-        if (empty($cities)) return null;
-
         foreach ($cities as $city) {
             $name = $city['name'] ?? $city['title'] ?? '';
-            $code = $city['id'] ?? $city['code'] ?? $city['city_code'] ?? null;
-
-            if (!$code || !$name) continue;
-
-            if ($name === $cityName) return (int) $code;
-            if (str_contains($name, $cityName) || str_contains($cityName, $name)) {
+            $code = $city['id'] ?? $city['code'] ?? null;
+            if ($code && ($name === $cityName || str_contains($name, $cityName) || str_contains($cityName, $name))) {
                 return (int) $code;
             }
         }
 
-        Log::warning('Tapin city not found', ['city' => $cityName, 'province_code' => $provinceCode]);
-        return null;
+        // fallback: کد استان = مرکز استان
+        return (int) $provinceCode;
     }
 
     // ==========================================
