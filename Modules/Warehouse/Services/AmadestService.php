@@ -459,7 +459,11 @@ class AmadestService
 
             $recipientMobile = $this->formatMobile($orderData['recipient_mobile']);
 
+            // store_id اجباریه - از تنظیمات بخون یا پیش‌فرض 84085
+            $storeId = (int) WarehouseSetting::get('amadest_store_id', '84085');
+
             $payload = [
+                'store_id' => $storeId ?: 84085,
                 'external_order_id' => $externalIdInt,
                 'recipient_name' => $orderData['recipient_name'] ?: 'مشتری',
                 'sender_name' => $senderName,

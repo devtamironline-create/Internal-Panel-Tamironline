@@ -62,8 +62,6 @@ class AmadestController extends Controller
         if (!empty($validated['user_id'])) {
             WarehouseSetting::set('amadest_user_id', $validated['user_id']);
         }
-        WarehouseSetting::set('amadest_store_id', '0');
-
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'تنظیمات ذخیره شد.']);
         }
@@ -186,8 +184,6 @@ class AmadestController extends Controller
         if (!empty($validated['warehouse_address'])) {
             WarehouseSetting::set('amadest_warehouse_address', $validated['warehouse_address']);
         }
-
-        WarehouseSetting::set('amadest_store_id', '0');
 
         return redirect()->route('warehouse.amadest.index')
             ->with('success', 'اطلاعات فرستنده ذخیره شد.');
