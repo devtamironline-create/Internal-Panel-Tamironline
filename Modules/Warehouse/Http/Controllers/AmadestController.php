@@ -213,13 +213,16 @@ class AmadestController extends Controller
         if ($order && $order->customer_mobile) {
             $result = $service->searchOrders([$order->customer_mobile]);
             // فیلتر کن فقط همین سفارش رو نشون بده
-            if (($result['success'] ?? false) && !empty($result['data'])) {
+            if (!empty($result['data']) && is_array($result['data'])) {
                 $externalId = (int) preg_replace('/\D/', '', $order->order_number);
                 $filtered = collect($result['data'])->filter(function ($item) use ($externalId) {
                     return ($item['external_order_id'] ?? null) == $externalId;
                 })->values()->toArray();
-                if (!empty($filtered)) {
-                    $result['data'] = $filtered;
+
+                // فقط سفارش مورد نظر رو برگردون - اگه پیدا نشد بگو پیدا نشد
+                $result['data'] = $filtered;
+                if (empty($filtered)) {
+                    $result['message'] = "سفارش {$order->order_number} هنوز در آمادست ثبت نشده یا در حال پردازش است.";
                 }
             }
             return response()->json($result);
