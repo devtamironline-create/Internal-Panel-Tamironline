@@ -53,6 +53,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::get('/{order}/print/label', [PrintController::class, 'label'])->name('warehouse.print.label')
         ->where('order', '[0-9]+');
+    Route::post('/{order}/retry-register', [PrintController::class, 'retryRegister'])->name('warehouse.retry-register')
+        ->where('order', '[0-9]+');
 
     // Dispatch
     Route::prefix('dispatch')->group(function () {

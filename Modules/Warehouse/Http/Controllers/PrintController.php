@@ -72,6 +72,7 @@ class PrintController extends Controller
 
         // ثبت خودکار در سرویس ارسال (آمادست یا تاپین) برای سفارشات پستی
         $shippingProvider = WarehouseSetting::get('shipping_provider', 'amadest');
+        $registrationError = null;
 
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
@@ -84,16 +85,24 @@ class PrintController extends Controller
                 $fullAddress = implode('، ', array_filter([$state, $city, $address]));
                 $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
 
+                Log::info('Shipping auto-register attempt', [
+                    'order' => $order->order_number,
+                    'provider' => $shippingProvider,
+                    'weight_grams' => $order->total_weight_with_box_grams,
+                    'city' => $city,
+                    'state' => $state,
+                ]);
+
                 if ($shippingProvider === 'tapin') {
-                    // ثبت از طریق تاپین
-                    $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
+                    $registrationError = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
                 } else {
-                    // ثبت از طریق آمادست
-                    $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
+                    $registrationError = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
                 }
 
                 $order->refresh();
+                $order->load(['items', 'boxSize']);
             } catch (\Exception $e) {
+                $registrationError = $shippingProvider . ': ' . $e->getMessage();
                 Log::error('Shipping auto-register error', ['provider' => $shippingProvider, 'order' => $order->order_number, 'error' => $e->getMessage()]);
             }
         }
@@ -138,7 +147,67 @@ class PrintController extends Controller
             'sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
         ];
 
-        return view('warehouse::print.invoice', compact('order', 'invoiceSettings'));
+        return view('warehouse::print.invoice', compact('order', 'invoiceSettings', 'shippingProvider', 'registrationError'));
+    }
+
+    /**
+     * تلاش مجدد ثبت در سرویس ارسال
+     */
+    public function retryRegister(WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $order->load(['items', 'boxSize']);
+
+        $shippingProvider = WarehouseSetting::get('shipping_provider', 'amadest');
+
+        if ($order->shipping_type !== 'post') {
+            return response()->json(['success' => false, 'message' => 'سفارش پستی نیست']);
+        }
+
+        // پاک کردن بارکد قبلی اگه خالی یا TAPIN- بود
+        if (empty($order->amadest_barcode) || str_starts_with($order->amadest_barcode, 'TAPIN-') || str_starts_with($order->amadest_barcode, 'AMD-')) {
+            $order->amadest_barcode = null;
+            $order->post_tracking_code = null;
+            $order->save();
+        }
+
+        if (!empty($order->amadest_barcode)) {
+            return response()->json(['success' => true, 'message' => 'سفارش قبلاً ثبت شده: ' . $order->amadest_barcode]);
+        }
+
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        $shipping = $wcData['shipping'] ?? [];
+        $billing = $wcData['billing'] ?? [];
+        $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
+        $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
+        $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+        $fullAddress = implode('، ', array_filter([$state, $city, $address]));
+        $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
+
+        try {
+            if ($shippingProvider === 'tapin') {
+                $error = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
+            } else {
+                $error = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
+            }
+
+            $order->refresh();
+
+            if ($error) {
+                return response()->json(['success' => false, 'message' => $error]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ثبت شد! بارکد: ' . ($order->amadest_barcode ?? 'نامشخص'),
+                'barcode' => $order->amadest_barcode,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     public function label(WarehouseOrder $order)
@@ -154,11 +223,12 @@ class PrintController extends Controller
 
     /**
      * ثبت سفارش از طریق آمادست
+     * @return string|null خطا یا null اگه موفق بود
      */
-    private function registerViaAmadest(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): void
+    private function registerViaAmadest(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
     {
         $amadest = new AmadestService();
-        if (!$amadest->isConfigured()) return;
+        if (!$amadest->isConfigured()) return 'آمادست تنظیم نشده';
 
         $cityId = $amadest->findCityId($city, $state);
 
@@ -193,6 +263,7 @@ class PrintController extends Controller
                 'amadest_barcode' => $order->amadest_barcode,
                 'courier_tracking_code' => $courierTrackingCode,
             ]);
+            return null;
         } elseif ($isDuplicate) {
             Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);
             $searchResult = $amadest->searchOrders([$order->customer_mobile]);
@@ -214,18 +285,24 @@ class PrintController extends Controller
                 $order->save();
                 Log::warning('Amadest duplicate but search failed', ['order' => $order->order_number]);
             }
+            return null;
         } else {
-            Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
+            $error = $result['message'] ?? 'خطای نامشخص';
+            Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+            return 'آمادست: ' . $error;
         }
     }
 
     /**
      * ثبت سفارش از طریق تاپین
+     * @return string|null خطا یا null اگه موفق بود
      */
-    private function registerViaTapin(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): void
+    private function registerViaTapin(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
     {
         $tapin = new TapinService();
-        if (!$tapin->isConfigured()) return;
+        if (!$tapin->isConfigured()) {
+            return 'تاپین تنظیم نشده (API Key یا Shop ID خالی)';
+        }
 
         // ساخت لیست محصولات از آیتم‌های سفارش
         $products = [];
@@ -284,9 +361,13 @@ class PrintController extends Controller
                     'tapin_order_id' => $tapinOrderId,
                     'saved_ref' => $trackingRef,
                 ]);
+                return null; // موفق
             }
-        } else {
-            Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
+            return 'تاپین: ثبت شد ولی بارکد/شناسه دریافت نشد';
         }
+
+        $error = $result['message'] ?? 'خطای نامشخص';
+        Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+        return 'تاپین: ' . $error;
     }
 }

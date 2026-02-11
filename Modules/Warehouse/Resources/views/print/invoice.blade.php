@@ -144,7 +144,16 @@
             {{ $order->print_count }} بار چاپ شده
         </span>
         @endif
+        <span style="font-size:11px;color:#888;font-family:'Vazirmatn',Tahoma;">سرویس: {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</span>
+        @if($order->shipping_type === 'post' && empty($order->amadest_barcode))
+        <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</button>
+        @endif
     </div>
+    @if(!empty($registrationError))
+    <div class="no-print" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:8px 12px;margin:60px 10px 0;border-radius:6px;font-size:11px;">
+        <strong>خطا در ثبت سرویس ارسال:</strong> {{ $registrationError }}
+    </div>
+    @endif
 
     <div class="invoice">
         {{-- Header --}}
@@ -344,6 +353,37 @@
             }
             @endif
             window.print();
+        }
+
+        function retryRegister() {
+            var btn = document.getElementById('retryBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = 'در حال ثبت...';
+            fetch('/warehouse/{{ $order->id }}/retry-register', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    alert('موفق! ' + data.message);
+                    location.reload();
+                } else {
+                    alert('خطا: ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'ثبت مجدد';
+                }
+            })
+            .catch(function() {
+                alert('خطا در ارتباط');
+                btn.disabled = false;
+                btn.textContent = 'ثبت مجدد';
+            });
         }
     </script>
 

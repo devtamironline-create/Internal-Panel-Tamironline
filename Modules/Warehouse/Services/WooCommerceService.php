@@ -589,8 +589,8 @@ class WooCommerceService
             foreach ($orderIds as $orderId) {
                 $order = WarehouseOrder::with('items')->find($orderId);
                 if ($order) {
-                    $totalWeight = $order->items->sum(fn($i) => $i->weight * $i->quantity);
-                    $order->update(['total_weight' => round($totalWeight)]);
+                    $totalWeight = $order->items->sum(fn($i) => WarehouseOrder::toGrams($i->weight) * $i->quantity);
+                    $order->update(['total_weight' => $totalWeight]);
                 }
             }
         }
