@@ -9,6 +9,7 @@ use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\AmadestService;
+use Modules\Warehouse\Services\TapinService;
 use Modules\SMS\Services\KavenegarService;
 
 class PrintController extends Controller
@@ -69,84 +70,31 @@ class PrintController extends Controller
             $order->load('items');
         }
 
-        // ثبت خودکار در آمادست برای سفارشات پستی (اگه بارکد آمادست نداره)
+        // ثبت خودکار در سرویس ارسال (آمادست یا تاپین) برای سفارشات پستی
+        $shippingProvider = WarehouseSetting::get('shipping_provider', 'amadest');
+
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
-                $amadest = new AmadestService();
-                if ($amadest->isConfigured()) {
-                    $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
-                    $shipping = $wcData['shipping'] ?? [];
-                    $billing = $wcData['billing'] ?? [];
-                    $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
-                    $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
-                    $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
-                    $fullAddress = implode('، ', array_filter([$state, $city, $address]));
-                    $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
-                    $cityId = $amadest->findCityId($city, $state);
+                $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                $shipping = $wcData['shipping'] ?? [];
+                $billing = $wcData['billing'] ?? [];
+                $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
+                $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
+                $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+                $fullAddress = implode('، ', array_filter([$state, $city, $address]));
+                $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
 
-                    $result = $amadest->createShipment([
-                        'external_order_id' => $order->order_number,
-                        'recipient_name' => $order->customer_name,
-                        'recipient_mobile' => $order->customer_mobile,
-                        'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
-                        'recipient_postal_code' => $postcode ?: null,
-                        'recipient_city_id' => $cityId,
-                        'weight' => $order->total_weight_with_box_grams ?: 500,
-                        'value' => (int)($wcData['total'] ?? 100000),
-                    ]);
-
-                    Log::info('Amadest auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
-
-                    $data = $result['data'] ?? [];
-                    $amadestId = $data['amadest_order_id'] ?? $data['id'] ?? null;
-                    $amadestTrackingCode = $data['amadast_tracking_code'] ?? null;
-                    $courierTrackingCode = $data['courier_tracking_code'] ?? null;
-                    $isDuplicate = !($result['success'] ?? false) && str_contains($result['message'] ?? '', 'تکراری');
-
-                    if ($result['success'] ?? false) {
-                        // ثبت موفق - ذخیره کد پیگیری آمادست
-                        $order->amadest_barcode = $amadestTrackingCode ?: (string) $amadestId;
-                        $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
-                        if ($courierTrackingCode) {
-                            $order->post_tracking_code = $courierTrackingCode;
-                        }
-                        $order->save();
-                        Log::info('Amadest barcode saved', [
-                            'order' => $order->order_number,
-                            'amadest_barcode' => $order->amadest_barcode,
-                            'courier_tracking_code' => $courierTrackingCode,
-                        ]);
-                    } elseif ($isDuplicate) {
-                        // سفارش قبلا ثبت شده - شناسه رو از جستجو بگیر
-                        Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);
-                        $searchResult = $amadest->searchOrders([$order->customer_mobile]);
-                        $externalId = (int) preg_replace('/\D/', '', $order->order_number);
-                        $found = false;
-                        foreach ($searchResult['data'] ?? [] as $existing) {
-                            if (($existing['external_order_id'] ?? null) == $externalId) {
-                                $order->amadest_barcode = (string) ($existing['amadast_tracking_code'] ?? '');
-                                $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
-                                $order->post_tracking_code = $existing['courier_tracking_code'] ?? null;
-                                $order->save();
-                                $found = true;
-                                Log::info('Amadest existing order found', ['order' => $order->order_number, 'amadest_id' => $order->amadest_barcode]);
-                                break;
-                            }
-                        }
-                        if (!$found) {
-                            // جستجو نتیجه نداد - از شماره سفارش بعنوان شناسه موقت استفاده کن
-                            $order->amadest_barcode = 'AMD-' . $externalId;
-                            $order->save();
-                            Log::warning('Amadest duplicate but search failed', ['order' => $order->order_number]);
-                        }
-                    } else {
-                        Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
-                    }
-
-                    $order->refresh();
+                if ($shippingProvider === 'tapin') {
+                    // ثبت از طریق تاپین
+                    $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
+                } else {
+                    // ثبت از طریق آمادست
+                    $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
                 }
+
+                $order->refresh();
             } catch (\Exception $e) {
-                Log::error('Amadest auto-register error', ['order' => $order->order_number, 'error' => $e->getMessage()]);
+                Log::error('Shipping auto-register error', ['provider' => $shippingProvider, 'order' => $order->order_number, 'error' => $e->getMessage()]);
             }
         }
 
@@ -202,5 +150,113 @@ class PrintController extends Controller
         $order->load(['items', 'boxSize']);
 
         return view('warehouse::print.label', compact('order'));
+    }
+
+    /**
+     * ثبت سفارش از طریق آمادست
+     */
+    private function registerViaAmadest(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): void
+    {
+        $amadest = new AmadestService();
+        if (!$amadest->isConfigured()) return;
+
+        $cityId = $amadest->findCityId($city, $state);
+
+        $result = $amadest->createShipment([
+            'external_order_id' => $order->order_number,
+            'recipient_name' => $order->customer_name,
+            'recipient_mobile' => $order->customer_mobile,
+            'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
+            'recipient_postal_code' => $postcode ?: null,
+            'recipient_city_id' => $cityId,
+            'weight' => $order->total_weight_with_box_grams ?: 500,
+            'value' => (int)($wcData['total'] ?? 100000),
+        ]);
+
+        Log::info('Amadest auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
+
+        $data = $result['data'] ?? [];
+        $amadestId = $data['amadest_order_id'] ?? $data['id'] ?? null;
+        $amadestTrackingCode = $data['amadast_tracking_code'] ?? null;
+        $courierTrackingCode = $data['courier_tracking_code'] ?? null;
+        $isDuplicate = !($result['success'] ?? false) && str_contains($result['message'] ?? '', 'تکراری');
+
+        if ($result['success'] ?? false) {
+            $order->amadest_barcode = $amadestTrackingCode ?: (string) $amadestId;
+            $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
+            if ($courierTrackingCode) {
+                $order->post_tracking_code = $courierTrackingCode;
+            }
+            $order->save();
+            Log::info('Amadest barcode saved', [
+                'order' => $order->order_number,
+                'amadest_barcode' => $order->amadest_barcode,
+                'courier_tracking_code' => $courierTrackingCode,
+            ]);
+        } elseif ($isDuplicate) {
+            Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);
+            $searchResult = $amadest->searchOrders([$order->customer_mobile]);
+            $externalId = (int) preg_replace('/\D/', '', $order->order_number);
+            $found = false;
+            foreach ($searchResult['data'] ?? [] as $existing) {
+                if (($existing['external_order_id'] ?? null) == $externalId) {
+                    $order->amadest_barcode = (string) ($existing['amadast_tracking_code'] ?? '');
+                    $order->tracking_code = $order->tracking_code ?: $order->amadest_barcode;
+                    $order->post_tracking_code = $existing['courier_tracking_code'] ?? null;
+                    $order->save();
+                    $found = true;
+                    Log::info('Amadest existing order found', ['order' => $order->order_number, 'amadest_id' => $order->amadest_barcode]);
+                    break;
+                }
+            }
+            if (!$found) {
+                $order->amadest_barcode = 'AMD-' . $externalId;
+                $order->save();
+                Log::warning('Amadest duplicate but search failed', ['order' => $order->order_number]);
+            }
+        } else {
+            Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
+        }
+    }
+
+    /**
+     * ثبت سفارش از طریق تاپین
+     */
+    private function registerViaTapin(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): void
+    {
+        $tapin = new TapinService();
+        if (!$tapin->isConfigured()) return;
+
+        $result = $tapin->createShipment([
+            'external_order_id' => $order->order_number,
+            'recipient_name' => $order->customer_name,
+            'recipient_mobile' => $order->customer_mobile,
+            'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
+            'recipient_postal_code' => $postcode ?: null,
+            'recipient_city_name' => $city,
+            'recipient_province' => $state,
+            'weight' => $order->total_weight_with_box_grams ?: 500,
+            'value' => (int)($wcData['total'] ?? 100000),
+        ]);
+
+        Log::info('Tapin auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
+
+        if ($result['success'] ?? false) {
+            $data = $result['data'] ?? [];
+            $trackingCode = $data['tracking_code'] ?? $data['barcode'] ?? null;
+
+            if ($trackingCode) {
+                $order->amadest_barcode = $trackingCode;
+                $order->tracking_code = $order->tracking_code ?: $trackingCode;
+                $order->post_tracking_code = $trackingCode;
+                $order->save();
+                Log::info('Tapin barcode saved', [
+                    'order' => $order->order_number,
+                    'tracking_code' => $trackingCode,
+                ]);
+            }
+        } else {
+            Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $result['message'] ?? 'unknown']);
+        }
     }
 }

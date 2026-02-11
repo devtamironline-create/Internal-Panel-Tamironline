@@ -7,6 +7,7 @@ use Modules\Warehouse\Http\Controllers\AmadestController;
 use Modules\Warehouse\Http\Controllers\PackingController;
 use Modules\Warehouse\Http\Controllers\PrintController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
+use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 
 /*
@@ -104,5 +105,17 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/track', [AmadestController::class, 'track'])->name('warehouse.amadest.track');
         Route::get('/stores', [AmadestController::class, 'getStores'])->name('warehouse.amadest.stores');
         Route::post('/select-store', [AmadestController::class, 'selectStore'])->name('warehouse.amadest.select-store');
+    });
+
+    // Tapin Integration
+    Route::prefix('tapin')->group(function () {
+        Route::get('/', [TapinController::class, 'index'])->name('warehouse.tapin.index');
+        Route::post('/save', [TapinController::class, 'saveSettings'])->name('warehouse.tapin.save');
+        Route::post('/test', [TapinController::class, 'testConnection'])->name('warehouse.tapin.test');
+        Route::post('/track', [TapinController::class, 'track'])->name('warehouse.tapin.track');
+        Route::get('/credit', [TapinController::class, 'getShopCredit'])->name('warehouse.tapin.credit');
+        Route::post('/check-price', [TapinController::class, 'checkPrice'])->name('warehouse.tapin.check-price');
+        Route::get('/shop-details', [TapinController::class, 'getShopDetails'])->name('warehouse.tapin.shop-details');
+        Route::post('/set-provider', [TapinController::class, 'setProvider'])->name('warehouse.tapin.set-provider');
     });
 });
