@@ -354,11 +354,21 @@ class PrintController extends Controller
             $tapinOrderId = $data['order_id'] ?? null;
 
             // اگه بارکد نداریم، change-status بزن تا بارکد بگیریم
+            // status 2 = آماده ارسال (بارکد ایزی پست ساخته میشه)
             if (empty($barcode) && $tapinOrderId) {
-                $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                // اول status 2 (آماده ارسال) رو امتحان کن - بارکد معمولا اینجا ساخته میشه
+                $statusResult = $tapin->changeOrderStatus($tapinOrderId, 2);
                 if ($statusResult['success'] ?? false) {
                     $barcode = $statusResult['data']['barcode'] ?? null;
-                    Log::info('Tapin barcode from change-status', ['order' => $order->order_number, 'barcode' => $barcode]);
+                    Log::info('Tapin barcode from change-status(2)', ['order' => $order->order_number, 'barcode' => $barcode]);
+                }
+                // اگه status 2 جواب نداد، status 1 رو امتحان کن
+                if (empty($barcode)) {
+                    $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                    if ($statusResult['success'] ?? false) {
+                        $barcode = $statusResult['data']['barcode'] ?? null;
+                        Log::info('Tapin barcode from change-status(1)', ['order' => $order->order_number, 'barcode' => $barcode]);
+                    }
                 }
             }
 

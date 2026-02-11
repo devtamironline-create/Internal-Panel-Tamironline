@@ -436,11 +436,18 @@ class TapinController extends Controller
                     $barcode = $data['barcode'] ?? null;
                     $tapinOrderId = $data['order_id'] ?? null;
 
-                    // اگه بارکد نداریم، change-status بزن
+                    // اگه بارکد نداریم، change-status بزن تا بارکد بگیریم
+                    // status 2 = آماده ارسال (بارکد ایزی پست ساخته میشه)
                     if (empty($barcode) && $tapinOrderId) {
-                        $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                        $statusResult = $tapin->changeOrderStatus($tapinOrderId, 2);
                         if ($statusResult['success'] ?? false) {
                             $barcode = $statusResult['data']['barcode'] ?? null;
+                        }
+                        if (empty($barcode)) {
+                            $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                            if ($statusResult['success'] ?? false) {
+                                $barcode = $statusResult['data']['barcode'] ?? null;
+                            }
                         }
                     }
 
