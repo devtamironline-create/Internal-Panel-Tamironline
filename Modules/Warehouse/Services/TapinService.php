@@ -788,7 +788,7 @@ class TapinService
         $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
 
         return [
-            'register_type' => 1,
+            'register_type' => 2,
             'shop_id' => $this->shopId,
             'first_name' => $this->getFirstName($orderData['recipient_name'] ?? 'مشتری'),
             'last_name' => $this->getLastName($orderData['recipient_name'] ?? 'مشتری'),
