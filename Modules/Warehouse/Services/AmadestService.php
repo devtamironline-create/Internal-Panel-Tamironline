@@ -20,7 +20,8 @@ class AmadestService
 
     public function isConfigured(): bool
     {
-        return !empty($this->clientCode) && !empty($this->getAccessToken());
+        // فقط توکن لازمه - X-Client-Code اختیاریه
+        return !empty($this->getAccessToken());
     }
 
     /**
@@ -28,11 +29,15 @@ class AmadestService
      */
     protected function getPublicHeaders(): array
     {
-        return [
+        $headers = [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'X-Client-Code' => $this->clientCode ?? '',
         ];
+        // X-Client-Code اختیاریه - اگه وارد شده بفرست
+        if (!empty($this->clientCode)) {
+            $headers['X-Client-Code'] = $this->clientCode;
+        }
+        return $headers;
     }
 
     /**
@@ -41,12 +46,16 @@ class AmadestService
     protected function getHeaders(): array
     {
         $token = $this->getAccessToken();
-        return [
+        $headers = [
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'X-Client-Code' => $this->clientCode ?? '',
         ];
+        // X-Client-Code اختیاریه - اگه وارد شده بفرست
+        if (!empty($this->clientCode)) {
+            $headers['X-Client-Code'] = $this->clientCode;
+        }
+        return $headers;
     }
 
     /**
@@ -435,7 +444,7 @@ class AmadestService
     public function createOrder(array $orderData): array
     {
         if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست (توکن یا کد کلاینت وارد نشده)'];
+            return ['success' => false, 'message' => 'تنظیمات آمادست کامل نیست (توکن وارد نشده)'];
         }
 
         try {

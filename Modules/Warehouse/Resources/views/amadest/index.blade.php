@@ -38,11 +38,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">کد کلاینت (X-Client-Code) <span class="text-red-500">*</span></label>
-                    <input type="text" name="client_code" value="{{ old('client_code', $settings['client_code'] ?? '') }}" dir="ltr" required
+                    <label class="block text-sm font-medium text-gray-700 mb-1">کد کلاینت (X-Client-Code) <span class="text-gray-400 text-xs font-normal">اختیاری</span></label>
+                    <input type="text" name="client_code" value="{{ old('client_code', $settings['client_code'] ?? '') }}" dir="ltr"
                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-mono"
-                           placeholder="abcdef-1234-5678">
-                    <p class="text-gray-400 text-xs mt-1">کد کلاینت منحصر به فرد که در ایمیل آمادست ارسال شده</p>
+                           placeholder="اگه دارید وارد کنید - اجباری نیست">
+                    <p class="text-gray-400 text-xs mt-1">اگه آمادست بهتون ایمیل کرده وارد کنید. اگه ندارید خالی بذارید - فقط توکن کافیه.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">توکن (Bearer Token)</label>

@@ -40,7 +40,7 @@ class AmadestController extends Controller
 
         $validated = $request->validate([
             'api_url' => 'nullable|url|max:500',
-            'client_code' => 'required|string|max:500',
+            'client_code' => 'nullable|string|max:500',
             'api_key' => 'nullable|string|max:5000',
             'user_id' => 'nullable|string|max:50',
         ]);
@@ -48,7 +48,10 @@ class AmadestController extends Controller
         if (!empty($validated['api_url'])) {
             WarehouseSetting::set('amadest_api_url', $validated['api_url']);
         }
-        WarehouseSetting::set('amadest_client_code', $validated['client_code']);
+        // X-Client-Code اختیاریه
+        if (isset($validated['client_code'])) {
+            WarehouseSetting::set('amadest_client_code', $validated['client_code']);
+        }
         // ذخیره توکن دستی اگه وارد شده باشه
         if (!empty($validated['api_key'])) {
             WarehouseSetting::set('amadest_api_key', $validated['api_key']);
