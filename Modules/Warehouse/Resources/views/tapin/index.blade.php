@@ -63,7 +63,11 @@
                     <input type="password" name="api_key" dir="ltr"
                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
                            placeholder="{{ $settings['has_key'] ? 'کلید ذخیره شده - برای تغییر مقدار جدید وارد کنید' : 'کلید API تاپین' }}">
-                    <p class="text-gray-400 text-xs mt-1">از پنل تاپین بخش API بگیرید.</p>
+                    @if(!empty($settings['key_preview']))
+                        <p class="text-blue-500 text-xs mt-1 font-mono" dir="ltr">ذخیره شده: {{ $settings['key_preview'] }}</p>
+                    @else
+                        <p class="text-gray-400 text-xs mt-1">از پنل تاپین بخش API بگیرید.</p>
+                    @endif
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">شناسه فروشگاه (Shop ID) <span class="text-red-500">*</span></label>

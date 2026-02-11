@@ -15,13 +15,15 @@ class TapinController extends Controller
             abort(403);
         }
 
+        $apiKey = WarehouseSetting::get('tapin_api_key');
         $settings = [
             'api_url' => WarehouseSetting::get('tapin_api_url', 'https://api.tapin.ir'),
-            'api_key' => WarehouseSetting::get('tapin_api_key'),
+            'api_key' => $apiKey,
             'shop_id' => WarehouseSetting::get('tapin_shop_id'),
             'sender_name' => WarehouseSetting::get('tapin_sender_name') ?: WarehouseSetting::get('amadest_sender_name'),
             'sender_mobile' => WarehouseSetting::get('tapin_sender_mobile') ?: WarehouseSetting::get('amadest_sender_mobile'),
-            'has_key' => !empty(WarehouseSetting::get('tapin_api_key')),
+            'has_key' => !empty($apiKey),
+            'key_preview' => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
             'shipping_provider' => WarehouseSetting::get('shipping_provider', 'amadest'),
         ];
 

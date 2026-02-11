@@ -54,32 +54,65 @@ class TapinService
             return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست (API Key یا Shop ID وارد نشده)'];
         }
 
-        try {
-            // تست واقعی با اعتبار فروشگاه - اگه توکن معتبر نباشه خطا میده
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('public/transaction/credit/'), [
-                    'shop_id' => $this->shopId,
+        $tokenPreview = substr($this->apiKey, 0, 8) . '...' . substr($this->apiKey, -4);
+        $url = $this->endpoint('public/transaction/credit/');
+        $payload = ['shop_id' => $this->shopId];
+
+        Log::info('Tapin test connection', [
+            'url' => $url,
+            'token_preview' => $tokenPreview,
+            'token_length' => strlen($this->apiKey),
+            'shop_id' => $this->shopId,
+        ]);
+
+        // تست با چند روش مختلف authentication
+        $authMethods = [
+            'Token' => 'Token ' . $this->apiKey,
+            'Bearer' => 'Bearer ' . $this->apiKey,
+            'Raw' => $this->apiKey,
+        ];
+
+        foreach ($authMethods as $method => $authHeader) {
+            try {
+                $headers = [
+                    'Authorization' => $authHeader,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ];
+
+                $response = Http::timeout(15)
+                    ->withHeaders($headers)
+                    ->post($url, $payload);
+
+                $data = $response->json() ?? [];
+                $status = $data['returns']['status'] ?? 0;
+
+                Log::info("Tapin test [{$method}]", [
+                    'http_status' => $response->status(),
+                    'api_status' => $status,
+                    'message' => $data['returns']['message'] ?? 'no message',
                 ]);
 
-            $data = $response->json() ?? [];
-            $status = $data['returns']['status'] ?? 0;
-
-            if ($response->successful() && $status === 200) {
-                $credit = $data['entries']['credit'] ?? null;
-                $creditFormatted = $credit !== null ? number_format($credit) . ' ریال' : '';
-                return [
-                    'success' => true,
-                    'message' => 'اتصال به تاپین برقرار است.' . ($creditFormatted ? ' اعتبار: ' . $creditFormatted : ''),
-                ];
+                if ($status === 200) {
+                    // این روش جواب داد - ذخیره کن
+                    $credit = $data['entries']['credit'] ?? null;
+                    $creditFormatted = $credit !== null ? number_format($credit) . ' ریال' : '';
+                    return [
+                        'success' => true,
+                        'message' => "اتصال برقرار ({$method})" . ($creditFormatted ? ' - اعتبار: ' . $creditFormatted : ''),
+                        'auth_method' => $method,
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::error("Tapin test [{$method}] error", ['error' => $e->getMessage()]);
             }
-
-            $message = $data['returns']['message'] ?? $response->body();
-            return ['success' => false, 'message' => 'خطا در اتصال: ' . $message];
-        } catch (\Exception $e) {
-            Log::error('Tapin connection test failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'خطا در اتصال: ' . $e->getMessage()];
         }
+
+        // هیچ کدوم جواب نداد - آخرین پاسخ رو برگردون
+        return [
+            'success' => false,
+            'message' => 'توکن معتبر نیست. (توکن: ' . $tokenPreview . ', طول: ' . strlen($this->apiKey) . ')',
+        ];
     }
 
     // ==========================================
