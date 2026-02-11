@@ -460,7 +460,6 @@ class AmadestService
             $recipientMobile = $this->formatMobile($orderData['recipient_mobile']);
 
             $payload = [
-                'store_id' => 0,
                 'external_order_id' => $externalIdInt,
                 'recipient_name' => $orderData['recipient_name'] ?: 'مشتری',
                 'sender_name' => $senderName,
