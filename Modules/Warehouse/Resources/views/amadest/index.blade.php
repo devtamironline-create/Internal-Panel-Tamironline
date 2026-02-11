@@ -304,10 +304,33 @@ function trackShipment() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showResult('tracking-result', true, '<strong>&#10003; اطلاعات مرسوله:</strong><br><pre dir="ltr" class="mt-2 text-xs">' + JSON.stringify(data.data, null, 2) + '</pre>');
+        if ((data.success || data.data) && data.data && data.data.length > 0) {
+            let html = '';
+            data.data.forEach(o => {
+                const statusMap = {
+                    'pending': 'در انتظار', 'processing': 'در حال پردازش', 'shipped': 'ارسال شده',
+                    'delivered': 'تحویل شده', 'cancelled': 'لغو شده', 'returned': 'مرجوعی'
+                };
+                const status = statusMap[o.status] || o.status || '-';
+                html += `<div class="border border-gray-200 rounded-lg p-4 mb-3">
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div><span class="text-gray-500">شماره سفارش:</span> <strong>${o.external_order_id || '-'}</strong></div>
+                        <div><span class="text-gray-500">وضعیت:</span> <strong class="text-blue-600">${status}</strong></div>
+                        <div><span class="text-gray-500">گیرنده:</span> ${o.recipient_name || '-'}</div>
+                        <div><span class="text-gray-500">موبایل:</span> <span dir="ltr">${o.recipient_mobile || '-'}</span></div>
+                        <div><span class="text-gray-500">کد پیگیری آمادست:</span> <strong class="text-green-600">${o.amadast_tracking_code || '-'}</strong></div>
+                        <div><span class="text-gray-500">بارکد پست:</span> <strong class="text-orange-600">${o.courier_tracking_code || '-'}</strong></div>
+                        <div><span class="text-gray-500">سرویس:</span> ${o.courier_title || '-'}</div>
+                        <div><span class="text-gray-500">وزن:</span> ${o.weight ? o.weight + ' گرم' : '-'}</div>
+                        ${o.recipient_address ? '<div class="col-span-2"><span class="text-gray-500">آدرس:</span> ' + o.recipient_address + '</div>' : ''}
+                    </div>
+                </div>`;
+            });
+            showResult('tracking-result', true, html);
+        } else if (data.success && (!data.data || data.data.length === 0)) {
+            showResult('tracking-result', false, 'سفارشی با این مشخصات یافت نشد.');
         } else {
-            showResult('tracking-result', false, data.message);
+            showResult('tracking-result', false, data.message || 'خطا در جستجو');
         }
     })
     .catch(() => showResult('tracking-result', false, 'خطا در ارتباط با سرور'));

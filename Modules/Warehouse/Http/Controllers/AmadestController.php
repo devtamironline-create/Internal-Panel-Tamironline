@@ -195,9 +195,38 @@ class AmadestController extends Controller
             'tracking_code' => 'required|string|max:100',
         ]);
 
+        $input = trim($request->tracking_code);
         $service = new AmadestService();
-        $result = $service->trackShipment($request->tracking_code);
 
+        // اگه شماره موبایل هست مستقیم جستجو کن
+        if (preg_match('/^09\d{9}$/', $input)) {
+            $result = $service->searchOrders([$input]);
+            return response()->json($result);
+        }
+
+        // اگه شماره سفارش هست - اول از دیتابیس محلی موبایل رو پیدا کن
+        $order = \Modules\Warehouse\Models\WarehouseOrder::where('order_number', 'LIKE', '%' . $input . '%')
+            ->orWhere('order_number', $input)
+            ->orWhere('order_number', 'WC-' . $input)
+            ->first();
+
+        if ($order && $order->customer_mobile) {
+            $result = $service->searchOrders([$order->customer_mobile]);
+            // فیلتر کن فقط همین سفارش رو نشون بده
+            if (($result['success'] ?? false) && !empty($result['data'])) {
+                $externalId = (int) preg_replace('/\D/', '', $order->order_number);
+                $filtered = collect($result['data'])->filter(function ($item) use ($externalId) {
+                    return ($item['external_order_id'] ?? null) == $externalId;
+                })->values()->toArray();
+                if (!empty($filtered)) {
+                    $result['data'] = $filtered;
+                }
+            }
+            return response()->json($result);
+        }
+
+        // fallback - مستقیم تو آمادست جستجو کن
+        $result = $service->trackShipment($input);
         return response()->json($result);
     }
 
