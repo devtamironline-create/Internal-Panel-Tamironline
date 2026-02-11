@@ -133,12 +133,15 @@ class WarehouseOrder extends Model
     }
 
     /**
-     * تبدیل وزن به گرم - اگه کمتر از 100 باشه یعنی kg هست
+     * تبدیل وزن به گرم
+     * واحد ووکامرس: گرم. فقط مقادیر خیلی کم (< 5) احتمالاً کیلوگرم قدیمی هستن
      */
     public static function toGrams($weight): int
     {
         if (!$weight || $weight == 0) return 0;
-        return (int) round($weight < 100 ? $weight * 1000 : $weight);
+        // فقط اگه کمتر از 5 باشه احتمالاً کیلوگرمه (مثل 2.45 = 2.45kg)
+        // وزن‌های 5 به بالا = گرم (مثل 22 = 22g, 300 = 300g, 850 = 850g)
+        return (int) round($weight < 5 ? $weight * 1000 : $weight);
     }
 
     public function getTotalWeightGramsAttribute(): int
