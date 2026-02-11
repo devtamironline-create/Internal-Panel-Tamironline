@@ -28,7 +28,7 @@ class TapinService
     protected function getHeaders(): array
     {
         return [
-            'Authorization' => 'Token ' . $this->apiKey,
+            'Authorization' => $this->apiKey,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ];
