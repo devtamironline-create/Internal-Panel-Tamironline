@@ -24,6 +24,7 @@ class AmadestController extends Controller
             'warehouse_address' => WarehouseSetting::get('amadest_warehouse_address'),
             'token_expires_at' => WarehouseSetting::get('amadest_token_expires_at'),
             'has_token' => !empty(WarehouseSetting::get('amadest_api_key')),
+            'store_id' => WarehouseSetting::get('amadest_store_id', '84085'),
         ];
 
         return view('warehouse::amadest.index', compact('settings'));
@@ -137,6 +138,39 @@ class AmadestController extends Controller
         $result = $service->fetchToken();
 
         return response()->json($result);
+    }
+
+    /**
+     * لیست فروشگاه‌ها از آمادست
+     */
+    public function getStores()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new AmadestService();
+        $result = $service->getStores();
+
+        return response()->json($result);
+    }
+
+    /**
+     * ذخیره store_id انتخابی
+     */
+    public function selectStore(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'store_id' => 'required|integer',
+        ]);
+
+        WarehouseSetting::set('amadest_store_id', (string) $validated['store_id']);
+
+        return response()->json(['success' => true, 'message' => 'فروشگاه انتخاب شد.']);
     }
 
     public function testConnection()

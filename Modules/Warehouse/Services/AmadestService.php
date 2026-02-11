@@ -431,6 +431,28 @@ class AmadestService
         }
     }
 
+    /**
+     * لیست فروشگاه‌ها
+     * GET /v1/stores
+     */
+    public function getStores(): array
+    {
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('stores'), ['per_page' => 50]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return ['success' => false, 'message' => 'خطا در دریافت فروشگاه‌ها: ' . $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Amadest getStores error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     // ==========================================
     // سفارش‌ها
     // ==========================================

@@ -136,6 +136,36 @@
         </div>
     </div>
 
+    <!-- Store Selection Card (full width) -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-700 font-bold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">انتخاب فروشگاه</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">فروشگاهی که سفارشات از طرف اون ثبت میشه</p>
+                </div>
+            </div>
+            <button type="button" onclick="loadStores()" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 text-sm font-medium">
+                دریافت لیست فروشگاه‌ها
+            </button>
+        </div>
+
+        @if(!empty($settings['store_id']))
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-700">
+                فروشگاه فعلی: <strong>store_id = {{ $settings['store_id'] }}</strong>
+            </div>
+        @endif
+
+        <div id="stores-list" class="hidden">
+            <div id="stores-loading" class="text-center py-6 text-gray-500 text-sm">در حال دریافت...</div>
+            <div id="stores-content" class="hidden"></div>
+        </div>
+        <div id="stores-result" class="hidden mt-3 p-3 rounded-lg text-sm"></div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Step 3: Sender Info Card -->
         <div class="bg-white rounded-xl shadow-sm p-6">
@@ -144,13 +174,6 @@
                 <div>
                     <h2 class="text-lg font-bold text-gray-900">اطلاعات فرستنده</h2>
                     <p class="text-xs text-gray-500 mt-0.5">اطلاعات فرستنده برای ثبت مرسوله</p>
-                </div>
-            </div>
-
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                <div class="flex items-center gap-2 text-purple-700 font-medium text-sm">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    حالت عادی - سفارشات مستقیم در آمادست ثبت می‌شوند (بدون فروشگاه)
                 </div>
             </div>
 
@@ -288,6 +311,64 @@ function trackShipment() {
         }
     })
     .catch(() => showResult('tracking-result', false, 'خطا در ارتباط با سرور'));
+}
+
+function loadStores() {
+    const list = document.getElementById('stores-list');
+    const loading = document.getElementById('stores-loading');
+    const content = document.getElementById('stores-content');
+    list.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    content.classList.add('hidden');
+
+    fetch('{{ route("warehouse.amadest.stores") }}', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+        const stores = data.data || [];
+        if (!stores.length) {
+            content.innerHTML = '<p class="text-gray-500 text-sm py-4 text-center">فروشگاهی یافت نشد.</p>';
+            return;
+        }
+        const currentStoreId = '{{ $settings["store_id"] ?? "" }}';
+        let html = '<div class="divide-y divide-gray-100">';
+        stores.forEach(s => {
+            const isActive = String(s.id) === currentStoreId;
+            html += `<div class="flex items-center justify-between py-3 px-2 ${isActive ? 'bg-amber-50 rounded-lg' : ''}">
+                <div>
+                    <span class="font-medium text-sm text-gray-900">${s.title || 'بدون نام'}</span>
+                    <span class="text-xs text-gray-400 mr-2">ID: ${s.id}</span>
+                    ${s.admin_name ? '<span class="text-xs text-gray-500 mr-2">(' + s.admin_name + ')</span>' : ''}
+                    ${s.phone ? '<span class="text-xs text-gray-400 mr-1">' + s.phone + '</span>' : ''}
+                </div>
+                <button onclick="selectStore(${s.id}, '${(s.title || '').replace(/'/g, "\\'")}')"
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium ${isActive ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+                    ${isActive ? 'فعال' : 'انتخاب'}
+                </button>
+            </div>`;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+    })
+    .catch(() => {
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+        content.innerHTML = '<p class="text-red-500 text-sm py-4 text-center">خطا در دریافت لیست فروشگاه‌ها</p>';
+    });
+}
+
+function selectStore(storeId, title) {
+    fetch('{{ route("warehouse.amadest.select-store") }}', {
+        method: 'POST', headers: defaultHeaders,
+        body: JSON.stringify({ store_id: storeId }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        showResult('stores-result', data.success, (data.success ? '&#10003; ' : '') + (data.message || 'خطا') + (title ? ' - ' + title : ''));
+        if (data.success) setTimeout(() => location.reload(), 1000);
+    })
+    .catch(() => showResult('stores-result', false, 'خطا در ارتباط با سرور'));
 }
 </script>
 @endpush

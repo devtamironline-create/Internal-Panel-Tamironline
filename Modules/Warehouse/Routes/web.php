@@ -102,5 +102,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/refresh-token', [AmadestController::class, 'refreshToken'])->name('warehouse.amadest.refresh-token');
         Route::post('/test', [AmadestController::class, 'testConnection'])->name('warehouse.amadest.test');
         Route::post('/track', [AmadestController::class, 'track'])->name('warehouse.amadest.track');
+        Route::get('/stores', [AmadestController::class, 'getStores'])->name('warehouse.amadest.stores');
+        Route::post('/select-store', [AmadestController::class, 'selectStore'])->name('warehouse.amadest.select-store');
     });
 });
