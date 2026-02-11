@@ -214,17 +214,25 @@ class TapinController extends Controller
 
         $count = $orders->count();
         foreach ($orders as $order) {
-            $order->update([
-                'amadest_barcode' => null,
-                'post_tracking_code' => null,
-            ]);
+            // پاک کردن بارکدها
+            $order->amadest_barcode = null;
+            $order->post_tracking_code = null;
+
+            // پاک کردن فلگ registered تا دوباره ثبت بشه
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            if (isset($wcData['tapin']['registered'])) {
+                unset($wcData['tapin']['registered']);
+                unset($wcData['tapin']['tapin_order_id']);
+                $order->wc_order_data = $wcData;
+            }
+            $order->save();
         }
 
         Log::info('Bulk clear old barcodes', ['count' => $count, 'user' => auth()->user()->name]);
 
         return response()->json([
             'success' => true,
-            'message' => "{$count} بارکد قدیمی پاک شد. حالا میتونید دوباره پرینت بزنید تا در تاپین ثبت بشه.",
+            'message' => "{$count} بارکد پاک شد. حالا میتونید دوباره پرینت بزنید تا در تاپین ثبت بشه.",
             'cleared' => $count,
         ]);
     }
