@@ -309,10 +309,36 @@
 
         {{-- OTHER STATUSES: Table Layout --}}
         @else
+        {{-- Bulk Action Bar --}}
+        @canany(['manage-warehouse', 'manage-permissions'])
+        <div id="bulkBar" class="hidden border-b border-gray-200 bg-blue-50 px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-blue-800"><span id="selectedCount">0</span> سفارش انتخاب شده</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="bulkStatus" class="px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+                        @foreach($allStatuses as $s)
+                            @if($s !== $currentStatus)
+                            <option value="{{ $s }}">{{ $statusLabels[$s] }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                    <button onclick="bulkChangeStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">تغییر وضعیت</button>
+                </div>
+            </div>
+        </div>
+        @endcanany
+
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
+                        @canany(['manage-warehouse', 'manage-permissions'])
+                        <th class="px-4 py-3 w-10">
+                            <input type="checkbox" id="selectAll" onclick="toggleSelectAll()" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        </th>
+                        @endcanany
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">شماره سفارش</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">مشتری</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">نوع ارسال</th>
@@ -324,6 +350,11 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse($orders as $order)
                     <tr class="hover:bg-gray-50 transition-colors">
+                        @canany(['manage-warehouse', 'manage-permissions'])
+                        <td class="px-4 py-4">
+                            <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" class="order-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" onchange="updateBulkBar()">
+                        </td>
+                        @endcanany
                         <td class="px-6 py-4">
                             <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
                         </td>
@@ -385,7 +416,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                             <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                             <p class="font-medium">سفارشی در این وضعیت وجود ندارد</p>
                             <p class="text-sm mt-1">سفارشات جدید از بخش «سفارش جدید» قابل ثبت هستند</p>
@@ -437,6 +468,63 @@
 
 @push('scripts')
 <script>
+function toggleSelectAll() {
+    var selectAll = document.getElementById('selectAll');
+    var checkboxes = document.querySelectorAll('.order-checkbox');
+    checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    var checkboxes = document.querySelectorAll('.order-checkbox:checked');
+    var bar = document.getElementById('bulkBar');
+    var countEl = document.getElementById('selectedCount');
+    var selectAll = document.getElementById('selectAll');
+    var allCheckboxes = document.querySelectorAll('.order-checkbox');
+
+    if (bar) {
+        if (checkboxes.length > 0) {
+            bar.classList.remove('hidden');
+            countEl.textContent = checkboxes.length;
+        } else {
+            bar.classList.add('hidden');
+        }
+    }
+    if (selectAll) {
+        selectAll.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+    }
+}
+
+function bulkChangeStatus() {
+    var checkboxes = document.querySelectorAll('.order-checkbox:checked');
+    if (checkboxes.length === 0) return;
+
+    var ids = Array.from(checkboxes).map(function(cb) { return parseInt(cb.value); });
+    var status = document.getElementById('bulkStatus').value;
+    var statusText = document.getElementById('bulkStatus').selectedOptions[0].text;
+
+    if (!confirm(ids.length + ' سفارش به وضعیت «' + statusText + '» تغییر کنه؟')) return;
+
+    fetch('{{ route("warehouse.bulk-status") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order_ids: ids, status: status }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'خطا');
+        }
+    })
+    .catch(function() { alert('خطا در ارتباط'); });
+}
+
 function openSupplyModal(orderId, items) {
     var modal = document.getElementById('supplyModal');
     var form = document.getElementById('supplyForm');

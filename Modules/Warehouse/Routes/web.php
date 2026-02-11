@@ -32,6 +32,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::post('/{order}/supply-wait', [WarehouseController::class, 'markSupplyWait'])->name('warehouse.supply-wait')
         ->where('order', '[0-9]+');
+    Route::post('/bulk-status', [WarehouseController::class, 'bulkUpdateStatus'])->name('warehouse.bulk-status');
     Route::delete('/{order}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy')
         ->where('order', '[0-9]+');
 

@@ -204,6 +204,39 @@ class WarehouseController extends Controller
             ->with('success', 'سفارش به انتظار تامین منتقل شد.');
     }
 
+    public function bulkUpdateStatus(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'integer|exists:warehouse_orders,id',
+            'status' => 'required|in:' . implode(',', WarehouseOrder::$statuses),
+        ]);
+
+        $orders = WarehouseOrder::whereIn('id', $validated['order_ids'])->get();
+        $count = 0;
+
+        foreach ($orders as $order) {
+            $order->update([
+                'status' => $validated['status'],
+                'status_changed_at' => now(),
+            ]);
+            $count++;
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "{$count} سفارش به وضعیت «" . WarehouseOrder::statusLabels()[$validated['status']] . "» تغییر کرد.",
+            ]);
+        }
+
+        return redirect()->back()->with('success', "{$count} سفارش تغییر وضعیت داده شد.");
+    }
+
     public function destroy(WarehouseOrder $order)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
