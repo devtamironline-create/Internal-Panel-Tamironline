@@ -279,9 +279,10 @@
         {{-- Barcodes Section --}}
         @php
             $amadestCode = $order->amadest_barcode ?: $order->tracking_code;
-            $postCode = $order->post_tracking_code ?: $order->tracking_code;
+            $postCode = $order->post_tracking_code;
             $showAmadest = !empty($amadestCode) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
+            $providerLabel = ($shippingProvider ?? 'amadest') === 'tapin' ? 'بارکد تاپین' : 'بارکد آمادست';
         @endphp
         <div class="barcode-section">
             <div class="barcode-list">
@@ -297,7 +298,7 @@
                 <div class="barcode-item">
                     <svg id="amadest-barcode"></svg>
                     <div class="barcode-meta">
-                        <span class="barcode-label">بارکد آمادست</span>
+                        <span class="barcode-label">{{ $providerLabel }}</span>
                         <span class="barcode-code">{{ $amadestCode }}</span>
                     </div>
                 </div>

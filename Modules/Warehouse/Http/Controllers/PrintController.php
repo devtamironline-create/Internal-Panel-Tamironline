@@ -74,6 +74,18 @@ class PrintController extends Controller
         $shippingProvider = WarehouseSetting::get('shipping_provider', 'amadest');
         $registrationError = null;
 
+        // اگه سرویس تاپین هست ولی بارکد قدیمی آمادست داره، پاک کن تا دوباره ثبت بشه
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        $tapinRegistered = ($wcData['tapin']['registered'] ?? false);
+        if ($order->shipping_type === 'post' && $shippingProvider === 'tapin' && !empty($order->amadest_barcode) && !$tapinRegistered) {
+            Log::info('Clearing old barcode for Tapin re-registration', [
+                'order' => $order->order_number,
+                'old_barcode' => $order->amadest_barcode,
+            ]);
+            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
+            $order->refresh();
+        }
+
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
                 $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
@@ -167,16 +179,15 @@ class PrintController extends Controller
             return response()->json(['success' => false, 'message' => 'سفارش پستی نیست']);
         }
 
-        // پاک کردن بارکد قبلی اگه خالی یا TAPIN- بود
-        if (empty($order->amadest_barcode) || str_starts_with($order->amadest_barcode, 'TAPIN-') || str_starts_with($order->amadest_barcode, 'AMD-')) {
-            $order->amadest_barcode = null;
-            $order->post_tracking_code = null;
-            $order->save();
+        // پاک کردن بارکد قبلی و فلگ registered برای ثبت مجدد
+        $order->amadest_barcode = null;
+        $order->post_tracking_code = null;
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        if (isset($wcData['tapin']['registered'])) {
+            unset($wcData['tapin']['registered']);
+            $order->wc_order_data = $wcData;
         }
-
-        if (!empty($order->amadest_barcode)) {
-            return response()->json(['success' => true, 'message' => 'سفارش قبلاً ثبت شده: ' . $order->amadest_barcode]);
-        }
+        $order->save();
 
         $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
         $shipping = $wcData['shipping'] ?? [];
@@ -359,6 +370,11 @@ class PrintController extends Controller
                 if ($barcode) {
                     $order->post_tracking_code = $barcode;
                 }
+                // ذخیره فلگ registered برای تشخیص ثبت تاپین از آمادست
+                $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                $wcDataCurrent['tapin']['registered'] = true;
+                $wcDataCurrent['tapin']['tapin_order_id'] = $tapinOrderId;
+                $order->wc_order_data = $wcDataCurrent;
                 $order->save();
                 Log::info('Tapin order saved', [
                     'order' => $order->order_number,

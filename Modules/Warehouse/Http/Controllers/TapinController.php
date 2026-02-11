@@ -194,7 +194,7 @@ class TapinController extends Controller
     }
 
     /**
-     * بازگرداندن سفارشات آماده‌سازی به مرحله پردازش + پاک کردن بارکدهای قدیمی
+     * پاک کردن بارکدهای قدیمی سفارشات ارسال‌نشده (بدون تغییر وضعیت)
      */
     public function clearBarcodes()
     {
@@ -202,27 +202,29 @@ class TapinController extends Controller
             abort(403);
         }
 
-        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)
+        $orders = WarehouseOrder::whereIn('status', [
+                WarehouseOrder::STATUS_PENDING,
+                WarehouseOrder::STATUS_PREPARING,
+            ])
             ->where('shipping_type', 'post')
+            ->where(function ($q) {
+                $q->whereNotNull('amadest_barcode')->where('amadest_barcode', '!=', '');
+            })
             ->get();
 
         $count = $orders->count();
         foreach ($orders as $order) {
             $order->update([
-                'status' => WarehouseOrder::STATUS_PENDING,
                 'amadest_barcode' => null,
                 'post_tracking_code' => null,
-                'tracking_code' => null,
-                'print_count' => 0,
-                'printed_at' => null,
             ]);
         }
 
-        Log::info('Bulk reset orders to pending', ['count' => $count, 'user' => auth()->user()->name]);
+        Log::info('Bulk clear old barcodes', ['count' => $count, 'user' => auth()->user()->name]);
 
         return response()->json([
             'success' => true,
-            'message' => "{$count} سفارش به مرحله «در حال پردازش» برگشت و بارکدهای قدیمی پاک شد.",
+            'message' => "{$count} بارکد قدیمی پاک شد. حالا میتونید دوباره پرینت بزنید تا در تاپین ثبت بشه.",
             'cleared' => $count,
         ]);
     }
