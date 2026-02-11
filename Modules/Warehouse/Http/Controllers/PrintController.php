@@ -260,7 +260,15 @@ class PrintController extends Controller
             $barcode = $data['barcode'] ?? null;
             $tapinOrderId = $data['order_id'] ?? null;
 
-            // بارکد پستی یا شناسه سفارش تاپین
+            // اگه بارکد نداریم، change-status بزن تا بارکد بگیریم
+            if (empty($barcode) && $tapinOrderId) {
+                $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                if ($statusResult['success'] ?? false) {
+                    $barcode = $statusResult['data']['barcode'] ?? null;
+                    Log::info('Tapin barcode from change-status', ['order' => $order->order_number, 'barcode' => $barcode]);
+                }
+            }
+
             $trackingRef = $barcode ?: ($tapinOrderId ? 'TAPIN-' . $tapinOrderId : null);
 
             if ($trackingRef) {

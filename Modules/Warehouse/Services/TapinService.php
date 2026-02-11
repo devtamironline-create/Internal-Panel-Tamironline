@@ -52,11 +52,6 @@ class TapinService
         return $this->apiUrl . '/api/v2/' . ltrim($path, '/');
     }
 
-    protected function endpointV1(string $path): string
-    {
-        return $this->apiUrl . '/api/v1/webservice/' . ltrim($path, '/');
-    }
-
     // ==========================================
     // تست اتصال
     // ==========================================
@@ -94,101 +89,38 @@ class TapinService
     }
 
     // ==========================================
-    // شهرها و استان‌ها
+    // استان‌ها و شهرها - POST /api/v2/public/state/tree/
     // ==========================================
 
-    public function getProvinces(): array
+    public function getStateTree(): array
     {
-        $cached = Cache::get('tapin_provinces');
+        $cached = Cache::get('tapin_state_tree');
         if (!empty($cached)) return $cached;
 
         try {
             $response = Http::timeout(15)
                 ->withHeaders($this->getHeaders())
-                ->get($this->endpoint('public/provinces/'));
+                ->post($this->endpoint('public/state/tree/'), []);
 
             $json = $response->json() ?? [];
+            $apiStatus = $json['returns']['status'] ?? 0;
 
-            // لاگ ساختار پاسخ برای دیباگ
-            Log::info('Tapin provinces raw response', [
-                'http_status' => $response->status(),
-                'keys' => is_array($json) ? array_keys($json) : 'not_array',
-                'returns_status' => $json['returns']['status'] ?? 'N/A',
-            ]);
-
-            if ($response->successful()) {
-                // ساختار پاسخ تاپین: {"returns": {...}, "entries": [...]}
-                $data = $json['entries'] ?? $json['results'] ?? $json['data'] ?? [];
-
-                // اگه entries خالی بود ولی json آرایه‌ای از استان‌ها بود
-                if (empty($data) && isset($json[0])) {
-                    $data = $json;
-                }
-
-                if (!empty($data) && is_array($data)) {
-                    // لاگ اولین آیتم برای دیدن ساختار
-                    $first = is_array($data) ? (reset($data) ?: []) : [];
-                    Log::info('Tapin provinces parsed', [
-                        'count' => count($data),
-                        'first_item_keys' => is_array($first) ? array_keys($first) : 'not_array',
-                        'first_item' => $first,
-                    ]);
-
-                    Cache::put('tapin_provinces', $data, 86400);
-                    return $data;
+            if ($apiStatus === 200) {
+                $entries = $json['entries'] ?? [];
+                if (!empty($entries) && is_array($entries)) {
+                    Cache::put('tapin_state_tree', $entries, 86400);
+                    Log::info('Tapin state tree loaded', ['count' => count($entries)]);
+                    return $entries;
                 }
             }
 
-            Log::warning('Tapin provinces empty or failed', ['body' => mb_substr($response->body(), 0, 500)]);
+            Log::warning('Tapin state tree failed', ['status' => $apiStatus, 'message' => $json['returns']['message'] ?? '']);
             return [];
         } catch (\Exception $e) {
-            Log::error('Tapin getProvinces error', ['error' => $e->getMessage()]);
+            Log::error('Tapin getStateTree error', ['error' => $e->getMessage()]);
             return [];
         }
     }
-
-    public function getCities($provinceCode): array
-    {
-        if (!$provinceCode) return [];
-
-        $cacheKey = 'tapin_cities_' . $provinceCode;
-        $cached = Cache::get($cacheKey);
-        if (!empty($cached)) return $cached;
-
-        try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpoint("public/cities/{$provinceCode}/"));
-
-            if ($response->successful()) {
-                $json = $response->json();
-                $data = $json['entries'] ?? $json['results'] ?? $json['data'] ?? $json;
-
-                if (!empty($data) && is_array($data)) {
-                    Cache::put($cacheKey, $data, 86400);
-                    return $data;
-                }
-            }
-            return [];
-        } catch (\Exception $e) {
-            Log::error('Tapin getCities error', ['error' => $e->getMessage()]);
-            return [];
-        }
-    }
-
-    // نگاشت استان فارسی به province_code تاپین
-    protected static array $provinceCodeMap = [
-        'آذربایجان شرقی' => 3, 'آذربایجان غربی' => 4, 'اردبیل' => 24,
-        'اصفهان' => 10, 'البرز' => 30, 'ایلام' => 16,
-        'بوشهر' => 18, 'تهران' => 8, 'چهارمحال و بختیاری' => 14,
-        'خراسان جنوبی' => 29, 'خراسان رضوی' => 9, 'خراسان شمالی' => 28,
-        'خوزستان' => 6, 'زنجان' => 19, 'سمنان' => 20,
-        'سیستان و بلوچستان' => 11, 'فارس' => 7, 'قزوین' => 26,
-        'قم' => 25, 'کردستان' => 12, 'کرمان' => 15,
-        'کرمانشاه' => 5, 'کهگیلویه و بویراحمد' => 17, 'گلستان' => 27,
-        'گیلان' => 1, 'لرستان' => 23, 'مازندران' => 2,
-        'مرکزی' => 22, 'هرمزگان' => 21, 'همدان' => 13, 'یزد' => 31,
-    ];
 
     /**
      * پیدا کردن province_code از نام استان یا کد ووکامرس
@@ -200,24 +132,11 @@ class TapinService
         // اگه کد ووکامرس هست، به نام فارسی تبدیل کن
         $persianName = self::$wcStateMap[strtoupper($stateNameOrCode)] ?? $stateNameOrCode;
 
-        // اول از mapping ثابت چک کن
-        if (isset(self::$provinceCodeMap[$persianName])) {
-            return self::$provinceCodeMap[$persianName];
-        }
-
-        // جستجوی fuzzy در mapping ثابت
-        foreach (self::$provinceCodeMap as $name => $code) {
-            if (str_contains($name, $persianName) || str_contains($persianName, $name)) {
-                return $code;
-            }
-        }
-
-        // fallback: تلاش از API
-        $provinces = $this->getProvinces();
-        foreach ($provinces as $province) {
-            $name = $province['name'] ?? $province['title'] ?? '';
-            $code = $province['id'] ?? $province['code'] ?? null;
-            if ($code && ($name === $persianName || str_contains($name, $persianName))) {
+        $stateTree = $this->getStateTree();
+        foreach ($stateTree as $province) {
+            $title = trim($province['title'] ?? '');
+            $code = $province['code'] ?? null;
+            if ($code !== null && ($title === $persianName || str_contains($title, $persianName) || str_contains($persianName, $title))) {
                 return (int) $code;
             }
         }
@@ -228,51 +147,45 @@ class TapinService
 
     /**
      * پیدا کردن city_code از نام شهر و کد استان
-     * fallback: 1 = معمولا مرکز استان
+     * از state/tree استفاده می‌کنه که شهرها رو هم داره
      */
     public function findCityCode(?string $cityName, $provinceCode): ?int
     {
-        if (!$cityName || !$provinceCode) return null;
+        if (!$provinceCode) return 1;
 
-        // تلاش از API
-        $cities = $this->getCities($provinceCode);
-        foreach ($cities as $city) {
-            $name = $city['name'] ?? $city['title'] ?? '';
-            $code = $city['id'] ?? $city['code'] ?? null;
-            if ($code && ($name === $cityName || str_contains($name, $cityName) || str_contains($cityName, $name))) {
-                return (int) $code;
+        $stateTree = $this->getStateTree();
+
+        // پیدا کردن استان و لیست شهراش
+        foreach ($stateTree as $province) {
+            if (($province['code'] ?? null) == $provinceCode) {
+                $cities = $province['cities'] ?? [];
+
+                // اگه نام شهر داریم جستجو کن
+                if ($cityName) {
+                    $cityName = trim($cityName);
+                    foreach ($cities as $city) {
+                        $title = trim($city['title'] ?? '');
+                        $code = $city['code'] ?? null;
+                        if ($code !== null && ($title === $cityName || str_contains($title, $cityName) || str_contains($cityName, $title))) {
+                            return (int) $code;
+                        }
+                    }
+                }
+
+                // اگه شهر پیدا نشد، اولین شهر (مرکز استان)
+                if (!empty($cities)) {
+                    return (int) ($cities[0]['code'] ?? 1);
+                }
+                break;
             }
         }
 
-        // fallback: 1 = اولین شهر (معمولا مرکز استان)
         return 1;
     }
 
     // ==========================================
-    // فروشگاه‌ها
+    // اعتبار فروشگاه
     // ==========================================
-
-    public function getShopDetails(): array
-    {
-        if (empty($this->shopId)) {
-            return ['success' => false, 'message' => 'Shop ID وارد نشده.'];
-        }
-
-        try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpoint("public/shops/{$this->shopId}/"));
-
-            if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
-            }
-
-            return ['success' => false, 'message' => 'خطا: ' . $response->body()];
-        } catch (\Exception $e) {
-            Log::error('Tapin getShopDetails error', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
 
     public function getShopCredit(): array
     {
@@ -289,7 +202,7 @@ class TapinService
 
             $data = $response->json() ?? [];
 
-            if ($response->successful() && ($data['returns']['status'] ?? 0) === 200) {
+            if (($data['returns']['status'] ?? 0) === 200) {
                 $credit = $data['entries']['credit'] ?? null;
                 return [
                     'success' => true,
@@ -303,6 +216,108 @@ class TapinService
             return ['success' => false, 'message' => $data['returns']['message'] ?? 'خطا: ' . $response->body()];
         } catch (\Exception $e) {
             Log::error('Tapin getShopCredit error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // ==========================================
+    // لیست بسته‌های پستی
+    // POST /api/v2/public/order/post/packing-box/
+    // ==========================================
+
+    public function getPackingBoxes(): array
+    {
+        $cached = Cache::get('tapin_packing_boxes');
+        if (!empty($cached)) return $cached;
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/packing-box/'), [
+                    'shop_id' => $this->shopId,
+                ]);
+
+            $json = $response->json() ?? [];
+            if (($json['returns']['status'] ?? 0) === 200) {
+                $list = $json['entries']['list'] ?? [];
+                if (!empty($list)) {
+                    Cache::put('tapin_packing_boxes', $list, 86400);
+                    return $list;
+                }
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Tapin getPackingBoxes error', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * انتخاب بهترین box_id بر اساس ابعاد
+     */
+    public function findBestBoxId(?float $length, ?float $width, ?float $height): int
+    {
+        $boxes = $this->getPackingBoxes();
+        if (empty($boxes)) return 10; // fallback
+
+        // اگه ابعاد نداریم، کوچکترین رو بده
+        if (!$length || !$width || !$height) {
+            return (int) ($boxes[0]['pk'] ?? 10);
+        }
+
+        // sort dimensions
+        $dims = [$length, $width, $height];
+        rsort($dims);
+
+        foreach ($boxes as $box) {
+            $bDims = [(float)$box['length'], (float)$box['width'], (float)$box['height']];
+            rsort($bDims);
+
+            if ($bDims[0] >= $dims[0] && $bDims[1] >= $dims[1] && $bDims[2] >= $dims[2]) {
+                return (int) $box['pk'];
+            }
+        }
+
+        // بزرگترین باکس
+        return (int) (end($boxes)['pk'] ?? 10);
+    }
+
+    // ==========================================
+    // استعلام قیمت
+    // POST /api/v2/public/order/post/check-price/
+    // ==========================================
+
+    public function checkPrice(array $orderData): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست'];
+        }
+
+        try {
+            $payload = $this->buildOrderPayload($orderData);
+            // check-price همون فیلدهای register رو می‌خواد
+            unset($payload['register_type'], $payload['manual_id'], $payload['has_insurance'], $payload['content_type']);
+
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/check-price/'), $payload);
+
+            $json = $response->json() ?? [];
+            $apiStatus = $json['returns']['status'] ?? 0;
+
+            if ($apiStatus === 200) {
+                $entries = $json['entries'] ?? [];
+                return [
+                    'success' => true,
+                    'data' => $entries,
+                    'total_price' => $entries['total_price'] ?? 0,
+                    'send_price' => $entries['send_price'] ?? 0,
+                ];
+            }
+
+            return ['success' => false, 'message' => $json['returns']['message'] ?? $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Tapin checkPrice error', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -332,7 +347,7 @@ class TapinService
 
             $apiStatus = $result['returns']['status'] ?? 0;
 
-            // 200 = موفق، 770 = تکراری (ولی اطلاعات سفارش رو برمیگردونه)
+            // 200 = موفق، 770 = تکراری
             if ($apiStatus === 200 || $apiStatus === 770) {
                 $entries = $result['entries'] ?? [];
                 return [
@@ -344,20 +359,16 @@ class TapinService
                         'barcode' => $entries['barcode'] ?? null,
                         'tracking_code' => $entries['barcode'] ?? null,
                         'status' => $entries['status'] ?? null,
-                        'insurance_price' => $entries['insurance_price'] ?? 0,
-                        'insurance_tax' => $entries['insurance_tax'] ?? 0,
                     ],
                 ];
             }
 
             $errorMessage = $result['returns']['message'] ?? $response->body();
-            // اگه entries خطاهای فیلد داره نشون بده
             $fieldErrors = $result['entries'] ?? [];
             if (is_array($fieldErrors) && !empty($fieldErrors)) {
                 $errorDetails = [];
                 foreach ($fieldErrors as $field => $errors) {
                     if (is_array($errors)) {
-                        // ممکنه nested باشه (مثل products: [{title: [...]}])
                         $flat = [];
                         array_walk_recursive($errors, function ($v) use (&$flat) { $flat[] = $v; });
                         $errorDetails[] = $field . ': ' . implode(', ', $flat);
@@ -377,12 +388,128 @@ class TapinService
         }
     }
 
-    /**
-     * Alias
-     */
     public function createShipment(array $data): array
     {
         return $this->createOrder($data);
+    }
+
+    // ==========================================
+    // تغییر وضعیت سفارش (+ دریافت بارکد)
+    // POST /api/v2/public/order/post/change-status/
+    // ==========================================
+
+    public function changeOrderStatus(int $orderId, int $status = 1): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/change-status/'), [
+                    'shop_id' => $this->shopId,
+                    'order_id' => $orderId,
+                    'status' => $status,
+                ]);
+
+            $json = $response->json() ?? [];
+            $apiStatus = $json['returns']['status'] ?? 0;
+
+            Log::info('Tapin changeOrderStatus response', [
+                'order_id' => $orderId,
+                'requested_status' => $status,
+                'api_status' => $apiStatus,
+                'entries' => $json['entries'] ?? [],
+            ]);
+
+            if ($apiStatus === 200) {
+                $entries = $json['entries'] ?? [];
+                return [
+                    'success' => true,
+                    'message' => $json['returns']['message'] ?? 'وضعیت تغییر کرد',
+                    'data' => [
+                        'barcode' => $entries['barcode'] ?? null,
+                        'order_id' => $entries['order_id'] ?? $orderId,
+                        'status' => $entries['status'] ?? null,
+                    ],
+                ];
+            }
+
+            return ['success' => false, 'message' => $json['returns']['message'] ?? $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Tapin changeOrderStatus error', ['order_id' => $orderId, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // ==========================================
+    // لیست سفارشات
+    // POST /api/v2/public/order/post/list/
+    // ==========================================
+
+    public function getOrdersList(int $page = 1, int $count = 10, array $filters = []): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست'];
+        }
+
+        try {
+            $payload = array_merge([
+                'shop_id' => $this->shopId,
+                'count' => $count,
+                'page' => $page,
+            ], $filters);
+
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/list/'), $payload);
+
+            $json = $response->json() ?? [];
+
+            if (($json['returns']['status'] ?? 0) === 200) {
+                return ['success' => true, 'data' => $json['entries'] ?? []];
+            }
+
+            return ['success' => false, 'message' => $json['returns']['message'] ?? $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Tapin getOrdersList error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // ==========================================
+    // وضعیت و بارکد سفارشات (بالک)
+    // POST /api/v2/public/order/post/get-status/bulk/
+    // ==========================================
+
+    public function getOrderStatusBulk(array $orderUuids): array
+    {
+        if (!$this->isConfigured() || empty($orderUuids)) {
+            return ['success' => false, 'message' => 'تنظیمات یا لیست سفارش خالی'];
+        }
+
+        try {
+            $orders = array_map(fn($id) => ['id' => $id], $orderUuids);
+
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/get-status/bulk/'), [
+                    'shop_id' => $this->shopId,
+                    'orders' => $orders,
+                ]);
+
+            $json = $response->json() ?? [];
+
+            if (($json['returns']['status'] ?? 0) === 200) {
+                return ['success' => true, 'data' => $json['entries']['list'] ?? []];
+            }
+
+            return ['success' => false, 'message' => $json['returns']['message'] ?? $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Tapin getOrderStatusBulk error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     // ==========================================
@@ -396,15 +523,13 @@ class TapinService
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpointV1("order/change-status/{$trackingCode}"));
-
-            if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
+            // اگه شناسه عددی تاپین هست، از لیست سفارشات بگیر
+            if (is_numeric($trackingCode)) {
+                return $this->getOrdersList(1, 1, ['order_id' => (int) $trackingCode]);
             }
 
-            return ['success' => false, 'message' => 'سفارش یافت نشد.'];
+            // رهگیری با بارکد
+            return $this->getOrdersList(1, 1, ['barcode' => $trackingCode]);
         } catch (\Exception $e) {
             Log::error('Tapin trackShipment error', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
@@ -413,7 +538,6 @@ class TapinService
 
     // ==========================================
     // ساخت payload ثبت سفارش
-    // طبق داکیومنت: POST /api/v2/public/order/post/register/
     // ==========================================
 
     protected function buildOrderPayload(array $orderData): array
@@ -421,12 +545,12 @@ class TapinService
         $weightGrams = (int) ($orderData['weight'] ?? 500);
         $weightGrams = max($weightGrams, 100);
 
-        // پیدا کردن کد استان و شهر
+        // پیدا کردن کد استان و شهر از state/tree API
         $state = $orderData['recipient_province'] ?? $orderData['recipient_state'] ?? '';
         $city = $orderData['recipient_city_name'] ?? $orderData['recipient_city'] ?? '';
 
         $provinceCode = $this->findProvinceCode($state);
-        $cityCode = $provinceCode ? $this->findCityCode($city, $provinceCode) : null;
+        $cityCode = $this->findCityCode($city, $provinceCode);
 
         Log::info('Tapin location lookup', [
             'state_input' => $state,
@@ -462,7 +586,12 @@ class TapinService
         $orderNumber = $orderData['external_order_id'] ?? '';
         $manualId = preg_replace('/\D/', '', $orderNumber) ?: (string) time();
 
-        $payload = [
+        // order_type از تنظیمات (پیش‌فرض 2 = عادی، 1 = پیشتاز)
+        $orderType = (int) WarehouseSetting::get('tapin_order_type', 2);
+
+        $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
+
+        return [
             'register_type' => 0,
             'shop_id' => $this->shopId,
             'first_name' => $this->getFirstName($orderData['recipient_name'] ?? 'مشتری'),
@@ -476,9 +605,9 @@ class TapinService
             'city_code' => $cityCode ?: 1,
             'description' => null,
             'employee_code' => -1,
-            'pay_type' => (int) ($orderData['pay_type'] ?? 1), // 1 = آنلاین پرداخت شده
-            'order_type' => 1, // 1 = پستی
-            'box_id' => (int) ($orderData['box_id'] ?? 10),
+            'pay_type' => (int) ($orderData['pay_type'] ?? 1),
+            'order_type' => $orderType,
+            'box_id' => $boxId,
             'kiosk_id' => null,
             'package_weight' => $weightGrams,
             'manual_id' => $manualId,
@@ -486,8 +615,6 @@ class TapinService
             'content_type' => 1,
             'products' => $products,
         ];
-
-        return $payload;
     }
 
     protected function getFirstName(string $fullName): string

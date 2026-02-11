@@ -27,6 +27,8 @@ class TapinController extends Controller
             'has_key' => !empty($apiKey),
             'key_preview' => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
             'shipping_provider' => WarehouseSetting::get('shipping_provider', 'amadest'),
+            'order_type' => WarehouseSetting::get('tapin_order_type', '2'),
+            'box_id' => WarehouseSetting::get('tapin_box_id', '10'),
         ];
 
         return view('warehouse::tapin.index', compact('settings'));
@@ -44,6 +46,8 @@ class TapinController extends Controller
             'shop_id' => 'nullable|string|max:100',
             'sender_name' => 'nullable|string|max:255',
             'sender_mobile' => 'nullable|string|max:20',
+            'order_type' => 'nullable|integer|in:1,2',
+            'box_id' => 'nullable|integer|min:1',
         ]);
 
         if (!empty($validated['api_url'])) {
@@ -60,6 +64,12 @@ class TapinController extends Controller
         }
         if (!empty($validated['sender_mobile'])) {
             WarehouseSetting::set('tapin_sender_mobile', $validated['sender_mobile']);
+        }
+        if (isset($validated['order_type'])) {
+            WarehouseSetting::set('tapin_order_type', $validated['order_type']);
+        }
+        if (isset($validated['box_id'])) {
+            WarehouseSetting::set('tapin_box_id', $validated['box_id']);
         }
 
         if ($request->wantsJson()) {
@@ -285,6 +295,15 @@ class TapinController extends Controller
                     $data = $result['data'] ?? [];
                     $barcode = $data['barcode'] ?? null;
                     $tapinOrderId = $data['order_id'] ?? null;
+
+                    // اگه بارکد نداریم، change-status بزن
+                    if (empty($barcode) && $tapinOrderId) {
+                        $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
+                        if ($statusResult['success'] ?? false) {
+                            $barcode = $statusResult['data']['barcode'] ?? null;
+                        }
+                    }
+
                     $trackingRef = $barcode ?: ($tapinOrderId ? 'TAPIN-' . $tapinOrderId : null);
 
                     if ($trackingRef) {
