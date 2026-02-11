@@ -437,7 +437,18 @@ class TapinService
                 ->post($this->endpoint('public/order/post/register/'), $payload);
 
             $result = $response->json() ?? [];
-            Log::info('Tapin createOrder response', ['status' => $response->status(), 'body' => $result]);
+            $entries = $result['entries'] ?? [];
+            Log::info('Tapin createOrder response', [
+                'http_status' => $response->status(),
+                'api_status' => $result['returns']['status'] ?? 0,
+                'api_message' => $result['returns']['message'] ?? '',
+                'entries_keys' => is_array($entries) ? array_keys($entries) : 'not-array',
+                'barcode' => $entries['barcode'] ?? 'EMPTY',
+                'order_id' => $entries['order_id'] ?? 'EMPTY',
+                'status' => $entries['status'] ?? 'EMPTY',
+                'register_type' => $payload['register_type'] ?? 'UNKNOWN',
+                'full_entries' => $entries,
+            ]);
 
             $apiStatus = $result['returns']['status'] ?? 0;
 
@@ -620,6 +631,66 @@ class TapinService
     }
 
     // ==========================================
+    // دریافت جزئیات سفارش (بارکد)
+    // POST /api/v2/public/order/post/list/ با فیلتر order_id
+    // ==========================================
+
+    public function getOrderDetails(int $orderId): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('public/order/post/list/'), [
+                    'shop_id' => $this->shopId,
+                    'order_id' => $orderId,
+                    'count' => 1,
+                    'page' => 1,
+                ]);
+
+            $json = $response->json() ?? [];
+            $apiStatus = $json['returns']['status'] ?? 0;
+
+            Log::info('Tapin getOrderDetails response', [
+                'order_id' => $orderId,
+                'api_status' => $apiStatus,
+                'entries' => $json['entries'] ?? [],
+            ]);
+
+            if ($apiStatus === 200) {
+                $entries = $json['entries'] ?? [];
+                // ممکنه entries مستقیم اطلاعات باشه یا لیست باشه
+                $orderData = null;
+                if (isset($entries['list']) && is_array($entries['list'])) {
+                    $orderData = $entries['list'][0] ?? null;
+                } elseif (isset($entries['barcode'])) {
+                    $orderData = $entries;
+                }
+
+                if ($orderData) {
+                    return [
+                        'success' => true,
+                        'data' => [
+                            'barcode' => $orderData['barcode'] ?? null,
+                            'order_id' => $orderData['order_id'] ?? $orderData['id'] ?? $orderId,
+                            'status' => $orderData['status'] ?? null,
+                            'post_barcode' => $orderData['post_barcode'] ?? $orderData['easypost_barcode'] ?? null,
+                        ],
+                    ];
+                }
+            }
+
+            return ['success' => false, 'message' => $json['returns']['message'] ?? 'سفارش یافت نشد'];
+        } catch (\Exception $e) {
+            Log::error('Tapin getOrderDetails error', ['order_id' => $orderId, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // ==========================================
     // رهگیری
     // ==========================================
 
@@ -717,7 +788,7 @@ class TapinService
         $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
 
         return [
-            'register_type' => 0,
+            'register_type' => 1,
             'shop_id' => $this->shopId,
             'first_name' => $this->getFirstName($orderData['recipient_name'] ?? 'مشتری'),
             'last_name' => $this->getLastName($orderData['recipient_name'] ?? 'مشتری'),

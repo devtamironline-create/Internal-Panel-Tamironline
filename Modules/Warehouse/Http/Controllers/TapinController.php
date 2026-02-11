@@ -444,11 +444,24 @@ class TapinController extends Controller
                     $barcode = $data['barcode'] ?? null;
                     $tapinOrderId = $data['order_id'] ?? null;
 
-                    // اگه بارکد نداریم، change-status(1) بزن تا بارکد بگیریم
+                    // اگه بارکد نداریم، از لیست سفارشات بگیر
                     if (empty($barcode) && $tapinOrderId) {
-                        $statusResult = $tapin->changeOrderStatus($tapinOrderId, 1);
-                        if ($statusResult['success'] ?? false) {
-                            $barcode = $statusResult['data']['barcode'] ?? null;
+                        $detailsResult = $tapin->getOrderDetails($tapinOrderId);
+                        if ($detailsResult['success'] ?? false) {
+                            $barcode = $detailsResult['data']['barcode']
+                                ?? $detailsResult['data']['post_barcode']
+                                ?? null;
+                        }
+                    }
+
+                    // آخرین تلاش: change-status
+                    if (empty($barcode) && $tapinOrderId) {
+                        foreach ([2, 1] as $tryStatus) {
+                            $statusResult = $tapin->changeOrderStatus($tapinOrderId, $tryStatus);
+                            if ($statusResult['success'] ?? false) {
+                                $barcode = $statusResult['data']['barcode'] ?? null;
+                                if (!empty($barcode)) break;
+                            }
                         }
                     }
 
@@ -460,6 +473,11 @@ class TapinController extends Controller
                         if ($barcode) {
                             $order->post_tracking_code = $barcode;
                         }
+                        // ذخیره فلگ registered
+                        $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                        $wcDataCurrent['tapin']['registered'] = true;
+                        $wcDataCurrent['tapin']['tapin_order_id'] = $tapinOrderId;
+                        $order->wc_order_data = $wcDataCurrent;
                         $order->save();
                         $status = 'success';
                     }
