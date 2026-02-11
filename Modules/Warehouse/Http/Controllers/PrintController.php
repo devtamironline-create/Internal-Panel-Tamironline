@@ -227,32 +227,47 @@ class PrintController extends Controller
         $tapin = new TapinService();
         if (!$tapin->isConfigured()) return;
 
+        // ساخت لیست محصولات از آیتم‌های سفارش
+        $products = [];
+        foreach ($order->items as $item) {
+            $products[] = [
+                'title' => $item->product_name ?: 'کالا',
+                'count' => (int) $item->quantity,
+                'price' => (int) ($item->price ?? 0),
+                'weight' => (int) WarehouseOrder::toGrams($item->weight),
+                'discount' => 0,
+                'product_id' => null,
+            ];
+        }
+
         $result = $tapin->createShipment([
             'external_order_id' => $order->order_number,
             'recipient_name' => $order->customer_name,
             'recipient_mobile' => $order->customer_mobile,
             'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
-            'recipient_postal_code' => $postcode ?: null,
+            'recipient_postal_code' => $postcode ?: '0000000000',
             'recipient_city_name' => $city,
             'recipient_province' => $state,
             'weight' => $order->total_weight_with_box_grams ?: 500,
             'value' => (int)($wcData['total'] ?? 100000),
+            'products' => $products,
         ]);
 
-        Log::info('Tapin auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
+        Log::info('Tapin auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false, 'message' => $result['message'] ?? '']);
 
         if ($result['success'] ?? false) {
             $data = $result['data'] ?? [];
-            $trackingCode = $data['tracking_code'] ?? $data['barcode'] ?? null;
+            $barcode = $data['barcode'] ?? null;
 
-            if ($trackingCode) {
-                $order->amadest_barcode = $trackingCode;
-                $order->tracking_code = $order->tracking_code ?: $trackingCode;
-                $order->post_tracking_code = $trackingCode;
+            if ($barcode) {
+                $order->amadest_barcode = $barcode;
+                $order->tracking_code = $order->tracking_code ?: $barcode;
+                $order->post_tracking_code = $barcode;
                 $order->save();
                 Log::info('Tapin barcode saved', [
                     'order' => $order->order_number,
-                    'tracking_code' => $trackingCode,
+                    'barcode' => $barcode,
+                    'tapin_order_id' => $data['order_id'] ?? null,
                 ]);
             }
         } else {
