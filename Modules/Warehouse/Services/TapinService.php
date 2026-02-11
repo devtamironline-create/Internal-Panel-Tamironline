@@ -184,6 +184,35 @@ class TapinService
     }
 
     // ==========================================
+    // اطلاعات فروشگاه
+    // ==========================================
+
+    public function getShopDetails(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات تاپین کامل نیست'];
+        }
+
+        try {
+            // دریافت اعتبار (تنها endpoint مستند برای اطلاعات فروشگاه)
+            $creditResult = $this->getShopCredit();
+
+            return [
+                'success' => $creditResult['success'] ?? false,
+                'data' => [
+                    'shop_id' => $this->shopId,
+                    'credit' => $creditResult['data']['credit'] ?? null,
+                    'credit_formatted' => $creditResult['data']['formatted'] ?? 'نامشخص',
+                ],
+                'message' => $creditResult['message'] ?? '',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Tapin getShopDetails error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // ==========================================
     // اعتبار فروشگاه
     // ==========================================
 
