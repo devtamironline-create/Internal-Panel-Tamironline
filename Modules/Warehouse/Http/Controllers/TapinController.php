@@ -228,6 +228,84 @@ class TapinController extends Controller
     }
 
     /**
+     * تشخیص تفاوت کدهای استان ووکامرس و تاپین
+     */
+    public function diagnosticStates()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $tapin = new TapinService();
+
+        // دریافت لیست استان‌ها از تاپین
+        $stateTree = $tapin->getStateTree();
+
+        // نگاشت فعلی ووکامرس
+        $wcMap = TapinService::getWcStateMap();
+
+        // استان‌های استفاده‌شده در سفارشات واقعی
+        $usedStates = WarehouseOrder::whereNotNull('wc_order_data')
+            ->get(['wc_order_data'])
+            ->map(function ($order) {
+                $data = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                return ($data['shipping']['state'] ?? '') ?: ($data['billing']['state'] ?? '');
+            })
+            ->filter()
+            ->countBy()
+            ->sortDesc();
+
+        // بررسی هر کد ووکامرس
+        $mapping = [];
+        foreach ($wcMap as $code => $persianName) {
+            $provinceCode = $tapin->findProvinceCode($code);
+            $tapinProvince = null;
+            foreach ($stateTree as $p) {
+                if (($p['code'] ?? null) == $provinceCode) {
+                    $tapinProvince = $p['title'] ?? '';
+                    break;
+                }
+            }
+            $mapping[] = [
+                'wc_code' => $code,
+                'wc_name' => $persianName,
+                'tapin_code' => $provinceCode,
+                'tapin_name' => $tapinProvince,
+                'match' => $provinceCode !== null,
+                'used_count' => $usedStates[$code] ?? 0,
+            ];
+        }
+
+        // کدهای ووکامرسی که تو مپ نیستن ولی تو سفارشات استفاده شدن
+        $unmapped = [];
+        foreach ($usedStates as $code => $count) {
+            if (!isset($wcMap[strtoupper($code)])) {
+                $provinceCode = $tapin->findProvinceCode($code);
+                $unmapped[] = [
+                    'wc_code' => $code,
+                    'tapin_code' => $provinceCode,
+                    'used_count' => $count,
+                ];
+            }
+        }
+
+        // لیست استان‌های تاپین
+        $tapinProvinces = collect($stateTree)->map(fn($p) => [
+            'code' => $p['code'] ?? null,
+            'title' => $p['title'] ?? '',
+            'cities_count' => count($p['cities'] ?? []),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'wc_mapping' => $mapping,
+            'unmapped_codes' => $unmapped,
+            'tapin_provinces' => $tapinProvinces,
+            'used_states_in_orders' => $usedStates,
+        ]);
+    }
+
+    /**
      * ثبت دسته‌ای سفارشات در تاپین
      */
     public function bulkRegister(Request $request)
