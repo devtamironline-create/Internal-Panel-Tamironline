@@ -184,6 +184,39 @@ class TapinController extends Controller
     }
 
     /**
+     * پاک کردن بارکدهای قدیمی آمادست از سفارشات در حال آماده‌سازی
+     */
+    public function clearBarcodes()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)
+            ->where('shipping_type', 'post')
+            ->where(function ($q) {
+                $q->whereNotNull('amadest_barcode')->where('amadest_barcode', '!=', '');
+            })
+            ->get();
+
+        $count = $orders->count();
+        foreach ($orders as $order) {
+            $order->update([
+                'amadest_barcode' => null,
+                'post_tracking_code' => null,
+            ]);
+        }
+
+        Log::info('Cleared old amadest barcodes', ['count' => $count, 'user' => auth()->user()->name]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$count} سفارش پاک‌سازی شد. حالا می‌تونید در تاپین ثبت کنید.",
+            'cleared' => $count,
+        ]);
+    }
+
+    /**
      * ثبت دسته‌ای سفارشات در تاپین
      */
     public function bulkRegister(Request $request)

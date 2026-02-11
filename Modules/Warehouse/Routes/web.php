@@ -118,6 +118,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::get('/shop-details', [TapinController::class, 'getShopDetails'])->name('warehouse.tapin.shop-details');
         Route::post('/set-provider', [TapinController::class, 'setProvider'])->name('warehouse.tapin.set-provider');
         Route::get('/pending-orders', [TapinController::class, 'getPendingOrders'])->name('warehouse.tapin.pending-orders');
+        Route::post('/clear-barcodes', [TapinController::class, 'clearBarcodes'])->name('warehouse.tapin.clear-barcodes');
         Route::post('/bulk-register', [TapinController::class, 'bulkRegister'])->name('warehouse.tapin.bulk-register');
     });
 });

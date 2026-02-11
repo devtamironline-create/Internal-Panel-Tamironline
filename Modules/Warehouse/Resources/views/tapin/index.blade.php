@@ -153,6 +153,7 @@
             </div>
         </div>
         <div class="flex gap-2">
+            <button onclick="clearOldBarcodes()" id="btn-clear" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium">پاک‌سازی بارکدهای قبلی</button>
             <button onclick="loadPendingOrders()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">بارگذاری لیست</button>
             <button onclick="bulkRegister()" id="btn-bulk" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium hidden">ثبت همه در تاپین</button>
         </div>
@@ -265,6 +266,30 @@ function loadPendingOrders() {
         list.innerHTML = html;
     })
     .catch(() => { list.innerHTML = '<div class="p-4 text-center text-red-500">خطا در بارگذاری</div>'; });
+}
+
+function clearOldBarcodes() {
+    if (!confirm('بارکدهای قبلی آمادست از سفارشات «آماده‌سازی» پاک بشه؟ بعد می‌تونید در تاپین ثبت کنید.')) return;
+    const btn = document.getElementById('btn-clear');
+    btn.disabled = true;
+    btn.textContent = 'در حال پاک‌سازی...';
+    showLoading('bulk-result', 'در حال پاک‌سازی بارکدهای قبلی...');
+
+    fetch('{{ route("warehouse.tapin.clear-barcodes") }}', {
+        method: 'POST', headers: defaultHeaders, body: '{}',
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = 'پاک‌سازی بارکدهای قبلی';
+        showResult('bulk-result', data.success, data.message || 'انجام شد');
+        if (data.success) loadPendingOrders();
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'پاک‌سازی بارکدهای قبلی';
+        showResult('bulk-result', false, 'خطا در ارتباط');
+    });
 }
 
 function bulkRegister() {
