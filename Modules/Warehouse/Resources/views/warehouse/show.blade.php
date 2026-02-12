@@ -95,6 +95,28 @@
                     <dd class="text-sm font-medium text-gray-900">{{ $order->shipping_type }}</dd>
                 </div>
                 @endif
+                @php
+                    $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                    $shippingLines = $wcData['shipping_lines'] ?? [];
+                    $wcShippingAddr = $wcData['shipping'] ?? [];
+                    $wcBillingAddr = $wcData['billing'] ?? [];
+                @endphp
+                @if(!empty($shippingLines))
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <dt class="text-xs text-gray-400 mb-1">اطلاعات ارسال ووکامرس:</dt>
+                    @foreach($shippingLines as $sl)
+                    <dd class="text-xs text-gray-600 bg-gray-50 rounded p-2 mb-1" dir="ltr">
+                        method_id: <strong>{{ $sl['method_id'] ?? '-' }}</strong><br>
+                        method_title: <strong>{{ $sl['method_title'] ?? '-' }}</strong><br>
+                        total: {{ $sl['total'] ?? '0' }}
+                    </dd>
+                    @endforeach
+                    <dd class="text-xs text-gray-500 mt-1">
+                        استان: <strong>{{ $wcShippingAddr['state'] ?? $wcBillingAddr['state'] ?? '-' }}</strong>
+                        | شهر: <strong>{{ $wcShippingAddr['city'] ?? $wcBillingAddr['city'] ?? '-' }}</strong>
+                    </dd>
+                </div>
+                @endif
                 @if($order->tracking_code)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">کد رهگیری</dt>
