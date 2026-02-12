@@ -149,6 +149,21 @@
                             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             <span class="text-sm text-gray-500">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
                         </div>
+                        @php
+                            $wcData = $order->wc_order_data ?? [];
+                            $sh = $wcData['shipping'] ?? [];
+                            $bl = $wcData['billing'] ?? [];
+                            $addrState = ($sh['state'] ?? '') ?: ($bl['state'] ?? '');
+                            $addrCity = ($sh['city'] ?? '') ?: ($bl['city'] ?? '');
+                            $addrLine = ($sh['address_1'] ?? '') ?: ($bl['address_1'] ?? '');
+                            $fullAddr = implode('، ', array_filter([$addrState, $addrCity, $addrLine]));
+                        @endphp
+                        @if($fullAddr)
+                        <div class="flex items-start gap-2 mt-2">
+                            <svg class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="text-xs text-gray-500 leading-5">{{ \Illuminate\Support\Str::limit($fullAddr, 80) }}</span>
+                        </div>
+                        @endif
                     </div>
 
                     {{-- Left Side: Products --}}
@@ -360,6 +375,21 @@
                             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             <span class="text-sm text-gray-500">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
                         </div>
+                        @php
+                            $wcData2 = $order->wc_order_data ?? [];
+                            $sh2 = $wcData2['shipping'] ?? [];
+                            $bl2 = $wcData2['billing'] ?? [];
+                            $addrState2 = ($sh2['state'] ?? '') ?: ($bl2['state'] ?? '');
+                            $addrCity2 = ($sh2['city'] ?? '') ?: ($bl2['city'] ?? '');
+                            $addrLine2 = ($sh2['address_1'] ?? '') ?: ($bl2['address_1'] ?? '');
+                            $fullAddr2 = implode('، ', array_filter([$addrState2, $addrCity2, $addrLine2]));
+                        @endphp
+                        @if($fullAddr2)
+                        <div class="flex items-start gap-2 mt-2">
+                            <svg class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="text-xs text-gray-500 leading-5">{{ \Illuminate\Support\Str::limit($fullAddr2, 80) }}</span>
+                        </div>
+                        @endif
                     </div>
 
                     {{-- Left Side: Products (highlight unavailable) --}}
@@ -486,6 +516,17 @@
                                 <div class="font-medium text-gray-900 text-sm">{{ $order->customer_name }}</div>
                                 @if($order->customer_mobile)
                                 <div class="text-xs text-gray-500 mt-0.5" dir="ltr">{{ $order->customer_mobile }}</div>
+                                @endif
+                                @php
+                                    $wcD = $order->wc_order_data ?? [];
+                                    $shT = $wcD['shipping'] ?? [];
+                                    $blT = $wcD['billing'] ?? [];
+                                    $cityT = ($shT['city'] ?? '') ?: ($blT['city'] ?? '');
+                                    $stateT = ($shT['state'] ?? '') ?: ($blT['state'] ?? '');
+                                    $addrSummary = implode('، ', array_filter([$stateT, $cityT]));
+                                @endphp
+                                @if($addrSummary)
+                                <div class="text-[11px] text-gray-400 mt-0.5">{{ $addrSummary }}</div>
                                 @endif
                             </div>
                         </td>
