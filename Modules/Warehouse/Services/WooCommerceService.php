@@ -327,12 +327,19 @@ class WooCommerceService
         $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
         $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
 
-        $stateCity = mb_strtolower($state . ' ' . $city);
+        $stateLower = mb_strtolower(trim($state));
+        $cityLower = mb_strtolower(trim($city));
 
-        // WooCommerce state code for Tehran is "THR" or "تهران"
-        return str_contains($stateCity, 'تهران')
-            || str_contains($stateCity, 'tehran')
-            || mb_strtoupper($state) === 'THR';
+        // استان باید تهران باشد
+        $isTehranProvince = $stateLower === 'تهران'
+            || mb_strtoupper($state) === 'THR'
+            || $stateLower === 'tehran';
+
+        // شهر هم باید تهران باشد (نه ورامین، شهریار و غیره)
+        $isTehranCity = str_contains($cityLower, 'تهران')
+            || str_contains($cityLower, 'tehran');
+
+        return $isTehranProvince && $isTehranCity;
     }
 
     public function detectShippingType(array $wcOrder): string
