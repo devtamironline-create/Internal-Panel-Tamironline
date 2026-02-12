@@ -266,6 +266,150 @@
         </div>
     </div>
 
+    <!-- Shipping Rules (قوانین override ارسال) -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-900">قوانین تغییر نوع ارسال</h2>
+            <p class="text-sm text-gray-500 mt-1">با این قوانین می‌توانید بر اساس استان، شهر و نوع ارسال اولیه، نوع ارسال را به صورت خودکار تغییر دهید. قوانین با اولویت بالاتر زودتر اجرا می‌شوند.</p>
+        </div>
+
+        <!-- Rules Table -->
+        @if($shippingRules->count() > 0)
+        <div class="border rounded-lg overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">نام قانون</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">استان</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">شهر</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">از نوع ارسال</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">به نوع ارسال</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">اولویت</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">وضعیت</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @foreach($shippingRules as $rule)
+                    <tr x-data="{ editing: false }">
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 font-medium text-gray-900">{{ $rule->name }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600">{{ $rule->province === '*' ? 'همه' : $rule->province }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600">{{ $rule->city === '*' ? 'همه' : $rule->city }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600">{{ $rule->from_shipping_type === '*' ? 'همه' : $rule->from_shipping_type }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 font-medium text-blue-700">{{ $rule->to_shipping_type }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3 text-gray-600" dir="ltr">{{ $rule->priority }}</td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 rounded text-xs {{ $rule->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ $rule->is_active ? 'فعال' : 'غیرفعال' }}
+                                </span>
+                            </td>
+                        </template>
+                        <template x-if="!editing">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <button @click="editing = true" class="text-sm text-blue-600 hover:text-blue-800">ویرایش</button>
+                                    <form action="{{ route('warehouse.settings.shipping-rule.delete', $rule) }}" method="POST" class="inline" onsubmit="return confirm('حذف قانون {{ $rule->name }}؟')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm text-red-600 hover:text-red-800">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </template>
+
+                        <!-- Edit Mode -->
+                        <template x-if="editing">
+                            <td colspan="8" class="px-4 py-3">
+                                <form onsubmit="return updateShippingRule(event, {{ $rule->id }})" class="flex items-center gap-2 flex-wrap">
+                                    <input type="text" name="name" value="{{ $rule->name }}" class="w-36 px-2 py-1.5 border rounded text-sm" placeholder="نام">
+                                    <input type="text" name="province" value="{{ $rule->province }}" class="w-20 px-2 py-1.5 border rounded text-sm" placeholder="استان">
+                                    <input type="text" name="city" value="{{ $rule->city }}" class="w-20 px-2 py-1.5 border rounded text-sm" placeholder="شهر">
+                                    <select name="from_shipping_type" class="w-28 px-2 py-1.5 border rounded text-sm">
+                                        <option value="*" {{ $rule->from_shipping_type === '*' ? 'selected' : '' }}>همه</option>
+                                        @foreach($shippingTypes as $type)
+                                        <option value="{{ $type->slug }}" {{ $rule->from_shipping_type === $type->slug ? 'selected' : '' }}>{{ $type->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <span class="text-gray-400">→</span>
+                                    <select name="to_shipping_type" class="w-28 px-2 py-1.5 border rounded text-sm">
+                                        @foreach($shippingTypes as $type)
+                                        <option value="{{ $type->slug }}" {{ $rule->to_shipping_type === $type->slug ? 'selected' : '' }}>{{ $type->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="number" name="priority" value="{{ $rule->priority }}" class="w-16 px-2 py-1.5 border rounded text-sm" dir="ltr">
+                                    <label class="flex items-center gap-1 text-sm">
+                                        <input type="checkbox" name="is_active" {{ $rule->is_active ? 'checked' : '' }}> فعال
+                                    </label>
+                                    <button type="submit" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm">ذخیره</button>
+                                    <button type="button" @click="editing = false" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm">لغو</button>
+                                </form>
+                            </td>
+                        </template>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @else
+        <div class="text-center py-6 text-gray-400 text-sm mb-4">هنوز قانونی تعریف نشده است.</div>
+        @endif
+
+        <!-- Add New Rule -->
+        <div class="pt-4 border-t">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">افزودن قانون جدید</h3>
+            <form action="{{ route('warehouse.settings.shipping-rule.store') }}" method="POST" class="flex items-end gap-2 flex-wrap">
+                @csrf
+                <div>
+                    <label class="block text-xs text-gray-500">نام قانون</label>
+                    <input type="text" name="name" required class="w-40 px-3 py-2 border rounded-lg text-sm" placeholder="مثلا: تهران پست به پیک">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">استان (* = همه)</label>
+                    <input type="text" name="province" value="*" required class="w-24 px-3 py-2 border rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">شهر (* = همه)</label>
+                    <input type="text" name="city" value="*" required class="w-24 px-3 py-2 border rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">از نوع ارسال</label>
+                    <select name="from_shipping_type" class="px-3 py-2 border rounded-lg text-sm">
+                        <option value="*">همه</option>
+                        @foreach($shippingTypes as $type)
+                        <option value="{{ $type->slug }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">به نوع ارسال</label>
+                    <select name="to_shipping_type" required class="px-3 py-2 border rounded-lg text-sm">
+                        @foreach($shippingTypes as $type)
+                        <option value="{{ $type->slug }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">اولویت</label>
+                    <input type="number" name="priority" value="0" required dir="ltr" class="w-16 px-3 py-2 border rounded-lg text-sm">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">افزودن</button>
+            </form>
+        </div>
+    </div>
+
     <!-- WooCommerce Shipping Method Mapping -->
     <div class="bg-white rounded-xl shadow-sm p-6" x-data="wcShippingMapping()">
         <div class="flex items-center justify-between mb-4">
@@ -372,6 +516,27 @@ function updateBoxSize(e, id) {
             width: parseFloat(form.width.value),
             height: parseFloat(form.height.value),
             weight: parseInt(form.weight.value),
+            is_active: form.is_active.checked,
+        }),
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) location.reload(); else alert(d.message); });
+    return false;
+}
+
+function updateShippingRule(e, id) {
+    e.preventDefault();
+    const form = e.target;
+    fetch('/warehouse/settings/shipping-rule/' + id, {
+        method: 'PUT',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+            name: form.name.value,
+            province: form.province.value,
+            city: form.city.value,
+            from_shipping_type: form.from_shipping_type.value,
+            to_shipping_type: form.to_shipping_type.value,
+            priority: parseInt(form.priority.value),
             is_active: form.is_active.checked,
         }),
     })

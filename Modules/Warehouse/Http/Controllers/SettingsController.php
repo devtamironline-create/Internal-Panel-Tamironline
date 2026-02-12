@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Modules\Warehouse\Models\WarehouseBoxSize;
 use Modules\Warehouse\Models\WarehouseSetting;
+use Modules\Warehouse\Models\WarehouseShippingRule;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
 class SettingsController extends Controller
@@ -32,8 +33,9 @@ class SettingsController extends Controller
         ];
 
         $boxSizes = WarehouseBoxSize::orderBy('sort_order')->get();
+        $shippingRules = WarehouseShippingRule::orderByDesc('priority')->get();
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings', 'boxSizes'));
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings', 'boxSizes', 'shippingRules'));
     }
 
     public function update(Request $request)
@@ -188,5 +190,59 @@ class SettingsController extends Controller
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'سایز کارتن حذف شد.');
+    }
+
+    public function storeShippingRule(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'province' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'from_shipping_type' => 'required|string|max:100',
+            'to_shipping_type' => 'required|string|max:100',
+            'priority' => 'required|integer|min:0',
+        ]);
+
+        WarehouseShippingRule::create($request->only('name', 'province', 'city', 'from_shipping_type', 'to_shipping_type', 'priority'));
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'قانون ارسال جدید اضافه شد.');
+    }
+
+    public function updateShippingRule(Request $request, WarehouseShippingRule $shippingRule)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'province' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'from_shipping_type' => 'required|string|max:100',
+            'to_shipping_type' => 'required|string|max:100',
+            'priority' => 'required|integer|min:0',
+            'is_active' => 'boolean',
+        ]);
+
+        $shippingRule->update($request->only('name', 'province', 'city', 'from_shipping_type', 'to_shipping_type', 'priority', 'is_active'));
+
+        return response()->json(['success' => true, 'message' => 'قانون ارسال ویرایش شد.']);
+    }
+
+    public function deleteShippingRule(WarehouseShippingRule $shippingRule)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $shippingRule->delete();
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'قانون ارسال حذف شد.');
     }
 }

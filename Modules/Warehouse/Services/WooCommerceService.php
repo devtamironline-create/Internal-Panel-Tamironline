@@ -9,6 +9,7 @@ use Modules\Warehouse\Models\WarehouseOrderItem;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseProductBundleItem;
 use Modules\Warehouse\Models\WarehouseSetting;
+use Modules\Warehouse\Models\WarehouseShippingRule;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
 class WooCommerceService
@@ -300,6 +301,20 @@ class WooCommerceService
     }
 
     /**
+     * استخراج استان و شهر از سفارش ووکامرس
+     */
+    public static function extractProvinceCity(array $wcOrder): array
+    {
+        $shipping = $wcOrder['shipping'] ?? [];
+        $billing = $wcOrder['billing'] ?? [];
+
+        return [
+            'province' => ($shipping['state'] ?? '') ?: ($billing['state'] ?? ''),
+            'city' => ($shipping['city'] ?? '') ?: ($billing['city'] ?? ''),
+        ];
+    }
+
+    /**
      * نگاشت کلید ارسال قالب گنجه به نوع ارسال داخلی
      *
      * قالب ووکامرس این مقادیر رو در meta key "_ganjeh_shipping_method" ذخیره می‌کنه:
@@ -321,6 +336,7 @@ class WooCommerceService
         $wcOrderId = $wcOrder['id'] ?? 'unknown';
 
         // ===== ۱. اولویت اول: _ganjeh_shipping_method از meta_data (دقیق‌ترین) =====
+        $baseType = null;
         foreach ($metaData as $meta) {
             if (($meta['key'] ?? '') === '_ganjeh_shipping_method') {
                 $ganjehMethod = strtolower(trim($meta['value'] ?? ''));
@@ -331,43 +347,63 @@ class WooCommerceService
                         'ganjeh_method' => $ganjehMethod,
                         'mapped_to' => $mapped,
                     ]);
-                    return $mapped;
+                    $baseType = $mapped;
+                    break;
                 }
             }
         }
 
         // ===== ۲. فالبک: shipping_lines (برای سفارشات قدیمی یا بدون meta) =====
-        $shippingLines = $wcOrder['shipping_lines'] ?? [];
-        foreach ($shippingLines as $line) {
-            $title = mb_strtolower($line['method_title'] ?? '');
-            $mId = strtolower($line['method_id'] ?? '');
+        if (!$baseType) {
+            $shippingLines = $wcOrder['shipping_lines'] ?? [];
+            foreach ($shippingLines as $line) {
+                $title = mb_strtolower($line['method_title'] ?? '');
+                $mId = strtolower($line['method_id'] ?? '');
 
-            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) return 'pickup';
-            if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) return 'urgent';
-            if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) return 'emergency';
-            if (str_contains($title, 'پیک') || str_contains($title, 'courier') || str_contains($mId, 'local_delivery')) return 'courier';
-            if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) return 'courier';
-            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) return 'post';
-            if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) return 'post';
+                if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) { $baseType = 'pickup'; break; }
+                if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) { $baseType = 'urgent'; break; }
+                if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) { $baseType = 'emergency'; break; }
+                if (str_contains($title, 'پیک') || str_contains($title, 'courier') || str_contains($mId, 'local_delivery')) { $baseType = 'courier'; break; }
+                if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) { $baseType = 'courier'; break; }
+                if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) { $baseType = 'post'; break; }
+                if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) { $baseType = 'post'; break; }
+            }
         }
 
         // ===== ۳. فالبک: fee_lines (قالب‌هایی که ارسال رو به عنوان fee اضافه می‌کنن) =====
-        $feeLines = $wcOrder['fee_lines'] ?? [];
-        foreach ($feeLines as $fee) {
-            $feeName = mb_strtolower($fee['name'] ?? '');
-            if (str_contains($feeName, 'حضوری')) return 'pickup';
-            if (str_contains($feeName, 'فوری') || str_contains($feeName, 'express')) return 'urgent';
-            if (str_contains($feeName, 'پیک') || str_contains($feeName, 'courier')) return 'courier';
-            if (str_contains($feeName, 'پست') || str_contains($feeName, 'ارسال')) return 'post';
+        if (!$baseType) {
+            $feeLines = $wcOrder['fee_lines'] ?? [];
+            foreach ($feeLines as $fee) {
+                $feeName = mb_strtolower($fee['name'] ?? '');
+                if (str_contains($feeName, 'حضوری')) { $baseType = 'pickup'; break; }
+                if (str_contains($feeName, 'فوری') || str_contains($feeName, 'express')) { $baseType = 'urgent'; break; }
+                if (str_contains($feeName, 'پیک') || str_contains($feeName, 'courier')) { $baseType = 'courier'; break; }
+                if (str_contains($feeName, 'پست') || str_contains($feeName, 'ارسال')) { $baseType = 'post'; break; }
+            }
         }
 
-        Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
-        return 'post';
+        if (!$baseType) {
+            Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
+            $baseType = 'post';
+        }
+
+        // ===== ۴. اعمال قوانین داینامیک override =====
+        $addr = self::extractProvinceCity($wcOrder);
+        $finalType = WarehouseShippingRule::applyRules($baseType, $addr['province'], $addr['city']);
+
+        if ($finalType !== $baseType) {
+            Log::info('WC shipping rule override', [
+                'wc_order_id' => $wcOrderId,
+                'base_type' => $baseType,
+                'final_type' => $finalType,
+                'province' => $addr['province'],
+                'city' => $addr['city'],
+            ]);
+        }
+
+        return $finalType;
     }
 
-    /**
-     * بازتشخیص نوع حمل و نقل برای سفارشات موجود از روی wc_order_data
-     */
     /**
      * گرفتن اطلاعات یک سفارش از API ووکامرس
      */

@@ -87,6 +87,10 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/box-size', [SettingsController::class, 'storeBoxSize'])->name('warehouse.settings.box-size.store');
         Route::put('/box-size/{boxSize}', [SettingsController::class, 'updateBoxSize'])->name('warehouse.settings.box-size.update');
         Route::delete('/box-size/{boxSize}', [SettingsController::class, 'deleteBoxSize'])->name('warehouse.settings.box-size.delete');
+        // Shipping Rules
+        Route::post('/shipping-rule', [SettingsController::class, 'storeShippingRule'])->name('warehouse.settings.shipping-rule.store');
+        Route::put('/shipping-rule/{shippingRule}', [SettingsController::class, 'updateShippingRule'])->name('warehouse.settings.shipping-rule.update');
+        Route::delete('/shipping-rule/{shippingRule}', [SettingsController::class, 'deleteShippingRule'])->name('warehouse.settings.shipping-rule.delete');
     });
 
     // WooCommerce Integration
