@@ -129,11 +129,21 @@
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border {{ $isPeyk ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-sky-50 text-sky-700 border-sky-200' }}">
+                            @php
+                                $isPickup = $order->shipping_type === 'pickup';
+                                $badgeClasses = $isPeyk
+                                    ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
+                                    : ($isPickup
+                                        ? 'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200'
+                                        : 'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200');
+                            @endphp
+                            <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md {{ $badgeClasses }}">
                                 @if($isPeyk)
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                @elseif($isPickup)
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                 @else
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                 @endif
                                 {{ $shippingLabel }}
                             </span>
@@ -356,10 +366,28 @@
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border
-                                {{ $order->shipping_type === 'emergency' ? 'bg-red-50 text-red-700 border-red-300' : ($order->shipping_type === 'urgent' ? 'bg-orange-50 text-orange-700 border-orange-300' : 'bg-amber-50 text-amber-700 border-amber-200') }}">
+                            @php
+                                $isPeyk2 = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
+                                $isPickup2 = $order->shipping_type === 'pickup';
+                                $badgeClasses2 = $order->shipping_type === 'emergency'
+                                    ? 'bg-gradient-to-l from-red-600 to-rose-500 text-white shadow-red-200'
+                                    : ($isUrgent
+                                        ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
+                                        : ($isPeyk2
+                                            ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
+                                            : ($isPickup2
+                                                ? 'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200'
+                                                : 'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200')));
+                            @endphp
+                            <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md {{ $badgeClasses2 }}">
                                 @if($isUrgent)
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                @elseif($isPeyk2)
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                @elseif($isPickup2)
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                @else
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                 @endif
                                 {{ $shippingLabel }}
                             </span>
