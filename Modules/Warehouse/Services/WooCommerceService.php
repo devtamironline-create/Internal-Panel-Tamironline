@@ -357,12 +357,6 @@ class WooCommerceService
             ])->toArray(),
         ]);
 
-        // تشخیص آدرس تهران → همیشه پیک (هرگز پست/تاپین)
-        if (self::isTehranOrder($wcOrder)) {
-            Log::info('WC shipping → courier (Tehran address)', ['wc_order_id' => $wcOrderId]);
-            return 'courier';
-        }
-
         // Load saved mappings from settings
         $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
         $mappings = $mappingsJson ? json_decode($mappingsJson, true) : [];
@@ -422,9 +416,13 @@ class WooCommerceService
                 return 'courier';
             }
 
-            // پست / پیشتاز
+            // پست / پیشتاز - ولی اگه تهران باشه → پیک
             if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')
                 || str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
+                if (self::isTehranOrder($wcOrder)) {
+                    Log::info('WC shipping → courier (post overridden for Tehran)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                    return 'courier';
+                }
                 Log::info('WC shipping → post', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'post';
             }
@@ -436,7 +434,11 @@ class WooCommerceService
             }
         }
 
-        // Default to post
+        // Default: اگه تهران باشه پیک، وگرنه پست
+        if (self::isTehranOrder($wcOrder)) {
+            Log::info('WC shipping → courier (default overridden for Tehran)', ['wc_order_id' => $wcOrderId]);
+            return 'courier';
+        }
         Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
     }
