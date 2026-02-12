@@ -297,6 +297,7 @@ class WooCommerceService
             'shipping_lines' => collect($shippingLines)->map(fn($l) => [
                 'method_id' => $l['method_id'] ?? '',
                 'method_title' => $l['method_title'] ?? '',
+                'total' => $l['total'] ?? '0',
             ])->toArray(),
         ]);
 
@@ -307,14 +308,15 @@ class WooCommerceService
         foreach ($shippingLines as $line) {
             $methodId = $line['method_id'] ?? '';
             $methodTitle = $line['method_title'] ?? '';
+            $shippingTotal = (float) ($line['total'] ?? 0);
 
-            // Check saved mappings first (by method_id)
+            // ۱. اول mapping ذخیره شده رو چک کن (by method_id)
             if (!empty($mappings[$methodId])) {
                 Log::info('WC shipping mapped by method_id', ['method_id' => $methodId, 'type' => $mappings[$methodId]]);
                 return $mappings[$methodId];
             }
 
-            // Check saved mappings by method_title
+            // ۲. mapping by method_title (exact)
             foreach ($mappings as $key => $mappedType) {
                 if (mb_strtolower($key) === mb_strtolower($methodTitle) && !empty($mappedType)) {
                     Log::info('WC shipping mapped by title', ['title' => $methodTitle, 'type' => $mappedType]);
@@ -322,42 +324,58 @@ class WooCommerceService
                 }
             }
 
-            // Fallback: auto-detect from keywords
-            $lowerMethodId = mb_strtolower($methodId);
-            $lowerTitle = mb_strtolower($methodTitle);
-            $combined = $lowerMethodId . ' ' . $lowerTitle;
-
-            // تشخیص پیک
-            if (str_contains($combined, 'local') || str_contains($combined, 'courier')
-                || str_contains($combined, 'پیک') || str_contains($combined, 'ارسال فوری')
-                || str_contains($combined, 'local_pickup') || str_contains($combined, 'delivery')) {
-                // local_pickup = حضوری، local_delivery = پیک
-                if (str_contains($lowerMethodId, 'local_pickup') || str_contains($combined, 'حضوری')
-                    || str_contains($combined, 'pickup') || str_contains($combined, 'تحویل حضوری')) {
-                    Log::info('WC shipping auto-detected: pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
-                    return 'pickup';
+            // ۳. mapping by method_title (partial match)
+            foreach ($mappings as $key => $mappedType) {
+                if (!empty($mappedType) && (
+                    str_contains(mb_strtolower($methodTitle), mb_strtolower($key)) ||
+                    str_contains(mb_strtolower($key), mb_strtolower($methodTitle))
+                )) {
+                    Log::info('WC shipping mapped by partial title', ['title' => $methodTitle, 'key' => $key, 'type' => $mappedType]);
+                    return $mappedType;
                 }
-                Log::info('WC shipping auto-detected: courier', ['method_id' => $methodId, 'title' => $methodTitle]);
-                return 'courier';
             }
 
-            // تشخیص حضوری
-            if (str_contains($combined, 'حضوری') || str_contains($combined, 'pickup')) {
-                Log::info('WC shipping auto-detected: pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
+            // ۴. تشخیص خودکار از عنوان
+            $title = mb_strtolower($methodTitle);
+            $mId = strtolower($methodId);
+
+            // حضوری / تحویل حضوری / pickup
+            if (str_contains($title, 'حضوری') || str_contains($title, 'تحویل حضوری')
+                || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
+                Log::info('WC shipping → pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'pickup';
             }
 
-            // تشخیص پست
-            if (str_contains($combined, 'پست') || str_contains($combined, 'پیشتاز')
-                || str_contains($combined, 'flat_rate') || str_contains($combined, 'free_shipping')
-                || str_contains($combined, 'رایگان')) {
-                Log::info('WC shipping auto-detected: post', ['method_id' => $methodId, 'title' => $methodTitle]);
+            // ارسال فوری / پیک فوری / پیک
+            if (str_contains($title, 'فوری') || str_contains($title, 'پیک')
+                || str_contains($title, 'courier') || str_contains($mId, 'local_delivery')
+                || str_contains($mId, 'courier')) {
+                Log::info('WC shipping → courier', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'courier';
+            }
+
+            // ارسال عادی برای تهران = پیک عادی
+            if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) {
+                Log::info('WC shipping → courier (عادی تهران)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'courier';
+            }
+
+            // پست / پیشتاز
+            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')
+                || str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
+                Log::info('WC shipping → post', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'post';
+            }
+
+            // ۵. فالبک بر اساس قیمت
+            if ($shippingTotal == 0) {
+                Log::info('WC shipping → pickup (free)', ['method_id' => $methodId, 'title' => $methodTitle, 'total' => $shippingTotal]);
+                return 'pickup';
             }
         }
 
         // Default to post
-        Log::warning('WC shipping defaulting to post (no match)', ['wc_order_id' => $wcOrderId]);
+        Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
     }
 
