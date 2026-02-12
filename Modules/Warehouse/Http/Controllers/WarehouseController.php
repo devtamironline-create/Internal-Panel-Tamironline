@@ -23,10 +23,16 @@ class WarehouseController extends Controller
 
         $currentStatus = $request->get('status', 'pending');
         $search = $request->get('search');
+        $shippingFilter = $request->get('shipping');
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
         $query = WarehouseOrder::with(['creator', 'assignee', 'items']);
+
+        // فیلتر نوع ارسال
+        if (!empty($shippingFilter) && $shippingFilter !== 'all') {
+            $query->where('shipping_type', $shippingFilter);
+        }
 
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
         if (!empty($search)) {
@@ -60,7 +66,7 @@ class WarehouseController extends Controller
         $shippingTypes = WarehouseShippingType::getActiveTypes();
 
         return view('warehouse::warehouse.index', compact(
-            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes',
+            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter',
         ));
     }
 

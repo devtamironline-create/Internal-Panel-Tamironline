@@ -53,6 +53,9 @@
         <div class="p-4 border-b border-gray-100">
             <form action="{{ route('warehouse.index') }}" method="GET" class="flex items-center gap-3">
                 <input type="hidden" name="status" value="{{ $currentStatus }}">
+                @if(!empty($shippingFilter) && $shippingFilter !== 'all')
+                <input type="hidden" name="shipping" value="{{ $shippingFilter }}">
+                @endif
                 <div class="relative flex-1">
                     <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="text" name="search" value="{{ $search }}" placeholder="جستجو شماره سفارش، نام مشتری، موبایل، کد رهگیری..."
@@ -60,9 +63,31 @@
                 </div>
                 <button type="submit" class="px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium">جستجو</button>
                 @if($search)
-                <a href="{{ route('warehouse.index', ['status' => $currentStatus]) }}" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">پاک کردن</a>
+                <a href="{{ route('warehouse.index', ['status' => $currentStatus, 'shipping' => $shippingFilter]) }}" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">پاک کردن</a>
                 @endif
             </form>
+        </div>
+
+        <!-- Shipping Type Filter -->
+        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+            <span class="text-xs text-gray-500 ml-1">نوع ارسال:</span>
+            @php
+                $shippingFilters = [
+                    'all' => ['label' => 'همه', 'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                    'post' => ['label' => 'پست', 'icon' => 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+                    'courier' => ['label' => 'پیک', 'icon' => 'M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0'],
+                    'pickup' => ['label' => 'حضوری', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z'],
+                ];
+                $activeFilter = $shippingFilter ?? 'all';
+            @endphp
+            @foreach($shippingFilters as $filterKey => $filter)
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $filterKey === 'all' ? null : $filterKey, 'search' => $search])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                   {{ $activeFilter === $filterKey ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $filter['icon'] }}"/></svg>
+                    {{ $filter['label'] }}
+                </a>
+            @endforeach
         </div>
 
         {{-- PENDING STATUS: Single Column Layout --}}
