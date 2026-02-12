@@ -27,6 +27,7 @@ class TapinController extends Controller
             'has_key' => !empty($apiKey),
             'key_preview' => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
             'shipping_provider' => WarehouseSetting::get('shipping_provider', 'amadest'),
+            'register_type' => WarehouseSetting::get('tapin_register_type', '2'),
             'order_type' => WarehouseSetting::get('tapin_order_type', '1'),
             'box_id' => WarehouseSetting::get('tapin_box_id', '10'),
         ];
@@ -46,6 +47,7 @@ class TapinController extends Controller
             'shop_id' => 'nullable|string|max:100',
             'sender_name' => 'nullable|string|max:255',
             'sender_mobile' => 'nullable|string|max:20',
+            'register_type' => 'nullable|integer|in:0,1,2',
             'order_type' => 'nullable|integer|in:1,2',
             'box_id' => 'nullable|integer|min:1',
         ]);
@@ -64,6 +66,9 @@ class TapinController extends Controller
         }
         if (!empty($validated['sender_mobile'])) {
             WarehouseSetting::set('tapin_sender_mobile', $validated['sender_mobile']);
+        }
+        if (isset($validated['register_type'])) {
+            WarehouseSetting::set('tapin_register_type', $validated['register_type']);
         }
         if (isset($validated['order_type'])) {
             WarehouseSetting::set('tapin_order_type', $validated['order_type']);
