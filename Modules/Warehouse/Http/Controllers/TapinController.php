@@ -423,6 +423,9 @@ class TapinController extends Controller
                 // خواندن لوکیشن تاپین اگه قبلاً ذخیره شده
                 $tapinData = $wcData['tapin'] ?? [];
 
+                // ابعاد جعبه سفارش برای match با بسته‌های تاپین
+                $box = $order->boxSize ?? $order->recommended_box;
+
                 $result = $tapin->createShipment([
                     'external_order_id' => $order->order_number,
                     'recipient_name' => $order->customer_name,
@@ -436,6 +439,9 @@ class TapinController extends Controller
                     'weight' => $order->total_weight_with_box_grams ?: 500,
                     'value' => (int)($wcData['total'] ?? 100000),
                     'products' => $products,
+                    'box_length' => $box->length ?? null,
+                    'box_width' => $box->width ?? null,
+                    'box_height' => $box->height ?? null,
                 ]);
 
                 $status = 'failed';

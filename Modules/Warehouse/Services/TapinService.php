@@ -785,7 +785,20 @@ class TapinService
         // order_type از تنظیمات (پیش‌فرض 1 = پیشتاز، 2 = عادی)
         $orderType = (int) WarehouseSetting::get('tapin_order_type', 1);
 
-        $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
+        // match ابعاد جعبه سفارش با بسته‌های تاپین
+        $boxLength = $orderData['box_length'] ?? null;
+        $boxWidth = $orderData['box_width'] ?? null;
+        $boxHeight = $orderData['box_height'] ?? null;
+
+        if ($boxLength && $boxWidth && $boxHeight) {
+            $boxId = $this->findBestBoxId((float) $boxLength, (float) $boxWidth, (float) $boxHeight);
+            Log::info('Tapin box matched', [
+                'order_box' => "{$boxLength}x{$boxWidth}x{$boxHeight}",
+                'tapin_box_id' => $boxId,
+            ]);
+        } else {
+            $boxId = (int) ($orderData['box_id'] ?? WarehouseSetting::get('tapin_box_id', 10));
+        }
 
         return [
             'register_type' => 2,
