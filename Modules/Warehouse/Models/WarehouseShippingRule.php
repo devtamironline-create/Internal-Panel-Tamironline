@@ -3,6 +3,7 @@
 namespace Modules\Warehouse\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Warehouse\Services\TapinService;
 
 class WarehouseShippingRule extends Model
 {
@@ -17,10 +18,27 @@ class WarehouseShippingRule extends Model
     ];
 
     /**
+     * نرمالایز نام استان - تبدیل کد WC (مثل THR) به فارسی (تهران)
+     */
+    protected static function normalizeProvince(string $value): string
+    {
+        $trimmed = trim($value);
+        $upper = mb_strtoupper($trimmed);
+
+        // اگه کد WC هست (مثل THR, ESF, ...) تبدیل به فارسی
+        $wcMap = TapinService::getWcStateMap();
+        if (isset($wcMap[$upper])) {
+            return mb_strtolower($wcMap[$upper]);
+        }
+
+        return mb_strtolower($trimmed);
+    }
+
+    /**
      * اعمال قوانین override بر روی نوع ارسال تشخیص داده شده
      *
      * @param string $detectedType نوع ارسال تشخیص داده شده (مثلا post)
-     * @param string $province استان مقصد
+     * @param string $province استان مقصد (ممکنه کد WC باشه مثل THR)
      * @param string $city شهر مقصد
      * @return string نوع ارسال نهایی (ممکنه override شده باشه)
      */
@@ -30,7 +48,12 @@ class WarehouseShippingRule extends Model
             ->orderByDesc('priority')
             ->get();
 
-        $provinceLower = mb_strtolower(trim($province));
+        if ($rules->isEmpty()) {
+            return $detectedType;
+        }
+
+        // نرمالایز استان (THR → تهران)
+        $provinceLower = self::normalizeProvince($province);
         $cityLower = mb_strtolower(trim($city));
 
         foreach ($rules as $rule) {
