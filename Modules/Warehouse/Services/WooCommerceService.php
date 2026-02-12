@@ -368,19 +368,68 @@ class WooCommerceService
     /**
      * بازتشخیص نوع حمل و نقل برای سفارشات موجود از روی wc_order_data
      */
+    /**
+     * گرفتن اطلاعات یک سفارش از API ووکامرس
+     */
+    public function fetchSingleOrder(int $wcOrderId): ?array
+    {
+        if (!$this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/orders/' . $wcOrderId);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to fetch WC order', ['wc_order_id' => $wcOrderId, 'error' => $e->getMessage()]);
+        }
+
+        return null;
+    }
+
+    /**
+     * بازتشخیص نوع ارسال برای همه سفارشات
+     * ابتدا data تازه از API ووکامرس می‌گیره، بعد تشخیص می‌زنه
+     */
     public function redetectShippingTypes(): array
     {
-        $orders = WarehouseOrder::whereNotNull('wc_order_data')
-            ->whereNotNull('wc_order_id')
-            ->get();
+        $orders = WarehouseOrder::whereNotNull('wc_order_id')->get();
 
         $updated = 0;
         $skipped = 0;
+        $refreshed = 0;
         $details = [];
 
         foreach ($orders as $order) {
             $wcData = $order->wc_order_data;
-            if (!is_array($wcData) || empty($wcData['shipping_lines'])) {
+
+            // اگه data نداره یا _ganjeh_shipping_method توش نیست، از API تازه بگیر
+            $hasGanjehMeta = false;
+            if (is_array($wcData)) {
+                foreach (($wcData['meta_data'] ?? []) as $meta) {
+                    if (($meta['key'] ?? '') === '_ganjeh_shipping_method') {
+                        $hasGanjehMeta = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!$hasGanjehMeta && $order->wc_order_id) {
+                $freshData = $this->fetchSingleOrder($order->wc_order_id);
+                if ($freshData) {
+                    $wcData = $freshData;
+                    $order->wc_order_data = $freshData;
+                    $order->save();
+                    $refreshed++;
+                }
+            }
+
+            if (!is_array($wcData)) {
                 $skipped++;
                 continue;
             }
@@ -393,7 +442,6 @@ class WooCommerceService
                 $order->save();
 
                 // تایمر رو هم بر اساس نوع ارسال جدید ریست کن
-                // فقط برای سفارشات pending و supply_wait
                 if (in_array($order->status, ['pending', 'supply_wait'])) {
                     $order->setTimerFromShippingType();
                 }
@@ -405,12 +453,17 @@ class WooCommerceService
             }
         }
 
-        Log::info('Redetect shipping types completed', ['updated' => $updated, 'skipped' => $skipped]);
+        Log::info('Redetect shipping types completed', [
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'refreshed' => $refreshed,
+        ]);
 
         return [
             'success' => true,
             'updated' => $updated,
             'skipped' => $skipped,
+            'refreshed' => $refreshed,
             'total' => $orders->count(),
             'details' => $details,
         ];
