@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseOrderItem;
 use Modules\Warehouse\Models\WarehouseProduct;
+use Modules\Warehouse\Models\WarehouseProductBundleItem;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -506,6 +507,8 @@ class WooCommerceService
         $totalImported = 0;
         $totalUpdated = 0;
         $totalVariations = 0;
+        $totalBundles = 0;
+        $bundleTypes = ['bundle', 'yith_bundle', 'woosb', 'grouped'];
 
         try {
             do {
@@ -530,6 +533,7 @@ class WooCommerceService
                     // وزن به گرم (ووکامرس به گرم ارسال میکنه)
                     $weightGrams = (int) round((float)($product['weight'] ?? 0));
                     $dims = $product['dimensions'] ?? [];
+                    $productType = $product['type'] ?? 'simple';
 
                     $result = WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $product['id']],
@@ -541,7 +545,7 @@ class WooCommerceService
                             'width' => (float)($dims['width'] ?? 0),
                             'height' => (float)($dims['height'] ?? 0),
                             'price' => (float)($product['price'] ?? 0),
-                            'type' => $product['type'] ?? 'simple',
+                            'type' => $productType,
                             'parent_id' => null,
                             'status' => $product['status'] ?? 'publish',
                         ]
@@ -554,15 +558,24 @@ class WooCommerceService
                     }
 
                     // اگر محصول متغیر بود، variation ها رو هم بگیر
-                    if (($product['type'] ?? '') === 'variable') {
+                    if ($productType === 'variable') {
                         $varCount = $this->syncProductVariations($product['id']);
                         $totalVariations += $varCount;
+                    }
+
+                    // اگر محصول باندل/پکیج بود، آیتم‌های باندل رو سینک کن
+                    if (in_array($productType, $bundleTypes)) {
+                        $bundleCount = $this->syncBundleItems($product);
+                        if ($bundleCount > 0) $totalBundles++;
                     }
                 }
 
                 $totalPages = (int) $response->header('X-WP-TotalPages', 1);
                 $page++;
             } while ($page <= $totalPages);
+
+            // محاسبه وزن و ابعاد باندل‌ها از روی زیرمجموعه‌ها
+            $this->updateBundleWeightsAndDimensions();
 
             WarehouseSetting::set('wc_products_last_sync', now()->toDateTimeString());
 
@@ -571,7 +584,11 @@ class WooCommerceService
             $updatedDimensions = $this->updateExistingOrderDimensions();
 
             $total = $totalImported + $totalUpdated;
-            $message = "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع | مجموع: {$total}";
+            $message = "محصولات سینک شد: {$totalImported} جدید، {$totalUpdated} بروزرسانی، {$totalVariations} تنوع";
+            if ($totalBundles > 0) {
+                $message .= "، {$totalBundles} پکیج";
+            }
+            $message .= " | مجموع: {$total}";
             if ($updatedWeights > 0) {
                 $message .= "\n{$updatedWeights} آیتم: وزن آپدیت شد.";
             }
@@ -585,6 +602,7 @@ class WooCommerceService
                 'imported' => $totalImported,
                 'updated' => $totalUpdated,
                 'variations' => $totalVariations,
+                'bundles' => $totalBundles,
                 'updated_items' => $updatedWeights + $updatedDimensions,
             ];
         } catch (\Exception $e) {
@@ -653,6 +671,195 @@ class WooCommerceService
         }
 
         return $count;
+    }
+
+    /**
+     * سینک آیتم‌های باندل/پکیج از ووکامرس
+     * ابتدا از bundle_data یا bundled_items داخل محصول، سپس از API جداگانه
+     */
+    protected function syncBundleItems(array $product): int
+    {
+        $productId = $product['id'];
+        $productType = $product['type'] ?? '';
+        $count = 0;
+
+        try {
+            $childIds = [];
+
+            // روش ۱: grouped products → children آیدی‌ها مستقیم داخل API هستن
+            if ($productType === 'grouped' && !empty($product['grouped_products'])) {
+                foreach ($product['grouped_products'] as $childId) {
+                    $childIds[] = ['product_id' => (int)$childId, 'quantity' => 1, 'optional' => false, 'discount' => 0, 'priced_individually' => true];
+                }
+            }
+
+            // روش ۲: WC Product Bundles → bundled_items در API response
+            if (empty($childIds) && !empty($product['bundled_items'])) {
+                foreach ($product['bundled_items'] as $bundledItem) {
+                    $childIds[] = [
+                        'product_id' => (int)($bundledItem['product_id'] ?? 0),
+                        'quantity' => (int)($bundledItem['default_quantity'] ?? $bundledItem['quantity_default'] ?? 1),
+                        'optional' => (bool)($bundledItem['optional'] ?? false),
+                        'discount' => (float)($bundledItem['discount'] ?? 0),
+                        'priced_individually' => (bool)($bundledItem['priced_individually'] ?? false),
+                    ];
+                }
+            }
+
+            // روش ۳: bundle_data در meta_data
+            if (empty($childIds)) {
+                $metaData = collect($product['meta_data'] ?? []);
+                $bundleDataMeta = $metaData->firstWhere('key', '_bundle_data');
+                if (!$bundleDataMeta) $bundleDataMeta = $metaData->firstWhere('key', 'bundle_data');
+                if (!$bundleDataMeta) $bundleDataMeta = $metaData->firstWhere('key', '_woosb_ids');
+
+                if ($bundleDataMeta) {
+                    $bundleData = $bundleDataMeta['value'] ?? [];
+
+                    // _woosb_ids format: "123/2,456/1" (productId/qty)
+                    if (is_string($bundleData) && str_contains($bundleData, '/')) {
+                        foreach (explode(',', $bundleData) as $pair) {
+                            $parts = explode('/', trim($pair));
+                            if (count($parts) >= 2) {
+                                $childIds[] = ['product_id' => (int)$parts[0], 'quantity' => (int)$parts[1], 'optional' => false, 'discount' => 0, 'priced_individually' => false];
+                            }
+                        }
+                    }
+                    // bundle_data format: array of items
+                    elseif (is_array($bundleData)) {
+                        foreach ($bundleData as $item) {
+                            $childProdId = (int)($item['product_id'] ?? 0);
+                            if ($childProdId > 0) {
+                                $childIds[] = [
+                                    'product_id' => $childProdId,
+                                    'quantity' => (int)($item['default_quantity'] ?? $item['quantity_default'] ?? $item['qty'] ?? 1),
+                                    'optional' => (bool)($item['optional'] ?? false),
+                                    'discount' => (float)($item['discount'] ?? 0),
+                                    'priced_individually' => (bool)($item['priced_individually'] ?? false),
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+
+            // روش ۴: فالبک - API جداگانه باندل
+            if (empty($childIds)) {
+                try {
+                    $bundleResponse = Http::timeout(15)
+                        ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                        ->get($this->siteUrl . "/wp-json/wc/v3/products/{$productId}/bundled-items");
+
+                    if ($bundleResponse->successful()) {
+                        $bundledItems = $bundleResponse->json();
+                        if (is_array($bundledItems)) {
+                            foreach ($bundledItems as $bundledItem) {
+                                $childIds[] = [
+                                    'product_id' => (int)($bundledItem['product_id'] ?? 0),
+                                    'quantity' => (int)($bundledItem['default_quantity'] ?? $bundledItem['quantity_default'] ?? 1),
+                                    'optional' => (bool)($bundledItem['optional'] ?? false),
+                                    'discount' => (float)($bundledItem['discount'] ?? 0),
+                                    'priced_individually' => (bool)($bundledItem['priced_individually'] ?? false),
+                                ];
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // API نداره، مشکلی نیست
+                }
+            }
+
+            if (empty($childIds)) {
+                Log::info('Bundle product has no components', ['product_id' => $productId, 'type' => $productType]);
+                return 0;
+            }
+
+            // حذف آیتم‌های قدیمی و ذخیره جدید
+            WarehouseProductBundleItem::where('bundle_product_id', $productId)->delete();
+
+            foreach ($childIds as $child) {
+                if (($child['product_id'] ?? 0) <= 0) continue;
+
+                WarehouseProductBundleItem::create([
+                    'bundle_product_id' => $productId,
+                    'child_product_id' => $child['product_id'],
+                    'default_quantity' => $child['quantity'],
+                    'optional' => $child['optional'],
+                    'discount' => $child['discount'],
+                    'priced_individually' => $child['priced_individually'],
+                ]);
+                $count++;
+            }
+
+            Log::info('Bundle items synced', [
+                'product_id' => $productId,
+                'type' => $productType,
+                'items_count' => $count,
+                'child_ids' => collect($childIds)->pluck('product_id')->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to sync bundle items', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $count;
+    }
+
+    /**
+     * محاسبه و آپدیت وزن و ابعاد محصولات باندل از روی زیرمجموعه‌ها
+     */
+    protected function updateBundleWeightsAndDimensions(): void
+    {
+        $bundleTypes = ['bundle', 'yith_bundle', 'woosb', 'grouped'];
+        $bundles = WarehouseProduct::whereIn('type', $bundleTypes)->get();
+
+        foreach ($bundles as $bundle) {
+            $items = $bundle->bundleItems()->with('childProduct')->get();
+            if ($items->isEmpty()) continue;
+
+            $totalWeight = 0;
+            $maxLength = 0;
+            $maxWidth = 0;
+            $totalHeight = 0;
+
+            foreach ($items as $item) {
+                if (!$item->childProduct || $item->optional) continue;
+
+                $child = $item->childProduct;
+                $qty = $item->default_quantity;
+
+                $totalWeight += $child->weight * $qty;
+
+                if ($child->length > 0 && $child->width > 0 && $child->height > 0) {
+                    $maxLength = max($maxLength, $child->length);
+                    $maxWidth = max($maxWidth, $child->width);
+                    $totalHeight += $child->height * $qty;
+                }
+            }
+
+            // فقط آپدیت اگه وزن/ابعاد فعلی 0 هست (اگه دستی تنظیم شده دست نزن)
+            $updates = [];
+            if ($bundle->weight == 0 && $totalWeight > 0) {
+                $updates['weight'] = round($totalWeight, 2);
+            }
+            if ($bundle->length == 0 && $maxLength > 0) {
+                $updates['length'] = round($maxLength, 1);
+                $updates['width'] = round($maxWidth, 1);
+                $updates['height'] = round($totalHeight, 1);
+            }
+
+            if (!empty($updates)) {
+                $bundle->update($updates);
+                Log::info('Bundle weight/dims updated from components', [
+                    'product_id' => $bundle->wc_product_id,
+                    'name' => $bundle->name,
+                    'weight' => $updates['weight'] ?? $bundle->weight,
+                    'dims' => ($updates['length'] ?? $bundle->length) . 'x' . ($updates['width'] ?? $bundle->width) . 'x' . ($updates['height'] ?? $bundle->height),
+                ]);
+            }
+        }
     }
 
     /**
