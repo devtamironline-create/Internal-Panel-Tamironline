@@ -10,6 +10,7 @@ use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseProductBundleItem;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
+use Modules\Warehouse\Models\WarehouseWcShippingMethod;
 
 class WooCommerceService
 {
@@ -300,6 +301,7 @@ class WooCommerceService
                                 'id' => $method['id'] ?? 0,
                                 'method_id' => $method['method_id'] ?? '',
                                 'method_title' => $method['title'] ?? $method['method_title'] ?? '',
+                                'zone_id' => $zoneId,
                                 'zone_name' => $zoneName,
                                 'enabled' => $method['enabled'] ?? false,
                             ];
@@ -313,6 +315,82 @@ class WooCommerceService
             Log::error('WooCommerce fetch shipping methods failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => 'خطا: ' . $e->getMessage(), 'methods' => []];
         }
+    }
+
+    /**
+     * سینک روش‌های ارسال از ووکامرس و ذخیره در دیتابیس
+     */
+    public function syncShippingMethods(): array
+    {
+        $result = $this->fetchShippingMethods();
+
+        if (!$result['success']) {
+            return $result;
+        }
+
+        if (empty($result['methods'])) {
+            return ['success' => true, 'message' => 'هیچ روش ارسالی در ووکامرس یافت نشد.', 'synced' => 0];
+        }
+
+        // Load existing mappings for preserving them
+        $existingMappings = WarehouseWcShippingMethod::pluck('mapped_shipping_type', 'method_id')
+            ->filter()
+            ->toArray();
+
+        $synced = 0;
+        $updated = 0;
+        $seenIds = [];
+
+        foreach ($result['methods'] as $method) {
+            $zoneId = $method['zone_id'] ?? 0;
+            $instanceId = $method['id'] ?? 0;
+
+            $record = WarehouseWcShippingMethod::updateOrCreate(
+                ['zone_id' => $zoneId, 'wc_instance_id' => $instanceId],
+                [
+                    'method_id' => $method['method_id'] ?? '',
+                    'method_title' => $method['method_title'] ?? '',
+                    'zone_name' => $method['zone_name'] ?? '',
+                    'enabled' => $method['enabled'] ?? true,
+                    'raw_data' => $method,
+                ]
+            );
+
+            // If no mapping set, try to preserve existing or auto-detect
+            if (!$record->mapped_shipping_type) {
+                $autoType = $existingMappings[$record->method_id] ?? $record->auto_detected_type;
+                if ($autoType) {
+                    $record->update(['mapped_shipping_type' => $autoType]);
+                }
+            }
+
+            $seenIds[] = $record->id;
+
+            if ($record->wasRecentlyCreated) {
+                $synced++;
+            } else {
+                $updated++;
+            }
+        }
+
+        // Remove methods that no longer exist in WooCommerce
+        $removed = WarehouseWcShippingMethod::whereNotIn('id', $seenIds)->delete();
+
+        WarehouseSetting::set('wc_shipping_methods_last_sync', now()->toDateTimeString());
+
+        $total = count($result['methods']);
+        $message = "از {$total} روش ارسال: {$synced} جدید، {$updated} بروزرسانی";
+        if ($removed > 0) {
+            $message .= "، {$removed} حذف شده";
+        }
+
+        return [
+            'success' => true,
+            'message' => $message,
+            'synced' => $synced,
+            'updated' => $updated,
+            'removed' => $removed,
+        ];
     }
 
     /**

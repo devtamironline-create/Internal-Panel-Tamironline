@@ -9,6 +9,7 @@ use Modules\Warehouse\Http\Controllers\PrintController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
+use Modules\Warehouse\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +87,15 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/box-size', [SettingsController::class, 'storeBoxSize'])->name('warehouse.settings.box-size.store');
         Route::put('/box-size/{boxSize}', [SettingsController::class, 'updateBoxSize'])->name('warehouse.settings.box-size.update');
         Route::delete('/box-size/{boxSize}', [SettingsController::class, 'deleteBoxSize'])->name('warehouse.settings.box-size.delete');
+    });
+
+    // Shipping Methods Management
+    Route::prefix('shipping')->group(function () {
+        Route::get('/', [ShippingController::class, 'index'])->name('warehouse.shipping.index');
+        Route::post('/sync', [ShippingController::class, 'syncFromWooCommerce'])->name('warehouse.shipping.sync');
+        Route::put('/method/{method}', [ShippingController::class, 'updateMapping'])->name('warehouse.shipping.update-mapping');
+        Route::post('/save-mappings', [ShippingController::class, 'saveMappings'])->name('warehouse.shipping.save-mappings');
+        Route::post('/redetect', [ShippingController::class, 'redetectAll'])->name('warehouse.shipping.redetect');
     });
 
     // WooCommerce Integration
