@@ -97,6 +97,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/sync-products', [WooCommerceController::class, 'syncProducts'])->name('warehouse.woocommerce.sync-products');
         Route::post('/shipping-methods', [WooCommerceController::class, 'fetchShippingMethods'])->name('warehouse.woocommerce.shipping-methods');
         Route::post('/shipping-mappings', [WooCommerceController::class, 'saveShippingMappings'])->name('warehouse.woocommerce.shipping-mappings');
+        Route::post('/redetect-shipping', [WooCommerceController::class, 'redetectShippingTypes'])->name('warehouse.woocommerce.redetect-shipping');
     });
 
     // Amadest Integration

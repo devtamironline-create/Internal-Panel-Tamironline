@@ -69,7 +69,7 @@
         </div>
 
         <!-- Shipping Type Filter -->
-        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap" x-data="{ redetecting: false, redetectResult: null }">
             <span class="text-xs text-gray-500 ml-1">نوع ارسال:</span>
             @php
                 $shippingFilters = [
@@ -88,6 +88,25 @@
                     {{ $filter['label'] }}
                 </a>
             @endforeach
+
+            @canany(['manage-warehouse', 'manage-permissions'])
+            <button @click="if(confirm('نوع ارسال همه سفارشات بر اساس اطلاعات ووکامرس بازتشخیص داده میشود. ادامه؟')) {
+                redetecting = true; redetectResult = null;
+                fetch('{{ route('warehouse.woocommerce.redetect-shipping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(d => { redetecting = false; redetectResult = d; if(d.updated > 0) setTimeout(() => location.reload(), 2000); })
+                .catch(() => { redetecting = false; redetectResult = { success: false, message: 'خطا در ارتباط' }; });
+            }"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors mr-auto"
+                :disabled="redetecting">
+                <svg class="w-3.5 h-3.5" :class="redetecting && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span x-text="redetecting ? 'در حال بازتشخیص...' : 'بازتشخیص نوع ارسال'"></span>
+            </button>
+            <template x-if="redetectResult">
+                <span class="text-xs" :class="redetectResult.updated > 0 ? 'text-green-600' : 'text-gray-500'"
+                    x-text="redetectResult.updated > 0 ? redetectResult.updated + ' سفارش آپدیت شد' : 'تغییری نبود'"></span>
+            </template>
+            @endcanany
         </div>
 
         {{-- PENDING STATUS: Single Column Layout --}}

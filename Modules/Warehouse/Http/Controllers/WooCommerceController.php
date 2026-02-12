@@ -103,6 +103,21 @@ class WooCommerceController extends Controller
         }
     }
 
+    public function redetectShippingTypes()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $service = new WooCommerceService();
+            $result = $service->redetectShippingTypes();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
+
     public function sync(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

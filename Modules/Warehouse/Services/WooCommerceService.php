@@ -286,7 +286,7 @@ class WooCommerceService
         }
     }
 
-    protected function detectShippingType(array $wcOrder): string
+    public function detectShippingType(array $wcOrder): string
     {
         $shippingLines = $wcOrder['shipping_lines'] ?? [];
         $wcOrderId = $wcOrder['id'] ?? 'unknown';
@@ -377,6 +377,50 @@ class WooCommerceService
         // Default to post
         Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
+    }
+
+    /**
+     * بازتشخیص نوع حمل و نقل برای سفارشات موجود از روی wc_order_data
+     */
+    public function redetectShippingTypes(): array
+    {
+        $orders = WarehouseOrder::whereNotNull('wc_order_data')
+            ->whereNotNull('wc_order_id')
+            ->get();
+
+        $updated = 0;
+        $skipped = 0;
+        $details = [];
+
+        foreach ($orders as $order) {
+            $wcData = $order->wc_order_data;
+            if (!is_array($wcData) || empty($wcData['shipping_lines'])) {
+                $skipped++;
+                continue;
+            }
+
+            $oldType = $order->shipping_type;
+            $newType = $this->detectShippingType($wcData);
+
+            if ($oldType !== $newType) {
+                $order->shipping_type = $newType;
+                $order->save();
+                $updated++;
+                $details[] = "#{$order->order_number}: {$oldType} → {$newType}";
+            } else {
+                $skipped++;
+            }
+        }
+
+        Log::info('Redetect shipping types completed', ['updated' => $updated, 'skipped' => $skipped]);
+
+        return [
+            'success' => true,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'total' => $orders->count(),
+            'details' => $details,
+        ];
     }
 
     /**
