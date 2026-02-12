@@ -261,12 +261,13 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 انصراف
                             </button>
-                            <a href="{{ route('warehouse.print.invoice', $order) }}" target="_blank"
+                            <button type="button"
+                               @click="window.open('{{ route('warehouse.print.invoice', $order) }}', '_blank'); setTimeout(() => { window.location.href = '{{ route('warehouse.packing.index') }}'; }, 500);"
                                class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 تایید و پرینت
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
