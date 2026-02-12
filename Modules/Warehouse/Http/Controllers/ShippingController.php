@@ -103,6 +103,7 @@ class ShippingController extends Controller
 
     /**
      * Sync DB mappings to the wc_shipping_mappings setting for backward compatibility
+     * Uses instance_id as key to avoid collisions when multiple methods share the same method_id (e.g. flat_rate)
      */
     protected function syncMappingsToSettings(): void
     {
@@ -110,8 +111,10 @@ class ShippingController extends Controller
         $mappings = [];
 
         foreach ($methods as $method) {
-            // Map by method_id (e.g. flat_rate) and by method_title
-            $mappings[$method->method_id] = $method->mapped_shipping_type;
+            // Map by instance_id (unique per method) and by method_title
+            if ($method->wc_instance_id) {
+                $mappings['instance:' . $method->wc_instance_id] = $method->mapped_shipping_type;
+            }
             $mappings[$method->method_title] = $method->mapped_shipping_type;
         }
 

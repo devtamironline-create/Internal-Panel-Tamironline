@@ -431,6 +431,7 @@ class WooCommerceService
             'shipping_lines' => collect($shippingLines)->map(fn($l) => [
                 'method_id' => $l['method_id'] ?? '',
                 'method_title' => $l['method_title'] ?? '',
+                'instance_id' => $l['instance_id'] ?? '',
                 'total' => $l['total'] ?? '0',
             ])->toArray(),
         ]);
@@ -445,41 +446,44 @@ class WooCommerceService
             }
         }
 
-        // Load saved mappings from settings
-        $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
-        $mappings = $mappingsJson ? json_decode($mappingsJson, true) : [];
+        // ۱. mapping از دیتابیس با instance_id (دقیق‌ترین روش - هر instance منحصر به فرد است)
+        foreach ($shippingLines as $line) {
+            $instanceId = $line['instance_id'] ?? null;
+            if ($instanceId) {
+                $dbMethod = WarehouseWcShippingMethod::where('wc_instance_id', $instanceId)->first();
+                if ($dbMethod && $dbMethod->mapped_shipping_type) {
+                    Log::info('WC shipping mapped by instance_id (DB)', [
+                        'instance_id' => $instanceId,
+                        'method_title' => $line['method_title'] ?? '',
+                        'type' => $dbMethod->mapped_shipping_type,
+                    ]);
+                    return $dbMethod->mapped_shipping_type;
+                }
+            }
+        }
 
+        // ۲. mapping از دیتابیس با method_title (exact match)
+        foreach ($shippingLines as $line) {
+            $methodTitle = $line['method_title'] ?? '';
+            if ($methodTitle) {
+                $dbMethod = WarehouseWcShippingMethod::where('method_title', $methodTitle)
+                    ->whereNotNull('mapped_shipping_type')
+                    ->first();
+                if ($dbMethod) {
+                    Log::info('WC shipping mapped by title (DB)', [
+                        'title' => $methodTitle,
+                        'type' => $dbMethod->mapped_shipping_type,
+                    ]);
+                    return $dbMethod->mapped_shipping_type;
+                }
+            }
+        }
+
+        // ۳. تشخیص خودکار از عنوان
         foreach ($shippingLines as $line) {
             $methodId = $line['method_id'] ?? '';
             $methodTitle = $line['method_title'] ?? '';
             $shippingTotal = (float) ($line['total'] ?? 0);
-
-            // ۱. mapping ذخیره شده رو چک کن (by method_id)
-            if (!empty($mappings[$methodId])) {
-                Log::info('WC shipping mapped by method_id', ['method_id' => $methodId, 'type' => $mappings[$methodId]]);
-                return $mappings[$methodId];
-            }
-
-            // ۲. mapping by method_title (exact)
-            foreach ($mappings as $key => $mappedType) {
-                if (mb_strtolower($key) === mb_strtolower($methodTitle) && !empty($mappedType)) {
-                    Log::info('WC shipping mapped by title', ['title' => $methodTitle, 'type' => $mappedType]);
-                    return $mappedType;
-                }
-            }
-
-            // ۳. mapping by method_title (partial match)
-            foreach ($mappings as $key => $mappedType) {
-                if (!empty($mappedType) && (
-                    str_contains(mb_strtolower($methodTitle), mb_strtolower($key)) ||
-                    str_contains(mb_strtolower($key), mb_strtolower($methodTitle))
-                )) {
-                    Log::info('WC shipping mapped by partial title', ['title' => $methodTitle, 'key' => $key, 'type' => $mappedType]);
-                    return $mappedType;
-                }
-            }
-
-            // ۴. تشخیص خودکار از عنوان
             $title = mb_strtolower($methodTitle);
             $mId = strtolower($methodId);
 
@@ -497,9 +501,8 @@ class WooCommerceService
                 return 'courier';
             }
 
-            // پست / پیشتاز - ولی اگه تهران باشه → پیک
-            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')
-                || str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
+            // پست / پیشتاز (بر اساس عنوان فارسی)
+            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
                 if (self::isTehranOrder($wcOrder)) {
                     Log::info('WC shipping → courier (post overridden for Tehran)', ['method_id' => $methodId, 'title' => $methodTitle]);
                     return 'courier';
@@ -508,7 +511,18 @@ class WooCommerceService
                 return 'post';
             }
 
-            // ۵. فالبک بر اساس قیمت
+            // flat_rate / free_shipping بدون عنوان شناخته‌شده
+            // (حضوری در Level 0 گرفته شده، پست/پیشتاز بالاتر گرفته شده)
+            if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
+                if (self::isTehranOrder($wcOrder)) {
+                    Log::info('WC shipping → courier (flat_rate/free_shipping for Tehran)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                    return 'courier';
+                }
+                Log::info('WC shipping → post (flat_rate/free_shipping)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'post';
+            }
+
+            // ۴. فالبک بر اساس قیمت
             if ($shippingTotal == 0) {
                 Log::info('WC shipping → pickup (free)', ['method_id' => $methodId, 'title' => $methodTitle, 'total' => $shippingTotal]);
                 return 'pickup';
