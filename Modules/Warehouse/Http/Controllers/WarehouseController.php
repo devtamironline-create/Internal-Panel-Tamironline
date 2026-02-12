@@ -41,6 +41,9 @@ class WarehouseController extends Controller
         } else {
             $query->byStatus($currentStatus);
 
+            // اولویت نوع ارسال: پیک → حضوری → پست
+            $query->orderByRaw("FIELD(shipping_type, 'courier', 'pickup', 'post', 'emergency') ASC");
+
             // For pending status, order by timer deadline (urgent first)
             if ($currentStatus === WarehouseOrder::STATUS_PENDING) {
                 $query->orderByRaw('timer_deadline IS NULL, timer_deadline ASC');
