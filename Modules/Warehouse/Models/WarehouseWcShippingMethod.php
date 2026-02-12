@@ -39,13 +39,19 @@ class WarehouseWcShippingMethod extends Model
         if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
             return 'pickup';
         }
-        if (str_contains($title, 'فوری') || str_contains($title, 'پیک') || str_contains($mId, 'courier') || str_contains($mId, 'local_delivery')) {
+        if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) {
+            return 'urgent';
+        }
+        if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) {
+            return 'emergency';
+        }
+        if (str_contains($title, 'پیک') || str_contains($mId, 'courier') || str_contains($mId, 'local_delivery')) {
             return 'courier';
         }
-        if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز') || str_contains($mId, 'flat_rate')) {
+        if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
             return 'post';
         }
-        if (str_contains($mId, 'free_shipping')) {
+        if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
             return 'post';
         }
 

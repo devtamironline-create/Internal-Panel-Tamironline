@@ -332,9 +332,9 @@ class WooCommerceService
             return ['success' => true, 'message' => 'هیچ روش ارسالی در ووکامرس یافت نشد.', 'synced' => 0];
         }
 
-        // Load existing mappings for preserving them
-        $existingMappings = WarehouseWcShippingMethod::pluck('mapped_shipping_type', 'method_id')
-            ->filter()
+        // Load existing mappings for preserving them (by instance_id, not method_id)
+        $existingMappings = WarehouseWcShippingMethod::whereNotNull('mapped_shipping_type')
+            ->pluck('mapped_shipping_type', 'wc_instance_id')
             ->toArray();
 
         $synced = 0;
@@ -356,9 +356,9 @@ class WooCommerceService
                 ]
             );
 
-            // If no mapping set, try to preserve existing or auto-detect
+            // If no mapping set, try to preserve existing (by instance_id) or auto-detect
             if (!$record->mapped_shipping_type) {
-                $autoType = $existingMappings[$record->method_id] ?? $record->auto_detected_type;
+                $autoType = $existingMappings[$instanceId] ?? $record->auto_detected_type;
                 if ($autoType) {
                     $record->update(['mapped_shipping_type' => $autoType]);
                 }
@@ -432,21 +432,20 @@ class WooCommerceService
                 'method_id' => $l['method_id'] ?? '',
                 'method_title' => $l['method_title'] ?? '',
                 'instance_id' => $l['instance_id'] ?? '',
-                'total' => $l['total'] ?? '0',
             ])->toArray(),
         ]);
 
-        // ۰. اول حضوری رو چک کن - این هیچوقت نباید override بشه
+        // ===== سطح ۰: حضوری (بالاترین اولویت) =====
         foreach ($shippingLines as $line) {
             $title = mb_strtolower($line['method_title'] ?? '');
             $mId = strtolower($line['method_id'] ?? '');
             if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
-                Log::info('WC shipping → pickup (priority check)', ['method_id' => $line['method_id'] ?? '', 'title' => $line['method_title'] ?? '']);
+                Log::info('WC shipping → pickup (hardcoded)', ['method_id' => $line['method_id'] ?? '', 'title' => $line['method_title'] ?? '']);
                 return 'pickup';
             }
         }
 
-        // ۱. mapping از دیتابیس با instance_id (دقیق‌ترین روش - هر instance منحصر به فرد است)
+        // ===== سطح ۱: mapping دیتابیس با instance_id (دقیق‌ترین) =====
         foreach ($shippingLines as $line) {
             $instanceId = $line['instance_id'] ?? null;
             if ($instanceId) {
@@ -462,7 +461,7 @@ class WooCommerceService
             }
         }
 
-        // ۲. mapping از دیتابیس با method_title (exact match)
+        // ===== سطح ۲: mapping دیتابیس با method_title (exact match) =====
         foreach ($shippingLines as $line) {
             $methodTitle = $line['method_title'] ?? '';
             if ($methodTitle) {
@@ -479,61 +478,53 @@ class WooCommerceService
             }
         }
 
-        // ۳. تشخیص خودکار از عنوان
+        // ===== سطح ۳: تشخیص خودکار از عنوان فارسی/انگلیسی =====
+        // ⚠️ فقط بر اساس عنوان روش ارسال ووکامرس - بدون هیچ override شهری
         foreach ($shippingLines as $line) {
             $methodId = $line['method_id'] ?? '';
             $methodTitle = $line['method_title'] ?? '';
-            $shippingTotal = (float) ($line['total'] ?? 0);
             $title = mb_strtolower($methodTitle);
             $mId = strtolower($methodId);
 
-            // ارسال فوری / پیک فوری / پیک
-            if (str_contains($title, 'فوری') || str_contains($title, 'پیک')
-                || str_contains($title, 'courier') || str_contains($mId, 'local_delivery')
-                || str_contains($mId, 'courier')) {
+            // فوری / urgent → urgent (پیک فوری)
+            if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) {
+                Log::info('WC shipping → urgent', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'urgent';
+            }
+
+            // اضطراری / emergency → emergency
+            if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) {
+                Log::info('WC shipping → emergency', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'emergency';
+            }
+
+            // پیک / courier / local_delivery → courier (پیک ۵ روزه)
+            if (str_contains($title, 'پیک') || str_contains($title, 'courier')
+                || str_contains($mId, 'local_delivery') || str_contains($mId, 'courier')) {
                 Log::info('WC shipping → courier', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'courier';
             }
 
-            // ارسال عادی برای تهران = پیک عادی
+            // عنوان حاوی «عادی» + «تهران» = روش خاص ووکامرس مثل «ارسال عادی تهران»
             if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) {
-                Log::info('WC shipping → courier (عادی تهران)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → courier (عادی تهران in title)', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'courier';
             }
 
-            // پست / پیشتاز (بر اساس عنوان فارسی)
+            // پست / پیشتاز / پستی → post (همیشه، بدون توجه به شهر)
             if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
-                if (self::isTehranOrder($wcOrder)) {
-                    Log::info('WC shipping → courier (post overridden for Tehran)', ['method_id' => $methodId, 'title' => $methodTitle]);
-                    return 'courier';
-                }
                 Log::info('WC shipping → post', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'post';
             }
 
-            // flat_rate / free_shipping بدون عنوان شناخته‌شده
-            // (حضوری در Level 0 گرفته شده، پست/پیشتاز بالاتر گرفته شده)
+            // flat_rate / free_shipping بدون کلیدواژه شناخته‌شده → post
             if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
-                if (self::isTehranOrder($wcOrder)) {
-                    Log::info('WC shipping → courier (flat_rate/free_shipping for Tehran)', ['method_id' => $methodId, 'title' => $methodTitle]);
-                    return 'courier';
-                }
                 Log::info('WC shipping → post (flat_rate/free_shipping)', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'post';
             }
-
-            // ۴. فالبک بر اساس قیمت
-            if ($shippingTotal == 0) {
-                Log::info('WC shipping → pickup (free)', ['method_id' => $methodId, 'title' => $methodTitle, 'total' => $shippingTotal]);
-                return 'pickup';
-            }
         }
 
-        // Default: اگه تهران باشه پیک، وگرنه پست
-        if (self::isTehranOrder($wcOrder)) {
-            Log::info('WC shipping → courier (default overridden for Tehran)', ['wc_order_id' => $wcOrderId]);
-            return 'courier';
-        }
+        // ===== فالبک: post =====
         Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
     }
@@ -564,6 +555,13 @@ class WooCommerceService
             if ($oldType !== $newType) {
                 $order->shipping_type = $newType;
                 $order->save();
+
+                // تایمر رو هم بر اساس نوع ارسال جدید ریست کن
+                // فقط برای سفارشات pending و supply_wait
+                if (in_array($order->status, ['pending', 'supply_wait'])) {
+                    $order->setTimerFromShippingType();
+                }
+
                 $updated++;
                 $details[] = "#{$order->order_number}: {$oldType} → {$newType}";
             } else {
