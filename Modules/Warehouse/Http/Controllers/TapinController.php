@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Services\TapinService;
+use Modules\Warehouse\Services\WooCommerceService;
 use Illuminate\Support\Facades\Log;
 
 class TapinController extends Controller
@@ -189,12 +190,18 @@ class TapinController extends Controller
                 $q->whereNull('amadest_barcode')->orWhere('amadest_barcode', '');
             })
             ->orderBy('created_at', 'desc')
-            ->get(['id', 'order_number', 'customer_name', 'customer_mobile', 'total_weight', 'created_at']);
+            ->get(['id', 'order_number', 'customer_name', 'customer_mobile', 'total_weight', 'created_at', 'wc_order_data']);
+
+        // حذف سفارشات تهران - نباید به تاپین بروند
+        $orders = $orders->filter(function ($order) {
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            return !WooCommerceService::isTehranOrder($wcData);
+        })->values();
 
         return response()->json([
             'success' => true,
             'count' => $orders->count(),
-            'orders' => $orders,
+            'orders' => $orders->map(fn($o) => collect($o)->except('wc_order_data')),
         ]);
     }
 
@@ -405,6 +412,21 @@ class TapinController extends Controller
         foreach ($orders as $order) {
             try {
                 $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+
+                // سفارشات تهران را اسکیپ کن - نباید در تاپین ثبت بشن
+                if (WooCommerceService::isTehranOrder($wcData)) {
+                    // تغییر نوع ارسال به پیک
+                    if ($order->shipping_type === 'post') {
+                        $order->update(['shipping_type' => 'courier']);
+                    }
+                    $results[] = [
+                        'order_number' => $order->order_number,
+                        'status' => 'skipped',
+                        'message' => 'سفارش تهران - ارسال با پیک (تغییر از پست)',
+                    ];
+                    continue;
+                }
+
                 $shipping = $wcData['shipping'] ?? [];
                 $billing = $wcData['billing'] ?? [];
                 $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');

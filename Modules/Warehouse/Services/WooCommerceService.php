@@ -315,6 +315,26 @@ class WooCommerceService
         }
     }
 
+    /**
+     * آیا سفارش مربوط به تهران است؟
+     * سفارشات تهرانی نباید به تاپین بروند و باید حتماً پیک باشند.
+     */
+    public static function isTehranOrder(array $wcOrder): bool
+    {
+        $shipping = $wcOrder['shipping'] ?? [];
+        $billing = $wcOrder['billing'] ?? [];
+
+        $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+        $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
+
+        $stateCity = mb_strtolower($state . ' ' . $city);
+
+        // WooCommerce state code for Tehran is "THR" or "تهران"
+        return str_contains($stateCity, 'تهران')
+            || str_contains($stateCity, 'tehran')
+            || mb_strtoupper($state) === 'THR';
+    }
+
     public function detectShippingType(array $wcOrder): string
     {
         $shippingLines = $wcOrder['shipping_lines'] ?? [];
@@ -329,6 +349,12 @@ class WooCommerceService
                 'total' => $l['total'] ?? '0',
             ])->toArray(),
         ]);
+
+        // تشخیص آدرس تهران → همیشه پیک (هرگز پست/تاپین)
+        if (self::isTehranOrder($wcOrder)) {
+            Log::info('WC shipping → courier (Tehran address)', ['wc_order_id' => $wcOrderId]);
+            return 'courier';
+        }
 
         // Load saved mappings from settings
         $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
@@ -423,7 +449,22 @@ class WooCommerceService
 
         foreach ($orders as $order) {
             $wcData = $order->wc_order_data;
-            if (!is_array($wcData) || empty($wcData['shipping_lines'])) {
+            if (!is_array($wcData)) {
+                $skipped++;
+                continue;
+            }
+
+            // سفارشات تهرانی حتماً باید پیک باشن (حتی بدون shipping_lines)
+            if (self::isTehranOrder($wcData) && $order->shipping_type !== 'courier') {
+                $oldType = $order->shipping_type;
+                $order->shipping_type = 'courier';
+                $order->save();
+                $updated++;
+                $details[] = "#{$order->order_number}: {$oldType} → courier (تهران)";
+                continue;
+            }
+
+            if (empty($wcData['shipping_lines'])) {
                 $skipped++;
                 continue;
             }
