@@ -357,6 +357,16 @@ class WooCommerceService
             ])->toArray(),
         ]);
 
+        // ۰. اول حضوری رو چک کن - این هیچوقت نباید override بشه
+        foreach ($shippingLines as $line) {
+            $title = mb_strtolower($line['method_title'] ?? '');
+            $mId = strtolower($line['method_id'] ?? '');
+            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
+                Log::info('WC shipping → pickup (priority check)', ['method_id' => $line['method_id'] ?? '', 'title' => $line['method_title'] ?? '']);
+                return 'pickup';
+            }
+        }
+
         // Load saved mappings from settings
         $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
         $mappings = $mappingsJson ? json_decode($mappingsJson, true) : [];
@@ -366,7 +376,7 @@ class WooCommerceService
             $methodTitle = $line['method_title'] ?? '';
             $shippingTotal = (float) ($line['total'] ?? 0);
 
-            // ۱. اول mapping ذخیره شده رو چک کن (by method_id)
+            // ۱. mapping ذخیره شده رو چک کن (by method_id)
             if (!empty($mappings[$methodId])) {
                 Log::info('WC shipping mapped by method_id', ['method_id' => $methodId, 'type' => $mappings[$methodId]]);
                 return $mappings[$methodId];
@@ -394,13 +404,6 @@ class WooCommerceService
             // ۴. تشخیص خودکار از عنوان
             $title = mb_strtolower($methodTitle);
             $mId = strtolower($methodId);
-
-            // حضوری / تحویل حضوری / pickup
-            if (str_contains($title, 'حضوری') || str_contains($title, 'تحویل حضوری')
-                || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
-                Log::info('WC shipping → pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
-                return 'pickup';
-            }
 
             // ارسال فوری / پیک فوری / پیک
             if (str_contains($title, 'فوری') || str_contains($title, 'پیک')
