@@ -535,6 +535,18 @@ class WooCommerceService
                     $dims = $product['dimensions'] ?? [];
                     $productType = $product['type'] ?? 'simple';
 
+                    // لاگ متادیتا برای تشخیص پلاگین باندل
+                    $metaKeys = collect($product['meta_data'] ?? [])->pluck('key')->toArray();
+                    $bundleRelatedKeys = array_filter($metaKeys, fn($k) => str_contains($k, 'bundle') || str_contains($k, 'woosb') || str_contains($k, 'yith_wcpb'));
+                    if (!empty($bundleRelatedKeys)) {
+                        Log::info('Product has bundle meta keys', [
+                            'product_id' => $product['id'],
+                            'name' => $product['name'] ?? '',
+                            'type' => $productType,
+                            'bundle_keys' => array_values($bundleRelatedKeys),
+                        ]);
+                    }
+
                     $result = WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $product['id']],
                         [
@@ -563,10 +575,22 @@ class WooCommerceService
                         $totalVariations += $varCount;
                     }
 
-                    // اگر محصول باندل/پکیج بود، آیتم‌های باندل رو سینک کن
-                    if (in_array($productType, $bundleTypes)) {
+                    // چک باندل: هم از type و هم از meta_data (پلاگین‌هایی مثل YITH که type رو simple نگه میدارن)
+                    $hasBundleMeta = $this->hasBundleMetaData($product);
+                    if (in_array($productType, $bundleTypes) || $hasBundleMeta) {
                         $bundleCount = $this->syncBundleItems($product);
-                        if ($bundleCount > 0) $totalBundles++;
+                        if ($bundleCount > 0) {
+                            $totalBundles++;
+                            // اگه type هنوز simple هست ولی باندل داره، تایپ رو آپدیت کن
+                            if (!in_array($productType, $bundleTypes)) {
+                                WarehouseProduct::where('wc_product_id', $product['id'])
+                                    ->update(['type' => 'bundle']);
+                                Log::info('Product type updated to bundle (detected from meta)', [
+                                    'product_id' => $product['id'],
+                                    'original_type' => $productType,
+                                ]);
+                            }
+                        }
                     }
                 }
 
@@ -674,6 +698,35 @@ class WooCommerceService
     }
 
     /**
+     * بررسی اینکه آیا محصول meta_data مربوط به باندل داره
+     */
+    protected function hasBundleMetaData(array $product): bool
+    {
+        $metaData = collect($product['meta_data'] ?? []);
+        $bundleKeys = [
+            '_yith_wcpb_bundle_data',
+            '_bundle_data',
+            'bundle_data',
+            '_woosb_ids',
+            '_woosb_data',
+        ];
+
+        foreach ($bundleKeys as $key) {
+            $meta = $metaData->firstWhere('key', $key);
+            if ($meta && !empty($meta['value'])) {
+                return true;
+            }
+        }
+
+        // همچنین بررسی bundled_items در API response
+        if (!empty($product['bundled_items'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * سینک آیتم‌های باندل/پکیج از ووکامرس
      * ابتدا از bundle_data یا bundled_items داخل محصول، سپس از API جداگانه
      */
@@ -706,15 +759,31 @@ class WooCommerceService
                 }
             }
 
-            // روش ۳: bundle_data در meta_data
+            // روش ۳: bundle_data در meta_data (پلاگین‌های مختلف)
             if (empty($childIds)) {
                 $metaData = collect($product['meta_data'] ?? []);
-                $bundleDataMeta = $metaData->firstWhere('key', '_bundle_data');
-                if (!$bundleDataMeta) $bundleDataMeta = $metaData->firstWhere('key', 'bundle_data');
-                if (!$bundleDataMeta) $bundleDataMeta = $metaData->firstWhere('key', '_woosb_ids');
+
+                // لیست کلیدهای مختلف پلاگین‌ها
+                $bundleKeys = [
+                    '_yith_wcpb_bundle_data',    // YITH WooCommerce Product Bundles
+                    '_bundle_data',               // WC Product Bundles (official)
+                    'bundle_data',
+                    '_woosb_ids',                 // WPC Product Bundles
+                    '_woosb_data',
+                ];
+
+                $bundleDataMeta = null;
+                foreach ($bundleKeys as $key) {
+                    $bundleDataMeta = $metaData->firstWhere('key', $key);
+                    if ($bundleDataMeta) {
+                        Log::info('Bundle meta found', ['product_id' => $productId, 'key' => $key]);
+                        break;
+                    }
+                }
 
                 if ($bundleDataMeta) {
                     $bundleData = $bundleDataMeta['value'] ?? [];
+                    $metaKey = $bundleDataMeta['key'] ?? '';
 
                     // _woosb_ids format: "123/2,456/1" (productId/qty)
                     if (is_string($bundleData) && str_contains($bundleData, '/')) {
@@ -725,16 +794,18 @@ class WooCommerceService
                             }
                         }
                     }
-                    // bundle_data format: array of items
+                    // YITH format: array indexed by ID with product_id, qty, etc.
+                    // یا WC Bundles format: array of items with product_id
                     elseif (is_array($bundleData)) {
-                        foreach ($bundleData as $item) {
+                        foreach ($bundleData as $itemKey => $item) {
+                            // YITH: item has 'product_id' and 'bp_quantity' or 'default_quantity'
                             $childProdId = (int)($item['product_id'] ?? 0);
                             if ($childProdId > 0) {
                                 $childIds[] = [
                                     'product_id' => $childProdId,
-                                    'quantity' => (int)($item['default_quantity'] ?? $item['quantity_default'] ?? $item['qty'] ?? 1),
-                                    'optional' => (bool)($item['optional'] ?? false),
-                                    'discount' => (float)($item['discount'] ?? 0),
+                                    'quantity' => (int)($item['bp_quantity'] ?? $item['default_quantity'] ?? $item['quantity_default'] ?? $item['qty'] ?? 1),
+                                    'optional' => (bool)($item['optional'] ?? $item['bp_optional'] ?? false),
+                                    'discount' => (float)($item['discount'] ?? $item['bp_discount'] ?? 0),
                                     'priced_individually' => (bool)($item['priced_individually'] ?? false),
                                 ];
                             }
