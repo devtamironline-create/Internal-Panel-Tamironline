@@ -192,6 +192,20 @@ class WooCommerceService
                     ->map(fn($item) => ($item['name'] ?? '') . ' x' . ($item['quantity'] ?? 1))
                     ->implode("\n");
 
+                // تشخیص سفارش باسلام
+                $wcOrderStatus = $wcOrder['status'] ?? '';
+                $isBasalam = str_contains($wcOrderStatus, 'bslm');
+                $orderNotes = 'مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان';
+                if ($isBasalam) {
+                    $orderNotes = '🛒 سفارش باسلام | ' . $orderNotes;
+                }
+
+                // Payment method
+                $paymentMethod = $wcOrder['payment_method_title'] ?? '';
+                if ($paymentMethod) {
+                    $orderNotes .= ' | پرداخت: ' . $paymentMethod;
+                }
+
                 // Create order
                 $order = WarehouseOrder::create([
                     'order_number' => $orderNumber,
@@ -205,7 +219,7 @@ class WooCommerceService
                     'barcode' => WarehouseOrder::generateBarcode(),
                     'total_weight' => $totalWeight,
                     'created_by' => auth()->id(),
-                    'notes' => 'مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان',
+                    'notes' => $orderNotes,
                 ]);
 
                 // Set timer based on shipping type

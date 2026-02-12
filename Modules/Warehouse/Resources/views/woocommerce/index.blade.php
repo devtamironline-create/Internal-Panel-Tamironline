@@ -93,6 +93,8 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">وضعیت سفارشات ووکامرس</label>
                         <select id="wc-sync-status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                             <option value="processing">در حال پردازش (Processing)</option>
+                            <option value="bslm-preparation">سفارش باسلام (Basalam)</option>
+                            <option value="processing,bslm-preparation">پردازش + باسلام (هر دو)</option>
                             <option value="on-hold">در انتظار (On Hold)</option>
                             <option value="pending">در انتظار پرداخت (Pending)</option>
                             <option value="completed">تکمیل شده (Completed)</option>
