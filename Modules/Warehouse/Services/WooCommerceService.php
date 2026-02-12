@@ -299,105 +299,68 @@ class WooCommerceService
         return $isTehranProvince && $isTehranCity;
     }
 
+    /**
+     * نگاشت کلید ارسال قالب گنجه به نوع ارسال داخلی
+     *
+     * قالب ووکامرس این مقادیر رو در meta key "_ganjeh_shipping_method" ذخیره می‌کنه:
+     *   post       → پست (ارسال پستی)
+     *   express    → urgent (پیک فوری تهران)
+     *   collection → courier (ارسال عادی تهران / پیک ۵ روزه)
+     *   pickup     → pickup (تحویل حضوری)
+     */
+    private const GANJEH_SHIPPING_MAP = [
+        'post'       => 'post',
+        'express'    => 'urgent',
+        'collection' => 'courier',
+        'pickup'     => 'pickup',
+    ];
+
     public function detectShippingType(array $wcOrder): string
     {
-        $shippingLines = $wcOrder['shipping_lines'] ?? [];
-        $feeLines = $wcOrder['fee_lines'] ?? [];
         $metaData = $wcOrder['meta_data'] ?? [];
         $wcOrderId = $wcOrder['id'] ?? 'unknown';
 
-        Log::info('WC shipping detection', [
-            'wc_order_id' => $wcOrderId,
-            'shipping_lines' => collect($shippingLines)->map(fn($l) => [
-                'method_id' => $l['method_id'] ?? '',
-                'method_title' => $l['method_title'] ?? '',
-            ])->toArray(),
-            'fee_lines' => collect($feeLines)->map(fn($f) => [
-                'name' => $f['name'] ?? '',
-                'total' => $f['total'] ?? '0',
-            ])->toArray(),
-        ]);
-
-        // ===== ۱. تشخیص از عنوان shipping_lines =====
-        foreach ($shippingLines as $line) {
-            $methodTitle = $line['method_title'] ?? '';
-            $methodId = $line['method_id'] ?? '';
-            $title = mb_strtolower($methodTitle);
-            $mId = strtolower($methodId);
-
-            // حضوری
-            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
-                Log::info('WC shipping → pickup', ['title' => $methodTitle]);
-                return 'pickup';
-            }
-            // فوری / urgent → urgent
-            if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) {
-                Log::info('WC shipping → urgent', ['title' => $methodTitle]);
-                return 'urgent';
-            }
-            // اضطراری / emergency
-            if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) {
-                Log::info('WC shipping → emergency', ['title' => $methodTitle]);
-                return 'emergency';
-            }
-            // پیک / courier / local_delivery
-            if (str_contains($title, 'پیک') || str_contains($title, 'courier')
-                || str_contains($mId, 'local_delivery') || str_contains($mId, 'courier')) {
-                Log::info('WC shipping → courier', ['title' => $methodTitle]);
-                return 'courier';
-            }
-            // «عادی» + «تهران» در عنوان
-            if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) {
-                Log::info('WC shipping → courier (عادی تهران)', ['title' => $methodTitle]);
-                return 'courier';
-            }
-            // پست / پیشتاز / پستی
-            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
-                Log::info('WC shipping → post', ['title' => $methodTitle]);
-                return 'post';
-            }
-            // flat_rate / free_shipping
-            if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
-                Log::info('WC shipping → post (flat_rate/free_shipping)', ['title' => $methodTitle]);
-                return 'post';
+        // ===== ۱. اولویت اول: _ganjeh_shipping_method از meta_data (دقیق‌ترین) =====
+        foreach ($metaData as $meta) {
+            if (($meta['key'] ?? '') === '_ganjeh_shipping_method') {
+                $ganjehMethod = strtolower(trim($meta['value'] ?? ''));
+                $mapped = self::GANJEH_SHIPPING_MAP[$ganjehMethod] ?? null;
+                if ($mapped) {
+                    Log::info('WC shipping detected from _ganjeh_shipping_method', [
+                        'wc_order_id' => $wcOrderId,
+                        'ganjeh_method' => $ganjehMethod,
+                        'mapped_to' => $mapped,
+                    ]);
+                    return $mapped;
+                }
             }
         }
 
-        // ===== ۲. تشخیص از fee_lines (قالب‌هایی که هزینه ارسال رو به عنوان fee اضافه می‌کنن) =====
+        // ===== ۲. فالبک: shipping_lines (برای سفارشات قدیمی یا بدون meta) =====
+        $shippingLines = $wcOrder['shipping_lines'] ?? [];
+        foreach ($shippingLines as $line) {
+            $title = mb_strtolower($line['method_title'] ?? '');
+            $mId = strtolower($line['method_id'] ?? '');
+
+            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) return 'pickup';
+            if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) return 'urgent';
+            if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) return 'emergency';
+            if (str_contains($title, 'پیک') || str_contains($title, 'courier') || str_contains($mId, 'local_delivery')) return 'courier';
+            if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) return 'courier';
+            if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) return 'post';
+            if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) return 'post';
+        }
+
+        // ===== ۳. فالبک: fee_lines (قالب‌هایی که ارسال رو به عنوان fee اضافه می‌کنن) =====
+        $feeLines = $wcOrder['fee_lines'] ?? [];
         foreach ($feeLines as $fee) {
             $feeName = mb_strtolower($fee['name'] ?? '');
-            if (str_contains($feeName, 'حضوری') || str_contains($feeName, 'pickup')) {
-                Log::info('WC shipping → pickup (fee)', ['fee' => $fee['name'] ?? '']);
-                return 'pickup';
-            }
-            if (str_contains($feeName, 'فوری') || str_contains($feeName, 'express')) {
-                Log::info('WC shipping → urgent (fee)', ['fee' => $fee['name'] ?? '']);
-                return 'urgent';
-            }
-            if (str_contains($feeName, 'پیک') || str_contains($feeName, 'courier')) {
-                Log::info('WC shipping → courier (fee)', ['fee' => $fee['name'] ?? '']);
-                return 'courier';
-            }
-            if (str_contains($feeName, 'پست') || str_contains($feeName, 'ارسال')) {
-                Log::info('WC shipping → post (fee)', ['fee' => $fee['name'] ?? '']);
-                return 'post';
-            }
+            if (str_contains($feeName, 'حضوری')) return 'pickup';
+            if (str_contains($feeName, 'فوری') || str_contains($feeName, 'express')) return 'urgent';
+            if (str_contains($feeName, 'پیک') || str_contains($feeName, 'courier')) return 'courier';
+            if (str_contains($feeName, 'پست') || str_contains($feeName, 'ارسال')) return 'post';
         }
 
-        // ===== ۳. تشخیص از meta_data (بعضی قالب‌ها shipping_method رو در meta ذخیره می‌کنن) =====
-        foreach ($metaData as $meta) {
-            $key = $meta['key'] ?? '';
-            $value = strtolower($meta['value'] ?? '');
-            if ($key === '_shipping_method' || $key === 'shipping_method') {
-                if (str_contains($value, 'pickup') || str_contains($value, 'حضوری')) return 'pickup';
-                if (str_contains($value, 'express') || str_contains($value, 'فوری')) return 'urgent';
-                if (str_contains($value, 'collection') || str_contains($value, 'عادی')) return 'courier';
-                if (str_contains($value, 'post') || str_contains($value, 'پست')) return 'post';
-                Log::info('WC shipping from meta', ['key' => $key, 'value' => $value]);
-            }
-        }
-
-        // ===== فالبک: post =====
         Log::warning('WC shipping → post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
     }
