@@ -10,7 +10,6 @@ use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseProductBundleItem;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
-use Modules\Warehouse\Models\WarehouseWcShippingMethod;
 
 class WooCommerceService
 {
@@ -271,127 +270,7 @@ class WooCommerceService
         ];
     }
 
-    public function fetchShippingMethods(): array
-    {
-        if (!$this->isConfigured()) {
-            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.', 'methods' => []];
-        }
 
-        try {
-            $methods = [];
-
-            // Fetch shipping zones
-            $zonesResponse = Http::timeout(15)
-                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
-                ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones');
-
-            if ($zonesResponse->successful()) {
-                foreach ($zonesResponse->json() as $zone) {
-                    $zoneId = $zone['id'];
-                    $zoneName = $zone['name'] ?? 'Zone ' . $zoneId;
-
-                    // Fetch methods for each zone
-                    $methodsResponse = Http::timeout(15)
-                        ->withBasicAuth($this->consumerKey, $this->consumerSecret)
-                        ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones/' . $zoneId . '/methods');
-
-                    if ($methodsResponse->successful()) {
-                        foreach ($methodsResponse->json() as $method) {
-                            $methods[] = [
-                                'id' => $method['id'] ?? 0,
-                                'method_id' => $method['method_id'] ?? '',
-                                'method_title' => $method['title'] ?? $method['method_title'] ?? '',
-                                'zone_id' => $zoneId,
-                                'zone_name' => $zoneName,
-                                'enabled' => $method['enabled'] ?? false,
-                            ];
-                        }
-                    }
-                }
-            }
-
-            return ['success' => true, 'methods' => $methods];
-        } catch (\Exception $e) {
-            Log::error('WooCommerce fetch shipping methods failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage(), 'methods' => []];
-        }
-    }
-
-    /**
-     * سینک روش‌های ارسال از ووکامرس و ذخیره در دیتابیس
-     */
-    public function syncShippingMethods(): array
-    {
-        $result = $this->fetchShippingMethods();
-
-        if (!$result['success']) {
-            return $result;
-        }
-
-        if (empty($result['methods'])) {
-            return ['success' => true, 'message' => 'هیچ روش ارسالی در ووکامرس یافت نشد.', 'synced' => 0];
-        }
-
-        // Load existing mappings for preserving them (by instance_id, not method_id)
-        $existingMappings = WarehouseWcShippingMethod::whereNotNull('mapped_shipping_type')
-            ->pluck('mapped_shipping_type', 'wc_instance_id')
-            ->toArray();
-
-        $synced = 0;
-        $updated = 0;
-        $seenIds = [];
-
-        foreach ($result['methods'] as $method) {
-            $zoneId = $method['zone_id'] ?? 0;
-            $instanceId = $method['id'] ?? 0;
-
-            $record = WarehouseWcShippingMethod::updateOrCreate(
-                ['zone_id' => $zoneId, 'wc_instance_id' => $instanceId],
-                [
-                    'method_id' => $method['method_id'] ?? '',
-                    'method_title' => $method['method_title'] ?? '',
-                    'zone_name' => $method['zone_name'] ?? '',
-                    'enabled' => $method['enabled'] ?? true,
-                    'raw_data' => $method,
-                ]
-            );
-
-            // If no mapping set, try to preserve existing (by instance_id) or auto-detect
-            if (!$record->mapped_shipping_type) {
-                $autoType = $existingMappings[$instanceId] ?? $record->auto_detected_type;
-                if ($autoType) {
-                    $record->update(['mapped_shipping_type' => $autoType]);
-                }
-            }
-
-            $seenIds[] = $record->id;
-
-            if ($record->wasRecentlyCreated) {
-                $synced++;
-            } else {
-                $updated++;
-            }
-        }
-
-        // Remove methods that no longer exist in WooCommerce
-        $removed = WarehouseWcShippingMethod::whereNotIn('id', $seenIds)->delete();
-
-        WarehouseSetting::set('wc_shipping_methods_last_sync', now()->toDateTimeString());
-
-        $total = count($result['methods']);
-        $message = "از {$total} روش ارسال: {$synced} جدید، {$updated} بروزرسانی";
-        if ($removed > 0) {
-            $message .= "، {$removed} حذف شده";
-        }
-
-        return [
-            'success' => true,
-            'message' => $message,
-            'synced' => $synced,
-            'updated' => $updated,
-            'removed' => $removed,
-        ];
-    }
 
     /**
      * آیا سفارش مربوط به تهران است؟
@@ -423,104 +302,98 @@ class WooCommerceService
     public function detectShippingType(array $wcOrder): string
     {
         $shippingLines = $wcOrder['shipping_lines'] ?? [];
+        $feeLines = $wcOrder['fee_lines'] ?? [];
+        $metaData = $wcOrder['meta_data'] ?? [];
         $wcOrderId = $wcOrder['id'] ?? 'unknown';
 
-        // لاگ shipping_lines برای دیباگ
         Log::info('WC shipping detection', [
             'wc_order_id' => $wcOrderId,
             'shipping_lines' => collect($shippingLines)->map(fn($l) => [
                 'method_id' => $l['method_id'] ?? '',
                 'method_title' => $l['method_title'] ?? '',
-                'instance_id' => $l['instance_id'] ?? '',
+            ])->toArray(),
+            'fee_lines' => collect($feeLines)->map(fn($f) => [
+                'name' => $f['name'] ?? '',
+                'total' => $f['total'] ?? '0',
             ])->toArray(),
         ]);
 
-        // ===== سطح ۰: حضوری (بالاترین اولویت) =====
-        foreach ($shippingLines as $line) {
-            $title = mb_strtolower($line['method_title'] ?? '');
-            $mId = strtolower($line['method_id'] ?? '');
-            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
-                Log::info('WC shipping → pickup (hardcoded)', ['method_id' => $line['method_id'] ?? '', 'title' => $line['method_title'] ?? '']);
-                return 'pickup';
-            }
-        }
-
-        // ===== سطح ۱: mapping دیتابیس با instance_id (دقیق‌ترین) =====
-        foreach ($shippingLines as $line) {
-            $instanceId = $line['instance_id'] ?? null;
-            if ($instanceId) {
-                $dbMethod = WarehouseWcShippingMethod::where('wc_instance_id', $instanceId)->first();
-                if ($dbMethod && $dbMethod->mapped_shipping_type) {
-                    Log::info('WC shipping mapped by instance_id (DB)', [
-                        'instance_id' => $instanceId,
-                        'method_title' => $line['method_title'] ?? '',
-                        'type' => $dbMethod->mapped_shipping_type,
-                    ]);
-                    return $dbMethod->mapped_shipping_type;
-                }
-            }
-        }
-
-        // ===== سطح ۲: mapping دیتابیس با method_title (exact match) =====
+        // ===== ۱. تشخیص از عنوان shipping_lines =====
         foreach ($shippingLines as $line) {
             $methodTitle = $line['method_title'] ?? '';
-            if ($methodTitle) {
-                $dbMethod = WarehouseWcShippingMethod::where('method_title', $methodTitle)
-                    ->whereNotNull('mapped_shipping_type')
-                    ->first();
-                if ($dbMethod) {
-                    Log::info('WC shipping mapped by title (DB)', [
-                        'title' => $methodTitle,
-                        'type' => $dbMethod->mapped_shipping_type,
-                    ]);
-                    return $dbMethod->mapped_shipping_type;
-                }
-            }
-        }
-
-        // ===== سطح ۳: تشخیص خودکار از عنوان فارسی/انگلیسی =====
-        // ⚠️ فقط بر اساس عنوان روش ارسال ووکامرس - بدون هیچ override شهری
-        foreach ($shippingLines as $line) {
             $methodId = $line['method_id'] ?? '';
-            $methodTitle = $line['method_title'] ?? '';
             $title = mb_strtolower($methodTitle);
             $mId = strtolower($methodId);
 
-            // فوری / urgent → urgent (پیک فوری)
+            // حضوری
+            if (str_contains($title, 'حضوری') || str_contains($mId, 'local_pickup') || str_contains($mId, 'pickup')) {
+                Log::info('WC shipping → pickup', ['title' => $methodTitle]);
+                return 'pickup';
+            }
+            // فوری / urgent → urgent
             if (str_contains($title, 'فوری') || str_contains($title, 'urgent')) {
-                Log::info('WC shipping → urgent', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → urgent', ['title' => $methodTitle]);
                 return 'urgent';
             }
-
-            // اضطراری / emergency → emergency
+            // اضطراری / emergency
             if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) {
-                Log::info('WC shipping → emergency', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → emergency', ['title' => $methodTitle]);
                 return 'emergency';
             }
-
-            // پیک / courier / local_delivery → courier (پیک ۵ روزه)
+            // پیک / courier / local_delivery
             if (str_contains($title, 'پیک') || str_contains($title, 'courier')
                 || str_contains($mId, 'local_delivery') || str_contains($mId, 'courier')) {
-                Log::info('WC shipping → courier', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → courier', ['title' => $methodTitle]);
                 return 'courier';
             }
-
-            // عنوان حاوی «عادی» + «تهران» = روش خاص ووکامرس مثل «ارسال عادی تهران»
+            // «عادی» + «تهران» در عنوان
             if (str_contains($title, 'عادی') && str_contains($title, 'تهران')) {
-                Log::info('WC shipping → courier (عادی تهران in title)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → courier (عادی تهران)', ['title' => $methodTitle]);
                 return 'courier';
             }
-
-            // پست / پیشتاز / پستی → post (همیشه، بدون توجه به شهر)
+            // پست / پیشتاز / پستی
             if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
-                Log::info('WC shipping → post', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → post', ['title' => $methodTitle]);
                 return 'post';
             }
-
-            // flat_rate / free_shipping بدون کلیدواژه شناخته‌شده → post
+            // flat_rate / free_shipping
             if (str_contains($mId, 'flat_rate') || str_contains($mId, 'free_shipping')) {
-                Log::info('WC shipping → post (flat_rate/free_shipping)', ['method_id' => $methodId, 'title' => $methodTitle]);
+                Log::info('WC shipping → post (flat_rate/free_shipping)', ['title' => $methodTitle]);
                 return 'post';
+            }
+        }
+
+        // ===== ۲. تشخیص از fee_lines (قالب‌هایی که هزینه ارسال رو به عنوان fee اضافه می‌کنن) =====
+        foreach ($feeLines as $fee) {
+            $feeName = mb_strtolower($fee['name'] ?? '');
+            if (str_contains($feeName, 'حضوری') || str_contains($feeName, 'pickup')) {
+                Log::info('WC shipping → pickup (fee)', ['fee' => $fee['name'] ?? '']);
+                return 'pickup';
+            }
+            if (str_contains($feeName, 'فوری') || str_contains($feeName, 'express')) {
+                Log::info('WC shipping → urgent (fee)', ['fee' => $fee['name'] ?? '']);
+                return 'urgent';
+            }
+            if (str_contains($feeName, 'پیک') || str_contains($feeName, 'courier')) {
+                Log::info('WC shipping → courier (fee)', ['fee' => $fee['name'] ?? '']);
+                return 'courier';
+            }
+            if (str_contains($feeName, 'پست') || str_contains($feeName, 'ارسال')) {
+                Log::info('WC shipping → post (fee)', ['fee' => $fee['name'] ?? '']);
+                return 'post';
+            }
+        }
+
+        // ===== ۳. تشخیص از meta_data (بعضی قالب‌ها shipping_method رو در meta ذخیره می‌کنن) =====
+        foreach ($metaData as $meta) {
+            $key = $meta['key'] ?? '';
+            $value = strtolower($meta['value'] ?? '');
+            if ($key === '_shipping_method' || $key === 'shipping_method') {
+                if (str_contains($value, 'pickup') || str_contains($value, 'حضوری')) return 'pickup';
+                if (str_contains($value, 'express') || str_contains($value, 'فوری')) return 'urgent';
+                if (str_contains($value, 'collection') || str_contains($value, 'عادی')) return 'courier';
+                if (str_contains($value, 'post') || str_contains($value, 'پست')) return 'post';
+                Log::info('WC shipping from meta', ['key' => $key, 'value' => $value]);
             }
         }
 

@@ -9,7 +9,7 @@ use Modules\Warehouse\Http\Controllers\PrintController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
-use Modules\Warehouse\Http\Controllers\ShippingController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -89,15 +89,6 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::delete('/box-size/{boxSize}', [SettingsController::class, 'deleteBoxSize'])->name('warehouse.settings.box-size.delete');
     });
 
-    // Shipping Methods Management
-    Route::prefix('shipping')->group(function () {
-        Route::get('/', [ShippingController::class, 'index'])->name('warehouse.shipping.index');
-        Route::post('/sync', [ShippingController::class, 'syncFromWooCommerce'])->name('warehouse.shipping.sync');
-        Route::put('/method/{method}', [ShippingController::class, 'updateMapping'])->name('warehouse.shipping.update-mapping');
-        Route::post('/save-mappings', [ShippingController::class, 'saveMappings'])->name('warehouse.shipping.save-mappings');
-        Route::post('/redetect', [ShippingController::class, 'redetectAll'])->name('warehouse.shipping.redetect');
-    });
-
     // WooCommerce Integration
     Route::prefix('woocommerce')->group(function () {
         Route::get('/', [WooCommerceController::class, 'index'])->name('warehouse.woocommerce.index');
@@ -105,8 +96,6 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/test', [WooCommerceController::class, 'testConnection'])->name('warehouse.woocommerce.test');
         Route::post('/sync', [WooCommerceController::class, 'sync'])->name('warehouse.woocommerce.sync');
         Route::post('/sync-products', [WooCommerceController::class, 'syncProducts'])->name('warehouse.woocommerce.sync-products');
-        Route::post('/shipping-methods', [WooCommerceController::class, 'fetchShippingMethods'])->name('warehouse.woocommerce.shipping-methods');
-        Route::post('/shipping-mappings', [WooCommerceController::class, 'saveShippingMappings'])->name('warehouse.woocommerce.shipping-mappings');
         Route::post('/redetect-shipping', [WooCommerceController::class, 'redetectShippingTypes'])->name('warehouse.woocommerce.redetect-shipping');
     });
 
