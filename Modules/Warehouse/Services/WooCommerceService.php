@@ -289,6 +289,16 @@ class WooCommerceService
     protected function detectShippingType(array $wcOrder): string
     {
         $shippingLines = $wcOrder['shipping_lines'] ?? [];
+        $wcOrderId = $wcOrder['id'] ?? 'unknown';
+
+        // لاگ shipping_lines برای دیباگ
+        Log::info('WC shipping detection', [
+            'wc_order_id' => $wcOrderId,
+            'shipping_lines' => collect($shippingLines)->map(fn($l) => [
+                'method_id' => $l['method_id'] ?? '',
+                'method_title' => $l['method_title'] ?? '',
+            ])->toArray(),
+        ]);
 
         // Load saved mappings from settings
         $mappingsJson = WarehouseSetting::get('wc_shipping_mappings');
@@ -300,26 +310,54 @@ class WooCommerceService
 
             // Check saved mappings first (by method_id)
             if (!empty($mappings[$methodId])) {
+                Log::info('WC shipping mapped by method_id', ['method_id' => $methodId, 'type' => $mappings[$methodId]]);
                 return $mappings[$methodId];
             }
 
             // Check saved mappings by method_title
             foreach ($mappings as $key => $mappedType) {
                 if (mb_strtolower($key) === mb_strtolower($methodTitle) && !empty($mappedType)) {
+                    Log::info('WC shipping mapped by title', ['title' => $methodTitle, 'type' => $mappedType]);
                     return $mappedType;
                 }
             }
 
-            // Fallback: auto-detect courier/local delivery
-            $lowerMethodId = strtolower($methodId);
-            $lowerTitle = strtolower($methodTitle);
-            if (str_contains($lowerMethodId, 'local') || str_contains($lowerMethodId, 'courier')
-                || str_contains($lowerTitle, 'پیک') || str_contains($lowerTitle, 'courier')) {
+            // Fallback: auto-detect from keywords
+            $lowerMethodId = mb_strtolower($methodId);
+            $lowerTitle = mb_strtolower($methodTitle);
+            $combined = $lowerMethodId . ' ' . $lowerTitle;
+
+            // تشخیص پیک
+            if (str_contains($combined, 'local') || str_contains($combined, 'courier')
+                || str_contains($combined, 'پیک') || str_contains($combined, 'ارسال فوری')
+                || str_contains($combined, 'local_pickup') || str_contains($combined, 'delivery')) {
+                // local_pickup = حضوری، local_delivery = پیک
+                if (str_contains($lowerMethodId, 'local_pickup') || str_contains($combined, 'حضوری')
+                    || str_contains($combined, 'pickup') || str_contains($combined, 'تحویل حضوری')) {
+                    Log::info('WC shipping auto-detected: pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
+                    return 'pickup';
+                }
+                Log::info('WC shipping auto-detected: courier', ['method_id' => $methodId, 'title' => $methodTitle]);
                 return 'courier';
+            }
+
+            // تشخیص حضوری
+            if (str_contains($combined, 'حضوری') || str_contains($combined, 'pickup')) {
+                Log::info('WC shipping auto-detected: pickup', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'pickup';
+            }
+
+            // تشخیص پست
+            if (str_contains($combined, 'پست') || str_contains($combined, 'پیشتاز')
+                || str_contains($combined, 'flat_rate') || str_contains($combined, 'free_shipping')
+                || str_contains($combined, 'رایگان')) {
+                Log::info('WC shipping auto-detected: post', ['method_id' => $methodId, 'title' => $methodTitle]);
+                return 'post';
             }
         }
 
         // Default to post
+        Log::warning('WC shipping defaulting to post (no match)', ['wc_order_id' => $wcOrderId]);
         return 'post';
     }
 
