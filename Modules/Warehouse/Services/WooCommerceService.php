@@ -537,7 +537,7 @@ class WooCommerceService
 
                     // لاگ متادیتا برای تشخیص پلاگین باندل
                     $metaKeys = collect($product['meta_data'] ?? [])->pluck('key')->toArray();
-                    $bundleRelatedKeys = array_filter($metaKeys, fn($k) => str_contains($k, 'bundle') || str_contains($k, 'woosb') || str_contains($k, 'yith_wcpb'));
+                    $bundleRelatedKeys = array_filter($metaKeys, fn($k) => str_contains($k, 'bundle') || str_contains($k, 'woosb') || str_contains($k, 'yith_wcpb') || str_contains($k, 'ganjeh_bundle'));
                     if (!empty($bundleRelatedKeys)) {
                         Log::info('Product has bundle meta keys', [
                             'product_id' => $product['id'],
@@ -704,10 +704,12 @@ class WooCommerceService
     {
         $metaData = collect($product['meta_data'] ?? []);
         $bundleKeys = [
-            '_yith_wcpb_bundle_data',
-            '_bundle_data',
+            '_ganjeh_bundle_data',           // Ganjeh Market theme
+            '_ganjeh_bundle_items',          // Ganjeh Market theme (fallback)
+            '_yith_wcpb_bundle_data',        // YITH WooCommerce Product Bundles
+            '_bundle_data',                   // WC Product Bundles (official)
             'bundle_data',
-            '_woosb_ids',
+            '_woosb_ids',                     // WPC Product Bundles
             '_woosb_data',
         ];
 
@@ -765,10 +767,12 @@ class WooCommerceService
 
                 // لیست کلیدهای مختلف پلاگین‌ها
                 $bundleKeys = [
-                    '_yith_wcpb_bundle_data',    // YITH WooCommerce Product Bundles
-                    '_bundle_data',               // WC Product Bundles (official)
+                    '_ganjeh_bundle_data',           // Ganjeh Market theme (اصلی)
+                    '_ganjeh_bundle_items',          // Ganjeh Market theme (فالبک - فقط آی‌دی‌ها)
+                    '_yith_wcpb_bundle_data',        // YITH WooCommerce Product Bundles
+                    '_bundle_data',                   // WC Product Bundles (official)
                     'bundle_data',
-                    '_woosb_ids',                 // WPC Product Bundles
+                    '_woosb_ids',                     // WPC Product Bundles
                     '_woosb_data',
                 ];
 
@@ -794,16 +798,25 @@ class WooCommerceService
                             }
                         }
                     }
-                    // YITH format: array indexed by ID with product_id, qty, etc.
-                    // یا WC Bundles format: array of items with product_id
+                    // _ganjeh_bundle_items format: فقط آرایه آی‌دی‌ها [123, 456]
+                    elseif (is_array($bundleData) && isset($bundleData[0]) && !is_array($bundleData[0])) {
+                        foreach ($bundleData as $childId) {
+                            $childId = (int)$childId;
+                            if ($childId > 0) {
+                                $childIds[] = ['product_id' => $childId, 'quantity' => 1, 'optional' => false, 'discount' => 0, 'priced_individually' => false];
+                            }
+                        }
+                    }
+                    // Ganjeh / YITH / WC Bundles format: array of items
                     elseif (is_array($bundleData)) {
                         foreach ($bundleData as $itemKey => $item) {
-                            // YITH: item has 'product_id' and 'bp_quantity' or 'default_quantity'
-                            $childProdId = (int)($item['product_id'] ?? 0);
+                            if (!is_array($item)) continue;
+                            // Ganjeh: 'id' field | YITH: 'product_id' field
+                            $childProdId = (int)($item['id'] ?? $item['product_id'] ?? 0);
                             if ($childProdId > 0) {
                                 $childIds[] = [
                                     'product_id' => $childProdId,
-                                    'quantity' => (int)($item['bp_quantity'] ?? $item['default_quantity'] ?? $item['quantity_default'] ?? $item['qty'] ?? 1),
+                                    'quantity' => (int)($item['default_qty'] ?? $item['bp_quantity'] ?? $item['default_quantity'] ?? $item['quantity_default'] ?? $item['qty'] ?? 1),
                                     'optional' => (bool)($item['optional'] ?? $item['bp_optional'] ?? false),
                                     'discount' => (float)($item['discount'] ?? $item['bp_discount'] ?? 0),
                                     'priced_individually' => (bool)($item['priced_individually'] ?? false),
