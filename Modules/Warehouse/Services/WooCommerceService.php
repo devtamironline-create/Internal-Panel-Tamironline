@@ -176,6 +176,18 @@ class WooCommerceService
                     continue;
                 }
 
+                // سفارشات completed فقط حضوری‌ها رو وارد کن (پرداخت حضوری)
+                $wcOrderStatus = $wcOrder['status'] ?? '';
+                if ($wcOrderStatus === 'completed') {
+                    $paymentTitle = $wcOrder['payment_method_title'] ?? '';
+                    $paymentSlug = $wcOrder['payment_method'] ?? '';
+                    $isInStore = str_contains($paymentTitle, 'حضوری') || str_contains($paymentSlug, 'cod');
+                    if (!$isInStore) {
+                        $skipped++;
+                        continue;
+                    }
+                }
+
                 $customerName = trim(($wcOrder['billing']['first_name'] ?? '') . ' ' . ($wcOrder['billing']['last_name'] ?? ''));
                 if (empty($customerName)) {
                     $customerName = 'مشتری ووکامرس #' . $wcOrderId;
@@ -192,12 +204,14 @@ class WooCommerceService
                     ->map(fn($item) => ($item['name'] ?? '') . ' x' . ($item['quantity'] ?? 1))
                     ->implode("\n");
 
-                // تشخیص سفارش باسلام
-                $wcOrderStatus = $wcOrder['status'] ?? '';
+                // تشخیص نوع سفارش (باسلام / حضوری)
                 $isBasalam = str_contains($wcOrderStatus, 'bslm');
+                $isCompleted = $wcOrderStatus === 'completed';
                 $orderNotes = 'مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان';
                 if ($isBasalam) {
                     $orderNotes = '🛒 سفارش باسلام | ' . $orderNotes;
+                } elseif ($isCompleted) {
+                    $orderNotes = '🏪 سفارش حضوری | ' . $orderNotes;
                 }
 
                 // Payment method
