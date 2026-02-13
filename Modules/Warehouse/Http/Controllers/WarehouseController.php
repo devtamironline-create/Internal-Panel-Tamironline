@@ -37,7 +37,7 @@ class WarehouseController extends Controller
 
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
         if (!empty($search)) {
-            $query->search($search)->orderBy('created_at', 'desc');
+            $query->search($search)->orderBy('created_at', 'asc');
             $orders = $query->get();
         } else {
             $query->byStatus($currentStatus);
@@ -45,12 +45,8 @@ class WarehouseController extends Controller
             // اولویت نوع ارسال: پیک → حضوری → پست
             $query->orderByRaw("FIELD(shipping_type, 'courier', 'pickup', 'post', 'emergency') ASC");
 
-            // For pending status, order by timer deadline (urgent first)
-            if ($currentStatus === WarehouseOrder::STATUS_PENDING) {
-                $query->orderByRaw('timer_deadline IS NULL, timer_deadline ASC');
-            } else {
-                $query->orderBy('created_at', 'desc');
-            }
+            // ترتیب بر اساس تاریخ: قدیمی‌ترین بالا، جدیدترین پایین
+            $query->orderBy('created_at', 'asc');
 
             // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
             $noPaginationStatuses = [

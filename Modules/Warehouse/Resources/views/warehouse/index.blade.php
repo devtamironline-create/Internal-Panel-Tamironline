@@ -887,6 +887,33 @@ function formatDelay(totalSec) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // سینک اتوماتیک سفارشات هنگام بارگذاری صفحه
+    (function autoSync() {
+        var syncKey = 'warehouse_last_auto_sync';
+        var lastSync = parseInt(sessionStorage.getItem(syncKey) || '0', 10);
+        var now = Date.now();
+        // حداقل ۶۰ ثانیه بین هر سینک اتوماتیک
+        if (now - lastSync < 60000) return;
+        sessionStorage.setItem(syncKey, now.toString());
+
+        fetch('{{ route("warehouse.woocommerce.sync") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ wc_status: 'processing' }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.imported > 0) {
+                location.reload();
+            }
+        })
+        .catch(function() { /* سینک پس‌زمینه - خطا مهم نیست */ });
+    })();
+
     var timerElements = document.querySelectorAll('.timer-display');
 
     timerElements.forEach(function(el) {
