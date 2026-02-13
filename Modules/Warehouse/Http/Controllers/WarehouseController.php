@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -108,6 +109,8 @@ class WarehouseController extends Controller
         $order = WarehouseOrder::create($validated);
         $order->setTimerFromShippingType();
 
+        OrderLog::log($order, OrderLog::ACTION_CREATED, 'سفارش ایجاد شد');
+
         return redirect()->route('warehouse.index')
             ->with('success', 'سفارش با موفقیت ثبت شد.');
     }
@@ -118,7 +121,7 @@ class WarehouseController extends Controller
             abort(403);
         }
 
-        $order->load(['creator', 'assignee', 'items', 'boxSize']);
+        $order->load(['creator', 'assignee', 'items', 'boxSize', 'logs' => fn($q) => $q->with('user')->orderByDesc('created_at')]);
 
         return view('warehouse::warehouse.show', compact('order'));
     }
@@ -153,6 +156,8 @@ class WarehouseController extends Controller
 
         $order->update($validated);
 
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'سفارش ویرایش شد');
+
         return redirect()->route('warehouse.show', $order)
             ->with('success', 'سفارش با موفقیت ویرایش شد.');
     }
@@ -167,7 +172,14 @@ class WarehouseController extends Controller
             'status' => 'required|in:' . implode(',', WarehouseOrder::$statuses),
         ]);
 
+        $oldStatus = $order->status;
         $order->updateStatus($request->status);
+
+        $statusLabels = WarehouseOrder::statusLabels();
+        OrderLog::log($order, OrderLog::ACTION_STATUS_CHANGED,
+            'تغییر وضعیت: ' . ($statusLabels[$oldStatus] ?? $oldStatus) . ' → ' . ($statusLabels[$request->status] ?? $request->status),
+            ['from' => $oldStatus, 'to' => $request->status]
+        );
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'وضعیت با موفقیت تغییر کرد.']);
@@ -204,6 +216,9 @@ class WarehouseController extends Controller
         $order->status = WarehouseOrder::STATUS_SUPPLY_WAIT;
         $order->status_changed_at = now();
         $order->save();
+
+        $unavailableNames = $order->items()->whereIn('id', $request->input('unavailable_items'))->pluck('product_name')->implode('، ');
+        OrderLog::log($order, OrderLog::ACTION_SUPPLY_WAIT, 'منتقل به انتظار تامین — کالاهای ناموجود: ' . $unavailableNames);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'سفارش به انتظار تامین منتقل شد.']);
@@ -292,6 +307,8 @@ class WarehouseController extends Controller
             'city_name' => $validated['city_name'] ?? '',
         ];
         $order->update(['wc_order_data' => $wcData]);
+
+        OrderLog::log($order, OrderLog::ACTION_TAPIN_LOCATION, 'تنظیم تاپین: ' . ($validated['province_name'] ?? '') . ' — ' . ($validated['city_name'] ?? ''));
 
         return response()->json([
             'success' => true,

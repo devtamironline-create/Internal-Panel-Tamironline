@@ -4,6 +4,7 @@ namespace Modules\Warehouse\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseOrderItem;
 use Modules\Warehouse\Models\WarehouseSetting;
@@ -193,6 +194,10 @@ class PackingController extends Controller
 
         if ($weightOk) {
             $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+            OrderLog::log($order, OrderLog::ACTION_WEIGHT_VERIFIED, 'وزن تایید شد: ' . number_format($request->actual_weight) . 'g (اختلاف: ' . round($diff ?? 0, 1) . '%)', [
+                'actual_weight' => $request->actual_weight,
+                'difference_percent' => round($diff ?? 0, 1),
+            ]);
             return response()->json([
                 'success' => true,
                 'verified' => true,
@@ -200,6 +205,12 @@ class PackingController extends Controller
                 'difference' => $diff ? round($diff, 1) : 0,
             ]);
         }
+
+        OrderLog::log($order, OrderLog::ACTION_WEIGHT_REJECTED, 'وزن رد شد: ' . number_format($request->actual_weight) . 'g (اختلاف: ' . round($diff, 1) . '%)', [
+            'actual_weight' => $request->actual_weight,
+            'expected_weight' => $order->total_weight,
+            'difference_percent' => round($diff, 1),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -219,6 +230,8 @@ class PackingController extends Controller
         $order->weight_verified = true;
         $order->save();
         $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+
+        OrderLog::log($order, OrderLog::ACTION_WEIGHT_FORCED, 'وزن به صورت دستی تایید شد');
 
         return response()->json([
             'success' => true,

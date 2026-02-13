@@ -208,6 +208,11 @@ class WarehouseOrder extends Model
         return $this->hasMany(WarehouseOrderItem::class);
     }
 
+    public function logs(): HasMany
+    {
+        return $this->hasMany(OrderLog::class, 'warehouse_order_id');
+    }
+
     public function boxSize(): BelongsTo
     {
         return $this->belongsTo(WarehouseBoxSize::class, 'box_size_id');

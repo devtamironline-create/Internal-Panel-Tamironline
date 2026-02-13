@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Services\AmadestService;
 
@@ -123,6 +124,11 @@ class DispatchController extends Controller
             'user_id' => auth()->id(),
         ]);
 
+        OrderLog::log($order, OrderLog::ACTION_COURIER_ASSIGNED, 'پیک: ' . $request->driver_name . ' (' . $request->driver_phone . ')', [
+            'driver_name' => $request->driver_name,
+            'driver_phone' => $request->driver_phone,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'پیک برای سفارش ' . $order->order_number . ' ثبت شد. سفارش بعد از ۴ ساعت به ارسال شده تغییر می‌کند.',
@@ -224,6 +230,8 @@ class DispatchController extends Controller
             'shipped_at' => now()->toDateTimeString(),
         ]);
 
+        OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال با اسکن بارکد: ' . $barcode);
+
         return response()->json([
             'success' => true,
             'message' => 'سفارش ' . $order->order_number . ' (' . $order->customer_name . ') ارسال شد.',
@@ -322,6 +330,8 @@ class DispatchController extends Controller
             $order->notes = ($order->notes ? $order->notes . "\n" : '') . 'مرجوعی: ' . $request->notes;
             $order->save();
         }
+
+        OrderLog::log($order, OrderLog::ACTION_RETURNED, 'مرجوعی' . ($request->notes ? ': ' . $request->notes : ''));
 
         return response()->json(['success' => true, 'message' => 'سفارش مرجوعی شد.']);
     }

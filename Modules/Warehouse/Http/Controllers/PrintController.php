@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
@@ -130,6 +131,10 @@ class PrintController extends Controller
             'user_id' => auth()->id(),
             'user_name' => auth()->user()->name,
             'printed_at' => now()->toDateTimeString(),
+        ]);
+
+        OrderLog::log($order, OrderLog::ACTION_PRINTED, 'چاپ فاکتور (بار ' . $order->print_count . ')', [
+            'print_count' => $order->print_count,
         ]);
 
         // Send SMS alert on duplicate print
@@ -274,6 +279,10 @@ class PrintController extends Controller
                 'amadest_barcode' => $order->amadest_barcode,
                 'courier_tracking_code' => $courierTrackingCode,
             ]);
+            OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, 'ثبت در آمادست — بارکد: ' . $order->amadest_barcode, [
+                'provider' => 'amadest',
+                'barcode' => $order->amadest_barcode,
+            ]);
             return null;
         } elseif ($isDuplicate) {
             Log::info('Amadest order duplicate, searching existing', ['order' => $order->order_number]);
@@ -300,6 +309,10 @@ class PrintController extends Controller
         } else {
             $error = $result['message'] ?? 'خطای نامشخص';
             Log::warning('Amadest auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+            OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت آمادست: ' . $error, [
+                'provider' => 'amadest',
+                'error' => $error,
+            ]);
             return 'آمادست: ' . $error;
         }
     }
@@ -424,6 +437,11 @@ class PrintController extends Controller
                     'tapin_order_id' => $tapinOrderId,
                     'saved_ref' => $trackingRef,
                 ]);
+                OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, 'ثبت در تاپین — بارکد: ' . $trackingRef, [
+                    'provider' => 'tapin',
+                    'barcode' => $barcode,
+                    'tapin_order_id' => $tapinOrderId,
+                ]);
                 // اگه بارکد پست نگرفتیم، خطا رو برگردون (ولی سفارش ثبت شده)
                 if (empty($barcode) && $fallbackError) {
                     return 'تاپین: ثبت شد (TAPIN-' . $tapinOrderId . ') ولی بارکد پست نیومد: ' . $fallbackError;
@@ -435,6 +453,10 @@ class PrintController extends Controller
 
         $error = $result['message'] ?? 'خطای نامشخص';
         Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+        OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت تاپین: ' . $error, [
+            'provider' => 'tapin',
+            'error' => $error,
+        ]);
         return 'تاپین: ' . $error;
     }
 }

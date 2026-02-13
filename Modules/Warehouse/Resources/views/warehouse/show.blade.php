@@ -372,6 +372,39 @@
     </div>
     @endif
 
+    <!-- Activity Log -->
+    @if($order->logs->count() > 0)
+    <div class="bg-white rounded-xl shadow-sm">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-bold text-gray-900">تاریخچه فعالیت</h2>
+        </div>
+        <div class="p-6">
+            <div class="relative">
+                <div class="absolute top-0 bottom-0 right-4 w-0.5 bg-gray-200"></div>
+                <div class="space-y-4">
+                    @foreach($order->logs as $log)
+                    <div class="relative flex gap-4 pr-2">
+                        <div class="relative z-10 flex items-center justify-center w-5 h-5 mt-0.5 rounded-full bg-white ring-2 {{ str_replace('text-', 'ring-', $log->action_color) }}">
+                            <div class="w-2 h-2 rounded-full {{ str_replace('text-', 'bg-', $log->action_color) }}"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-medium {{ $log->action_color }}">{{ $log->action_label }}</span>
+                                <span class="text-xs text-gray-400">{{ \Morilog\Jalali\Jalalian::fromCarbon($log->created_at)->format('Y/m/d H:i') }}</span>
+                                @if($log->user)
+                                <span class="text-xs text-gray-400">— {{ $log->user->name }}</span>
+                                @endif
+                            </div>
+                            <p class="text-sm text-gray-600 mt-0.5">{{ $log->message }}</p>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Status Change Actions -->
     @canany(['manage-warehouse', 'manage-permissions'])
     @php
