@@ -506,7 +506,13 @@
                     </button>
                 </div>
                 @if($order->total_weight)
-                <p class="text-xs text-gray-400 mt-2">وزن سیستمی: {{ number_format($order->total_weight_grams) }}g</p>
+                <p class="text-xs text-gray-400 mt-2">
+                    وزن سیستمی (با کارتن): {{ number_format($order->total_weight_with_box_grams) }}g
+                    @if($displayBox)
+                        <span class="text-gray-300 mx-1">|</span>
+                        محصولات: {{ number_format($order->total_weight_grams) }}g + کارتن: {{ number_format($displayBox->weight) }}g
+                    @endif
+                </p>
                 @endif
 
                 <!-- Weight Result -->

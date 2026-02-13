@@ -181,11 +181,12 @@ class PackingController extends Controller
             'actual_weight' => 'required|numeric|min:0',
         ]);
 
-        $order = WarehouseOrder::findOrFail($request->order_id);
+        $order = WarehouseOrder::with(['boxSize', 'items'])->findOrFail($request->order_id);
         $tolerance = (float) WarehouseSetting::get('weight_tolerance', '5');
 
         $order->actual_weight = $request->actual_weight;
 
+        $expectedWeight = $order->total_weight_with_box_grams;
         $diff = $order->weight_difference_percent;
         $weightOk = $diff === null || $diff <= $tolerance;
 
@@ -194,8 +195,9 @@ class PackingController extends Controller
 
         if ($weightOk) {
             $order->updateStatus(WarehouseOrder::STATUS_PACKED);
-            OrderLog::log($order, OrderLog::ACTION_WEIGHT_VERIFIED, 'وزن تایید شد: ' . number_format($request->actual_weight) . 'g (اختلاف: ' . round($diff ?? 0, 1) . '%)', [
+            OrderLog::log($order, OrderLog::ACTION_WEIGHT_VERIFIED, 'وزن تایید شد: ' . number_format($request->actual_weight) . 'g (وزن مورد انتظار با کارتن: ' . number_format($expectedWeight) . 'g، اختلاف: ' . round($diff ?? 0, 1) . '%)', [
                 'actual_weight' => $request->actual_weight,
+                'expected_weight' => $expectedWeight,
                 'difference_percent' => round($diff ?? 0, 1),
             ]);
             return response()->json([
@@ -206,9 +208,9 @@ class PackingController extends Controller
             ]);
         }
 
-        OrderLog::log($order, OrderLog::ACTION_WEIGHT_REJECTED, 'وزن رد شد: ' . number_format($request->actual_weight) . 'g (اختلاف: ' . round($diff, 1) . '%)', [
+        OrderLog::log($order, OrderLog::ACTION_WEIGHT_REJECTED, 'وزن رد شد: ' . number_format($request->actual_weight) . 'g (وزن مورد انتظار با کارتن: ' . number_format($expectedWeight) . 'g، اختلاف: ' . round($diff, 1) . '%)', [
             'actual_weight' => $request->actual_weight,
-            'expected_weight' => $order->total_weight,
+            'expected_weight' => $expectedWeight,
             'difference_percent' => round($diff, 1),
         ]);
 
@@ -216,7 +218,7 @@ class PackingController extends Controller
             'success' => true,
             'verified' => false,
             'message' => 'اختلاف وزن: ' . round($diff, 1) . '% - احتمالا محصولی جا مانده!',
-            'expected' => $order->total_weight,
+            'expected' => $expectedWeight,
             'actual' => $order->actual_weight,
             'difference' => round($diff, 1),
         ]);

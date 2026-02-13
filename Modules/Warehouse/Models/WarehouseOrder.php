@@ -188,8 +188,10 @@ class WarehouseOrder extends Model
 
     public function getWeightDifferencePercentAttribute(): ?float
     {
-        if (!$this->total_weight || $this->total_weight == 0 || !$this->actual_weight) return null;
-        return abs($this->actual_weight - $this->total_weight) / $this->total_weight * 100;
+        // مقایسه با وزن کل + کارتن (چون وزن واقعی شامل کارتن هم هست)
+        $expectedWeight = $this->total_weight_with_box_grams;
+        if (!$expectedWeight || $expectedWeight == 0 || !$this->actual_weight) return null;
+        return abs($this->actual_weight - $expectedWeight) / $expectedWeight * 100;
     }
 
     // Relations
