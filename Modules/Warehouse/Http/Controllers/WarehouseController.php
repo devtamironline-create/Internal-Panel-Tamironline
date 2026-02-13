@@ -213,6 +213,27 @@ class WarehouseController extends Controller
             ->with('success', 'سفارش به انتظار تامین منتقل شد.');
     }
 
+    public function updateShippingType(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'shipping_type' => 'required|string|max:50|exists:warehouse_shipping_types,slug',
+        ]);
+
+        $order->update(['shipping_type' => $validated['shipping_type']]);
+
+        $shippingType = WarehouseShippingType::where('slug', $validated['shipping_type'])->first();
+
+        return response()->json([
+            'success' => true,
+            'shipping_type' => $validated['shipping_type'],
+            'shipping_label' => $shippingType ? $shippingType->name : $validated['shipping_type'],
+        ]);
+    }
+
     public function bulkUpdateStatus(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

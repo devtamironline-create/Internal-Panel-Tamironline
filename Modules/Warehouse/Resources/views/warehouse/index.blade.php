@@ -123,30 +123,34 @@
                 $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="{ showConfirm: false }">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="{ showConfirm: false, shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); } }">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            @php
-                                $isPickup = $order->shipping_type === 'pickup';
-                                $badgeClasses = $isPeyk
-                                    ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
-                                    : ($isPickup
-                                        ? 'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200'
-                                        : 'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200');
-                            @endphp
-                            <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md {{ $badgeClasses }}">
-                                @if($isPeyk)
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                @elseif($isPickup)
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                @else
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                @endif
-                                {{ $shippingLabel }}
-                            </span>
+                            <div class="relative" @click.outside="shippingOpen = false">
+                                <button @click="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                                    :class="{
+                                        'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200': shippingType === 'courier' || shippingType === 'emergency',
+                                        'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200': shippingType === 'pickup',
+                                        'bg-gradient-to-l from-red-600 to-rose-500 text-white shadow-red-200': shippingType === 'urgent',
+                                        'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200': shippingType !== 'courier' && shippingType !== 'emergency' && shippingType !== 'pickup' && shippingType !== 'urgent'
+                                    }">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+                                    <span x-text="shippingLabel"></span>
+                                </button>
+                                <div x-show="shippingOpen" x-transition.scale.origin.top class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[140px]">
+                                    @foreach($shippingTypes as $st)
+                                    <button type="button" @click="changeShipping('{{ $st->slug }}', '{{ $st->name }}')"
+                                        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between gap-2"
+                                        :class="shippingType === '{{ $st->slug }}' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700'">
+                                        <span>{{ $st->name }}</span>
+                                        <svg x-show="shippingType === '{{ $st->slug }}'" class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                         <p class="text-base font-semibold text-gray-900">{{ $order->customer_name }}</p>
                         @if($order->customer_mobile)
@@ -360,37 +364,35 @@
                 $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : ($order->shipping_type ?: '—');
                 $isUrgent = in_array($order->shipping_type, ['urgent', 'emergency']);
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                x-data="{ shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); } }">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            @php
-                                $isPeyk2 = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
-                                $isPickup2 = $order->shipping_type === 'pickup';
-                                $badgeClasses2 = $order->shipping_type === 'emergency'
-                                    ? 'bg-gradient-to-l from-red-600 to-rose-500 text-white shadow-red-200'
-                                    : ($isUrgent
-                                        ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
-                                        : ($isPeyk2
-                                            ? 'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200'
-                                            : ($isPickup2
-                                                ? 'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200'
-                                                : 'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200')));
-                            @endphp
-                            <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md {{ $badgeClasses2 }}">
-                                @if($isUrgent)
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                                @elseif($isPeyk2)
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                @elseif($isPickup2)
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                @else
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                @endif
-                                {{ $shippingLabel }}
-                            </span>
+                            <div class="relative" @click.outside="shippingOpen = false">
+                                <button @click="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                                    :class="{
+                                        'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200': shippingType === 'courier' || shippingType === 'emergency',
+                                        'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200': shippingType === 'pickup',
+                                        'bg-gradient-to-l from-red-600 to-rose-500 text-white shadow-red-200': shippingType === 'urgent',
+                                        'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200': shippingType !== 'courier' && shippingType !== 'emergency' && shippingType !== 'pickup' && shippingType !== 'urgent'
+                                    }">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+                                    <span x-text="shippingLabel"></span>
+                                </button>
+                                <div x-show="shippingOpen" x-transition.scale.origin.top class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[140px]">
+                                    @foreach($shippingTypes as $st)
+                                    <button type="button" @click="changeShipping('{{ $st->slug }}', '{{ $st->name }}')"
+                                        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between gap-2"
+                                        :class="shippingType === '{{ $st->slug }}' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700'">
+                                        <span>{{ $st->name }}</span>
+                                        <svg x-show="shippingType === '{{ $st->slug }}'" class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                         <p class="text-base font-semibold text-gray-900">{{ $order->customer_name }}</p>
                         @if($order->customer_mobile)
@@ -503,22 +505,35 @@
                         ? 'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200'
                         : 'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200');
             @endphp
-            <a href="{{ route('warehouse.show', $order) }}" class="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <a href="{{ route('warehouse.show', $order) }}" class="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                x-data="{ shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); } }">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
-                            <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md {{ $badgeClasses }}">
-                                @if($isPeyk)
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                @elseif($isPickup)
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                @else
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                @endif
-                                {{ $shippingLabel }}
-                            </span>
+                            <div class="relative" @click.stop @click.outside="shippingOpen = false">
+                                <button @click.prevent="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                                    :class="{
+                                        'bg-gradient-to-l from-orange-500 to-amber-500 text-white shadow-orange-200': shippingType === 'courier' || shippingType === 'emergency',
+                                        'bg-gradient-to-l from-emerald-500 to-teal-500 text-white shadow-emerald-200': shippingType === 'pickup',
+                                        'bg-gradient-to-l from-red-600 to-rose-500 text-white shadow-red-200': shippingType === 'urgent',
+                                        'bg-gradient-to-l from-sky-500 to-blue-500 text-white shadow-sky-200': shippingType !== 'courier' && shippingType !== 'emergency' && shippingType !== 'pickup' && shippingType !== 'urgent'
+                                    }">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+                                    <span x-text="shippingLabel"></span>
+                                </button>
+                                <div x-show="shippingOpen" x-transition.scale.origin.top class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[140px]">
+                                    @foreach($shippingTypes as $st)
+                                    <button type="button" @click.prevent="changeShipping('{{ $st->slug }}', '{{ $st->name }}')"
+                                        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between gap-2"
+                                        :class="shippingType === '{{ $st->slug }}' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700'">
+                                        <span>{{ $st->name }}</span>
+                                        <svg x-show="shippingType === '{{ $st->slug }}'" class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                         <p class="text-base font-semibold text-gray-900">{{ $order->customer_name }}</p>
                         @if($order->customer_mobile)
