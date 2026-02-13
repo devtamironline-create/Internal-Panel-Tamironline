@@ -10,6 +10,7 @@ use Modules\Attendance\Models\LeaveRequest;
 use Modules\Attendance\Models\EmployeeSetting;
 use Modules\Task\Models\Task;
 use Modules\Task\Models\Team;
+use Modules\Warehouse\Models\WarehouseOrder;
 
 class DashboardController extends Controller
 {
@@ -116,6 +117,18 @@ class DashboardController extends Controller
         if ($user->can('view-teams') || $user->can('manage-teams')) {
             $stats['teams'] = Team::withCount('members', 'tasks')->get();
         }
+
+        // Warehouse order stats
+        $stats['warehouse_orders'] = [
+            'pending' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PENDING)->count(),
+            'supply_wait' => WarehouseOrder::where('status', WarehouseOrder::STATUS_SUPPLY_WAIT)->count(),
+            'preparing' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)->count(),
+            'packed' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PACKED)->count(),
+            'shipped' => WarehouseOrder::where('status', WarehouseOrder::STATUS_SHIPPED)->count(),
+            'delivered' => WarehouseOrder::where('status', WarehouseOrder::STATUS_DELIVERED)->count(),
+            'returned' => WarehouseOrder::where('status', WarehouseOrder::STATUS_RETURNED)->count(),
+            'total' => WarehouseOrder::count(),
+        ];
 
         // Birthday stats - show upcoming birthdays
         $stats['birthdays'] = $this->getUpcomingBirthdays();

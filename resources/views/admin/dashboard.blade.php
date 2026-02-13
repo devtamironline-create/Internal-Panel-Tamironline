@@ -110,6 +110,53 @@
         @endcan
     </div>
 
+    <!-- Warehouse Orders Widget -->
+    @if(isset($stats['warehouse_orders']))
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">وضعیت سفارشات</h3>
+            </div>
+            <a href="{{ route('warehouse.journey') }}" class="text-sm text-brand-600 dark:text-blue-400 hover:text-brand-700 dark:hover:text-blue-300">مشاهده همه</a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <a href="{{ route('warehouse.journey', ['status' => 'pending']) }}" class="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition group">
+                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ $stats['warehouse_orders']['pending'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">در انتظار</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'supply_wait']) }}" class="text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/30 transition group">
+                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ $stats['warehouse_orders']['supply_wait'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-amber-600 dark:group-hover:text-amber-400">انتظار تامین</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'preparing']) }}" class="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl hover:bg-orange-100 dark:hover:bg-orange-900/30 transition group">
+                <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ $stats['warehouse_orders']['preparing'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-orange-600 dark:group-hover:text-orange-400">آماده‌سازی</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'packed']) }}" class="text-center p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition group">
+                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ $stats['warehouse_orders']['packed'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-cyan-600 dark:group-hover:text-cyan-400">بسته‌بندی شده</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'shipped']) }}" class="text-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition group">
+                <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ $stats['warehouse_orders']['shipped'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">ارسال شده</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'delivered']) }}" class="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition group">
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ $stats['warehouse_orders']['delivered'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-green-600 dark:group-hover:text-green-400">تحویل شده</p>
+            </a>
+            <a href="{{ route('warehouse.journey', ['status' => 'returned']) }}" class="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition group">
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $stats['warehouse_orders']['returned'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-red-600 dark:group-hover:text-red-400">مرجوعی</p>
+            </a>
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Content Area -->
         <div class="lg:col-span-2 space-y-6">

@@ -16,6 +16,12 @@
         <span x-show="sidebarOpen">پیام‌رسان</span>
     </a>
 </li>
+<li>
+    <a href="{{ route('warehouse.journey') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('warehouse.journey') || request()->routeIs('warehouse.index') || request()->routeIs('warehouse.show') ? 'bg-slate-700 text-white' : '' }}">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span x-show="sidebarOpen">سفارشات</span>
+    </a>
+</li>
 <li class="my-4 border-t border-slate-700"></li>
 <!-- Warehouse Section -->
 <li x-data="{ warehouseOpen: {{ request()->routeIs('warehouse.*') ? 'true' : 'false' }} }">
