@@ -21,7 +21,7 @@ class PrintController extends Controller
             abort(403);
         }
 
-        $order->load(['items', 'boxSize']);
+        $order->load(['items', 'boxSize', 'shippingTypeRelation']);
 
         // اگر آیتم‌ها وزن ندارن، از جدول محصولات بگیر و آپدیت کن
         $needsWeightUpdate = $order->items->contains(fn($item) => $item->weight == 0 && $item->wc_product_id);
