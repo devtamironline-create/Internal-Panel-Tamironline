@@ -173,6 +173,25 @@ class WarehouseController extends Controller
         ]);
 
         $oldStatus = $order->status;
+
+        // وقتی از آماده ارسال برمیگرده به پردازش، بارکدهای ارسال رو پاک کن
+        if ($oldStatus === WarehouseOrder::STATUS_PACKED && $request->status === WarehouseOrder::STATUS_PENDING) {
+            $oldBarcode = $order->amadest_barcode;
+            $order->amadest_barcode = null;
+            $order->post_tracking_code = null;
+            // فلگ تاپین رو هم پاک کن
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            if (isset($wcData['tapin']['registered'])) {
+                unset($wcData['tapin']['registered']);
+                $order->wc_order_data = $wcData;
+            }
+            $order->save();
+
+            OrderLog::log($order, OrderLog::ACTION_STATUS_CHANGED, 'بارکد ارسال پاک شد: ' . ($oldBarcode ?? '—'), [
+                'cleared_barcode' => $oldBarcode,
+            ]);
+        }
+
         $order->updateStatus($request->status);
 
         $statusLabels = WarehouseOrder::statusLabels();
