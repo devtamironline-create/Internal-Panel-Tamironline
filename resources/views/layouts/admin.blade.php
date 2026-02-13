@@ -1016,5 +1016,8 @@
     @if(!request()->routeIs('admin.messenger'))
         @include('components.chat-widget')
     @endif
+    @if(request()->routeIs('warehouse.*'))
+        @include('components.order-search-widget')
+    @endif
 </body>
 </html>

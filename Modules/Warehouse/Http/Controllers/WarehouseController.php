@@ -16,6 +16,37 @@ class WarehouseController extends Controller
         return redirect()->route('warehouse.index');
     }
 
+    public function quickSearch(Request $request)
+    {
+        $search = $request->get('q');
+        if (!$search || mb_strlen($search) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $orders = WarehouseOrder::with(['items'])
+            ->search($search)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->customer_name,
+                    'customer_mobile' => $order->customer_mobile,
+                    'status' => $order->status,
+                    'status_label' => $order->status_label,
+                    'status_color' => $order->status_color,
+                    'items_count' => $order->items->count(),
+                    'tracking_code' => $order->tracking_code,
+                    'shipping_type' => $order->shipping_type,
+                    'url' => route('warehouse.show', $order->id),
+                ];
+            });
+
+        return response()->json(['results' => $orders]);
+    }
+
     public function index(Request $request)
     {
         if (!auth()->user()->can('view-warehouse') && !auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

@@ -36,6 +36,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     Route::patch('/{order}/shipping-type', [WarehouseController::class, 'updateShippingType'])->name('warehouse.update-shipping-type')
         ->where('order', '[0-9]+');
     Route::post('/bulk-status', [WarehouseController::class, 'bulkUpdateStatus'])->name('warehouse.bulk-status');
+    Route::get('/quick-search', [WarehouseController::class, 'quickSearch'])->name('warehouse.quick-search');
     Route::delete('/{order}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy')
         ->where('order', '[0-9]+');
 
