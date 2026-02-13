@@ -478,6 +478,12 @@ class TapinService
                         'tracking_code' => $entries['barcode'] ?? null,
                         'status' => $entries['status'] ?? null,
                     ],
+                    '_debug' => [
+                        'payload' => $payload,
+                        'raw_response' => $result,
+                        'box_id' => $payload['box_id'] ?? null,
+                        'package_weight' => $payload['package_weight'] ?? null,
+                    ],
                 ];
             }
 
@@ -499,10 +505,27 @@ class TapinService
                 }
             }
 
-            return ['success' => false, 'message' => 'خطا در ثبت سفارش: ' . $errorMessage];
+            return [
+                'success' => false,
+                'message' => 'خطا در ثبت سفارش: ' . $errorMessage,
+                '_debug' => [
+                    'payload' => $payload,
+                    'raw_response' => $result,
+                    'box_id' => $payload['box_id'] ?? null,
+                    'package_weight' => $payload['package_weight'] ?? null,
+                ],
+            ];
         } catch (\Exception $e) {
             Log::error('Tapin createOrder error', ['error' => $e->getMessage()]);
-            return ['success' => false, 'message' => $e->getMessage()];
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                '_debug' => [
+                    'payload' => $payload ?? null,
+                    'raw_response' => null,
+                    'error' => $e->getMessage(),
+                ],
+            ];
         }
     }
 

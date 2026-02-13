@@ -453,7 +453,7 @@ class TapinController extends Controller
                 // ابعاد جعبه سفارش برای match با بسته‌های تاپین
                 $box = $order->boxSize ?? $order->recommended_box;
 
-                $result = $tapin->createShipment([
+                $orderPayloadData = [
                     'external_order_id' => $order->order_number,
                     'recipient_name' => $order->customer_name,
                     'recipient_mobile' => $order->customer_mobile,
@@ -469,7 +469,28 @@ class TapinController extends Controller
                     'box_length' => $box->length ?? null,
                     'box_width' => $box->width ?? null,
                     'box_height' => $box->height ?? null,
-                ]);
+                ];
+
+                $result = $tapin->createShipment($orderPayloadData);
+
+                // استعلام هزینه پستی از تاپین
+                $shippingCost = null;
+                try {
+                    $priceResult = $tapin->checkPrice($orderPayloadData);
+                    if ($priceResult['success'] ?? false) {
+                        $shippingCost = $priceResult['total_price'] ?? $priceResult['send_price'] ?? null;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Tapin checkPrice failed for order', ['order' => $order->order_number, 'error' => $e->getMessage()]);
+                }
+
+                // اطلاعات باکس
+                $boxInfo = $box ? [
+                    'name' => $box->name ?? null,
+                    'size' => ($box->length ?? 0) . 'x' . ($box->width ?? 0) . 'x' . ($box->height ?? 0),
+                    'weight' => $box->weight ?? 0,
+                ] : null;
+                $usedBoxId = $result['_debug']['box_id'] ?? null;
 
                 $status = 'failed';
                 if ($result['success'] ?? false) {
@@ -523,6 +544,11 @@ class TapinController extends Controller
                     'message' => $result['message'] ?? '',
                     'barcode' => $result['data']['barcode'] ?? '',
                     'order_id' => $result['data']['order_id'] ?? '',
+                    'shipping_cost' => $shippingCost,
+                    'box_id' => $usedBoxId,
+                    'box_info' => $boxInfo,
+                    'weight' => $order->total_weight_with_box_grams ?: 500,
+                    '_debug' => $result['_debug'] ?? null,
                 ];
             } catch (\Exception $e) {
                 Log::error('Tapin bulk register error', ['order' => $order->order_number, 'error' => $e->getMessage()]);

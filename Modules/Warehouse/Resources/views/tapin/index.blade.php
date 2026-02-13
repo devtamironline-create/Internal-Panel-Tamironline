@@ -187,6 +187,40 @@
     <div id="bulk-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
 </div>
 
+{{-- نوار اطلاعات هزینه پستی و باکس (بعد از ثبت نمایش داده میشه) --}}
+<div id="shipping-info-bar" class="hidden">
+    <div class="bg-blue-50 border border-blue-200 rounded-xl shadow-sm p-4 mt-4">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-sm font-bold text-blue-800">اطلاعات ثبت سفارشات در تاپین</span>
+            </div>
+            <button onclick="document.getElementById('shipping-info-bar').classList.add('hidden')" class="text-blue-400 hover:text-blue-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="shipping-info-content" class="text-sm text-blue-900"></div>
+    </div>
+</div>
+
+{{-- مودال دیباگ API --}}
+<div id="debug-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" style="background: rgba(0,0,0,0.5)">
+    <div class="flex items-start justify-center min-h-screen pt-8 pb-8">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-900">دیتای ارسالی و دریافتی API تاپین</h3>
+                <button onclick="closeDebugModal()" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="debug-modal-content" class="p-4 max-h-[80vh] overflow-y-auto"></div>
+            <div class="flex justify-end p-4 border-t">
+                <button onclick="closeDebugModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">بستن</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 const csrfToken = '{{ csrf_token() }}';
@@ -314,6 +348,9 @@ function clearOldBarcodes() {
     });
 }
 
+// ذخیره دیتای دیباگ آخرین ثبت
+let lastBulkDebugData = [];
+
 function bulkRegister() {
     if (!confirm('آیا همه سفارشات در صف رو در تاپین ثبت کنم؟')) return;
     const btn = document.getElementById('btn-bulk');
@@ -332,13 +369,32 @@ function bulkRegister() {
             showResult('bulk-result', true, data.message || 'سفارشی نبود');
             return;
         }
-        let html = '<strong>' + data.message + '</strong><br><br>';
-        html += '<table class="w-full text-xs mt-2"><thead class="bg-gray-50"><tr><th class="p-1 text-right">سفارش</th><th class="p-1 text-right">مشتری</th><th class="p-1 text-right">وضعیت</th><th class="p-1 text-right">بارکد/پیام</th></tr></thead><tbody>';
-        data.results.forEach(r => {
-            const color = r.status === 'success' ? 'text-green-600' : 'text-red-600';
-            const statusText = r.status === 'success' ? 'موفق' : 'خطا';
+
+        // ذخیره دیتای دیباگ
+        lastBulkDebugData = data.results;
+
+        // نمایش نوار اطلاعات هزینه پستی و باکس
+        showShippingInfoBar(data.results);
+
+        let html = '<div class="flex items-center justify-between mb-3"><strong>' + data.message + '</strong>';
+        html += '<button onclick="showDebugModal()" class="px-3 py-1 bg-gray-700 text-white rounded text-xs hover:bg-gray-800">مشاهده دیتای API</button></div>';
+        html += '<table class="w-full text-xs mt-2"><thead class="bg-gray-50"><tr><th class="p-1 text-right">سفارش</th><th class="p-1 text-right">مشتری</th><th class="p-1 text-right">وضعیت</th><th class="p-1 text-right">هزینه پستی</th><th class="p-1 text-right">باکس</th><th class="p-1 text-right">وزن</th><th class="p-1 text-right">بارکد/پیام</th></tr></thead><tbody>';
+        data.results.forEach((r, idx) => {
+            const color = r.status === 'success' ? 'text-green-600' : (r.status === 'skipped' ? 'text-yellow-600' : 'text-red-600');
+            const statusText = r.status === 'success' ? 'موفق' : (r.status === 'skipped' ? 'اسکیپ' : 'خطا');
             const info = r.barcode || r.order_id || r.message || '-';
-            html += `<tr class="border-t"><td class="p-1 font-mono">${r.order_number}</td><td class="p-1">${r.customer}</td><td class="p-1 ${color} font-bold">${statusText}</td><td class="p-1 text-xs">${info}</td></tr>`;
+            const cost = r.shipping_cost ? Number(r.shipping_cost).toLocaleString('fa-IR') + ' ریال' : '-';
+            const boxLabel = r.box_id ? ('باکس ' + r.box_id + (r.box_info ? ' (' + r.box_info.size + ')' : '')) : '-';
+            const weight = r.weight ? (r.weight >= 1000 ? (r.weight / 1000).toFixed(1) + 'kg' : r.weight + 'g') : '-';
+            html += `<tr class="border-t">
+                <td class="p-1 font-mono">${r.order_number}</td>
+                <td class="p-1">${r.customer || '-'}</td>
+                <td class="p-1 ${color} font-bold">${statusText}</td>
+                <td class="p-1">${cost}</td>
+                <td class="p-1 text-xs">${boxLabel}</td>
+                <td class="p-1 text-xs">${weight}</td>
+                <td class="p-1 text-xs">${info}</td>
+            </tr>`;
         });
         html += '</tbody></table>';
         showResult('bulk-result', true, html);
@@ -348,6 +404,129 @@ function bulkRegister() {
         btn.disabled = false;
         btn.textContent = 'ثبت همه در تاپین';
         showResult('bulk-result', false, 'خطا در ارتباط');
+    });
+}
+
+function showShippingInfoBar(results) {
+    const bar = document.getElementById('shipping-info-bar');
+    const content = document.getElementById('shipping-info-content');
+    bar.classList.remove('hidden');
+
+    const successResults = results.filter(r => r.status === 'success');
+    const totalShippingCost = successResults.reduce((sum, r) => sum + (r.shipping_cost || 0), 0);
+    const boxCounts = {};
+    successResults.forEach(r => {
+        if (r.box_id) {
+            const key = 'باکس ' + r.box_id + (r.box_info ? ' (' + r.box_info.size + ')' : '');
+            boxCounts[key] = (boxCounts[key] || 0) + 1;
+        }
+    });
+
+    let html = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">';
+
+    // هزینه پستی کل
+    html += '<div class="bg-white rounded-lg p-3 border border-blue-100">';
+    html += '<div class="text-xs text-blue-600 mb-1">هزینه پستی کل (تاپین)</div>';
+    html += '<div class="text-lg font-bold text-blue-900">' + (totalShippingCost > 0 ? Number(totalShippingCost).toLocaleString('fa-IR') + ' <span class="text-xs font-normal">ریال</span>' : 'نامشخص') + '</div>';
+    html += '</div>';
+
+    // تعداد سفارشات ثبت‌شده
+    html += '<div class="bg-white rounded-lg p-3 border border-blue-100">';
+    html += '<div class="text-xs text-blue-600 mb-1">سفارشات ثبت‌شده</div>';
+    html += '<div class="text-lg font-bold text-blue-900">' + successResults.length + ' <span class="text-xs font-normal">از ' + results.length + '</span></div>';
+    html += '</div>';
+
+    // سایز کارتن‌ها
+    html += '<div class="bg-white rounded-lg p-3 border border-blue-100">';
+    html += '<div class="text-xs text-blue-600 mb-1">کارتن‌های استفاده‌شده</div>';
+    if (Object.keys(boxCounts).length > 0) {
+        html += '<div class="text-sm text-blue-900">';
+        for (const [box, count] of Object.entries(boxCounts)) {
+            html += '<div>' + box + ': <strong>' + count + '</strong> عدد</div>';
+        }
+        html += '</div>';
+    } else {
+        html += '<div class="text-sm text-blue-900">نامشخص</div>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+
+    // هزینه به تفکیک هر سفارش
+    if (successResults.some(r => r.shipping_cost)) {
+        html += '<div class="mt-3 pt-3 border-t border-blue-100">';
+        html += '<div class="text-xs text-blue-600 mb-2">هزینه پستی هر سفارش:</div>';
+        html += '<div class="flex flex-wrap gap-2">';
+        successResults.forEach(r => {
+            const cost = r.shipping_cost ? Number(r.shipping_cost).toLocaleString('fa-IR') : '?';
+            html += '<span class="inline-flex items-center gap-1 bg-white border border-blue-100 rounded px-2 py-1 text-xs">';
+            html += '<span class="font-mono text-blue-800">' + r.order_number + '</span>';
+            html += '<span class="text-blue-500">' + cost + ' ریال</span>';
+            html += '</span>';
+        });
+        html += '</div></div>';
+    }
+
+    content.innerHTML = html;
+}
+
+function showDebugModal() {
+    const modal = document.getElementById('debug-modal');
+    const content = document.getElementById('debug-modal-content');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    if (!lastBulkDebugData || lastBulkDebugData.length === 0) {
+        content.innerHTML = '<p class="text-gray-500">دیتای دیباگ موجود نیست</p>';
+        return;
+    }
+
+    let html = '';
+    lastBulkDebugData.forEach((r, idx) => {
+        if (r.status === 'skipped') return;
+        const debug = r._debug || {};
+        const isOpen = lastBulkDebugData.length <= 3 ? 'open' : '';
+        html += `<details ${isOpen} class="mb-4 border rounded-lg overflow-hidden">
+            <summary class="p-3 bg-gray-50 cursor-pointer hover:bg-gray-100 flex items-center justify-between">
+                <span class="font-mono text-sm font-bold">${r.order_number} - ${r.customer || ''}</span>
+                <span class="text-xs ${r.status === 'success' ? 'text-green-600' : 'text-red-600'}">${r.status === 'success' ? 'موفق' : 'خطا'}</span>
+            </summary>
+            <div class="p-3 space-y-3">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-orange-700 uppercase">Request Payload (ارسالی)</span>
+                        <button onclick="copyToClipboard(this, 'payload-${idx}')" class="text-xs text-blue-500 hover:underline">کپی</button>
+                    </div>
+                    <pre id="payload-${idx}" dir="ltr" class="bg-orange-50 text-orange-900 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">${JSON.stringify(debug.payload || {}, null, 2)}</pre>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-green-700 uppercase">Response (دریافتی)</span>
+                        <button onclick="copyToClipboard(this, 'response-${idx}')" class="text-xs text-blue-500 hover:underline">کپی</button>
+                    </div>
+                    <pre id="response-${idx}" dir="ltr" class="bg-green-50 text-green-900 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">${JSON.stringify(debug.raw_response || {}, null, 2)}</pre>
+                </div>
+                ${r.shipping_cost ? '<div class="text-sm"><strong>هزینه پستی:</strong> ' + Number(r.shipping_cost).toLocaleString('fa-IR') + ' ریال</div>' : ''}
+                ${debug.box_id ? '<div class="text-sm"><strong>باکس تاپین:</strong> ' + debug.box_id + '</div>' : ''}
+                ${debug.package_weight ? '<div class="text-sm"><strong>وزن بسته:</strong> ' + debug.package_weight + ' گرم</div>' : ''}
+            </div>
+        </details>`;
+    });
+
+    content.innerHTML = html || '<p class="text-gray-500">دیتای دیباگ موجود نیست</p>';
+}
+
+function closeDebugModal() {
+    document.getElementById('debug-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function copyToClipboard(btn, elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = 'کپی شد!';
+        setTimeout(() => btn.textContent = originalText, 1500);
     });
 }
 </script>
