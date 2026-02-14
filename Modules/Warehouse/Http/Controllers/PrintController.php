@@ -151,9 +151,9 @@ class PrintController extends Controller
             }
         }
 
-        // Mark as printed and move to preparing
-        if ($order->status === WarehouseOrder::STATUS_PENDING) {
-            $order->updateStatus(WarehouseOrder::STATUS_PREPARING);
+        // Mark as printed and move to packed (در انتظار اسکن خروج)
+        if (in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PREPARING])) {
+            $order->updateStatus(WarehouseOrder::STATUS_PACKED);
         }
 
         $invoiceSettings = [

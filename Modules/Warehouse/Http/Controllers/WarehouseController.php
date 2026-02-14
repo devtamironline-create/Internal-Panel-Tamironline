@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseBoxSize;
 use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
 class WarehouseController extends Controller
@@ -366,6 +367,8 @@ class WarehouseController extends Controller
 
     /**
      * ذخیره کارتن و وزن قبل از پرینت (مرحله pending)
+     * وزن خودکار محاسبه میشه: وزن محصولات + وزن کارتن
+     * بعد از تایید سفارش به وضعیت packed (در انتظار اسکن خروج) میره
      */
     public function confirmAndPrint(Request $request, WarehouseOrder $order)
     {
@@ -379,9 +382,28 @@ class WarehouseController extends Controller
             'postal_code' => 'nullable|string|max:10',
         ]);
 
+        // بارگذاری کارتن انتخابی
+        $boxSize = \Modules\Warehouse\Models\WarehouseBoxSize::findOrFail($validated['box_size_id']);
+
+        // اعتبارسنجی وزن با ضریب خطا
+        $order->load('items');
+        $expectedWeight = $order->total_weight_grams + $boxSize->weight;
+        $actualWeight = (float) $validated['total_weight_with_box'];
+        $tolerance = (float) WarehouseSetting::get('weight_tolerance', '5');
+
+        if ($expectedWeight > 0) {
+            $diff = abs($actualWeight - $expectedWeight) / $expectedWeight * 100;
+            if ($diff > $tolerance) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'اختلاف وزن ' . round($diff, 1) . '% — مورد انتظار: ' . number_format($expectedWeight) . 'g، دریافتی: ' . number_format($actualWeight) . 'g',
+                ]);
+            }
+        }
+
         $order->update([
             'box_size_id' => $validated['box_size_id'],
-            'actual_weight' => $validated['total_weight_with_box'],
+            'actual_weight' => $actualWeight,
         ]);
 
         // ذخیره کد پستی در wc_order_data اگه وارد شده
@@ -394,9 +416,14 @@ class WarehouseController extends Controller
             $order->update(['wc_order_data' => $wcData]);
         }
 
-        OrderLog::log($order, OrderLog::ACTION_EDITED, 'تنظیم کارتن و وزن قبل از پرینت', [
+        // تغییر وضعیت به packed (در انتظار اسکن خروج)
+        $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'تایید کارتن و وزن — سفارش به انتظار اسکن خروج رفت', [
             'box_size_id' => $validated['box_size_id'],
-            'total_weight_with_box' => $validated['total_weight_with_box'],
+            'box_name' => $boxSize->name,
+            'total_weight_with_box' => $actualWeight,
+            'expected_weight' => $expectedWeight,
             'postal_code' => $validated['postal_code'] ?? null,
         ]);
 

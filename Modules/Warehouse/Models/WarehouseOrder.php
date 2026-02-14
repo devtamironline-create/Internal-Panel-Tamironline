@@ -61,7 +61,7 @@ class WarehouseOrder extends Model
             self::STATUS_PENDING => 'در حال پردازش',
             self::STATUS_SUPPLY_WAIT => 'در انتظار تامین',
             self::STATUS_PREPARING => 'در حال آماده‌سازی',
-            self::STATUS_PACKED => 'آماده ارسال',
+            self::STATUS_PACKED => 'در انتظار اسکن خروج',
             self::STATUS_SHIPPED => 'ارسال شده',
             self::STATUS_DELIVERED => 'تحویل شده',
             self::STATUS_RETURNED => 'مرجوعی',
@@ -97,7 +97,7 @@ class WarehouseOrder extends Model
     public static function nextStatus(string $current): ?string
     {
         $flow = [
-            self::STATUS_PENDING => self::STATUS_PREPARING,
+            self::STATUS_PENDING => self::STATUS_PACKED,
             self::STATUS_PREPARING => self::STATUS_PACKED,
             self::STATUS_PACKED => self::STATUS_SHIPPED,
             self::STATUS_SHIPPED => self::STATUS_DELIVERED,

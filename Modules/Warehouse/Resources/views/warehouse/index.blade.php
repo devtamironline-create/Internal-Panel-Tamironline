@@ -128,7 +128,7 @@
                 $isPost = $order->shipping_type === 'post';
                 $needsPostcode = $isPost && empty($postcode);
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="pendingOrderCard({{ $order->id }}, '{{ $order->shipping_type }}', '{{ addslashes($shippingLabel) }}', {{ $needsPostcode ? 'true' : 'false' }})">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="pendingOrderCard({{ $order->id }}, '{{ $order->shipping_type }}', '{{ addslashes($shippingLabel) }}', {{ $needsPostcode ? 'true' : 'false' }}, {{ $order->total_weight_grams }})">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
@@ -333,20 +333,26 @@
                             {{-- انتخاب کارتن --}}
                             <div>
                                 <label class="block text-xs font-bold text-gray-600 mb-2">انتخاب کارتن</label>
-                                <select x-model="selectedBox" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-3">
-                                    <option value="">کارتن را انتخاب کنید...</option>
+                                <div class="grid grid-cols-3 gap-2 max-h-[240px] overflow-y-auto">
                                     @foreach($boxSizes as $box)
-                                    <option value="{{ $box->id }}">سایز {{ $box->name }} — {{ $box->dimensions_label }}cm — وزن کارتن: {{ $box->weight_label }}</option>
+                                    <div @click="selectedBox = '{{ $box->id }}'"
+                                         :class="selectedBox == '{{ $box->id }}' ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'"
+                                         class="cursor-pointer border-2 rounded-xl p-2.5 transition-all text-center">
+                                        <div class="text-sm font-bold" :class="selectedBox == '{{ $box->id }}' ? 'text-brand-700' : 'text-gray-800'">سایز {{ $box->name }}</div>
+                                        <div class="text-[11px] text-gray-500 mt-1" dir="ltr">{{ $box->dimensions_label }}</div>
+                                        <div class="text-[10px] mt-0.5" :class="selectedBox == '{{ $box->id }}' ? 'text-brand-600' : 'text-gray-400'">{{ $box->weight_label }}</div>
+                                    </div>
                                     @endforeach
-                                </select>
+                                </div>
                             </div>
 
-                            {{-- وزن بسته با کارتن --}}
-                            <div>
+                            {{-- وزن محاسبه‌شده --}}
+                            <div x-show="selectedBox" x-cloak>
                                 <label class="block text-xs font-bold text-gray-600 mb-2">وزن کل بسته با کارتن (گرم)</label>
-                                <input type="number" x-model="enteredWeight" step="1" min="1" dir="ltr" placeholder="وزن کل را به گرم وارد کنید..."
-                                       class="w-full px-4 py-3 border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm text-center font-medium">
-                                <p class="text-[11px] text-gray-400 mt-1">وزن سیستمی محصولات: {{ number_format($order->total_weight_grams) }}g</p>
+                                <div class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-center font-bold text-gray-800" dir="ltr">
+                                    <span x-text="calculatedWeight ? Number(calculatedWeight).toLocaleString() + 'g' : '—'"></span>
+                                </div>
+                                <p class="text-[11px] text-gray-400 mt-1">وزن محصولات: {{ number_format($order->total_weight_grams) }}g + وزن کارتن: <span x-text="selectedBoxWeight + 'g'"></span></p>
                             </div>
 
                             {{-- هشدار کد پستی برای سفارشات پستی --}}
@@ -373,7 +379,7 @@
                             {{-- هشدار --}}
                             <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
                                 <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                                بعد از تایید، بارکد پستی تولید خواهد شد و فاکتور پرینت می‌شود.
+                                بعد از تایید، فاکتور در تب جدید پرینت می‌شود و سفارش به «در انتظار اسکن خروج» منتقل می‌شود.
                             </div>
                         </div>
                         {{-- دکمه‌ها --}}
@@ -383,7 +389,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 انصراف
                             </button>
-                            <button type="button" @click="confirmAndPrint()" :disabled="confirmLoading || !selectedBox || !enteredWeight || (needsPostcode && !postalCode)"
+                            <button type="button" @click="confirmAndPrint()" :disabled="confirmLoading || !selectedBox || (needsPostcode && !postalCode)"
                                class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
                                 <template x-if="!confirmLoading">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -849,7 +855,9 @@
 
 @push('scripts')
 <script>
-function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
+window._boxSizesData = @json($boxSizes->keyBy('id')->map(fn($b) => ['weight' => $b->weight, 'name' => $b->name]));
+
+function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode, totalWeightGrams) {
     return {
         showPrintModal: false,
         shippingOpen: false,
@@ -857,11 +865,22 @@ function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
         shippingLabel: shippingLabel,
         shippingLoading: false,
         selectedBox: '',
-        enteredWeight: '',
         postalCode: '',
         needsPostcode: needsPostcode,
         confirmLoading: false,
         confirmError: '',
+        totalWeightGrams: totalWeightGrams,
+
+        get selectedBoxWeight() {
+            if (!this.selectedBox || !window._boxSizesData) return 0;
+            var box = window._boxSizesData[this.selectedBox];
+            return box ? box.weight : 0;
+        },
+
+        get calculatedWeight() {
+            if (!this.selectedBox) return 0;
+            return this.totalWeightGrams + this.selectedBoxWeight;
+        },
 
         changeShipping(slug, label) {
             if (slug === this.shippingType) { this.shippingOpen = false; return; }
@@ -876,8 +895,8 @@ function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
         },
 
         async confirmAndPrint() {
-            if (!this.selectedBox || !this.enteredWeight) {
-                this.confirmError = 'لطفاً کارتن و وزن را وارد کنید';
+            if (!this.selectedBox) {
+                this.confirmError = 'لطفاً کارتن را انتخاب کنید';
                 return;
             }
             if (this.needsPostcode && !this.postalCode) {
@@ -889,7 +908,7 @@ function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
             try {
                 var payload = {
                     box_size_id: this.selectedBox,
-                    total_weight_with_box: parseFloat(this.enteredWeight)
+                    total_weight_with_box: this.calculatedWeight
                 };
                 if (this.postalCode) {
                     payload.postal_code = this.postalCode;
@@ -902,7 +921,7 @@ function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
                 var data = await res.json();
                 if (data.success) {
                     window.open(data.print_url, '_blank');
-                    setTimeout(function() { window.location.href = data.show_url; }, 500);
+                    setTimeout(function() { window.location.reload(); }, 500);
                 } else {
                     this.confirmError = data.message || 'خطا در ثبت';
                 }
