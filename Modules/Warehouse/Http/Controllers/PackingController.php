@@ -48,10 +48,10 @@ class PackingController extends Controller
             return response()->json(['success' => false, 'message' => 'سفارشی با این بارکد یافت نشد.']);
         }
 
-        if ($order->status !== WarehouseOrder::STATUS_PREPARING) {
+        if (!in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PACKED])) {
             return response()->json([
                 'success' => false,
-                'message' => 'این سفارش در مرحله آماده‌سازی نیست. وضعیت فعلی: ' . $order->status_label,
+                'message' => 'این سفارش در مرحله پردازش نیست. وضعیت فعلی: ' . $order->status_label,
             ]);
         }
 
@@ -95,8 +95,8 @@ class PackingController extends Controller
 
         $order = WarehouseOrder::findOrFail($request->input('order_id'));
 
-        if ($order->status !== WarehouseOrder::STATUS_PREPARING) {
-            return response()->json(['success' => false, 'message' => 'این سفارش در مرحله آماده‌سازی نیست.']);
+        if (!in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PACKED])) {
+            return response()->json(['success' => false, 'message' => 'این سفارش در مرحله پردازش نیست.']);
         }
 
         // Check if barcode matches order barcode, order number, or tracking codes

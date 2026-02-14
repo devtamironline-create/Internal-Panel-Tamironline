@@ -184,7 +184,7 @@ class TapinController extends Controller
             abort(403);
         }
 
-        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)
+        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PENDING)
             ->where('shipping_type', 'post')
             ->where(function ($q) {
                 $q->whereNull('amadest_barcode')->orWhere('amadest_barcode', '');
@@ -214,10 +214,7 @@ class TapinController extends Controller
             abort(403);
         }
 
-        $orders = WarehouseOrder::whereIn('status', [
-                WarehouseOrder::STATUS_PENDING,
-                WarehouseOrder::STATUS_PREPARING,
-            ])
+        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PENDING)
             ->where('shipping_type', 'post')
             ->where(function ($q) {
                 $q->whereNotNull('amadest_barcode')->where('amadest_barcode', '!=', '');
@@ -396,7 +393,7 @@ class TapinController extends Controller
             return response()->json(['success' => false, 'message' => 'تاپین تنظیم نشده']);
         }
 
-        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)
+        $orders = WarehouseOrder::where('status', WarehouseOrder::STATUS_PENDING)
             ->where('shipping_type', 'post')
             ->where(function ($q) {
                 $q->whereNull('amadest_barcode')->orWhere('amadest_barcode', '');

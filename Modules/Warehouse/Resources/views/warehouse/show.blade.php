@@ -69,6 +69,19 @@
         </div>
     </div>
 
+    <!-- Order Barcode -->
+    @if($order->barcode)
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-gray-900">بارکد سفارش</h2>
+            <span class="text-sm text-gray-500" dir="ltr">{{ $order->barcode }}</span>
+        </div>
+        <div class="flex justify-center">
+            <svg id="order-barcode"></svg>
+        </div>
+    </div>
+    @endif
+
     <!-- Order Details Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Order Info -->
@@ -416,8 +429,8 @@
         $nextColor = $nextStatus ? $statusColors[$nextStatus] : null;
     @endphp
 
-    @if($order->status === 'preparing')
-    <!-- Preparing Stage: Scan Order Barcode + Verify Weight -->
+    @if($order->status === 'packed')
+    <!-- Packed Stage: Scan Order Barcode + Verify Weight -->
     <div class="bg-white rounded-xl shadow-sm" x-data="preparingStation()" x-init="init()">
         <div class="p-6 border-b border-gray-100">
             <h2 class="text-lg font-bold text-gray-900">تایید سفارش و وزن</h2>
@@ -566,7 +579,7 @@
     @endcanany
 </div>
 
-@if($order->status === 'preparing')
+@if($order->status === 'packed')
 @push('scripts')
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
@@ -759,6 +772,27 @@ function preparingStation() {
         }
     };
 }
+</script>
+@endpush
+@endif
+
+@if($order->barcode)
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('order-barcode');
+    if (el) {
+        JsBarcode(el, '{{ $order->barcode }}', {
+            format: 'CODE128',
+            width: 2,
+            height: 80,
+            displayValue: true,
+            fontSize: 16,
+            margin: 10,
+        });
+    }
+});
 </script>
 @endpush
 @endif

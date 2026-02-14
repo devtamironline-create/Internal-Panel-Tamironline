@@ -171,7 +171,7 @@
             </div>
             <div>
                 <h2 class="text-lg font-bold text-gray-900">پردازش دسته‌ای سفارشات</h2>
-                <p class="text-xs text-gray-500">سفارشات پستی در مرحله «آماده‌سازی» بدون بارکد</p>
+                <p class="text-xs text-gray-500">سفارشات پستی در مرحله «پردازش» بدون بارکد</p>
             </div>
         </div>
         <div class="flex gap-2">

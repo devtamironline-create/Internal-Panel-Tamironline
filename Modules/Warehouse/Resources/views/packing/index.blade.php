@@ -9,7 +9,7 @@
         </a>
         <div>
             <h1 class="text-xl font-bold text-gray-900">ایستگاه اسکن</h1>
-            <p class="text-gray-600 mt-1">اسکن بارکد فاکتور برای شروع آماده‌سازی</p>
+            <p class="text-gray-600 mt-1">اسکن بارکد فاکتور برای شروع پردازش</p>
         </div>
     </div>
 

@@ -56,6 +56,10 @@ class WarehouseController extends Controller
         }
 
         $currentStatus = $request->get('status', 'pending');
+        // preparing حذف شده - به pending ریدایرکت کن
+        if ($currentStatus === 'preparing') {
+            return redirect()->route('warehouse.index', ['status' => 'pending']);
+        }
         $search = $request->get('search');
         $shippingFilter = $request->get('shipping');
 
@@ -85,7 +89,6 @@ class WarehouseController extends Controller
             $noPaginationStatuses = [
                 WarehouseOrder::STATUS_PENDING,
                 WarehouseOrder::STATUS_SUPPLY_WAIT,
-                WarehouseOrder::STATUS_PREPARING,
                 WarehouseOrder::STATUS_PACKED,
             ];
 
