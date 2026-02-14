@@ -266,6 +266,91 @@
         </div>
     </div>
 
+    <!-- Working Hours (ساعات کاری) -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">ساعات کاری</h2>
+                <p class="text-sm text-gray-500 mt-1">تایمر سفارشات فقط در ساعات کاری محاسبه می‌شود. خارج از ساعت کاری تایمر متوقف می‌شود.</p>
+            </div>
+        </div>
+
+        <form action="{{ route('warehouse.settings.working-hours.update') }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            <div class="mb-5">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="hidden" name="working_hours_enabled" value="0">
+                    <input type="checkbox" name="working_hours_enabled" value="1" {{ $workingHoursEnabled ? 'checked' : '' }}
+                        class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <div>
+                        <span class="text-sm font-bold text-gray-800">فعال‌سازی ساعات کاری</span>
+                        <span class="block text-xs text-gray-500">اگر غیرفعال باشد، تایمر ۲۴ ساعته محاسبه می‌شود</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="border rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-right font-medium text-gray-700 w-12">فعال</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-700">روز</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-700">شروع</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-700">پایان</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-700">ساعت کاری</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($dayLabels as $dayKey => $dayLabel)
+                        @php
+                            $dayData = $workingHours[$dayKey] ?? ['active' => false, 'start' => '09:00', 'end' => '17:00'];
+                        @endphp
+                        <tr class="{{ $dayData['active'] ? '' : 'bg-gray-50 opacity-60' }}" x-data="{ active: {{ $dayData['active'] ? 'true' : 'false' }}, start: '{{ $dayData['start'] }}', end: '{{ $dayData['end'] }}' }">
+                            <td class="px-4 py-3 text-center">
+                                <input type="hidden" name="days[{{ $dayKey }}][active]" :value="active ? '1' : ''">
+                                <input type="checkbox" x-model="active"
+                                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 font-bold text-gray-800">{{ $dayLabel }}</td>
+                            <td class="px-4 py-3">
+                                <input type="time" name="days[{{ $dayKey }}][start]" x-model="start" :disabled="!active"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400" dir="ltr">
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="time" name="days[{{ $dayKey }}][end]" x-model="end" :disabled="!active"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400" dir="ltr">
+                            </td>
+                            <td class="px-4 py-3 text-gray-500 text-xs">
+                                <template x-if="active">
+                                    <span x-text="(() => {
+                                        let [sh, sm] = start.split(':').map(Number);
+                                        let [eh, em] = end.split(':').map(Number);
+                                        let diff = (eh * 60 + em) - (sh * 60 + sm);
+                                        if (diff <= 0) return '—';
+                                        let h = Math.floor(diff / 60);
+                                        let m = diff % 60;
+                                        return (h > 0 ? h + ' ساعت' : '') + (m > 0 ? ' و ' + m + ' دقیقه' : '');
+                                    })()"></span>
+                                </template>
+                                <template x-if="!active">
+                                    <span class="text-red-400">تعطیل</span>
+                                </template>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 flex items-center gap-3">
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">ذخیره ساعات کاری</button>
+                <p class="text-xs text-gray-400">تغییرات فقط روی سفارشات جدید اعمال می‌شود.</p>
+            </div>
+        </form>
+    </div>
+
     <!-- Shipping Rules (قوانین override ارسال) -->
     <div class="bg-white rounded-xl shadow-sm p-6">
         <div class="mb-4">

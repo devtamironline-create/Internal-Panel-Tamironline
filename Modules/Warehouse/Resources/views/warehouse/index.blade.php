@@ -191,7 +191,7 @@
                 $isPeyk = $order->shipping_type && (str_contains(mb_strtolower($order->shipping_type), 'courier') || str_contains($shippingLabel, 'پیک'));
                 $isExpired = $order->is_timer_expired;
                 $remaining = $order->timer_remaining_seconds;
-                $delaySec = ($isExpired && $order->timer_deadline) ? (int) $order->timer_deadline->diffInSeconds(now()) : 0;
+                $delaySec = $order->timer_delay_seconds;
                 $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
@@ -897,6 +897,26 @@
 @push('scripts')
 <script>
 window._boxSizesData = @json($boxSizes->keyBy('id')->map(fn($b) => ['weight' => $b->weight, 'name' => $b->name]));
+window._workingSchedule = @json(\Modules\Warehouse\Services\WorkingHoursService::todaySchedule());
+window._workingHours = @json(\Modules\Warehouse\Services\WorkingHoursService::getWorkingHours());
+
+/**
+ * آیا الان در ساعت کاری هستیم؟ (JS)
+ */
+function isWorkingNow() {
+    var schedule = window._workingSchedule;
+    if (!schedule || !schedule.enabled) return true; // غیرفعال = همیشه شمارش
+    if (!schedule.active) return false; // روز تعطیل
+
+    var now = new Date();
+    var parts = schedule.start.split(':');
+    var startMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    parts = schedule.end.split(':');
+    var endMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+
+    return nowMin >= startMin && nowMin < endMin;
+}
 
 function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode, totalWeightGrams) {
     return {
@@ -1109,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Already expired on page load - start counting delay up
         if (expired) {
             setInterval(function() {
+                if (!isWorkingNow()) return; // خارج ساعت کاری شمارش نکن
                 delaySec++;
                 el.textContent = formatDelay(delaySec);
             }, 1000);
@@ -1116,11 +1137,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         var interval = setInterval(function() {
+            if (!isWorkingNow()) return; // خارج ساعت کاری تایمر متوقف
+
             remaining--;
 
             if (remaining <= 0) {
                 clearInterval(interval);
-                // Switch to counting delay up
                 delaySec = 0;
                 el.textContent = formatDelay(0);
                 if (card) {
@@ -1128,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (bar) bar.style.width = '100%';
                 }
                 setInterval(function() {
+                    if (!isWorkingNow()) return;
                     delaySec++;
                     el.textContent = formatDelay(delaySec);
                 }, 1000);

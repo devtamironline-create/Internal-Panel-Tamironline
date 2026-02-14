@@ -127,14 +127,25 @@ class WarehouseOrder extends Model
 
     public function getIsTimerExpiredAttribute(): bool
     {
-        return $this->timer_deadline && $this->timer_deadline->isPast();
+        if (!$this->timer_deadline) return false;
+        // با ساعت کاری: اگه ثانیه کاری باقیمانده صفر باشه و ددلاین گذشته
+        return $this->timer_deadline->isPast() ||
+            \Modules\Warehouse\Services\WorkingHoursService::workingSecondsUntil(now(), $this->timer_deadline) <= 0;
     }
 
     public function getTimerRemainingSecondsAttribute(): int
     {
         if (!$this->timer_deadline) return 0;
-        $remaining = now()->diffInSeconds($this->timer_deadline, false);
-        return max(0, (int) $remaining);
+        return \Modules\Warehouse\Services\WorkingHoursService::workingSecondsUntil(now(), $this->timer_deadline);
+    }
+
+    /**
+     * ثانیه‌های تاخیر کاری (بعد از اتمام ددلاین)
+     */
+    public function getTimerDelaySecondsAttribute(): int
+    {
+        if (!$this->timer_deadline || !$this->timer_deadline->isPast()) return 0;
+        return \Modules\Warehouse\Services\WorkingHoursService::workingSecondsSince($this->timer_deadline);
     }
 
     /**
@@ -273,7 +284,9 @@ class WarehouseOrder extends Model
     {
         $shippingType = WarehouseShippingType::where('slug', $this->shipping_type)->first();
         if ($shippingType) {
-            $this->timer_deadline = now()->addMinutes($shippingType->timer_minutes);
+            $this->timer_deadline = \Modules\Warehouse\Services\WorkingHoursService::addWorkingMinutes(
+                now(), $shippingType->timer_minutes
+            );
             $this->save();
         }
     }

@@ -9,6 +9,7 @@ use Modules\Warehouse\Models\WarehouseBoxSize;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingRule;
 use Modules\Warehouse\Models\WarehouseShippingType;
+use Modules\Warehouse\Services\WorkingHoursService;
 
 class SettingsController extends Controller
 {
@@ -35,7 +36,11 @@ class SettingsController extends Controller
         $boxSizes = WarehouseBoxSize::orderBy('sort_order')->get();
         $shippingRules = WarehouseShippingRule::orderByDesc('priority')->get();
 
-        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings', 'boxSizes', 'shippingRules'));
+        $workingHours = WorkingHoursService::getWorkingHours();
+        $workingHoursEnabled = WarehouseSetting::get('working_hours_enabled', '1') === '1';
+        $dayLabels = WorkingHoursService::$dayLabels;
+
+        return view('warehouse::settings.index', compact('shippingTypes', 'weightTolerance', 'alertMobile', 'shippingMappings', 'invoiceSettings', 'boxSizes', 'shippingRules', 'workingHours', 'workingHoursEnabled', 'dayLabels'));
     }
 
     public function update(Request $request)
@@ -244,5 +249,37 @@ class SettingsController extends Controller
 
         return redirect()->route('warehouse.settings.index')
             ->with('success', 'قانون ارسال حذف شد.');
+    }
+
+    public function updateWorkingHours(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'working_hours_enabled' => 'required|in:0,1',
+            'days' => 'required|array',
+        ]);
+
+        $workingHours = [];
+        foreach (WorkingHoursService::$dayKeys as $day) {
+            $dayData = $request->input("days.{$day}", []);
+            $workingHours[$day] = [
+                'active' => !empty($dayData['active']),
+                'start'  => $dayData['start'] ?? '09:00',
+                'end'    => $dayData['end'] ?? '17:00',
+            ];
+        }
+
+        WarehouseSetting::set('working_hours', json_encode($workingHours));
+        WarehouseSetting::set('working_hours_enabled', $request->input('working_hours_enabled'));
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'ساعات کاری ذخیره شد.']);
+        }
+
+        return redirect()->route('warehouse.settings.index')
+            ->with('success', 'ساعات کاری ذخیره شد.');
     }
 }

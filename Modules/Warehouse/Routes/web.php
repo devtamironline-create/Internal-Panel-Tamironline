@@ -100,6 +100,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/shipping-rule', [SettingsController::class, 'storeShippingRule'])->name('warehouse.settings.shipping-rule.store');
         Route::put('/shipping-rule/{shippingRule}', [SettingsController::class, 'updateShippingRule'])->name('warehouse.settings.shipping-rule.update');
         Route::delete('/shipping-rule/{shippingRule}', [SettingsController::class, 'deleteShippingRule'])->name('warehouse.settings.shipping-rule.delete');
+        // Working Hours
+        Route::put('/working-hours', [SettingsController::class, 'updateWorkingHours'])->name('warehouse.settings.working-hours.update');
     });
 
     // WooCommerce Integration
