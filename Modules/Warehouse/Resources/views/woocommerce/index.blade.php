@@ -237,6 +237,97 @@
 
         <div id="product-sync-result" class="hidden p-4 rounded-lg text-sm"></div>
 
+        {{-- لیست محصولات بدون وزن --}}
+        @if($zeroWeightCount > 0)
+        @php
+            $zeroWeightProducts = \Modules\Warehouse\Models\WarehouseProduct::where('weight', 0)
+                ->whereNotIn('type', ['variation'])
+                ->orderBy('name')
+                ->get();
+            $zeroWeightVariations = \Modules\Warehouse\Models\WarehouseProduct::where('weight', 0)
+                ->where('type', 'variation')
+                ->orderBy('parent_id')
+                ->get();
+        @endphp
+        <div class="mt-5 pt-5 border-t" x-data="{ showList: true }">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-yellow-700 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    محصولات بدون وزن ({{ $zeroWeightProducts->count() + $zeroWeightVariations->count() }})
+                </h3>
+                <button @click="showList = !showList" class="text-xs text-gray-500 hover:text-gray-700" x-text="showList ? 'بستن' : 'نمایش لیست'"></button>
+            </div>
+
+            <div x-show="showList" x-transition>
+                @if($zeroWeightProducts->count() > 0)
+                <div class="border border-yellow-200 rounded-xl overflow-hidden mb-4">
+                    <table class="w-full text-sm">
+                        <thead class="bg-yellow-50">
+                            <tr>
+                                <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-10">#</th>
+                                <th class="px-4 py-2.5 text-right font-medium text-yellow-800">نام محصول</th>
+                                <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-24">نوع</th>
+                                <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-20">SKU</th>
+                                <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-20">WC ID</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-yellow-100 bg-white">
+                            @foreach($zeroWeightProducts as $i => $product)
+                            <tr class="hover:bg-yellow-50/50">
+                                <td class="px-4 py-2.5 text-gray-400 text-xs">{{ $i + 1 }}</td>
+                                <td class="px-4 py-2.5 font-medium text-gray-800">{{ $product->name }}</td>
+                                <td class="px-4 py-2.5">
+                                    <span class="px-2 py-0.5 rounded text-xs
+                                        {{ $product->type === 'simple' ? 'bg-blue-100 text-blue-700' : '' }}
+                                        {{ $product->type === 'variable' ? 'bg-purple-100 text-purple-700' : '' }}
+                                        {{ in_array($product->type, ['bundle', 'yith_bundle', 'woosb', 'grouped']) ? 'bg-orange-100 text-orange-700' : '' }}
+                                    ">{{ $product->type }}</span>
+                                </td>
+                                <td class="px-4 py-2.5 text-gray-500 text-xs" dir="ltr">{{ $product->sku ?: '—' }}</td>
+                                <td class="px-4 py-2.5 text-gray-500 text-xs" dir="ltr">{{ $product->wc_product_id }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+
+                @if($zeroWeightVariations->count() > 0)
+                <div x-data="{ showVars: false }">
+                    <button @click="showVars = !showVars" class="flex items-center gap-2 text-xs text-yellow-700 hover:text-yellow-900 mb-2">
+                        <svg class="w-4 h-4 transition-transform" :class="showVars && 'rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        تنوع‌های بدون وزن ({{ $zeroWeightVariations->count() }} تنوع)
+                    </button>
+                    <div x-show="showVars" x-transition class="border border-yellow-200 rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-yellow-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-right font-medium text-yellow-800 w-10">#</th>
+                                    <th class="px-4 py-2 text-right font-medium text-yellow-800">نام تنوع</th>
+                                    <th class="px-4 py-2 text-right font-medium text-yellow-800 w-20">SKU</th>
+                                    <th class="px-4 py-2 text-right font-medium text-yellow-800 w-20">WC ID</th>
+                                    <th class="px-4 py-2 text-right font-medium text-yellow-800 w-20">Parent ID</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-yellow-100 bg-white">
+                                @foreach($zeroWeightVariations as $i => $var)
+                                <tr class="hover:bg-yellow-50/50">
+                                    <td class="px-4 py-2 text-gray-400 text-xs">{{ $i + 1 }}</td>
+                                    <td class="px-4 py-2 text-gray-700 text-xs">{{ $var->full_name }}</td>
+                                    <td class="px-4 py-2 text-gray-500 text-xs" dir="ltr">{{ $var->sku ?: '—' }}</td>
+                                    <td class="px-4 py-2 text-gray-500 text-xs" dir="ltr">{{ $var->wc_product_id }}</td>
+                                    <td class="px-4 py-2 text-gray-500 text-xs" dir="ltr">{{ $var->parent_id }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <p class="text-xs text-gray-400 mt-3">نکته: ابتدا محصولات را سینک کنید، سپس سفارشات. وزن هر سفارش از جدول محصولات محاسبه می‌شود.</p>
     </div>
 </div>
