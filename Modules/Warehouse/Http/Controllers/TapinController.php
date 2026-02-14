@@ -431,6 +431,18 @@ class TapinController extends Controller
                 $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
                 $fullAddress = implode('، ', array_filter([$state, $city, $address]));
                 $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
+                $postcode = TapinService::normalizePostalCode($postcode);
+
+                // اگه کد پستی نداره، اسکیپ کن
+                if (empty($postcode) || strlen($postcode) !== 10) {
+                    $results[] = [
+                        'order_number' => $order->order_number,
+                        'customer' => $order->customer_name,
+                        'status' => 'failed',
+                        'message' => 'کد پستی ثبت نشده یا نامعتبر (باید ۱۰ رقم باشد) — "' . ($postcode ?: 'خالی') . '"',
+                    ];
+                    continue;
+                }
 
                 $products = [];
                 foreach ($order->items as $item) {
@@ -455,7 +467,7 @@ class TapinController extends Controller
                     'recipient_name' => $order->customer_name,
                     'recipient_mobile' => $order->customer_mobile,
                     'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
-                    'recipient_postal_code' => $postcode ?: '0000000000',
+                    'recipient_postal_code' => $postcode,
                     'recipient_city_name' => $city,
                     'recipient_province' => $state,
                     'tapin_province_code' => $tapinData['province_code'] ?? null,

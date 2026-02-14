@@ -855,7 +855,7 @@ class TapinService
             'phone' => null,
             'email' => null,
             'address' => $orderData['recipient_address'] ?? 'آدرس نامشخص',
-            'postal_code' => self::normalizePostalCode($orderData['recipient_postal_code'] ?? '') ?: '0000000000',
+            'postal_code' => self::normalizePostalCode($orderData['recipient_postal_code'] ?? ''),
             'province_code' => $provinceCode,
             'city_code' => $cityCode ?: ($provinceCode ? 1 : null),
             'description' => null,

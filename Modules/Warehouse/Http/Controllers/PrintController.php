@@ -328,6 +328,13 @@ class PrintController extends Controller
             return 'تاپین تنظیم نشده (API Key یا Shop ID خالی)';
         }
 
+        // نرمال‌سازی کد پستی (تبدیل فارسی/عربی + حذف غیرعددی)
+        $postcode = TapinService::normalizePostalCode($postcode);
+        if (empty($postcode) || strlen($postcode) !== 10) {
+            Log::warning('Tapin: postal code missing or invalid', ['order' => $order->order_number, 'postcode' => $postcode]);
+            return 'کد پستی ثبت نشده یا نامعتبر است (باید ۱۰ رقم باشد) — کد فعلی: "' . ($postcode ?: 'خالی') . '"';
+        }
+
         // ساخت لیست محصولات از آیتم‌های سفارش
         $products = [];
         foreach ($order->items as $item) {
@@ -347,12 +354,14 @@ class PrintController extends Controller
         // ابعاد جعبه سفارش برای match با بسته‌های تاپین
         $box = $order->boxSize;
 
+        Log::info('Tapin register postal code', ['order' => $order->order_number, 'postcode' => $postcode]);
+
         $result = $tapin->createShipment([
             'external_order_id' => $order->order_number,
             'recipient_name' => $order->customer_name,
             'recipient_mobile' => $order->customer_mobile,
             'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
-            'recipient_postal_code' => $postcode ?: '0000000000',
+            'recipient_postal_code' => $postcode,
             'recipient_city_name' => $city,
             'recipient_province' => $state,
             'tapin_province_code' => $tapinData['province_code'] ?? null,
@@ -452,10 +461,11 @@ class PrintController extends Controller
         }
 
         $error = $result['message'] ?? 'خطای نامشخص';
-        Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $error]);
-        OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت تاپین: ' . $error, [
+        Log::warning('Tapin auto-register failed', ['order' => $order->order_number, 'error' => $error, 'postcode_sent' => $postcode]);
+        OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت تاپین: ' . $error . ' (کد پستی ارسالی: ' . $postcode . ')', [
             'provider' => 'tapin',
             'error' => $error,
+            'postcode_sent' => $postcode,
         ]);
         return 'تاپین: ' . $error;
     }
