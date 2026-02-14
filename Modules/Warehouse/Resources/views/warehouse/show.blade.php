@@ -452,6 +452,20 @@
 
     <!-- Order Items -->
     @if($order->items->count() > 0)
+    @php
+        // پیدا کردن محصولات پکیج/باندل از بین آیتم‌های سفارش
+        $itemProductIds = $order->items->pluck('wc_product_id')->filter()->unique()->toArray();
+        $bundleProducts = [];
+        if (!empty($itemProductIds)) {
+            $bundleTypes = ['bundle', 'yith_bundle', 'woosb', 'grouped'];
+            $bundles = \Modules\Warehouse\Models\WarehouseProduct::whereIn('wc_product_id', $itemProductIds)
+                ->whereIn('type', $bundleTypes)
+                ->with(['bundleItems.childProduct'])
+                ->get()
+                ->keyBy('wc_product_id');
+            $bundleProducts = $bundles;
+        }
+    @endphp
     <div class="bg-white rounded-xl shadow-sm">
         <div class="p-6 border-b border-gray-100">
             <h2 class="text-lg font-bold text-gray-900">محصولات سفارش ({{ $order->items->count() }} قلم)</h2>
@@ -473,9 +487,21 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($order->items as $index => $item)
+                    @php
+                        $isBundle = $item->wc_product_id && isset($bundleProducts[$item->wc_product_id]);
+                        $bundleProduct = $isBundle ? $bundleProducts[$item->wc_product_id] : null;
+                    @endphp
                     <tr class="hover:bg-gray-50 {{ $item->scanned ? 'bg-green-50' : '' }}">
                         <td class="px-6 py-3 text-sm text-gray-500">{{ $index + 1 }}</td>
-                        <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ $item->product_name }}</td>
+                        <td class="px-6 py-3 text-sm font-medium text-gray-900">
+                            {{ $item->product_name }}
+                            @if($isBundle)
+                                <span class="inline-flex items-center gap-1 mr-2 px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 rounded">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                    پکیج
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_sku ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_barcode ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-900 font-medium">{{ $item->quantity }}</td>
@@ -493,6 +519,75 @@
                             @endif
                         </td>
                     </tr>
+                    {{-- نمایش زیرمجموعه‌های پکیج --}}
+                    @if($isBundle && $bundleProduct->bundleItems->count() > 0)
+                        @php
+                            $bundleChildTotalWeight = 0;
+                        @endphp
+                        @foreach($bundleProduct->bundleItems as $bundleItem)
+                            @if($bundleItem->childProduct && !$bundleItem->optional)
+                                @php
+                                    $childWeight = (float) $bundleItem->childProduct->weight;
+                                    // هندل محصولات variable
+                                    if ($childWeight == 0 && $bundleItem->childProduct->type === 'variable') {
+                                        $firstVar = \Modules\Warehouse\Models\WarehouseProduct::where('parent_id', $bundleItem->childProduct->wc_product_id)
+                                            ->where('type', 'variation')->where('weight', '>', 0)->first();
+                                        if ($firstVar) $childWeight = (float) $firstVar->weight;
+                                    }
+                                    $childWeightGrams = \Modules\Warehouse\Models\WarehouseOrder::toGrams($childWeight);
+                                    $childTotalWeight = $childWeightGrams * $bundleItem->default_quantity;
+                                    $bundleChildTotalWeight += $childTotalWeight;
+                                @endphp
+                                <tr class="bg-purple-50/50">
+                                    <td class="px-6 py-2 text-sm text-gray-400"></td>
+                                    <td class="px-6 py-2 text-sm text-gray-600 pr-12">
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                            {{ $bundleItem->childProduct->name }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-2 text-sm text-gray-400" dir="ltr">{{ $bundleItem->childProduct->sku ?? '—' }}</td>
+                                    <td class="px-6 py-2 text-sm text-gray-400" dir="ltr">—</td>
+                                    <td class="px-6 py-2 text-sm text-gray-500">{{ $bundleItem->default_quantity }}</td>
+                                    <td class="px-6 py-2 text-sm text-gray-500">
+                                        @if($childWeightGrams > 0)
+                                            {{ number_format($childWeightGrams) }}g
+                                            @if($bundleItem->default_quantity > 1)
+                                                <span class="text-gray-400 text-xs">({{ number_format($childTotalWeight) }}g)</span>
+                                            @endif
+                                        @else
+                                            <span class="text-red-400">0g</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-2 text-sm text-gray-400" dir="ltr">
+                                        @php
+                                            $cl = (float) $bundleItem->childProduct->length;
+                                            $cw = (float) $bundleItem->childProduct->width;
+                                            $ch = (float) $bundleItem->childProduct->height;
+                                        @endphp
+                                        {{ ($cl && $cw && $ch) ? "{$cl}×{$cw}×{$ch}" : '—' }}
+                                    </td>
+                                    <td class="px-6 py-2 text-sm text-gray-400">—</td>
+                                    <td class="px-6 py-2"></td>
+                                </tr>
+                            @endif
+                        @endforeach
+                        {{-- ردیف جمع وزن پکیج --}}
+                        <tr class="bg-purple-50 border-b-2 border-purple-200">
+                            <td class="px-6 py-2"></td>
+                            <td class="px-6 py-2 text-xs font-bold text-purple-700 pr-12">
+                                جمع وزن پکیج ({{ $bundleProduct->bundleItems->filter(fn($bi) => $bi->childProduct && !$bi->optional)->count() }} محصول)
+                            </td>
+                            <td class="px-6 py-2" colspan="3"></td>
+                            <td class="px-6 py-2 text-xs font-bold text-purple-700">
+                                {{ number_format($bundleChildTotalWeight) }}g
+                                @if($item->weight_grams > 0 && $item->weight_grams != $bundleChildTotalWeight)
+                                    <span class="text-red-500 mr-1">(ثبت شده: {{ number_format($item->weight_grams) }}g)</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-2" colspan="3"></td>
+                        </tr>
+                    @endif
                     @endforeach
                 </tbody>
             </table>
