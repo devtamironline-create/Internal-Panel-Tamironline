@@ -490,6 +490,22 @@
                     @php
                         $isBundle = $item->wc_product_id && isset($bundleProducts[$item->wc_product_id]);
                         $bundleProduct = $isBundle ? $bundleProducts[$item->wc_product_id] : null;
+                        // وزن نمایشی: برای پکیج‌ها از زیرمجموعه‌ها حساب کن
+                        $showItemWeight = $item->weight_grams;
+                        if ($isBundle && $bundleProduct->bundleItems->count() > 0) {
+                            $calcW = 0;
+                            foreach ($bundleProduct->bundleItems as $tmpBi) {
+                                if (!$tmpBi->childProduct || $tmpBi->optional) continue;
+                                $tmpW = (float) $tmpBi->childProduct->weight;
+                                if ($tmpW == 0 && $tmpBi->childProduct->type === 'variable') {
+                                    $tmpVar = \Modules\Warehouse\Models\WarehouseProduct::where('parent_id', $tmpBi->childProduct->wc_product_id)
+                                        ->where('type', 'variation')->where('weight', '>', 0)->first();
+                                    if ($tmpVar) $tmpW = (float) $tmpVar->weight;
+                                }
+                                $calcW += \Modules\Warehouse\Models\WarehouseOrder::toGrams($tmpW) * $tmpBi->default_quantity;
+                            }
+                            if ($calcW > 0) $showItemWeight = $calcW;
+                        }
                     @endphp
                     <tr class="hover:bg-gray-50 {{ $item->scanned ? 'bg-green-50' : '' }}">
                         <td class="px-6 py-3 text-sm text-gray-500">{{ $index + 1 }}</td>
@@ -505,7 +521,7 @@
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_sku ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ $item->product_barcode ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-900 font-medium">{{ $item->quantity }}</td>
-                        <td class="px-6 py-3 text-sm text-gray-600">{{ $item->weight ? number_format($item->weight_grams) . 'g' : '—' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-600">{{ $showItemWeight > 0 ? number_format($showItemWeight) . 'g' : '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600" dir="ltr">{{ ($item->length && $item->width && $item->height) ? "{$item->length}×{$item->width}×{$item->height}" : '—' }}</td>
                         <td class="px-6 py-3 text-sm text-gray-600">{{ $item->price ? number_format($item->price) . ' تومان' : '—' }}</td>
                         <td class="px-6 py-3">

@@ -353,12 +353,21 @@
                                             @php
                                                 $modalIsBundle = $item->wc_product_id && isset($modalBundles[$item->wc_product_id]);
                                                 $modalBundle = $modalIsBundle ? $modalBundles[$item->wc_product_id] : null;
-                                                // وزن نمایشی آیتم: برای پکیج‌ها از زیرمجموعه‌ها حساب کن
+                                                // وزن نمایشی آیتم: برای پکیج‌ها مستقیم از زیرمجموعه‌های لود شده حساب کن
                                                 $displayWeight = \Modules\Warehouse\Models\WarehouseOrder::toGrams($item->weight);
-                                                if ($modalIsBundle) {
-                                                    $calcBundleW = $modalBundle->calculateBundleWeight();
-                                                    $calcBundleWG = \Modules\Warehouse\Models\WarehouseOrder::toGrams($calcBundleW);
-                                                    if ($calcBundleWG > 0) $displayWeight = $calcBundleWG;
+                                                if ($modalIsBundle && $modalBundle->bundleItems->count() > 0) {
+                                                    $calcTotal = 0;
+                                                    foreach ($modalBundle->bundleItems as $tmpBi) {
+                                                        if (!$tmpBi->childProduct || $tmpBi->optional) continue;
+                                                        $tmpW = (float) $tmpBi->childProduct->weight;
+                                                        if ($tmpW == 0 && $tmpBi->childProduct->type === 'variable') {
+                                                            $tmpVar = \Modules\Warehouse\Models\WarehouseProduct::where('parent_id', $tmpBi->childProduct->wc_product_id)
+                                                                ->where('type', 'variation')->where('weight', '>', 0)->first();
+                                                            if ($tmpVar) $tmpW = (float) $tmpVar->weight;
+                                                        }
+                                                        $calcTotal += \Modules\Warehouse\Models\WarehouseOrder::toGrams($tmpW) * $tmpBi->default_quantity;
+                                                    }
+                                                    if ($calcTotal > 0) $displayWeight = $calcTotal;
                                                 }
                                                 $correctedTotalWeight += $displayWeight * $item->quantity;
                                             @endphp
