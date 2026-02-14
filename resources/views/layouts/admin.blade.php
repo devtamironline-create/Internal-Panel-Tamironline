@@ -993,12 +993,14 @@
 
                         if (data.new_notifications && data.new_notifications.length > 0) {
                             data.new_notifications.forEach(notif => {
-                                this.addToast(
-                                    notif.type === 'leave_approved' ? 'success' :
-                                    notif.type === 'leave_rejected' ? 'warning' : 'info',
-                                    notif.title,
-                                    notif.body || notif.message
-                                );
+                                let toastType = 'info';
+                                let duration = 5000;
+
+                                if (notif.type === 'leave_approved') { toastType = 'success'; }
+                                else if (notif.type === 'leave_rejected') { toastType = 'warning'; }
+                                else if (notif.type === 'wc_order_changed') { toastType = 'warning'; duration = 15000; }
+
+                                this.addToast(toastType, notif.title, notif.body || notif.message, duration);
                             });
                         }
                         lastCheck = Date.now();

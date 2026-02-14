@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Providers;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Warehouse\Console\CheckWcOrderUpdates;
 use Modules\Warehouse\Console\SyncWooCommerceOrders;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
@@ -38,6 +39,7 @@ class WarehouseServiceProvider extends ServiceProvider
     {
         $this->commands([
             SyncWooCommerceOrders::class,
+            CheckWcOrderUpdates::class,
         ]);
     }
 
@@ -45,7 +47,13 @@ class WarehouseServiceProvider extends ServiceProvider
     {
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
+            // سینک سفارشات جدید از ووکامرس
             $schedule->command('warehouse:sync-orders')
+                ->everyFiveMinutes()
+                ->withoutOverlapping()
+                ->runInBackground();
+            // بررسی تغییرات سفارشات فعال در ووکامرس
+            $schedule->command('warehouse:check-wc-updates')
                 ->everyFiveMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
