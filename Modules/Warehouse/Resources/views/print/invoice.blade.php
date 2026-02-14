@@ -42,11 +42,6 @@
         .notes-section { padding: 6px 10px; border-top: 1px solid #eee; }
         .notes { background: #fff; padding: 4px 8px; border-radius: 3px; margin-bottom: 3px; font-size: 9px; border-right: 3px solid #ccc; }
 
-        /* Order Barcode (top) */
-        .order-barcode-top { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #ddd; background: #fff; }
-        .order-barcode-top svg { max-width: 280px; height: auto; }
-        .order-barcode-top .barcode-meta { display: flex; flex-direction: column; flex-shrink: 0; }
-
         /* Barcode */
         .barcode-section { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #ddd; gap: 8px; overflow: hidden; }
         .barcode-list { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -161,15 +156,6 @@
     @endif
 
     <div class="invoice">
-        {{-- Order Barcode (Top) --}}
-        <div class="order-barcode-top">
-            <svg id="barcode"></svg>
-            <div class="barcode-meta">
-                <span class="barcode-label">بارکد سفارش</span>
-                <span class="barcode-code">{{ $order->barcode }}</span>
-            </div>
-        </div>
-
         {{-- Header --}}
         <div class="header">
             <div class="header-right">
@@ -303,10 +289,6 @@
             <div class="barcode-list">
                 <div class="barcode-item">
                     <svg id="amadest-barcode"></svg>
-                    <div class="barcode-meta">
-                        <span class="barcode-label">بارکد پست</span>
-                        <span class="barcode-code">{{ $amadestCode }}</span>
-                    </div>
                 </div>
             </div>
             @endif
@@ -327,14 +309,6 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     @endif
     <script>
-        JsBarcode("#barcode", "{{ $order->barcode }}", {
-            format: "CODE128",
-            width: 2,
-            height: 45,
-            displayValue: false,
-            margin: 2,
-        });
-
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
