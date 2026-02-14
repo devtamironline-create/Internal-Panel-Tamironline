@@ -742,15 +742,29 @@ class WooCommerceService
                     break;
                 }
 
+                // گرفتن اسم محصول پدر برای ساخت اسم کامل variation
+                $parentProduct = WarehouseProduct::where('wc_product_id', $productId)->first();
+                $parentName = $parentProduct ? $parentProduct->name : '';
+
                 foreach ($variations as $variation) {
                     // وزن خام از ووکامرس (ممکنه گرم یا کیلوگرم باشه - toGrams تشخیص میده)
                     $weightGrams = (float)($variation['weight'] ?? 0);
                     $dims = $variation['dimensions'] ?? [];
 
+                    // ساخت اسم کامل: اگه اسم variation خالی یا خیلی کوتاهه، اسم پدر + ویژگی‌ها رو بذار
+                    $variationName = $variation['name'] ?? '';
+                    if (empty($variationName) || (mb_strlen($variationName) < 20 && $parentName && !str_contains($variationName, $parentName))) {
+                        $attributes = collect($variation['attributes'] ?? [])
+                            ->pluck('option')
+                            ->filter()
+                            ->implode(' - ');
+                        $variationName = $parentName . ($attributes ? ' - ' . $attributes : '');
+                    }
+
                     WarehouseProduct::updateOrCreate(
                         ['wc_product_id' => $variation['id']],
                         [
-                            'name' => $variation['name'] ?? ('تنوع #' . $variation['id']),
+                            'name' => $variationName ?: ('تنوع #' . $variation['id']),
                             'sku' => $variation['sku'] ?? null,
                             'weight' => $weightGrams,
                             'length' => (float)($dims['length'] ?? 0),

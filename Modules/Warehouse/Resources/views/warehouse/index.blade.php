@@ -234,7 +234,7 @@
                                                 <td class="py-1.5 px-4 text-[11px] text-gray-500 pr-8">
                                                     <span class="inline-flex items-center gap-1">
                                                         <svg class="w-2.5 h-2.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                                        {{ $cbi->childProduct->name }}
+                                                        {{ $cbi->childProduct->full_name }}
                                                     </span>
                                                 </td>
                                                 <td class="py-1.5 px-4 text-center">
@@ -348,10 +348,19 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
+                                            @php $correctedTotalWeight = 0; @endphp
                                             @foreach($order->items as $index => $item)
                                             @php
                                                 $modalIsBundle = $item->wc_product_id && isset($modalBundles[$item->wc_product_id]);
                                                 $modalBundle = $modalIsBundle ? $modalBundles[$item->wc_product_id] : null;
+                                                // وزن نمایشی آیتم: برای پکیج‌ها از زیرمجموعه‌ها حساب کن
+                                                $displayWeight = \Modules\Warehouse\Models\WarehouseOrder::toGrams($item->weight);
+                                                if ($modalIsBundle) {
+                                                    $calcBundleW = $modalBundle->calculateBundleWeight();
+                                                    $calcBundleWG = \Modules\Warehouse\Models\WarehouseOrder::toGrams($calcBundleW);
+                                                    if ($calcBundleWG > 0) $displayWeight = $calcBundleWG;
+                                                }
+                                                $correctedTotalWeight += $displayWeight * $item->quantity;
                                             @endphp
                                             <tr class="hover:bg-gray-50/50">
                                                 <td class="py-2 px-3 text-gray-400 text-xs">{{ $index + 1 }}</td>
@@ -367,7 +376,7 @@
                                                 <td class="py-2 px-3 text-center">
                                                     <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1 bg-brand-50 text-brand-700 rounded text-xs font-bold">{{ $item->quantity }}</span>
                                                 </td>
-                                                <td class="py-2 px-3 text-center text-xs text-gray-500">{{ $item->weight ? number_format(\Modules\Warehouse\Models\WarehouseOrder::toGrams($item->weight)) . 'g' : '—' }}</td>
+                                                <td class="py-2 px-3 text-center text-xs text-gray-500">{{ $displayWeight > 0 ? number_format($displayWeight) . 'g' : '—' }}</td>
                                             </tr>
                                             {{-- زیرمجموعه‌های پکیج --}}
                                             @if($modalIsBundle && $modalBundle->bundleItems->count() > 0)
@@ -390,7 +399,7 @@
                                                             <td class="py-1.5 px-3 text-[11px] text-gray-500 pr-6">
                                                                 <span class="inline-flex items-center gap-1">
                                                                     <svg class="w-2.5 h-2.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                                                    {{ $bi->childProduct->name }}
+                                                                    {{ $bi->childProduct->full_name }}
                                                                 </span>
                                                             </td>
                                                             <td class="py-1.5 px-3 text-center text-[11px] text-gray-400">{{ $bi->default_quantity }}</td>
@@ -412,7 +421,7 @@
                                         <tfoot class="bg-gray-50">
                                             <tr>
                                                 <td colspan="3" class="py-2 px-3 text-xs font-bold text-gray-700 text-left">وزن کل محصولات:</td>
-                                                <td class="py-2 px-3 text-center text-xs font-bold text-gray-900">{{ number_format($order->total_weight_grams) }}g</td>
+                                                <td class="py-2 px-3 text-center text-xs font-bold text-gray-900">{{ number_format($correctedTotalWeight) }}g</td>
                                             </tr>
                                         </tfoot>
                                     </table>

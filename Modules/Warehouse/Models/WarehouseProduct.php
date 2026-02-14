@@ -29,6 +29,20 @@ class WarehouseProduct extends Model
     }
 
     /**
+     * اسم کامل محصول - برای variation ها اسم پدر رو هم اضافه میکنه
+     */
+    public function getFullNameAttribute(): string
+    {
+        if ($this->type === 'variation' && $this->parent_id && mb_strlen($this->name) < 20) {
+            $parent = self::where('wc_product_id', $this->parent_id)->first();
+            if ($parent && !str_contains($this->name, $parent->name)) {
+                return $parent->name . ' - ' . $this->name;
+            }
+        }
+        return $this->name;
+    }
+
+    /**
      * آیتم‌های باندل (محصولات زیرمجموعه پکیج)
      */
     public function bundleItems(): HasMany

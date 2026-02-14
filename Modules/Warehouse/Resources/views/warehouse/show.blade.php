@@ -543,7 +543,7 @@
                                     <td class="px-6 py-2 text-sm text-gray-600 pr-12">
                                         <span class="inline-flex items-center gap-1.5">
                                             <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-                                            {{ $bundleItem->childProduct->name }}
+                                            {{ $bundleItem->childProduct->full_name }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-2 text-sm text-gray-400" dir="ltr">{{ $bundleItem->childProduct->sku ?? '—' }}</td>
