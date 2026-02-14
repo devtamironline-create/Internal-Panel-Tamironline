@@ -376,6 +376,7 @@ class WarehouseController extends Controller
         $validated = $request->validate([
             'box_size_id' => 'required|exists:warehouse_box_sizes,id',
             'total_weight_with_box' => 'required|numeric|min:1',
+            'postal_code' => 'nullable|string|max:10',
         ]);
 
         $order->update([
@@ -383,9 +384,20 @@ class WarehouseController extends Controller
             'actual_weight' => $validated['total_weight_with_box'],
         ]);
 
+        // ذخیره کد پستی در wc_order_data اگه وارد شده
+        if (!empty($validated['postal_code'])) {
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            if (!isset($wcData['shipping'])) $wcData['shipping'] = [];
+            $wcData['shipping']['postcode'] = $validated['postal_code'];
+            if (!isset($wcData['billing'])) $wcData['billing'] = [];
+            $wcData['billing']['postcode'] = $validated['postal_code'];
+            $order->update(['wc_order_data' => $wcData]);
+        }
+
         OrderLog::log($order, OrderLog::ACTION_EDITED, 'تنظیم کارتن و وزن قبل از پرینت', [
             'box_size_id' => $validated['box_size_id'],
             'total_weight_with_box' => $validated['total_weight_with_box'],
+            'postal_code' => $validated['postal_code'] ?? null,
         ]);
 
         return response()->json([

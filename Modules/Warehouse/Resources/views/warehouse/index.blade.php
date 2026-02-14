@@ -123,7 +123,12 @@
                 $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="{ showPrintModal: false, shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, selectedBox: '', enteredWeight: '', confirmLoading: false, confirmError: '', changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); }, async confirmAndPrint() { if(!this.selectedBox || !this.enteredWeight) { this.confirmError = 'لطفاً کارتن و وزن را وارد کنید'; return; } this.confirmLoading = true; this.confirmError = ''; try { const res = await fetch('/warehouse/{{ $order->id }}/confirm-and-print', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}, body: JSON.stringify({box_size_id: this.selectedBox, total_weight_with_box: parseFloat(this.enteredWeight)}) }); const data = await res.json(); if(data.success) { window.open(data.print_url, '_blank'); setTimeout(() => { window.location.href = data.show_url; }, 500); } else { this.confirmError = data.message || 'خطا در ثبت'; } } catch(e) { this.confirmError = 'خطا در ارتباط با سرور'; } this.confirmLoading = false; } }">
+            @php
+                $postcode = ($sh['postcode'] ?? '') ?: ($bl['postcode'] ?? '');
+                $isPost = $order->shipping_type === 'post';
+                $needsPostcode = $isPost && empty($postcode);
+            @endphp
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="pendingOrderCard({{ $order->id }}, '{{ $order->shipping_type }}', '{{ addslashes($shippingLabel) }}', {{ $needsPostcode ? 'true' : 'false' }})">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
@@ -344,6 +349,24 @@
                                 <p class="text-[11px] text-gray-400 mt-1">وزن سیستمی محصولات: {{ number_format($order->total_weight_grams) }}g</p>
                             </div>
 
+                            {{-- هشدار کد پستی برای سفارشات پستی --}}
+                            @if($needsPostcode)
+                            <div class="p-3 bg-red-50 border border-red-200 rounded-xl space-y-2">
+                                <div class="flex items-center gap-2 text-sm font-bold text-red-700">
+                                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                    کد پستی ثبت نشده!
+                                </div>
+                                @if($fullAddr)
+                                <p class="text-xs text-gray-600">آدرس: <span class="font-medium">{{ $fullAddr }}</span></p>
+                                @endif
+                                <div>
+                                    <label class="block text-xs font-medium text-red-700 mb-1">کد پستی را وارد کنید:</label>
+                                    <input type="text" x-model="postalCode" maxlength="10" dir="ltr" placeholder="مثال: 1234567890"
+                                           class="w-full px-3 py-2 border-red-300 rounded-lg shadow-sm focus:border-red-500 focus:ring-red-500 text-sm text-center font-medium">
+                                </div>
+                            </div>
+                            @endif
+
                             {{-- پیام خطا --}}
                             <div x-show="confirmError" x-cloak class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700" x-text="confirmError"></div>
 
@@ -360,7 +383,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 انصراف
                             </button>
-                            <button type="button" @click="confirmAndPrint()" :disabled="confirmLoading || !selectedBox || !enteredWeight"
+                            <button type="button" @click="confirmAndPrint()" :disabled="confirmLoading || !selectedBox || !enteredWeight || (needsPostcode && !postalCode)"
                                class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
                                 <template x-if="!confirmLoading">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -826,6 +849,71 @@
 
 @push('scripts')
 <script>
+function pendingOrderCard(orderId, shippingType, shippingLabel, needsPostcode) {
+    return {
+        showPrintModal: false,
+        shippingOpen: false,
+        shippingType: shippingType,
+        shippingLabel: shippingLabel,
+        shippingLoading: false,
+        selectedBox: '',
+        enteredWeight: '',
+        postalCode: '',
+        needsPostcode: needsPostcode,
+        confirmLoading: false,
+        confirmError: '',
+
+        changeShipping(slug, label) {
+            if (slug === this.shippingType) { this.shippingOpen = false; return; }
+            this.shippingLoading = true;
+            fetch('/warehouse/' + orderId + '/shipping-type', {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                body: JSON.stringify({shipping_type: slug})
+            }).then(r => r.json()).then(d => {
+                if (d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; }
+            }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; });
+        },
+
+        async confirmAndPrint() {
+            if (!this.selectedBox || !this.enteredWeight) {
+                this.confirmError = 'لطفاً کارتن و وزن را وارد کنید';
+                return;
+            }
+            if (this.needsPostcode && !this.postalCode) {
+                this.confirmError = 'لطفاً کد پستی را وارد کنید';
+                return;
+            }
+            this.confirmLoading = true;
+            this.confirmError = '';
+            try {
+                var payload = {
+                    box_size_id: this.selectedBox,
+                    total_weight_with_box: parseFloat(this.enteredWeight)
+                };
+                if (this.postalCode) {
+                    payload.postal_code = this.postalCode;
+                }
+                var res = await fetch('/warehouse/' + orderId + '/confirm-and-print', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+                if (data.success) {
+                    window.open(data.print_url, '_blank');
+                    setTimeout(function() { window.location.href = data.show_url; }, 500);
+                } else {
+                    this.confirmError = data.message || 'خطا در ثبت';
+                }
+            } catch(e) {
+                this.confirmError = 'خطا در ارتباط با سرور';
+            }
+            this.confirmLoading = false;
+        }
+    };
+}
+
 function toggleSelectAll() {
     var selectAll = document.getElementById('selectAll');
     var checkboxes = document.querySelectorAll('.order-checkbox');
