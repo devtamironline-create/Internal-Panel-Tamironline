@@ -611,8 +611,8 @@ class WooCommerceService
                 }
 
                 foreach ($products as $product) {
-                    // وزن به گرم (ووکامرس به گرم ارسال میکنه)
-                    $weightGrams = (int) round((float)($product['weight'] ?? 0));
+                    // وزن خام از ووکامرس (ممکنه گرم یا کیلوگرم باشه - toGrams تشخیص میده)
+                    $weightGrams = (float)($product['weight'] ?? 0);
                     $dims = $product['dimensions'] ?? [];
                     $productType = $product['type'] ?? 'simple';
 
@@ -743,8 +743,8 @@ class WooCommerceService
                 }
 
                 foreach ($variations as $variation) {
-                    // وزن به گرم
-                    $weightGrams = (int) round((float)($variation['weight'] ?? 0));
+                    // وزن خام از ووکامرس (ممکنه گرم یا کیلوگرم باشه - toGrams تشخیص میده)
+                    $weightGrams = (float)($variation['weight'] ?? 0);
                     $dims = $variation['dimensions'] ?? [];
 
                     WarehouseProduct::updateOrCreate(
@@ -1028,16 +1028,14 @@ class WooCommerceService
     }
 
     /**
-     * آپدیت وزن آیتم‌های سفارشات موجود که وزنشون 0 هست
+     * آپدیت وزن آیتم‌های سفارشات موجود که وزنشون با warehouse_products فرق داره
      */
     public function updateExistingOrderWeights(): int
     {
         $updatedCount = 0;
 
-        // آیتم‌هایی که وزنشون 0 هست
-        $items = WarehouseOrderItem::whereNotNull('wc_product_id')
-            ->where('weight', 0)
-            ->get();
+        // همه آیتم‌هایی که product_id دارن
+        $items = WarehouseOrderItem::whereNotNull('wc_product_id')->get();
 
         if ($items->isEmpty()) {
             return 0;
@@ -1047,17 +1045,20 @@ class WooCommerceService
         $productIds = $items->pluck('wc_product_id')->unique()->toArray();
         $weightsMap = WarehouseProduct::getWeightsMap($productIds);
 
+        $affectedOrderIds = collect();
+
         foreach ($items as $item) {
             $newWeight = (float)($weightsMap[$item->wc_product_id] ?? 0);
-            if ($newWeight > 0 && $newWeight != $item->weight) {
+            if ($newWeight > 0 && $newWeight != (float)$item->weight) {
                 $item->update(['weight' => $newWeight]);
+                $affectedOrderIds->push($item->warehouse_order_id);
                 $updatedCount++;
             }
         }
 
-        // آپدیت وزن کل همه سفارشاتی که آیتمشون تغییر کرده
+        // آپدیت وزن کل سفارشاتی که آیتمشون تغییر کرده
         if ($updatedCount > 0) {
-            $orderIds = $items->pluck('warehouse_order_id')->unique();
+            $orderIds = $affectedOrderIds->unique();
             foreach ($orderIds as $orderId) {
                 $order = WarehouseOrder::with('items')->find($orderId);
                 if ($order) {
