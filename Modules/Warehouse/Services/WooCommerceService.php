@@ -149,7 +149,8 @@ class WooCommerceService
                     // If old order exists without wc_order_id, update it with journey fields
                     if (!$existingOrder->wc_order_id) {
                         $shippingType = $this->detectShippingType($wcOrder);
-                        $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? [], $productWeights);
+                        $filteredItems = $this->filterBundleChildren($wcOrder['line_items'] ?? []);
+                        $totalWeight = $this->calculateTotalWeight($filteredItems, $productWeights);
 
                         $existingOrder->update([
                             'wc_order_id' => $wcOrderId,
@@ -197,11 +198,14 @@ class WooCommerceService
                 // Determine shipping type from WC shipping methods
                 $shippingType = $this->detectShippingType($wcOrder);
 
+                // فیلتر کردن زیرمجموعه‌های تکراری پکیج
+                $filteredLineItems = $this->filterBundleChildren($wcOrder['line_items'] ?? []);
+
                 // Calculate total weight from product weights
-                $totalWeight = $this->calculateTotalWeight($wcOrder['line_items'] ?? [], $productWeights);
+                $totalWeight = $this->calculateTotalWeight($filteredLineItems, $productWeights);
 
                 // Build description
-                $lineItems = collect($wcOrder['line_items'] ?? [])
+                $lineItems = collect($filteredLineItems)
                     ->map(fn($item) => ($item['name'] ?? '') . ' x' . ($item['quantity'] ?? 1))
                     ->implode("\n");
 
@@ -240,8 +244,8 @@ class WooCommerceService
                 // Set timer based on shipping type
                 $order->setTimerFromShippingType();
 
-                // Create order items with product weights
-                $this->createOrderItems($order, $wcOrder['line_items'] ?? [], $productWeights);
+                // Create order items with product weights (filtered = no bundle children)
+                $this->createOrderItems($order, $filteredLineItems, $productWeights);
 
                 $imported++;
             } catch (\Exception $e) {
@@ -520,6 +524,22 @@ class WooCommerceService
 
         // بعد وزن محصول اصلی
         return (float)($weightsMap[$item['product_id'] ?? 0] ?? 0);
+    }
+
+    /**
+     * فیلتر کردن آیتم‌هایی که زیرمجموعه پکیج هستن
+     * ووکامرس هم پکیج رو میفرسته هم زیرمجموعه‌هاش رو جداگانه - زیرمجموعه‌ها تکراری هستن
+     */
+    protected function filterBundleChildren(array $lineItems): array
+    {
+        return array_values(array_filter($lineItems, function ($item) {
+            foreach ($item['meta_data'] ?? [] as $meta) {
+                if (($meta['key'] ?? '') === '_bundled_by') {
+                    return false;
+                }
+            }
+            return true;
+        }));
     }
 
     protected function calculateTotalWeight(array $lineItems, array $weightsMap = []): float
