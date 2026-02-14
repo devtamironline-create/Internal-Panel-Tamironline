@@ -126,106 +126,25 @@
                     @endforeach
                 </div>
                 @endif
-                {{-- آدرس (قابل ویرایش) --}}
-                @canany(['manage-warehouse', 'manage-permissions'])
                 @php
                     $addrState = ($wcShippingAddr['state'] ?? '') ?: ($wcBillingAddr['state'] ?? '');
                     $addrCity = ($wcShippingAddr['city'] ?? '') ?: ($wcBillingAddr['city'] ?? '');
                     $addrAddress = ($wcShippingAddr['address_1'] ?? '') ?: ($wcBillingAddr['address_1'] ?? '');
                     $fullAddr = implode('، ', array_filter([$addrState, $addrCity, $addrAddress]));
-                @endphp
-                <div class="mt-3 pt-3 border-t border-gray-100" x-data="{ editingAddr: false, addrState: '{{ addslashes($addrState) }}', addrCity: '{{ addslashes($addrCity) }}', addrAddress: '{{ addslashes($addrAddress) }}', savingAddr: false, savedAddr: false, addrError: '' }">
-                    <div class="flex items-center justify-between mb-1">
-                        <dt class="text-sm text-gray-500">آدرس</dt>
-                        <button x-show="!editingAddr" @click="editingAddr = true; savedAddr = false; addrError = ''" type="button" class="text-xs text-brand-600 hover:text-brand-700 font-medium">
-                            <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            ویرایش
-                        </button>
-                        <span x-show="savedAddr" x-cloak class="text-xs text-green-600">ذخیره شد</span>
-                    </div>
-                    <template x-if="!editingAddr">
-                        <dd class="text-sm text-gray-900 {{ $fullAddr ? '' : 'text-red-500' }}">{{ $fullAddr ?: 'ثبت نشده' }}</dd>
-                    </template>
-                    <template x-if="editingAddr">
-                        <div class="space-y-2">
-                            <div class="grid grid-cols-2 gap-2">
-                                <input type="text" x-model="addrState" placeholder="استان"
-                                       class="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500">
-                                <input type="text" x-model="addrCity" placeholder="شهر"
-                                       class="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500">
-                            </div>
-                            <textarea x-model="addrAddress" placeholder="آدرس کامل" rows="2"
-                                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500"></textarea>
-                            <div class="flex items-center gap-2">
-                                <button @click="
-                                    if (!addrAddress.trim()) { addrError = 'آدرس نمی‌تواند خالی باشد'; return; }
-                                    savingAddr = true; addrError = '';
-                                    fetch('/warehouse/{{ $order->id }}/save-address', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
-                                        body: JSON.stringify({state: addrState, city: addrCity, address: addrAddress})
-                                    }).then(r => r.json()).then(d => {
-                                        savingAddr = false;
-                                        if (d.success) { editingAddr = false; savedAddr = true; setTimeout(() => location.reload(), 500); }
-                                        else { addrError = d.message || 'خطا'; }
-                                    }).catch(() => { savingAddr = false; addrError = 'خطا در ارتباط'; })
-                                " :disabled="savingAddr" type="button"
-                                   class="px-4 py-1.5 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 disabled:opacity-50">
-                                    <span x-text="savingAddr ? '...' : 'ذخیره'"></span>
-                                </button>
-                                <button @click="editingAddr = false; addrError = ''" type="button" class="text-xs text-gray-400 hover:text-gray-600">انصراف</button>
-                            </div>
-                            <p x-show="addrError" x-cloak class="text-xs text-red-500" x-text="addrError"></p>
-                        </div>
-                    </template>
-                </div>
-                @endcanany
-                {{-- کد پستی (قابل ویرایش) --}}
-                @canany(['manage-warehouse', 'manage-permissions'])
-                @php
                     $currentPostcode = ($wcShippingAddr['postcode'] ?? '') ?: ($wcBillingAddr['postcode'] ?? '');
                 @endphp
-                <div class="mt-3 pt-3 border-t border-gray-100" x-data="{ editing: false, postcode: '{{ $currentPostcode }}', saving: false, saved: false, error: '' }">
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm text-gray-500">کد پستی</dt>
-                        <dd class="flex items-center gap-2">
-                            <template x-if="!editing">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-sm font-medium {{ $currentPostcode ? 'text-gray-900' : 'text-red-500' }}" dir="ltr" x-text="postcode || 'ثبت نشده'"></span>
-                                    <button @click="editing = true; saved = false; error = ''" type="button" class="text-xs text-brand-600 hover:text-brand-700 font-medium">
-                                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                    </button>
-                                    <span x-show="saved" x-cloak class="text-xs text-green-600">ذخیره شد</span>
-                                </div>
-                            </template>
-                            <template x-if="editing">
-                                <div class="flex items-center gap-2">
-                                    <input type="text" x-model="postcode" maxlength="10" dir="ltr" placeholder="کد پستی ۱۰ رقمی"
-                                           class="w-32 px-2 py-1 border border-gray-300 rounded-lg text-sm text-center font-medium focus:border-brand-500 focus:ring-brand-500">
-                                    <button @click="
-                                        if (!postcode || postcode.length < 10) { error = 'کد پستی باید ۱۰ رقمی باشد'; return; }
-                                        saving = true; error = '';
-                                        fetch('/warehouse/{{ $order->id }}/save-postal-code', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
-                                            body: JSON.stringify({postal_code: postcode})
-                                        }).then(r => r.json()).then(d => {
-                                            saving = false;
-                                            if (d.success) { editing = false; saved = true; }
-                                            else { error = d.message || 'خطا'; }
-                                        }).catch(() => { saving = false; error = 'خطا در ارتباط'; })
-                                    " :disabled="saving" type="button"
-                                       class="px-3 py-1 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 disabled:opacity-50">
-                                        <span x-text="saving ? '...' : 'ذخیره'"></span>
-                                    </button>
-                                    <button @click="editing = false; error = ''" type="button" class="text-xs text-gray-400 hover:text-gray-600">انصراف</button>
-                                </div>
-                            </template>
-                        </dd>
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">آدرس</dt>
+                        <dd class="text-sm text-gray-900 text-left {{ $fullAddr ? '' : 'text-red-500' }}" style="max-width: 65%">{{ $fullAddr ?: 'ثبت نشده' }}</dd>
                     </div>
-                    <p x-show="error" x-cloak class="text-xs text-red-500 mt-1" x-text="error"></p>
                 </div>
-                @endcanany
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">کد پستی</dt>
+                        <dd class="text-sm font-medium {{ $currentPostcode ? 'text-gray-900' : 'text-red-500' }}" dir="ltr">{{ $currentPostcode ?: 'ثبت نشده' }}</dd>
+                    </div>
+                </div>
                 @if($order->tracking_code)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">کد رهگیری</dt>
@@ -433,6 +352,103 @@
     </div>
     @endcanany
     @endif
+
+    <!-- Address Edit Card -->
+    @canany(['manage-warehouse', 'manage-permissions'])
+    <div class="bg-white rounded-xl shadow-sm p-6" x-data="{
+        addrState: '{{ addslashes($addrState) }}',
+        addrCity: '{{ addslashes($addrCity) }}',
+        addrAddress: '{{ addslashes($addrAddress) }}',
+        postcode: '{{ $currentPostcode }}',
+        savingAddr: false,
+        savedAddr: false,
+        addrError: '',
+        savingPostcode: false,
+        savedPostcode: false,
+        postcodeError: ''
+    }">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">ویرایش آدرس</h2>
+
+        {{-- نمایش آدرس فعلی --}}
+        <div class="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 mb-4">
+            <span class="{{ $fullAddr ? '' : 'text-red-500' }}">{{ $fullAddr ?: 'آدرس ثبت نشده' }}</span>
+            &nbsp;—&nbsp;
+            <span class="text-gray-400">کد پستی:</span> <span dir="ltr" class="{{ $currentPostcode ? '' : 'text-red-500' }}">{{ $currentPostcode ?: 'ثبت نشده' }}</span>
+        </div>
+
+        <div class="space-y-4">
+            {{-- استان و شهر --}}
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">استان</label>
+                    <input type="text" x-model="addrState" placeholder="استان"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شهر</label>
+                    <input type="text" x-model="addrCity" placeholder="شهر"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500">
+                </div>
+            </div>
+
+            {{-- آدرس کامل --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">آدرس کامل</label>
+                <textarea x-model="addrAddress" placeholder="آدرس کامل" rows="2"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-brand-500 focus:ring-brand-500"></textarea>
+            </div>
+
+            {{-- دکمه ذخیره آدرس --}}
+            <div class="flex items-center gap-3">
+                <button @click="
+                    if (!addrAddress.trim()) { addrError = 'آدرس نمی‌تواند خالی باشد'; return; }
+                    savingAddr = true; addrError = '';
+                    fetch('/warehouse/{{ $order->id }}/save-address', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
+                        body: JSON.stringify({state: addrState, city: addrCity, address: addrAddress})
+                    }).then(r => r.json()).then(d => {
+                        savingAddr = false;
+                        if (d.success) { savedAddr = true; setTimeout(() => location.reload(), 800); }
+                        else { addrError = d.message || 'خطا'; }
+                    }).catch(() => { savingAddr = false; addrError = 'خطا در ارتباط'; })
+                " :disabled="savingAddr" type="button"
+                   class="px-5 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50">
+                    <span x-text="savingAddr ? 'در حال ذخیره...' : 'ذخیره آدرس'"></span>
+                </button>
+                <span x-show="savedAddr" x-cloak class="text-sm text-green-600 font-medium">ذخیره شد</span>
+                <span x-show="addrError" x-cloak class="text-sm text-red-500" x-text="addrError"></span>
+            </div>
+
+            {{-- کد پستی --}}
+            <div class="pt-4 border-t border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-1">کد پستی</label>
+                <div class="flex items-center gap-3">
+                    <input type="text" x-model="postcode" maxlength="10" dir="ltr" placeholder="کد پستی ۱۰ رقمی"
+                           class="w-44 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center font-medium focus:border-brand-500 focus:ring-brand-500">
+                    <button @click="
+                        if (!postcode || postcode.length < 10) { postcodeError = 'کد پستی باید ۱۰ رقمی باشد'; return; }
+                        savingPostcode = true; postcodeError = '';
+                        fetch('/warehouse/{{ $order->id }}/save-postal-code', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
+                            body: JSON.stringify({postal_code: postcode})
+                        }).then(r => r.json()).then(d => {
+                            savingPostcode = false;
+                            if (d.success) { savedPostcode = true; setTimeout(() => location.reload(), 800); }
+                            else { postcodeError = d.message || 'خطا'; }
+                        }).catch(() => { savingPostcode = false; postcodeError = 'خطا در ارتباط'; })
+                    " :disabled="savingPostcode" type="button"
+                       class="px-5 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50">
+                        <span x-text="savingPostcode ? '...' : 'ذخیره کد پستی'"></span>
+                    </button>
+                    <span x-show="savedPostcode" x-cloak class="text-sm text-green-600 font-medium">ذخیره شد</span>
+                    <span x-show="postcodeError" x-cloak class="text-sm text-red-500" x-text="postcodeError"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endcanany
 
     <!-- Order Items -->
     @if($order->items->count() > 0)
