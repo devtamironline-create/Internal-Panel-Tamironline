@@ -413,24 +413,28 @@ class WooCommerceService
      */
     public const WC_STATUS_MAP = [
         'pending'     => 'processing',
-        'supply_wait' => 'on-hold',
-        'packed'      => 'processing',
-        'shipped'     => 'completed',
+        'supply_wait' => 'supply-wait',
+        'packed'      => 'packed',
+        'shipped'     => 'shipped',
         'delivered'   => 'completed',
-        'returned'    => 'cancelled',
+        'returned'    => 'returned',
     ];
 
     /**
      * لیبل فارسی وضعیت‌های ووکامرس
      */
     public const WC_STATUS_LABELS = [
-        'pending'    => 'در انتظار پرداخت',
-        'processing' => 'در حال پردازش',
-        'on-hold'    => 'در انتظار',
-        'completed'  => 'تکمیل شده',
-        'cancelled'  => 'لغو شده',
-        'refunded'   => 'مسترد شده',
-        'failed'     => 'ناموفق',
+        'pending'     => 'در انتظار پرداخت',
+        'processing'  => 'در حال پردازش',
+        'on-hold'     => 'در انتظار',
+        'completed'   => 'تکمیل شده',
+        'cancelled'   => 'لغو شده',
+        'refunded'    => 'مسترد شده',
+        'failed'      => 'ناموفق',
+        'supply-wait' => 'در انتظار تامین',
+        'packed'      => 'در انتظار اسکن خروج',
+        'shipped'     => 'ارسال شده',
+        'returned'    => 'مرجوعی',
     ];
 
     /**
