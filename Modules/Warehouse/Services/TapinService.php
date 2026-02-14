@@ -167,6 +167,29 @@ class TapinService
     }
 
     /**
+     * نرمال‌سازی کد پستی: تبدیل اعداد فارسی/عربی به انگلیسی و حذف کاراکترهای غیرعددی
+     */
+    public static function normalizePostalCode(?string $postalCode): string
+    {
+        if (!$postalCode) return '';
+        // تبدیل اعداد فارسی به انگلیسی
+        $postalCode = str_replace(
+            ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $postalCode
+        );
+        // تبدیل اعداد عربی به انگلیسی
+        $postalCode = str_replace(
+            ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $postalCode
+        );
+        // حذف هر کاراکتری غیر از عدد (فاصله، خط‌تیره، ...)
+        $postalCode = preg_replace('/\D/', '', $postalCode);
+        return $postalCode;
+    }
+
+    /**
      * پیدا کردن province_code از نام استان یا کد ووکامرس
      */
     public function findProvinceCode(?string $stateNameOrCode): ?int
@@ -832,7 +855,7 @@ class TapinService
             'phone' => null,
             'email' => null,
             'address' => $orderData['recipient_address'] ?? 'آدرس نامشخص',
-            'postal_code' => $orderData['recipient_postal_code'] ?? '0000000000',
+            'postal_code' => self::normalizePostalCode($orderData['recipient_postal_code'] ?? '') ?: '0000000000',
             'province_code' => $provinceCode,
             'city_code' => $cityCode ?: ($provinceCode ? 1 : null),
             'description' => null,
