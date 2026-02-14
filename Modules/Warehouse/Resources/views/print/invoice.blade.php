@@ -42,6 +42,11 @@
         .notes-section { padding: 6px 10px; border-top: 1px solid #eee; }
         .notes { background: #fff; padding: 4px 8px; border-radius: 3px; margin-bottom: 3px; font-size: 9px; border-right: 3px solid #ccc; }
 
+        /* Order Barcode (top) */
+        .order-barcode-top { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #ddd; background: #fff; }
+        .order-barcode-top svg { max-width: 280px; height: auto; }
+        .order-barcode-top .barcode-meta { display: flex; flex-direction: column; flex-shrink: 0; }
+
         /* Barcode */
         .barcode-section { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #ddd; gap: 8px; overflow: hidden; }
         .barcode-list { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -156,6 +161,15 @@
     @endif
 
     <div class="invoice">
+        {{-- Order Barcode (Top) --}}
+        <div class="order-barcode-top">
+            <svg id="barcode"></svg>
+            <div class="barcode-meta">
+                <span class="barcode-label">بارکد سفارش</span>
+                <span class="barcode-code">{{ $order->barcode }}</span>
+            </div>
+        </div>
+
         {{-- Header --}}
         <div class="header">
             <div class="header-right">
@@ -282,28 +296,20 @@
             $postCode = $order->post_tracking_code;
             $showAmadest = !empty($amadestCode) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
-            $providerLabel = ($shippingProvider ?? 'amadest') === 'tapin' ? 'بارکد تاپین' : 'بارکد آمادست';
         @endphp
+        @if($showAmadest || $showPostQR)
         <div class="barcode-section">
+            @if($showAmadest)
             <div class="barcode-list">
-                <div class="barcode-item">
-                    <svg id="barcode"></svg>
-                    <div class="barcode-meta">
-                        <span class="barcode-label">بارکد سفارش</span>
-                        <span class="barcode-code">{{ $order->barcode }}</span>
-                    </div>
-                </div>
-
-                @if($showAmadest)
                 <div class="barcode-item">
                     <svg id="amadest-barcode"></svg>
                     <div class="barcode-meta">
-                        <span class="barcode-label">{{ $providerLabel }}</span>
+                        <span class="barcode-label">بارکد پست</span>
                         <span class="barcode-code">{{ $amadestCode }}</span>
                     </div>
                 </div>
-                @endif
             </div>
+            @endif
 
             @if($showPostQR)
             <div class="qr-side">
@@ -313,6 +319,7 @@
             </div>
             @endif
         </div>
+        @endif
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
