@@ -4,6 +4,7 @@ namespace Modules\Warehouse\Console;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseOrder;
@@ -24,6 +25,9 @@ class CheckWcOrderUpdates extends Command
         if (empty($siteUrl) || empty($key) || empty($secret)) {
             return self::SUCCESS;
         }
+
+        // پاکسازی نوتیفیکیشن‌های قدیمی تغییر وضعیت عادی (completed, processing, ...)
+        $this->cleanupNormalStatusNotifications();
 
         // سفارشات فعال که هنوز تحویل/مرجوع نشدن
         $activeOrders = WarehouseOrder::whereNotNull('wc_order_id')
@@ -98,6 +102,24 @@ class CheckWcOrderUpdates extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    protected function cleanupNormalStatusNotifications(): void
+    {
+        $problemStatuses = ['cancelled', 'refunded', 'failed'];
+
+        $deleted = DB::table('notifications')
+            ->where('type', WcOrderChangedNotification::class)
+            ->where(function ($q) use ($problemStatuses) {
+                foreach ($problemStatuses as $status) {
+                    $q->where('data', 'not like', '%"wc_new_status":"' . $status . '"%');
+                }
+            })
+            ->delete();
+
+        if ($deleted > 0) {
+            Log::info("Cleaned up {$deleted} normal WC status change notifications");
+        }
     }
 
     protected function notifyWarehouseUsers(WarehouseOrder $order, string $wcOldStatus, string $wcNewStatus): void
