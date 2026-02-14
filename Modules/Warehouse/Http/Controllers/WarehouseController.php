@@ -79,8 +79,17 @@ class WarehouseController extends Controller
         } else {
             $query->byStatus($currentStatus);
 
-            // اولویت نوع ارسال: پیک فوری → حضوری → پیک ۵ روزه → پست
-            $query->orderByRaw("FIELD(shipping_type, 'emergency', 'urgent', 'pickup', 'courier', 'post') ASC");
+            // اولویت نوع ارسال: پیک فوری → فوری → حضوری → پیک ۵ روزه → پست → بقیه
+            $query->orderByRaw("
+                CASE
+                    WHEN shipping_type = 'emergency' THEN 0
+                    WHEN shipping_type = 'urgent' THEN 1
+                    WHEN shipping_type = 'pickup' THEN 2
+                    WHEN shipping_type = 'courier' THEN 3
+                    WHEN shipping_type = 'post' THEN 4
+                    ELSE 5
+                END ASC
+            ");
 
             // پیک فوری: قدیمی‌ترین اول (FIFO) — بقیه: جدیدترین اول
             $query->orderByRaw("
