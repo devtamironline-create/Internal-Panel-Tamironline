@@ -206,24 +206,8 @@ class PackingController extends Controller
         $order->save();
 
         if ($weightOk) {
-            // سفارشات پستی بعد از تایید وزن مستقیم به ارسال شده تغییر میکنن
-            if ($order->shipping_type === 'post') {
-                $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
-                OrderLog::log($order, OrderLog::ACTION_WEIGHT_VERIFIED, 'وزن تایید شد: ' . number_format($request->actual_weight) . 'g (وزن مورد انتظار با کارتن: ' . number_format($expectedWeight) . 'g، اختلاف: ' . round($diff ?? 0, 1) . '%)', [
-                    'actual_weight' => $request->actual_weight,
-                    'expected_weight' => $expectedWeight,
-                    'difference_percent' => round($diff ?? 0, 1),
-                ]);
-                OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال خودکار سفارش پستی پس از تایید وزن');
-                return response()->json([
-                    'success' => true,
-                    'verified' => true,
-                    'auto_shipped' => true,
-                    'message' => 'وزن تایید شد. سفارش پستی به ارسال شده منتقل شد.',
-                    'difference' => $diff ? round($diff, 1) : 0,
-                ]);
-            }
-
+            // همه سفارشات بعد از تایید وزن به مرحله اسکن خروج (packed) میرن
+            // بعد از اسکن خروج به ارسال شده منتقل میشن
             $order->updateStatus(WarehouseOrder::STATUS_PACKED);
             OrderLog::log($order, OrderLog::ACTION_WEIGHT_VERIFIED, 'وزن تایید شد: ' . number_format($request->actual_weight) . 'g (وزن مورد انتظار با کارتن: ' . number_format($expectedWeight) . 'g، اختلاف: ' . round($diff ?? 0, 1) . '%)', [
                 'actual_weight' => $request->actual_weight,
@@ -233,7 +217,7 @@ class PackingController extends Controller
             return response()->json([
                 'success' => true,
                 'verified' => true,
-                'message' => 'وزن تایید شد. سفارش آماده ارسال است.',
+                'message' => 'وزن تایید شد. سفارش آماده اسکن خروج است.',
                 'difference' => $diff ? round($diff, 1) : 0,
             ]);
         }
@@ -262,18 +246,7 @@ class PackingController extends Controller
         $order->weight_verified = true;
         $order->save();
 
-        // سفارشات پستی بعد از تایید وزن مستقیم به ارسال شده تغییر میکنن
-        if ($order->shipping_type === 'post') {
-            $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
-            OrderLog::log($order, OrderLog::ACTION_WEIGHT_FORCED, 'وزن به صورت دستی تایید شد');
-            OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال خودکار سفارش پستی پس از تایید وزن');
-            return response()->json([
-                'success' => true,
-                'auto_shipped' => true,
-                'message' => 'وزن تایید شد. سفارش پستی به ارسال شده منتقل شد.',
-            ]);
-        }
-
+        // همه سفارشات بعد از تایید وزن به مرحله اسکن خروج (packed) میرن
         $order->updateStatus(WarehouseOrder::STATUS_PACKED);
         OrderLog::log($order, OrderLog::ACTION_WEIGHT_FORCED, 'وزن به صورت دستی تایید شد');
 
