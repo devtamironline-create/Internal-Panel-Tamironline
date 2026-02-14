@@ -995,21 +995,51 @@ class WooCommerceService
                 $child = $item->childProduct;
                 $qty = $item->default_quantity;
 
-                $totalWeight += $child->weight * $qty;
+                $childWeight = (float) $child->weight;
 
-                if ($child->length > 0 && $child->width > 0 && $child->height > 0) {
-                    $maxLength = max($maxLength, $child->length);
-                    $maxWidth = max($maxWidth, $child->width);
-                    $totalHeight += $child->height * $qty;
+                // اگه محصول فرزند variable هست و وزنش 0 هست، وزن رو از variation ها بگیر
+                if ($childWeight == 0 && $child->type === 'variable') {
+                    $firstVariation = WarehouseProduct::where('parent_id', $child->wc_product_id)
+                        ->where('type', 'variation')
+                        ->where('weight', '>', 0)
+                        ->first();
+                    if ($firstVariation) {
+                        $childWeight = (float) $firstVariation->weight;
+                    }
+                }
+
+                $totalWeight += $childWeight * $qty;
+
+                // ابعاد: اگه فرزند variable هست و ابعادش 0 هست، از variation بگیر
+                $childLength = (float) $child->length;
+                $childWidth = (float) $child->width;
+                $childHeight = (float) $child->height;
+
+                if ($childLength == 0 && $child->type === 'variable') {
+                    $firstVarDims = WarehouseProduct::where('parent_id', $child->wc_product_id)
+                        ->where('type', 'variation')
+                        ->where('length', '>', 0)
+                        ->first();
+                    if ($firstVarDims) {
+                        $childLength = (float) $firstVarDims->length;
+                        $childWidth = (float) $firstVarDims->width;
+                        $childHeight = (float) $firstVarDims->height;
+                    }
+                }
+
+                if ($childLength > 0 && $childWidth > 0 && $childHeight > 0) {
+                    $maxLength = max($maxLength, $childLength);
+                    $maxWidth = max($maxWidth, $childWidth);
+                    $totalHeight += $childHeight * $qty;
                 }
             }
 
-            // فقط آپدیت اگه وزن/ابعاد فعلی 0 هست (اگه دستی تنظیم شده دست نزن)
+            // همیشه وزن رو از زیرمجموعه‌ها آپدیت کن (وزن ووکامرس ممکنه غلط باشه)
             $updates = [];
-            if ($bundle->weight == 0 && $totalWeight > 0) {
+            if ($totalWeight > 0) {
                 $updates['weight'] = round($totalWeight, 2);
             }
-            if ($bundle->length == 0 && $maxLength > 0) {
+            if ($maxLength > 0) {
                 $updates['length'] = round($maxLength, 1);
                 $updates['width'] = round($maxWidth, 1);
                 $updates['height'] = round($totalHeight, 1);

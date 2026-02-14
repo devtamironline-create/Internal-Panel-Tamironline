@@ -56,9 +56,22 @@ class WarehouseProduct extends Model
 
         $totalWeight = 0;
         foreach ($items as $item) {
-            if ($item->childProduct && !$item->optional) {
-                $totalWeight += $item->childProduct->weight * $item->default_quantity;
+            if (!$item->childProduct || $item->optional) continue;
+
+            $childWeight = (float) $item->childProduct->weight;
+
+            // اگه محصول فرزند variable هست و وزنش 0 هست، وزن رو از variation ها بگیر
+            if ($childWeight == 0 && $item->childProduct->type === 'variable') {
+                $firstVariation = self::where('parent_id', $item->childProduct->wc_product_id)
+                    ->where('type', 'variation')
+                    ->where('weight', '>', 0)
+                    ->first();
+                if ($firstVariation) {
+                    $childWeight = (float) $firstVariation->weight;
+                }
             }
+
+            $totalWeight += $childWeight * $item->default_quantity;
         }
 
         return round($totalWeight, 2);
@@ -78,7 +91,6 @@ class WarehouseProduct extends Model
             ];
         }
 
-        $totalVolume = 0;
         $maxLength = 0;
         $maxWidth = 0;
         $totalHeight = 0;
@@ -89,12 +101,27 @@ class WarehouseProduct extends Model
             $child = $item->childProduct;
             $qty = $item->default_quantity;
 
-            if ($child->length > 0 && $child->width > 0 && $child->height > 0) {
-                // بزرگترین طول و عرض رو نگه‌دار، ارتفاع‌ها رو جمع کن (روی هم چیده میشن)
-                $maxLength = max($maxLength, $child->length);
-                $maxWidth = max($maxWidth, $child->width);
-                $totalHeight += $child->height * $qty;
-                $totalVolume += ($child->length * $child->width * $child->height) * $qty;
+            $childLength = (float) $child->length;
+            $childWidth = (float) $child->width;
+            $childHeight = (float) $child->height;
+
+            // اگه محصول فرزند variable هست و ابعادش 0 هست، از variation بگیر
+            if ($childLength == 0 && $child->type === 'variable') {
+                $firstVarDims = self::where('parent_id', $child->wc_product_id)
+                    ->where('type', 'variation')
+                    ->where('length', '>', 0)
+                    ->first();
+                if ($firstVarDims) {
+                    $childLength = (float) $firstVarDims->length;
+                    $childWidth = (float) $firstVarDims->width;
+                    $childHeight = (float) $firstVarDims->height;
+                }
+            }
+
+            if ($childLength > 0 && $childWidth > 0 && $childHeight > 0) {
+                $maxLength = max($maxLength, $childLength);
+                $maxWidth = max($maxWidth, $childWidth);
+                $totalHeight += $childHeight * $qty;
             }
         }
 
@@ -123,9 +150,13 @@ class WarehouseProduct extends Model
         $product = self::where('wc_product_id', $productId)->first();
         if (!$product) return 0;
 
-        // اگه باندل هست و وزنش 0 هست، از زیرمجموعه‌ها حساب کن
-        if ($product->is_bundle && $product->weight == 0) {
-            return $product->calculateBundleWeight();
+        // اگه باندل هست، همیشه از زیرمجموعه‌ها حساب کن (وزن ووکامرس ممکنه غلط باشه)
+        if ($product->is_bundle) {
+            $bundleWeight = $product->calculateBundleWeight();
+            // اگه زیرمجموعه‌ها وزن دارن، وزن محاسبه‌شده رو برگردون
+            if ($bundleWeight > 0) {
+                return $bundleWeight;
+            }
         }
 
         return (float) $product->weight;
@@ -133,7 +164,7 @@ class WarehouseProduct extends Model
 
     /**
      * دریافت همه وزن‌ها به صورت دسته‌ای (برای performance)
-     * باندل‌ها با وزن 0 رو از زیرمجموعه‌ها محاسبه میکنه
+     * باندل‌ها همیشه از زیرمجموعه‌ها محاسبه میشن
      */
     public static function getWeightsMap(array $productIds, array $variationIds = []): array
     {
@@ -143,8 +174,10 @@ class WarehouseProduct extends Model
         $map = [];
 
         foreach ($products as $product) {
-            if ($product->is_bundle && $product->weight == 0) {
-                $map[$product->wc_product_id] = $product->calculateBundleWeight();
+            if ($product->is_bundle) {
+                // همیشه از زیرمجموعه‌ها حساب کن (وزن ووکامرس ممکنه غلط باشه)
+                $bundleWeight = $product->calculateBundleWeight();
+                $map[$product->wc_product_id] = $bundleWeight > 0 ? $bundleWeight : (float) $product->weight;
             } else {
                 $map[$product->wc_product_id] = (float) $product->weight;
             }
@@ -155,7 +188,7 @@ class WarehouseProduct extends Model
 
     /**
      * دریافت ابعاد محصولات به صورت دسته‌ای
-     * باندل‌ها با ابعاد 0 رو از زیرمجموعه‌ها محاسبه میکنه
+     * باندل‌ها همیشه از زیرمجموعه‌ها محاسبه میشن
      */
     public static function getDimensionsMap(array $productIds, array $variationIds = []): array
     {
@@ -165,13 +198,15 @@ class WarehouseProduct extends Model
         $map = [];
 
         foreach ($products as $product) {
-            if ($product->is_bundle && $product->length == 0 && $product->width == 0 && $product->height == 0) {
+            if ($product->is_bundle) {
+                // همیشه از زیرمجموعه‌ها حساب کن
                 $dims = $product->calculateBundleDimensions();
+                $hasDims = $dims['length'] > 0 || $dims['width'] > 0 || $dims['height'] > 0;
                 $map[$product->wc_product_id] = [
                     'wc_product_id' => $product->wc_product_id,
-                    'length' => $dims['length'],
-                    'width' => $dims['width'],
-                    'height' => $dims['height'],
+                    'length' => $hasDims ? $dims['length'] : (float) $product->length,
+                    'width' => $hasDims ? $dims['width'] : (float) $product->width,
+                    'height' => $hasDims ? $dims['height'] : (float) $product->height,
                 ];
             } else {
                 $map[$product->wc_product_id] = [
