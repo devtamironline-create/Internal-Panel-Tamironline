@@ -69,20 +69,23 @@ class CheckWcOrderUpdates extends Command
                     // آپدیت wc_order_data ذخیره شده
                     $order->update(['wc_order_data' => $wcOrder]);
 
-                    // اگه هنوز "در حال پردازش" هست → آپدیت ساکت
-                    if ($order->status === WarehouseOrder::STATUS_PENDING) {
-                        // اگه تو سایت کنسل/ریفاند شد → حذف سفارش
-                        if (in_array($wcNewStatus, ['cancelled', 'refunded', 'failed'])) {
+                    // فقط وضعیت‌های مشکل‌دار نیاز به واکنش دارن
+                    $problemStatuses = ['cancelled', 'refunded', 'failed'];
+
+                    if (in_array($wcNewStatus, $problemStatuses)) {
+                        if ($order->status === WarehouseOrder::STATUS_PENDING) {
+                            // هنوز در حال پردازشه → حذف ساکت
                             $order->update(['status' => WarehouseOrder::STATUS_RETURNED]);
                             $order->delete(); // soft delete
                             Log::info("WC order {$order->order_number} auto-cancelled (WC status: {$wcNewStatus})");
+                            $updated++;
+                        } else {
+                            // سفارش جلوتر رفته → نوتیفیکیشن بده
+                            $this->notifyWarehouseUsers($order, $wcOldStatus, $wcNewStatus);
+                            $notified++;
                         }
-                        $updated++;
-                    } else {
-                        // سفارش در مرحله دیگه‌ای هست → نوتیفیکیشن بده
-                        $this->notifyWarehouseUsers($order, $wcOldStatus, $wcNewStatus);
-                        $notified++;
                     }
+                    // بقیه تغییرات (completed, processing, on-hold, ...) → آپدیت ساکت بدون نوتیفیکیشن
                 }
             } catch (\Exception $e) {
                 Log::error('WC order update check failed', ['error' => $e->getMessage()]);
