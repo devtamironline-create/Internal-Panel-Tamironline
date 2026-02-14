@@ -164,7 +164,7 @@ class WarehouseOrder extends Model
     public function getTotalWeightWithBoxGramsAttribute(): int
     {
         $itemsWeight = $this->total_weight_grams;
-        $box = $this->boxSize ?? $this->recommended_box;
+        $box = $this->boxSize;
         $boxWeight = $box ? $box->weight : 0;
         return $itemsWeight + $boxWeight;
     }

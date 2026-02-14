@@ -169,7 +169,7 @@
                     <tr><td class="info-label">تاریخ:</td><td class="info-val">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</td></tr>
                     <tr><td class="info-label">نوع ارسال:</td><td class="info-val">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</td></tr>
                     @php
-                        $invoiceBox = $order->boxSize ?? $order->recommended_box;
+                        $invoiceBox = $order->boxSize;
                         $boxWeight = $invoiceBox ? $invoiceBox->weight : 0;
                     @endphp
                     <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($order->total_weight_grams + $boxWeight) }}g</td></tr>

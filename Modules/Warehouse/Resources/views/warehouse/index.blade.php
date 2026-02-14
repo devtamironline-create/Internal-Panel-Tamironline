@@ -123,7 +123,7 @@
                 $totalSeconds = ($order->timer_deadline && $shippingTypeModel) ? $shippingTypeModel->timer_minutes * 60 : 0;
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="{ showConfirm: false, shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); } }">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="{ showPrintModal: false, shippingOpen: false, shippingType: '{{ $order->shipping_type }}', shippingLabel: '{{ $shippingLabel }}', shippingLoading: false, selectedBox: '', enteredWeight: '', confirmLoading: false, confirmError: '', changeShipping(slug, label) { if(slug === this.shippingType) { this.shippingOpen = false; return; } this.shippingLoading = true; fetch('/warehouse/{{ $order->id }}/shipping-type', { method: 'PATCH', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: JSON.stringify({shipping_type: slug}) }).then(r => r.json()).then(d => { if(d.success) { this.shippingType = d.shipping_type; this.shippingLabel = d.shipping_label; } }).finally(() => { this.shippingLoading = false; this.shippingOpen = false; }); }, async confirmAndPrint() { if(!this.selectedBox || !this.enteredWeight) { this.confirmError = 'لطفاً کارتن و وزن را وارد کنید'; return; } this.confirmLoading = true; this.confirmError = ''; try { const res = await fetch('/warehouse/{{ $order->id }}/confirm-and-print', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}, body: JSON.stringify({box_size_id: this.selectedBox, total_weight_with_box: parseFloat(this.enteredWeight)}) }); const data = await res.json(); if(data.success) { window.open(data.print_url, '_blank'); setTimeout(() => { window.location.href = data.show_url; }, 500); } else { this.confirmError = data.message || 'خطا در ثبت'; } } catch(e) { this.confirmError = 'خطا در ارتباط با سرور'; } this.confirmLoading = false; } }">
                 <div class="flex flex-col lg:flex-row">
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
@@ -257,95 +257,123 @@
                                 محدودیت تامین
                             </button>
 
-                            @if(!$isPeyk)
-                            {{-- مرحله ۱: دکمه تایید موجودی (فقط سفارشات پستی) --}}
-                            <button x-show="!showConfirm" @click="showConfirm = true" type="button"
-                               class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors text-sm font-medium whitespace-nowrap">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                تایید موجودی محصول و مرحله بعدی
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                            </button>
-                            @else
-                            {{-- پیک/حضوری: پرینت + رفتن به صفحه سفارش --}}
-                            <button type="button"
-                               @click="window.open('{{ route('warehouse.print.invoice', $order) }}', '_blank'); setTimeout(() => { window.location.href = '{{ route('warehouse.show', $order) }}'; }, 500);"
+                            {{-- دکمه واحد برای همه نوع ارسال: دریافت بارکد و پرینت --}}
+                            <button @click="showPrintModal = true" type="button"
                                class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors text-sm font-medium whitespace-nowrap">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                                پرینت و آماده‌سازی
+                                دریافت بارکد و پرینت
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                             </button>
-                            @endif
                         </div>
                         @endcanany
                     </div>
                 </div>
 
-                {{-- پاپ‌آپ تایید موجودی (فقط پستی) --}}
-                @if(!$isPeyk)
-                <div x-show="showConfirm" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
+                {{-- پاپ‌آپ دریافت بارکد و پرینت (همه نوع ارسال) --}}
+                <div x-show="showPrintModal" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
                     {{-- بک‌دراپ --}}
-                    <div class="absolute inset-0 bg-black/50" @click="showConfirm = false"></div>
+                    <div class="absolute inset-0 bg-black/50" @click="showPrintModal = false"></div>
                     {{-- محتوای مودال --}}
-                    <div x-show="showConfirm" x-transition.scale.origin.center class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" @click.stop>
+                    <div x-show="showPrintModal" x-transition.scale.origin.center class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col" @click.stop>
                         {{-- هدر --}}
-                        <div class="bg-orange-50 border-b border-orange-200 px-5 py-4">
+                        <div class="bg-purple-50 border-b border-purple-200 px-5 py-4 shrink-0">
                             <div class="flex items-center justify-between">
-                                <h4 class="text-sm font-bold text-orange-800 flex items-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                                    آیا مطمئن هستید محصولات موجود هستند؟
+                                <h4 class="text-sm font-bold text-purple-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                    دریافت بارکد و پرینت
                                 </h4>
-                                <button @click="showConfirm = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                <button @click="showPrintModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </div>
-                            <p class="text-xs text-orange-600 mt-1">سفارش {{ $order->order_number }} - {{ $order->customer_name }}</p>
+                            <p class="text-xs text-purple-600 mt-1">سفارش {{ $order->order_number }} - {{ $order->customer_name }}</p>
                         </div>
-                        {{-- لیست محصولات --}}
-                        <div class="px-5 py-4">
-                            <div class="border border-orange-200 rounded-xl overflow-hidden mb-4">
-                                <table class="w-full text-sm">
-                                    <thead>
-                                        <tr class="bg-orange-50">
-                                            <th class="text-right py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200">#</th>
-                                            <th class="text-right py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200">نام محصول</th>
-                                            <th class="text-center py-2.5 px-3 text-xs font-semibold text-orange-700 border-b border-orange-200 w-20">تعداد</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-orange-100">
-                                        @foreach($order->items as $index => $item)
-                                        <tr class="hover:bg-orange-50/50">
-                                            <td class="py-2.5 px-3 text-gray-400 text-xs">{{ $index + 1 }}</td>
-                                            <td class="py-2.5 px-3 text-gray-800 font-medium">{{ $item->product_name }}</td>
-                                            <td class="py-2.5 px-3 text-center">
-                                                <span class="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 bg-orange-100 text-orange-800 rounded-md text-xs font-bold">{{ $item->quantity }}</span>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                        {{-- محتوا --}}
+                        <div class="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+                            {{-- لیست محصولات --}}
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-2">محصولات سفارش</label>
+                                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                                    <table class="w-full text-sm">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 border-b border-gray-200">#</th>
+                                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 border-b border-gray-200">نام محصول</th>
+                                                <th class="text-center py-2 px-3 text-xs font-semibold text-gray-600 border-b border-gray-200 w-16">تعداد</th>
+                                                <th class="text-center py-2 px-3 text-xs font-semibold text-gray-600 border-b border-gray-200 w-20">وزن</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($order->items as $index => $item)
+                                            <tr class="hover:bg-gray-50/50">
+                                                <td class="py-2 px-3 text-gray-400 text-xs">{{ $index + 1 }}</td>
+                                                <td class="py-2 px-3 text-gray-800 font-medium text-xs">{{ $item->product_name }}</td>
+                                                <td class="py-2 px-3 text-center">
+                                                    <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1 bg-brand-50 text-brand-700 rounded text-xs font-bold">{{ $item->quantity }}</span>
+                                                </td>
+                                                <td class="py-2 px-3 text-center text-xs text-gray-500">{{ $item->weight ? number_format(\Modules\Warehouse\Models\WarehouseOrder::toGrams($item->weight)) . 'g' : '—' }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="bg-gray-50">
+                                            <tr>
+                                                <td colspan="3" class="py-2 px-3 text-xs font-bold text-gray-700 text-left">وزن کل محصولات:</td>
+                                                <td class="py-2 px-3 text-center text-xs font-bold text-gray-900">{{ number_format($order->total_weight_grams) }}g</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
                             </div>
-                            <p class="text-sm text-red-600 font-medium leading-relaxed">
-                                بعد از تایید شما بارکد پستی تولید خواهد شد و هزینه کسر می‌شود و قابلیت لغو ندارد.
-                            </p>
+
+                            {{-- انتخاب کارتن --}}
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-2">انتخاب کارتن</label>
+                                <select x-model="selectedBox" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-3">
+                                    <option value="">کارتن را انتخاب کنید...</option>
+                                    @foreach($boxSizes as $box)
+                                    <option value="{{ $box->id }}">سایز {{ $box->name }} — {{ $box->dimensions_label }}cm — وزن کارتن: {{ $box->weight_label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- وزن بسته با کارتن --}}
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-2">وزن کل بسته با کارتن (گرم)</label>
+                                <input type="number" x-model="enteredWeight" step="1" min="1" dir="ltr" placeholder="وزن کل را به گرم وارد کنید..."
+                                       class="w-full px-4 py-3 border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm text-center font-medium">
+                                <p class="text-[11px] text-gray-400 mt-1">وزن سیستمی محصولات: {{ number_format($order->total_weight_grams) }}g</p>
+                            </div>
+
+                            {{-- پیام خطا --}}
+                            <div x-show="confirmError" x-cloak class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700" x-text="confirmError"></div>
+
+                            {{-- هشدار --}}
+                            <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
+                                <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                بعد از تایید، بارکد پستی تولید خواهد شد و فاکتور پرینت می‌شود.
+                            </div>
                         </div>
                         {{-- دکمه‌ها --}}
-                        <div class="bg-gray-50 border-t border-gray-100 px-5 py-3 flex items-center gap-2 justify-end">
-                            <button @click="showConfirm = false" type="button"
+                        <div class="bg-gray-50 border-t border-gray-100 px-5 py-3 flex items-center gap-2 justify-end shrink-0">
+                            <button @click="showPrintModal = false" type="button"
                                 class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors text-sm font-medium">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 انصراف
                             </button>
-                            <button type="button"
-                               @click="window.open('{{ route('warehouse.print.invoice', $order) }}', '_blank'); setTimeout(() => { window.location.href = '{{ route('warehouse.show', $order) }}'; }, 500);"
-                               class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                تایید و پرینت
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                            <button type="button" @click="confirmAndPrint()" :disabled="confirmLoading || !selectedBox || !enteredWeight"
+                               class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
+                                <template x-if="!confirmLoading">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </template>
+                                <template x-if="confirmLoading">
+                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                </template>
+                                <span x-text="confirmLoading ? 'در حال ثبت...' : 'تایید و پرینت'"></span>
+                                <svg x-show="!confirmLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                             </button>
                         </div>
                     </div>
                 </div>
-                @endif
             </div>
             @empty
             <div class="py-16 text-center text-gray-400">

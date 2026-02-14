@@ -39,7 +39,7 @@
             <strong>{{ $order->order_number }}</strong>
         </div>
         @php
-            $labelBox = $order->boxSize ?? $order->recommended_box;
+            $labelBox = $order->boxSize;
             $labelBoxWeight = $labelBox ? $labelBox->weight : 0;
             $labelWeight = ($order->actual_weight_grams ?: $order->total_weight_grams) + $labelBoxWeight;
         @endphp

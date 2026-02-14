@@ -204,25 +204,28 @@
                 @endif
                 @php
                     $selectedBox = $order->boxSize;
-                    $recommendedBox = $order->recommended_box;
-                    $displayBox = $selectedBox ?? $recommendedBox;
                 @endphp
-                @if($displayBox)
+                @if($selectedBox)
                 <div class="flex justify-between">
-                    <dt class="text-sm text-gray-500">کارتن {{ $selectedBox ? '' : '(پیشنهادی)' }}</dt>
+                    <dt class="text-sm text-gray-500">کارتن انتخابی</dt>
                     <dd class="text-sm font-medium text-gray-900">
                         <span class="inline-flex items-center gap-2 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg">
                             <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                            سایز {{ $displayBox->name }} — {{ $displayBox->dimensions_label }}cm — {{ $displayBox->weight_label }}
+                            سایز {{ $selectedBox->name }} — {{ $selectedBox->dimensions_label }}cm — {{ $selectedBox->weight_label }}
                         </span>
                     </dd>
                 </div>
-                @if($displayBox && $order->total_weight_grams)
+                @if($order->total_weight_grams)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">وزن کل + کارتن</dt>
-                    <dd class="text-sm font-bold text-gray-900">{{ number_format($order->total_weight_grams + $displayBox->weight) }}g</dd>
+                    <dd class="text-sm font-bold text-gray-900">{{ number_format($order->total_weight_grams + $selectedBox->weight) }}g</dd>
                 </div>
                 @endif
+                @else
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">کارتن</dt>
+                    <dd class="text-sm text-gray-400">انتخاب نشده</dd>
+                </div>
                 @endif
                 @if($order->driver_name)
                 <div class="flex justify-between">
@@ -508,9 +511,9 @@
                 @if($order->total_weight)
                 <p class="text-xs text-gray-400 mt-2">
                     وزن سیستمی (با کارتن): {{ number_format($order->total_weight_with_box_grams) }}g
-                    @if($displayBox)
+                    @if($selectedBox)
                         <span class="text-gray-300 mx-1">|</span>
-                        محصولات: {{ number_format($order->total_weight_grams) }}g + کارتن: {{ number_format($displayBox->weight) }}g
+                        محصولات: {{ number_format($order->total_weight_grams) }}g + کارتن: {{ number_format($selectedBox->weight) }}g
                     @endif
                 </p>
                 @endif

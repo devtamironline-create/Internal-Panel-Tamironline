@@ -451,7 +451,7 @@ class TapinController extends Controller
                 $tapinData = $wcData['tapin'] ?? [];
 
                 // ابعاد جعبه سفارش برای match با بسته‌های تاپین
-                $box = $order->boxSize ?? $order->recommended_box;
+                $box = $order->boxSize;
 
                 $orderPayloadData = [
                     'external_order_id' => $order->order_number,

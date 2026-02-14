@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Warehouse\Models\OrderLog;
+use Modules\Warehouse\Models\WarehouseBoxSize;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseShippingType;
 
@@ -95,9 +96,10 @@ class WarehouseController extends Controller
         }
 
         $shippingTypes = WarehouseShippingType::getActiveTypes();
+        $boxSizes = WarehouseBoxSize::active()->ordered()->get();
 
         return view('warehouse::warehouse.index', compact(
-            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter',
+            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter', 'boxSizes',
         ));
     }
 
@@ -359,6 +361,37 @@ class WarehouseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'استان و شهر تاپین ذخیره شد: ' . ($validated['province_name'] ?? '') . ' - ' . ($validated['city_name'] ?? ''),
+        ]);
+    }
+
+    /**
+     * ذخیره کارتن و وزن قبل از پرینت (مرحله pending)
+     */
+    public function confirmAndPrint(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'box_size_id' => 'required|exists:warehouse_box_sizes,id',
+            'total_weight_with_box' => 'required|numeric|min:1',
+        ]);
+
+        $order->update([
+            'box_size_id' => $validated['box_size_id'],
+            'actual_weight' => $validated['total_weight_with_box'],
+        ]);
+
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'تنظیم کارتن و وزن قبل از پرینت', [
+            'box_size_id' => $validated['box_size_id'],
+            'total_weight_with_box' => $validated['total_weight_with_box'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'print_url' => route('warehouse.print.invoice', $order),
+            'show_url' => route('warehouse.show', $order),
         ]);
     }
 
