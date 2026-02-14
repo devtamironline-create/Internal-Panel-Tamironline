@@ -130,6 +130,17 @@
                 $postcode = ($sh['postcode'] ?? '') ?: ($bl['postcode'] ?? '');
                 $isPost = $order->shipping_type === 'post';
                 $needsPostcode = $isPost && empty($postcode);
+
+                // پیدا کردن محصولات پکیج/باندل برای این سفارش
+                $orderProductIds = $order->items->pluck('wc_product_id')->filter()->unique()->toArray();
+                $orderBundles = collect();
+                if (!empty($orderProductIds)) {
+                    $orderBundles = \Modules\Warehouse\Models\WarehouseProduct::whereIn('wc_product_id', $orderProductIds)
+                        ->whereIn('type', ['bundle', 'yith_bundle', 'woosb', 'grouped'])
+                        ->with(['bundleItems.childProduct'])
+                        ->get()
+                        ->keyBy('wc_product_id');
+                }
             @endphp
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-order-id="{{ $order->id }}" x-data="pendingOrderCard({{ $order->id }}, '{{ $order->shipping_type }}', '{{ addslashes($shippingLabel) }}', {{ $needsPostcode ? 'true' : 'false' }}, {{ $order->total_weight_grams }})">
                 <div class="flex flex-col lg:flex-row">
@@ -199,13 +210,40 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     @foreach($order->items as $index => $item)
+                                    @php
+                                        $cardIsBundle = $item->wc_product_id && isset($orderBundles[$item->wc_product_id]);
+                                        $cardBundle = $cardIsBundle ? $orderBundles[$item->wc_product_id] : null;
+                                    @endphp
                                     <tr class="hover:bg-gray-50">
                                         <td class="py-2.5 px-4 text-gray-400 text-xs">{{ $index + 1 }}</td>
-                                        <td class="py-2.5 px-4 text-gray-800">{{ $item->product_name }}</td>
+                                        <td class="py-2.5 px-4 text-gray-800">
+                                            {{ $item->product_name }}
+                                            @if($cardIsBundle)
+                                                <span class="inline-flex items-center gap-0.5 mr-1 px-1 py-0.5 text-[9px] font-medium bg-purple-100 text-purple-700 rounded">پکیج</span>
+                                            @endif
+                                        </td>
                                         <td class="py-2.5 px-4 text-center">
                                             <span class="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold">{{ $item->quantity }}</span>
                                         </td>
                                     </tr>
+                                    @if($cardIsBundle && $cardBundle->bundleItems->count() > 0)
+                                        @foreach($cardBundle->bundleItems as $cbi)
+                                            @if($cbi->childProduct && !$cbi->optional)
+                                            <tr class="bg-purple-50/30">
+                                                <td class="py-1.5 px-4"></td>
+                                                <td class="py-1.5 px-4 text-[11px] text-gray-500 pr-8">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <svg class="w-2.5 h-2.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                                        {{ $cbi->childProduct->name }}
+                                                    </span>
+                                                </td>
+                                                <td class="py-1.5 px-4 text-center">
+                                                    <span class="text-[11px] text-gray-400">{{ $cbi->default_quantity }}</span>
+                                                </td>
+                                            </tr>
+                                            @endif
+                                        @endforeach
+                                    @endif
                                     @endforeach
                                 </tbody>
                             </table>
@@ -298,6 +336,7 @@
                             {{-- لیست محصولات --}}
                             <div>
                                 <label class="block text-xs font-bold text-gray-600 mb-2">محصولات سفارش</label>
+                                @php $modalBundles = $orderBundles; @endphp
                                 <div class="border border-gray-200 rounded-xl overflow-hidden">
                                     <table class="w-full text-sm">
                                         <thead>
@@ -310,14 +349,64 @@
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
                                             @foreach($order->items as $index => $item)
+                                            @php
+                                                $modalIsBundle = $item->wc_product_id && isset($modalBundles[$item->wc_product_id]);
+                                                $modalBundle = $modalIsBundle ? $modalBundles[$item->wc_product_id] : null;
+                                            @endphp
                                             <tr class="hover:bg-gray-50/50">
                                                 <td class="py-2 px-3 text-gray-400 text-xs">{{ $index + 1 }}</td>
-                                                <td class="py-2 px-3 text-gray-800 font-medium text-xs">{{ $item->product_name }}</td>
+                                                <td class="py-2 px-3 text-gray-800 font-medium text-xs">
+                                                    {{ $item->product_name }}
+                                                    @if($modalIsBundle)
+                                                        <span class="inline-flex items-center gap-0.5 mr-1 px-1 py-0.5 text-[9px] font-medium bg-purple-100 text-purple-700 rounded">
+                                                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                                            پکیج
+                                                        </span>
+                                                    @endif
+                                                </td>
                                                 <td class="py-2 px-3 text-center">
                                                     <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1 bg-brand-50 text-brand-700 rounded text-xs font-bold">{{ $item->quantity }}</span>
                                                 </td>
                                                 <td class="py-2 px-3 text-center text-xs text-gray-500">{{ $item->weight ? number_format(\Modules\Warehouse\Models\WarehouseOrder::toGrams($item->weight)) . 'g' : '—' }}</td>
                                             </tr>
+                                            {{-- زیرمجموعه‌های پکیج --}}
+                                            @if($modalIsBundle && $modalBundle->bundleItems->count() > 0)
+                                                @php $modalBundleTotal = 0; @endphp
+                                                @foreach($modalBundle->bundleItems as $bi)
+                                                    @if($bi->childProduct && !$bi->optional)
+                                                        @php
+                                                            $biWeight = (float) $bi->childProduct->weight;
+                                                            if ($biWeight == 0 && $bi->childProduct->type === 'variable') {
+                                                                $biVar = \Modules\Warehouse\Models\WarehouseProduct::where('parent_id', $bi->childProduct->wc_product_id)
+                                                                    ->where('type', 'variation')->where('weight', '>', 0)->first();
+                                                                if ($biVar) $biWeight = (float) $biVar->weight;
+                                                            }
+                                                            $biWeightG = \Modules\Warehouse\Models\WarehouseOrder::toGrams($biWeight);
+                                                            $biTotalG = $biWeightG * $bi->default_quantity;
+                                                            $modalBundleTotal += $biTotalG;
+                                                        @endphp
+                                                        <tr class="bg-purple-50/40">
+                                                            <td class="py-1.5 px-3 text-gray-300 text-[10px]"></td>
+                                                            <td class="py-1.5 px-3 text-[11px] text-gray-500 pr-6">
+                                                                <span class="inline-flex items-center gap-1">
+                                                                    <svg class="w-2.5 h-2.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                                                    {{ $bi->childProduct->name }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="py-1.5 px-3 text-center text-[11px] text-gray-400">{{ $bi->default_quantity }}</td>
+                                                            <td class="py-1.5 px-3 text-center text-[11px] {{ $biWeightG > 0 ? 'text-gray-400' : 'text-red-400' }}">
+                                                                {{ $biWeightG > 0 ? number_format($biWeightG) . 'g' : '0g' }}
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endforeach
+                                                <tr class="bg-purple-50 border-b border-purple-200">
+                                                    <td class="py-1.5 px-3"></td>
+                                                    <td class="py-1.5 px-3 text-[10px] font-bold text-purple-700 pr-6">جمع پکیج</td>
+                                                    <td class="py-1.5 px-3"></td>
+                                                    <td class="py-1.5 px-3 text-center text-[10px] font-bold text-purple-700">{{ number_format($modalBundleTotal) }}g</td>
+                                                </tr>
+                                            @endif
                                             @endforeach
                                         </tbody>
                                         <tfoot class="bg-gray-50">
