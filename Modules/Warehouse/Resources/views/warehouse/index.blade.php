@@ -124,6 +124,9 @@
                 $timerPercent = $totalSeconds > 0 ? max(0, min(100, ($remaining / $totalSeconds) * 100)) : 0;
             @endphp
             @php
+                $wcData = $order->wc_order_data ?? [];
+                $sh = $wcData['shipping'] ?? [];
+                $bl = $wcData['billing'] ?? [];
                 $postcode = ($sh['postcode'] ?? '') ?: ($bl['postcode'] ?? '');
                 $isPost = $order->shipping_type === 'post';
                 $needsPostcode = $isPost && empty($postcode);
@@ -169,9 +172,6 @@
                             <span class="text-sm text-gray-500">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</span>
                         </div>
                         @php
-                            $wcData = $order->wc_order_data ?? [];
-                            $sh = $wcData['shipping'] ?? [];
-                            $bl = $wcData['billing'] ?? [];
                             $addrState = ($sh['state'] ?? '') ?: ($bl['state'] ?? '');
                             $addrCity = ($sh['city'] ?? '') ?: ($bl['city'] ?? '');
                             $addrLine = ($sh['address_1'] ?? '') ?: ($bl['address_1'] ?? '');
