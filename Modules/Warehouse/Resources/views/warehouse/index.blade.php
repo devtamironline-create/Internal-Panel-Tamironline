@@ -109,8 +109,80 @@
             @endcanany
         </div>
 
+        {{-- SEARCH RESULTS: Table with status column --}}
+        @if(!empty($search))
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">شماره سفارش</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">مشتری</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">وضعیت</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">نوع ارسال</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">کد رهگیری</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">تاریخ ثبت</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($orders as $order)
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">{{ $order->customer_name }}</div>
+                                @if($order->customer_mobile)
+                                <div class="text-xs text-gray-500 mt-0.5" dir="ltr">{{ $order->customer_mobile }}</div>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full bg-{{ $statusColors[$order->status] ?? 'gray' }}-100 text-{{ $statusColors[$order->status] ?? 'gray' }}-700">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! $statusIcons[$order->status] ?? '' !!}</svg>
+                                {{ $statusLabels[$order->status] ?? $order->status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            @if($order->shipping_type)
+                                @php
+                                    $shippingTypeModel = $shippingTypes->firstWhere('slug', $order->shipping_type);
+                                    $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : $order->shipping_type;
+                                @endphp
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                                    {{ $shippingLabel }}
+                                </span>
+                            @else
+                                <span class="text-sm text-gray-400">--</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600" dir="ltr">
+                            {{ $order->tracking_code ?? '--' }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="{{ route('warehouse.show', $order) }}" class="p-2 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg inline-flex" title="مشاهده">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </a>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <p class="font-medium">نتیجه‌ای برای «{{ $search }}» یافت نشد</p>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
         {{-- PENDING STATUS: Single Column Layout --}}
-        @if($currentStatus === 'pending')
+        @elseif($currentStatus === 'pending')
         <div class="p-5 space-y-4">
             @forelse($orders as $order)
             @php
