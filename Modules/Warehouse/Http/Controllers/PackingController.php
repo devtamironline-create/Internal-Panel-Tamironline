@@ -122,6 +122,12 @@ class PackingController extends Controller
             return response()->json(['success' => false, 'message' => 'بارکد با این سفارش مطابقت ندارد. اسکن شده: ' . $barcode]);
         }
 
+        // ذخیره تایید اسکن خروج در دیتابیس
+        $order->exit_scanned_at = now();
+        $order->save();
+
+        OrderLog::log($order, OrderLog::ACTION_EXIT_SCANNED, 'اسکن خروج انجام شد (بارکد: ' . $barcode . ')');
+
         return response()->json([
             'success' => true,
             'message' => 'بارکد سفارش تایید شد.',

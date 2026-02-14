@@ -20,6 +20,7 @@ class WarehouseOrder extends Model
         'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
         'status_changed_at', 'shipped_at', 'delivered_at', 'courier_dispatched_at',
         'notes', 'tracking_code', 'amadest_barcode', 'post_tracking_code', 'driver_name', 'driver_phone',
+        'exit_scanned_at',
     ];
 
     protected $casts = [
@@ -35,6 +36,7 @@ class WarehouseOrder extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
         'courier_dispatched_at' => 'datetime',
+        'exit_scanned_at' => 'datetime',
     ];
 
     const STATUS_PENDING = 'pending';

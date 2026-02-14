@@ -36,6 +36,7 @@ class OrderLog extends Model
     const ACTION_SUPPLY_WAIT = 'supply_wait';
     const ACTION_TAPIN_LOCATION = 'tapin_location';
     const ACTION_RETURNED = 'returned';
+    const ACTION_EXIT_SCANNED = 'exit_scanned';
 
     public static function actionLabels(): array
     {
@@ -54,6 +55,7 @@ class OrderLog extends Model
             self::ACTION_SUPPLY_WAIT => 'انتظار تامین',
             self::ACTION_TAPIN_LOCATION => 'تنظیم استان/شهر تاپین',
             self::ACTION_RETURNED => 'مرجوعی',
+            self::ACTION_EXIT_SCANNED => 'اسکن خروج',
         ];
     }
 
@@ -74,6 +76,7 @@ class OrderLog extends Model
             self::ACTION_SUPPLY_WAIT => 'text-amber-500',
             self::ACTION_TAPIN_LOCATION => 'text-teal-500',
             self::ACTION_RETURNED => 'text-red-500',
+            self::ACTION_EXIT_SCANNED => 'text-emerald-500',
         ];
     }
 

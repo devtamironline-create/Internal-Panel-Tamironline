@@ -56,11 +56,14 @@ class DispatchController extends Controller
         // Auto-ship courier orders that were dispatched more than 4 hours ago
         $this->autoShipCourierOrders();
 
+        // شامل هم courier (پیک ۵ روزه) و هم urgent (پیک فوری)
+        $courierTypes = ['courier', 'urgent'];
+
         if ($tab === 'ready') {
             // سفارشات پیکی آماده ارسال (بدون اطلاعات پیک)
             $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
                 ->byStatus(WarehouseOrder::STATUS_PACKED)
-                ->where('shipping_type', 'courier')
+                ->whereIn('shipping_type', $courierTypes)
                 ->whereNull('courier_dispatched_at')
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
@@ -68,7 +71,7 @@ class DispatchController extends Controller
             // سفارشاتی که پیک گرفته ولی هنوز ارسال نشده
             $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
                 ->byStatus(WarehouseOrder::STATUS_PACKED)
-                ->where('shipping_type', 'courier')
+                ->whereIn('shipping_type', $courierTypes)
                 ->whereNotNull('courier_dispatched_at')
                 ->whereNotNull('driver_name')
                 ->orderBy('courier_dispatched_at', 'desc')
@@ -77,21 +80,21 @@ class DispatchController extends Controller
             // سفارشات پیکی ارسال شده
             $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
                 ->byStatus(WarehouseOrder::STATUS_SHIPPED)
-                ->where('shipping_type', 'courier')
+                ->whereIn('shipping_type', $courierTypes)
                 ->orderBy('shipped_at', 'desc')
                 ->paginate(20);
         }
 
         $readyCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
-            ->where('shipping_type', 'courier')
+            ->whereIn('shipping_type', $courierTypes)
             ->whereNull('courier_dispatched_at')
             ->count();
         $dispatchedCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
-            ->where('shipping_type', 'courier')
+            ->whereIn('shipping_type', $courierTypes)
             ->whereNotNull('courier_dispatched_at')
             ->count();
         $shippedCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_SHIPPED)
-            ->where('shipping_type', 'courier')
+            ->whereIn('shipping_type', $courierTypes)
             ->count();
 
         return view('warehouse::dispatch.courier', compact('orders', 'tab', 'readyCount', 'dispatchedCount', 'shippedCount'));
@@ -141,7 +144,7 @@ class DispatchController extends Controller
     protected function autoShipCourierOrders(): int
     {
         $orders = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
-            ->where('shipping_type', 'courier')
+            ->whereIn('shipping_type', ['courier', 'urgent'])
             ->whereNotNull('courier_dispatched_at')
             ->where('courier_dispatched_at', '<=', now()->subHours(4))
             ->get();
