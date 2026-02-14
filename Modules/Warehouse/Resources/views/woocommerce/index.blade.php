@@ -118,11 +118,76 @@
                     <li>وارد پنل مدیریت وردپرس شوید</li>
                     <li>به <strong class="text-gray-900">ووکامرس &rarr; تنظیمات &rarr; پیشرفته &rarr; REST API</strong> بروید</li>
                     <li>روی <strong class="text-gray-900">افزودن کلید</strong> کلیک کنید</li>
-                    <li>توضیحات را وارد کنید و سطح دسترسی <strong class="text-gray-900">خواندن</strong> را انتخاب کنید</li>
+                    <li>توضیحات را وارد کنید و سطح دسترسی <strong class="text-gray-900">خواندن/نوشتن (Read/Write)</strong> را انتخاب کنید</li>
                     <li>کلیدهای Consumer Key و Consumer Secret را کپی کنید</li>
                 </ol>
             </div>
         </div>
+    </div>
+
+    <!-- WC Status Sync Card -->
+    <div class="bg-white rounded-xl shadow-sm p-6 lg:col-span-2">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">سینک وضعیت به ووکامرس</h2>
+                <p class="text-sm text-gray-500">وقتی وضعیت سفارش در پنل تغییر کنه، وضعیت سفارش در ووکامرس هم به‌روز میشه.</p>
+            </div>
+        </div>
+
+        <div class="mb-5 p-4 bg-gray-50 rounded-lg">
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" id="wc-status-sync-toggle" {{ $statusSyncEnabled ? 'checked' : '' }}
+                    onchange="toggleStatusSync(this.checked)"
+                    class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                <div>
+                    <span class="text-sm font-bold text-gray-800">فعال‌سازی سینک وضعیت</span>
+                    <span class="block text-xs text-gray-500">هر تغییر وضعیت در پنل، خودکار به ووکامرس ارسال می‌شود</span>
+                </div>
+            </label>
+        </div>
+
+        <h3 class="text-sm font-bold text-gray-700 mb-3">نگاشت وضعیت‌ها (پنل → ووکامرس)</h3>
+        <div class="border rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">وضعیت پنل</th>
+                        <th class="px-4 py-2.5 text-center font-medium text-gray-400">→</th>
+                        <th class="px-4 py-2.5 text-right font-medium text-gray-700">وضعیت ووکامرس</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @php
+                        $panelLabels = \Modules\Warehouse\Models\WarehouseOrder::statusLabels();
+                    @endphp
+                    @foreach($statusMap as $panelStatus => $wcStatus)
+                    <tr>
+                        <td class="px-4 py-3">
+                            <span class="font-medium text-gray-800">{{ $panelLabels[$panelStatus] ?? $panelStatus }}</span>
+                            <span class="text-xs text-gray-400 mr-1">({{ $panelStatus }})</span>
+                        </td>
+                        <td class="px-4 py-3 text-center text-gray-400">→</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
+                                {{ $wcStatus === 'completed' ? 'bg-green-100 text-green-700' : '' }}
+                                {{ $wcStatus === 'processing' ? 'bg-blue-100 text-blue-700' : '' }}
+                                {{ $wcStatus === 'on-hold' ? 'bg-yellow-100 text-yellow-700' : '' }}
+                                {{ $wcStatus === 'cancelled' ? 'bg-red-100 text-red-700' : '' }}
+                            ">
+                                {{ $wcStatusLabels[$wcStatus] ?? $wcStatus }}
+                                <span class="text-gray-400">({{ $wcStatus }})</span>
+                            </span>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-3">توجه: سینک فقط برای سفارشاتی انجام می‌شود که از ووکامرس وارد شده باشند. سفارشات دستی پنل سینک نمی‌شوند.</p>
     </div>
 
     <!-- Product Sync Card (Full Width) -->
@@ -259,6 +324,24 @@ function syncProducts() {
         icon.classList.remove('animate-spin');
         text.textContent = 'سینک محصولات';
         showResult('product-sync-result', false, 'خطا: ' + err.message);
+    });
+}
+
+function toggleStatusSync(enabled) {
+    fetch('{{ route("warehouse.woocommerce.toggle-status-sync") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ enabled: enabled }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { /* saved */ })
+    .catch(function() {
+        document.getElementById('wc-status-sync-toggle').checked = !enabled;
     });
 }
 

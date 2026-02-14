@@ -277,7 +277,35 @@ class WarehouseOrder extends Model
         };
 
         $this->save();
+
+        // سینک وضعیت به ووکامرس (در بکگراند، خطا مانع عملیات نمیشه)
+        $this->syncStatusToWc($newStatus);
+
         return $this;
+    }
+
+    /**
+     * سینک وضعیت به ووکامرس
+     */
+    public function syncStatusToWc(?string $status = null): void
+    {
+        $status = $status ?? $this->status;
+
+        if (!$this->wc_order_id) {
+            return;
+        }
+
+        try {
+            $wcService = new \Modules\Warehouse\Services\WooCommerceService();
+            $wcService->syncPanelStatusToWc($this, $status);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('WC status sync failed silently', [
+                'order_id' => $this->id,
+                'wc_order_id' => $this->wc_order_id,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function setTimerFromShippingType(): void

@@ -110,6 +110,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/save', [WooCommerceController::class, 'saveSettings'])->name('warehouse.woocommerce.save');
         Route::post('/test', [WooCommerceController::class, 'testConnection'])->name('warehouse.woocommerce.test');
         Route::post('/sync', [WooCommerceController::class, 'sync'])->name('warehouse.woocommerce.sync');
+        Route::post('/toggle-status-sync', [WooCommerceController::class, 'toggleStatusSync'])->name('warehouse.woocommerce.toggle-status-sync');
         Route::post('/sync-products', [WooCommerceController::class, 'syncProducts'])->name('warehouse.woocommerce.sync-products');
         Route::post('/redetect-shipping', [WooCommerceController::class, 'redetectShippingTypes'])->name('warehouse.woocommerce.redetect-shipping');
     });

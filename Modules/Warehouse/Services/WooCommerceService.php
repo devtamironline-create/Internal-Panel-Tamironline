@@ -409,6 +409,153 @@ class WooCommerceService
     }
 
     /**
+     * نگاشت وضعیت‌های پنل به ووکامرس
+     */
+    public const WC_STATUS_MAP = [
+        'pending'     => 'processing',
+        'supply_wait' => 'on-hold',
+        'packed'      => 'processing',
+        'shipped'     => 'completed',
+        'delivered'   => 'completed',
+        'returned'    => 'cancelled',
+    ];
+
+    /**
+     * لیبل فارسی وضعیت‌های ووکامرس
+     */
+    public const WC_STATUS_LABELS = [
+        'pending'    => 'در انتظار پرداخت',
+        'processing' => 'در حال پردازش',
+        'on-hold'    => 'در انتظار',
+        'completed'  => 'تکمیل شده',
+        'cancelled'  => 'لغو شده',
+        'refunded'   => 'مسترد شده',
+        'failed'     => 'ناموفق',
+    ];
+
+    /**
+     * آیا سینک وضعیت به ووکامرس فعاله؟
+     */
+    public static function isStatusSyncEnabled(): bool
+    {
+        return WarehouseSetting::get('wc_status_sync_enabled', '1') === '1';
+    }
+
+    /**
+     * آپدیت وضعیت سفارش در ووکامرس
+     */
+    public function updateOrderStatus(int $wcOrderId, string $wcStatus, ?string $note = null): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        try {
+            $body = ['status' => $wcStatus];
+
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->put($this->siteUrl . '/wp-json/wc/v3/orders/' . $wcOrderId, $body);
+
+            if ($response->successful()) {
+                // اضافه کردن یادداشت به سفارش
+                if ($note) {
+                    $this->addOrderNote($wcOrderId, $note);
+                }
+
+                Log::info('WC order status synced', [
+                    'wc_order_id' => $wcOrderId,
+                    'wc_status' => $wcStatus,
+                ]);
+
+                return ['success' => true, 'message' => 'وضعیت ووکامرس آپدیت شد.'];
+            }
+
+            $errorBody = $response->json();
+            $errorMessage = $errorBody['message'] ?? ('HTTP ' . $response->status());
+
+            Log::warning('WC order status update failed', [
+                'wc_order_id' => $wcOrderId,
+                'wc_status' => $wcStatus,
+                'http_status' => $response->status(),
+                'response' => $errorMessage,
+            ]);
+
+            return ['success' => false, 'message' => 'خطا در آپدیت ووکامرس: ' . $errorMessage];
+        } catch (\Exception $e) {
+            Log::error('WC order status update exception', [
+                'wc_order_id' => $wcOrderId,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * اضافه کردن یادداشت به سفارش ووکامرس
+     */
+    public function addOrderNote(int $wcOrderId, string $note, bool $customerNote = false): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->post($this->siteUrl . '/wp-json/wc/v3/orders/' . $wcOrderId . '/notes', [
+                    'note' => $note,
+                    'customer_note' => $customerNote,
+                ]);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::warning('WC order note failed', [
+                'wc_order_id' => $wcOrderId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * سینک وضعیت از پنل به ووکامرس
+     */
+    public function syncPanelStatusToWc(WarehouseOrder $order, string $panelStatus): array
+    {
+        if (!self::isStatusSyncEnabled()) {
+            return ['success' => false, 'message' => 'سینک وضعیت غیرفعال است.'];
+        }
+
+        if (!$order->wc_order_id) {
+            return ['success' => false, 'message' => 'سفارش ووکامرسی نیست.'];
+        }
+
+        // مپینگ سفارشی از تنظیمات (اگه وجود داره)
+        $customMap = WarehouseSetting::get('wc_status_map');
+        $map = $customMap ? (json_decode($customMap, true) ?: self::WC_STATUS_MAP) : self::WC_STATUS_MAP;
+
+        $wcStatus = $map[$panelStatus] ?? null;
+        if (!$wcStatus) {
+            return ['success' => false, 'message' => "مپینگی برای وضعیت {$panelStatus} تعریف نشده."];
+        }
+
+        $statusLabels = WarehouseOrder::statusLabels();
+        $panelLabel = $statusLabels[$panelStatus] ?? $panelStatus;
+        $note = "وضعیت در پنل انبار: {$panelLabel}";
+
+        // اگه کد رهگیری داره، اضافه کن
+        if ($order->tracking_code && in_array($panelStatus, ['shipped', 'delivered'])) {
+            $note .= " | کد رهگیری: {$order->tracking_code}";
+        }
+        if ($order->post_tracking_code && in_array($panelStatus, ['shipped', 'delivered'])) {
+            $note .= " | کد رهگیری پست: {$order->post_tracking_code}";
+        }
+
+        return $this->updateOrderStatus($order->wc_order_id, $wcStatus, $note);
+    }
+
+    /**
      * گرفتن اطلاعات یک سفارش از API ووکامرس
      */
     public function fetchSingleOrder(int $wcOrderId): ?array

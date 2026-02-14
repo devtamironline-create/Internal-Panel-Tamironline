@@ -283,6 +283,9 @@ class WarehouseController extends Controller
         $order->status_changed_at = now();
         $order->save();
 
+        // سینک وضعیت به ووکامرس
+        $order->syncStatusToWc(WarehouseOrder::STATUS_SUPPLY_WAIT);
+
         $unavailableNames = $order->items()->whereIn('id', $request->input('unavailable_items'))->pluck('product_name')->implode('، ');
         OrderLog::log($order, OrderLog::ACTION_SUPPLY_WAIT, 'منتقل به انتظار تامین — کالاهای ناموجود: ' . $unavailableNames);
 
@@ -335,6 +338,8 @@ class WarehouseController extends Controller
                 'status' => $validated['status'],
                 'status_changed_at' => now(),
             ]);
+            // سینک وضعیت به ووکامرس
+            $order->syncStatusToWc($validated['status']);
             $count++;
         }
 
