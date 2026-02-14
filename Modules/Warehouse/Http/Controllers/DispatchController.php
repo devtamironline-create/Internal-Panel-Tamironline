@@ -207,7 +207,25 @@ class DispatchController extends Controller
             ]);
         }
 
-        if ($order->status !== WarehouseOrder::STATUS_PACKED) {
+        if ($order->status === WarehouseOrder::STATUS_DELIVERED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سفارش ' . $order->order_number . ' قبلا تحویل داده شده.',
+                'order' => [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->customer_name,
+                    'status' => $order->status,
+                    'status_label' => $order->status_label,
+                ],
+            ]);
+        }
+
+        // سفارشات پستی از هر وضعیتی (pending یا packed) میتونن ارسال بشن
+        $canShip = $order->status === WarehouseOrder::STATUS_PACKED
+            || ($order->shipping_type === 'post' && $order->status === WarehouseOrder::STATUS_PENDING);
+
+        if (!$canShip) {
             return response()->json([
                 'success' => false,
                 'message' => 'سفارش ' . $order->order_number . ' آماده ارسال نیست. وضعیت: ' . $order->status_label,

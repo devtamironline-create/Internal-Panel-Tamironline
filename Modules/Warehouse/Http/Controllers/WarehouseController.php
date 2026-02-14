@@ -456,10 +456,14 @@ class WarehouseController extends Controller
             }
         }
 
-        // تغییر وضعیت به packed (در انتظار اسکن خروج)
-        $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+        // سفارشات پستی مستقیم به ارسال شده، بقیه به انتظار اسکن خروج
+        if ($order->shipping_type === 'post') {
+            $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
+        } else {
+            $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+        }
 
-        OrderLog::log($order, OrderLog::ACTION_EDITED, 'تایید کارتن و وزن — سفارش به انتظار اسکن خروج رفت', [
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'تایید کارتن و وزن — سفارش به ' . ($order->shipping_type === 'post' ? 'ارسال شده' : 'انتظار اسکن خروج') . ' رفت', [
             'box_size_id' => $validated['box_size_id'],
             'box_name' => $boxSize->name,
             'total_weight_with_box' => $actualWeight,
