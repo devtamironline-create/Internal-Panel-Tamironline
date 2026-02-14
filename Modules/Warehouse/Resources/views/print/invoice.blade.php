@@ -171,8 +171,10 @@
                     @php
                         $invoiceBox = $order->boxSize;
                         $boxWeight = $invoiceBox ? $invoiceBox->weight : 0;
+                        // وزن واقعی (ترازو) اولویت داره، در غیر این صورت وزن سیستمی + کارتن
+                        $displayWeight = $order->actual_weight ? $order->actual_weight_grams : ($order->total_weight_grams + $boxWeight);
                     @endphp
-                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($order->total_weight_grams + $boxWeight) }}g</td></tr>
+                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($displayWeight) }}g</td></tr>
                     @if($invoiceBox)
                     <tr><td class="info-label">کارتن:</td><td class="info-val">سایز {{ $invoiceBox->name }} ({{ $invoiceBox->weight_label }})</td></tr>
                     @endif

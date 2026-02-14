@@ -65,6 +65,8 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::post('/{order}/save-postal-code', [WarehouseController::class, 'savePostalCode'])->name('warehouse.save-postal-code')
         ->where('order', '[0-9]+');
+    Route::post('/{order}/save-address', [WarehouseController::class, 'saveAddress'])->name('warehouse.save-address')
+        ->where('order', '[0-9]+');
 
     // Dispatch
     Route::prefix('dispatch')->group(function () {

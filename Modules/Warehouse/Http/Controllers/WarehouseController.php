@@ -403,6 +403,43 @@ class WarehouseController extends Controller
     }
 
     /**
+     * ذخیره آدرس سفارش
+     */
+    public function saveAddress(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'state' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'address' => 'required|string|max:500',
+        ]);
+
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        if (!isset($wcData['shipping'])) $wcData['shipping'] = [];
+        if (!isset($wcData['billing'])) $wcData['billing'] = [];
+
+        $wcData['shipping']['state'] = $validated['state'] ?? '';
+        $wcData['shipping']['city'] = $validated['city'] ?? '';
+        $wcData['shipping']['address_1'] = $validated['address'];
+        $wcData['billing']['state'] = $validated['state'] ?? '';
+        $wcData['billing']['city'] = $validated['city'] ?? '';
+        $wcData['billing']['address_1'] = $validated['address'];
+
+        $order->update(['wc_order_data' => $wcData]);
+
+        $fullAddress = implode('، ', array_filter([$validated['state'], $validated['city'], $validated['address']]));
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'آدرس تغییر کرد: ' . $fullAddress);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'آدرس ذخیره شد',
+        ]);
+    }
+
+    /**
      * ذخیره کارتن و وزن قبل از پرینت (مرحله pending)
      * وزن خودکار محاسبه میشه: وزن محصولات + وزن کارتن
      * بعد از تایید سفارش به وضعیت packed (در انتظار اسکن خروج) میره

@@ -258,7 +258,7 @@ class PrintController extends Controller
             'recipient_address' => $fullAddress ?: 'آدرس نامشخص',
             'recipient_postal_code' => $postcode ?: null,
             'recipient_city_id' => $cityId,
-            'weight' => $order->total_weight_with_box_grams ?: 500,
+            'weight' => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
             'value' => (int)($wcData['total'] ?? 100000),
         ]);
 
@@ -369,7 +369,7 @@ class PrintController extends Controller
             'recipient_province' => $state,
             'tapin_province_code' => $tapinData['province_code'] ?? null,
             'tapin_city_code' => $tapinData['city_code'] ?? null,
-            'weight' => $order->total_weight_with_box_grams ?: 500,
+            'weight' => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
             'value' => (int)($wcData['total'] ?? 100000),
             'products' => $products,
             'box_length' => $box->length ?? null,
