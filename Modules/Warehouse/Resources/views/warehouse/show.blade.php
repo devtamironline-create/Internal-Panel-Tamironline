@@ -130,6 +130,52 @@
                     </dd>
                 </div>
                 @endif
+                {{-- کد پستی (قابل ویرایش) --}}
+                @canany(['manage-warehouse', 'manage-permissions'])
+                @php
+                    $currentPostcode = ($wcShippingAddr['postcode'] ?? '') ?: ($wcBillingAddr['postcode'] ?? '');
+                @endphp
+                <div class="mt-3 pt-3 border-t border-gray-100" x-data="{ editing: false, postcode: '{{ $currentPostcode }}', saving: false, saved: false, error: '' }">
+                    <div class="flex items-center justify-between">
+                        <dt class="text-sm text-gray-500">کد پستی</dt>
+                        <dd class="flex items-center gap-2">
+                            <template x-if="!editing">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium {{ $currentPostcode ? 'text-gray-900' : 'text-red-500' }}" dir="ltr" x-text="postcode || 'ثبت نشده'"></span>
+                                    <button @click="editing = true; saved = false; error = ''" type="button" class="text-xs text-brand-600 hover:text-brand-700 font-medium">
+                                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                    <span x-show="saved" x-cloak class="text-xs text-green-600">ذخیره شد</span>
+                                </div>
+                            </template>
+                            <template x-if="editing">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" x-model="postcode" maxlength="10" dir="ltr" placeholder="کد پستی ۱۰ رقمی"
+                                           class="w-32 px-2 py-1 border border-gray-300 rounded-lg text-sm text-center font-medium focus:border-brand-500 focus:ring-brand-500">
+                                    <button @click="
+                                        if (!postcode || postcode.length < 10) { error = 'کد پستی باید ۱۰ رقمی باشد'; return; }
+                                        saving = true; error = '';
+                                        fetch('/warehouse/{{ $order->id }}/save-postal-code', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
+                                            body: JSON.stringify({postal_code: postcode})
+                                        }).then(r => r.json()).then(d => {
+                                            saving = false;
+                                            if (d.success) { editing = false; saved = true; }
+                                            else { error = d.message || 'خطا'; }
+                                        }).catch(() => { saving = false; error = 'خطا در ارتباط'; })
+                                    " :disabled="saving" type="button"
+                                       class="px-3 py-1 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 disabled:opacity-50">
+                                        <span x-text="saving ? '...' : 'ذخیره'"></span>
+                                    </button>
+                                    <button @click="editing = false; error = ''" type="button" class="text-xs text-gray-400 hover:text-gray-600">انصراف</button>
+                                </div>
+                            </template>
+                        </dd>
+                    </div>
+                    <p x-show="error" x-cloak class="text-xs text-red-500 mt-1" x-text="error"></p>
+                </div>
+                @endcanany
                 @if($order->tracking_code)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">کد رهگیری</dt>

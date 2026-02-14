@@ -369,6 +369,34 @@ class WarehouseController extends Controller
     }
 
     /**
+     * ذخیره کد پستی سفارش
+     */
+    public function savePostalCode(Request $request, WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'postal_code' => 'required|string|size:10',
+        ]);
+
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        if (!isset($wcData['shipping'])) $wcData['shipping'] = [];
+        $wcData['shipping']['postcode'] = $validated['postal_code'];
+        if (!isset($wcData['billing'])) $wcData['billing'] = [];
+        $wcData['billing']['postcode'] = $validated['postal_code'];
+        $order->update(['wc_order_data' => $wcData]);
+
+        OrderLog::log($order, OrderLog::ACTION_EDITED, 'کد پستی تغییر کرد: ' . $validated['postal_code']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کد پستی ذخیره شد',
+        ]);
+    }
+
+    /**
      * ذخیره کارتن و وزن قبل از پرینت (مرحله pending)
      * وزن خودکار محاسبه میشه: وزن محصولات + وزن کارتن
      * بعد از تایید سفارش به وضعیت packed (در انتظار اسکن خروج) میره
