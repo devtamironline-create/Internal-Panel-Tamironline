@@ -156,11 +156,8 @@ class PrintController extends Controller
             $order->updateStatus(WarehouseOrder::STATUS_PACKED);
         }
 
-        // سفارشات پستی بعد از پرینت فاکتور مستقیم به ارسال شده تغییر میکنن
-        if ($order->shipping_type === 'post' && $order->status === WarehouseOrder::STATUS_PACKED) {
-            $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
-            OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال خودکار سفارش پستی پس از پرینت فاکتور');
-        }
+        // سفارشات پستی هم بعد از پرینت در مرحله اسکن خروج (packed) میمونن
+        // و بعد از اسکن خروج به ارسال شده (shipped) منتقل میشن
 
         $invoiceSettings = [
             'store_name' => WarehouseSetting::get('invoice_store_name', 'گنجه'),

@@ -128,9 +128,15 @@ class PackingController extends Controller
 
         OrderLog::log($order, OrderLog::ACTION_EXIT_SCANNED, 'اسکن خروج انجام شد (بارکد: ' . $barcode . ')');
 
+        // بعد از اسکن خروج، سفارش مستقیم به ارسال شده منتقل بشه
+        if (in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PACKED])) {
+            $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
+            OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال سفارش پس از اسکن خروج');
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'بارکد سفارش تایید شد.',
+            'message' => 'بارکد سفارش تایید شد و به ارسال شده منتقل شد.',
         ]);
     }
 
