@@ -151,13 +151,7 @@ class PrintController extends Controller
             }
         }
 
-        // Mark as printed and move to packed (در انتظار اسکن خروج)
-        if ($order->status === WarehouseOrder::STATUS_PENDING) {
-            $order->updateStatus(WarehouseOrder::STATUS_PACKED);
-        }
-
-        // سفارشات پستی هم بعد از پرینت در مرحله اسکن خروج (packed) میمونن
-        // و بعد از اسکن خروج به ارسال شده (shipped) منتقل میشن
+        // پرینت فقط فاکتور رو نشون میده — تغییر وضعیت جداگانه انجام میشه
 
         $invoiceSettings = [
             'store_name' => WarehouseSetting::get('invoice_store_name', 'گنجه'),
