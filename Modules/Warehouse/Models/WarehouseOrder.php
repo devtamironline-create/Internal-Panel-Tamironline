@@ -67,7 +67,41 @@ class WarehouseOrder extends Model
 
     public function getSourceLabelAttribute(): string
     {
-        return self::sourceLabels()[$this->order_source] ?? $this->order_source ?? 'نامشخص';
+        $source = $this->order_source;
+
+        // فالبک: اگه ستون هنوز اضافه نشده یا NULL باشه
+        if (empty($source)) {
+            if (empty($this->wc_order_id)) {
+                $source = self::SOURCE_MANUAL;
+            } elseif (str_contains($this->notes ?? '', 'سفارش باسلام')) {
+                $source = self::SOURCE_BASALAM;
+            } elseif (str_contains($this->notes ?? '', 'سفارش حضوری')) {
+                $source = self::SOURCE_IN_STORE;
+            } else {
+                $source = self::SOURCE_WEBSITE;
+            }
+        }
+
+        return self::sourceLabels()[$source] ?? $source;
+    }
+
+    public function getSourceColorAttribute(): string
+    {
+        $source = $this->order_source;
+
+        if (empty($source)) {
+            if (empty($this->wc_order_id)) {
+                $source = self::SOURCE_MANUAL;
+            } elseif (str_contains($this->notes ?? '', 'سفارش باسلام')) {
+                $source = self::SOURCE_BASALAM;
+            } elseif (str_contains($this->notes ?? '', 'سفارش حضوری')) {
+                $source = self::SOURCE_IN_STORE;
+            } else {
+                $source = self::SOURCE_WEBSITE;
+            }
+        }
+
+        return self::sourceColors()[$source] ?? 'gray';
     }
 
     const STATUS_PENDING = 'pending';
