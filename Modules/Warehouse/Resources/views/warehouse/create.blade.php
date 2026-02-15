@@ -45,6 +45,14 @@
                     @enderror
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">منبع سفارش</label>
+                    <select name="order_source" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        @foreach(\Modules\Warehouse\Models\WarehouseOrder::sourceLabels() as $key => $label)
+                        <option value="{{ $key }}" {{ old('order_source', 'manual') == $key ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">مسئول انبار</label>
                     <select name="assigned_to" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                         <option value="">انتخاب کنید</option>

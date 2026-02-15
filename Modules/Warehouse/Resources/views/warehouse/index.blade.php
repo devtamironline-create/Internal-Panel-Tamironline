@@ -128,7 +128,11 @@
                     @forelse($orders as $order)
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">
-                            <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
+                                @php $srcColor = \Modules\Warehouse\Models\WarehouseOrder::sourceColors()[$order->order_source] ?? 'gray'; @endphp
+                                <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-{{ $srcColor }}-100 text-{{ $srcColor }}-700">{{ $order->source_label }}</span>
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <div>
@@ -219,7 +223,11 @@
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
-                            <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
+                                @php $srcColor = \Modules\Warehouse\Models\WarehouseOrder::sourceColors()[$order->order_source] ?? 'gray'; @endphp
+                                <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-{{ $srcColor }}-100 text-{{ $srcColor }}-700">{{ $order->source_label }}</span>
+                            </div>
                             <div class="relative" @click.outside="shippingOpen = false">
                                 <button @click="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
                                     :class="{
@@ -604,7 +612,11 @@
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
-                            <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
+                                @php $srcColor = \Modules\Warehouse\Models\WarehouseOrder::sourceColors()[$order->order_source] ?? 'gray'; @endphp
+                                <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-{{ $srcColor }}-100 text-{{ $srcColor }}-700">{{ $order->source_label }}</span>
+                            </div>
                             <div class="relative" @click.outside="shippingOpen = false">
                                 <button @click="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
                                     :class="{
@@ -773,7 +785,11 @@
                         </td>
                         @endcanany
                         <td class="px-6 py-4">
-                            <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-brand-600 text-sm" dir="ltr">{{ $order->order_number }}</span>
+                                @php $srcColor = \Modules\Warehouse\Models\WarehouseOrder::sourceColors()[$order->order_source] ?? 'gray'; @endphp
+                                <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-{{ $srcColor }}-100 text-{{ $srcColor }}-700">{{ $order->source_label }}</span>
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <div>

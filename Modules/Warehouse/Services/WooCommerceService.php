@@ -209,13 +209,16 @@ class WooCommerceService
                     ->map(fn($item) => ($item['name'] ?? '') . ' x' . ($item['quantity'] ?? 1))
                     ->implode("\n");
 
-                // تشخیص نوع سفارش (باسلام / حضوری)
+                // تشخیص منبع سفارش (باسلام / حضوری / سایت)
                 $isBasalam = str_contains($wcOrderStatus, 'bslm');
                 $isCompleted = $wcOrderStatus === 'completed';
+                $orderSource = WarehouseOrder::SOURCE_WEBSITE;
                 $orderNotes = 'مبلغ: ' . number_format((float)($wcOrder['total'] ?? 0)) . ' تومان';
                 if ($isBasalam) {
+                    $orderSource = WarehouseOrder::SOURCE_BASALAM;
                     $orderNotes = '🛒 سفارش باسلام | ' . $orderNotes;
                 } elseif ($isCompleted) {
+                    $orderSource = WarehouseOrder::SOURCE_IN_STORE;
                     $orderNotes = '🏪 سفارش حضوری | ' . $orderNotes;
                 }
 
@@ -235,6 +238,7 @@ class WooCommerceService
                     'description' => $lineItems ?: null,
                     'status' => WarehouseOrder::STATUS_PENDING,
                     'shipping_type' => $shippingType,
+                    'order_source' => $orderSource,
                     'barcode' => WarehouseOrder::generateBarcode(),
                     'total_weight' => $totalWeight,
                     'created_by' => auth()->id(),

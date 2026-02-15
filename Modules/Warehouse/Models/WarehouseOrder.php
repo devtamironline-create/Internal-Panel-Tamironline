@@ -14,7 +14,7 @@ class WarehouseOrder extends Model
 
     protected $fillable = [
         'order_number', 'customer_name', 'customer_mobile', 'description',
-        'status', 'shipping_type', 'assigned_to', 'created_by',
+        'status', 'shipping_type', 'order_source', 'assigned_to', 'created_by',
         'wc_order_id', 'wc_order_data', 'barcode',
         'total_weight', 'actual_weight', 'weight_verified', 'box_size_id',
         'timer_deadline', 'supply_deadline', 'printed_at', 'print_count', 'packed_at',
@@ -38,6 +38,37 @@ class WarehouseOrder extends Model
         'courier_dispatched_at' => 'datetime',
         'exit_scanned_at' => 'datetime',
     ];
+
+    // Order Sources
+    const SOURCE_WEBSITE = 'website';
+    const SOURCE_BASALAM = 'basalam';
+    const SOURCE_IN_STORE = 'in_store';
+    const SOURCE_MANUAL = 'manual';
+
+    public static function sourceLabels(): array
+    {
+        return [
+            self::SOURCE_WEBSITE => 'سایت',
+            self::SOURCE_BASALAM => 'باسلام',
+            self::SOURCE_IN_STORE => 'خرید حضوری',
+            self::SOURCE_MANUAL => 'دستی',
+        ];
+    }
+
+    public static function sourceColors(): array
+    {
+        return [
+            self::SOURCE_WEBSITE => 'blue',
+            self::SOURCE_BASALAM => 'emerald',
+            self::SOURCE_IN_STORE => 'orange',
+            self::SOURCE_MANUAL => 'gray',
+        ];
+    }
+
+    public function getSourceLabelAttribute(): string
+    {
+        return self::sourceLabels()[$this->order_source] ?? $this->order_source ?? 'نامشخص';
+    }
 
     const STATUS_PENDING = 'pending';
     const STATUS_SUPPLY_WAIT = 'supply_wait';

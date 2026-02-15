@@ -135,6 +135,7 @@ class WarehouseController extends Controller
             'description' => 'nullable|string',
             'assigned_to' => 'nullable|exists:users,id',
             'shipping_type' => 'nullable|string|max:50',
+            'order_source' => 'nullable|string|in:website,basalam,in_store,manual',
             'notes' => 'nullable|string',
         ]);
 
@@ -142,6 +143,7 @@ class WarehouseController extends Controller
         $validated['barcode'] = WarehouseOrder::generateBarcode();
         $validated['created_by'] = auth()->id();
         $validated['status'] = WarehouseOrder::STATUS_PENDING;
+        $validated['order_source'] = $validated['order_source'] ?? WarehouseOrder::SOURCE_MANUAL;
 
         $order = WarehouseOrder::create($validated);
         $order->setTimerFromShippingType();
