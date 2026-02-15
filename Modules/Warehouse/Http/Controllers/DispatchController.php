@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\Warehouse\Models\WarehouseShippingType;
 use Modules\Warehouse\Services\AmadestService;
 
 class DispatchController extends Controller
@@ -56,14 +57,19 @@ class DispatchController extends Controller
         // Auto-ship courier orders that were dispatched more than 4 hours ago
         $this->autoShipCourierOrders();
 
-        // شامل هم courier (پیک ۵ روزه) و هم urgent (پیک فوری)
-        $courierTypes = ['courier', 'urgent'];
+        // حمل‌ونقل‌هایی که نیاز به ایستگاه پیک دارند (از تنظیمات)
+        $courierTypes = WarehouseShippingType::getDispatchRequiredSlugs();
+
+        if (empty($courierTypes)) {
+            $courierTypes = ['__none__']; // prevent empty whereIn
+        }
 
         if ($tab === 'ready') {
-            // سفارشات پیکی آماده ارسال (بدون اطلاعات پیک)
+            // سفارشاتی که اسکن خروج شدن و منتظر تخصیص پیک هستن
             $orders = WarehouseOrder::with(['creator', 'assignee', 'items'])
                 ->byStatus(WarehouseOrder::STATUS_PACKED)
                 ->whereIn('shipping_type', $courierTypes)
+                ->whereNotNull('exit_scanned_at')
                 ->whereNull('courier_dispatched_at')
                 ->orderBy('created_at', 'asc')
                 ->paginate(20);
@@ -87,6 +93,7 @@ class DispatchController extends Controller
 
         $readyCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
             ->whereIn('shipping_type', $courierTypes)
+            ->whereNotNull('exit_scanned_at')
             ->whereNull('courier_dispatched_at')
             ->count();
         $dispatchedCount = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
@@ -143,8 +150,11 @@ class DispatchController extends Controller
      */
     protected function autoShipCourierOrders(): int
     {
+        $dispatchTypes = WarehouseShippingType::getDispatchRequiredSlugs();
+        if (empty($dispatchTypes)) return 0;
+
         $orders = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PACKED)
-            ->whereIn('shipping_type', ['courier', 'urgent'])
+            ->whereIn('shipping_type', $dispatchTypes)
             ->whereNotNull('courier_dispatched_at')
             ->where('courier_dispatched_at', '<=', now()->subHours(4))
             ->get();

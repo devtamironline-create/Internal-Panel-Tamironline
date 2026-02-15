@@ -8,6 +8,7 @@ use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseOrderItem;
 use Modules\Warehouse\Models\WarehouseSetting;
+use Modules\Warehouse\Models\WarehouseShippingType;
 
 class PackingController extends Controller
 {
@@ -128,7 +129,21 @@ class PackingController extends Controller
 
         OrderLog::log($order, OrderLog::ACTION_EXIT_SCANNED, 'اسکن خروج انجام شد (بارکد: ' . $barcode . ')');
 
-        // بعد از اسکن خروج، سفارش مستقیم به ارسال شده منتقل بشه
+        // چک کن آیا نوع ارسال نیاز به ایستگاه پیک داره
+        $dispatchSlugs = WarehouseShippingType::getDispatchRequiredSlugs();
+        $needsDispatch = in_array($order->shipping_type, $dispatchSlugs);
+
+        if ($needsDispatch) {
+            // فقط وضعیت packed بمونه تا از ایستگاه پیک رد بشه
+            // exit_scanned_at ثبت شده، ایستگاه پیک این سفارش رو نشون میده
+            return response()->json([
+                'success' => true,
+                'message' => 'بارکد تایید شد. سفارش به ایستگاه ارسال پیک منتقل شد.',
+                'needs_dispatch' => true,
+            ]);
+        }
+
+        // بقیه سفارشات مستقیم ارسال شده بشن
         if (in_array($order->status, [WarehouseOrder::STATUS_PENDING, WarehouseOrder::STATUS_PACKED])) {
             $order->updateStatus(WarehouseOrder::STATUS_SHIPPED);
             OrderLog::log($order, OrderLog::ACTION_SCANNED_SHIPPED, 'ارسال سفارش پس از اسکن خروج');

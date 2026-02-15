@@ -6,12 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class WarehouseShippingType extends Model
 {
-    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active'];
+    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active', 'requires_dispatch'];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'requires_dispatch' => 'boolean',
         'timer_minutes' => 'integer',
     ];
+
+    /**
+     * slug های حمل‌ونقل‌هایی که نیاز به ایستگاه ارسال پیک دارند
+     */
+    public static function getDispatchRequiredSlugs(): array
+    {
+        return static::where('requires_dispatch', true)
+            ->pluck('slug')
+            ->toArray();
+    }
 
     public function getTimerLabelAttribute(): string
     {

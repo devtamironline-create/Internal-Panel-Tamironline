@@ -95,9 +95,10 @@ class SettingsController extends Controller
             'name' => 'required|string|max:255',
             'timer_minutes' => 'required|integer|min:1',
             'is_active' => 'boolean',
+            'requires_dispatch' => 'boolean',
         ]);
 
-        $shippingType->update($request->only('name', 'timer_minutes', 'is_active'));
+        $shippingType->update($request->only('name', 'timer_minutes', 'is_active', 'requires_dispatch'));
 
         return response()->json(['success' => true, 'message' => 'نوع ارسال ویرایش شد.']);
     }
