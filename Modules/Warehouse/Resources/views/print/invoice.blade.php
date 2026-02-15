@@ -238,10 +238,10 @@
                 <tr>
                     <th style="width:28px">#</th>
                     <th>نام محصول</th>
-                    <th style="width:65px">SKU</th>
                     <th style="width:45px">تعداد</th>
+                    <th style="width:85px">قیمت واحد (تومان)</th>
                     <th style="width:55px">وزن(g)</th>
-                    <th style="width:95px">مبلغ (تومان)</th>
+                    <th style="width:85px">قیمت کل (تومان)</th>
                 </tr>
             </thead>
             <tbody>
@@ -254,15 +254,19 @@
                     }
                 @endphp
                 @foreach($order->items as $index => $item)
+                @php
+                    $lineTotal = $item->price;
+                    $unitPrice = $item->quantity > 0 ? $item->price / $item->quantity : $item->price;
+                @endphp
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->product_name }}</td>
-                    <td dir="ltr">{{ $item->product_sku ?? '-' }}</td>
                     <td>{{ $item->quantity }}</td>
+                    <td>{{ number_format($unitPrice) }}</td>
                     <td>{{ number_format($item->weight_grams) }}</td>
-                    <td>{{ number_format($item->price) }}</td>
+                    <td>{{ number_format($lineTotal) }}</td>
                 </tr>
-                @php $totalPrice += $item->price * $item->quantity; @endphp
+                @php $totalPrice += $lineTotal; @endphp
                 @endforeach
                 @if($shippingTotal > 0)
                 <tr style="border-top: 1px solid #ddd;">
