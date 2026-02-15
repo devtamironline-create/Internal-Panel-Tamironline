@@ -79,25 +79,15 @@ class WarehouseController extends Controller
         } else {
             $query->byStatus($currentStatus);
 
-            // اولویت نوع ارسال: پیک فوری → فوری → حضوری → پیک ۵ روزه → پست → بقیه
+            // ترتیب: قدیم به جدید — پیک فوری/اضطراری در هر تاریخ اول بیاد
+            $query->orderByRaw("DATE(created_at) ASC");
             $query->orderByRaw("
                 CASE
-                    WHEN shipping_type = 'emergency' THEN 0
-                    WHEN shipping_type = 'urgent' THEN 1
-                    WHEN shipping_type = 'pickup' THEN 2
-                    WHEN shipping_type = 'courier' THEN 3
-                    WHEN shipping_type = 'post' THEN 4
-                    ELSE 5
+                    WHEN shipping_type IN ('emergency', 'urgent') THEN 0
+                    ELSE 1
                 END ASC
             ");
-
-            // پیک فوری: قدیمی‌ترین اول (FIFO) — بقیه: جدیدترین اول
-            $query->orderByRaw("
-                CASE
-                    WHEN shipping_type IN ('emergency', 'urgent') THEN UNIX_TIMESTAMP(created_at)
-                    ELSE -UNIX_TIMESTAMP(created_at)
-                END ASC
-            ");
+            $query->orderBy('created_at', 'asc');
 
             // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
             $noPaginationStatuses = [

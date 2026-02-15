@@ -65,7 +65,7 @@ class DispatchController extends Controller
                 ->byStatus(WarehouseOrder::STATUS_PACKED)
                 ->whereIn('shipping_type', $courierTypes)
                 ->whereNull('courier_dispatched_at')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('created_at', 'asc')
                 ->paginate(20);
         } elseif ($tab === 'dispatched') {
             // سفارشاتی که پیک گرفته ولی هنوز ارسال نشده
