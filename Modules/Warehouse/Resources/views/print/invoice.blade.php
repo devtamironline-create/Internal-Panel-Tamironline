@@ -288,9 +288,22 @@
             $postCode = $order->post_tracking_code;
             $showAmadest = !empty($amadestCode) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
+            $showOrderBarcode = $order->shipping_type !== 'post' && !empty($order->barcode);
         @endphp
-        @if($showAmadest || $showPostQR)
+        @if($showAmadest || $showPostQR || $showOrderBarcode)
         <div class="barcode-section">
+            @if($showOrderBarcode)
+            <div class="barcode-list">
+                <div class="barcode-item">
+                    <svg id="order-barcode"></svg>
+                </div>
+                <div class="barcode-meta">
+                    <span class="barcode-label">بارکد سفارش</span>
+                    <span class="barcode-code">{{ $order->barcode }}</span>
+                </div>
+            </div>
+            @endif
+
             @if($showAmadest)
             <div class="barcode-list">
                 <div class="barcode-item">
@@ -315,6 +328,17 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     @endif
     <script>
+        @if($showOrderBarcode)
+        JsBarcode("#order-barcode", "{{ $order->barcode }}", {
+            format: "CODE128",
+            width: 2,
+            height: 45,
+            displayValue: true,
+            margin: 2,
+            fontSize: 10,
+        });
+        @endif
+
         @if($showAmadest)
         JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
             format: "CODE128",
