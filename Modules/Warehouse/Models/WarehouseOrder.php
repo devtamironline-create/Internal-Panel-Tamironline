@@ -226,9 +226,9 @@ class WarehouseOrder extends Model
 
     public function getTotalWeightGramsAttribute(): int
     {
-        // محاسبه از روی آیتم‌ها اگه لود شده باشن
+        // محاسبه از روی آیتم‌ها اگه لود شده باشن (weight_grams خودش از جدول محصولات میخونه)
         if ($this->relationLoaded('items') && $this->items->count() > 0) {
-            return $this->items->sum(fn($item) => self::toGrams($item->weight) * $item->quantity);
+            return $this->items->sum(fn($item) => $item->weight_grams * $item->quantity);
         }
         return self::toGrams($this->total_weight);
     }

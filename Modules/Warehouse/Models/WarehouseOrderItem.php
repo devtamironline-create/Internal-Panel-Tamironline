@@ -33,6 +33,18 @@ class WarehouseOrderItem extends Model
 
     public function getWeightGramsAttribute(): int
     {
+        // وزن رو از جدول محصولات بگیر (دقیق‌تر از وزن ذخیره‌شده قدیمی)
+        if ($this->wc_product_id) {
+            static $weightsCache = null;
+            if ($weightsCache === null) {
+                $weightsCache = WarehouseProduct::pluck('weight', 'wc_product_id')->toArray();
+            }
+            $productWeight = (float)($weightsCache[$this->wc_product_id] ?? 0);
+            if ($productWeight >= 1) {
+                return (int) round($productWeight);
+            }
+        }
+
         return \Modules\Warehouse\Models\WarehouseOrder::toGrams($this->weight);
     }
 
