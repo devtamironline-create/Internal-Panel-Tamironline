@@ -1019,6 +1019,17 @@ class WooCommerceService
                 foreach ($variations as $variation) {
                     // وزن از ووکامرس → تبدیل به گرم بر اساس واحد سایت
                     $weightGrams = $this->convertToGrams((float)($variation['weight'] ?? 0), $wcWeightUnit);
+
+                    // اگه variation وزن نداره، از parent بگیر
+                    if ($weightGrams == 0 && $parentProduct && $parentProduct->weight > 0) {
+                        $weightGrams = (float) $parentProduct->weight;
+                        Log::info('Variation inherited weight from parent', [
+                            'variation_id' => $variation['id'],
+                            'parent_id' => $productId,
+                            'inherited_weight' => $weightGrams,
+                        ]);
+                    }
+
                     $dims = $variation['dimensions'] ?? [];
 
                     // ساخت اسم کامل: اگه اسم variation خالی یا خیلی کوتاهه، اسم پدر + ویژگی‌ها رو بذار
@@ -1659,5 +1670,88 @@ class WooCommerceService
             ]);
             return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * رفع وزن صفر variations - وزن رو از محصول parent میگیره
+     */
+    public function fixZeroWeightVariations(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        // پیدا کردن variations با وزن 0 که parent دارن
+        $zeroWeightVariations = WarehouseProduct::where('type', 'variation')
+            ->where('weight', 0)
+            ->whereNotNull('parent_id')
+            ->get();
+
+        if ($zeroWeightVariations->isEmpty()) {
+            return [
+                'success' => true,
+                'message' => 'variation با وزن صفر یافت نشد.',
+                'fixed' => 0,
+            ];
+        }
+
+        $fixed = 0;
+        $failed = 0;
+        $details = [];
+
+        foreach ($zeroWeightVariations as $variation) {
+            // گرفتن parent product
+            $parent = WarehouseProduct::where('wc_product_id', $variation->parent_id)->first();
+
+            if (!$parent) {
+                Log::warning('Variation parent not found', [
+                    'variation_id' => $variation->wc_product_id,
+                    'parent_id' => $variation->parent_id,
+                ]);
+                $failed++;
+                continue;
+            }
+
+            // اگه parent هم وزن نداره، skip کن
+            if ($parent->weight == 0) {
+                Log::info('Parent also has zero weight, skipping', [
+                    'variation_id' => $variation->wc_product_id,
+                    'parent_id' => $parent->wc_product_id,
+                ]);
+                $failed++;
+                continue;
+            }
+
+            // وزن parent رو به variation بده
+            $variation->update(['weight' => $parent->weight]);
+            $fixed++;
+
+            $details[] = [
+                'variation_id' => $variation->wc_product_id,
+                'variation_name' => $variation->name,
+                'parent_id' => $parent->wc_product_id,
+                'parent_name' => $parent->name,
+                'inherited_weight' => (float) $parent->weight,
+            ];
+
+            Log::info('Fixed variation weight from parent', [
+                'variation_id' => $variation->wc_product_id,
+                'parent_id' => $parent->wc_product_id,
+                'weight' => $parent->weight,
+            ]);
+        }
+
+        $message = "{$fixed} variation رفع شد.";
+        if ($failed > 0) {
+            $message .= " {$failed} variation رفع نشد (parent وزن نداره).";
+        }
+
+        return [
+            'success' => true,
+            'message' => $message,
+            'fixed' => $fixed,
+            'failed' => $failed,
+            'details' => $details,
+        ];
     }
 }

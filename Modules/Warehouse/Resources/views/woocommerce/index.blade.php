@@ -265,6 +265,10 @@
                         <svg class="w-4 h-4" id="fix-zero-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         <span id="fix-zero-text">رفع مشکل وزن</span>
                     </button>
+                    <button onclick="fixVariationWeights()" id="fix-var-btn" class="px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-xs flex items-center gap-1.5">
+                        <svg class="w-4 h-4" id="fix-var-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span id="fix-var-text">رفع variations</span>
+                    </button>
                     <button @click="showList = !showList" class="text-xs text-gray-500 hover:text-gray-700" x-text="showList ? 'بستن' : 'نمایش لیست'"></button>
                 </div>
             </div>
@@ -629,6 +633,46 @@ function debugProduct(productId) {
     })
     .catch(err => {
         content.innerHTML = '<div class="text-red-600">خطا: ' + err.message + '</div>';
+    });
+}
+
+function fixVariationWeights() {
+    const btn = document.getElementById('fix-var-btn');
+    const icon = document.getElementById('fix-var-icon');
+    const text = document.getElementById('fix-var-text');
+
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+    text.textContent = 'در حال رفع مشکل...';
+    document.getElementById('fix-zero-result').classList.add('hidden');
+
+    fetch('{{ route("warehouse.woocommerce.fix-zero-weight-variations") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('سرور خطا برگرداند (HTTP ' + r.status + ')');
+        return r.json();
+    })
+    .then(data => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'رفع variations';
+        showResult('fix-zero-result', data.success, data.message);
+        if (data.success && data.fixed > 0) {
+            setTimeout(() => location.reload(), 2000);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'رفع variations';
+        showResult('fix-zero-result', false, 'خطا: ' + err.message);
     });
 }
 </script>

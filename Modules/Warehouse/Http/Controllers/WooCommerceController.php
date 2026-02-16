@@ -167,6 +167,22 @@ class WooCommerceController extends Controller
         }
     }
 
+    public function fixZeroWeightVariations()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $service = new WooCommerceService();
+            $result = $service->fixZeroWeightVariations();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Fix variation weight error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
+
     public function productsCatalog(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
