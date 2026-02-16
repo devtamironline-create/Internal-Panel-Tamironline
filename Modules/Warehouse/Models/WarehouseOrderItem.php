@@ -40,8 +40,8 @@ class WarehouseOrderItem extends Model
                 $weightsCache = WarehouseProduct::pluck('weight', 'wc_product_id')->toArray();
             }
             $productWeight = (float)($weightsCache[$this->wc_product_id] ?? 0);
-            if ($productWeight >= 1) {
-                return (int) round($productWeight);
+            if ($productWeight > 0) {
+                return \Modules\Warehouse\Models\WarehouseOrder::toGrams($productWeight);
             }
         }
 

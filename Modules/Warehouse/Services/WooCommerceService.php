@@ -150,6 +150,9 @@ class WooCommerceService
             ];
         }
 
+        // واحد وزن رو بگیر و کش کن (برای toGrams)
+        $this->getWeightUnit();
+
         $result = $this->fetchOrders(1, 100, $wcStatus);
 
         if (!$result['success']) {

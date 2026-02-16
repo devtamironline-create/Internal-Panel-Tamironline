@@ -215,12 +215,32 @@ class WarehouseOrder extends Model
 
     /**
      * تبدیل وزن به گرم
-     * مقادیر کمتر از 5 احتمالاً کیلوگرم هستن (از سینک‌های قبلی)
-     * بعد از سینک جدید محصولات، مقادیر به گرم ذخیره میشن و این شرط تاثیری نداره
+     * بر اساس واحد وزن ووکامرس تصمیم میگیره:
+     * - گرم (g): مقادیر از قبل گرم هستن، فقط گرد کن
+     * - کیلوگرم (kg): ضربدر 1000
+     * - نامشخص: هیوریستیک (< 5 احتمالاً کیلوگرم)
      */
     public static function toGrams($weight): int
     {
         if (!$weight || $weight == 0) return 0;
+
+        // یک بار واحد وزن رو بخون و کش کن (در هر ریکوئست)
+        static $wcUnit = null;
+        if ($wcUnit === null) {
+            $wcUnit = WarehouseSetting::get('wc_weight_unit', 'g');
+        }
+
+        // واحد گرم: مقادیر باید از قبل به گرم تبدیل شده باشن
+        if ($wcUnit === 'g') {
+            return (int) round($weight);
+        }
+
+        // واحد کیلوگرم: همیشه ضربدر 1000
+        if ($wcUnit === 'kg') {
+            return (int) round($weight * 1000);
+        }
+
+        // واحد نامشخص یا دیگر: هیوریستیک قدیمی
         return (int) round($weight < 5 ? $weight * 1000 : $weight);
     }
 
