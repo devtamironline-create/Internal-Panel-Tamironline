@@ -870,9 +870,21 @@ class WooCommerceService
 
                 foreach ($products as $product) {
                     // وزن از ووکامرس → تبدیل به گرم بر اساس واحد سایت
-                    $weightGrams = $this->convertToGrams((float)($product['weight'] ?? 0), $wcWeightUnit);
+                    $rawWeight = (float)($product['weight'] ?? 0);
+                    $weightGrams = $this->convertToGrams($rawWeight, $wcWeightUnit);
                     $dims = $product['dimensions'] ?? [];
                     $productType = $product['type'] ?? 'simple';
+
+                    // لاگ محصولاتی که وزن 0 یا خالی دارن (مگر grouped که وزن از زیرمجموعه‌ها میاد)
+                    if ($weightGrams == 0 && $productType !== 'grouped' && $productType !== 'variable') {
+                        Log::warning('Product synced with zero weight', [
+                            'product_id' => $product['id'],
+                            'name' => $product['name'] ?? '',
+                            'type' => $productType,
+                            'raw_weight_from_wc' => $rawWeight,
+                            'weight_unit' => $wcWeightUnit,
+                        ]);
+                    }
 
                     // لاگ متادیتا برای تشخیص پلاگین باندل
                     $metaKeys = collect($product['meta_data'] ?? [])->pluck('key')->toArray();
@@ -1260,6 +1272,7 @@ class WooCommerceService
             $maxLength = 0;
             $maxWidth = 0;
             $totalHeight = 0;
+            $zeroWeightChildren = [];
 
             foreach ($items as $item) {
                 if (!$item->childProduct || $item->optional) continue;
@@ -1278,6 +1291,16 @@ class WooCommerceService
                     if ($firstVariation) {
                         $childWeight = (float) $firstVariation->weight;
                     }
+                }
+
+                // لاگ محصولات با وزن صفر
+                if ($childWeight == 0) {
+                    $zeroWeightChildren[] = [
+                        'id' => $child->wc_product_id,
+                        'name' => $child->name,
+                        'type' => $child->type,
+                        'qty' => $qty,
+                    ];
                 }
 
                 $totalWeight += $childWeight * $qty;
@@ -1324,6 +1347,16 @@ class WooCommerceService
                     'name' => $bundle->name,
                     'weight' => $updates['weight'] ?? $bundle->weight,
                     'dims' => ($updates['length'] ?? $bundle->length) . 'x' . ($updates['width'] ?? $bundle->width) . 'x' . ($updates['height'] ?? $bundle->height),
+                ]);
+            }
+
+            // اگه bundle وزن 0 داره و child های با وزن 0 داره، لاگ کن
+            if ($totalWeight == 0 && !empty($zeroWeightChildren)) {
+                Log::warning('Bundle weight is zero due to child products with zero weight', [
+                    'bundle_id' => $bundle->wc_product_id,
+                    'bundle_name' => $bundle->name,
+                    'bundle_type' => $bundle->type,
+                    'zero_weight_children' => $zeroWeightChildren,
                 ]);
             }
         }
@@ -1410,5 +1443,96 @@ class WooCommerceService
         }
 
         return $updatedCount;
+    }
+
+    /**
+     * رفع مشکل محصولاتی که وزن 0 دارن - دوباره از ووکامرس میگیره
+     */
+    public function fixZeroWeightProducts(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        // پیدا کردن محصولاتی که وزن 0 دارن (غیر از grouped و variable)
+        $zeroWeightProducts = WarehouseProduct::where('weight', 0)
+            ->whereNotIn('type', ['grouped', 'variable'])
+            ->get();
+
+        if ($zeroWeightProducts->isEmpty()) {
+            return [
+                'success' => true,
+                'message' => 'محصولی با وزن صفر یافت نشد.',
+                'fixed' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        $wcWeightUnit = $this->getWeightUnit();
+        $fixed = 0;
+        $failed = 0;
+        $details = [];
+
+        foreach ($zeroWeightProducts as $product) {
+            try {
+                // دریافت اطلاعات محصول از ووکامرس
+                $response = Http::timeout(15)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . '/wp-json/wc/v3/products/' . $product->wc_product_id);
+
+                if (!$response->successful()) {
+                    $failed++;
+                    continue;
+                }
+
+                $wcProduct = $response->json();
+                $rawWeight = (float)($wcProduct['weight'] ?? 0);
+                $weightGrams = $this->convertToGrams($rawWeight, $wcWeightUnit);
+
+                if ($weightGrams > 0) {
+                    $product->update(['weight' => $weightGrams]);
+                    $fixed++;
+                    $details[] = [
+                        'id' => $product->wc_product_id,
+                        'name' => $product->name,
+                        'old_weight' => 0,
+                        'new_weight' => $weightGrams,
+                    ];
+                    Log::info('Fixed zero weight product', [
+                        'product_id' => $product->wc_product_id,
+                        'name' => $product->name,
+                        'new_weight' => $weightGrams,
+                    ]);
+                } else {
+                    // اگه توی ووکامرس هم وزن 0 بود
+                    Log::warning('Product has zero weight in WooCommerce too', [
+                        'product_id' => $product->wc_product_id,
+                        'name' => $product->name,
+                        'type' => $product->type,
+                    ]);
+                    $failed++;
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to fix zero weight product', [
+                    'product_id' => $product->wc_product_id,
+                    'error' => $e->getMessage(),
+                ]);
+                $failed++;
+            }
+        }
+
+        // بعد از فیکس، وزن bundle ها رو دوباره محاسبه کن
+        if ($fixed > 0) {
+            $this->updateBundleWeightsAndDimensions();
+            $this->updateExistingOrderWeights();
+        }
+
+        return [
+            'success' => true,
+            'message' => "از {$zeroWeightProducts->count()} محصول: {$fixed} رفع شد، {$failed} ناموفق",
+            'fixed' => $fixed,
+            'failed' => $failed,
+            'details' => $details,
+        ];
     }
 }

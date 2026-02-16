@@ -69,6 +69,9 @@ class WarehouseProduct extends Model
         }
 
         $totalWeight = 0;
+        $hasZeroWeightChild = false;
+        $zeroWeightChildren = [];
+
         foreach ($items as $item) {
             if (!$item->childProduct || $item->optional) continue;
 
@@ -85,7 +88,28 @@ class WarehouseProduct extends Model
                 }
             }
 
+            // لاگ کردن محصولات با وزن صفر
+            if ($childWeight == 0) {
+                $hasZeroWeightChild = true;
+                $zeroWeightChildren[] = [
+                    'id' => $item->childProduct->wc_product_id,
+                    'name' => $item->childProduct->name,
+                    'type' => $item->childProduct->type,
+                    'quantity' => $item->default_quantity,
+                ];
+            }
+
             $totalWeight += $childWeight * $item->default_quantity;
+        }
+
+        // اگه bundle وزن محاسبه‌شده 0 بود و child های با وزن 0 داره، لاگ کن
+        if ($hasZeroWeightChild) {
+            \Log::warning('Bundle has child products with zero weight', [
+                'bundle_id' => $this->wc_product_id,
+                'bundle_name' => $this->name,
+                'calculated_weight' => $totalWeight,
+                'zero_weight_children' => $zeroWeightChildren,
+            ]);
         }
 
         return round($totalWeight, 2);

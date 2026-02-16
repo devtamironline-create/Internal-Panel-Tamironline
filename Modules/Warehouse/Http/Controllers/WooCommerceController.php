@@ -133,4 +133,20 @@ class WooCommerceController extends Controller
             ]);
         }
     }
+
+    public function fixZeroWeightProducts()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $service = new WooCommerceService();
+            $result = $service->fixZeroWeightProducts();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Fix zero weight error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
 }

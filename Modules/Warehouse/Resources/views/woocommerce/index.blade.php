@@ -255,8 +255,16 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                     محصولات بدون وزن ({{ $zeroWeightProducts->count() + $zeroWeightVariations->count() }})
                 </h3>
-                <button @click="showList = !showList" class="text-xs text-gray-500 hover:text-gray-700" x-text="showList ? 'بستن' : 'نمایش لیست'"></button>
+                <div class="flex items-center gap-2">
+                    <button onclick="fixZeroWeights()" id="fix-zero-btn" class="px-4 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium text-xs flex items-center gap-1.5">
+                        <svg class="w-4 h-4" id="fix-zero-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span id="fix-zero-text">رفع مشکل وزن</span>
+                    </button>
+                    <button @click="showList = !showList" class="text-xs text-gray-500 hover:text-gray-700" x-text="showList ? 'بستن' : 'نمایش لیست'"></button>
+                </div>
             </div>
+
+            <div id="fix-zero-result" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
 
             <div x-show="showList" x-transition>
                 @if($zeroWeightProducts->count() > 0)
@@ -479,6 +487,46 @@ function syncOrders() {
         icon.classList.remove('animate-spin');
         text.textContent = 'شروع سینک سفارشات';
         showResult('wc-sync-result', false, 'خطا: ' + err.message);
+    });
+}
+
+function fixZeroWeights() {
+    const btn = document.getElementById('fix-zero-btn');
+    const icon = document.getElementById('fix-zero-icon');
+    const text = document.getElementById('fix-zero-text');
+
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+    text.textContent = 'در حال رفع مشکل...';
+    document.getElementById('fix-zero-result').classList.add('hidden');
+
+    fetch('{{ route("warehouse.woocommerce.fix-zero-weight") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('سرور خطا برگرداند (HTTP ' + r.status + ')');
+        return r.json();
+    })
+    .then(data => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'رفع مشکل وزن';
+        showResult('fix-zero-result', data.success, data.message);
+        if (data.success && data.fixed > 0) {
+            setTimeout(() => location.reload(), 2000);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'رفع مشکل وزن';
+        showResult('fix-zero-result', false, 'خطا: ' + err.message);
     });
 }
 </script>
