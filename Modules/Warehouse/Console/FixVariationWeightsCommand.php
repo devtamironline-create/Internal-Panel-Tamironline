@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\WarehouseProduct;
+use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\WooCommerceService;
 
 class FixVariationWeightsCommand extends Command
@@ -68,12 +69,13 @@ class FixVariationWeightsCommand extends Command
                 try {
                     $this->line("  🌐 Parent وزن نداره، از ووکامرس میگیرم: {$parent->wc_product_id}...");
 
+                    $siteUrl = WarehouseSetting::get('wc_site_url');
+                    $consumerKey = WarehouseSetting::get('wc_consumer_key');
+                    $consumerSecret = WarehouseSetting::get('wc_consumer_secret');
+
                     $response = Http::timeout(15)
-                        ->withBasicAuth(
-                            config('warehouse.woocommerce.consumer_key'),
-                            config('warehouse.woocommerce.consumer_secret')
-                        )
-                        ->get(config('warehouse.woocommerce.site_url') . '/wp-json/wc/v3/products/' . $parent->wc_product_id);
+                        ->withBasicAuth($consumerKey, $consumerSecret)
+                        ->get(rtrim($siteUrl, '/') . '/wp-json/wc/v3/products/' . $parent->wc_product_id);
 
                     if ($response->successful()) {
                         $wcProduct = $response->json();
