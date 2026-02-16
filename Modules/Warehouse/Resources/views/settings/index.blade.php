@@ -87,7 +87,7 @@
             <div class="space-y-3">
                 @foreach($shippingTypes as $type)
                 <div class="flex items-center justify-between p-3 border rounded-lg" x-data="{ editing: false }">
-                    <div x-show="!editing" class="flex items-center gap-3">
+                    <div x-show="!editing" class="flex items-center gap-3 flex-wrap">
                         <span class="font-medium">{{ $type->name }}</span>
                         <span class="text-sm text-gray-500">({{ $type->slug }})</span>
                         <span class="px-2 py-0.5 rounded text-xs {{ $type->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
@@ -100,12 +100,19 @@
                         <span class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">فوری</span>
                         @endif
                         <span class="text-sm text-blue-600">{{ $type->timer_label }}</span>
+                        @if($type->auto_deliver_hours)
+                        <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">تحویل خودکار: {{ $type->auto_deliver_hours }}h</span>
+                        @endif
                     </div>
                     <button x-show="!editing" @click="editing = true" class="text-sm text-blue-600 hover:text-blue-800">ویرایش</button>
 
-                    <form x-show="editing" class="flex items-center gap-2 flex-1" onsubmit="return updateShipping(event, {{ $type->id }})">
-                        <input type="text" name="name" value="{{ $type->name }}" class="flex-1 px-3 py-1.5 border rounded text-sm">
+                    <form x-show="editing" class="flex items-center gap-2 flex-1 flex-wrap" onsubmit="return updateShipping(event, {{ $type->id }})">
+                        <input type="text" name="name" value="{{ $type->name }}" class="flex-1 min-w-[150px] px-3 py-1.5 border rounded text-sm">
                         <input type="number" name="timer_minutes" value="{{ $type->timer_minutes }}" class="w-24 px-3 py-1.5 border rounded text-sm" dir="ltr" placeholder="دقیقه">
+                        <div class="flex items-center gap-1">
+                            <input type="number" name="auto_deliver_hours" value="{{ $type->auto_deliver_hours }}" step="0.5" min="0" class="w-20 px-2 py-1.5 border rounded text-sm" dir="ltr" placeholder="0">
+                            <span class="text-xs text-gray-500">ساعت تحویل خودکار</span>
+                        </div>
                         <label class="flex items-center gap-1 text-sm">
                             <input type="checkbox" name="is_active" {{ $type->is_active ? 'checked' : '' }}> فعال
                         </label>

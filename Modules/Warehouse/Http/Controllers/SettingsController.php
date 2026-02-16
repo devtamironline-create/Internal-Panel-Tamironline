@@ -96,9 +96,18 @@ class SettingsController extends Controller
             'timer_minutes' => 'required|integer|min:1',
             'is_active' => 'boolean',
             'requires_dispatch' => 'boolean',
+            'is_priority' => 'boolean',
+            'auto_deliver_hours' => 'nullable|numeric|min:0',
         ]);
 
-        $shippingType->update($request->only('name', 'timer_minutes', 'is_active', 'requires_dispatch'));
+        $data = $request->only('name', 'timer_minutes', 'is_active', 'requires_dispatch', 'is_priority', 'auto_deliver_hours');
+
+        // اگر auto_deliver_hours خالی بود یا صفر، null ذخیره کن
+        if (empty($data['auto_deliver_hours']) || $data['auto_deliver_hours'] == 0) {
+            $data['auto_deliver_hours'] = null;
+        }
+
+        $shippingType->update($data);
 
         return response()->json(['success' => true, 'message' => 'نوع ارسال ویرایش شد.']);
     }

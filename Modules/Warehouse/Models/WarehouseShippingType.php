@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class WarehouseShippingType extends Model
 {
-    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active', 'requires_dispatch', 'is_priority'];
+    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active', 'requires_dispatch', 'is_priority', 'auto_deliver_hours'];
 
     protected $casts = [
         'is_active' => 'boolean',
         'requires_dispatch' => 'boolean',
         'is_priority' => 'boolean',
         'timer_minutes' => 'integer',
+        'auto_deliver_hours' => 'decimal:2',
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace Modules\Warehouse\Providers;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Warehouse\Console\AutoDeliverOrders;
 use Modules\Warehouse\Console\CheckWcOrderUpdates;
 use Modules\Warehouse\Console\FixVariationWeightsCommand;
 use Modules\Warehouse\Console\SyncWooCommerceOrders;
@@ -42,6 +43,7 @@ class WarehouseServiceProvider extends ServiceProvider
             SyncWooCommerceOrders::class,
             CheckWcOrderUpdates::class,
             FixVariationWeightsCommand::class,
+            AutoDeliverOrders::class,
         ]);
     }
 
@@ -57,6 +59,11 @@ class WarehouseServiceProvider extends ServiceProvider
             // بررسی تغییرات سفارشات فعال در ووکامرس
             $schedule->command('warehouse:check-wc-updates')
                 ->everyFiveMinutes()
+                ->withoutOverlapping()
+                ->runInBackground();
+            // تحویل خودکار سفارشات ارسال شده
+            $schedule->command('warehouse:auto-deliver')
+                ->everyFifteenMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
         });
