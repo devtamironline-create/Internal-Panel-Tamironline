@@ -220,9 +220,8 @@ class WarehouseOrder extends Model
     public static function toGrams($weight): int
     {
         if (!$weight || $weight == 0) return 0;
-        // فقط اگه کمتر از 5 باشه احتمالاً کیلوگرمه (مثل 2.45 = 2.45kg)
-        // وزن‌های 5 به بالا = گرم (مثل 22 = 22g, 300 = 300g, 850 = 850g)
-        return (int) round($weight < 5 ? $weight * 1000 : $weight);
+        // وزن‌ها همیشه به گرم ذخیره میشن (سینک محصولات تبدیل میکنه)
+        return (int) round($weight);
     }
 
     public function getTotalWeightGramsAttribute(): int

@@ -17,6 +17,50 @@ class WooCommerceService
     protected ?string $siteUrl;
     protected ?string $consumerKey;
     protected ?string $consumerSecret;
+    protected ?string $weightUnit = null;
+
+    /**
+     * واحد وزن ووکامرس رو از API بخون و کش کن
+     * @return string 'kg', 'g', 'lbs', 'oz'
+     */
+    protected function getWeightUnit(): string
+    {
+        if ($this->weightUnit !== null) {
+            return $this->weightUnit;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/settings/products/woocommerce_weight_unit');
+
+            if ($response->successful()) {
+                $this->weightUnit = $response->json()['value'] ?? 'g';
+                WarehouseSetting::set('wc_weight_unit', $this->weightUnit);
+                return $this->weightUnit;
+            }
+        } catch (\Exception $e) {
+            Log::warning('Could not fetch WC weight unit', ['error' => $e->getMessage()]);
+        }
+
+        $this->weightUnit = WarehouseSetting::get('wc_weight_unit', 'g');
+        return $this->weightUnit;
+    }
+
+    /**
+     * تبدیل وزن خام ووکامرس به گرم
+     */
+    protected function convertToGrams(float $weight, string $unit): float
+    {
+        if ($weight <= 0) return 0;
+
+        return match($unit) {
+            'kg' => round($weight * 1000, 2),
+            'lbs' => round($weight * 453.592, 2),
+            'oz' => round($weight * 28.3495, 2),
+            default => round($weight, 2), // 'g' یا هر چیز دیگه
+        };
+    }
 
     public function __construct()
     {
@@ -799,6 +843,9 @@ class WooCommerceService
         $totalBundles = 0;
         $bundleTypes = ['bundle', 'yith_bundle', 'woosb', 'grouped'];
 
+        // واحد وزن ووکامرس رو بگیر (g, kg, lbs, oz)
+        $wcWeightUnit = $this->getWeightUnit();
+
         try {
             do {
                 $response = Http::timeout(60)
@@ -819,8 +866,8 @@ class WooCommerceService
                 }
 
                 foreach ($products as $product) {
-                    // وزن خام از ووکامرس (ممکنه گرم یا کیلوگرم باشه - toGrams تشخیص میده)
-                    $weightGrams = (float)($product['weight'] ?? 0);
+                    // وزن از ووکامرس → تبدیل به گرم بر اساس واحد سایت
+                    $weightGrams = $this->convertToGrams((float)($product['weight'] ?? 0), $wcWeightUnit);
                     $dims = $product['dimensions'] ?? [];
                     $productType = $product['type'] ?? 'simple';
 
@@ -955,8 +1002,8 @@ class WooCommerceService
                 $parentName = $parentProduct ? $parentProduct->name : '';
 
                 foreach ($variations as $variation) {
-                    // وزن خام از ووکامرس (ممکنه گرم یا کیلوگرم باشه - toGrams تشخیص میده)
-                    $weightGrams = (float)($variation['weight'] ?? 0);
+                    // وزن از ووکامرس → تبدیل به گرم بر اساس واحد سایت
+                    $weightGrams = $this->convertToGrams((float)($variation['weight'] ?? 0), $wcWeightUnit);
                     $dims = $variation['dimensions'] ?? [];
 
                     // ساخت اسم کامل: اگه اسم variation خالی یا خیلی کوتاهه، اسم پدر + ویژگی‌ها رو بذار
