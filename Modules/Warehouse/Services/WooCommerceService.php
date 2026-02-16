@@ -262,6 +262,9 @@ class WooCommerceService
             }
         }
 
+        // ریکلکولیت وزن سفارشات موجود (باندل‌ها ممکنه بعد از سینک محصولات وزنشون تغییر کنه)
+        $this->updateExistingOrderWeights();
+
         WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
 
         $totalFound = count($result['orders']);
@@ -717,12 +720,20 @@ class WooCommerceService
         $dimensionsMap = WarehouseProduct::getDimensionsMap($productIds, $variationIds);
 
         foreach ($lineItems as $item) {
+            $prodId = $item['product_id'] ?? 0;
             $weight = !empty($weightsMap) ? $this->getItemWeight($item, $weightsMap) : 0;
+
+            // برای باندل‌ها: همیشه وزن رو از بچه‌ها حساب کن (وزن ووکامرس ممکنه اشتباه باشه)
+            if ($weight == 0 || $this->isBundleProduct($prodId)) {
+                $bundleWeight = $this->calculateBundleWeightFromDb($prodId);
+                if ($bundleWeight > 0) {
+                    $weight = $bundleWeight;
+                }
+            }
 
             // ابعاد: اول variation بعد محصول اصلی
             $dims = ['length' => 0, 'width' => 0, 'height' => 0];
             $varId = $item['variation_id'] ?? 0;
-            $prodId = $item['product_id'] ?? 0;
             if ($varId > 0 && isset($dimensionsMap[$varId]) && ($dimensionsMap[$varId]['length'] ?? 0) > 0) {
                 $dims = $dimensionsMap[$varId];
             } elseif ($prodId > 0 && isset($dimensionsMap[$prodId])) {
@@ -740,9 +751,31 @@ class WooCommerceService
                 'width' => (float)($dims['width'] ?? 0),
                 'height' => (float)($dims['height'] ?? 0),
                 'price' => (float)($item['total'] ?? 0),
-                'wc_product_id' => $item['product_id'] ?? null,
+                'wc_product_id' => $prodId ?: null,
             ]);
         }
+
+        // ریکلکولیت وزن کل سفارش از آیتم‌های واقعی
+        $order->load('items');
+        $recalcWeight = $order->items->sum(fn($i) => WarehouseOrder::toGrams($i->weight) * $i->quantity);
+        if ($recalcWeight > 0 && $recalcWeight != WarehouseOrder::toGrams($order->total_weight)) {
+            $order->update(['total_weight' => $recalcWeight]);
+        }
+    }
+
+    protected function isBundleProduct(int $productId): bool
+    {
+        if ($productId <= 0) return false;
+        $product = WarehouseProduct::where('wc_product_id', $productId)->first();
+        return $product && $product->is_bundle;
+    }
+
+    protected function calculateBundleWeightFromDb(int $productId): float
+    {
+        if ($productId <= 0) return 0;
+        $product = WarehouseProduct::where('wc_product_id', $productId)->first();
+        if (!$product || !$product->is_bundle) return 0;
+        return $product->calculateBundleWeight();
     }
 
     /**
