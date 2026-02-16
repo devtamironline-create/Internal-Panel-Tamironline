@@ -1674,6 +1674,8 @@ class WooCommerceService
 
     /**
      * رفع وزن صفر variations - وزن رو از محصول parent میگیره
+     * این تابع همه variable products رو پیدا میکنه و variations براشون sync میکنه
+     * برای variations که وزن ندارن، خودکار از parent میگیره
      */
     public function fixZeroWeightVariations(): array
     {
@@ -1681,76 +1683,115 @@ class WooCommerceService
             return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
         }
 
-        // پیدا کردن variations با وزن 0 که parent دارن
-        $zeroWeightVariations = WarehouseProduct::where('type', 'variation')
-            ->where('weight', 0)
-            ->whereNotNull('parent_id')
-            ->get();
+        // پیدا کردن همه variable products
+        $variableProducts = WarehouseProduct::where('type', 'variable')->get();
 
-        if ($zeroWeightVariations->isEmpty()) {
+        if ($variableProducts->isEmpty()) {
             return [
                 'success' => true,
-                'message' => 'variation با وزن صفر یافت نشد.',
+                'message' => 'محصول variable یافت نشد.',
                 'fixed' => 0,
             ];
         }
 
-        $fixed = 0;
-        $failed = 0;
+        $wcWeightUnit = $this->getWeightUnit();
+        $totalFixed = 0;
+        $totalFailed = 0;
         $details = [];
 
-        foreach ($zeroWeightVariations as $variation) {
-            // گرفتن parent product
-            $parent = WarehouseProduct::where('wc_product_id', $variation->parent_id)->first();
-
-            if (!$parent) {
-                Log::warning('Variation parent not found', [
-                    'variation_id' => $variation->wc_product_id,
-                    'parent_id' => $variation->parent_id,
+        foreach ($variableProducts as $parentProduct) {
+            try {
+                Log::info('Syncing variations for variable product', [
+                    'parent_id' => $parentProduct->wc_product_id,
+                    'parent_name' => $parentProduct->name,
                 ]);
-                $failed++;
+
+                // دریافت variations از ووکامرس
+                $response = Http::timeout(30)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . "/wp-json/wc/v3/products/{$parentProduct->wc_product_id}/variations", [
+                        'per_page' => 100,
+                    ]);
+
+                if (!$response->successful()) {
+                    Log::warning('Failed to fetch variations', [
+                        'parent_id' => $parentProduct->wc_product_id,
+                        'status' => $response->status(),
+                    ]);
+                    continue;
+                }
+
+                $variations = $response->json();
+
+                foreach ($variations as $variation) {
+                    // چک کنیم variation در دیتابیس هست یا نه
+                    $localVariation = WarehouseProduct::where('wc_product_id', $variation['id'])->first();
+
+                    if (!$localVariation) {
+                        // variation نیست - پس skip کن، چون باید sync کامل بزنه
+                        continue;
+                    }
+
+                    // اگه variation وزن داره، نیازی به fix نداره
+                    if ($localVariation->weight > 0) {
+                        continue;
+                    }
+
+                    // وزن از ووکامرس
+                    $weightGrams = $this->convertToGrams((float)($variation['weight'] ?? 0), $wcWeightUnit);
+
+                    // اگه variation تو ووکامرس هم وزن نداره، از parent بگیر
+                    if ($weightGrams == 0 && $parentProduct->weight > 0) {
+                        $weightGrams = (float) $parentProduct->weight;
+                    }
+
+                    // اگه هنوز وزن 0 هست (parent هم وزن نداره)، skip کن
+                    if ($weightGrams == 0) {
+                        $totalFailed++;
+                        continue;
+                    }
+
+                    // آپدیت variation با parent_id و weight
+                    $localVariation->update([
+                        'weight' => $weightGrams,
+                        'parent_id' => $parentProduct->wc_product_id,
+                    ]);
+
+                    $totalFixed++;
+
+                    $details[] = [
+                        'variation_id' => $variation['id'],
+                        'variation_name' => $localVariation->name,
+                        'parent_id' => $parentProduct->wc_product_id,
+                        'parent_name' => $parentProduct->name,
+                        'inherited_weight' => $weightGrams,
+                    ];
+
+                    Log::info('Fixed variation weight', [
+                        'variation_id' => $variation['id'],
+                        'parent_id' => $parentProduct->wc_product_id,
+                        'weight' => $weightGrams,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Error fixing variations for product', [
+                    'parent_id' => $parentProduct->wc_product_id,
+                    'error' => $e->getMessage(),
+                ]);
                 continue;
             }
-
-            // اگه parent هم وزن نداره، skip کن
-            if ($parent->weight == 0) {
-                Log::info('Parent also has zero weight, skipping', [
-                    'variation_id' => $variation->wc_product_id,
-                    'parent_id' => $parent->wc_product_id,
-                ]);
-                $failed++;
-                continue;
-            }
-
-            // وزن parent رو به variation بده
-            $variation->update(['weight' => $parent->weight]);
-            $fixed++;
-
-            $details[] = [
-                'variation_id' => $variation->wc_product_id,
-                'variation_name' => $variation->name,
-                'parent_id' => $parent->wc_product_id,
-                'parent_name' => $parent->name,
-                'inherited_weight' => (float) $parent->weight,
-            ];
-
-            Log::info('Fixed variation weight from parent', [
-                'variation_id' => $variation->wc_product_id,
-                'parent_id' => $parent->wc_product_id,
-                'weight' => $parent->weight,
-            ]);
         }
 
-        $message = "{$fixed} variation رفع شد.";
-        if ($failed > 0) {
-            $message .= " {$failed} variation رفع نشد (parent وزن نداره).";
+        $message = "{$totalFixed} variation رفع شد.";
+        if ($totalFailed > 0) {
+            $message .= " {$totalFailed} variation رفع نشد (parent هم وزن نداره).";
         }
 
         return [
             'success' => true,
             'message' => $message,
-            'fixed' => $fixed,
-            'failed' => $failed,
+            'fixed' => $totalFixed,
+            'failed' => $totalFailed,
             'details' => $details,
         ];
     }
