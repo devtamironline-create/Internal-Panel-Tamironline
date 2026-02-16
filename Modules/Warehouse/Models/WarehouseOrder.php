@@ -215,13 +215,13 @@ class WarehouseOrder extends Model
 
     /**
      * تبدیل وزن به گرم
-     * واحد ووکامرس: گرم. فقط مقادیر خیلی کم (< 5) احتمالاً کیلوگرم قدیمی هستن
+     * مقادیر کمتر از 5 احتمالاً کیلوگرم هستن (از سینک‌های قبلی)
+     * بعد از سینک جدید محصولات، مقادیر به گرم ذخیره میشن و این شرط تاثیری نداره
      */
     public static function toGrams($weight): int
     {
         if (!$weight || $weight == 0) return 0;
-        // وزن‌ها همیشه به گرم ذخیره میشن (سینک محصولات تبدیل میکنه)
-        return (int) round($weight);
+        return (int) round($weight < 5 ? $weight * 1000 : $weight);
     }
 
     public function getTotalWeightGramsAttribute(): int
