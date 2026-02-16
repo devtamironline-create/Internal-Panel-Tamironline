@@ -209,7 +209,7 @@ class WooCommerceController extends Controller
         $stats = [
             'total' => \Modules\Warehouse\Models\WarehouseProduct::count(),
             'zero_weight' => \Modules\Warehouse\Models\WarehouseProduct::where('weight', 0)->count(),
-            'bundles' => \Modules\Warehouse\Models\WarehouseProduct::where('is_bundle', true)->count(),
+            'bundles' => \Modules\Warehouse\Models\WarehouseProduct::whereIn('type', ['bundle', 'yith_bundle', 'woosb', 'grouped'])->count(),
         ];
 
         return view('warehouse::woocommerce.products-catalog', compact('products', 'stats'));
