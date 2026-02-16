@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Warehouse\Console\CheckWcOrderUpdates;
+use Modules\Warehouse\Console\FixVariationWeightsCommand;
 use Modules\Warehouse\Console\SyncWooCommerceOrders;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
@@ -40,6 +41,7 @@ class WarehouseServiceProvider extends ServiceProvider
         $this->commands([
             SyncWooCommerceOrders::class,
             CheckWcOrderUpdates::class,
+            FixVariationWeightsCommand::class,
         ]);
     }
 

@@ -174,9 +174,20 @@ class WooCommerceController extends Controller
         }
 
         try {
-            $service = new WooCommerceService();
-            $result = $service->fixZeroWeightVariations();
-            return response()->json($result);
+            // اجرای command برای fix کردن variations
+            \Illuminate\Support\Facades\Artisan::call('warehouse:fix-variation-weights');
+            $output = \Illuminate\Support\Facades\Artisan::output();
+
+            // Parse کردن نتیجه
+            preg_match('/(\d+) variation رفع شد/', $output, $matches);
+            $fixed = isset($matches[1]) ? (int)$matches[1] : 0;
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$fixed} variation رفع شد.",
+                'fixed' => $fixed,
+                'output' => strip_tags($output),
+            ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Fix variation weight error', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
