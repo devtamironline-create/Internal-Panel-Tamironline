@@ -193,7 +193,7 @@
                 $shownNormalHeader = false;
             @endphp
 
-            <div class="space-y-4">
+            <div class="space-y-5">
             @forelse($orders as $order)
                 @php
                     $isUrgent = in_array($order->shipping_type, $prioritySlugs);
@@ -202,20 +202,62 @@
                 {{-- نمایش header ارسال‌های فوری (یک بار) --}}
                 @if($isUrgent && !$shownUrgentHeader)
                     @php $shownUrgentHeader = true; @endphp
-                    <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-red-300 -mt-2">
-                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        <h2 class="text-base font-bold text-red-700">ارسال‌های فوری</h2>
-                        <span class="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">{{ $urgentOrders->count() }}</span>
+                    <div class="relative mb-6 -mt-2">
+                        <div class="absolute inset-0 bg-gradient-to-l from-red-500/10 via-red-500/5 to-transparent rounded-2xl blur-xl"></div>
+                        <div class="relative bg-gradient-to-l from-red-600 to-rose-500 rounded-2xl p-4 shadow-lg shadow-red-500/30">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl backdrop-blur-sm">
+                                        <svg class="w-6 h-6 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-black text-white drop-shadow-md">ارسال‌های فوری</h2>
+                                        <p class="text-xs text-white/80 mt-0.5">نیاز به پردازش سریع دارند</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-medium text-white/80">تعداد:</span>
+                                            <span class="text-xl font-black text-white">{{ $urgentOrders->count() }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-3 h-3 bg-white rounded-full animate-ping"></div>
+                                    <div class="w-3 h-3 bg-white rounded-full absolute"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
 
                 {{-- نمایش header سفارش‌های عادی (یک بار، بعد از آخرین فوری) --}}
                 @if(!$isUrgent && !$shownNormalHeader && $shownUrgentHeader)
                     @php $shownNormalHeader = true; @endphp
-                    <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-gray-300 mt-6">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        <h2 class="text-base font-bold text-gray-700">سفارش‌ها</h2>
-                        <span class="px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-bold">{{ $normalOrders->count() }}</span>
+                    <div class="relative mb-6 mt-8">
+                        <div class="absolute inset-0 bg-gradient-to-l from-blue-500/10 via-blue-500/5 to-transparent rounded-2xl blur-xl"></div>
+                        <div class="relative bg-gradient-to-l from-blue-600 to-sky-500 rounded-2xl p-4 shadow-lg shadow-blue-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl backdrop-blur-sm">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-black text-white drop-shadow-md">سفارش‌های عادی</h2>
+                                        <p class="text-xs text-white/80 mt-0.5">پردازش بر اساس ترتیب زمانی</p>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-medium text-white/80">تعداد:</span>
+                                        <span class="text-xl font-black text-white">{{ $normalOrders->count() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
             @php
