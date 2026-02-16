@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Warehouse\Models\OrderLog;
+use Modules\Warehouse\Models\ReprintRequest;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
@@ -18,20 +19,68 @@ class PrintController extends Controller
     /**
      * ثبت چاپ فاکتور (وقتی دکمه چاپ زده میشه)
      */
-    public function markPrinted(WarehouseOrder $order)
+    public function markPrinted(Request $request, WarehouseOrder $order)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
             return response()->json(['success' => false, 'message' => 'دسترسی ندارید'], 403);
         }
 
-        // اگه قبلاً چاپ شده و کاربر permission نداره
-        if ($order->print_count > 0 && !auth()->user()->can('warehouse.reprint-invoice')) {
+        // اگه قبلاً چاپ شده → باید درخواست ثبت کنه
+        if ($order->print_count > 0) {
+            // چک کن آیا درخواست تایید شده‌ای داره؟
+            $approvedRequest = ReprintRequest::where('warehouse_order_id', $order->id)
+                ->where('requester_id', auth()->id())
+                ->where('status', 'approved')
+                ->first();
+
+            if ($approvedRequest) {
+                // درخواست تایید شده داره → اجازه چاپ
+                return $this->executePrint($order, $approvedRequest);
+            }
+
+            // چک کن آیا درخواست pending داره؟
+            $pendingRequest = ReprintRequest::where('warehouse_order_id', $order->id)
+                ->where('requester_id', auth()->id())
+                ->where('status', 'pending')
+                ->first();
+
+            if ($pendingRequest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'درخواست چاپ مجدد شما در انتظار تایید مدیر است.',
+                    'type' => 'pending'
+                ]);
+            }
+
+            // هیچ درخواستی نداره → ثبت درخواست جدید
+            ReprintRequest::create([
+                'warehouse_order_id' => $order->id,
+                'requester_id' => auth()->id(),
+                'reason' => $request->input('reason', 'درخواست چاپ مجدد'),
+                'status' => 'pending',
+            ]);
+
+            // لاگ ثبت درخواست
+            OrderLog::log($order, OrderLog::ACTION_PRINTED, 'درخواست چاپ مجدد ثبت شد', [
+                'requester' => auth()->user()->name,
+            ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'این فاکتور قبلاً چاپ شده است. برای چاپ مجدد به دسترسی ویژه نیاز دارید.'
-            ], 403);
+                'success' => true,
+                'message' => 'درخواست چاپ مجدد ثبت شد و منتظر تایید مدیر است.',
+                'type' => 'request_submitted'
+            ]);
         }
 
+        // چاپ اول → مستقیم انجام بده
+        return $this->executePrint($order);
+    }
+
+    /**
+     * اجرای فرآیند چاپ
+     */
+    private function executePrint(WarehouseOrder $order, ?ReprintRequest $request = null)
+    {
         // Track print count
         $order->increment('print_count');
         $order->refresh();
@@ -49,11 +98,18 @@ class PrintController extends Controller
             'user_id' => auth()->id(),
             'user_name' => auth()->user()->name,
             'printed_at' => now()->toDateTimeString(),
+            'via_request' => $request ? true : false,
         ]);
 
         OrderLog::log($order, OrderLog::ACTION_PRINTED, 'چاپ فاکتور (بار ' . $order->print_count . ')', [
             'print_count' => $order->print_count,
+            'via_request' => $request ? true : false,
         ]);
+
+        // اگه از طریق درخواست بود، کامل کن
+        if ($request) {
+            $request->complete();
+        }
 
         // Send SMS alert on duplicate print
         if ($order->print_count > 1) {
@@ -72,7 +128,8 @@ class PrintController extends Controller
         return response()->json([
             'success' => true,
             'print_count' => $order->print_count,
-            'message' => 'ثبت شد'
+            'message' => 'ثبت شد',
+            'can_print' => true
         ]);
     }
 
@@ -183,6 +240,16 @@ class PrintController extends Controller
 
         // فقط نمایش صفحه — ثبت چاپ با دکمه انجام میشه
 
+        // چک کردن وضعیت درخواست چاپ مجدد
+        $reprintRequest = null;
+        if ($order->print_count > 0) {
+            $reprintRequest = ReprintRequest::where('warehouse_order_id', $order->id)
+                ->where('requester_id', auth()->id())
+                ->whereIn('status', ['pending', 'approved'])
+                ->latest()
+                ->first();
+        }
+
         $invoiceSettings = [
             'store_name' => WarehouseSetting::get('invoice_store_name', 'گنجه'),
             'subtitle' => WarehouseSetting::get('invoice_subtitle', 'فاکتور سفارش انبار'),
@@ -191,7 +258,7 @@ class PrintController extends Controller
             'sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
         ];
 
-        return view('warehouse::print.invoice', compact('order', 'invoiceSettings', 'shippingProvider', 'registrationError'));
+        return view('warehouse::print.invoice', compact('order', 'invoiceSettings', 'shippingProvider', 'registrationError', 'reprintRequest'));
     }
 
     /**

@@ -137,13 +137,27 @@
     @endphp
 
     <div class="top-bar">
-        <button class="print-btn" onclick="handlePrint()">چاپ فاکتور</button>
-        @if($order->print_count > 1)
+        <button class="print-btn" onclick="handlePrint()" id="printBtn">چاپ فاکتور</button>
+
+        @if($order->print_count > 0)
         <span class="print-count-badge">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-            {{ $order->print_count }} بار چاپ شده
+            تعداد چاپ: {{ $order->print_count }}
         </span>
         @endif
+
+        @if($reprintRequest && $reprintRequest->status === 'pending')
+        <span class="print-count-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            درخواست در انتظار تایید
+        </span>
+        @elseif($reprintRequest && $reprintRequest->status === 'approved')
+        <span class="print-count-badge" style="background:#d1fae5;color:#065f46;border-color:#a7f3d0;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            تایید شده - می‌توانید چاپ کنید
+        </span>
+        @endif
+
         <span style="font-size:11px;color:#888;font-family:'Vazirmatn',Tahoma;">سرویس: {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</span>
         @if($order->shipping_type === 'post' && empty($order->amadest_barcode))
         <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</button>
@@ -360,10 +374,28 @@
 
         function handlePrint() {
             @if($order->print_count > 0)
-            if (!confirm('این فاکتور قبلا {{ $order->print_count }} بار چاپ شده. مطمئنی میخوای دوباره چاپ کنی؟')) {
+            // چاپ مجدد - نیاز به تاییدیه
+            var confirmMsg = 'این فاکتور {{ $order->print_count }} بار چاپ شده است.\n\n';
+
+            @if($reprintRequest && $reprintRequest->status === 'approved')
+                confirmMsg += '✅ درخواست شما تایید شده. آیا مطمئنید که میخواهید چاپ کنید؟';
+            @elseif($reprintRequest && $reprintRequest->status === 'pending')
+                alert('⏳ درخواست چاپ مجدد شما در انتظار تایید مدیر است.\n\nلطفاً صبر کنید تا مدیر درخواست شما را بررسی کند.');
+                return;
+            @else
+                confirmMsg += 'برای چاپ مجدد، درخواست شما باید توسط مدیر تایید شود.\n\nآیا میخواهید درخواست چاپ مجدد ثبت کنید؟';
+            @endif
+
+            if (!confirm(confirmMsg)) {
                 return;
             }
             @endif
+
+            var btn = document.getElementById('printBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'در حال پردازش...';
+            }
 
             // ثبت چاپ در سیستم
             fetch('/warehouse/{{ $order->id }}/print/mark-printed', {
@@ -377,18 +409,31 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success) {
-                    // موفق - حالا چاپ کن
-                    window.print();
-                    // بعد چاپ صفحه رو refresh کن تا badge آپدیت بشه
-                    setTimeout(function() {
+                    if (data.type === 'request_submitted') {
+                        // درخواست ثبت شد
+                        alert('✅ ' + data.message);
                         location.reload();
-                    }, 500);
+                    } else if (data.can_print) {
+                        // اجازه چاپ داره
+                        window.print();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 500);
+                    }
                 } else {
-                    alert('خطا: ' + (data.message || 'ثبت چاپ ناموفق بود'));
+                    alert('❌ ' + (data.message || 'خطا در پردازش'));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'چاپ فاکتور';
+                    }
                 }
             })
             .catch(function(err) {
-                alert('خطا در ثبت چاپ: ' + err.message);
+                alert('❌ خطا در ارتباط با سرور');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'چاپ فاکتور';
+                }
             });
         }
 

@@ -6,6 +6,7 @@ use Modules\Warehouse\Http\Controllers\WooCommerceController;
 use Modules\Warehouse\Http\Controllers\AmadestController;
 use Modules\Warehouse\Http\Controllers\PackingController;
 use Modules\Warehouse\Http\Controllers\PrintController;
+use Modules\Warehouse\Http\Controllers\ReprintRequestController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
@@ -59,6 +60,14 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::get('/{order}/print/label', [PrintController::class, 'label'])->name('warehouse.print.label')
         ->where('order', '[0-9]+');
+
+    // Reprint Requests
+    Route::prefix('reprint-requests')->group(function () {
+        Route::get('/', [ReprintRequestController::class, 'index'])->name('warehouse.reprint-requests.index');
+        Route::post('/{request}/approve', [ReprintRequestController::class, 'approve'])->name('warehouse.reprint-requests.approve');
+        Route::post('/{request}/reject', [ReprintRequestController::class, 'reject'])->name('warehouse.reprint-requests.reject');
+        Route::get('/pending-count', [ReprintRequestController::class, 'pendingCount'])->name('warehouse.reprint-requests.pending-count');
+    });
     Route::post('/{order}/retry-register', [PrintController::class, 'retryRegister'])->name('warehouse.retry-register')
         ->where('order', '[0-9]+');
     Route::post('/{order}/save-tapin-location', [WarehouseController::class, 'saveTapinLocation'])->name('warehouse.save-tapin-location')
