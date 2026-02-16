@@ -316,6 +316,9 @@
                 $isPost = $order->shipping_type === 'post';
                 $needsPostcode = $isPost && empty($postcode);
 
+                // استخراج روش پرداخت
+                $paymentMethod = $wcData['payment_method_title'] ?? $wcData['payment_method'] ?? null;
+
                 // پیدا کردن محصولات پکیج/باندل برای این سفارش
                 $orderProductIds = $order->items->pluck('wc_product_id')->filter()->unique()->toArray();
                 $orderBundles = collect();
@@ -332,9 +335,15 @@
                     {{-- Right Side: Order Info --}}
                     <div class="lg:w-5/12 p-5 lg:border-l border-b lg:border-b-0 border-gray-100">
                         <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-sm font-bold text-gray-800" dir="ltr">{{ $order->order_number }}</span>
                                 <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-{{ $order->source_color }}-100 text-{{ $order->source_color }}-700">{{ $order->source_label }}</span>
+                                @if($paymentMethod)
+                                <div class="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-100 text-purple-700">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
+                                    <span>{{ $paymentMethod }}</span>
+                                </div>
+                                @endif
                             </div>
                             <div class="relative" @click.outside="shippingOpen = false">
                                 <button @click="shippingOpen = !shippingOpen" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl shadow-md cursor-pointer transition-all"
