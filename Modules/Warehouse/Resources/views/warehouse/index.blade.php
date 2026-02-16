@@ -372,7 +372,28 @@
                         {{-- Action Buttons --}}
                         @canany(['manage-warehouse', 'manage-permissions'])
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="openSupplyModal({{ $order->id }}, {{ json_encode($order->items->map(fn($i) => ['id' => $i->id, 'name' => $i->product_name, 'qty' => $i->quantity])) }})"
+                            @php
+                                $itemsData = $order->items->load('product.bundleItems.childProduct')->map(function($i) {
+                                    $data = [
+                                        'id' => $i->id,
+                                        'name' => $i->product_name,
+                                        'qty' => $i->quantity,
+                                        'is_bundle' => false,
+                                        'children' => []
+                                    ];
+                                    if ($i->product && $i->product->is_bundle) {
+                                        $data['is_bundle'] = true;
+                                        $data['children'] = $i->product->bundleItems->map(fn($b) => [
+                                            'id' => $b->child_product_id,
+                                            'name' => $b->childProduct->name ?? 'محصول ناشناس',
+                                            'qty' => $b->default_quantity,
+                                            'sku' => $b->childProduct->sku ?? '',
+                                        ])->toArray();
+                                    }
+                                    return $data;
+                                });
+                            @endphp
+                            <button type="button" onclick='openSupplyModal({{ $order->id }}, @json($itemsData))'
                                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors text-sm font-medium whitespace-nowrap">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                                 محدودیت تامین
@@ -682,7 +703,19 @@
                                     @foreach($order->items as $index => $item)
                                     <tr class="{{ $item->is_unavailable ? 'bg-red-50' : 'hover:bg-gray-50' }}">
                                         <td class="py-2.5 px-4 text-gray-400 text-xs">{{ $index + 1 }}</td>
-                                        <td class="py-2.5 px-4 {{ $item->is_unavailable ? 'text-red-700 font-medium' : 'text-gray-800' }}">{{ $item->product_name }}</td>
+                                        <td class="py-2.5 px-4 {{ $item->is_unavailable ? 'text-red-700 font-medium' : 'text-gray-800' }}">
+                                            {{ $item->product_name }}
+                                            @if($item->is_unavailable && !empty($item->unavailable_bundle_children))
+                                                @php
+                                                    $unavailableChildren = \Modules\Warehouse\Models\WarehouseProduct::whereIn('wc_product_id', $item->unavailable_bundle_children)->pluck('name')->toArray();
+                                                @endphp
+                                                @if(!empty($unavailableChildren))
+                                                    <div class="text-[11px] text-red-600 mt-0.5 font-normal">
+                                                        ناموجود: {{ implode('، ', $unavailableChildren) }}
+                                                    </div>
+                                                @endif
+                                            @endif
+                                        </td>
                                         <td class="py-2.5 px-4 text-center">
                                             <span class="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 {{ $item->is_unavailable ? 'bg-red-100 text-red-700' : 'bg-brand-50 text-brand-700' }} rounded-lg text-xs font-bold">{{ $item->quantity }}</span>
                                         </td>
@@ -1077,15 +1110,64 @@ function openSupplyModal(orderId, items) {
     list.innerHTML = '';
 
     items.forEach(function(item) {
-        var div = document.createElement('div');
-        div.className = 'flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg';
-        div.innerHTML = '<input type="checkbox" name="unavailable_items[]" value="' + item.id + '" class="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">' +
-            '<span class="text-sm text-gray-800 flex-1">' + item.name + '</span>' +
-            '<span class="text-xs text-gray-500">تعداد: ' + item.qty + '</span>';
-        list.appendChild(div);
+        if (item.is_bundle && item.children && item.children.length > 0) {
+            // محصول پک/باندل
+            var container = document.createElement('div');
+            container.className = 'border border-amber-200 rounded-lg p-3 bg-amber-50/50';
+
+            // عنوان پک
+            var header = document.createElement('div');
+            header.className = 'flex items-center gap-2 mb-2 pb-2 border-b border-amber-200';
+            header.innerHTML = '<svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>' +
+                '<span class="text-sm font-bold text-amber-800">' + item.name + '</span>' +
+                '<span class="text-xs text-amber-600">(پک - تعداد: ' + item.qty + ')</span>';
+            container.appendChild(header);
+
+            // محصولات داخل پک
+            var childrenDiv = document.createElement('div');
+            childrenDiv.className = 'space-y-1.5 mr-6';
+            item.children.forEach(function(child) {
+                var childDiv = document.createElement('div');
+                childDiv.className = 'flex items-center gap-2 p-2 bg-white rounded border border-gray-200';
+                childDiv.innerHTML = '<input type="checkbox" name="bundle_children[' + item.id + '][]" value="' + child.id + '" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" onchange="updateBundleStatus(' + item.id + ')">' +
+                    '<span class="text-sm text-gray-700 flex-1">' + child.name + '</span>' +
+                    '<span class="text-xs text-gray-500">تعداد: ' + child.qty + '</span>';
+                childrenDiv.appendChild(childDiv);
+            });
+            container.appendChild(childrenDiv);
+
+            // چک‌باکس اصلی پک (مخفی) - برای ارسال unavailable_items[]
+            var hiddenCheckbox = document.createElement('input');
+            hiddenCheckbox.type = 'checkbox';
+            hiddenCheckbox.name = 'unavailable_items[]';
+            hiddenCheckbox.value = item.id;
+            hiddenCheckbox.id = 'bundle_main_' + item.id;
+            hiddenCheckbox.style.display = 'none';
+            container.appendChild(hiddenCheckbox);
+
+            list.appendChild(container);
+        } else {
+            // محصول عادی
+            var div = document.createElement('div');
+            div.className = 'flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg';
+            div.innerHTML = '<input type="checkbox" name="unavailable_items[]" value="' + item.id + '" class="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">' +
+                '<span class="text-sm text-gray-800 flex-1">' + item.name + '</span>' +
+                '<span class="text-xs text-gray-500">تعداد: ' + item.qty + '</span>';
+            list.appendChild(div);
+        }
     });
 
     modal.classList.remove('hidden');
+}
+
+function updateBundleStatus(bundleId) {
+    // اگر حداقل یکی از بچه‌ها انتخاب شد، پک رو هم انتخاب کن
+    var children = document.querySelectorAll('input[name="bundle_children[' + bundleId + '][]"]');
+    var anyChecked = Array.from(children).some(function(cb) { return cb.checked; });
+    var mainCheckbox = document.getElementById('bundle_main_' + bundleId);
+    if (mainCheckbox) {
+        mainCheckbox.checked = anyChecked;
+    }
 }
 
 function closeSupplyModal() {

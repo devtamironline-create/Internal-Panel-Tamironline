@@ -11,7 +11,7 @@ class WarehouseOrderItem extends Model
         'warehouse_order_id', 'product_name', 'product_sku',
         'product_barcode', 'quantity', 'weight', 'length', 'width', 'height',
         'price', 'wc_product_id', 'scanned', 'scanned_at',
-        'is_unavailable', 'available_at',
+        'is_unavailable', 'available_at', 'unavailable_bundle_children',
     ];
 
     protected $casts = [
@@ -24,11 +24,17 @@ class WarehouseOrderItem extends Model
         'scanned_at' => 'datetime',
         'is_unavailable' => 'boolean',
         'available_at' => 'datetime',
+        'unavailable_bundle_children' => 'array',
     ];
 
     public function order(): BelongsTo
     {
         return $this->belongsTo(WarehouseOrder::class, 'warehouse_order_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseProduct::class, 'wc_product_id', 'wc_product_id');
     }
 
     public function getWeightGramsAttribute(): int

@@ -255,11 +255,27 @@ class WarehouseController extends Controller
         $request->validate([
             'unavailable_items' => 'required|array|min:1',
             'unavailable_items.*' => 'exists:warehouse_order_items,id',
+            'bundle_children' => 'nullable|array',
+            'bundle_children.*' => 'array',
         ]);
 
-        // Mark selected items as unavailable
-        $order->items()->whereIn('id', $request->input('unavailable_items'))
-            ->update(['is_unavailable' => true]);
+        $unavailableItemIds = $request->input('unavailable_items', []);
+        $bundleChildren = $request->input('bundle_children', []);
+
+        // Mark selected items as unavailable + save bundle children info
+        foreach ($unavailableItemIds as $itemId) {
+            $item = $order->items()->find($itemId);
+            if ($item) {
+                $updateData = ['is_unavailable' => true];
+
+                // اگر این آیتم پک هست و بچه‌های ناموجود داره، ذخیرشون کن
+                if (isset($bundleChildren[$itemId]) && !empty($bundleChildren[$itemId])) {
+                    $updateData['unavailable_bundle_children'] = $bundleChildren[$itemId];
+                }
+
+                $item->update($updateData);
+            }
+        }
 
         // Change shipping type: post → urgent (فوری), courier → emergency (اضطراری)
         $shippingMap = [
@@ -278,8 +294,28 @@ class WarehouseController extends Controller
         // سینک وضعیت به ووکامرس
         $order->syncStatusToWc(WarehouseOrder::STATUS_SUPPLY_WAIT);
 
-        $unavailableNames = $order->items()->whereIn('id', $request->input('unavailable_items'))->pluck('product_name')->implode('، ');
-        OrderLog::log($order, OrderLog::ACTION_SUPPLY_WAIT, 'منتقل به انتظار تامین — کالاهای ناموجود: ' . $unavailableNames);
+        // ساخت پیام لاگ با جزئیات محصولات ناموجود (شامل بچه‌های پک)
+        $logMessage = 'منتقل به انتظار تامین — کالاهای ناموجود: ';
+        $unavailableDetails = [];
+
+        foreach ($order->items()->whereIn('id', $unavailableItemIds)->get() as $item) {
+            $detail = $item->product_name;
+
+            // اگر بچه‌های ناموجود داره، اضافه کن
+            if (!empty($item->unavailable_bundle_children)) {
+                $childNames = \Modules\Warehouse\Models\WarehouseProduct::whereIn('wc_product_id', $item->unavailable_bundle_children)
+                    ->pluck('name')
+                    ->toArray();
+                if (!empty($childNames)) {
+                    $detail .= ' [' . implode('، ', $childNames) . ']';
+                }
+            }
+
+            $unavailableDetails[] = $detail;
+        }
+
+        $logMessage .= implode('، ', $unavailableDetails);
+        OrderLog::log($order, OrderLog::ACTION_SUPPLY_WAIT, $logMessage);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'سفارش به انتظار تامین منتقل شد.']);
