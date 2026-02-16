@@ -15,6 +15,67 @@ use Modules\SMS\Services\KavenegarService;
 
 class PrintController extends Controller
 {
+    /**
+     * ثبت چاپ فاکتور (وقتی دکمه چاپ زده میشه)
+     */
+    public function markPrinted(WarehouseOrder $order)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید'], 403);
+        }
+
+        // اگه قبلاً چاپ شده و کاربر permission نداره
+        if ($order->print_count > 0 && !auth()->user()->can('warehouse.reprint-invoice')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'این فاکتور قبلاً چاپ شده است. برای چاپ مجدد به دسترسی ویژه نیاز دارید.'
+            ], 403);
+        }
+
+        // Track print count
+        $order->increment('print_count');
+        $order->refresh();
+
+        // تغییر وضعیت به "در حال آماده‌سازی" اگه هنوز پندینگ باشه
+        if ($order->status === 'pending') {
+            $order->update(['status' => 'preparing']);
+        }
+
+        // Log print
+        Log::channel('daily')->info('فاکتور چاپ شد', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'print_count' => $order->print_count,
+            'user_id' => auth()->id(),
+            'user_name' => auth()->user()->name,
+            'printed_at' => now()->toDateTimeString(),
+        ]);
+
+        OrderLog::log($order, OrderLog::ACTION_PRINTED, 'چاپ فاکتور (بار ' . $order->print_count . ')', [
+            'print_count' => $order->print_count,
+        ]);
+
+        // Send SMS alert on duplicate print
+        if ($order->print_count > 1) {
+            $alertMobile = WarehouseSetting::get('alert_mobile');
+            if (!empty($alertMobile)) {
+                try {
+                    $sms = new KavenegarService();
+                    $message = "هشدار: فاکتور {$order->order_number} برای بار {$order->print_count} توسط " . auth()->user()->name . " پرینت شد.";
+                    $sms->send($alertMobile, $message);
+                } catch (\Exception $e) {
+                    Log::error('SMS alert failed for duplicate print', ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'print_count' => $order->print_count,
+            'message' => 'ثبت شد'
+        ]);
+    }
+
     public function invoice(WarehouseOrder $order)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
@@ -120,38 +181,7 @@ class PrintController extends Controller
             }
         }
 
-        // Track print count
-        $order->increment('print_count');
-
-        // Log every print
-        Log::channel('daily')->info('فاکتور چاپ شد', [
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-            'print_count' => $order->print_count,
-            'user_id' => auth()->id(),
-            'user_name' => auth()->user()->name,
-            'printed_at' => now()->toDateTimeString(),
-        ]);
-
-        OrderLog::log($order, OrderLog::ACTION_PRINTED, 'چاپ فاکتور (بار ' . $order->print_count . ')', [
-            'print_count' => $order->print_count,
-        ]);
-
-        // Send SMS alert on duplicate print
-        if ($order->print_count > 1) {
-            $alertMobile = WarehouseSetting::get('alert_mobile');
-            if (!empty($alertMobile)) {
-                try {
-                    $sms = new KavenegarService();
-                    $message = "هشدار: فاکتور {$order->order_number} برای بار {$order->print_count} توسط " . auth()->user()->name . " پرینت شد.";
-                    $sms->send($alertMobile, $message);
-                } catch (\Exception $e) {
-                    Log::error('SMS alert failed for duplicate print', ['error' => $e->getMessage()]);
-                }
-            }
-        }
-
-        // پرینت فقط فاکتور رو نشون میده — تغییر وضعیت جداگانه انجام میشه
+        // فقط نمایش صفحه — ثبت چاپ با دکمه انجام میشه
 
         $invoiceSettings = [
             'store_name' => WarehouseSetting::get('invoice_store_name', 'گنجه'),

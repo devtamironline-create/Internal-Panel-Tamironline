@@ -359,12 +359,37 @@
         @endif
 
         function handlePrint() {
-            @if($order->print_count > 1)
-            if (!confirm('این فاکتور قبلا {{ $order->print_count - 1 }} بار چاپ شده. مطمئنی میخوای دوباره چاپ کنی؟')) {
+            @if($order->print_count > 0)
+            if (!confirm('این فاکتور قبلا {{ $order->print_count }} بار چاپ شده. مطمئنی میخوای دوباره چاپ کنی؟')) {
                 return;
             }
             @endif
-            window.print();
+
+            // ثبت چاپ در سیستم
+            fetch('/warehouse/{{ $order->id }}/print/mark-printed', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    // موفق - حالا چاپ کن
+                    window.print();
+                    // بعد چاپ صفحه رو refresh کن تا badge آپدیت بشه
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
+                } else {
+                    alert('خطا: ' + (data.message || 'ثبت چاپ ناموفق بود'));
+                }
+            })
+            .catch(function(err) {
+                alert('خطا در ثبت چاپ: ' + err.message);
+            });
         }
 
         function retryRegister() {
