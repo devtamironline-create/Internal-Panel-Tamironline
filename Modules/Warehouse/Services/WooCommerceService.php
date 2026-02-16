@@ -907,7 +907,7 @@ class WooCommerceService
 
                     // اگر محصول متغیر بود، variation ها رو هم بگیر
                     if ($productType === 'variable') {
-                        $varCount = $this->syncProductVariations($product['id']);
+                        $varCount = $this->syncProductVariations($product['id'], $wcWeightUnit);
                         $totalVariations += $varCount;
                     }
 
@@ -974,7 +974,7 @@ class WooCommerceService
     /**
      * سینک variation های یک محصول متغیر
      */
-    protected function syncProductVariations(int $productId): int
+    protected function syncProductVariations(int $productId, string $wcWeightUnit = 'g'): int
     {
         $count = 0;
         $page = 1;
