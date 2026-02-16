@@ -13,6 +13,11 @@
                 <p class="text-gray-600 mt-1">سینک سفارشات از فروشگاه ووکامرسی</p>
             </div>
         </div>
+        <a href="{{ route('warehouse.woocommerce.products-catalog') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+            کاتالوگ محصولات
+        </a>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

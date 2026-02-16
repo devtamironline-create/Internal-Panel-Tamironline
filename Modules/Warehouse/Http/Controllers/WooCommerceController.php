@@ -166,4 +166,52 @@ class WooCommerceController extends Controller
             return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
         }
     }
+
+    public function productsCatalog(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $query = \Modules\Warehouse\Models\WarehouseProduct::query();
+
+        // فیلتر براساس جستجو
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('sku', 'LIKE', "%{$search}%")
+                    ->orWhere('wc_product_id', $search);
+            });
+        }
+
+        // فیلتر براساس نوع
+        if ($type = $request->input('type')) {
+            $query->where('type', $type);
+        }
+
+        // فیلتر براساس وزن
+        if ($weightFilter = $request->input('weight_filter')) {
+            if ($weightFilter === 'zero') {
+                $query->where('weight', 0);
+            } elseif ($weightFilter === 'non_zero') {
+                $query->where('weight', '>', 0);
+            }
+        }
+
+        // مرتب‌سازی
+        $sortBy = $request->input('sort', 'name');
+        $sortDir = $request->input('dir', 'asc');
+        $query->orderBy($sortBy, $sortDir);
+
+        $products = $query->paginate(50);
+
+        // آمار
+        $stats = [
+            'total' => \Modules\Warehouse\Models\WarehouseProduct::count(),
+            'zero_weight' => \Modules\Warehouse\Models\WarehouseProduct::where('weight', 0)->count(),
+            'bundles' => \Modules\Warehouse\Models\WarehouseProduct::where('is_bundle', true)->count(),
+        ];
+
+        return view('warehouse::woocommerce.products-catalog', compact('products', 'stats'));
+    }
 }
