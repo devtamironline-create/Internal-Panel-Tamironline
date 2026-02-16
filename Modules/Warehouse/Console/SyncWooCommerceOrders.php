@@ -9,9 +9,9 @@ use Modules\Warehouse\Services\WooCommerceService;
 class SyncWooCommerceOrders extends Command
 {
     protected $signature = 'warehouse:sync-orders
-                            {--status=processing,bslm-preparation,completed : WC order statuses (comma-separated)}';
+                            {--status=processing : WC order statuses (comma-separated)}';
 
-    protected $description = 'سینک خودکار سفارشات از ووکامرس (پردازش، باسلام، حضوری)';
+    protected $description = 'سینک خودکار سفارشات از ووکامرس (فقط در حال پردازش)';
 
     public function handle(): int
     {
