@@ -62,6 +62,7 @@ class WarehouseController extends Controller
         }
         $search = $request->get('search');
         $shippingFilter = $request->get('shipping');
+        $paymentFilter = $request->get('payment');
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
@@ -70,6 +71,11 @@ class WarehouseController extends Controller
         // فیلتر نوع ارسال
         if (!empty($shippingFilter) && $shippingFilter !== 'all') {
             $query->where('shipping_type', $shippingFilter);
+        }
+
+        // فیلتر نحوه خرید (payment method)
+        if (!empty($paymentFilter) && $paymentFilter !== 'all') {
+            $query->whereRaw("JSON_EXTRACT(wc_order_data, '$.payment_method') = ?", [$paymentFilter]);
         }
 
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
@@ -118,8 +124,23 @@ class WarehouseController extends Controller
         $shippingTypes = WarehouseShippingType::getActiveTypes();
         $boxSizes = WarehouseBoxSize::active()->ordered()->get();
 
+        // گرفتن لیست نحوه‌های خرید موجود از سفارشات
+        $paymentMethods = WarehouseOrder::whereNotNull('wc_order_data')
+            ->get()
+            ->pluck('wc_order_data')
+            ->map(function($data) {
+                return [
+                    'method' => $data['payment_method'] ?? null,
+                    'title' => $data['payment_method_title'] ?? $data['payment_method'] ?? null,
+                ];
+            })
+            ->filter(fn($p) => !empty($p['method']))
+            ->unique('method')
+            ->values();
+
         return view('warehouse::warehouse.index', compact(
-            'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter', 'boxSizes',
+            'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search',
+            'shippingTypes', 'shippingFilter', 'paymentMethods', 'paymentFilter', 'boxSizes',
         ));
     }
 

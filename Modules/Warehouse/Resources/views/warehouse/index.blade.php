@@ -56,6 +56,9 @@
                 @if(!empty($shippingFilter) && $shippingFilter !== 'all')
                 <input type="hidden" name="shipping" value="{{ $shippingFilter }}">
                 @endif
+                @if(!empty($paymentFilter) && $paymentFilter !== 'all')
+                <input type="hidden" name="payment" value="{{ $paymentFilter }}">
+                @endif
                 <div class="relative flex-1">
                     <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="text" name="search" value="{{ $search }}" placeholder="جستجو شماره سفارش، نام مشتری، موبایل، کد رهگیری..."
@@ -63,49 +66,84 @@
                 </div>
                 <button type="submit" class="px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium">جستجو</button>
                 @if($search)
-                <a href="{{ route('warehouse.index', ['status' => $currentStatus, 'shipping' => $shippingFilter]) }}" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">پاک کردن</a>
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $shippingFilter, 'payment' => $paymentFilter])) }}" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">پاک کردن</a>
                 @endif
             </form>
         </div>
 
-        <!-- Shipping Type Filter -->
-        <div class="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap" x-data="{ redetecting: false, redetectResult: null }">
-            <span class="text-xs text-gray-500 ml-1">نوع ارسال:</span>
-            @php
-                $shippingFilters = [
-                    'all' => ['label' => 'همه', 'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                    'post' => ['label' => 'پست', 'icon' => 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-                    'courier' => ['label' => 'پیک', 'icon' => 'M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0'],
-                    'pickup' => ['label' => 'حضوری', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z'],
-                ];
-                $activeFilter = $shippingFilter ?? 'all';
-            @endphp
-            @foreach($shippingFilters as $filterKey => $filter)
-                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $filterKey === 'all' ? null : $filterKey, 'search' => $search])) }}"
+        <!-- Filters: Shipping Type & Payment Method -->
+        <div class="px-4 py-2.5 border-b border-gray-100" x-data="{ redetecting: false, redetectResult: null }">
+            {{-- فیلتر نوع ارسال --}}
+            <div class="flex items-center gap-2 flex-wrap mb-2">
+                <span class="text-xs text-gray-500 font-medium ml-1">نوع ارسال:</span>
+                @php $activeShippingFilter = $shippingFilter ?? 'all'; @endphp
+
+                {{-- دکمه "همه" --}}
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'payment' => $paymentFilter, 'search' => $search])) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
-                   {{ $activeFilter === $filterKey ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $filter['icon'] }}"/></svg>
-                    {{ $filter['label'] }}
+                   {{ $activeShippingFilter === 'all' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    همه
                 </a>
-            @endforeach
+
+                {{-- دکمه‌های داینامیک از دیتابیس --}}
+                @foreach($shippingTypes as $type)
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $type->slug, 'payment' => $paymentFilter, 'search' => $search])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                   {{ $activeShippingFilter === $type->slug ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    {{ $type->name }}
+                    @if($type->is_priority)
+                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                    @endif
+                </a>
+                @endforeach
+            </div>
+
+            {{-- فیلتر نحوه خرید --}}
+            @if($paymentMethods->isNotEmpty())
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs text-gray-500 font-medium ml-1">نحوه خرید:</span>
+                @php $activePaymentFilter = $paymentFilter ?? 'all'; @endphp
+
+                {{-- دکمه "همه" --}}
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $shippingFilter, 'search' => $search])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                   {{ $activePaymentFilter === 'all' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    همه
+                </a>
+
+                {{-- دکمه‌های داینامیک روش‌های پرداخت --}}
+                @foreach($paymentMethods as $pm)
+                <a href="{{ route('warehouse.index', array_filter(['status' => $currentStatus, 'shipping' => $shippingFilter, 'payment' => $pm['method'], 'search' => $search])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                   {{ $activePaymentFilter === $pm['method'] ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                    {{ $pm['title'] }}
+                </a>
+                @endforeach
+            </div>
+            @endif
 
             @canany(['manage-warehouse', 'manage-permissions'])
-            <button @click="if(confirm('نوع ارسال همه سفارشات بر اساس اطلاعات ووکامرس بازتشخیص داده میشود. ادامه؟')) {
-                redetecting = true; redetectResult = null;
-                fetch('{{ route('warehouse.woocommerce.redetect-shipping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } })
-                .then(r => r.json())
-                .then(d => { redetecting = false; redetectResult = d; if(d.updated > 0) setTimeout(() => location.reload(), 2000); })
-                .catch(() => { redetecting = false; redetectResult = { success: false, message: 'خطا در ارتباط' }; });
-            }"
-                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors mr-auto"
-                :disabled="redetecting">
-                <svg class="w-3.5 h-3.5" :class="redetecting && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                <span x-text="redetecting ? 'در حال بازتشخیص...' : 'بازتشخیص نوع ارسال'"></span>
-            </button>
-            <template x-if="redetectResult">
-                <span class="text-xs" :class="redetectResult.updated > 0 ? 'text-green-600' : 'text-gray-500'"
-                    x-text="redetectResult.updated > 0 ? redetectResult.updated + ' سفارش آپدیت شد' : 'تغییری نبود'"></span>
-            </template>
+            <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                <button @click="if(confirm('نوع ارسال همه سفارشات بر اساس اطلاعات ووکامرس بازتشخیص داده میشود. ادامه؟')) {
+                    redetecting = true; redetectResult = null;
+                    fetch('{{ route('warehouse.woocommerce.redetect-shipping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } })
+                    .then(r => r.json())
+                    .then(d => { redetecting = false; redetectResult = d; if(d.updated > 0) setTimeout(() => location.reload(), 2000); })
+                    .catch(() => { redetecting = false; redetectResult = { success: false, message: 'خطا در ارتباط' }; });
+                }"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                    :disabled="redetecting">
+                    <svg class="w-3.5 h-3.5" :class="redetecting && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span x-text="redetecting ? 'در حال بازتشخیص...' : 'بازتشخیص نوع ارسال'"></span>
+                </button>
+                <template x-if="redetectResult">
+                    <span class="text-xs" :class="redetectResult.updated > 0 ? 'text-green-600' : 'text-gray-500'"
+                        x-text="redetectResult.updated > 0 ? redetectResult.updated + ' سفارش آپدیت شد' : 'تغییری نبود'"></span>
+                </template>
+            </div>
             @endcanany
         </div>
 
