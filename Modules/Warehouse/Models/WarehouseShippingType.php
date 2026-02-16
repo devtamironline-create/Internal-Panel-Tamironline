@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class WarehouseShippingType extends Model
 {
-    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active', 'requires_dispatch'];
+    protected $fillable = ['name', 'slug', 'timer_minutes', 'is_active', 'requires_dispatch', 'is_priority'];
 
     protected $casts = [
         'is_active' => 'boolean',
         'requires_dispatch' => 'boolean',
+        'is_priority' => 'boolean',
         'timer_minutes' => 'integer',
     ];
 
@@ -20,6 +21,17 @@ class WarehouseShippingType extends Model
     public static function getDispatchRequiredSlugs(): array
     {
         return static::where('requires_dispatch', true)
+            ->pluck('slug')
+            ->toArray();
+    }
+
+    /**
+     * slug های حمل‌ونقل‌هایی که در بخش "ارسال‌های فوری" نمایش داده می‌شوند
+     */
+    public static function getPrioritySlugs(): array
+    {
+        return static::where('is_priority', true)
+            ->where('is_active', true)
             ->pluck('slug')
             ->toArray();
     }

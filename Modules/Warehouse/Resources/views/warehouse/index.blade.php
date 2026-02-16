@@ -186,8 +186,38 @@
 
         {{-- PENDING STATUS: Single Column Layout --}}
         @elseif($currentStatus === 'pending')
-        <div class="p-5 space-y-4">
+        <div class="p-5">
+            @php
+                $prioritySlugs = \Modules\Warehouse\Models\WarehouseShippingType::getPrioritySlugs();
+                $shownUrgentHeader = false;
+                $shownNormalHeader = false;
+            @endphp
+
+            <div class="space-y-4">
             @forelse($orders as $order)
+                @php
+                    $isUrgent = in_array($order->shipping_type, $prioritySlugs);
+                @endphp
+
+                {{-- نمایش header ارسال‌های فوری (یک بار) --}}
+                @if($isUrgent && !$shownUrgentHeader)
+                    @php $shownUrgentHeader = true; @endphp
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-red-300 -mt-2">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <h2 class="text-base font-bold text-red-700">ارسال‌های فوری</h2>
+                        <span class="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">{{ $urgentOrders->count() }}</span>
+                    </div>
+                @endif
+
+                {{-- نمایش header سفارش‌های عادی (یک بار، بعد از آخرین فوری) --}}
+                @if(!$isUrgent && !$shownNormalHeader && $shownUrgentHeader)
+                    @php $shownNormalHeader = true; @endphp
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-gray-300 mt-6">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <h2 class="text-base font-bold text-gray-700">سفارش‌ها</h2>
+                        <span class="px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-bold">{{ $normalOrders->count() }}</span>
+                    </div>
+                @endif
             @php
                 $shippingTypeModel = $order->shipping_type ? $shippingTypes->firstWhere('slug', $order->shipping_type) : null;
                 $shippingLabel = $shippingTypeModel ? $shippingTypeModel->name : ($order->shipping_type ?: '—');
@@ -614,6 +644,7 @@
                 <p class="text-sm mt-1">سفارشات جدید از بخش «سفارش جدید» قابل ثبت هستند</p>
             </div>
             @endforelse
+            </div>
         </div>
 
         {{-- SUPPLY WAIT STATUS: Single Column --}}

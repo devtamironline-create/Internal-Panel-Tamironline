@@ -76,18 +76,10 @@ class WarehouseController extends Controller
         if (!empty($search)) {
             $query->search($search)->orderBy('created_at', 'asc');
             $orders = $query->get();
+            $urgentOrders = collect();
+            $normalOrders = $orders;
         } else {
             $query->byStatus($currentStatus);
-
-            // ترتیب: قدیم به جدید — پیک فوری/اضطراری در هر تاریخ اول بیاد
-            $query->orderByRaw("DATE(created_at) ASC");
-            $query->orderByRaw("
-                CASE
-                    WHEN shipping_type IN ('emergency', 'urgent') THEN 0
-                    ELSE 1
-                END ASC
-            ");
-            $query->orderBy('created_at', 'asc');
 
             // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
             $noPaginationStatuses = [
@@ -97,9 +89,29 @@ class WarehouseController extends Controller
             ];
 
             if (in_array($currentStatus, $noPaginationStatuses)) {
-                $orders = $query->get();
+                // گرفتن slug های اولویت‌دار (فوری)
+                $prioritySlugs = WarehouseShippingType::getPrioritySlugs();
+
+                // سفارشات فوری - ترتیب: قدیم به جدید
+                $urgentOrders = (clone $query)
+                    ->whereIn('shipping_type', $prioritySlugs)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+
+                // سفارشات عادی - ترتیب: قدیم به جدید
+                $normalOrders = (clone $query)
+                    ->whereNotIn('shipping_type', $prioritySlugs)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+
+                // ترکیب برای متغیر $orders (برای سازگاری با کدهای قدیمی)
+                $orders = $urgentOrders->concat($normalOrders);
             } else {
+                // برای وضعیت‌های دیگه که صفحه‌بندی دارن - روش قدیمی
+                $query->orderBy('created_at', 'asc');
                 $orders = $query->paginate(20)->appends($request->query());
+                $urgentOrders = collect();
+                $normalOrders = $orders;
             }
         }
 
@@ -107,7 +119,7 @@ class WarehouseController extends Controller
         $boxSizes = WarehouseBoxSize::active()->ordered()->get();
 
         return view('warehouse::warehouse.index', compact(
-            'orders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter', 'boxSizes',
+            'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search', 'shippingTypes', 'shippingFilter', 'boxSizes',
         ));
     }
 

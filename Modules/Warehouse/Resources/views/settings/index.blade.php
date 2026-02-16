@@ -96,6 +96,9 @@
                         @if($type->requires_dispatch)
                         <span class="px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">ایستگاه پیک</span>
                         @endif
+                        @if($type->is_priority)
+                        <span class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">فوری</span>
+                        @endif
                         <span class="text-sm text-blue-600">{{ $type->timer_label }}</span>
                     </div>
                     <button x-show="!editing" @click="editing = true" class="text-sm text-blue-600 hover:text-blue-800">ویرایش</button>
@@ -108,6 +111,9 @@
                         </label>
                         <label class="flex items-center gap-1 text-sm text-purple-700">
                             <input type="checkbox" name="requires_dispatch" {{ $type->requires_dispatch ? 'checked' : '' }}> ایستگاه پیک
+                        </label>
+                        <label class="flex items-center gap-1 text-sm text-red-700">
+                            <input type="checkbox" name="is_priority" {{ $type->is_priority ? 'checked' : '' }}> اولویت (فوری)
                         </label>
                         <button type="submit" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm">ذخیره</button>
                         <button type="button" @click="editing = false" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm">لغو</button>
@@ -516,6 +522,7 @@ function updateShipping(e, id) {
             timer_minutes: parseInt(form.timer_minutes.value),
             is_active: form.is_active.checked,
             requires_dispatch: form.requires_dispatch.checked,
+            is_priority: form.is_priority.checked,
         }),
     })
     .then(r => r.json())
