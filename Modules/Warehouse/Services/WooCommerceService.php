@@ -23,7 +23,7 @@ class WooCommerceService
      * واحد وزن ووکامرس رو از API بخون و کش کن
      * @return string 'kg', 'g', 'lbs', 'oz'
      */
-    protected function getWeightUnit(): string
+    public function getWeightUnit(): string
     {
         if ($this->weightUnit !== null) {
             return $this->weightUnit;
@@ -50,7 +50,7 @@ class WooCommerceService
     /**
      * تبدیل وزن خام ووکامرس به گرم
      */
-    protected function convertToGrams(float $weight, string $unit): float
+    public function convertToGrams(float $weight, string $unit): float
     {
         if ($weight <= 0) return 0;
 
