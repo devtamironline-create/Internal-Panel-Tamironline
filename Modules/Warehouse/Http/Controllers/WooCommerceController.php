@@ -149,4 +149,21 @@ class WooCommerceController extends Controller
             return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
         }
     }
+
+    public function debugProductWeight(\Illuminate\Http\Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        try {
+            $productId = $request->input('product_id');
+            $service = new WooCommerceService();
+            $result = $service->debugProductWeight($productId);
+            return response()->json($result);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Debug product weight error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
 }

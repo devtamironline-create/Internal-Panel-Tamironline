@@ -1569,4 +1569,95 @@ class WooCommerceService
             'details' => $details,
         ];
     }
+
+    /**
+     * دیباگ وزن یک محصول - دریافت وزن مستقیم از ووکامرس و نمایش جزئیات
+     */
+    public function debugProductWeight(int $wcProductId): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        try {
+            // محصول محلی
+            $localProduct = WarehouseProduct::where('wc_product_id', $wcProductId)->first();
+            if (!$localProduct) {
+                return ['success' => false, 'message' => 'محصول در دیتابیس محلی یافت نشد.'];
+            }
+
+            // دریافت از ووکامرس
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/products/' . $wcProductId);
+
+            if (!$response->successful()) {
+                return [
+                    'success' => false,
+                    'message' => 'خطا در دریافت از ووکامرس: HTTP ' . $response->status(),
+                ];
+            }
+
+            $wcProduct = $response->json();
+            $wcWeightUnit = $this->getWeightUnit();
+            $rawWeight = (float)($wcProduct['weight'] ?? 0);
+            $convertedWeight = $this->convertToGrams($rawWeight, $wcWeightUnit);
+
+            $debug = [
+                'local_product' => [
+                    'id' => $localProduct->wc_product_id,
+                    'name' => $localProduct->name,
+                    'type' => $localProduct->type,
+                    'weight_in_db' => (float) $localProduct->weight,
+                    'is_bundle' => $localProduct->is_bundle,
+                ],
+                'wc_product' => [
+                    'id' => $wcProduct['id'],
+                    'name' => $wcProduct['name'] ?? '',
+                    'type' => $wcProduct['type'] ?? '',
+                    'raw_weight' => $rawWeight,
+                    'weight_unit' => $wcWeightUnit,
+                    'converted_to_grams' => $convertedWeight,
+                    'sku' => $wcProduct['sku'] ?? '',
+                    'status' => $wcProduct['status'] ?? '',
+                ],
+                'conversion' => [
+                    'formula' => $wcWeightUnit === 'g' ? 'weight (same unit)' : "weight × conversion_factor",
+                    'unit_from' => $wcWeightUnit,
+                    'unit_to' => 'g (گرم)',
+                    'raw' => $rawWeight,
+                    'converted' => $convertedWeight,
+                ],
+            ];
+
+            // اگه bundle هست، زیرمجموعه‌ها رو هم نشون بده
+            if ($localProduct->is_bundle) {
+                $bundleItems = $localProduct->bundleItems()->with('childProduct')->get();
+                $debug['bundle_info'] = [
+                    'children_count' => $bundleItems->count(),
+                    'children' => $bundleItems->map(function ($item) {
+                        return [
+                            'id' => $item->child_product_id,
+                            'name' => $item->childProduct ? $item->childProduct->name : 'N/A',
+                            'weight' => $item->childProduct ? (float) $item->childProduct->weight : 0,
+                            'quantity' => $item->default_quantity,
+                            'total_weight' => $item->childProduct ? ((float) $item->childProduct->weight * $item->default_quantity) : 0,
+                        ];
+                    })->toArray(),
+                    'calculated_bundle_weight' => $localProduct->calculateBundleWeight(),
+                ];
+            }
+
+            return [
+                'success' => true,
+                'debug' => $debug,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Debug product weight failed', [
+                'product_id' => $wcProductId,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        }
+    }
 }

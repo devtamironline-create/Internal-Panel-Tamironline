@@ -277,11 +277,12 @@
                                 <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-24">نوع</th>
                                 <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-20">SKU</th>
                                 <th class="px-4 py-2.5 text-right font-medium text-yellow-800 w-20">WC ID</th>
+                                <th class="px-4 py-2.5 text-center font-medium text-yellow-800 w-24">دیباگ</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-yellow-100 bg-white">
                             @foreach($zeroWeightProducts as $i => $product)
-                            <tr class="hover:bg-yellow-50/50">
+                            <tr class="hover:bg-yellow-50/50" id="product-row-{{ $product->wc_product_id }}">
                                 <td class="px-4 py-2.5 text-gray-400 text-xs">{{ $i + 1 }}</td>
                                 <td class="px-4 py-2.5 font-medium text-gray-800">{{ $product->name }}</td>
                                 <td class="px-4 py-2.5">
@@ -293,6 +294,17 @@
                                 </td>
                                 <td class="px-4 py-2.5 text-gray-500 text-xs" dir="ltr">{{ $product->sku ?: '—' }}</td>
                                 <td class="px-4 py-2.5 text-gray-500 text-xs" dir="ltr">{{ $product->wc_product_id }}</td>
+                                <td class="px-4 py-2.5 text-center">
+                                    <button onclick="debugProduct({{ $product->wc_product_id }})"
+                                            class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                        چک وزن WC
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr id="debug-result-{{ $product->wc_product_id }}" class="hidden">
+                                <td colspan="6" class="px-4 py-3 bg-gray-50">
+                                    <div id="debug-content-{{ $product->wc_product_id }}" class="text-xs"></div>
+                                </td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -527,6 +539,91 @@ function fixZeroWeights() {
         icon.classList.remove('animate-spin');
         text.textContent = 'رفع مشکل وزن';
         showResult('fix-zero-result', false, 'خطا: ' + err.message);
+    });
+}
+
+function debugProduct(productId) {
+    const resultRow = document.getElementById('debug-result-' + productId);
+    const content = document.getElementById('debug-content-' + productId);
+
+    // اگه بازه، ببند
+    if (!resultRow.classList.contains('hidden')) {
+        resultRow.classList.add('hidden');
+        return;
+    }
+
+    content.innerHTML = '<div class="text-gray-500">در حال دریافت اطلاعات از ووکامرس...</div>';
+    resultRow.classList.remove('hidden');
+
+    fetch('{{ route("warehouse.woocommerce.debug-product-weight") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ product_id: productId }),
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            content.innerHTML = '<div class="text-red-600">' + data.message + '</div>';
+            return;
+        }
+
+        const d = data.debug;
+        let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+
+        // محصول محلی
+        html += '<div class="bg-white p-3 rounded border">';
+        html += '<div class="font-bold text-gray-700 mb-2">📦 دیتابیس محلی:</div>';
+        html += '<div class="space-y-1 text-gray-600">';
+        html += '<div>نام: <span class="font-medium">' + d.local_product.name + '</span></div>';
+        html += '<div>نوع: <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">' + d.local_product.type + '</span></div>';
+        html += '<div>وزن (DB): <span class="font-bold text-red-600">' + d.local_product.weight_in_db + ' گرم</span></div>';
+        html += '<div>پکیج؟: <span class="font-medium">' + (d.local_product.is_bundle ? 'بله' : 'خیر') + '</span></div>';
+        html += '</div></div>';
+
+        // محصول ووکامرس
+        html += '<div class="bg-white p-3 rounded border">';
+        html += '<div class="font-bold text-gray-700 mb-2">🌐 ووکامرس:</div>';
+        html += '<div class="space-y-1 text-gray-600">';
+        html += '<div>نام: <span class="font-medium">' + d.wc_product.name + '</span></div>';
+        html += '<div>نوع: <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">' + d.wc_product.type + '</span></div>';
+        html += '<div>وزن خام: <span class="font-bold">' + d.wc_product.raw_weight + ' ' + d.wc_product.weight_unit + '</span></div>';
+        html += '<div>تبدیل شده: <span class="font-bold text-green-600">' + d.wc_product.converted_to_grams + ' گرم</span></div>';
+        html += '<div>SKU: <span class="font-mono text-xs">' + (d.wc_product.sku || '—') + '</span></div>';
+        html += '</div></div>';
+
+        // اگه bundle بود
+        if (d.bundle_info) {
+            html += '<div class="md:col-span-2 bg-orange-50 p-3 rounded border border-orange-200">';
+            html += '<div class="font-bold text-orange-700 mb-2">📦 اطلاعات پکیج:</div>';
+            html += '<div class="text-sm">تعداد زیرمجموعه: <span class="font-bold">' + d.bundle_info.children_count + '</span></div>';
+            html += '<div class="mt-2 space-y-1">';
+            d.bundle_info.children.forEach(function(child, i) {
+                const weightColor = child.weight > 0 ? 'text-green-600' : 'text-red-600';
+                html += '<div class="flex items-center gap-2 text-xs">';
+                html += '<span class="text-gray-500">' + (i + 1) + '.</span>';
+                html += '<span class="flex-1">' + child.name + '</span>';
+                html += '<span class="' + weightColor + ' font-bold">' + child.weight + 'g × ' + child.quantity + ' = ' + child.total_weight + 'g</span>';
+                html += '</div>';
+            });
+            html += '</div>';
+            html += '<div class="mt-3 pt-3 border-t border-orange-200 font-bold text-orange-800">';
+            html += 'وزن محاسبه شده پکیج: <span class="text-lg">' + d.bundle_info.calculated_bundle_weight + ' گرم</span>';
+            html += '</div></div>';
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+    })
+    .catch(err => {
+        content.innerHTML = '<div class="text-red-600">خطا: ' + err.message + '</div>';
     });
 }
 </script>
