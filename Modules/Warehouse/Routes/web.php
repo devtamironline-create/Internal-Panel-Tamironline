@@ -9,6 +9,7 @@ use Modules\Warehouse\Http\Controllers\PrintController;
 use Modules\Warehouse\Http\Controllers\ReprintRequestController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
+use Modules\Warehouse\Http\Controllers\PostexController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 
 
@@ -156,5 +157,19 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/bulk-register', [TapinController::class, 'bulkRegister'])->name('warehouse.tapin.bulk-register');
         Route::get('/diagnostic-states', [TapinController::class, 'diagnosticStates'])->name('warehouse.tapin.diagnostic-states');
         Route::get('/wc-states', [TapinController::class, 'tapinStatesForWc'])->name('warehouse.tapin.wc-states');
+    });
+
+    // Postex Integration
+    Route::prefix('postex')->group(function () {
+        Route::get('/', [PostexController::class, 'index'])->name('warehouse.postex.index');
+        Route::post('/save', [PostexController::class, 'saveSettings'])->name('warehouse.postex.save');
+        Route::post('/test', [PostexController::class, 'testConnection'])->name('warehouse.postex.test');
+        Route::get('/wallet', [PostexController::class, 'getWalletBalance'])->name('warehouse.postex.wallet');
+        Route::get('/profile', [PostexController::class, 'getUserProfile'])->name('warehouse.postex.profile');
+        Route::get('/provinces', [PostexController::class, 'getProvinces'])->name('warehouse.postex.provinces');
+        Route::get('/cities', [PostexController::class, 'getCities'])->name('warehouse.postex.cities');
+        Route::post('/calculate-price', [PostexController::class, 'calculatePrice'])->name('warehouse.postex.calculate-price');
+        Route::post('/track', [PostexController::class, 'track'])->name('warehouse.postex.track');
+        Route::post('/set-provider', [PostexController::class, 'setProvider'])->name('warehouse.postex.set-provider');
     });
 });
