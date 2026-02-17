@@ -295,16 +295,16 @@ class PostexService
             ],
             'remark'          => 'تست اتصال از پنل',
             'courier'         => [
-                'name'        => $courier,
-                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'name'         => $courier,
+                'payment_type' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'service_type' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'firstname'   => 'تست',
-                    'lastname'    => 'تست',
-                    'mobileno'    => '09120000000',
-                    'telephoneno' => '09120000000',
+                    'first_name'   => 'تست',
+                    'last_name'    => 'تست',
+                    'mobile_no'    => '09120000000',
+                    'telephone_no' => '09120000000',
                 ],
                 'location' => [
                     'city_code' => 444,
@@ -314,10 +314,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'firstname'   => $fromFirst,
-                    'lastname'    => $fromLast,
-                    'mobileno'    => $fromPhone,
-                    'telephoneno' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
+                    'first_name'   => $fromFirst,
+                    'last_name'    => $fromLast,
+                    'mobile_no'    => $fromPhone,
+                    'telephone_no' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -325,11 +325,11 @@ class PostexService
                     'postcode'  => WarehouseSetting::get('postex_from_postcode', '1234567890'),
                 ],
             ],
-            'parcelproperties' => [
-                'totalvalue'  => 100000,
-                'totalweight' => 500,
-                'isfragile'   => false,
-                'isliquid'    => false,
+            'parcel_properties' => [
+                'total_value'  => 100000,
+                'total_weight' => 500,
+                'is_fragile'   => false,
+                'is_liquid'    => false,
             ],
         ];
 
@@ -576,8 +576,9 @@ class PostexService
         $recipientPhone  = $data['recipient_phone'] ?? $recipientMobile;
         $fromTelephone   = WarehouseSetting::get('postex_from_telephone', $fromPhone);
 
-        // ساختار payload - ALL LOWERCASE (مطابق مسیرهای خطای API پستکس)
-        // API مسیرهای خطا رو lowercase نشون میده: parcelproperties, courier.paymenttype, to.contact.firstname
+        // ساختار payload - snake_case مثل بقیه فیلدهای API که کار میکنن:
+        // collection_type, custom_order_no, city_code همه snake_case هستن و کار میکنن
+        // پس فیلدهای ترکیبی هم باید snake_case باشن
         $payload = [
             'collection_type' => $collectionType,
             'custom_order_no' => (string) $orderNo,
@@ -586,16 +587,16 @@ class PostexService
             ],
             'remark'          => $description,
             'courier'         => [
-                'name'        => $courierName,
-                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'name'         => $courierName,
+                'payment_type' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'service_type' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'firstname'   => $recipientFirst,
-                    'lastname'    => $recipientLast,
-                    'mobileno'    => $recipientMobile,
-                    'telephoneno' => $recipientPhone,
+                    'first_name'   => $recipientFirst,
+                    'last_name'    => $recipientLast,
+                    'mobile_no'    => $recipientMobile,
+                    'telephone_no' => $recipientPhone,
                 ],
                 'location' => [
                     'city_code' => $toCityCode,
@@ -605,10 +606,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'firstname'   => $fromFirst,
-                    'lastname'    => $fromLast,
-                    'mobileno'    => $fromPhone,
-                    'telephoneno' => $fromTelephone,
+                    'first_name'   => $fromFirst,
+                    'last_name'    => $fromLast,
+                    'mobile_no'    => $fromPhone,
+                    'telephone_no' => $fromTelephone,
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -616,11 +617,11 @@ class PostexService
                     'postcode'  => $fromPostcode,
                 ],
             ],
-            'parcelproperties' => [
-                'totalvalue'  => $totalValue,
-                'totalweight' => $weight,
-                'isfragile'   => false,
-                'isliquid'    => false,
+            'parcel_properties' => [
+                'total_value'  => $totalValue,
+                'total_weight' => $weight,
+                'is_fragile'   => false,
+                'is_liquid'    => false,
             ],
         ];
 
@@ -670,8 +671,8 @@ class PostexService
             // نسخه کد برای تشخیص آپدیت بودن - payload ارسالی رو هم نشون بده
             $payloadKeys = array_keys($payload['courier'] ?? []);
             $contactKeys = array_keys($payload['to']['contact'] ?? []);
-            $propsKey = isset($payload['parcelProperties']) ? 'parcelProperties' : (isset($payload['parcelproperties']) ? 'parcelproperties' : 'none');
-            $errorMsg .= ' [v7-lower|props:' . $propsKey . '|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
+            $propsKey = isset($payload['parcel_properties']) ? 'parcel_properties' : (isset($payload['parcelproperties']) ? 'parcelproperties' : 'none');
+            $errorMsg .= ' [v8-snake|props:' . $propsKey . '|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
