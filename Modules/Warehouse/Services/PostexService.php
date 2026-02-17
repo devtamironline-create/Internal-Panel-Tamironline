@@ -618,7 +618,19 @@ class PostexService
                 return ['success' => false, 'message' => 'پستکس: ثبت شد ولی بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
             }
 
-            $errorMsg = $body['message'] ?? json_encode($body['invalid_fields'] ?? $body, JSON_UNESCAPED_UNICODE);
+            $errorMsg = $body['message'] ?? 'خطای نامشخص';
+            // همیشه invalid_fields رو نمایش بده تا بفهمیم کدوم فیلد مشکل داره
+            if (!empty($body['invalid_fields'])) {
+                $errorMsg .= ' | فیلدهای نامعتبر: ' . json_encode($body['invalid_fields'], JSON_UNESCAPED_UNICODE);
+            }
+            // اگه errors هم داشت نشون بده
+            if (!empty($body['errors'])) {
+                $errorMsg .= ' | خطاها: ' . json_encode($body['errors'], JSON_UNESCAPED_UNICODE);
+            }
+            // اگه هیچ جزئیاتی نبود کل body رو نشون بده
+            if (empty($body['invalid_fields']) && empty($body['errors']) && empty($body['message'])) {
+                $errorMsg = json_encode($body, JSON_UNESCAPED_UNICODE);
+            }
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
