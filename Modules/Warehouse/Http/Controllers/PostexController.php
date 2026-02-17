@@ -178,11 +178,14 @@ class PostexController extends Controller
 
         $cityCode = $service->findCityCode($testCity, $testState);
 
+        // تست probe endpoint قبل از ثبت واقعی
+        $probeResult = $service->probeCreateEndpoints();
+
         $result = $service->createShipment([
             'external_order_id'    => 'TEST-' . now()->timestamp,
             'recipient_name'       => 'تست تست',
             'recipient_mobile'     => '09120000000',
-            'recipient_address'    => 'آدرس تست',
+            'recipient_address'    => 'تهران، خیابان تست، پلاک ۱',
             'recipient_postal_code'=> $testPostcode,
             'to_city_code'         => $cityCode,
             'weight'               => 500,
@@ -192,6 +195,7 @@ class PostexController extends Controller
 
         return response()->json([
             'city_code_found' => $cityCode,
+            'probe'           => $probeResult,
             'result'          => $result,
         ]);
     }

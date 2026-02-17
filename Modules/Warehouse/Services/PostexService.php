@@ -174,6 +174,10 @@ class PostexService
         }
     }
 
+    /**
+     * محاسبه هزینه جمع آوری و ارسال
+     * POST /api/v1/shipping/price
+     */
     public function calculateShippingCost(array $data): array
     {
         if (!$this->isConfigured()) {
@@ -181,14 +185,23 @@ class PostexService
         }
 
         try {
+            $collectionType = $data['collection_type']
+                ?? WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+            $fromCityCode = $data['from_city_code']
+                ?? (int) WarehouseSetting::get('postex_from_city_code', 444);
+
             $payload = [
-                'collection_type' => $data['collection_type'] ?? 'postex_drop_off',
-                'from_city_code' => $data['from_city_code'] ?? 444,
-                'parcels' => $data['parcels'] ?? [],
+                'collection_type' => $collectionType,
+                'from_city_code'  => $fromCityCode,
+                'parcels'         => $data['parcels'] ?? [],
             ];
 
             if (!empty($data['courier'])) {
                 $payload['courier'] = $data['courier'];
+            }
+
+            if (!empty($data['value_added_service'])) {
+                $payload['value_added_service'] = $data['value_added_service'];
             }
 
             $response = Http::timeout(15)
@@ -196,11 +209,7 @@ class PostexService
                 ->post($this->endpoint('shipping/price'), $payload);
 
             if ($response->successful()) {
-                $result = $response->json() ?? [];
-                return [
-                    'success' => true,
-                    'data' => $result,
-                ];
+                return ['success' => true, 'data' => $response->json() ?? []];
             }
 
             return ['success' => false, 'message' => $response->body()];
@@ -210,7 +219,11 @@ class PostexService
         }
     }
 
-    public function trackShipment(string $trackingCode): array
+    /**
+     * رهگیری مرسوله با شناسه مرسوله (parcel-no)
+     * GET /api/v1/tracking/{parcel-no}
+     */
+    public function trackShipment(string $parcelNo): array
     {
         if (!$this->isConfigured()) {
             return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست.'];
@@ -219,7 +232,7 @@ class PostexService
         try {
             $response = Http::timeout(15)
                 ->withHeaders($this->getHeaders())
-                ->get($this->endpoint("tracking/parcel/{$trackingCode}"));
+                ->get($this->endpoint("tracking/{$parcelNo}"));
 
             if ($response->successful()) {
                 $result = $response->json() ?? [];
@@ -228,87 +241,202 @@ class PostexService
 
             return ['success' => false, 'message' => $response->body()];
         } catch (\Exception $e) {
-            Log::error('Postex trackShipment error', ['tracking_code' => $trackingCode, 'error' => $e->getMessage()]);
+            Log::error('Postex trackShipment error', ['parcel_no' => $parcelNo, 'error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
     /**
-     * تست چند endpoint مختلف برای یافتن مسیر صحیح ثبت مرسوله
+     * رهگیری سفارش با بارکد (courier + tracking-code)
+     * GET /api/v1/tracking/{courier}/{tracking-code}
+     */
+    public function trackByBarcode(string $courier, string $trackingCode): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست.'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint("tracking/{$courier}/{$trackingCode}"));
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json() ?? []];
+            }
+
+            return ['success' => false, 'message' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Postex trackByBarcode error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * تست endpoint ثبت مرسوله با payload صحیح (بر اساس مستندات رسمی)
+     * فقط POST /api/v1/parcel تست می‌شه
      */
     public function probeCreateEndpoints(): array
     {
         $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
-        $fromCityCode   = (int) WarehouseSetting::get('postex_from_city_code', 444);
 
+        // payload بر اساس ساختار رسمی مستندات پستکس
         $samplePayload = [
             'collection_type' => $collectionType,
-            'from_city_code'  => $fromCityCode,
+            'remark'          => 'تست اتصال از پنل',
+            'custom_batch_no' => '',
+            'custom_channel'  => 'tamironline_panel',
             'parcels'         => [[
-                'amount'               => 100000,
-                'description'          => 'تست',
-                'weight'               => 500,
-                'to_city_code'         => 444,
-                'recipient_name'       => 'تست تست',
-                'recipient_phone'      => '09120000000',
-                'recipient_postal_code'=> '1234567890',
-                'recipient_address'    => 'تهران، آدرس تست',
+                'custom_order_no' => 'TEST-PROBE-' . now()->timestamp,
+                'request_label'   => false,
+                'to' => [
+                    'contact' => [
+                        'name'         => 'تست تست',
+                        'cellphone_no' => '09120000000',
+                    ],
+                    'location' => [
+                        'city_code' => 444,
+                        'address'   => 'تهران، آدرس تست',
+                        'postcode'  => '1234567890',
+                    ],
+                ],
+                'parcel_items' => [[
+                    'name'  => 'کالای تست',
+                    'count' => 1,
+                    'value' => 100000,
+                ]],
+                'parcel_properties' => [
+                    'total_value'  => 100000,
+                    'total_weight' => 500,
+                    'is_fragile'   => false,
+                    'is_liquid'    => false,
+                ],
             ]],
         ];
 
-        // endpoint های احتمالی برای ثبت مرسوله
-        $endpoints = [
-            'parcel/create',
-            'parcel/add',
-            'parcel/register',
-            'parcel/store',
-            'parcel',
-            'parcels',
-            'order/add',
-            'order/create',
-            'order/register',
-            'order/store',
-            'order',
-            'orders',
-            'shipment/create',
-            'shipment/add',
-            'shipments',
-            'shipping/create',
-            'shipping/add',
-            'shipping/register',
-            'register',
-            'register/parcel',
-        ];
-
         $results = [];
-        foreach ($endpoints as $path) {
-            try {
-                $response = Http::timeout(8)
-                    ->withHeaders($this->getHeaders())
-                    ->post($this->endpoint($path), $samplePayload);
 
-                $results[$path] = [
-                    'status' => $response->status(),
-                    'body'   => $response->json() ?? substr($response->body(), 0, 300),
-                ];
-            } catch (\Exception $e) {
-                $results[$path] = ['status' => 'exception', 'body' => $e->getMessage()];
-            }
-        }
+        // تست endpoint اصلی: POST /api/v1/parcel
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('parcel'), $samplePayload);
 
-        // سعی کن Swagger/OpenAPI docs رو هم پیدا کن
-        $docPaths = ['swagger/index.html', 'swagger.json', 'openapi.json', 'docs', 'api-docs'];
-        $baseUrl = rtrim(WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'), '/');
-        foreach ($docPaths as $docPath) {
-            try {
-                $r = Http::timeout(5)->withHeaders($this->getHeaders())->get($baseUrl . '/' . $docPath);
-                if ($r->status() !== 404) {
-                    $results['[DOCS] ' . $docPath] = ['status' => $r->status(), 'body' => substr($r->body(), 0, 200)];
-                }
-            } catch (\Exception $e) {}
+            $results['parcel'] = [
+                'status' => $response->status(),
+                'body'   => $response->json() ?? substr($response->body(), 0, 500),
+            ];
+        } catch (\Exception $e) {
+            $results['parcel'] = ['status' => 'exception', 'body' => $e->getMessage()];
         }
 
         return $results;
+    }
+
+    /**
+     * دریافت اطلاعات مرسوله با شماره سفارش مشتری (custom_order_no)
+     * GET /api/v1/parcel/custom-order-no/{custom-order-no}
+     */
+    public function getParcelByCustomOrderNo(string $customOrderNo): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint("parcel/custom-order-no/{$customOrderNo}"));
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json() ?? []];
+            }
+
+            return ['success' => false, 'message' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Postex getParcelByCustomOrderNo error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * دریافت اطلاعات مرسوله با شناسه مرسوله (parcel_no)
+     * GET /api/v1/parcel/{parcel-no}
+     */
+    public function getParcelByNo(int $parcelNo): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint("parcel/{$parcelNo}"));
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json() ?? []];
+            }
+
+            return ['success' => false, 'message' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Postex getParcelByNo error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * تولید برچسب پستی
+     * GET /api/v1/parcel/{parcel-no}/label
+     */
+    public function getLabel(string $parcelNo): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint("parcel/{$parcelNo}/label"));
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json() ?? []];
+            }
+
+            return ['success' => false, 'message' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Postex getLabel error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * درخواست انصراف از ارسال مرسوله
+     * POST /api/v1/parcel/{parcel-no}/cancel
+     */
+    public function cancelParcel(int $parcelNo, string $reason = ''): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات پستکس کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint("parcel/{$parcelNo}/cancel"), [
+                    'reason' => $reason ?: 'انصراف از ارسال',
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json() ?? []];
+            }
+
+            return ['success' => false, 'message' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error('Postex cancelParcel error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     /**
@@ -355,6 +483,8 @@ class PostexService
 
     /**
      * ثبت مرسوله در پستکس
+     * مستندات: POST /api/v1/parcel
+     * ساختار: { collection_type, remark, custom_batch_no, custom_channel, parcels: [{ to, parcel_items, parcel_properties, ... }] }
      */
     public function createShipment(array $data): array
     {
@@ -363,62 +493,121 @@ class PostexService
         }
 
         $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
-        $fromCityCode   = (int) WarehouseSetting::get('postex_from_city_code', 444);
 
         $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
         if (empty($postcode) || strlen($postcode) !== 10) {
             return ['success' => false, 'message' => 'کد پستی نامعتبر است (باید ۱۰ رقم باشد): "' . ($postcode ?: 'خالی') . '"'];
         }
 
-        $toCityCode = $data['to_city_code'] ?? null;
+        $toCityCode  = $data['to_city_code'] ?? null;
+        $weight      = (int)($data['weight'] ?? 500);
+        $totalValue  = (int)($data['value'] ?? 100000);
+        $description = $data['description'] ?? ('سفارش ' . ($data['external_order_id'] ?? ''));
+        $orderNo     = $data['external_order_id'] ?? '';
 
+        // ساختار payload بر اساس مستندات رسمی پستکس
         $payload = [
             'collection_type' => $collectionType,
-            'from_city_code'  => $fromCityCode,
+            'remark'          => $description,
+            'custom_batch_no' => '',
+            'custom_channel'  => 'tamironline_panel',
             'parcels'         => [[
-                'amount'               => (int)($data['value'] ?? 100000),
-                'description'          => $data['description'] ?? ('سفارش ' . ($data['external_order_id'] ?? '')),
-                'weight'               => (int)($data['weight'] ?? 500),
-                'to_city_code'         => $toCityCode,
-                'recipient_name'       => $data['recipient_name'] ?? '',
-                'recipient_phone'      => $this->formatMobile($data['recipient_mobile'] ?? ''),
-                'recipient_postal_code'=> $postcode,
-                'recipient_address'    => $data['recipient_address'] ?? '',
+                'custom_order_no' => (string) $orderNo,
+                'request_label'   => true,
+                'to' => [
+                    'contact' => [
+                        'name'         => $data['recipient_name'] ?? '',
+                        'cellphone_no' => $this->formatMobile($data['recipient_mobile'] ?? ''),
+                    ],
+                    'location' => [
+                        'city_code' => $toCityCode,
+                        'address'   => $data['recipient_address'] ?? '',
+                        'postcode'  => $postcode,
+                    ],
+                ],
+                'parcel_items' => [[
+                    'name'  => $description,
+                    'count' => 1,
+                    'value' => $totalValue,
+                ]],
+                'parcel_properties' => [
+                    'total_value'  => $totalValue,
+                    'total_weight' => $weight,
+                    'is_fragile'   => false,
+                    'is_liquid'    => false,
+                ],
             ]],
         ];
 
-        Log::info('Postex createShipment payload', ['order' => $data['external_order_id'] ?? '', 'payload' => $payload]);
+        Log::info('Postex createShipment payload', ['order' => $orderNo, 'payload' => $payload]);
 
         try {
+            // endpoint صحیح: POST /api/v1/parcel
             $response = Http::timeout(30)
                 ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('parcel/create'), $payload);
+                ->post($this->endpoint('parcel'), $payload);
 
             $body = $response->json() ?? [];
-            Log::info('Postex createShipment response', ['order' => $data['external_order_id'] ?? '', 'status' => $response->status(), 'body' => $body]);
+            Log::info('Postex createShipment response', [
+                'order'  => $orderNo,
+                'status' => $response->status(),
+                'body'   => $body,
+            ]);
 
             if ($response->successful() && !empty($body)) {
-                // پستکس tracking number یا barcode برمی‌گردونه
-                $parcel  = is_array($body['data'] ?? null) ? ($body['data'][0] ?? $body['data']) : ($body[0] ?? $body);
-                $barcode = $parcel['tracking_number']
-                    ?? $parcel['barcode']
-                    ?? $parcel['tracking_code']
-                    ?? ($body['tracking_number'] ?? null)
-                    ?? ($body['barcode'] ?? null);
+                // استخراج بارکد / tracking از پاسخ
+                $barcode = $this->extractBarcode($body);
 
                 if (!empty($barcode)) {
-                    return ['success' => true, 'data' => ['barcode' => (string)$barcode, 'raw' => $parcel]];
+                    return ['success' => true, 'data' => ['barcode' => (string)$barcode, 'raw' => $body]];
                 }
 
-                return ['success' => false, 'message' => 'پستکس: بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
+                return ['success' => false, 'message' => 'پستکس: ثبت شد ولی بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
+            }
+
+            // هندل کردن خطاهای خاص
+            if ($response->status() === 402) {
+                return ['success' => false, 'message' => 'پستکس: موجودی کیف پول کافی نیست. لطفاً کیف پول را شارژ کنید.'];
             }
 
             $errorMsg = $body['message'] ?? $body['error'] ?? $body['detail'] ?? $response->body();
-            return ['success' => false, 'message' => 'پستکس: ' . $errorMsg];
+            return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * استخراج بارکد/tracking از پاسخ پستکس
+     */
+    protected function extractBarcode(array $body): ?string
+    {
+        // حالت‌های مختلف پاسخ پستکس
+        $candidates = [
+            // { data: [{ parcel_no: ..., tracking_no: ... }] }
+            $body['data'][0]['tracking_no'] ?? null,
+            $body['data'][0]['parcel_no'] ?? null,
+            $body['data'][0]['tracking_number'] ?? null,
+            $body['data'][0]['barcode'] ?? null,
+            // { data: { tracking_no: ... } }
+            $body['data']['tracking_no'] ?? null,
+            $body['data']['parcel_no'] ?? null,
+            // flat response
+            $body['tracking_no'] ?? null,
+            $body['parcel_no'] ?? null,
+            $body['tracking_number'] ?? null,
+            $body['barcode'] ?? null,
+            // array response [{ ... }]
+            $body[0]['tracking_no'] ?? null,
+            $body[0]['parcel_no'] ?? null,
+        ];
+
+        foreach ($candidates as $val) {
+            if (!empty($val)) return (string) $val;
+        }
+
+        return null;
     }
 
     protected function formatMobile(?string $mobile): string
