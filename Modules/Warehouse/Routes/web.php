@@ -178,5 +178,6 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/calculate-price', [PostexController::class, 'calculatePrice'])->name('warehouse.postex.calculate-price');
         Route::post('/track', [PostexController::class, 'track'])->name('warehouse.postex.track');
         Route::post('/set-provider', [PostexController::class, 'setProvider'])->name('warehouse.postex.set-provider');
+        Route::get('/debug-create', [PostexController::class, 'debugCreateShipment'])->name('warehouse.postex.debug-create');
     });
 });

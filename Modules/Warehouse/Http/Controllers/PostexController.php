@@ -161,6 +161,42 @@ class PostexController extends Controller
         return response()->json($result);
     }
 
+    public function debugCreateShipment(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new PostexService();
+        if (!$service->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'API Key تنظیم نشده']);
+        }
+
+        // تست با داده‌های نمونه
+        $testPostcode = $request->get('postcode', '1234567890');
+        $testCity     = $request->get('city', 'تهران');
+        $testState    = $request->get('state', 'تهران');
+
+        $cityCode = $service->findCityCode($testCity, $testState);
+
+        $result = $service->createShipment([
+            'external_order_id'    => 'TEST-' . now()->timestamp,
+            'recipient_name'       => 'تست تست',
+            'recipient_mobile'     => '09120000000',
+            'recipient_address'    => 'آدرس تست',
+            'recipient_postal_code'=> $testPostcode,
+            'to_city_code'         => $cityCode,
+            'weight'               => 500,
+            'value'                => 100000,
+            'description'          => 'تست ثبت سفارش',
+        ]);
+
+        return response()->json([
+            'city_code_found' => $cityCode,
+            'result'          => $result,
+        ]);
+    }
+
     public function setProvider(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {

@@ -166,7 +166,7 @@
             };
         @endphp
         <span style="font-size:11px;color:#888;font-family:'Vazirmatn',Tahoma;">سرویس: {{ $providerLabel }}</span>
-        @if($order->shipping_type === 'post' && empty($order->amadest_barcode))
+        @if($order->shipping_type === 'post' && (empty($order->amadest_barcode) || !empty($registrationError) || ($shippingProvider ?? 'amadest') === 'postex'))
         <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ $providerLabel }}</button>
         @endif
     </div>

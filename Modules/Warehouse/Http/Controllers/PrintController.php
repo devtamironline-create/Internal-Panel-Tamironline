@@ -206,6 +206,17 @@ class PrintController extends Controller
             $order->refresh();
         }
 
+        // اگه سرویس پستکس هست ولی بارکد قدیمی آمادست داره، پاک کن تا دوباره ثبت بشه
+        $postexRegistered = ($wcData['postex']['registered'] ?? false);
+        if ($order->shipping_type === 'post' && $shippingProvider === 'postex' && !empty($order->amadest_barcode) && !$postexRegistered) {
+            Log::info('Clearing old barcode for Postex re-registration', [
+                'order' => $order->order_number,
+                'old_barcode' => $order->amadest_barcode,
+            ]);
+            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
+            $order->refresh();
+        }
+
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
                 $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];

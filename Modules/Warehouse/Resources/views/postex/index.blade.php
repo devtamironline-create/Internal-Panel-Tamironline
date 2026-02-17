@@ -96,9 +96,31 @@
                 <div class="flex items-center gap-3 pt-4 border-t">
                     <button type="submit" class="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">ذخیره تنظیمات</button>
                     <button type="button" onclick="testPostexConnection()" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">تست اتصال</button>
+                    <button type="button" onclick="debugCreateShipment()" class="px-6 py-2.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 font-medium text-sm">تست ثبت سفارش</button>
                 </div>
             </form>
             <div id="postex-test-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
+
+            <!-- Debug Create Form -->
+            <div id="debug-create-section" class="hidden mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <h3 class="text-sm font-bold text-orange-800 mb-3">تست ثبت سفارش در پستکس (با داده نمونه)</h3>
+                <div class="grid grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="text-xs text-gray-600">کد پستی (۱۰ رقم)</label>
+                        <input type="text" id="debug-postcode" value="1234567890" dir="ltr" class="w-full mt-1 px-3 py-2 border rounded text-sm font-mono">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600">شهر</label>
+                        <input type="text" id="debug-city" value="تهران" class="w-full mt-1 px-3 py-2 border rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600">استان</label>
+                        <input type="text" id="debug-state" value="تهران" class="w-full mt-1 px-3 py-2 border rounded text-sm">
+                    </div>
+                </div>
+                <button onclick="runDebugCreate()" class="px-4 py-2 bg-orange-600 text-white rounded text-sm font-medium">اجرای تست</button>
+                <pre id="debug-create-result" class="hidden mt-3 p-3 bg-gray-900 text-green-400 text-xs rounded overflow-auto max-h-64 text-left" dir="ltr"></pre>
+            </div>
         </div>
 
         <!-- Wallet & Profile -->
@@ -357,6 +379,32 @@ function trackPostex() {
         }
     })
     .catch(() => showResult('tracking-result', false, 'خطا در ارتباط'));
+}
+
+function debugCreateShipment() {
+    const section = document.getElementById('debug-create-section');
+    section.classList.toggle('hidden');
+}
+
+function runDebugCreate() {
+    const postcode = document.getElementById('debug-postcode').value;
+    const city     = document.getElementById('debug-city').value;
+    const state    = document.getElementById('debug-state').value;
+    const result   = document.getElementById('debug-create-result');
+
+    result.classList.remove('hidden');
+    result.textContent = 'در حال ارسال درخواست به پستکس...';
+
+    fetch(`{{ route('warehouse.postex.debug-create') }}?postcode=${encodeURIComponent(postcode)}&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        result.textContent = JSON.stringify(data, null, 2);
+    })
+    .catch(e => {
+        result.textContent = 'خطا: ' + e.message;
+    });
 }
 </script>
 @endpush
