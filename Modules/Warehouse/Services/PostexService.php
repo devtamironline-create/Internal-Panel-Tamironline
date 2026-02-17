@@ -550,6 +550,19 @@ class PostexService
         $cityName = trim($cityName);
         if (empty($cityName)) return null;
 
+        // ابتدا از جدول mapping دستی ادمین استفاده کن (اولویت بالا)
+        $cityMapRaw = WarehouseSetting::get('postex_city_map', '');
+        if (!empty($cityMapRaw)) {
+            foreach (explode("\n", $cityMapRaw) as $line) {
+                $line = trim($line);
+                if (empty($line) || !str_contains($line, ':')) continue;
+                [$mapCity, $mapCode] = explode(':', $line, 2);
+                if (trim($mapCity) === $cityName && is_numeric(trim($mapCode))) {
+                    return (int) trim($mapCode);
+                }
+            }
+        }
+
         // تبدیل کد WooCommerce به نام فارسی استان (مثلاً FA → فارس)
         $provinceName = trim($provinceName);
         if (!empty($provinceName) && isset(self::$wcProvinceCodes[strtoupper($provinceName)])) {

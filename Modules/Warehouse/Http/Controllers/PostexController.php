@@ -34,6 +34,7 @@ class PostexController extends Controller
             'payment_type'        => WarehouseSetting::get('postex_payment_type', '0'),
             'service_type'        => WarehouseSetting::get('postex_service_type', '0'),
             'fallback_city_code'  => WarehouseSetting::get('postex_fallback_city_code', ''),
+            'city_map'            => WarehouseSetting::get('postex_city_map', ''),
         ];
 
         return view('warehouse::postex.index', compact('settings'));
@@ -59,6 +60,7 @@ class PostexController extends Controller
             'payment_type'        => 'nullable|integer|min:0|max:10',
             'service_type'        => 'nullable|integer|min:0|max:10',
             'fallback_city_code'  => 'nullable|integer|min:1',
+            'city_map'            => 'nullable|string|max:5000',
         ]);
 
         if (!empty($validated['api_url'])) {
@@ -99,6 +101,9 @@ class PostexController extends Controller
         }
         if (isset($validated['fallback_city_code'])) {
             WarehouseSetting::set('postex_fallback_city_code', $validated['fallback_city_code']);
+        }
+        if (isset($validated['city_map'])) {
+            WarehouseSetting::set('postex_city_map', $validated['city_map']);
         }
 
         if ($request->wantsJson()) {

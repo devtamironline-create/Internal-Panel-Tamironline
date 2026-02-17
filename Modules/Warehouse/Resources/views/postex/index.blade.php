@@ -159,6 +159,16 @@
                     </div>
                 </div>
 
+                <!-- نقشه شهرها - چون API پستکس endpoint شهر ندارد باید دستی وارد شود -->
+                <div class="pt-3 border-t border-purple-100">
+                    <h3 class="text-sm font-semibold text-purple-700 mb-1">نقشه کد شهرهای مقصد</h3>
+                    <p class="text-xs text-gray-500 mb-2">چون API پستکس لیست شهر ندارد، اینجا شهرهای سایت خود را به کد پستکس map کنید. هر خط: <span dir="ltr" class="font-mono bg-gray-100 px-1">نام شهر:کد</span> — مثال: <span dir="ltr" class="font-mono bg-gray-100 px-1">شیراز:123</span></p>
+                    <textarea name="city_map" rows="6" dir="ltr"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                              placeholder="شیراز:123&#10;سروستان:456&#10;تهران:444">{{ $settings['city_map'] ?? '' }}</textarea>
+                    <p class="text-xs text-gray-400 mt-1">کدها را از پشتیبانی پستکس یا مستندات API بگیرید. همچنین کد شهر پیش‌فرض بالا را پر کنید تا شهرهای ناشناخته block نشوند.</p>
+                </div>
+
                 <div class="flex items-center gap-3 pt-4 border-t">
                     <button type="submit" class="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">ذخیره تنظیمات</button>
                     <button type="button" onclick="testPostexConnection()" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">تست اتصال</button>
