@@ -189,11 +189,27 @@ class PostexController extends Controller
             abort(403);
         }
 
+        Cache::forget('postex_cities_all');
         $service = new PostexService();
         $search  = trim($request->get('search', ''));
         $cities  = $service->getCities();
 
-        if (!empty($search)) {
+        // اگه خالی بود، raw response رو برای debug نشون بده
+        $rawDebug = null;
+        if (empty($cities)) {
+            try {
+                $apiUrl = rtrim(WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'), '/');
+                $apiKey = WarehouseSetting::get('postex_api_key');
+                $rawResp = \Illuminate\Support\Facades\Http::timeout(20)
+                    ->withHeaders(['x-api-key' => $apiKey, 'Accept' => 'application/json'])
+                    ->get($apiUrl . '/api/v1/locality/cities/all');
+                $rawDebug = ['status' => $rawResp->status(), 'body' => substr($rawResp->body(), 0, 500)];
+            } catch (\Exception $e) {
+                $rawDebug = ['error' => $e->getMessage()];
+            }
+        }
+
+        if (!empty($search) && !empty($cities)) {
             $cities = array_values(array_filter($cities, function ($c) use ($search) {
                 $name = $c['name'] ?? $c['title'] ?? '';
                 return str_contains($name, $search);
@@ -204,6 +220,8 @@ class PostexController extends Controller
             'success' => !empty($cities),
             'data'    => $cities,
             'count'   => count($cities),
+            'debug'   => $rawDebug,
+            'message' => empty($cities) ? 'API /locality/cities/all خالی برگشت' : null,
         ]);
     }
 
