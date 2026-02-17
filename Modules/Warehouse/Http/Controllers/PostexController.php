@@ -189,39 +189,33 @@ class PostexController extends Controller
             abort(403);
         }
 
-        Cache::forget('postex_cities_all');
         $service = new PostexService();
         $search  = trim($request->get('search', ''));
-        $cities  = $service->getCities();
 
-        // اگه خالی بود، raw response رو برای debug نشون بده
-        $rawDebug = null;
-        if (empty($cities)) {
-            try {
-                $apiUrl = rtrim(WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'), '/');
-                $apiKey = WarehouseSetting::get('postex_api_key');
-                $rawResp = \Illuminate\Support\Facades\Http::timeout(20)
-                    ->withHeaders(['x-api-key' => $apiKey, 'Accept' => 'application/json'])
-                    ->get($apiUrl . '/api/v1/locality/cities/all');
-                $rawDebug = ['status' => $rawResp->status(), 'body' => substr($rawResp->body(), 0, 500)];
-            } catch (\Exception $e) {
-                $rawDebug = ['error' => $e->getMessage()];
-            }
+        // بدون search: فقط تعداد رو نشون بده - لیست کامل خیلی بزرگه و JSON رو خراب میکنه
+        if (empty($search)) {
+            $cities = $service->getCities();
+            return response()->json([
+                'success' => !empty($cities),
+                'data'    => [],
+                'count'   => count($cities),
+                'message' => empty($cities)
+                    ? 'شهری بارگذاری نشد'
+                    : count($cities) . ' شهر در سیستم. نام شهر را جستجو کنید.',
+            ]);
         }
 
-        if (!empty($search) && !empty($cities)) {
-            $cities = array_values(array_filter($cities, function ($c) use ($search) {
-                $name = $c['name'] ?? $c['title'] ?? '';
-                return str_contains($name, $search);
-            }));
-        }
+        // با search: فیلتر server-side و فقط نتایج کوچک برگردون
+        $cities   = $service->getCities();
+        $filtered = array_values(array_filter($cities, function ($c) use ($search) {
+            $name = $c['name'] ?? $c['title'] ?? '';
+            return str_contains($name, $search);
+        }));
 
         return response()->json([
-            'success' => !empty($cities),
-            'data'    => $cities,
-            'count'   => count($cities),
-            'debug'   => $rawDebug,
-            'message' => empty($cities) ? 'API /locality/cities/all خالی برگشت' : null,
+            'success' => !empty($filtered),
+            'data'    => $filtered,
+            'count'   => count($filtered),
         ]);
     }
 
