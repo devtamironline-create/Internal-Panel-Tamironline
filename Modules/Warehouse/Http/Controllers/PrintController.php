@@ -450,6 +450,7 @@ class PrintController extends Controller
             'recipient_mobile'     => $order->customer_mobile,
             'recipient_address'    => $fullAddress ?: 'آدرس نامشخص',
             'recipient_postal_code'=> $postcode,
+            'recipient_city'       => $city,
             'to_city_code'         => $toCityCode,
             'weight'               => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
             'value'                => (int)($wcData['total'] ?? 100000),

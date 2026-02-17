@@ -552,6 +552,11 @@ class PostexService
         }
 
         $toCityCode  = $data['to_city_code'] ?? null;
+        if (empty($toCityCode)) {
+            return ['success' => false, 'message' => 'کد شهر مقصد یافت نشد — شهر "' . ($data['recipient_city'] ?? '?') . '" در سیستم پستکس ثبت نشده یا API شهرها در دسترس نیست'];
+        }
+        $toCityCode = (int) $toCityCode;
+
         $weight      = (int)($data['weight'] ?? 500);
         $totalValue  = (int)($data['value'] ?? 100000);
         $description = $data['description'] ?? ('سفارش ' . ($data['external_order_id'] ?? ''));
@@ -669,7 +674,7 @@ class PostexService
                     ? json_encode($body, JSON_UNESCAPED_UNICODE)
                     : substr($rawBody, 0, 500);
             }
-            $errorMsg .= ' [v10|label:false|ct:' . ($payload['collection_type'] ?? '?') . '|courier:' . ($payload['courier']['name'] ?? '?') . ']';
+            $errorMsg .= ' [v11|ct:' . ($payload['collection_type'] ?? '?') . '|courier:' . ($payload['courier']['name'] ?? '?') . '|to_city:' . ($payload['to']['location']['city_code'] ?? 'null') . '|from_city:' . ($payload['from']['location']['city_code'] ?? 'null') . '|pt:' . ($payload['courier']['payment_type'] ?? '?') . '|st:' . ($payload['courier']['service_type'] ?? '?') . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
