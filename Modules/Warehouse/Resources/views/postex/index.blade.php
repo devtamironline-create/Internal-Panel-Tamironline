@@ -424,17 +424,21 @@ function probeEndpoints() {
     .then(r => r.json())
     .then(data => {
         const out = document.getElementById('probe-output');
-        let text = '';
+        let positives = '', negatives = '';
         for (const [path, res] of Object.entries(data)) {
             const status = res.status;
-            const ok = status >= 200 && status < 300;
-            text += `[${ok ? '✓' : '✗'} ${status}] ${path}\n`;
-            if (ok || status === 400 || status === 422) {
-                text += '  → ' + JSON.stringify(res.body).substring(0, 200) + '\n';
+            const notFound = status === 404 || status === 'err';
+            const ok = !notFound;
+            const line = `[${status}] ${path}` + (res.url ? `\n    URL: ${res.url}` : '') + '\n';
+            if (ok) {
+                positives += '★ ' + line + '    body: ' + JSON.stringify(res.body).substring(0, 300) + '\n\n';
+            } else {
+                negatives += '  ' + line;
             }
-            text += '\n';
         }
-        out.textContent = text;
+        out.textContent = positives
+            ? '=== مسیرهای فعال ===\n' + positives + '\n=== مسیرهای 404 ===\n' + negatives
+            : '=== همه 404 هستند ===\n' + negatives;
     })
     .catch(e => {
         document.getElementById('probe-output').textContent = 'خطا: ' + e.message;

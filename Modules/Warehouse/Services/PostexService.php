@@ -273,19 +273,19 @@ class PostexService
     }
 
     /**
-     * تست endpoint ثبت مرسوله با payload صحیح (بر اساس مستندات رسمی)
-     * فقط POST /api/v1/parcel تست می‌شه
+     * تست endpoint های مختلف برای یافتن مسیر صحیح ثبت مرسوله
+     * با payload صحیح بر اساس مستندات رسمی
      */
     public function probeCreateEndpoints(): array
     {
         $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
 
-        // payload بر اساس ساختار رسمی مستندات پستکس
-        $samplePayload = [
+        // payload رسمی مستندات
+        $correctPayload = [
             'collection_type' => $collectionType,
             'remark'          => 'تست اتصال از پنل',
             'custom_batch_no' => '',
-            'custom_channel'  => 'tamironline_panel',
+            'custom_channel'  => '',
             'parcels'         => [[
                 'custom_order_no' => 'TEST-PROBE-' . now()->timestamp,
                 'request_label'   => false,
@@ -314,21 +314,53 @@ class PostexService
             ]],
         ];
 
+        // مسیرهای مختلف برای تست (v1 و v2)
+        $paths = [
+            'parcel',
+            'parcels',
+            'order',
+            'orders',
+            'order/create',
+            'order/add',
+            'order/batch',
+            'parcel/batch',
+            'parcel/add',
+            'parcel/create',
+            'parcel/register',
+            'shipment',
+            'shipments',
+        ];
+
         $results = [];
 
-        // تست endpoint اصلی: POST /api/v1/parcel
-        try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('parcel'), $samplePayload);
+        foreach ($paths as $path) {
+            foreach (['v1', 'v2'] as $ver) {
+                $url = $this->apiUrl . '/api/' . $ver . '/' . $path;
+                $key = $ver . '/' . $path;
+                try {
+                    $response = Http::timeout(8)
+                        ->withHeaders($this->getHeaders())
+                        ->post($url, $correctPayload);
 
-            $results['parcel'] = [
-                'status' => $response->status(),
-                'body'   => $response->json() ?? substr($response->body(), 0, 500),
-            ];
-        } catch (\Exception $e) {
-            $results['parcel'] = ['status' => 'exception', 'body' => $e->getMessage()];
+                    $status = $response->status();
+                    if ($status !== 404) {
+                        // هر چیزی که 404 نیست مهمه
+                        $results['★ ' . $key] = [
+                            'status' => $status,
+                            'url'    => $url,
+                            'body'   => $response->json() ?? substr($response->body(), 0, 400),
+                        ];
+                    } else {
+                        $results[$key] = ['status' => 404, 'url' => $url];
+                    }
+                } catch (\Exception $e) {
+                    $results[$key] = ['status' => 'err', 'url' => $url, 'err' => $e->getMessage()];
+                }
+            }
         }
+
+        // مرتب‌سازی: نتایج مثبت اول
+        uksort($results, fn($a, $b) => str_starts_with($b, '★') <=> str_starts_with($a, '★'));
 
         return $results;
     }
