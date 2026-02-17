@@ -493,10 +493,33 @@ class PostexService
     /**
      * جستجوی کد شهر مقصد بر اساس نام شهر و استان
      */
+    /**
+     * نقشه کدهای WooCommerce Iran به نام استان به فارسی
+     * WooCommerce ایران استان‌ها را با کد دو حرفی ذخیره می‌کند
+     */
+    protected static array $wcProvinceCodes = [
+        'TH' => 'تهران',       'IS' => 'اصفهان',      'FA' => 'فارس',
+        'KH' => 'خراسان رضوی', 'MZ' => 'مازندران',    'GB' => 'گیلان',
+        'KR' => 'کرمان',       'KG' => 'کردستان',     'AE' => 'آذربایجان شرقی',
+        'AW' => 'آذربایجان غربی', 'AR' => 'اردبیل',   'SM' => 'سمنان',
+        'SB' => 'سیستان و بلوچستان', 'CM' => 'چهارمحال و بختیاری',
+        'GS' => 'گلستان',      'ZJ' => 'زنجان',       'LO' => 'لرستان',
+        'KV' => 'خراسان شمالی','KS' => 'خراسان جنوبی','KZ' => 'خوزستان',
+        'KJ' => 'کهگیلویه و بویراحمد', 'QM' => 'قم', 'QZ' => 'قزوین',
+        'YZ' => 'یزد',         'EW' => 'کرمانشاه',    'IL' => 'ایلام',
+        'BU' => 'بوشهر',       'MK' => 'مرکزی',       'HM' => 'همدان',
+    ];
+
     public function findCityCode(string $cityName, string $provinceName = ''): ?int
     {
         $cityName = trim($cityName);
         if (empty($cityName)) return null;
+
+        // تبدیل کد WooCommerce به نام فارسی استان (مثلاً FA → فارس)
+        $provinceName = trim($provinceName);
+        if (!empty($provinceName) && isset(self::$wcProvinceCodes[strtoupper($provinceName)])) {
+            $provinceName = self::$wcProvinceCodes[strtoupper($provinceName)];
+        }
 
         // اگر استان داریم، اول از طریق استان پیدا کن
         if (!empty($provinceName)) {
@@ -551,9 +574,20 @@ class PostexService
             return ['success' => false, 'message' => 'کد پستی نامعتبر است (باید ۱۰ رقم باشد): "' . ($postcode ?: 'خالی') . '"'];
         }
 
-        $toCityCode  = $data['to_city_code'] ?? null;
+        $toCityCode = $data['to_city_code'] ?? null;
         if (empty($toCityCode)) {
-            return ['success' => false, 'message' => 'کد شهر مقصد یافت نشد — شهر "' . ($data['recipient_city'] ?? '?') . '" در سیستم پستکس ثبت نشده یا API شهرها در دسترس نیست'];
+            // اگه شهر پیدا نشد از fallback city code استفاده کن
+            $fallback = (int) WarehouseSetting::get('postex_fallback_city_code', 0);
+            if ($fallback > 0) {
+                Log::warning('Postex: city not found, using fallback city code', [
+                    'order' => $data['external_order_id'] ?? '',
+                    'city'  => $data['recipient_city'] ?? '',
+                    'fallback_city_code' => $fallback,
+                ]);
+                $toCityCode = $fallback;
+            } else {
+                return ['success' => false, 'message' => 'کد شهر مقصد یافت نشد — شهر "' . ($data['recipient_city'] ?? '?') . '" در سیستم پستکس ثبت نشده. یک "کد شهر پیش‌فرض" در تنظیمات پستکس وارد کنید.'];
+            }
         }
         $toCityCode = (int) $toCityCode;
 

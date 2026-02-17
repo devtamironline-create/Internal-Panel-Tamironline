@@ -141,6 +141,12 @@
                             <p class="text-gray-400 text-xs mt-1">تهران: 444</p>
                         </div>
                         <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">کد شهر پیش‌فرض مقصد</label>
+                            <input type="number" name="fallback_city_code" value="{{ $settings['fallback_city_code'] ?? '' }}" dir="ltr"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="444">
+                            <p class="text-gray-400 text-xs mt-1">اگه شهر سفارش در پستکس نبود از این کد استفاده میشه (مثلاً نزدیک‌ترین شهر بزرگ)</p>
+                        </div>
+                        <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">کد پستی مبدا (۱۰ رقم)</label>
                             <input type="text" name="from_postcode" value="{{ $settings['from_postcode'] ?? '' }}" dir="ltr"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" maxlength="10" placeholder="1234567890">

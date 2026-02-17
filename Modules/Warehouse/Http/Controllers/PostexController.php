@@ -30,8 +30,9 @@ class PostexController extends Controller
             'from_address'      => WarehouseSetting::get('postex_from_address', ''),
             'from_postcode'     => WarehouseSetting::get('postex_from_postcode', ''),
             'courier'           => WarehouseSetting::get('postex_courier', 'post'),
-            'payment_type'      => WarehouseSetting::get('postex_payment_type', '0'),
-            'service_type'      => WarehouseSetting::get('postex_service_type', '0'),
+            'payment_type'        => WarehouseSetting::get('postex_payment_type', '0'),
+            'service_type'        => WarehouseSetting::get('postex_service_type', '0'),
+            'fallback_city_code'  => WarehouseSetting::get('postex_fallback_city_code', ''),
         ];
 
         return view('warehouse::postex.index', compact('settings'));
@@ -54,8 +55,9 @@ class PostexController extends Controller
             'from_address'   => 'nullable|string|max:500',
             'from_postcode'  => 'nullable|string|max:10',
             'courier'        => 'nullable|string|max:50',
-            'payment_type'   => 'nullable|integer|min:0|max:10',
-            'service_type'   => 'nullable|integer|min:0|max:10',
+            'payment_type'        => 'nullable|integer|min:0|max:10',
+            'service_type'        => 'nullable|integer|min:0|max:10',
+            'fallback_city_code'  => 'nullable|integer|min:1',
         ]);
 
         if (!empty($validated['api_url'])) {
@@ -93,6 +95,9 @@ class PostexController extends Controller
         }
         if (isset($validated['service_type'])) {
             WarehouseSetting::set('postex_service_type', $validated['service_type']);
+        }
+        if (isset($validated['fallback_city_code'])) {
+            WarehouseSetting::set('postex_fallback_city_code', $validated['fallback_city_code']);
         }
 
         if ($request->wantsJson()) {
