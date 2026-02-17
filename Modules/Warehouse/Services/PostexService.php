@@ -668,6 +668,10 @@ class PostexService
             if (empty($body['invalid_fields']) && empty($body['errors']) && empty($body['message'])) {
                 $errorMsg = json_encode($body, JSON_UNESCAPED_UNICODE);
             }
+            // نسخه کد برای تشخیص آپدیت بودن - payload ارسالی رو هم نشون بده
+            $payloadKeys = array_keys($payload['courier'] ?? []);
+            $contactKeys = array_keys($payload['to']['contact'] ?? []);
+            $errorMsg .= ' [v5|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
