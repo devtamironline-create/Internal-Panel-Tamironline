@@ -486,7 +486,7 @@ class WooCommerceService
         'refunded'    => 'مسترد شده',
         'failed'      => 'ناموفق',
         'supply-wait' => 'در انتظار تامین',
-        'packed'      => 'در انتظار اسکن خروج',
+        'packed'      => 'در صف ارسال (خروج)',
         'shipped'     => 'ارسال شده',
         'returned'    => 'مرجوعی',
     ];

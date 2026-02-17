@@ -126,7 +126,7 @@ class WarehouseOrder extends Model
         return [
             self::STATUS_PENDING => 'در حال پردازش',
             self::STATUS_SUPPLY_WAIT => 'در انتظار تامین',
-            self::STATUS_PACKED => 'در انتظار اسکن خروج',
+            self::STATUS_PACKED => 'در صف ارسال (خروج)',
             self::STATUS_SHIPPED => 'ارسال شده',
             self::STATUS_DELIVERED => 'تحویل شده',
             self::STATUS_RETURNED => 'مرجوعی',
