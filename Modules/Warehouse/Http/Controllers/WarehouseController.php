@@ -522,7 +522,7 @@ class WarehouseController extends Controller
     /**
      * ذخیره کارتن و وزن قبل از پرینت (مرحله pending)
      * وزن خودکار محاسبه میشه: وزن محصولات + وزن کارتن
-     * بعد از تایید سفارش به وضعیت packed (در صف ارسال (خروج)) میره
+     * بعد از تایید سفارش به وضعیت packed (در صف ارسال (اسکن)) میره
      */
     public function confirmAndPrint(Request $request, WarehouseOrder $order)
     {
