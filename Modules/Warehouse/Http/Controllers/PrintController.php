@@ -11,6 +11,7 @@ use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\AmadestService;
+use Modules\Warehouse\Services\PostexService;
 use Modules\Warehouse\Services\TapinService;
 use Modules\SMS\Services\KavenegarService;
 
@@ -226,6 +227,8 @@ class PrintController extends Controller
 
                 if ($shippingProvider === 'tapin') {
                     $registrationError = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
+                } elseif ($shippingProvider === 'postex') {
+                    $registrationError = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state);
                 } else {
                     $registrationError = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
                 }
@@ -300,6 +303,8 @@ class PrintController extends Controller
         try {
             if ($shippingProvider === 'tapin') {
                 $error = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
+            } elseif ($shippingProvider === 'postex') {
+                $error = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state);
             } else {
                 $error = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
             }
@@ -409,6 +414,68 @@ class PrintController extends Controller
             ]);
             return 'آمادست: ' . $error;
         }
+    }
+
+    /**
+     * ثبت سفارش از طریق پستکس
+     * @return string|null خطا یا null اگه موفق بود
+     */
+    private function registerViaPostex(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
+    {
+        $postex = new PostexService();
+        if (!$postex->isConfigured()) {
+            return 'پستکس تنظیم نشده (API Key خالی)';
+        }
+
+        // یافتن کد شهر مقصد
+        $toCityCode = $postex->findCityCode($city, $state);
+        if (!$toCityCode) {
+            Log::warning('Postex: city code not found', ['order' => $order->order_number, 'city' => $city, 'state' => $state]);
+        }
+
+        $result = $postex->createShipment([
+            'external_order_id'    => $order->order_number,
+            'recipient_name'       => $order->customer_name,
+            'recipient_mobile'     => $order->customer_mobile,
+            'recipient_address'    => $fullAddress ?: 'آدرس نامشخص',
+            'recipient_postal_code'=> $postcode,
+            'to_city_code'         => $toCityCode,
+            'weight'               => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
+            'value'                => (int)($wcData['total'] ?? 100000),
+            'description'          => 'سفارش ' . $order->order_number,
+        ]);
+
+        Log::info('Postex auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
+
+        if ($result['success'] ?? false) {
+            $barcode = $result['data']['barcode'] ?? null;
+            if ($barcode) {
+                $order->amadest_barcode = (string) $barcode;
+                $order->tracking_code   = $order->tracking_code ?: (string) $barcode;
+                $order->post_tracking_code = (string) $barcode;
+                // ذخیره فلگ postex برای تشخیص
+                $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                $wcDataCurrent['postex']['registered'] = true;
+                $wcDataCurrent['postex']['barcode']    = (string) $barcode;
+                $order->wc_order_data = $wcDataCurrent;
+                $order->save();
+                Log::info('Postex barcode saved', ['order' => $order->order_number, 'barcode' => $barcode]);
+                OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, 'ثبت در پستکس — بارکد: ' . $barcode, [
+                    'provider' => 'postex',
+                    'barcode'  => $barcode,
+                ]);
+                return null;
+            }
+            return 'پستکس: ثبت شد ولی بارکد دریافت نشد';
+        }
+
+        $error = $result['message'] ?? 'خطای نامشخص';
+        Log::warning('Postex auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+        OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت پستکس: ' . $error, [
+            'provider' => 'postex',
+            'error'    => $error,
+        ]);
+        return 'پستکس: ' . $error;
     }
 
     /**

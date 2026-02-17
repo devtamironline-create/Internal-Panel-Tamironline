@@ -233,6 +233,116 @@ class PostexService
         }
     }
 
+    /**
+     * جستجوی کد شهر مقصد بر اساس نام شهر و استان
+     */
+    public function findCityCode(string $cityName, string $provinceName = ''): ?int
+    {
+        $cityName = trim($cityName);
+        if (empty($cityName)) return null;
+
+        // اگر استان داریم، اول از طریق استان پیدا کن
+        if (!empty($provinceName)) {
+            $provinces = $this->getProvinces();
+            $provinceCode = null;
+            foreach ($provinces as $prov) {
+                $pName = $prov['name'] ?? $prov['title'] ?? '';
+                if (str_contains($pName, $provinceName) || str_contains($provinceName, $pName)) {
+                    $provinceCode = $prov['code'] ?? $prov['id'] ?? null;
+                    break;
+                }
+            }
+            if ($provinceCode) {
+                $cities = $this->getCities($provinceCode);
+                foreach ($cities as $city) {
+                    $cName = $city['name'] ?? $city['title'] ?? '';
+                    if (str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
+                        return (int)($city['code'] ?? $city['id'] ?? 0) ?: null;
+                    }
+                }
+            }
+        }
+
+        // fallback: جستجو در همه شهرها
+        $allCities = $this->getCities();
+        foreach ($allCities as $city) {
+            $cName = $city['name'] ?? $city['title'] ?? '';
+            if (str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
+                return (int)($city['code'] ?? $city['id'] ?? 0) ?: null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ثبت مرسوله در پستکس
+     */
+    public function createShipment(array $data): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'پستکس تنظیم نشده (API Key خالی)'];
+        }
+
+        $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+        $fromCityCode   = (int) WarehouseSetting::get('postex_from_city_code', 444);
+
+        $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
+        if (empty($postcode) || strlen($postcode) !== 10) {
+            return ['success' => false, 'message' => 'کد پستی نامعتبر است (باید ۱۰ رقم باشد): "' . ($postcode ?: 'خالی') . '"'];
+        }
+
+        $toCityCode = $data['to_city_code'] ?? null;
+
+        $payload = [
+            'collection_type' => $collectionType,
+            'from_city_code'  => $fromCityCode,
+            'parcels'         => [[
+                'amount'               => (int)($data['value'] ?? 100000),
+                'description'          => $data['description'] ?? ('سفارش ' . ($data['external_order_id'] ?? '')),
+                'weight'               => (int)($data['weight'] ?? 500),
+                'to_city_code'         => $toCityCode,
+                'recipient_name'       => $data['recipient_name'] ?? '',
+                'recipient_phone'      => $this->formatMobile($data['recipient_mobile'] ?? ''),
+                'recipient_postal_code'=> $postcode,
+                'recipient_address'    => $data['recipient_address'] ?? '',
+            ]],
+        ];
+
+        Log::info('Postex createShipment payload', ['order' => $data['external_order_id'] ?? '', 'payload' => $payload]);
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('parcel/create'), $payload);
+
+            $body = $response->json() ?? [];
+            Log::info('Postex createShipment response', ['order' => $data['external_order_id'] ?? '', 'status' => $response->status(), 'body' => $body]);
+
+            if ($response->successful() && !empty($body)) {
+                // پستکس tracking number یا barcode برمی‌گردونه
+                $parcel  = is_array($body['data'] ?? null) ? ($body['data'][0] ?? $body['data']) : ($body[0] ?? $body);
+                $barcode = $parcel['tracking_number']
+                    ?? $parcel['barcode']
+                    ?? $parcel['tracking_code']
+                    ?? ($body['tracking_number'] ?? null)
+                    ?? ($body['barcode'] ?? null);
+
+                if (!empty($barcode)) {
+                    return ['success' => true, 'data' => ['barcode' => (string)$barcode, 'raw' => $parcel]];
+                }
+
+                return ['success' => false, 'message' => 'پستکس: بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
+            }
+
+            $errorMsg = $body['message'] ?? $body['error'] ?? $body['detail'] ?? $response->body();
+            return ['success' => false, 'message' => 'پستکس: ' . $errorMsg];
+        } catch (\Exception $e) {
+            Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     protected function formatMobile(?string $mobile): string
     {
         if (!$mobile) return '';

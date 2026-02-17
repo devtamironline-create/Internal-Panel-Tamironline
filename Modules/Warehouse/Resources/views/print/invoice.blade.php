@@ -158,9 +158,16 @@
         </span>
         @endif
 
-        <span style="font-size:11px;color:#888;font-family:'Vazirmatn',Tahoma;">سرویس: {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</span>
+        @php
+            $providerLabel = match($shippingProvider ?? 'amadest') {
+                'tapin'  => 'تاپین',
+                'postex' => 'پستکس',
+                default  => 'آمادست',
+            };
+        @endphp
+        <span style="font-size:11px;color:#888;font-family:'Vazirmatn',Tahoma;">سرویس: {{ $providerLabel }}</span>
         @if($order->shipping_type === 'post' && empty($order->amadest_barcode))
-        <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ ($shippingProvider ?? 'amadest') === 'tapin' ? 'تاپین' : 'آمادست' }}</button>
+        <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ $providerLabel }}</button>
         @endif
     </div>
     @if(!empty($registrationError))
