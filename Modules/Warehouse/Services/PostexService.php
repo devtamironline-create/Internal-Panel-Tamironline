@@ -296,8 +296,8 @@ class PostexService
             'remark'          => 'تست اتصال از پنل',
             'courier'         => [
                 'name'         => $courier,
-                'payment_type' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'service_type' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'payment_type' => (string) WarehouseSetting::get('postex_payment_type', '0'),
+                'service_type' => (string) WarehouseSetting::get('postex_service_type', '0'),
             ],
             'to' => [
                 'contact' => [
@@ -588,8 +588,8 @@ class PostexService
             'remark'          => $description,
             'courier'         => [
                 'name'         => $courierName,
-                'payment_type' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'service_type' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'payment_type' => (string) WarehouseSetting::get('postex_payment_type', '0'),
+                'service_type' => (string) WarehouseSetting::get('postex_service_type', '0'),
             ],
             'to' => [
                 'contact' => [
@@ -672,7 +672,7 @@ class PostexService
             $payloadKeys = array_keys($payload['courier'] ?? []);
             $contactKeys = array_keys($payload['to']['contact'] ?? []);
             $propsKey = isset($payload['parcel_properties']) ? 'parcel_properties' : (isset($payload['parcelproperties']) ? 'parcelproperties' : 'none');
-            $errorMsg .= ' [v8-snake|props:' . $propsKey . '|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
+            $errorMsg .= ' [v9-str|props:' . $propsKey . '|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
