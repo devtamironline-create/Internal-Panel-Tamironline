@@ -583,7 +583,7 @@ class PostexService
             'collection_type' => $collectionType,
             'custom_order_no' => (string) $orderNo,
             'request'         => [
-                'label' => true,
+                'label' => false,
             ],
             'remark'          => $description,
             'courier'         => [
@@ -655,24 +655,21 @@ class PostexService
                 return ['success' => false, 'message' => 'پستکس: ثبت شد ولی بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
             }
 
-            $errorMsg = $body['message'] ?? 'خطای نامشخص';
-            // همیشه invalid_fields رو نمایش بده تا بفهمیم کدوم فیلد مشکل داره
+            $errorMsg = $body['message'] ?? '';
             if (!empty($body['invalid_fields'])) {
                 $errorMsg .= ' | فیلدهای نامعتبر: ' . json_encode($body['invalid_fields'], JSON_UNESCAPED_UNICODE);
             }
-            // اگه errors هم داشت نشون بده
             if (!empty($body['errors'])) {
                 $errorMsg .= ' | خطاها: ' . json_encode($body['errors'], JSON_UNESCAPED_UNICODE);
             }
-            // اگه هیچ جزئیاتی نبود کل body رو نشون بده
-            if (empty($body['invalid_fields']) && empty($body['errors']) && empty($body['message'])) {
-                $errorMsg = json_encode($body, JSON_UNESCAPED_UNICODE);
+            // برای 500 یا هر خطایی که پیام مشخصی ندارد، کل body رو نشون بده
+            if (empty(trim($errorMsg))) {
+                $rawBody = $response->body();
+                $errorMsg = !empty($body)
+                    ? json_encode($body, JSON_UNESCAPED_UNICODE)
+                    : substr($rawBody, 0, 500);
             }
-            // نسخه کد برای تشخیص آپدیت بودن - payload ارسالی رو هم نشون بده
-            $payloadKeys = array_keys($payload['courier'] ?? []);
-            $contactKeys = array_keys($payload['to']['contact'] ?? []);
-            $propsKey = isset($payload['parcel_properties']) ? 'parcel_properties' : (isset($payload['parcelproperties']) ? 'parcelproperties' : 'none');
-            $errorMsg .= ' [v9-str|props:' . $propsKey . '|courier:' . implode(',', $payloadKeys) . '|contact:' . implode(',', $contactKeys) . ']';
+            $errorMsg .= ' [v10|label:false|ct:' . ($payload['collection_type'] ?? '?') . '|courier:' . ($payload['courier']['name'] ?? '?') . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
