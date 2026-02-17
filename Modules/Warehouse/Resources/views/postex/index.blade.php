@@ -229,23 +229,37 @@
 
     <!-- Geography Tools -->
     <div class="bg-white rounded-xl shadow-sm p-6">
-        <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
             </div>
-            <h2 class="text-lg font-bold text-gray-900">استان‌ها و شهرها</h2>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">جستجوی کد شهر پستکس</h2>
+                <p class="text-xs text-gray-500">شهرها از API پستکس بارگذاری می‌شوند — استان‌ها hardcoded در پلاگین رسمی</p>
+            </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <button onclick="loadProvinces()" class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">بارگذاری استان‌ها</button>
-                <div id="provinces-result" class="hidden mt-4 p-4 rounded-lg text-sm max-h-96 overflow-y-auto"></div>
+                <p class="text-xs text-gray-600 mb-2 font-medium">استان‌ها (کدهای WooCommerce پلاگین پستکس):</p>
+                <div class="bg-gray-50 rounded-lg p-3 text-xs font-mono max-h-64 overflow-y-auto leading-6">
+                    KHZ=خوزستان(18) | THR=تهران(1) | ILM=ایلام(24) | BHR=بوشهر(23)<br>
+                    ADL=اردبیل(27) | ESF=اصفهان(26) | YZD=یزد(31) | KRH=کرمانشاه(9)<br>
+                    KRN=کرمان(10) | HDN=همدان(15) | GZN=قزوین(13) | ZJN=زنجان(17)<br>
+                    LRS=لرستان(5) | ABZ=البرز(25) | EAZ=آذربایجان شرقی(29) | WAZ=آذربایجان غربی(28)<br>
+                    CHB=چهارمحال(22) | SKH=خراسان جنوبی(21) | RKH=خراسان رضوی(20) | NKH=خراسان شمالی(19)<br>
+                    SMN=سمنان(30) | <strong>FRS=فارس(14)</strong> | QHM=قم(12) | KRD=کردستان(11)<br>
+                    KBD=کهگیلویه(8) | GLS=گلستان(7) | GIL=گیلان(6) | MZN=مازندران(4)<br>
+                    MKZ=مرکزی(3) | HRZ=هرمزگان(2) | SBN=سیستان(16)
+                </div>
             </div>
             <div>
-                <div class="flex gap-2">
-                    <input type="number" id="province-code" dir="ltr" placeholder="کد استان" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                    <button onclick="loadCities()" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">بارگذاری شهرها</button>
+                <p class="text-xs text-gray-600 mb-2 font-medium">جستجوی شهر (از API <code class="bg-gray-100 px-1">/locality/cities/all</code>):</p>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="city-search" dir="rtl" placeholder="نام شهر (مثلاً سروستان)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    <button onclick="searchCity()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">جستجو</button>
                 </div>
-                <div id="cities-result" class="hidden mt-4 p-4 rounded-lg text-sm max-h-96 overflow-y-auto"></div>
+                <button onclick="loadCities()" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">بارگذاری همه شهرها</button>
+                <div id="cities-result" class="hidden mt-3 p-3 rounded-lg text-sm max-h-72 overflow-y-auto"></div>
             </div>
         </div>
     </div>
@@ -379,14 +393,36 @@ function loadProvinces() {
     .catch(() => showResult('provinces-result', false, 'خطا در ارتباط'));
 }
 
+function searchCity() {
+    const q = (document.getElementById('city-search').value || '').trim();
+    if (!q) { showResult('cities-result', false, 'نام شهر را وارد کنید'); return; }
+    showLoading('cities-result', 'در حال جستجو...');
+    fetch('{{ route("warehouse.postex.cities") }}?search=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.data && data.data.length > 0) {
+            let html = '<div class="text-xs font-bold mb-2">' + data.count + ' شهر یافت شد</div>';
+            html += '<table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="p-1 text-right">کد</th><th class="p-1 text-right">نام</th><th class="p-1 text-right">استان ID</th></tr></thead><tbody>';
+            data.data.forEach(c => {
+                html += `<tr class="border-t cursor-pointer hover:bg-blue-50" onclick="document.getElementById('fallback_city_code_input').value='${c.code||c.id||''}'">
+                    <td class="p-1 font-mono font-bold text-blue-700">${c.code||c.id||'-'}</td>
+                    <td class="p-1">${c.name||c.title||'-'}</td>
+                    <td class="p-1 text-gray-400">${c.province_code||'-'}</td></tr>`;
+            });
+            html += '</tbody></table><p class="text-xs text-gray-400 mt-2">روی هر ردیف کلیک کن تا کد شهر کپی شود</p>';
+            const div = document.getElementById('cities-result');
+            div.classList.remove('hidden','bg-red-50','text-red-800','bg-gray-50','text-gray-600');
+            div.classList.add('bg-blue-50','text-blue-800');
+            div.innerHTML = html;
+        } else {
+            showResult('cities-result', false, 'شهری یافت نشد — ' + (data.message || ''));
+        }
+    }).catch(() => showResult('cities-result', false, 'خطا در ارتباط'));
+}
+
 function loadCities() {
-    const provinceCode = document.getElementById('province-code').value;
-    if (!provinceCode) {
-        showResult('cities-result', false, 'کد استان را وارد کنید');
-        return;
-    }
-    showLoading('cities-result', 'در حال بارگذاری شهرها...');
-    fetch('{{ route("warehouse.postex.cities") }}?province_code=' + provinceCode, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    showLoading('cities-result', 'در حال بارگذاری همه شهرها...');
+    fetch('{{ route("warehouse.postex.cities") }}', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
     .then(r => r.json())
     .then(data => {
         if (data.success && data.data && data.data.length > 0) {

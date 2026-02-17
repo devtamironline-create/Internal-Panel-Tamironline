@@ -189,15 +189,21 @@ class PostexController extends Controller
             abort(403);
         }
 
-        $provinceCode = $request->get('province_code');
-
         $service = new PostexService();
-        $cities = $service->getCities($provinceCode);
+        $search  = trim($request->get('search', ''));
+        $cities  = $service->getCities();
+
+        if (!empty($search)) {
+            $cities = array_values(array_filter($cities, function ($c) use ($search) {
+                $name = $c['name'] ?? $c['title'] ?? '';
+                return str_contains($name, $search);
+            }));
+        }
 
         return response()->json([
             'success' => !empty($cities),
-            'data' => $cities,
-            'count' => count($cities),
+            'data'    => $cities,
+            'count'   => count($cities),
         ]);
     }
 

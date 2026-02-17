@@ -160,35 +160,49 @@ class PostexService
         }
     }
 
-    public function getCities(?int $provinceCode = null): array
+    /**
+     * دریافت همه شهرها از API پستکس
+     * endpoint صحیح: GET /api/v1/locality/cities/all
+     * هر آیتم: {code, name, province_code} که province_code = postex_id استان
+     */
+    public function getCities(?int $postexProvinceId = null): array
     {
-        $cacheKey = 'postex_cities_' . ($provinceCode ?? 'all');
-        $cached = Cache::get($cacheKey);
-        if (!empty($cached)) return $cached;
+        $cacheKey = 'postex_cities_all';
+        $cached   = Cache::get($cacheKey);
 
-        try {
-            $url = $provinceCode
-                ? $this->endpoint("location/province/{$provinceCode}/cities")
-                : $this->endpoint('location/cities');
+        if (empty($cached)) {
+            try {
+                $response = Http::timeout(20)
+                    ->withHeaders($this->getHeaders())
+                    ->get($this->endpoint('locality/cities/all'));
 
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($url);
-
-            if ($response->successful()) {
-                $raw  = $response->json() ?? [];
-                $data = $this->unwrapList($raw);
-                if (!empty($data)) {
-                    Cache::put($cacheKey, $data, 86400);
-                    return $data;
+                if ($response->successful()) {
+                    $raw  = $response->json() ?? [];
+                    $data = $this->unwrapList($raw);
+                    if (!empty($data)) {
+                        Cache::put($cacheKey, $data, 86400);
+                        $cached = $data;
+                    }
                 }
-            }
 
-            return [];
-        } catch (\Exception $e) {
-            Log::error('Postex getCities error', ['error' => $e->getMessage()]);
-            return [];
+                if (empty($cached)) {
+                    Log::warning('Postex getCities failed', ['status' => $response->status(), 'body' => substr($response->body(), 0, 300)]);
+                    return [];
+                }
+            } catch (\Exception $e) {
+                Log::error('Postex getCities error', ['error' => $e->getMessage()]);
+                return [];
+            }
         }
+
+        // فیلتر بر اساس province_id اگه داده شده
+        if ($postexProvinceId !== null) {
+            return array_values(array_filter($cached, function ($city) use ($postexProvinceId) {
+                return ($city['province_code'] ?? $city['province_id'] ?? null) == $postexProvinceId;
+            }));
+        }
+
+        return $cached;
     }
 
     /**
@@ -511,38 +525,18 @@ class PostexService
      * جستجوی کد شهر مقصد بر اساس نام شهر و استان
      */
     /**
-     * نقشه کدهای WooCommerce Iran به نام استان به فارسی
-     * WooCommerce ایران استان‌ها را با کد دو حرفی ذخیره می‌کند
+     * نقشه کدهای WooCommerce پلاگین پستکس → postex_id استان
+     * مستقیماً از سورس پلاگین رسمی پستکس (postex-advanced-shipping-method) استخراج شده
      */
-    protected static array $wcProvinceCodes = [
-        // کدهای ۲ حرفی
-        'TH' => 'تهران',       'IS' => 'اصفهان',      'FA' => 'فارس',
-        'KH' => 'خراسان رضوی', 'MZ' => 'مازندران',    'GB' => 'گیلان',
-        'KR' => 'کرمان',       'KG' => 'کردستان',     'AE' => 'آذربایجان شرقی',
-        'AW' => 'آذربایجان غربی', 'AR' => 'اردبیل',   'SM' => 'سمنان',
-        'SB' => 'سیستان و بلوچستان', 'CM' => 'چهارمحال و بختیاری',
-        'GS' => 'گلستان',      'ZJ' => 'زنجان',       'LO' => 'لرستان',
-        'KV' => 'خراسان شمالی','KS' => 'خراسان جنوبی','KZ' => 'خوزستان',
-        'KJ' => 'کهگیلویه و بویراحمد', 'QM' => 'قم', 'QZ' => 'قزوین',
-        'YZ' => 'یزد',         'EW' => 'کرمانشاه',    'IL' => 'ایلام',
-        'BU' => 'بوشهر',       'MK' => 'مرکزی',       'HM' => 'همدان',
-        'AL' => 'البرز',       'TE' => 'تهران',        'EF' => 'اصفهان',
-        'GI' => 'گیلان',       'GN' => 'گلستان',      'KE' => 'کرمانشاه',
-        'KU' => 'کردستان',     'MN' => 'مازندران',    'SE' => 'سمنان',
-        'YA' => 'یزد',         'ZA' => 'زنجان',       'KM' => 'کرمان',
-        'BS' => 'بوشهر',       'CH' => 'چهارمحال و بختیاری',
-        // کدهای ۳ حرفی (برخی سیستم‌های WooCommerce ایران)
-        'FRS' => 'فارس',       'THR' => 'تهران',      'ISF' => 'اصفهان',
-        'KHR' => 'خراسان رضوی','MZN' => 'مازندران',   'GIL' => 'گیلان',
-        'KRM' => 'کرمان',      'KRD' => 'کردستان',    'KHZ' => 'خوزستان',
-        'AZE' => 'آذربایجان شرقی', 'AZW' => 'آذربایجان غربی',
-        'ARD' => 'اردبیل',     'SEM' => 'سمنان',      'SIS' => 'سیستان و بلوچستان',
-        'CHB' => 'چهارمحال و بختیاری', 'GLN' => 'گلستان',
-        'ZNJ' => 'زنجان',      'LRS' => 'لرستان',     'KHN' => 'خراسان شمالی',
-        'KHS' => 'خراسان جنوبی', 'KBK' => 'کهگیلویه و بویراحمد',
-        'QOM' => 'قم',         'QAZ' => 'قزوین',      'YZD' => 'یزد',
-        'KRH' => 'کرمانشاه',   'ILM' => 'ایلام',      'BSH' => 'بوشهر',
-        'MRK' => 'مرکزی',      'HMD' => 'همدان',      'ALB' => 'البرز',
+    protected static array $wcProvinceToPostexId = [
+        'KHZ' => 18, 'THR' => 1,  'ILM' => 24, 'BHR' => 23,
+        'ADL' => 27, 'ESF' => 26, 'YZD' => 31, 'KRH' => 9,
+        'KRN' => 10, 'HDN' => 15, 'GZN' => 13, 'ZJN' => 17,
+        'LRS' => 5,  'ABZ' => 25, 'EAZ' => 29, 'WAZ' => 28,
+        'CHB' => 22, 'SKH' => 21, 'RKH' => 20, 'NKH' => 19,
+        'SMN' => 30, 'FRS' => 14, 'QHM' => 12, 'KRD' => 11,
+        'KBD' => 8,  'GLS' => 7,  'GIL' => 6,  'MZN' => 4,
+        'MKZ' => 3,  'HRZ' => 2,  'SBN' => 16,
     ];
 
     public function findCityCode(string $cityName, string $provinceName = ''): ?int
@@ -563,30 +557,23 @@ class PostexService
             }
         }
 
-        // تبدیل کد WooCommerce به نام فارسی استان (مثلاً FA → فارس)
+        // تبدیل کد WooCommerce به postex_id استان (از جدول پلاگین رسمی پستکس)
         $provinceName = trim($provinceName);
-        if (!empty($provinceName) && isset(self::$wcProvinceCodes[strtoupper($provinceName)])) {
-            $provinceName = self::$wcProvinceCodes[strtoupper($provinceName)];
+        $postexProvinceId = null;
+        if (!empty($provinceName)) {
+            $wcCode = strtoupper($provinceName);
+            if (isset(self::$wcProvinceToPostexId[$wcCode])) {
+                $postexProvinceId = self::$wcProvinceToPostexId[$wcCode];
+            }
         }
 
-        // اگر استان داریم، اول از طریق استان پیدا کن
-        if (!empty($provinceName)) {
-            $provinces = $this->getProvinces();
-            $provinceCode = null;
-            foreach ($provinces as $prov) {
-                $pName = $prov['name'] ?? $prov['title'] ?? '';
-                if (str_contains($pName, $provinceName) || str_contains($provinceName, $pName)) {
-                    $provinceCode = $prov['code'] ?? $prov['id'] ?? null;
-                    break;
-                }
-            }
-            if ($provinceCode) {
-                $cities = $this->getCities($provinceCode);
-                foreach ($cities as $city) {
-                    $cName = $city['name'] ?? $city['title'] ?? '';
-                    if (str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
-                        return (int)($city['code'] ?? $city['id'] ?? 0) ?: null;
-                    }
+        // اگه province_id داریم، ابتدا در شهرهای همون استان جستجو کن
+        if ($postexProvinceId !== null) {
+            $provinceCities = $this->getCities($postexProvinceId);
+            foreach ($provinceCities as $city) {
+                $cName = $city['name'] ?? $city['title'] ?? '';
+                if ($cName === $cityName || str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
+                    return (int)($city['code'] ?? $city['id'] ?? 0) ?: null;
                 }
             }
         }
@@ -595,7 +582,7 @@ class PostexService
         $allCities = $this->getCities();
         foreach ($allCities as $city) {
             $cName = $city['name'] ?? $city['title'] ?? '';
-            if (str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
+            if ($cName === $cityName || str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
                 return (int)($city['code'] ?? $city['id'] ?? 0) ?: null;
             }
         }
