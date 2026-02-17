@@ -172,7 +172,6 @@ class PostexController extends Controller
             return response()->json(['success' => false, 'message' => 'API Key تنظیم نشده']);
         }
 
-        // تست با داده‌های نمونه
         $testPostcode = $request->get('postcode', '1234567890');
         $testCity     = $request->get('city', 'تهران');
         $testState    = $request->get('state', 'تهران');
@@ -195,6 +194,24 @@ class PostexController extends Controller
             'city_code_found' => $cityCode,
             'result'          => $result,
         ]);
+    }
+
+    /**
+     * کشف endpoint صحیح پستکس با تست چند مسیر مختلف
+     */
+    public function probeEndpoints(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new PostexService();
+        if (!$service->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'API Key تنظیم نشده']);
+        }
+
+        $results = $service->probeCreateEndpoints();
+        return response()->json($results);
     }
 
     public function setProvider(Request $request)

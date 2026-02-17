@@ -234,6 +234,62 @@ class PostexService
     }
 
     /**
+     * تست چند endpoint مختلف برای یافتن مسیر صحیح ثبت مرسوله
+     */
+    public function probeCreateEndpoints(): array
+    {
+        $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+        $fromCityCode   = (int) WarehouseSetting::get('postex_from_city_code', 444);
+
+        $samplePayload = [
+            'collection_type' => $collectionType,
+            'from_city_code'  => $fromCityCode,
+            'parcels'         => [[
+                'amount'               => 100000,
+                'description'          => 'تست',
+                'weight'               => 500,
+                'to_city_code'         => 444,
+                'recipient_name'       => 'تست تست',
+                'recipient_phone'      => '09120000000',
+                'recipient_postal_code'=> '1234567890',
+                'recipient_address'    => 'تهران، آدرس تست',
+            ]],
+        ];
+
+        // endpoint های احتمالی برای ثبت مرسوله
+        $endpoints = [
+            'parcel/create',
+            'parcel',
+            'parcels',
+            'order/add',
+            'order/create',
+            'order',
+            'orders',
+            'shipment/create',
+            'shipments',
+            'shipping/create',
+        ];
+
+        $results = [];
+        foreach ($endpoints as $path) {
+            try {
+                $response = Http::timeout(10)
+                    ->withHeaders($this->getHeaders())
+                    ->post($this->endpoint($path), $samplePayload);
+
+                $results[$path] = [
+                    'status' => $response->status(),
+                    'body'   => $response->json() ?? $response->body(),
+                ];
+            } catch (\Exception $e) {
+                $results[$path] = ['status' => 'exception', 'body' => $e->getMessage()];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
      * جستجوی کد شهر مقصد بر اساس نام شهر و استان
      */
     public function findCityCode(string $cityName, string $provinceName = ''): ?int

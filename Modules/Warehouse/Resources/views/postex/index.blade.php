@@ -97,6 +97,7 @@
                     <button type="submit" class="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">ذخیره تنظیمات</button>
                     <button type="button" onclick="testPostexConnection()" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">تست اتصال</button>
                     <button type="button" onclick="debugCreateShipment()" class="px-6 py-2.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 font-medium text-sm">تست ثبت سفارش</button>
+                    <button type="button" onclick="probeEndpoints()" class="px-6 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm">کشف endpoint</button>
                 </div>
             </form>
             <div id="postex-test-result" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
@@ -404,6 +405,39 @@ function runDebugCreate() {
     })
     .catch(e => {
         result.textContent = 'خطا: ' + e.message;
+    });
+}
+
+function probeEndpoints() {
+    const probeEl = document.getElementById('probe-result-section');
+    if (probeEl) { probeEl.remove(); }
+
+    const section = document.createElement('div');
+    section.id = 'probe-result-section';
+    section.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+    section.innerHTML = '<p class="text-sm font-bold text-red-800 mb-2">در حال بررسی endpointها... (ممکنه چند ثانیه طول بکشه)</p><pre id="probe-output" class="p-3 bg-gray-900 text-green-400 text-xs rounded overflow-auto max-h-96" dir="ltr">loading...</pre>';
+    document.getElementById('postex-test-result').after(section);
+
+    fetch('{{ route('warehouse.postex.probe-endpoints') }}', {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const out = document.getElementById('probe-output');
+        let text = '';
+        for (const [path, res] of Object.entries(data)) {
+            const status = res.status;
+            const ok = status >= 200 && status < 300;
+            text += `[${ok ? '✓' : '✗'} ${status}] ${path}\n`;
+            if (ok || status === 400 || status === 422) {
+                text += '  → ' + JSON.stringify(res.body).substring(0, 200) + '\n';
+            }
+            text += '\n';
+        }
+        out.textContent = text;
+    })
+    .catch(e => {
+        document.getElementById('probe-output').textContent = 'خطا: ' + e.message;
     });
 }
 </script>
