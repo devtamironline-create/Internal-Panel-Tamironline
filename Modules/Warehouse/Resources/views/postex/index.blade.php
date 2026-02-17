@@ -87,10 +87,48 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">کد شهر مبدا</label>
-                    <input type="number" name="from_city_code" value="{{ $settings['from_city_code'] ?? '444' }}" dir="ltr"
-                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm" placeholder="444">
-                    <p class="text-gray-400 text-xs mt-1">کد شهری که از آن ارسال می‌کنید (مثلاً تهران: 444)</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">نوع پیک (courier) <span class="text-red-500">*</span></label>
+                    <select name="courier" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
+                        <option value="post" {{ ($settings['courier'] ?? 'post') == 'post' ? 'selected' : '' }}>پست (post)</option>
+                        <option value="pishtaz" {{ ($settings['courier'] ?? 'post') == 'pishtaz' ? 'selected' : '' }}>پیشتاز (pishtaz)</option>
+                        <option value="mahex" {{ ($settings['courier'] ?? 'post') == 'mahex' ? 'selected' : '' }}>ماهکس (mahex)</option>
+                        <option value="snap" {{ ($settings['courier'] ?? 'post') == 'snap' ? 'selected' : '' }}>اسنپ (snap)</option>
+                        <option value="tipax" {{ ($settings['courier'] ?? 'post') == 'tipax' ? 'selected' : '' }}>تیپاکس (tipax)</option>
+                    </select>
+                    <p class="text-gray-400 text-xs mt-1">فیلد اجباری API پستکس</p>
+                </div>
+
+                <!-- اطلاعات فرستنده (مبدا) - فیلدهای اجباری API -->
+                <div class="pt-3 border-t border-purple-100">
+                    <h3 class="text-sm font-semibold text-purple-700 mb-3">اطلاعات فرستنده (مبدا) <span class="text-red-500">*</span></h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">نام فرستنده</label>
+                            <input type="text" name="from_name" value="{{ $settings['from_name'] ?? '' }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="نام و نام خانوادگی">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">موبایل فرستنده</label>
+                            <input type="text" name="from_phone" value="{{ $settings['from_phone'] ?? '' }}" dir="ltr"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" placeholder="09xxxxxxxxx">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">کد شهر مبدا</label>
+                            <input type="number" name="from_city_code" value="{{ $settings['from_city_code'] ?? '444' }}" dir="ltr"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="444">
+                            <p class="text-gray-400 text-xs mt-1">تهران: 444</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">کد پستی مبدا (۱۰ رقم)</label>
+                            <input type="text" name="from_postcode" value="{{ $settings['from_postcode'] ?? '' }}" dir="ltr"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" maxlength="10" placeholder="1234567890">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">آدرس فرستنده</label>
+                        <input type="text" name="from_address" value="{{ $settings['from_address'] ?? '' }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="تهران، خیابان ...">
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-3 pt-4 border-t">

@@ -17,13 +17,18 @@ class PostexController extends Controller
 
         $apiKey = WarehouseSetting::get('postex_api_key');
         $settings = [
-            'api_url' => WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'),
-            'api_key' => $apiKey,
-            'has_key' => !empty($apiKey),
-            'key_preview' => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
+            'api_url'           => WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'),
+            'api_key'           => $apiKey,
+            'has_key'           => !empty($apiKey),
+            'key_preview'       => $apiKey ? (substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) . ' (طول: ' . strlen($apiKey) . ')') : '',
             'shipping_provider' => WarehouseSetting::get('shipping_provider', 'amadest'),
-            'collection_type' => WarehouseSetting::get('postex_collection_type', 'postex_drop_off'),
-            'from_city_code' => WarehouseSetting::get('postex_from_city_code', '444'),
+            'collection_type'   => WarehouseSetting::get('postex_collection_type', 'postex_drop_off'),
+            'from_city_code'    => WarehouseSetting::get('postex_from_city_code', '444'),
+            'from_name'         => WarehouseSetting::get('postex_from_name', ''),
+            'from_phone'        => WarehouseSetting::get('postex_from_phone', ''),
+            'from_address'      => WarehouseSetting::get('postex_from_address', ''),
+            'from_postcode'     => WarehouseSetting::get('postex_from_postcode', ''),
+            'courier'           => WarehouseSetting::get('postex_courier', 'post'),
         ];
 
         return view('warehouse::postex.index', compact('settings'));
@@ -36,10 +41,15 @@ class PostexController extends Controller
         }
 
         $validated = $request->validate([
-            'api_url' => 'nullable|url|max:500',
-            'api_key' => 'nullable|string|max:5000',
-            'collection_type' => 'nullable|in:pick_up,courier_drop_off,postex_drop_off',
+            'api_url'        => 'nullable|url|max:500',
+            'api_key'        => 'nullable|string|max:5000',
+            'collection_type'=> 'nullable|in:pick_up,courier_drop_off,postex_drop_off',
             'from_city_code' => 'nullable|integer|min:1',
+            'from_name'      => 'nullable|string|max:100',
+            'from_phone'     => 'nullable|string|max:20',
+            'from_address'   => 'nullable|string|max:500',
+            'from_postcode'  => 'nullable|string|max:10',
+            'courier'        => 'nullable|string|max:50',
         ]);
 
         if (!empty($validated['api_url'])) {
@@ -53,6 +63,21 @@ class PostexController extends Controller
         }
         if (isset($validated['from_city_code'])) {
             WarehouseSetting::set('postex_from_city_code', $validated['from_city_code']);
+        }
+        if (isset($validated['from_name'])) {
+            WarehouseSetting::set('postex_from_name', $validated['from_name']);
+        }
+        if (isset($validated['from_phone'])) {
+            WarehouseSetting::set('postex_from_phone', $validated['from_phone']);
+        }
+        if (isset($validated['from_address'])) {
+            WarehouseSetting::set('postex_from_address', $validated['from_address']);
+        }
+        if (isset($validated['from_postcode'])) {
+            WarehouseSetting::set('postex_from_postcode', $validated['from_postcode']);
+        }
+        if (isset($validated['courier'])) {
+            WarehouseSetting::set('postex_courier', $validated['courier']);
         }
 
         if ($request->wantsJson()) {
