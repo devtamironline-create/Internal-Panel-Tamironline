@@ -127,8 +127,8 @@ class PostexService
         if (isset($raw['result']) && is_array($raw['result'])) return $raw['result'];
         if (isset($raw['results']) && is_array($raw['results'])) return $raw['results'];
         if (isset($raw['items']) && is_array($raw['items'])) return $raw['items'];
-        // اگه آرایه خود مستقیم بود (indexed array)
-        if (array_is_list($raw)) return $raw;
+        // اگه آرایه خود indexed بود (PHP 8.0 compatible)
+        if (!empty($raw) && array_keys($raw) === range(0, count($raw) - 1)) return $raw;
         return [];
     }
 

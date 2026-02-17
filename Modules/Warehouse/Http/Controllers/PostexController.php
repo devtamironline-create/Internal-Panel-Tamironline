@@ -4,6 +4,7 @@ namespace Modules\Warehouse\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\PostexService;
 
@@ -151,12 +152,29 @@ class PostexController extends Controller
         }
 
         $service = new PostexService();
+        Cache::forget('postex_provinces'); // پاک کردن cache قدیمی برای debug
         $provinces = $service->getProvinces();
+
+        // اگه خالی بود، raw response رو مستقیم از API بگیر برای debug
+        $rawDebug = null;
+        if (empty($provinces)) {
+            try {
+                $apiUrl = rtrim(WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'), '/');
+                $apiKey = WarehouseSetting::get('postex_api_key');
+                $rawResp = \Illuminate\Support\Facades\Http::timeout(15)
+                    ->withHeaders(['x-api-key' => $apiKey, 'Accept' => 'application/json'])
+                    ->get($apiUrl . '/api/v1/location/provinces');
+                $rawDebug = ['status' => $rawResp->status(), 'body' => substr($rawResp->body(), 0, 1000)];
+            } catch (\Exception $e) {
+                $rawDebug = ['error' => $e->getMessage()];
+            }
+        }
 
         return response()->json([
             'success' => !empty($provinces),
-            'data' => $provinces,
-            'count' => count($provinces),
+            'data'    => $provinces,
+            'count'   => count($provinces),
+            'debug'   => $rawDebug,
         ]);
     }
 
