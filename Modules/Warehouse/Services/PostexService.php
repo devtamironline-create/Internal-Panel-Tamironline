@@ -296,15 +296,15 @@ class PostexService
             'remark'          => 'تست اتصال از پنل',
             'courier'         => [
                 'name'        => $courier,
-                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'PaymentType' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'ServiceType' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'firstname'   => 'تست',
-                    'lastname'    => 'تست',
-                    'mobileno'    => '09120000000',
-                    'telephoneno' => '09120000000',
+                    'FirstName'   => 'تست',
+                    'LastName'    => 'تست',
+                    'MobileNo'    => '09120000000',
+                    'TelephoneNo' => '09120000000',
                 ],
                 'location' => [
                     'city_code' => 444,
@@ -314,10 +314,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'firstname'   => $fromFirst,
-                    'lastname'    => $fromLast,
-                    'mobileno'    => $fromPhone,
-                    'telephoneno' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
+                    'FirstName'   => $fromFirst,
+                    'LastName'    => $fromLast,
+                    'MobileNo'    => $fromPhone,
+                    'TelephoneNo' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -326,10 +326,10 @@ class PostexService
                 ],
             ],
             'parcelproperties' => [
-                'totalvalue'  => 100000,
-                'totalweight' => 500,
-                'isfragile'   => false,
-                'isliquid'    => false,
+                'TotalValue'  => 100000,
+                'TotalWeight' => 500,
+                'IsFragile'   => false,
+                'IsLiquid'    => false,
             ],
         ];
 
@@ -576,10 +576,9 @@ class PostexService
         $recipientPhone  = $data['recipient_phone'] ?? $recipientMobile;
         $fromTelephone   = WarehouseSetting::get('postex_from_telephone', $fromPhone);
 
-        // ساختار payload بر اساس خطاهای دقیق API پستکس:
-        // - contact: firstname, lastname, mobileno, telephoneno
-        // - courier: name, paymenttype, servicetype
-        // - parcelproperties: بدون آندرلاین (totalvalue, totalweight, ...)
+        // ساختار payload - فیلدهای ترکیبی باید PascalCase باشن (ASP.NET Core)
+        // فیلدهای تک‌کلمه‌ای (name, address, postcode) → lowercase کار میکنن
+        // فیلدهای ترکیبی (PaymentType, FirstName, ...) → PascalCase لازمه
         $payload = [
             'collection_type' => $collectionType,
             'custom_order_no' => (string) $orderNo,
@@ -589,15 +588,15 @@ class PostexService
             'remark'          => $description,
             'courier'         => [
                 'name'        => $courierName,
-                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
-                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
+                'PaymentType' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'ServiceType' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'firstname'   => $recipientFirst,
-                    'lastname'    => $recipientLast,
-                    'mobileno'    => $recipientMobile,
-                    'telephoneno' => $recipientPhone,
+                    'FirstName'   => $recipientFirst,
+                    'LastName'    => $recipientLast,
+                    'MobileNo'    => $recipientMobile,
+                    'TelephoneNo' => $recipientPhone,
                 ],
                 'location' => [
                     'city_code' => $toCityCode,
@@ -607,10 +606,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'firstname'   => $fromFirst,
-                    'lastname'    => $fromLast,
-                    'mobileno'    => $fromPhone,
-                    'telephoneno' => $fromTelephone,
+                    'FirstName'   => $fromFirst,
+                    'LastName'    => $fromLast,
+                    'MobileNo'    => $fromPhone,
+                    'TelephoneNo' => $fromTelephone,
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -619,10 +618,10 @@ class PostexService
                 ],
             ],
             'parcelproperties' => [
-                'totalvalue'  => $totalValue,
-                'totalweight' => $weight,
-                'isfragile'   => false,
-                'isliquid'    => false,
+                'TotalValue'  => $totalValue,
+                'TotalWeight' => $weight,
+                'IsFragile'   => false,
+                'IsLiquid'    => false,
             ],
         ];
 
