@@ -26,9 +26,12 @@ class PostexController extends Controller
             'from_city_code'    => WarehouseSetting::get('postex_from_city_code', '444'),
             'from_name'         => WarehouseSetting::get('postex_from_name', ''),
             'from_phone'        => WarehouseSetting::get('postex_from_phone', ''),
+            'from_telephone'    => WarehouseSetting::get('postex_from_telephone', ''),
             'from_address'      => WarehouseSetting::get('postex_from_address', ''),
             'from_postcode'     => WarehouseSetting::get('postex_from_postcode', ''),
             'courier'           => WarehouseSetting::get('postex_courier', 'post'),
+            'payment_type'      => WarehouseSetting::get('postex_payment_type', '0'),
+            'service_type'      => WarehouseSetting::get('postex_service_type', '0'),
         ];
 
         return view('warehouse::postex.index', compact('settings'));
@@ -47,9 +50,12 @@ class PostexController extends Controller
             'from_city_code' => 'nullable|integer|min:1',
             'from_name'      => 'nullable|string|max:100',
             'from_phone'     => 'nullable|string|max:20',
+            'from_telephone' => 'nullable|string|max:20',
             'from_address'   => 'nullable|string|max:500',
             'from_postcode'  => 'nullable|string|max:10',
             'courier'        => 'nullable|string|max:50',
+            'payment_type'   => 'nullable|integer|min:0|max:10',
+            'service_type'   => 'nullable|integer|min:0|max:10',
         ]);
 
         if (!empty($validated['api_url'])) {
@@ -78,6 +84,15 @@ class PostexController extends Controller
         }
         if (isset($validated['courier'])) {
             WarehouseSetting::set('postex_courier', $validated['courier']);
+        }
+        if (isset($validated['from_telephone'])) {
+            WarehouseSetting::set('postex_from_telephone', $validated['from_telephone']);
+        }
+        if (isset($validated['payment_type'])) {
+            WarehouseSetting::set('postex_payment_type', $validated['payment_type']);
+        }
+        if (isset($validated['service_type'])) {
+            WarehouseSetting::set('postex_service_type', $validated['service_type']);
         }
 
         if ($request->wantsJson()) {

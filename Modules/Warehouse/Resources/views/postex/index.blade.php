@@ -95,7 +95,24 @@
                         <option value="snap" {{ ($settings['courier'] ?? 'post') == 'snap' ? 'selected' : '' }}>اسنپ (snap)</option>
                         <option value="tipax" {{ ($settings['courier'] ?? 'post') == 'tipax' ? 'selected' : '' }}>تیپاکس (tipax)</option>
                     </select>
-                    <p class="text-gray-400 text-xs mt-1">فیلد اجباری API پستکس</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع پرداخت (paymenttype)</label>
+                        <select name="payment_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
+                            <option value="0" {{ ($settings['payment_type'] ?? '0') == '0' ? 'selected' : '' }}>0 - پیش‌پرداخت</option>
+                            <option value="1" {{ ($settings['payment_type'] ?? '0') == '1' ? 'selected' : '' }}>1 - پرداخت در محل (COD)</option>
+                            <option value="2" {{ ($settings['payment_type'] ?? '0') == '2' ? 'selected' : '' }}>2 - اعتباری</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع سرویس (servicetype)</label>
+                        <select name="service_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
+                            <option value="0" {{ ($settings['service_type'] ?? '0') == '0' ? 'selected' : '' }}>0 - عادی</option>
+                            <option value="1" {{ ($settings['service_type'] ?? '0') == '1' ? 'selected' : '' }}>1 - ویژه / سریع</option>
+                            <option value="2" {{ ($settings['service_type'] ?? '0') == '2' ? 'selected' : '' }}>2 - اقتصادی</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- اطلاعات فرستنده (مبدا) - فیلدهای اجباری API -->
@@ -108,9 +125,14 @@
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="نام و نام خانوادگی">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">موبایل فرستنده</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">موبایل فرستنده (mobileno)</label>
                             <input type="text" name="from_phone" value="{{ $settings['from_phone'] ?? '' }}" dir="ltr"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" placeholder="09xxxxxxxxx">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">تلفن ثابت فرستنده (telephoneno)</label>
+                            <input type="text" name="from_telephone" value="{{ $settings['from_telephone'] ?? '' }}" dir="ltr"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" placeholder="02100000000">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">کد شهر مبدا</label>

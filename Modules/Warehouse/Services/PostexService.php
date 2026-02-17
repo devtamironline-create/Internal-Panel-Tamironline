@@ -283,7 +283,10 @@ class PostexService
         $fromCityCode = (int) WarehouseSetting::get('postex_from_city_code', 444);
         $courier      = WarehouseSetting::get('postex_courier', 'post');
 
-        // payload با ساختار صحیح - courier آبجکت + فیلد request
+        $fromPhone = $this->formatMobile(WarehouseSetting::get('postex_from_phone', '09000000000'));
+        [$fromFirst, $fromLast] = $this->splitName(WarehouseSetting::get('postex_from_name', 'فرستنده تست'));
+
+        // payload با ساختار صحیح API پستکس
         $correctPayload = [
             'collection_type' => $collectionType,
             'custom_order_no' => 'TEST-PROBE-' . now()->timestamp,
@@ -292,12 +295,16 @@ class PostexService
             ],
             'remark'          => 'تست اتصال از پنل',
             'courier'         => [
-                'name' => $courier,
+                'name'        => $courier,
+                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'name'         => 'تست تست',
-                    'cellphone_no' => '09120000000',
+                    'firstname'   => 'تست',
+                    'lastname'    => 'تست',
+                    'mobileno'    => '09120000000',
+                    'telephoneno' => '09120000000',
                 ],
                 'location' => [
                     'city_code' => 444,
@@ -307,8 +314,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'name'         => WarehouseSetting::get('postex_from_name', 'فرستنده'),
-                    'cellphone_no' => WarehouseSetting::get('postex_from_phone', '09000000000'),
+                    'firstname'   => $fromFirst,
+                    'lastname'    => $fromLast,
+                    'mobileno'    => $fromPhone,
+                    'telephoneno' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -317,10 +326,10 @@ class PostexService
                 ],
             ],
             'parcelproperties' => [
-                'total_value'  => 100000,
-                'total_weight' => 500,
-                'is_fragile'   => false,
-                'is_liquid'    => false,
+                'totalvalue'  => 100000,
+                'totalweight' => 500,
+                'isfragile'   => false,
+                'isliquid'    => false,
             ],
         ];
 
@@ -535,7 +544,7 @@ class PostexService
         }
 
         $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
-        $courier        = WarehouseSetting::get('postex_courier', 'post');
+        $courierName    = WarehouseSetting::get('postex_courier', 'post');
 
         $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
         if (empty($postcode) || strlen($postcode) !== 10) {
@@ -555,9 +564,22 @@ class PostexService
         $fromAddress  = WarehouseSetting::get('postex_from_address', 'آدرس مبدا');
         $fromPostcode = $this->normalizePostalCode(WarehouseSetting::get('postex_from_postcode', '1234567890'));
 
-        // ساختار payload بر اساس خطای API:
-        // - courier باید آبجکت باشه (CreateParcelCourierDto) نه رشته
-        // - فیلد request اجباری هست
+        // تفکیک نام و نام خانوادگی گیرنده
+        $recipientFullName = $data['recipient_name'] ?? '';
+        [$recipientFirst, $recipientLast] = $this->splitName($recipientFullName);
+
+        // تفکیک نام و نام خانوادگی فرستنده
+        [$fromFirst, $fromLast] = $this->splitName($fromName);
+
+        // شماره ثابت (اگه نداریم از موبایل استفاده میکنیم)
+        $recipientMobile = $this->formatMobile($data['recipient_mobile'] ?? '');
+        $recipientPhone  = $data['recipient_phone'] ?? $recipientMobile;
+        $fromTelephone   = WarehouseSetting::get('postex_from_telephone', $fromPhone);
+
+        // ساختار payload بر اساس خطاهای دقیق API پستکس:
+        // - contact: firstname, lastname, mobileno, telephoneno
+        // - courier: name, paymenttype, servicetype
+        // - parcelproperties: بدون آندرلاین (totalvalue, totalweight, ...)
         $payload = [
             'collection_type' => $collectionType,
             'custom_order_no' => (string) $orderNo,
@@ -566,12 +588,16 @@ class PostexService
             ],
             'remark'          => $description,
             'courier'         => [
-                'name' => $courier,
+                'name'        => $courierName,
+                'paymenttype' => (int) WarehouseSetting::get('postex_payment_type', 0),
+                'servicetype' => (int) WarehouseSetting::get('postex_service_type', 0),
             ],
             'to' => [
                 'contact' => [
-                    'name'         => $data['recipient_name'] ?? '',
-                    'cellphone_no' => $this->formatMobile($data['recipient_mobile'] ?? ''),
+                    'firstname'   => $recipientFirst,
+                    'lastname'    => $recipientLast,
+                    'mobileno'    => $recipientMobile,
+                    'telephoneno' => $recipientPhone,
                 ],
                 'location' => [
                     'city_code' => $toCityCode,
@@ -581,8 +607,10 @@ class PostexService
             ],
             'from' => [
                 'contact' => [
-                    'name'         => $fromName,
-                    'cellphone_no' => $fromPhone,
+                    'firstname'   => $fromFirst,
+                    'lastname'    => $fromLast,
+                    'mobileno'    => $fromPhone,
+                    'telephoneno' => $fromTelephone,
                 ],
                 'location' => [
                     'city_code' => $fromCityCode,
@@ -591,10 +619,10 @@ class PostexService
                 ],
             ],
             'parcelproperties' => [
-                'total_value'  => $totalValue,
-                'total_weight' => $weight,
-                'is_fragile'   => false,
-                'is_liquid'    => false,
+                'totalvalue'  => $totalValue,
+                'totalweight' => $weight,
+                'isfragile'   => false,
+                'isliquid'    => false,
             ],
         ];
 
@@ -678,6 +706,21 @@ class PostexService
         }
 
         return null;
+    }
+
+    /**
+     * تفکیک نام کامل به نام و نام خانوادگی
+     */
+    protected function splitName(string $fullName): array
+    {
+        $fullName = trim($fullName);
+        if (empty($fullName)) {
+            return ['', ''];
+        }
+        $parts = preg_split('/\s+/', $fullName, 2);
+        $firstName = $parts[0] ?? '';
+        $lastName  = $parts[1] ?? $firstName; // اگه فقط یه کلمه بود، هر دو فیلد رو پر کن
+        return [$firstName, $lastName];
     }
 
     protected function formatMobile(?string $mobile): string
