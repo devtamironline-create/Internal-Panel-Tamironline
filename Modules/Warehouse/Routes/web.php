@@ -10,6 +10,7 @@ use Modules\Warehouse\Http\Controllers\ReprintRequestController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\PostexController;
+use Modules\Warehouse\Http\Controllers\ExitScanController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 
 
@@ -43,6 +44,12 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
     Route::get('/quick-search', [WarehouseController::class, 'quickSearch'])->name('warehouse.quick-search');
     Route::delete('/{order}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy')
         ->where('order', '[0-9]+');
+
+    // Exit Scan Station
+    Route::prefix('exit-scan')->group(function () {
+        Route::get('/', [ExitScanController::class, 'index'])->name('warehouse.exit-scan.index');
+        Route::post('/scan-and-ship', [ExitScanController::class, 'scanAndShip'])->name('warehouse.exit-scan.scan-and-ship');
+    });
 
     // Packing Station
     Route::prefix('packing')->group(function () {

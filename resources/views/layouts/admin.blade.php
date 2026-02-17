@@ -394,6 +394,10 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                             ایستگاه بسته‌بندی
                         </a>
+                        <a href="{{ route('warehouse.exit-scan.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.exit-scan.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1.5 12h11L19 8"/></svg>
+                            صف ارسال (اسکن)
+                        </a>
                         @endcanany
                         @can('warehouse.reprint-invoice')
                         <a href="{{ route('warehouse.reprint-requests.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.reprint-requests.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
