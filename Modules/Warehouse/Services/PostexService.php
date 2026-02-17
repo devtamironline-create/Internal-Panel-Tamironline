@@ -186,7 +186,7 @@ class PostexService
 
         try {
             $collectionType = $data['collection_type']
-                ?? WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+                ?? WarehouseSetting::get('postex_collection_type', 'pick_up');
             $fromCityCode = $data['from_city_code']
                 ?? (int) WarehouseSetting::get('postex_from_city_code', 444);
 
@@ -278,7 +278,7 @@ class PostexService
      */
     public function probeCreateEndpoints(): array
     {
-        $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+        $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
 
         $fromCityCode = (int) WarehouseSetting::get('postex_from_city_code', 444);
         $courier      = WarehouseSetting::get('postex_courier', 'post');
@@ -543,7 +543,7 @@ class PostexService
             return ['success' => false, 'message' => 'پستکس تنظیم نشده (API Key خالی)'];
         }
 
-        $collectionType = WarehouseSetting::get('postex_collection_type', 'postex_drop_off');
+        $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
         $courierName    = WarehouseSetting::get('postex_courier', 'post');
 
         $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');

@@ -81,9 +81,9 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">نوع جمع‌آوری مرسوله</label>
                     <select name="collection_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                        <option value="pick_up" {{ ($settings['collection_type'] ?? 'postex_drop_off') == 'pick_up' ? 'selected' : '' }}>پیک‌آپ (Pick Up)</option>
-                        <option value="courier_drop_off" {{ ($settings['collection_type'] ?? 'postex_drop_off') == 'courier_drop_off' ? 'selected' : '' }}>تحویل به پیک (Courier Drop Off)</option>
-                        <option value="postex_drop_off" {{ ($settings['collection_type'] ?? 'postex_drop_off') == 'postex_drop_off' ? 'selected' : '' }}>تحویل به پستکس (Postex Drop Off)</option>
+                        <option value="pick_up" {{ ($settings['collection_type'] ?? 'pick_up') == 'pick_up' ? 'selected' : '' }}>پیک‌آپ - پیک می‌آید (Pick Up)</option>
+                        <option value="courier_drop_off" {{ ($settings['collection_type'] ?? 'pick_up') == 'courier_drop_off' ? 'selected' : '' }}>تحویل به پیک (Courier Drop Off)</option>
+                        <option value="postex_drop_off" {{ ($settings['collection_type'] ?? 'pick_up') == 'postex_drop_off' ? 'selected' : '' }}>تحویل به نمایندگی پستکس - نیاز به نمایندگی در شهر مبدا (Postex Drop Off)</option>
                     </select>
                 </div>
                 <div>
