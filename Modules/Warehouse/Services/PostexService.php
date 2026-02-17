@@ -118,6 +118,20 @@ class PostexService
         }
     }
 
+    /**
+     * استخراج آرایه از پاسخ API که ممکنه توی data/result/results wrap شده باشه
+     */
+    protected function unwrapList(array $raw): array
+    {
+        if (isset($raw['data']) && is_array($raw['data'])) return $raw['data'];
+        if (isset($raw['result']) && is_array($raw['result'])) return $raw['result'];
+        if (isset($raw['results']) && is_array($raw['results'])) return $raw['results'];
+        if (isset($raw['items']) && is_array($raw['items'])) return $raw['items'];
+        // اگه آرایه خود مستقیم بود (indexed array)
+        if (array_is_list($raw)) return $raw;
+        return [];
+    }
+
     public function getProvinces(): array
     {
         $cached = Cache::get('postex_provinces');
@@ -129,14 +143,16 @@ class PostexService
                 ->get($this->endpoint('location/provinces'));
 
             if ($response->successful()) {
-                $data = $response->json() ?? [];
+                $raw  = $response->json() ?? [];
+                $data = $this->unwrapList($raw);
                 if (!empty($data)) {
                     Cache::put('postex_provinces', $data, 86400);
                     return $data;
                 }
+                Log::warning('Postex getProvinces empty', ['raw' => $raw]);
             }
 
-            Log::warning('Postex getProvinces failed', ['response' => $response->body()]);
+            Log::warning('Postex getProvinces failed', ['status' => $response->status(), 'body' => substr($response->body(), 0, 300)]);
             return [];
         } catch (\Exception $e) {
             Log::error('Postex getProvinces error', ['error' => $e->getMessage()]);
@@ -160,7 +176,8 @@ class PostexService
                 ->get($url);
 
             if ($response->successful()) {
-                $data = $response->json() ?? [];
+                $raw  = $response->json() ?? [];
+                $data = $this->unwrapList($raw);
                 if (!empty($data)) {
                     Cache::put($cacheKey, $data, 86400);
                     return $data;
@@ -498,6 +515,7 @@ class PostexService
      * WooCommerce ایران استان‌ها را با کد دو حرفی ذخیره می‌کند
      */
     protected static array $wcProvinceCodes = [
+        // کدهای ۲ حرفی
         'TH' => 'تهران',       'IS' => 'اصفهان',      'FA' => 'فارس',
         'KH' => 'خراسان رضوی', 'MZ' => 'مازندران',    'GB' => 'گیلان',
         'KR' => 'کرمان',       'KG' => 'کردستان',     'AE' => 'آذربایجان شرقی',
@@ -508,6 +526,23 @@ class PostexService
         'KJ' => 'کهگیلویه و بویراحمد', 'QM' => 'قم', 'QZ' => 'قزوین',
         'YZ' => 'یزد',         'EW' => 'کرمانشاه',    'IL' => 'ایلام',
         'BU' => 'بوشهر',       'MK' => 'مرکزی',       'HM' => 'همدان',
+        'AL' => 'البرز',       'TE' => 'تهران',        'EF' => 'اصفهان',
+        'GI' => 'گیلان',       'GN' => 'گلستان',      'KE' => 'کرمانشاه',
+        'KU' => 'کردستان',     'MN' => 'مازندران',    'SE' => 'سمنان',
+        'YA' => 'یزد',         'ZA' => 'زنجان',       'KM' => 'کرمان',
+        'BS' => 'بوشهر',       'CH' => 'چهارمحال و بختیاری',
+        // کدهای ۳ حرفی (برخی سیستم‌های WooCommerce ایران)
+        'FRS' => 'فارس',       'THR' => 'تهران',      'ISF' => 'اصفهان',
+        'KHR' => 'خراسان رضوی','MZN' => 'مازندران',   'GIL' => 'گیلان',
+        'KRM' => 'کرمان',      'KRD' => 'کردستان',    'KHZ' => 'خوزستان',
+        'AZE' => 'آذربایجان شرقی', 'AZW' => 'آذربایجان غربی',
+        'ARD' => 'اردبیل',     'SEM' => 'سمنان',      'SIS' => 'سیستان و بلوچستان',
+        'CHB' => 'چهارمحال و بختیاری', 'GLN' => 'گلستان',
+        'ZNJ' => 'زنجان',      'LRS' => 'لرستان',     'KHN' => 'خراسان شمالی',
+        'KHS' => 'خراسان جنوبی', 'KBK' => 'کهگیلویه و بویراحمد',
+        'QOM' => 'قم',         'QAZ' => 'قزوین',      'YZD' => 'یزد',
+        'KRH' => 'کرمانشاه',   'ILM' => 'ایلام',      'BSH' => 'بوشهر',
+        'MRK' => 'مرکزی',      'HMD' => 'همدان',      'ALB' => 'البرز',
     ];
 
     public function findCityCode(string $cityName, string $provinceName = ''): ?int
