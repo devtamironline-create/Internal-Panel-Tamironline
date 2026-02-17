@@ -283,13 +283,17 @@ class PostexService
         $fromCityCode = (int) WarehouseSetting::get('postex_from_city_code', 444);
         $courier      = WarehouseSetting::get('postex_courier', 'post');
 
-        // payload با ساختار تخت (flat) - بدون آرایه parcels
+        // payload با ساختار صحیح - courier آبجکت + فیلد request
         $correctPayload = [
             'collection_type' => $collectionType,
             'custom_order_no' => 'TEST-PROBE-' . now()->timestamp,
-            'request_label'   => false,
+            'request'         => [
+                'label' => false,
+            ],
             'remark'          => 'تست اتصال از پنل',
-            'courier'         => $courier,
+            'courier'         => [
+                'name' => $courier,
+            ],
             'to' => [
                 'contact' => [
                     'name'         => 'تست تست',
@@ -551,13 +555,19 @@ class PostexService
         $fromAddress  = WarehouseSetting::get('postex_from_address', 'آدرس مبدا');
         $fromPostcode = $this->normalizePostalCode(WarehouseSetting::get('postex_from_postcode', '1234567890'));
 
-        // ساختار تخت payload - فیلدهای اجباری در سطح اول
+        // ساختار payload بر اساس خطای API:
+        // - courier باید آبجکت باشه (CreateParcelCourierDto) نه رشته
+        // - فیلد request اجباری هست
         $payload = [
             'collection_type' => $collectionType,
             'custom_order_no' => (string) $orderNo,
-            'request_label'   => true,
+            'request'         => [
+                'label' => true,
+            ],
             'remark'          => $description,
-            'courier'         => $courier,
+            'courier'         => [
+                'name' => $courier,
+            ],
             'to' => [
                 'contact' => [
                     'name'         => $data['recipient_name'] ?? '',
