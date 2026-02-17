@@ -259,31 +259,53 @@ class PostexService
         // endpoint های احتمالی برای ثبت مرسوله
         $endpoints = [
             'parcel/create',
+            'parcel/add',
+            'parcel/register',
+            'parcel/store',
             'parcel',
             'parcels',
             'order/add',
             'order/create',
+            'order/register',
+            'order/store',
             'order',
             'orders',
             'shipment/create',
+            'shipment/add',
             'shipments',
             'shipping/create',
+            'shipping/add',
+            'shipping/register',
+            'register',
+            'register/parcel',
         ];
 
         $results = [];
         foreach ($endpoints as $path) {
             try {
-                $response = Http::timeout(10)
+                $response = Http::timeout(8)
                     ->withHeaders($this->getHeaders())
                     ->post($this->endpoint($path), $samplePayload);
 
                 $results[$path] = [
                     'status' => $response->status(),
-                    'body'   => $response->json() ?? $response->body(),
+                    'body'   => $response->json() ?? substr($response->body(), 0, 300),
                 ];
             } catch (\Exception $e) {
                 $results[$path] = ['status' => 'exception', 'body' => $e->getMessage()];
             }
+        }
+
+        // سعی کن Swagger/OpenAPI docs رو هم پیدا کن
+        $docPaths = ['swagger/index.html', 'swagger.json', 'openapi.json', 'docs', 'api-docs'];
+        $baseUrl = rtrim(WarehouseSetting::get('postex_api_url', 'https://api.postex.ir'), '/');
+        foreach ($docPaths as $docPath) {
+            try {
+                $r = Http::timeout(5)->withHeaders($this->getHeaders())->get($baseUrl . '/' . $docPath);
+                if ($r->status() !== 404) {
+                    $results['[DOCS] ' . $docPath] = ['status' => $r->status(), 'body' => substr($r->body(), 0, 200)];
+                }
+            } catch (\Exception $e) {}
         }
 
         return $results;
