@@ -12,6 +12,7 @@ use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\PostexController;
 use Modules\Warehouse\Http\Controllers\ExitScanController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
+use Modules\Warehouse\Http\Controllers\OrderPresenceController;
 
 
 /*
@@ -43,6 +44,12 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::get('/quick-search', [WarehouseController::class, 'quickSearch'])->name('warehouse.quick-search');
     Route::delete('/{order}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy')
+        ->where('order', '[0-9]+');
+
+    // Order presence (concurrent viewer detection)
+    Route::post('/{order}/presence/heartbeat', [OrderPresenceController::class, 'heartbeat'])->name('warehouse.presence.heartbeat')
+        ->where('order', '[0-9]+');
+    Route::post('/{order}/presence/leave', [OrderPresenceController::class, 'leave'])->name('warehouse.presence.leave')
         ->where('order', '[0-9]+');
 
     // Exit Scan Station

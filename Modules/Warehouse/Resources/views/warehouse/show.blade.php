@@ -1018,3 +1018,101 @@ function tapinLocation() {
 @endpush
 @endif
 @endsection
+
+{{-- ====== Order Presence: concurrent viewer detection ====== --}}
+<div
+    x-data="orderPresence({{ $order->id }}, {{ auth()->id() }}, @js(auth()->user()->name))"
+    x-init="init()"
+>
+    {{-- Modal --}}
+    <div
+        x-show="showModal"
+        x-transition.opacity
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        style="display:none"
+    >
+        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 text-center space-y-4">
+            <div class="flex justify-center">
+                <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100">
+                    <svg class="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">این سفارش در حال بررسی است</h3>
+            <p class="text-sm text-gray-600">
+                اپراتور
+                <template x-for="(viewer, i) in others" :key="viewer.id">
+                    <span>
+                        <strong class="text-gray-900" x-text="viewer.name"></strong><span x-show="i < others.length - 1"> و </span>
+                    </span>
+                </template>
+                در حال مشاهده این سفارش است.
+            </p>
+            <div class="flex gap-2 justify-center">
+                <button
+                    @click="showModal = false"
+                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
+                >
+                    متوجه شدم، ادامه می‌دم
+                </button>
+                <a
+                    href="{{ route('warehouse.index') }}"
+                    class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
+                >
+                    بازگشت به لیست
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function orderPresence(orderId, selfId, selfName) {
+    return {
+        orderId,
+        selfId,
+        selfName,
+        others: [],
+        showModal: false,
+        intervalId: null,
+
+        init() {
+            this.heartbeat();
+            this.intervalId = setInterval(() => this.heartbeat(), 25000);
+
+            // Leave on page unload (sendBeacon survives page close)
+            window.addEventListener('beforeunload', () => {
+                navigator.sendBeacon(
+                    `/warehouse/${orderId}/presence/leave`,
+                    new URLSearchParams({ _token: '{{ csrf_token() }}' })
+                );
+            });
+        },
+
+        async heartbeat() {
+            try {
+                const res = await fetch(`/warehouse/${this.orderId}/presence/heartbeat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                this.others = data.others || [];
+                if (this.others.length > 0) {
+                    this.showModal = true;
+                }
+            } catch (e) {
+                // ignore network errors silently
+            }
+        },
+    };
+}
+</script>
+@endpush
