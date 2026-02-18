@@ -1,20 +1,24 @@
-@extends('layouts.base')
-
-@section('title', $page_title ?? 'همکاری با ما')
-
-@push('styles')
-<style>
-    .gradient-hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f4c81 40%, #1a6b4a 100%); }
-    .gradient-cta  { background: linear-gradient(135deg, #0f4c81 0%, #1a6b4a 100%); }
-    .benefit-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
-    .benefit-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .faq-item summary::-webkit-details-marker { display: none; }
-    .step-line { background: linear-gradient(to bottom, #0f4c81, #1a6b4a); }
-</style>
-@endpush
-
-@section('content')
-<div class="min-h-screen bg-gray-50 font-[Rokh,sans-serif]" dir="rtl">
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $page_title ?? 'همکاری با ما' }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="/css/fonts.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Rokh', Tahoma, sans-serif; }
+        .gradient-hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f4c81 40%, #1a6b4a 100%); }
+        .gradient-cta  { background: linear-gradient(135deg, #0f4c81 0%, #1a6b4a 100%); }
+        .benefit-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .benefit-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .step-line { background: linear-gradient(to bottom, #0f4c81, #1a6b4a); }
+    </style>
+</head>
+<body class="bg-gray-50 antialiased">
+<div class="min-h-screen" dir="rtl">
 
     {{-- ===== NAVBAR ===== --}}
     <nav class="bg-white/90 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
@@ -188,4 +192,5 @@
     </footer>
 
 </div>
-@endsection
+</body>
+</html>
