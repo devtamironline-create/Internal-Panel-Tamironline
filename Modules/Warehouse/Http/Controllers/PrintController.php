@@ -540,10 +540,32 @@ class PrintController extends Controller
         // خواندن لوکیشن تاپین اگه قبلاً ذخیره شده
         $tapinData = $wcData['tapin'] ?? [];
 
+        // پیدا کردن province_code اگه قبلاً ذخیره نشده
+        $provinceCode = $tapinData['province_code'] ?? null;
+        $cityCode     = $tapinData['city_code'] ?? null;
+        if (!$provinceCode) {
+            $provinceCode = $tapin->findProvinceCode($state);
+            $cityCode     = $tapin->findCityCode($city, $provinceCode);
+
+            if (!$provinceCode) {
+                Log::warning('Tapin: province not found', ['order' => $order->order_number, 'state' => $state, 'city' => $city]);
+                return "تاپین: کد استان پیدا نشد (استان: '{$state}'، شهر: '{$city}') — استان سفارش را بررسی کنید";
+            }
+
+            // ذخیره province_code و city_code برای دفعات بعدی (تا هر بار API call نزنه)
+            $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            $wcDataCurrent['tapin']['province_code'] = $provinceCode;
+            $wcDataCurrent['tapin']['city_code']     = $cityCode;
+            $order->wc_order_data = $wcDataCurrent;
+            $order->save();
+            $tapinData['province_code'] = $provinceCode;
+            $tapinData['city_code']     = $cityCode;
+        }
+
         // ابعاد جعبه سفارش برای match با بسته‌های تاپین
         $box = $order->boxSize;
 
-        Log::info('Tapin register postal code', ['order' => $order->order_number, 'postcode' => $postcode]);
+        Log::info('Tapin register postal code', ['order' => $order->order_number, 'postcode' => $postcode, 'province_code' => $provinceCode, 'city_code' => $cityCode]);
 
         $result = $tapin->createShipment([
             'external_order_id' => $order->order_number,
@@ -553,8 +575,8 @@ class PrintController extends Controller
             'recipient_postal_code' => $postcode,
             'recipient_city_name' => $city,
             'recipient_province' => $state,
-            'tapin_province_code' => $tapinData['province_code'] ?? null,
-            'tapin_city_code' => $tapinData['city_code'] ?? null,
+            'tapin_province_code' => $provinceCode,
+            'tapin_city_code' => $cityCode,
             'weight' => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
             'value' => (int)($wcData['total'] ?? 100000),
             'products' => $products,
