@@ -162,12 +162,16 @@ class PostexService
 
     /**
      * دریافت همه شهرها از API پستکس
-     * endpoint صحیح: GET /api/v1/locality/cities/all
-     * هر آیتم: {code, name, province_code} که province_code = postex_id استان
+     * endpoint: GET /api/v1/locality/cities/all
+     *
+     * ساختار پاسخ API: آرایه‌ای از استان‌ها که هر کدام آرایه شهرها دارن:
+     * [ { code: 14, name: "فارس", cities: [ {code: 123, name: "شیراز"}, ... ] }, ... ]
+     *
+     * ما شهرها رو flatten می‌کنیم و province_code اضافه می‌کنیم
      */
     public function getCities(?int $postexProvinceId = null): array
     {
-        $cacheKey = 'postex_cities_all';
+        $cacheKey = 'postex_cities_flat_v2';
         $cached   = Cache::get($cacheKey);
 
         if (empty($cached)) {
@@ -179,14 +183,48 @@ class PostexService
                 if ($response->successful()) {
                     $raw  = $response->json() ?? [];
                     $data = $this->unwrapList($raw);
+
                     if (!empty($data)) {
-                        Cache::put($cacheKey, $data, 86400);
-                        $cached = $data;
+                        // بررسی: آیا ساختار nested هست (استان‌ها با شهرهای داخلی)?
+                        $firstItem = $data[0] ?? [];
+                        $hasCities = isset($firstItem['cities']) && is_array($firstItem['cities']);
+
+                        if ($hasCities) {
+                            // ساختار nested: flatten کن
+                            $flat = [];
+                            foreach ($data as $province) {
+                                $provCode = $province['code'] ?? $province['id'] ?? null;
+                                $provName = $province['name'] ?? $province['title'] ?? '';
+                                $cities   = $province['cities'] ?? [];
+
+                                foreach ($cities as $city) {
+                                    $city['province_code'] = $provCode;
+                                    $city['province_name'] = $provName;
+                                    $flat[] = $city;
+                                }
+                            }
+                            Log::info('Postex getCities: flattened nested structure', [
+                                'provinces' => count($data),
+                                'cities'    => count($flat),
+                            ]);
+                            $data = $flat;
+                        } else {
+                            // ساختار flat: شاید مستقیم شهرها باشن
+                            Log::info('Postex getCities: flat structure', [
+                                'count' => count($data),
+                                'sample_keys' => array_keys($firstItem),
+                            ]);
+                        }
+
+                        if (!empty($data)) {
+                            Cache::put($cacheKey, $data, 86400);
+                            $cached = $data;
+                        }
                     }
                 }
 
                 if (empty($cached)) {
-                    Log::warning('Postex getCities failed', ['status' => $response->status(), 'body' => substr($response->body(), 0, 300)]);
+                    Log::warning('Postex getCities failed', ['status' => $response->status() ?? 0, 'body' => substr($response->body() ?? '', 0, 500)]);
                     return [];
                 }
             } catch (\Exception $e) {
@@ -195,33 +233,11 @@ class PostexService
             }
         }
 
-        // فیلتر بر اساس province_id اگه داده شده
-        // فیلدهای ممکن برای شناسه استان در پاسخ API پستکس:
+        // فیلتر بر اساس province_code
         if ($postexProvinceId !== null) {
-            $filtered = array_values(array_filter($cached, function ($city) use ($postexProvinceId) {
-                $prov = $city['province_code'] // اسم رسمی‌تر
-                    ?? $city['province_id']    // جایگزین شماره‌ای
-                    ?? $city['province']       // گاهی مستقیماً province
-                    ?? $city['state_id']       // بعضی APIها state_id
-                    ?? $city['state_code']     // یا state_code
-                    ?? $city['provinceId']     // camelCase
-                    ?? $city['ProvinceId']     // PascalCase
-                    ?? null;
-                return $prov == $postexProvinceId;
+            return array_values(array_filter($cached, function ($city) use ($postexProvinceId) {
+                return ($city['province_code'] ?? null) == $postexProvinceId;
             }));
-
-            if (empty($filtered) && !empty($cached)) {
-                // اگه فیلتر خالی برگشت، فیلد نام استان رو log کن
-                $sampleKeys = array_keys($cached[0] ?? []);
-                Log::warning('Postex getCities: province filter returned empty', [
-                    'postex_province_id' => $postexProvinceId,
-                    'total_cities'       => count($cached),
-                    'sample_city_keys'   => $sampleKeys,
-                    'sample_city'        => $cached[0] ?? null,
-                ]);
-            }
-
-            return $filtered;
         }
 
         return $cached;
