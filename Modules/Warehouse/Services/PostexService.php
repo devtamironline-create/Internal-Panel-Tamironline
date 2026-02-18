@@ -420,9 +420,9 @@ class PostexService
     {
         $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
         $fromCityCode = (int) WarehouseSetting::get('postex_from_city_code', 444);
-        $courierName  = WarehouseSetting::get('postex_courier', 'IR_POST');
-        $serviceType  = WarehouseSetting::get('postex_service_type', 'pishtaz');
-        $paymentType  = WarehouseSetting::get('postex_payment_type', 'RECEIVER');
+        $courierName  = $this->normalizeCourier(WarehouseSetting::get('postex_courier', 'IR_POST'));
+        $serviceType  = $this->normalizeServiceType(WarehouseSetting::get('postex_service_type', 'pishtaz'));
+        $paymentType  = $this->normalizePaymentType(WarehouseSetting::get('postex_payment_type', 'RECEIVER'));
 
         $fromPhone = $this->formatMobile(WarehouseSetting::get('postex_from_phone', '09000000000'));
         [$fromFirst, $fromLast] = $this->splitName(WarehouseSetting::get('postex_from_name', 'فرستنده تست'));
@@ -710,9 +710,9 @@ class PostexService
         }
 
         $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
-        $courierName    = WarehouseSetting::get('postex_courier', 'IR_POST');
-        $serviceType    = WarehouseSetting::get('postex_service_type', 'pishtaz');
-        $paymentType    = WarehouseSetting::get('postex_payment_type', 'RECEIVER');
+        $courierName    = $this->normalizeCourier(WarehouseSetting::get('postex_courier', 'IR_POST'));
+        $serviceType    = $this->normalizeServiceType(WarehouseSetting::get('postex_service_type', 'pishtaz'));
+        $paymentType    = $this->normalizePaymentType(WarehouseSetting::get('postex_payment_type', 'RECEIVER'));
 
         $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
         if (empty($postcode) || strlen($postcode) !== 10) {
@@ -908,6 +908,52 @@ class PostexService
         }
 
         return null;
+    }
+
+    /**
+     * تبدیل مقادیر قدیمی courier به فرمت صحیح API
+     * قدیمی: "post", "pishtaz", "mahex" → جدید: "IR_POST", "IR_POST", "MAHEX"
+     */
+    protected function normalizeCourier(string $value): string
+    {
+        $map = [
+            'post'     => 'IR_POST',
+            'pishtaz'  => 'IR_POST',
+            'sefareshi'=> 'IR_POST',
+            'mahex'    => 'MAHEX',
+            'chapar'   => 'CHAPAR',
+            'snap'     => 'IR_POST',
+            'tipax'    => 'IR_POST',
+        ];
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * تبدیل مقادیر قدیمی service_type به فرمت صحیح API
+     * قدیمی: "0", "1", "2" → جدید: "pishtaz", "pishtaz", "sefareshi"
+     */
+    protected function normalizeServiceType(string $value): string
+    {
+        $map = [
+            '0' => 'pishtaz',
+            '1' => 'pishtaz',
+            '2' => 'sefareshi',
+        ];
+        return $map[$value] ?? $value;
+    }
+
+    /**
+     * تبدیل مقادیر قدیمی payment_type به فرمت صحیح API
+     * قدیمی: "0", "1", "2" → جدید: "SENDER", "RECEIVER", "SENDER"
+     */
+    protected function normalizePaymentType(string $value): string
+    {
+        $map = [
+            '0' => 'SENDER',
+            '1' => 'RECEIVER',
+            '2' => 'RECEIVER',
+        ];
+        return $map[$value] ?? $value;
     }
 
     /**
