@@ -86,9 +86,24 @@ class PrintController extends Controller
         $order->increment('print_count');
         $order->refresh();
 
-        // تغییر وضعیت به "در حال آماده‌سازی" اگه هنوز پندینگ باشه
-        if ($order->status === 'pending') {
-            $order->update(['status' => 'preparing']);
+        // ثبت زمان اولین چاپ
+        if ($order->print_count === 1 && !$order->printed_at) {
+            $order->update(['printed_at' => now()]);
+            $order->refresh();
+        }
+
+        // انتقال وضعیت به "در صف ارسال (اسکن)" در هنگام چاپ فاکتور
+        if (in_array($order->status, [
+            WarehouseOrder::STATUS_PENDING,
+            WarehouseOrder::STATUS_PREPARING,
+            WarehouseOrder::STATUS_SUPPLY_WAIT,
+        ])) {
+            $order->updateStatus(WarehouseOrder::STATUS_PACKED);
+            OrderLog::log($order, OrderLog::ACTION_STATUS_CHANGED, 'وضعیت به "در صف ارسال" تغییر یافت (چاپ فاکتور)', [
+                'from' => 'pending',
+                'to' => WarehouseOrder::STATUS_PACKED,
+                'triggered_by' => 'print',
+            ]);
         }
 
         // Log print
