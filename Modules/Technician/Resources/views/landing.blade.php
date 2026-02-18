@@ -62,16 +62,18 @@
                 {{ $hero_description }}
             </p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-                <a href="#register-form"
+                <a href="{{ $hero_cta_link }}"
                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-blue-900 font-bold text-sm rounded-full hover:bg-blue-50 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
                     {{ $hero_cta_text }}
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 </a>
-                <a href="#how-it-works"
+                @if($hero_secondary_text)
+                <a href="{{ $hero_secondary_link }}"
                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-white/10 backdrop-blur border border-white/25 text-white font-medium text-sm rounded-full hover:bg-white/20 transition-all">
-                    بیشتر بدان
+                    {{ $hero_secondary_text }}
                     <svg class="w-4 h-4 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </a>
+                @endif
             </div>
         </div>
     </section>

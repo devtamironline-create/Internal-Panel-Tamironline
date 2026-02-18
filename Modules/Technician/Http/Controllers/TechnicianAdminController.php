@@ -33,6 +33,9 @@ class TechnicianAdminController extends Controller
             'hero_subtitle'      => TechnicianSetting::get('hero_subtitle',       $defaults['hero_subtitle']),
             'hero_description'   => TechnicianSetting::get('hero_description',    $defaults['hero_description']),
             'hero_cta_text'      => TechnicianSetting::get('hero_cta_text',       $defaults['hero_cta_text']),
+            'hero_cta_link'      => TechnicianSetting::get('hero_cta_link',       $defaults['hero_cta_link']),
+            'hero_secondary_text' => TechnicianSetting::get('hero_secondary_text', $defaults['hero_secondary_text']),
+            'hero_secondary_link' => TechnicianSetting::get('hero_secondary_link', $defaults['hero_secondary_link']),
             'hero_badge'         => TechnicianSetting::get('hero_badge',          $defaults['hero_badge']),
             'hero_bg_image'      => TechnicianSetting::get('hero_bg_image',        null),
             'hero_overlay_color' => TechnicianSetting::get('hero_overlay_color',   '#0f2a4a'),
@@ -67,8 +70,9 @@ class TechnicianAdminController extends Controller
 
         $simpleFields = [
             'page_title', 'brand_name',
-            'hero_title', 'hero_subtitle', 'hero_description', 'hero_cta_text', 'hero_badge',
-            'hero_overlay_color', 'hero_overlay_opacity',
+            'hero_title', 'hero_subtitle', 'hero_description',
+            'hero_cta_text', 'hero_cta_link', 'hero_secondary_text', 'hero_secondary_link',
+            'hero_badge', 'hero_overlay_color', 'hero_overlay_opacity',
             'benefits_title', 'steps_title', 'requirements_title', 'faq_title',
             'cta_title', 'cta_description', 'cta_badge',
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',

@@ -41,6 +41,9 @@ class TechnicianSetting extends Model
             'hero_subtitle'      => 'کار آزاد، درآمد خوب، در شهر خودت',
             'hero_description'   => 'تعمیر آنلاین به تکنسین‌های حرفه‌ای در رشته‌های برق، تاسیسات، سرمایش و گرمایش، لوله‌کشی و دیگر حوزه‌های فنی نیاز دارد. با ما همکار شو و درآمد خود را افزایش بده.',
             'hero_cta_text'      => 'همین حالا ثبت‌نام کن',
+            'hero_cta_link'      => '#register-form',
+            'hero_secondary_text' => 'بیشتر بدان',
+            'hero_secondary_link' => '#how-it-works',
             'hero_badge'         => 'جدیدترین فرصت شغلی',
             'benefits_title'     => 'چرا با تعمیر آنلاین همکار شوی؟',
             'benefits'           => json_encode([
