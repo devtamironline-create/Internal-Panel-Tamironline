@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
     <style>
-        * { font-family: 'Rokh', Tahoma, sans-serif; }
+        * { font-family: 'Vazirmatn', Tahoma, sans-serif; }
         .gradient-hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f4c81 40%, #1a6b4a 100%); }
         .gradient-cta  { background: linear-gradient(135deg, #0f4c81 0%, #1a6b4a 100%); }
         .benefit-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
@@ -23,7 +23,10 @@
     {{-- ===== NAVBAR ===== --}}
     <nav class="bg-white/90 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <span class="text-xl font-black text-blue-900">{{ $brand_name }}</span>
+            <div class="flex items-center gap-2">
+                <img src="/images/logo/logo.svg" alt="{{ $brand_name }}" class="h-9 w-auto">
+                <span class="text-xl font-black text-blue-900">{{ $brand_name }}</span>
+            </div>
             <a href="#register-form"
                class="px-5 py-2 bg-blue-700 text-white text-sm font-bold rounded-lg hover:bg-blue-800 transition-colors">
                 {{ $hero_cta_text }}
