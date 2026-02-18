@@ -56,6 +56,9 @@ class PermissionSeeder extends Seeder
             'manage-warehouse' => 'مدیریت انبار',
             'warehouse.reprint-invoice' => 'چاپ مجدد فاکتور انبار',
 
+            // تکنسین
+            'manage-technicians' => 'مدیریت تکنسین‌ها',
+
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',

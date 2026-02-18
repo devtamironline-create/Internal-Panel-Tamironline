@@ -32,6 +32,7 @@ class StaffController extends Controller
         'view-salary' => 'مشاهده حقوق خود',
         'manage-salary' => 'مدیریت حقوق',
         'use-messenger' => 'استفاده از پیام‌رسان',
+        'manage-technicians' => 'مدیریت تکنسین‌ها',
         'manage-settings' => 'مدیریت تنظیمات',
         'manage-permissions' => 'مدیریت دسترسی‌ها',
     ];
