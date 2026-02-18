@@ -34,6 +34,7 @@ class PermissionController extends Controller
             if (str_contains($name, 'okr')) return 'OKR';
             if (str_contains($name, 'salary')) return 'حقوق';
             if (str_contains($name, 'warehouse')) return 'انبار';
+            if (str_contains($name, 'technician')) return 'تکنسین';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
@@ -59,6 +60,7 @@ class PermissionController extends Controller
             if (str_contains($name, 'okr')) return 'OKR';
             if (str_contains($name, 'salary')) return 'حقوق';
             if (str_contains($name, 'warehouse')) return 'انبار';
+            if (str_contains($name, 'technician')) return 'تکنسین';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
@@ -118,6 +120,7 @@ class PermissionController extends Controller
             'use-messenger' => 'پیام‌رسان',
             'view-warehouse' => 'مشاهده انبار',
             'manage-warehouse' => 'مدیریت انبار',
+            'manage-technicians' => 'مدیریت تکنسین‌ها',
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
         ];
