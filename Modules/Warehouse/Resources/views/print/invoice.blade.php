@@ -176,6 +176,54 @@
     </div>
     @endif
 
+    {{-- انتخاب استان و شهر پستکس - فقط وقتی سرویس پستکس هست --}}
+    @if(($shippingProvider ?? 'amadest') === 'postex' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
+    <div class="no-print" id="postex-city-selector" style="background:#f5f3ff;border:1px solid #c4b5fd;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;">
+        <div style="font-weight:bold;color:#5b21b6;margin-bottom:6px;">انتخاب استان و شهر مقصد پستکس</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:120px;">
+                <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">استان:</label>
+                <select id="postex-province" onchange="loadProvinceCities()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+                    <option value="">انتخاب استان...</option>
+                    @php
+                        $provinces = [
+                            1  => 'تهران', 2  => 'هرمزگان', 3  => 'مرکزی', 4  => 'مازندران',
+                            5  => 'لرستان', 6  => 'گیلان', 7  => 'گلستان', 8  => 'کهگیلویه',
+                            9  => 'کرمانشاه', 10 => 'کرمان', 11 => 'کردستان', 12 => 'قم',
+                            13 => 'قزوین', 14 => 'فارس', 15 => 'همدان', 16 => 'سیستان',
+                            17 => 'زنجان', 18 => 'خوزستان', 19 => 'خراسان شمالی', 20 => 'خراسان رضوی',
+                            21 => 'خراسان جنوبی', 22 => 'چهارمحال', 23 => 'بوشهر', 24 => 'ایلام',
+                            25 => 'البرز', 26 => 'اصفهان', 27 => 'اردبیل', 28 => 'آذربایجان غربی',
+                            29 => 'آذربایجان شرقی', 30 => 'سمنان', 31 => 'یزد',
+                        ];
+                        // تبدیل WC state به postex_id برای pre-select
+                        $wcToPostex = [
+                            'KHZ'=>18,'THR'=>1,'ILM'=>24,'BHR'=>23,'ADL'=>27,'ESF'=>26,'YZD'=>31,
+                            'KRH'=>9,'KRN'=>10,'HDN'=>15,'GZN'=>13,'ZJN'=>17,'LRS'=>5,'ABZ'=>25,
+                            'EAZ'=>29,'WAZ'=>28,'CHB'=>22,'SKH'=>21,'RKH'=>20,'NKH'=>19,'SMN'=>30,
+                            'FRS'=>14,'QHM'=>12,'KRD'=>11,'KBD'=>8,'GLS'=>7,'GIL'=>6,'MZN'=>4,
+                            'MKZ'=>3,'HRZ'=>2,'SBN'=>16,
+                        ];
+                        $orderState = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
+                        $preSelectedProvince = $wcToPostex[strtoupper($orderState)] ?? null;
+                    @endphp
+                    @foreach($provinces as $id => $name)
+                        <option value="{{ $id }}" {{ $preSelectedProvince == $id ? 'selected' : '' }}>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="flex:2;min-width:180px;">
+                <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">شهر:</label>
+                <select id="postex-city" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+                    <option value="">ابتدا استان را انتخاب کنید...</option>
+                </select>
+            </div>
+            <button onclick="retryWithCity()" id="retryWithCityBtn" style="padding:5px 14px;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-family:'Vazirmatn',Tahoma;white-space:nowrap;">ثبت در پستکس</button>
+        </div>
+        <div id="postex-city-status" style="font-size:10px;color:#888;margin-top:4px;"></div>
+    </div>
+    @endif
+
     <div class="invoice">
         {{-- Header --}}
         <div class="header">
@@ -445,10 +493,20 @@
         }
 
         function retryRegister() {
+            // اگه selector پستکس وجود داره و شهر انتخاب شده، از اون استفاده کن
+            var citySelect = document.getElementById('postex-city');
+            var cityCode = citySelect ? citySelect.value : '';
+
             var btn = document.getElementById('retryBtn');
             if (!btn) return;
             btn.disabled = true;
             btn.textContent = 'در حال ثبت...';
+
+            var bodyData = {};
+            if (cityCode) {
+                bodyData.postex_city_code = parseInt(cityCode);
+            }
+
             fetch('/warehouse/{{ $order->id }}/retry-register', {
                 method: 'POST',
                 headers: {
@@ -456,6 +514,7 @@
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify(bodyData),
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -474,6 +533,106 @@
                 btn.textContent = 'ثبت مجدد';
             });
         }
+
+        // بارگذاری شهرهای استان انتخاب شده
+        function loadProvinceCities() {
+            var provinceId = document.getElementById('postex-province').value;
+            var citySelect = document.getElementById('postex-city');
+            var statusEl = document.getElementById('postex-city-status');
+
+            if (!provinceId) {
+                citySelect.innerHTML = '<option value="">ابتدا استان را انتخاب کنید...</option>';
+                return;
+            }
+
+            citySelect.innerHTML = '<option value="">در حال بارگذاری...</option>';
+            if (statusEl) statusEl.textContent = 'در حال دریافت شهرها...';
+
+            fetch('/warehouse/postex/cities?province_id=' + provinceId, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var cities = data.data || [];
+                if (cities.length === 0) {
+                    citySelect.innerHTML = '<option value="">شهری یافت نشد</option>';
+                    if (statusEl) statusEl.textContent = 'شهری برای این استان یافت نشد';
+                    return;
+                }
+
+                var orderCity = @json(($shipping['city'] ?? '') ?: ($billing['city'] ?? ''));
+                var html = '<option value="">انتخاب شهر (' + cities.length + ' شهر)...</option>';
+                var autoSelected = false;
+
+                cities.forEach(function(c) {
+                    var code = c.code || c.id || '';
+                    var name = c.name || c.title || '';
+                    var selected = '';
+                    // اگه نام شهر سفارش با شهر پستکس مطابقت داره، auto-select کن
+                    if (!autoSelected && orderCity && (name === orderCity || name.indexOf(orderCity) !== -1 || orderCity.indexOf(name) !== -1)) {
+                        selected = ' selected';
+                        autoSelected = true;
+                    }
+                    html += '<option value="' + code + '"' + selected + '>' + name + ' (کد: ' + code + ')</option>';
+                });
+
+                citySelect.innerHTML = html;
+                if (statusEl) {
+                    statusEl.textContent = cities.length + ' شهر بارگذاری شد' + (autoSelected ? ' — شهر سفارش خودکار انتخاب شد' : '');
+                    statusEl.style.color = autoSelected ? '#059669' : '#888';
+                }
+            })
+            .catch(function() {
+                citySelect.innerHTML = '<option value="">خطا در بارگذاری</option>';
+                if (statusEl) statusEl.textContent = 'خطا در دریافت شهرها';
+            });
+        }
+
+        // ثبت با شهر انتخاب شده
+        function retryWithCity() {
+            var cityCode = document.getElementById('postex-city').value;
+            if (!cityCode) {
+                alert('لطفاً ابتدا شهر مقصد را انتخاب کنید');
+                return;
+            }
+
+            var btn = document.getElementById('retryWithCityBtn');
+            btn.disabled = true;
+            btn.textContent = 'در حال ثبت...';
+
+            fetch('/warehouse/{{ $order->id }}/retry-register', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ postex_city_code: parseInt(cityCode) }),
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    alert('موفق! ' + data.message);
+                    location.reload();
+                } else {
+                    alert('خطا: ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'ثبت در پستکس';
+                }
+            })
+            .catch(function() {
+                alert('خطا در ارتباط');
+                btn.disabled = false;
+                btn.textContent = 'ثبت در پستکس';
+            });
+        }
+
+        // اگه استان از قبل انتخاب شده (pre-selected)، شهرها رو بارگذاری کن
+        @if(($shippingProvider ?? 'amadest') === 'postex' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
+        if (document.getElementById('postex-province') && document.getElementById('postex-province').value) {
+            loadProvinceCities();
+        }
+        @endif
     </script>
 
 </body>
