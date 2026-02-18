@@ -1,0 +1,230 @@
+@extends('layouts.admin')
+@section('page-title', 'تنظیمات صفحه جذب تکنسین')
+
+@section('main')
+<div class="space-y-6">
+
+    {{-- Header --}}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">تنظیمات صفحه جذب تکنسین</h1>
+            <p class="text-sm text-gray-500 mt-1">محتوای صفحه عمومی را از اینجا مدیریت کنید.</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ route('technician.landing') }}" target="_blank"
+               class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                مشاهده صفحه
+            </a>
+            <form method="POST" action="{{ route('technician.admin.settings.reset') }}"
+                  onsubmit="return confirm('آیا از بازنشانی به مقادیر پیش‌فرض مطمئنید؟')">
+                @csrf
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    بازنشانی
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if(session('success'))
+    <div class="bg-green-50 border border-green-200 text-green-800 rounded-xl px-4 py-3 flex items-center gap-2">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {{ session('success') }}
+    </div>
+    @endif
+
+    <form method="POST" action="{{ route('technician.admin.settings.update') }}" x-data="{ activeTab: 'hero' }">
+        @csrf
+        @method('PUT')
+
+        {{-- Tabs --}}
+        <div class="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 overflow-x-auto">
+            @foreach([
+                ['hero', 'هیرو'],
+                ['benefits', 'مزایا'],
+                ['steps', 'مراحل'],
+                ['requirements', 'شرایط'],
+                ['faq', 'سوالات'],
+                ['cta', 'دعوت به عمل'],
+                ['general', 'عمومی'],
+            ] as [$tab, $label])
+            <button type="button" @click="activeTab = '{{ $tab }}'"
+                    :class="activeTab === '{{ $tab }}' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap flex-shrink-0">
+                {{ $label }}
+            </button>
+            @endforeach
+        </div>
+
+        {{-- TAB: هیرو --}}
+        <div x-show="activeTab === 'hero'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش هیرو (بالای صفحه)</h2>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">بج (نوار کوچک بالای عنوان)</label>
+                    <input type="text" name="hero_badge" value="{{ $settings['hero_badge'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="مثال: جدیدترین فرصت شغلی">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان اصلی <span class="text-red-500">*</span></label>
+                    <input type="text" name="hero_title" value="{{ $settings['hero_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">زیرعنوان</label>
+                    <input type="text" name="hero_subtitle" value="{{ $settings['hero_subtitle'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">توضیحات</label>
+                    <textarea name="hero_description" rows="3"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none">{{ $settings['hero_description'] }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">متن دکمه اصلی</label>
+                    <input type="text" name="hero_cta_text" value="{{ $settings['hero_cta_text'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: مزایا --}}
+        <div x-show="activeTab === 'benefits'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش مزایا</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان بخش</label>
+                    <input type="text" name="benefits_title" value="{{ $settings['benefits_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        لیست مزایا
+                        <span class="text-xs text-gray-400 mr-2">فرمت JSON — هر آیتم: {"icon": "money|clock|map|support|growth|tools", "title": "...", "description": "..."}</span>
+                    </label>
+                    <textarea name="benefits_json" rows="12"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y" dir="ltr">{{ $settings['benefits_json'] }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: مراحل --}}
+        <div x-show="activeTab === 'steps'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش "چطور شروع کنی؟"</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان بخش</label>
+                    <input type="text" name="steps_title" value="{{ $settings['steps_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        مراحل
+                        <span class="text-xs text-gray-400 mr-2">فرمت JSON — هر آیتم: {"number": "۱", "title": "...", "description": "..."}</span>
+                    </label>
+                    <textarea name="steps_json" rows="10"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y" dir="ltr">{{ $settings['steps_json'] }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: شرایط --}}
+        <div x-show="activeTab === 'requirements'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش شرایط همکاری</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان بخش</label>
+                    <input type="text" name="requirements_title" value="{{ $settings['requirements_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        لیست شرایط
+                        <span class="text-xs text-gray-400 mr-2">فرمت JSON — آرایه‌ای از رشته‌ها: ["شرط اول", "شرط دوم", ...]</span>
+                    </label>
+                    <textarea name="requirements_json" rows="8"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y" dir="ltr">{{ $settings['requirements_json'] }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: سوالات --}}
+        <div x-show="activeTab === 'faq'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">سوالات متداول (FAQ)</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان بخش</label>
+                    <input type="text" name="faq_title" value="{{ $settings['faq_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        سوالات و جواب‌ها
+                        <span class="text-xs text-gray-400 mr-2">فرمت JSON — هر آیتم: {"question": "...", "answer": "..."}</span>
+                    </label>
+                    <textarea name="faq_json" rows="12"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y" dir="ltr">{{ $settings['faq_json'] }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: دعوت به عمل --}}
+        <div x-show="activeTab === 'cta'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش پایین صفحه (CTA)</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان</label>
+                    <input type="text" name="cta_title" value="{{ $settings['cta_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">توضیحات</label>
+                    <textarea name="cta_description" rows="2"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none">{{ $settings['cta_description'] }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">متن دکمه</label>
+                    <input type="text" name="cta_button_text" value="{{ $settings['cta_button_text'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: عمومی --}}
+        <div x-show="activeTab === 'general'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات عمومی</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">عنوان صفحه (title tag)</label>
+                    <input type="text" name="page_title" value="{{ $settings['page_title'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">نام برند (لوگو و فوتر)</label>
+                    <input type="text" name="brand_name" value="{{ $settings['brand_name'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+                    <p class="font-medium text-gray-800 mb-2">لینک صفحه عمومی:</p>
+                    <code class="bg-gray-100 px-2 py-1 rounded text-xs" dir="ltr">{{ url('/join-technician') }}</code>
+                    <a href="{{ route('technician.landing') }}" target="_blank"
+                       class="mr-3 text-blue-600 hover:underline text-xs">باز کردن ←</a>
+                </div>
+            </div>
+        </div>
+
+        {{-- Save Button --}}
+        <div class="flex justify-end pt-4">
+            <button type="submit"
+                    class="px-6 py-2.5 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-800 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                ذخیره تنظیمات
+            </button>
+        </div>
+    </form>
+
+</div>
+@endsection
