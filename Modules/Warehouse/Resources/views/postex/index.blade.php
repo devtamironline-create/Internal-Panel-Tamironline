@@ -87,30 +87,27 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">نوع پیک (courier) <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شرکت حمل (courier name) <span class="text-red-500">*</span></label>
                     <select name="courier" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                        <option value="post" {{ ($settings['courier'] ?? 'post') == 'post' ? 'selected' : '' }}>پست (post)</option>
-                        <option value="pishtaz" {{ ($settings['courier'] ?? 'post') == 'pishtaz' ? 'selected' : '' }}>پیشتاز (pishtaz)</option>
-                        <option value="mahex" {{ ($settings['courier'] ?? 'post') == 'mahex' ? 'selected' : '' }}>ماهکس (mahex)</option>
-                        <option value="snap" {{ ($settings['courier'] ?? 'post') == 'snap' ? 'selected' : '' }}>اسنپ (snap)</option>
-                        <option value="tipax" {{ ($settings['courier'] ?? 'post') == 'tipax' ? 'selected' : '' }}>تیپاکس (tipax)</option>
+                        <option value="IR_POST" {{ ($settings['courier'] ?? 'IR_POST') == 'IR_POST' ? 'selected' : '' }}>پست ایران (IR_POST)</option>
+                        <option value="CHAPAR" {{ ($settings['courier'] ?? 'IR_POST') == 'CHAPAR' ? 'selected' : '' }}>چاپار (CHAPAR)</option>
+                        <option value="MAHEX" {{ ($settings['courier'] ?? 'IR_POST') == 'MAHEX' ? 'selected' : '' }}>ماهکس (MAHEX)</option>
+                        <option value="DEKAPOST" {{ ($settings['courier'] ?? 'IR_POST') == 'DEKAPOST' ? 'selected' : '' }}>دکاپست (DEKAPOST)</option>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع پرداخت (paymenttype)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع پرداخت (payment_type)</label>
                         <select name="payment_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                            <option value="0" {{ ($settings['payment_type'] ?? '0') == '0' ? 'selected' : '' }}>0 - پیش‌پرداخت</option>
-                            <option value="1" {{ ($settings['payment_type'] ?? '0') == '1' ? 'selected' : '' }}>1 - پرداخت در محل (COD)</option>
-                            <option value="2" {{ ($settings['payment_type'] ?? '0') == '2' ? 'selected' : '' }}>2 - اعتباری</option>
+                            <option value="RECEIVER" {{ ($settings['payment_type'] ?? 'RECEIVER') == 'RECEIVER' ? 'selected' : '' }}>پسکرایه - گیرنده پرداخت (RECEIVER)</option>
+                            <option value="SENDER" {{ ($settings['payment_type'] ?? 'RECEIVER') == 'SENDER' ? 'selected' : '' }}>پیشکرایه - فرستنده پرداخت (SENDER)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع سرویس (servicetype)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نوع سرویس (service_type)</label>
                         <select name="service_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
-                            <option value="0" {{ ($settings['service_type'] ?? '0') == '0' ? 'selected' : '' }}>0 - عادی</option>
-                            <option value="1" {{ ($settings['service_type'] ?? '0') == '1' ? 'selected' : '' }}>1 - ویژه / سریع</option>
-                            <option value="2" {{ ($settings['service_type'] ?? '0') == '2' ? 'selected' : '' }}>2 - اقتصادی</option>
+                            <option value="pishtaz" {{ ($settings['service_type'] ?? 'pishtaz') == 'pishtaz' ? 'selected' : '' }}>پیشتاز (pishtaz)</option>
+                            <option value="sefareshi" {{ ($settings['service_type'] ?? 'pishtaz') == 'sefareshi' ? 'selected' : '' }}>سفارشی (sefareshi)</option>
                         </select>
                     </div>
                 </div>
