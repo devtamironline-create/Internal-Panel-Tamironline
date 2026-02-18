@@ -119,6 +119,78 @@ class PostexService
     }
 
     /**
+     * دریافت روش‌های ارسال از API پستکس
+     * endpoint: GET /api/v1/shipping-methods
+     * پاسخ: { success: true, data: { data: [{courierCode, courierServiceCode, ...}] } }
+     */
+    public function getShippingMethods(): array
+    {
+        if (!$this->isConfigured()) {
+            return [];
+        }
+
+        $cached = Cache::get('postex_shipping_methods');
+        if (!empty($cached)) {
+            return $cached;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('shipping-methods'));
+
+            if ($response->successful()) {
+                $body = $response->json() ?? [];
+                $data = $body['data']['data'] ?? $body['data'] ?? [];
+                if (!empty($data)) {
+                    Cache::put('postex_shipping_methods', $data, 86400);
+                    return $data;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Postex getShippingMethods error', ['error' => $e->getMessage()]);
+        }
+
+        return [];
+    }
+
+    /**
+     * دریافت روش‌های پرداخت از API پستکس
+     * endpoint: GET /api/v1/common/payment-methods
+     * پاسخ: { success: true, data: [{name, value}] }
+     */
+    public function getPaymentMethods(): array
+    {
+        if (!$this->isConfigured()) {
+            return [];
+        }
+
+        $cached = Cache::get('postex_payment_methods');
+        if (!empty($cached)) {
+            return $cached;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders($this->getHeaders())
+                ->get($this->endpoint('common/payment-methods'));
+
+            if ($response->successful()) {
+                $body = $response->json() ?? [];
+                $data = $body['data'] ?? [];
+                if (!empty($data)) {
+                    Cache::put('postex_payment_methods', $data, 86400);
+                    return $data;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Postex getPaymentMethods error', ['error' => $e->getMessage()]);
+        }
+
+        return [];
+    }
+
+    /**
      * استخراج آرایه از پاسخ API که ممکنه توی data/result/results wrap شده باشه
      */
     protected function unwrapList(array $raw): array
@@ -342,81 +414,72 @@ class PostexService
     }
 
     /**
-     * تست endpoint های مختلف برای یافتن مسیر صحیح ثبت مرسوله
-     * با payload صحیح بر اساس مستندات رسمی
+     * تست endpoint ثبت مرسوله با ساختار صحیح پلاگین رسمی
      */
     public function probeCreateEndpoints(): array
     {
         $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
-
         $fromCityCode = (int) WarehouseSetting::get('postex_from_city_code', 444);
-        $courier      = WarehouseSetting::get('postex_courier', 'post');
+        $courierName  = WarehouseSetting::get('postex_courier', 'IR_POST');
+        $serviceType  = WarehouseSetting::get('postex_service_type', 'pishtaz');
+        $paymentType  = WarehouseSetting::get('postex_payment_type', 'RECEIVER');
 
         $fromPhone = $this->formatMobile(WarehouseSetting::get('postex_from_phone', '09000000000'));
         [$fromFirst, $fromLast] = $this->splitName(WarehouseSetting::get('postex_from_name', 'فرستنده تست'));
 
-        // payload با ساختار صحیح API پستکس
+        // payload با ساختار صحیح بر اساس پلاگین رسمی WP
         $correctPayload = [
             'collection_type' => $collectionType,
-            'custom_order_no' => 'TEST-PROBE-' . now()->timestamp,
-            'request'         => [
-                'label' => false,
-            ],
-            'remark'          => 'تست اتصال از پنل',
-            'courier'         => [
-                'name'         => $courier,
-                'payment_type' => (string) WarehouseSetting::get('postex_payment_type', '0'),
-                'service_type' => (string) WarehouseSetting::get('postex_service_type', '0'),
-            ],
-            'to' => [
-                'contact' => [
-                    'first_name'   => 'تست',
-                    'last_name'    => 'تست',
-                    'mobile_no'    => '09120000000',
-                    'telephone_no' => '09120000000',
+            'custom_channel'  => 'laravel-panel',
+            'parcels' => [[
+                'from' => [
+                    'contact' => [
+                        'first_name'   => $fromFirst,
+                        'last_name'    => $fromLast,
+                        'mobile_no'    => $fromPhone,
+                        'telephone_no' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
+                    ],
+                    'location' => [
+                        'post_code' => WarehouseSetting::get('postex_from_postcode', '1234567890'),
+                        'country'   => 'IR',
+                        'city_id'   => $fromCityCode,
+                        'address'   => WarehouseSetting::get('postex_from_address', 'آدرس مبدا'),
+                    ],
                 ],
-                'location' => [
-                    'city_code' => 444,
-                    'address'   => 'تهران، آدرس تست',
-                    'postcode'  => '1234567890',
+                'to' => [
+                    'contact' => [
+                        'first_name'   => 'تست',
+                        'last_name'    => 'تست',
+                        'mobile_no'    => '09120000000',
+                        'telephone_no' => '09120000000',
+                    ],
+                    'location' => [
+                        'post_code' => '1234567890',
+                        'city_id'   => 444,
+                        'address'   => 'تهران، آدرس تست',
+                    ],
                 ],
-            ],
-            'from' => [
-                'contact' => [
-                    'first_name'   => $fromFirst,
-                    'last_name'    => $fromLast,
-                    'mobile_no'    => $fromPhone,
-                    'telephone_no' => WarehouseSetting::get('postex_from_telephone', $fromPhone),
+                'parcel_properties' => [
+                    'total_value'          => 100000,
+                    'total_value_currency' => 'IRR',
+                    'total_weight'         => 500,
+                    'is_fragile'           => false,
+                    'is_liquid'            => false,
                 ],
-                'location' => [
-                    'city_code' => $fromCityCode,
-                    'address'   => WarehouseSetting::get('postex_from_address', 'آدرس مبدا'),
-                    'postcode'  => WarehouseSetting::get('postex_from_postcode', '1234567890'),
+                'courier' => [
+                    'name'         => $courierName,
+                    'service_type' => $serviceType,
+                    'payment_type' => $paymentType,
                 ],
-            ],
-            'parcel_properties' => [
-                'total_value'  => 100000,
-                'total_weight' => 500,
-                'is_fragile'   => false,
-                'is_liquid'    => false,
-            ],
+                'custom_reference_no' => 'TEST-PROBE-' . now()->timestamp,
+                'ready_to_accept'     => false,
+            ]],
         ];
 
-        // مسیرهای مختلف برای تست (v1 و v2)
+        // تست فقط endpoint اصلی
         $paths = [
-            'parcel',
+            'parcels/bulk',
             'parcels',
-            'order',
-            'orders',
-            'order/create',
-            'order/add',
-            'order/batch',
-            'parcel/batch',
-            'parcel/add',
-            'parcel/create',
-            'parcel/register',
-            'shipment',
-            'shipments',
         ];
 
         $results = [];
@@ -630,8 +693,15 @@ class PostexService
 
     /**
      * ثبت مرسوله در پستکس
-     * endpoint صحیح: POST /api/v1/parcels (جمع)
-     * ساختار تخت (flat) با فیلدهای اجباری: to, from, courier, parcelproperties
+     * endpoint صحیح: POST /api/v1/parcels/bulk (بر اساس پلاگین رسمی WP)
+     * ساختار: parcels آرایه‌ای از مرسوله‌ها، هر مرسوله شامل from, to, courier, parcel_properties
+     *
+     * مقادیر مهم:
+     *   courier.name = "IR_POST" | "CHAPAR" | "MAHEX" | "DEKAPOST"
+     *   courier.service_type = "pishtaz" | "sefareshi" | ...
+     *   courier.payment_type = "RECEIVER" | "SENDER" | ...
+     *   location.city_id (نه city_code)
+     *   location.post_code (نه postcode)
      */
     public function createShipment(array $data): array
     {
@@ -640,7 +710,9 @@ class PostexService
         }
 
         $collectionType = WarehouseSetting::get('postex_collection_type', 'pick_up');
-        $courierName    = WarehouseSetting::get('postex_courier', 'post');
+        $courierName    = WarehouseSetting::get('postex_courier', 'IR_POST');
+        $serviceType    = WarehouseSetting::get('postex_service_type', 'pishtaz');
+        $paymentType    = WarehouseSetting::get('postex_payment_type', 'RECEIVER');
 
         $postcode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
         if (empty($postcode) || strlen($postcode) !== 10) {
@@ -649,7 +721,6 @@ class PostexService
 
         $toCityCode = $data['to_city_code'] ?? null;
         if (empty($toCityCode)) {
-            // اگه شهر پیدا نشد از fallback city code استفاده کن
             $fallback = (int) WarehouseSetting::get('postex_fallback_city_code', 0);
             if ($fallback > 0) {
                 Log::warning('Postex: city not found, using fallback city code', [
@@ -666,7 +737,6 @@ class PostexService
 
         $weight      = (int)($data['weight'] ?? 500);
         $totalValue  = (int)($data['value'] ?? 100000);
-        $description = $data['description'] ?? ('سفارش ' . ($data['external_order_id'] ?? ''));
         $orderNo     = $data['external_order_id'] ?? '';
 
         // اطلاعات فرستنده از تنظیمات
@@ -676,32 +746,31 @@ class PostexService
         $fromAddress  = WarehouseSetting::get('postex_from_address', 'آدرس مبدا');
         $fromPostcode = $this->normalizePostalCode(WarehouseSetting::get('postex_from_postcode', '1234567890'));
 
-        // تفکیک نام و نام خانوادگی گیرنده
-        $recipientFullName = $data['recipient_name'] ?? '';
-        [$recipientFirst, $recipientLast] = $this->splitName($recipientFullName);
-
-        // تفکیک نام و نام خانوادگی فرستنده
+        [$recipientFirst, $recipientLast] = $this->splitName($data['recipient_name'] ?? '');
         [$fromFirst, $fromLast] = $this->splitName($fromName);
 
-        // شماره ثابت (اگه نداریم از موبایل استفاده میکنیم)
         $recipientMobile = $this->formatMobile($data['recipient_mobile'] ?? '');
         $recipientPhone  = $data['recipient_phone'] ?? $recipientMobile;
         $fromTelephone   = WarehouseSetting::get('postex_from_telephone', $fromPhone);
 
-        // ساختار payload - snake_case مثل بقیه فیلدهای API که کار میکنن:
-        // collection_type, custom_order_no, city_code همه snake_case هستن و کار میکنن
-        // پس فیلدهای ترکیبی هم باید snake_case باشن
-        $payload = [
-            'collection_type' => $collectionType,
-            'custom_order_no' => (string) $orderNo,
-            'request'         => [
-                'label' => false,
-            ],
-            'remark'          => $description,
-            'courier'         => [
-                'name'         => $courierName,
-                'payment_type' => (string) WarehouseSetting::get('postex_payment_type', '0'),
-                'service_type' => (string) WarehouseSetting::get('postex_service_type', '0'),
+        // ساختار بر اساس پلاگین رسمی پستکس (WP plugin)
+        // endpoint: POST /parcels/bulk
+        // courier.name = "IR_POST", service_type = "pishtaz", payment_type = "RECEIVER"
+        // location: city_id (نه city_code), post_code (نه postcode)
+        $parcel = [
+            'from' => [
+                'contact' => [
+                    'first_name'   => $fromFirst,
+                    'last_name'    => $fromLast,
+                    'mobile_no'    => $fromPhone,
+                    'telephone_no' => $fromTelephone,
+                ],
+                'location' => [
+                    'post_code' => $fromPostcode,
+                    'country'   => 'IR',
+                    'city_id'   => $fromCityCode,
+                    'address'   => $fromAddress,
+                ],
             ],
             'to' => [
                 'contact' => [
@@ -711,39 +780,51 @@ class PostexService
                     'telephone_no' => $recipientPhone,
                 ],
                 'location' => [
-                    'city_code' => $toCityCode,
+                    'post_code' => $postcode,
+                    'city_id'   => $toCityCode,
+                    'city_name' => $data['recipient_city'] ?? '',
                     'address'   => $data['recipient_address'] ?? '',
-                    'postcode'  => $postcode,
-                ],
-            ],
-            'from' => [
-                'contact' => [
-                    'first_name'   => $fromFirst,
-                    'last_name'    => $fromLast,
-                    'mobile_no'    => $fromPhone,
-                    'telephone_no' => $fromTelephone,
-                ],
-                'location' => [
-                    'city_code' => $fromCityCode,
-                    'address'   => $fromAddress,
-                    'postcode'  => $fromPostcode,
                 ],
             ],
             'parcel_properties' => [
-                'total_value'  => $totalValue,
-                'total_weight' => $weight,
-                'is_fragile'   => false,
-                'is_liquid'    => false,
+                'total_value'          => $totalValue,
+                'total_value_currency' => 'IRR',
+                'total_weight'         => $weight,
+                'is_fragile'           => false,
+                'is_liquid'            => false,
             ],
+            'courier' => [
+                'name'         => $courierName,
+                'service_type' => $serviceType,
+                'payment_type' => $paymentType,
+            ],
+            'added_service' => [
+                'handling_fee'               => 0,
+                'request_label'              => false,
+                'request_packaging'          => false,
+                'request_sms_notification'   => false,
+                'request_email_notification' => false,
+                'print_logo'                 => false,
+            ],
+            'delivery_instructions' => '',
+            'custom_order_no'       => null,
+            'custom_reference_no'   => (string) $orderNo,
+            'ready_to_accept'       => false,
+            'drop_off_location'     => '',
+        ];
+
+        $payload = [
+            'collection_type' => $collectionType,
+            'custom_channel'  => 'laravel-panel',
+            'parcels'         => [$parcel],
         ];
 
         Log::info('Postex createShipment payload', ['order' => $orderNo, 'payload' => $payload]);
 
         try {
-            // endpoint صحیح: POST /api/v1/parcels (جمع با s)
             $response = Http::timeout(30)
                 ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('parcels'), $payload);
+                ->post($this->endpoint('parcels/bulk'), $payload);
 
             $body = $response->json() ?? [];
             Log::info('Postex createShipment response', [
@@ -756,12 +837,17 @@ class PostexService
                 return ['success' => false, 'message' => 'پستکس: موجودی کیف پول کافی نیست. لطفاً کیف پول را شارژ کنید.'];
             }
 
-            if ($response->successful() && ($body['isSuccess'] ?? !empty($body))) {
-                // استخراج بارکد / tracking از پاسخ
+            // پاسخ موفق: { result: [{ isSuccess: true, data: { shipments: [{ tracking_no: ... }] } }] }
+            if ($response->successful()) {
                 $barcode = $this->extractBarcode($body);
-
                 if (!empty($barcode)) {
                     return ['success' => true, 'data' => ['barcode' => (string)$barcode, 'raw' => $body]];
+                }
+
+                // بررسی خطا در result
+                $resultItem = $body['result'][0] ?? null;
+                if ($resultItem && isset($resultItem['isSuccess']) && !$resultItem['isSuccess']) {
+                    return ['success' => false, 'message' => 'پستکس: ' . ($resultItem['message'] ?? json_encode($resultItem, JSON_UNESCAPED_UNICODE))];
                 }
 
                 return ['success' => false, 'message' => 'پستکس: ثبت شد ولی بارکد در پاسخ نیامد — ' . json_encode($body, JSON_UNESCAPED_UNICODE)];
@@ -774,14 +860,13 @@ class PostexService
             if (!empty($body['errors'])) {
                 $errorMsg .= ' | خطاها: ' . json_encode($body['errors'], JSON_UNESCAPED_UNICODE);
             }
-            // برای 500 یا هر خطایی که پیام مشخصی ندارد، کل body رو نشون بده
             if (empty(trim($errorMsg))) {
                 $rawBody = $response->body();
                 $errorMsg = !empty($body)
                     ? json_encode($body, JSON_UNESCAPED_UNICODE)
                     : substr($rawBody, 0, 500);
             }
-            $errorMsg .= ' [v11|ct:' . ($payload['collection_type'] ?? '?') . '|courier:' . ($payload['courier']['name'] ?? '?') . '|to_city:' . ($payload['to']['location']['city_code'] ?? 'null') . '|from_city:' . ($payload['from']['location']['city_code'] ?? 'null') . '|pt:' . ($payload['courier']['payment_type'] ?? '?') . '|st:' . ($payload['courier']['service_type'] ?? '?') . ']';
+            $errorMsg .= ' [ct:' . $collectionType . '|courier:' . $courierName . '|st:' . $serviceType . '|pt:' . $paymentType . '|to_city:' . $toCityCode . '|from_city:' . $fromCityCode . ']';
             return ['success' => false, 'message' => 'پستکس (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Postex createShipment error', ['error' => $e->getMessage()]);
@@ -791,17 +876,24 @@ class PostexService
 
     /**
      * استخراج بارکد/tracking از پاسخ پستکس
+     * ساختار پاسخ /parcels/bulk:
+     * { result: [{ isSuccess: true, data: { shipments: [{ tracking_no: "...", courier: {...} }] } }] }
      */
     protected function extractBarcode(array $body): ?string
     {
-        // حالت‌های مختلف پاسخ پستکس
         $candidates = [
-            // { data: [{ parcel_no: ..., tracking_no: ... }] }
+            // /parcels/bulk response: { result: [{ data: { shipments: [{ tracking_no }] } }] }
+            $body['result'][0]['data']['shipments'][0]['tracking_no'] ?? null,
+            $body['result'][0]['data']['shipments'][0]['parcel_no'] ?? null,
+            $body['result'][0]['data']['shipments'][0]['tracking_number'] ?? null,
+            $body['result'][0]['data']['shipments'][0]['barcode'] ?? null,
+            // result.data direct
+            $body['result'][0]['data']['tracking_no'] ?? null,
+            $body['result'][0]['data']['parcel_no'] ?? null,
+            // { data: [{ tracking_no }] }
             $body['data'][0]['tracking_no'] ?? null,
             $body['data'][0]['parcel_no'] ?? null,
-            $body['data'][0]['tracking_number'] ?? null,
-            $body['data'][0]['barcode'] ?? null,
-            // { data: { tracking_no: ... } }
+            // { data: { tracking_no } }
             $body['data']['tracking_no'] ?? null,
             $body['data']['parcel_no'] ?? null,
             // flat response
@@ -809,9 +901,6 @@ class PostexService
             $body['parcel_no'] ?? null,
             $body['tracking_number'] ?? null,
             $body['barcode'] ?? null,
-            // array response [{ ... }]
-            $body[0]['tracking_no'] ?? null,
-            $body[0]['parcel_no'] ?? null,
         ];
 
         foreach ($candidates as $val) {
