@@ -197,6 +197,14 @@ class PostexController extends Controller
         if ($provinceId) {
             $cities = $service->getCities($provinceId);
 
+            // اگه فیلتر استان خالی برگشت (فیلد استان در API نامشخصه)، همه شهرها رو برگردون
+            if (empty($cities)) {
+                $cities = $service->getCities();
+                $fallback = true;
+            } else {
+                $fallback = false;
+            }
+
             // اگه search هم هست، فیلتر کن
             if (!empty($search)) {
                 $cities = array_values(array_filter($cities, function ($c) use ($search) {
@@ -206,9 +214,10 @@ class PostexController extends Controller
             }
 
             return response()->json([
-                'success' => !empty($cities),
-                'data'    => $cities,
-                'count'   => count($cities),
+                'success'  => !empty($cities),
+                'data'     => $cities,
+                'count'    => count($cities),
+                'fallback' => $fallback,
             ]);
         }
 
