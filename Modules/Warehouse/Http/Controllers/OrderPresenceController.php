@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class OrderPresenceController
 {
-    private const TTL = 35; // seconds before user considered gone
+    private const TTL = 20; // seconds before user considered gone
 
     private function cacheKey(int $orderId): string
     {
