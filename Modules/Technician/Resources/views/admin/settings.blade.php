@@ -97,6 +97,62 @@
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
             </div>
+
+            {{-- تصویر پس‌زمینه + اورلی --}}
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-5">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تصویر پس‌زمینه و اورلی</h2>
+
+                {{-- آپلود تصویر --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">تصویر پس‌زمینه هیرو</label>
+                    <div class="flex items-start gap-4">
+                        @if($settings['hero_bg_image'])
+                        <div class="relative flex-shrink-0">
+                            <img src="{{ asset('storage/' . $settings['hero_bg_image']) }}" alt="Hero BG"
+                                 class="h-24 w-40 object-cover rounded-lg border border-gray-200">
+                            <a href="{{ route('technician.admin.settings.delete-hero-bg') }}"
+                               onclick="return confirm('تصویر پس‌زمینه حذف شود؟')"
+                               class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </a>
+                        </div>
+                        @endif
+                        <div class="flex-1">
+                            <input type="file" name="hero_bg_image" accept="image/*"
+                                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WebP — حداکثر 5MB — اگه نذاری gradient پیش‌فرض نمایش داده میشه</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- رنگ اورلی + شفافیت --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                     x-data="{ opacity: {{ $settings['hero_overlay_opacity'] ?? 60 }} }">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">رنگ اورلی</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" name="hero_overlay_color"
+                                   value="{{ $settings['hero_overlay_color'] ?? '#0f2a4a' }}"
+                                   class="h-10 w-16 rounded-lg border border-gray-300 cursor-pointer p-0.5">
+                            <span class="text-sm text-gray-500">رنگ لایه روی تصویر</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            شفافیت اورلی — <span x-text="opacity + '%'" class="text-blue-600 font-semibold"></span>
+                        </label>
+                        <input type="range" name="hero_overlay_opacity"
+                               min="0" max="90" step="5"
+                               x-model="opacity"
+                               value="{{ $settings['hero_overlay_opacity'] ?? 60 }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>شفاف‌تر</span>
+                            <span>تیره‌تر</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- TAB: مزایا --}}

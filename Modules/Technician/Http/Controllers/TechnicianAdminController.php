@@ -34,6 +34,9 @@ class TechnicianAdminController extends Controller
             'hero_description'   => TechnicianSetting::get('hero_description',    $defaults['hero_description']),
             'hero_cta_text'      => TechnicianSetting::get('hero_cta_text',       $defaults['hero_cta_text']),
             'hero_badge'         => TechnicianSetting::get('hero_badge',          $defaults['hero_badge']),
+            'hero_bg_image'      => TechnicianSetting::get('hero_bg_image',        null),
+            'hero_overlay_color' => TechnicianSetting::get('hero_overlay_color',   '#0f2a4a'),
+            'hero_overlay_opacity' => TechnicianSetting::get('hero_overlay_opacity', '60'),
             'benefits_title'     => TechnicianSetting::get('benefits_title',      $defaults['benefits_title']),
             'benefits_json'      => TechnicianSetting::get('benefits',            $defaults['benefits']),
             'steps_title'        => TechnicianSetting::get('steps_title',         $defaults['steps_title']),
@@ -60,6 +63,7 @@ class TechnicianAdminController extends Controller
         $simpleFields = [
             'page_title', 'brand_name',
             'hero_title', 'hero_subtitle', 'hero_description', 'hero_cta_text', 'hero_badge',
+            'hero_overlay_color', 'hero_overlay_opacity',
             'benefits_title', 'steps_title', 'requirements_title', 'faq_title',
             'cta_title', 'cta_description', 'cta_button_text',
         ];
@@ -67,6 +71,19 @@ class TechnicianAdminController extends Controller
         foreach ($simpleFields as $field) {
             if ($request->has($field)) {
                 TechnicianSetting::set($field, $request->input($field));
+            }
+        }
+
+        // آپلود تصویر پس‌زمینه هیرو
+        if ($request->hasFile('hero_bg_image')) {
+            $file = $request->file('hero_bg_image');
+            if ($file->isValid() && in_array($file->getClientMimeType(), [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
+            ]) && $file->getSize() <= 5 * 1024 * 1024) {
+                $old = TechnicianSetting::get('hero_bg_image');
+                if ($old) Storage::disk('public')->delete($old);
+                $path = $file->store('technician', 'public');
+                TechnicianSetting::set('hero_bg_image', $path);
             }
         }
 
@@ -99,6 +116,20 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.settings')
             ->with('success', 'تنظیمات صفحه جذب تکنسین با موفقیت ذخیره شد.');
+    }
+
+    /**
+     * حذف تصویر پس‌زمینه هیرو
+     */
+    public function deleteHeroBg()
+    {
+        $this->checkAccess();
+        $old = TechnicianSetting::get('hero_bg_image');
+        if ($old) Storage::disk('public')->delete($old);
+        TechnicianSetting::set('hero_bg_image', null);
+
+        return redirect()->route('technician.admin.settings')
+            ->with('success', 'تصویر پس‌زمینه هیرو حذف شد.');
     }
 
     /**

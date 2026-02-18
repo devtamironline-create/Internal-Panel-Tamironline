@@ -39,8 +39,14 @@
     </nav>
 
     {{-- ===== HERO ===== --}}
-    <section class="gradient-hero text-white py-20 md:py-28">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+    <section class="{{ $hero_bg_image ? '' : 'gradient-hero' }} text-white py-20 md:py-28 relative"
+             @if($hero_bg_image)
+             style="background-image: url('{{ asset('storage/' . $hero_bg_image) }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+             @endif>
+        @if($hero_bg_image)
+        <div class="absolute inset-0" style="background-color: {{ $hero_overlay_color }}; opacity: {{ intval($hero_overlay_opacity) / 100 }};"></div>
+        @endif
+        <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
             @if($hero_badge)
             <span class="inline-block mb-5 px-4 py-1.5 bg-white/15 backdrop-blur text-sm font-semibold rounded-full border border-white/30">
                 ✨ {{ $hero_badge }}
@@ -69,6 +75,7 @@
     </section>
 
     {{-- ===== BENEFITS ===== --}}
+
     @if(!empty($benefits))
     <section class="py-16 md:py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4 sm:px-6">

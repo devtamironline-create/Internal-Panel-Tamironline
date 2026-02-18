@@ -13,4 +13,5 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::put('/settings', [TechnicianAdminController::class, 'updateSettings'])->name('settings.update');
     Route::post('/settings/reset', [TechnicianAdminController::class, 'resetDefaults'])->name('settings.reset');
     Route::get('/settings/delete-logo', [TechnicianAdminController::class, 'deleteLogo'])->name('settings.delete-logo');
+    Route::get('/settings/delete-hero-bg', [TechnicianAdminController::class, 'deleteHeroBg'])->name('settings.delete-hero-bg');
 });
