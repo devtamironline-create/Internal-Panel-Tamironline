@@ -1052,7 +1052,7 @@ function tapinLocation() {
             </p>
             <div class="flex gap-2 justify-center">
                 <button
-                    @click="showModal = false"
+                    @click="showModal = false; dismissed = true"
                     class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
                 >
                     متوجه شدم، ادامه می‌دم
@@ -1077,11 +1077,12 @@ function orderPresence(orderId, selfId, selfName) {
         selfName,
         others: [],
         showModal: false,
+        dismissed: false,
         intervalId: null,
 
         init() {
             this.heartbeat();
-            this.intervalId = setInterval(() => this.heartbeat(), 25000);
+            this.intervalId = setInterval(() => this.heartbeat(), 12000);
 
             // Leave on page unload (sendBeacon survives page close)
             window.addEventListener('beforeunload', () => {
@@ -1105,7 +1106,11 @@ function orderPresence(orderId, selfId, selfName) {
                 });
                 const data = await res.json();
                 this.others = data.others || [];
-                if (this.others.length > 0) {
+                if (this.others.length === 0) {
+                    // Other viewers gone — reset so next arrival triggers warning again
+                    this.showModal = false;
+                    this.dismissed = false;
+                } else if (!this.dismissed) {
                     this.showModal = true;
                 }
             } catch (e) {
