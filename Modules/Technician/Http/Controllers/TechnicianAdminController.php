@@ -72,11 +72,16 @@ class TechnicianAdminController extends Controller
 
         // آپلود لوگوی صفحه عمومی
         if ($request->hasFile('brand_logo')) {
-            $request->validate(['brand_logo' => 'image|max:2048']);
-            $old = TechnicianSetting::get('brand_logo');
-            if ($old) Storage::disk('public')->delete($old);
-            $path = $request->file('brand_logo')->store('technician', 'public');
-            TechnicianSetting::set('brand_logo', $path);
+            $file = $request->file('brand_logo');
+            if ($file->isValid() && in_array($file->getClientMimeType(), [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'image/svg+xml', 'image/bmp',
+            ]) && $file->getSize() <= 2 * 1024 * 1024) {
+                $old = TechnicianSetting::get('brand_logo');
+                if ($old) Storage::disk('public')->delete($old);
+                $path = $file->store('technician', 'public');
+                TechnicianSetting::set('brand_logo', $path);
+            }
         }
 
         // فیلدهای JSON
