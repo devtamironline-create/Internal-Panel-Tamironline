@@ -39,6 +39,7 @@
     35 => 'Modules\\Core\\Providers\\CoreServiceProvider',
     36 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
     37 => 'Modules\\Attendance\\Providers\\AttendanceServiceProvider',
+    38 => 'Modules\\Technician\\Providers\\TechnicianServiceProvider',
   ),
   'eager' => 
   array (
@@ -64,6 +65,7 @@
     19 => 'Modules\\Core\\Providers\\CoreServiceProvider',
     20 => 'Modules\\SMS\\Providers\\SMSServiceProvider',
     21 => 'Modules\\Attendance\\Providers\\AttendanceServiceProvider',
+    22 => 'Modules\\Technician\\Providers\\TechnicianServiceProvider',
   ),
   'deferred' => 
   array (
