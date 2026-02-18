@@ -753,10 +753,7 @@ class PostexService
         $recipientPhone  = $data['recipient_phone'] ?? $recipientMobile;
         $fromTelephone   = WarehouseSetting::get('postex_from_telephone', $fromPhone);
 
-        // ساختار بر اساس پلاگین رسمی پستکس (WP plugin)
-        // endpoint: POST /parcels/bulk
-        // courier.name = "IR_POST", service_type = "pishtaz", payment_type = "RECEIVER"
-        // location: city_id (نه city_code), post_code (نه postcode)
+        // ساختار دقیقاً مثل پلاگین رسمی WP پستکس (core.php خط 577-651)
         $parcel = [
             'from' => [
                 'contact' => [
@@ -764,12 +761,18 @@ class PostexService
                     'last_name'    => $fromLast,
                     'mobile_no'    => $fromPhone,
                     'telephone_no' => $fromTelephone,
+                    'email_address' => '',
+                    'company_name'  => '',
+                    'national_code' => '',
                 ],
                 'location' => [
                     'post_code' => $fromPostcode,
                     'country'   => 'IR',
                     'city_id'   => $fromCityCode,
+                    'city_name' => '',
                     'address'   => $fromAddress,
+                    'lat'       => '',
+                    'lon'       => '',
                 ],
             ],
             'to' => [
@@ -786,12 +789,17 @@ class PostexService
                     'address'   => $data['recipient_address'] ?? '',
                 ],
             ],
+            'parcel_items' => [],
             'parcel_properties' => [
-                'total_value'          => $totalValue,
-                'total_value_currency' => 'IRR',
+                'length'               => 10,
+                'width'                => 10,
+                'height'               => 10,
                 'total_weight'         => $weight,
                 'is_fragile'           => false,
                 'is_liquid'            => false,
+                'total_value'          => $totalValue,
+                'total_value_currency' => 'IRR',
+                'box_type_id'          => 0,
             ],
             'courier' => [
                 'name'         => $courierName,
@@ -809,13 +817,16 @@ class PostexService
             'delivery_instructions' => '',
             'custom_order_no'       => null,
             'custom_reference_no'   => (string) $orderNo,
+            'submit_channel'        => 'laravel-panel',
             'ready_to_accept'       => false,
             'drop_off_location'     => '',
         ];
 
         $payload = [
+            'custom_batch_no' => (string) $orderNo,
             'collection_type' => $collectionType,
             'custom_channel'  => 'laravel-panel',
+            'submit_source'   => 'laravel-panel-v1',
             'parcels'         => [$parcel],
         ];
 
