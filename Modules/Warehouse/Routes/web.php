@@ -180,5 +180,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/set-provider', [PostexController::class, 'setProvider'])->name('warehouse.postex.set-provider');
         Route::get('/debug-create', [PostexController::class, 'debugCreateShipment'])->name('warehouse.postex.debug-create');
         Route::get('/probe-endpoints', [PostexController::class, 'probeEndpoints'])->name('warehouse.postex.probe-endpoints');
+        Route::get('/cities/sample', [PostexController::class, 'sampleCities'])->name('warehouse.postex.cities-sample');
+        Route::get('/debug-find-city', [PostexController::class, 'debugFindCity'])->name('warehouse.postex.debug-find-city');
     });
 });

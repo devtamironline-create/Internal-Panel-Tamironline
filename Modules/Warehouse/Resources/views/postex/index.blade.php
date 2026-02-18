@@ -142,7 +142,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">کد شهر پیش‌فرض مقصد</label>
-                            <input type="number" name="fallback_city_code" value="{{ $settings['fallback_city_code'] ?? '' }}" dir="ltr"
+                            <input type="number" id="fallback_city_code_input" name="fallback_city_code" value="{{ $settings['fallback_city_code'] ?? '' }}" dir="ltr"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="444">
                             <p class="text-gray-400 text-xs mt-1">اگه شهر سفارش در پستکس نبود از این کد استفاده میشه (مثلاً نزدیک‌ترین شهر بزرگ)</p>
                         </div>
@@ -159,14 +159,14 @@
                     </div>
                 </div>
 
-                <!-- نقشه شهرها - چون API پستکس endpoint شهر ندارد باید دستی وارد شود -->
+                <!-- نقشه شهرها - برای شهرهایی که پستکس نمی‌شناسد -->
                 <div class="pt-3 border-t border-purple-100">
-                    <h3 class="text-sm font-semibold text-purple-700 mb-1">نقشه کد شهرهای مقصد</h3>
-                    <p class="text-xs text-gray-500 mb-2">چون API پستکس لیست شهر ندارد، اینجا شهرهای سایت خود را به کد پستکس map کنید. هر خط: <span dir="ltr" class="font-mono bg-gray-100 px-1">نام شهر:کد</span> — مثال: <span dir="ltr" class="font-mono bg-gray-100 px-1">شیراز:123</span></p>
-                    <textarea name="city_map" rows="6" dir="ltr"
+                    <h3 class="text-sm font-semibold text-purple-700 mb-1">نقشه کد شهرهای دستی (اختیاری)</h3>
+                    <p class="text-xs text-gray-500 mb-2">اگه شهری در جستجوی پایین پیدا نشد، اینجا دستی map کنید. هر خط: <span dir="ltr" class="font-mono bg-gray-100 px-1">نام شهر:کد</span> — مثال: <span dir="ltr" class="font-mono bg-gray-100 px-1">سروستان:123</span></p>
+                    <textarea name="city_map" rows="5" dir="ltr"
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
-                              placeholder="شیراز:123&#10;سروستان:456&#10;تهران:444">{{ $settings['city_map'] ?? '' }}</textarea>
-                    <p class="text-xs text-gray-400 mt-1">کدها را از پشتیبانی پستکس یا مستندات API بگیرید. همچنین کد شهر پیش‌فرض بالا را پر کنید تا شهرهای ناشناخته block نشوند.</p>
+                              placeholder="سروستان:123&#10;شیراز:456">{{ $settings['city_map'] ?? '' }}</textarea>
+                    <p class="text-xs text-gray-400 mt-1">ابتدا از بخش جستجوی شهر پایین کد پستکس را پیدا کنید، سپس اینجا وارد کنید.</p>
                 </div>
 
                 <div class="flex items-center gap-3 pt-4 border-t">
@@ -235,12 +235,12 @@
             </div>
             <div>
                 <h2 class="text-lg font-bold text-gray-900">جستجوی کد شهر پستکس</h2>
-                <p class="text-xs text-gray-500">شهرها از API پستکس بارگذاری می‌شوند — استان‌ها hardcoded در پلاگین رسمی</p>
+                <p class="text-xs text-gray-500">شهرها از API پستکس (<code>/locality/cities/all</code>) بارگذاری می‌شوند — استان‌ها از پلاگین رسمی پستکس hardcoded هستند</p>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <p class="text-xs text-gray-600 mb-2 font-medium">استان‌ها (کدهای WooCommerce پلاگین پستکس):</p>
+                <p class="text-xs text-gray-600 mb-2 font-medium">استان‌ها (کدهای WooCommerce → شناسه پستکس):</p>
                 <div class="bg-gray-50 rounded-lg p-3 text-xs font-mono max-h-64 overflow-y-auto leading-6">
                     KHZ=خوزستان(18) | THR=تهران(1) | ILM=ایلام(24) | BHR=بوشهر(23)<br>
                     ADL=اردبیل(27) | ESF=اصفهان(26) | YZD=یزد(31) | KRH=کرمانشاه(9)<br>
@@ -253,14 +253,29 @@
                 </div>
             </div>
             <div>
-                <p class="text-xs text-gray-600 mb-2 font-medium">جستجوی شهر (از API <code class="bg-gray-100 px-1">/locality/cities/all</code>):</p>
+                <p class="text-xs text-gray-600 mb-2 font-medium">جستجوی شهر:</p>
                 <div class="flex gap-2 mb-2">
                     <input type="text" id="city-search" dir="rtl" placeholder="نام شهر (مثلاً سروستان)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     <button onclick="searchCity()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">جستجو</button>
                 </div>
-                <button onclick="loadCities()" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">بارگذاری همه شهرها</button>
+                <div class="flex gap-2 mb-2">
+                    <button onclick="loadCities()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">بارگذاری همه (فقط تعداد)</button>
+                    <button onclick="sampleCities()" class="flex-1 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 text-sm">ساختار API</button>
+                </div>
                 <div id="cities-result" class="hidden mt-3 p-3 rounded-lg text-sm max-h-72 overflow-y-auto"></div>
             </div>
+        </div>
+
+        <!-- تست جستجوی شهر+استان - مفید برای debug -->
+        <div class="mt-4 pt-4 border-t border-blue-100">
+            <p class="text-xs text-gray-600 mb-2 font-medium">تست خودکار جستجوی شهر (همان روشی که سفارشات از آن استفاده می‌کنند):</p>
+            <div class="flex gap-2">
+                <input type="text" id="find-city-name" dir="rtl" placeholder="نام شهر (مثلاً سروستان)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <input type="text" id="find-city-state" dir="ltr" placeholder="کد استان (مثلاً FRS)" class="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <button onclick="runFindCity()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">تست جستجو</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">کد استان WooCommerce را وارد کنید (FRS برای فارس، THR برای تهران و ...)</p>
+            <div id="find-city-result" class="hidden mt-3 p-3 rounded-lg text-sm"></div>
         </div>
     </div>
 
@@ -421,26 +436,74 @@ function searchCity() {
 }
 
 function loadCities() {
-    showLoading('cities-result', 'در حال بارگذاری همه شهرها...');
+    showLoading('cities-result', 'در حال بارگذاری...');
     fetch('{{ route("warehouse.postex.cities") }}', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
     .then(r => r.json())
     .then(data => {
-        if (data.success && data.data && data.data.length > 0) {
-            let html = '<div class="text-xs font-bold text-gray-700 mb-2">' + data.count + ' شهر یافت شد</div>';
-            html += '<table class="w-full text-xs"><thead class="bg-gray-50"><tr><th class="p-2 text-right">کد</th><th class="p-2 text-right">نام شهر</th></tr></thead><tbody>';
-            data.data.forEach(c => {
-                html += `<tr class="border-t"><td class="p-2 font-mono">${c.code || c.id || '-'}</td><td class="p-2">${c.name || c.title || '-'}</td></tr>`;
-            });
-            html += '</tbody></table>';
-            const div = document.getElementById('cities-result');
-            div.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800', 'bg-gray-50', 'text-gray-600');
-            div.classList.add('bg-blue-50', 'text-blue-800');
-            div.innerHTML = html;
-        } else {
-            showResult('cities-result', false, 'شهری یافت نشد');
-        }
+        const msg = data.message || (data.count + ' شهر در سیستم — برای دیدن لیست از جستجو استفاده کنید');
+        showResult('cities-result', data.success, msg);
     })
     .catch(() => showResult('cities-result', false, 'خطا در ارتباط'));
+}
+
+function sampleCities() {
+    showLoading('cities-result', 'در حال دریافت ساختار API...');
+    fetch('{{ route("warehouse.postex.cities-sample") }}', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+        const div = document.getElementById('cities-result');
+        div.classList.remove('hidden','bg-red-50','text-red-800','bg-gray-50','text-gray-600','bg-green-50','text-green-800');
+        div.classList.add('bg-yellow-50','text-yellow-900');
+        let html = '<div class="text-xs font-bold mb-2">مجموع شهرها: ' + data.total + '</div>';
+        html += '<div class="text-xs mb-1">نام فیلدها: <code class="bg-gray-100 px-1">' + (data.field_names || []).join(', ') + '</code></div>';
+        html += '<pre class="text-xs mt-2 overflow-auto" dir="ltr">' + JSON.stringify(data.sample, null, 2) + '</pre>';
+        div.innerHTML = html;
+    })
+    .catch(() => showResult('cities-result', false, 'خطا در ارتباط'));
+}
+
+function runFindCity() {
+    const city  = (document.getElementById('find-city-name').value || '').trim();
+    const state = (document.getElementById('find-city-state').value || '').trim();
+    if (!city) { showResult('find-city-result', false, 'نام شهر را وارد کنید'); return; }
+    showLoading('find-city-result', 'در حال جستجو...');
+    fetch(`{{ route('warehouse.postex.debug-find-city') }}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`, {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const div = document.getElementById('find-city-result');
+        div.classList.remove('hidden','bg-red-50','text-red-800','bg-gray-50','text-gray-600');
+        const found = data.final_city_code !== null;
+        div.classList.add(found ? 'bg-green-50' : 'bg-orange-50', found ? 'text-green-900' : 'text-orange-900');
+        let html = `<div class="text-sm font-bold mb-2">${found ? '✓ شهر پیدا شد — کد: ' + data.final_city_code : '✗ شهر پیدا نشد'}</div>`;
+        html += `<div class="text-xs space-y-1">`;
+        html += `<div>کد استان پستکس (از WC کد ${data.state}): <strong>${data.postex_province_id ?? 'یافت نشد'}</strong></div>`;
+        html += `<div>شهرهای این استان: <strong>${data.province_cities_count}</strong></div>`;
+        html += `<div>کل شهرها: <strong>${data.all_cities_count}</strong></div>`;
+        html += `<div>نام فیلدهای API: <code class="bg-gray-100 px-1">${(data.city_field_names || []).join(', ')}</code></div>`;
+        if (data.manual_search_results && data.manual_search_results.length) {
+            html += `<div class="mt-2 font-bold">نتایج جستجو در همه شهرها:</div>`;
+            html += '<table class="w-full text-xs mt-1"><thead><tr><th class="text-right p-1">کد</th><th class="text-right p-1">نام</th><th class="text-right p-1">استان</th></tr></thead><tbody>';
+            data.manual_search_results.forEach(c => {
+                const code = c.code ?? c.id ?? '-';
+                const name = c.name ?? c.title ?? '-';
+                const prov = c.province_code ?? c.province_id ?? c.province ?? c.state_id ?? '-';
+                html += `<tr class="border-t cursor-pointer hover:bg-green-100" onclick="document.getElementById('fallback_city_code_input').value='${code}';document.getElementById('city-search').value='${name}'">
+                    <td class="p-1 font-mono font-bold text-blue-700">${code}</td><td class="p-1">${name}</td><td class="p-1 text-gray-500">${prov}</td></tr>`;
+            });
+            html += '</tbody></table><p class="text-xs text-gray-400 mt-1">روی هر ردیف کلیک کن تا کد پر شود</p>';
+        } else if (!found) {
+            html += `<div class="mt-2 text-orange-700">«${city}» در پایگاه پستکس وجود ندارد — کد شهر پیش‌فرض را پر کنید.</div>`;
+        }
+        if (data.sample_province_cities && data.sample_province_cities.length) {
+            html += `<details class="mt-2"><summary class="cursor-pointer text-xs text-gray-500">نمونه شهرهای استان (${data.province_cities_count} شهر)</summary>`;
+            html += '<pre class="text-xs mt-1 overflow-auto" dir="ltr">' + JSON.stringify(data.sample_province_cities, null, 2) + '</pre></details>';
+        }
+        html += '</div>';
+        div.innerHTML = html;
+    })
+    .catch(e => showResult('find-city-result', false, 'خطا: ' + e.message));
 }
 
 function calculatePrice() {

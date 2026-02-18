@@ -196,10 +196,32 @@ class PostexService
         }
 
         // فیلتر بر اساس province_id اگه داده شده
+        // فیلدهای ممکن برای شناسه استان در پاسخ API پستکس:
         if ($postexProvinceId !== null) {
-            return array_values(array_filter($cached, function ($city) use ($postexProvinceId) {
-                return ($city['province_code'] ?? $city['province_id'] ?? null) == $postexProvinceId;
+            $filtered = array_values(array_filter($cached, function ($city) use ($postexProvinceId) {
+                $prov = $city['province_code'] // اسم رسمی‌تر
+                    ?? $city['province_id']    // جایگزین شماره‌ای
+                    ?? $city['province']       // گاهی مستقیماً province
+                    ?? $city['state_id']       // بعضی APIها state_id
+                    ?? $city['state_code']     // یا state_code
+                    ?? $city['provinceId']     // camelCase
+                    ?? $city['ProvinceId']     // PascalCase
+                    ?? null;
+                return $prov == $postexProvinceId;
             }));
+
+            if (empty($filtered) && !empty($cached)) {
+                // اگه فیلتر خالی برگشت، فیلد نام استان رو log کن
+                $sampleKeys = array_keys($cached[0] ?? []);
+                Log::warning('Postex getCities: province filter returned empty', [
+                    'postex_province_id' => $postexProvinceId,
+                    'total_cities'       => count($cached),
+                    'sample_city_keys'   => $sampleKeys,
+                    'sample_city'        => $cached[0] ?? null,
+                ]);
+            }
+
+            return $filtered;
         }
 
         return $cached;

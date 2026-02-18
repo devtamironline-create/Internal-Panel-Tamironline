@@ -304,6 +304,87 @@ class PostexController extends Controller
         return response()->json($results);
     }
 
+    /**
+     * نمونه ساختار پاسخ API شهرها — برای دیدن نام فیلدهای واقعی
+     */
+    public function sampleCities()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new PostexService();
+        $cities  = $service->getCities();
+
+        $sample = array_slice($cities, 0, 5);
+
+        return response()->json([
+            'total'       => count($cities),
+            'field_names' => !empty($cities[0]) ? array_keys($cities[0]) : [],
+            'sample'      => $sample,
+        ]);
+    }
+
+    /**
+     * دیباگ جستجوی شهر — نشان می‌دهد findCityCode چطور کار می‌کند
+     */
+    public function debugFindCity(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $cityName  = trim($request->get('city', ''));
+        $stateName = trim($request->get('state', ''));
+
+        $service = new PostexService();
+
+        // نقشه WC → postex province id
+        $wcMap = [
+            'KHZ' => 18, 'THR' => 1,  'ILM' => 24, 'BHR' => 23,
+            'ADL' => 27, 'ESF' => 26, 'YZD' => 31, 'KRH' => 9,
+            'KRN' => 10, 'HDN' => 15, 'GZN' => 13, 'ZJN' => 17,
+            'LRS' => 5,  'ABZ' => 25, 'EAZ' => 29, 'WAZ' => 28,
+            'CHB' => 22, 'SKH' => 21, 'RKH' => 20, 'NKH' => 19,
+            'SMN' => 30, 'FRS' => 14, 'QHM' => 12, 'KRD' => 11,
+            'KBD' => 8,  'GLS' => 7,  'GIL' => 6,  'MZN' => 4,
+            'MKZ' => 3,  'HRZ' => 2,  'SBN' => 16,
+        ];
+
+        $postexProvinceId = $wcMap[strtoupper($stateName)] ?? null;
+
+        $allCities      = $service->getCities();
+        $provinceCities = $postexProvinceId ? $service->getCities($postexProvinceId) : [];
+        $cityCode       = $service->findCityCode($cityName, $stateName);
+
+        // نمونه‌ای از شهرهای استان
+        $sampleProvinceCities = array_slice($provinceCities, 0, 5);
+
+        // جستجوی دستی در همه شهرها
+        $manualSearch = [];
+        if (!empty($cityName)) {
+            foreach ($allCities as $c) {
+                $cName = $c['name'] ?? $c['title'] ?? '';
+                if (str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
+                    $manualSearch[] = $c;
+                    if (count($manualSearch) >= 10) break;
+                }
+            }
+        }
+
+        return response()->json([
+            'city'                    => $cityName,
+            'state'                   => $stateName,
+            'postex_province_id'      => $postexProvinceId,
+            'all_cities_count'        => count($allCities),
+            'province_cities_count'   => count($provinceCities),
+            'sample_province_cities'  => $sampleProvinceCities,
+            'city_field_names'        => !empty($allCities[0]) ? array_keys($allCities[0]) : [],
+            'manual_search_results'   => $manualSearch,
+            'final_city_code'         => $cityCode,
+        ]);
+    }
+
     public function setProvider(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
