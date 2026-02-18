@@ -25,14 +25,15 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 @if($brand_logo)
-                    <img src="{{ asset('storage/' . $brand_logo) }}" alt="{{ $brand_name }}" class="h-10 max-w-[180px] w-auto object-contain">
+                    <img src="{{ asset('storage/' . $brand_logo) }}" alt="{{ $brand_name }}" class="h-14 max-w-[220px] w-auto object-contain">
                 @else
                     <span class="text-xl font-black text-blue-900">{{ $brand_name }}</span>
                 @endif
             </div>
             <a href="#register-form"
-               class="px-5 py-2 bg-blue-700 text-white text-sm font-bold rounded-lg hover:bg-blue-800 transition-colors">
+               class="px-5 py-2.5 bg-gradient-to-l from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
                 {{ $hero_cta_text }}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
             </a>
         </div>
     </nav>
@@ -184,11 +185,32 @@
     @endif
 
     {{-- ===== CTA ===== --}}
-    <section id="register-form" class="gradient-cta py-16 md:py-20 text-white text-center">
-        <div class="max-w-2xl mx-auto px-4 sm:px-6">
-            <h2 class="text-2xl md:text-3xl font-black mb-4">{{ $cta_title }}</h2>
-            <p class="text-blue-100 text-lg mb-8">{{ $cta_description }}</p>
-            <p class="text-blue-200 text-sm">فرم ثبت‌نام به زودی فعال می‌شود.</p>
+    <section id="register-form" class="gradient-cta py-20 md:py-28 text-white text-center relative overflow-hidden">
+        {{-- دایره‌های تزئینی پس‌زمینه --}}
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full"></div>
+            <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-white/5 rounded-full"></div>
+        </div>
+        <div class="max-w-2xl mx-auto px-4 sm:px-6 relative z-10">
+            <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                در حال پذیرش تکنسین
+            </div>
+            <h2 class="text-3xl md:text-4xl font-black mb-4 leading-tight">{{ $cta_title }}</h2>
+            <p class="text-blue-100 text-lg mb-10 leading-relaxed">{{ $cta_description }}</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="mailto:join@tamironline.ir"
+                   class="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-blue-900 font-black text-lg rounded-2xl hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    {{ $cta_button_text }}
+                </a>
+                <a href="tel:02100000000"
+                   class="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur border border-white/30 text-white font-bold text-lg rounded-2xl hover:bg-white/20 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    تماس با ما
+                </a>
+            </div>
+            <p class="mt-8 text-blue-200/70 text-sm">پاسخگویی ۲۴ ساعته · بدون نیاز به قرار قبلی</p>
         </div>
     </section>
 
