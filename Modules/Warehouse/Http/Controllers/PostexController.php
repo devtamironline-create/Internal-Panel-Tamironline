@@ -189,8 +189,28 @@ class PostexController extends Controller
             abort(403);
         }
 
-        $service = new PostexService();
-        $search  = trim($request->get('search', ''));
+        $service    = new PostexService();
+        $search     = trim($request->get('search', ''));
+        $provinceId = $request->get('province_id') ? (int) $request->get('province_id') : null;
+
+        // اگه province_id داده شده، شهرهای همون استان رو برگردون
+        if ($provinceId) {
+            $cities = $service->getCities($provinceId);
+
+            // اگه search هم هست، فیلتر کن
+            if (!empty($search)) {
+                $cities = array_values(array_filter($cities, function ($c) use ($search) {
+                    $name = $c['name'] ?? $c['title'] ?? '';
+                    return str_contains($name, $search);
+                }));
+            }
+
+            return response()->json([
+                'success' => !empty($cities),
+                'data'    => $cities,
+                'count'   => count($cities),
+            ]);
+        }
 
         // بدون search: فقط تعداد رو نشون بده - لیست کامل خیلی بزرگه و JSON رو خراب میکنه
         if (empty($search)) {

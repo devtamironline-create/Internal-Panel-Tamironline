@@ -293,7 +293,7 @@ class PrintController extends Controller
     /**
      * تلاش مجدد ثبت در سرویس ارسال
      */
-    public function retryRegister(WarehouseOrder $order)
+    public function retryRegister(WarehouseOrder $order, Request $request = null)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
             abort(403);
@@ -307,12 +307,22 @@ class PrintController extends Controller
             return response()->json(['success' => false, 'message' => 'سفارش پستی نیست']);
         }
 
+        // کد شهر دستی از فرم (وقتی کاربر استان و شهر رو خودش انتخاب میکنه)
+        $manualCityCode = null;
+        if ($request && $request->has('postex_city_code') && (int) $request->input('postex_city_code') > 0) {
+            $manualCityCode = (int) $request->input('postex_city_code');
+        }
+
         // پاک کردن بارکد قبلی و فلگ registered برای ثبت مجدد
         $order->amadest_barcode = null;
         $order->post_tracking_code = null;
         $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
         if (isset($wcData['tapin']['registered'])) {
             unset($wcData['tapin']['registered']);
+            $order->wc_order_data = $wcData;
+        }
+        if (isset($wcData['postex']['registered'])) {
+            unset($wcData['postex']['registered']);
             $order->wc_order_data = $wcData;
         }
         $order->save();
@@ -330,7 +340,7 @@ class PrintController extends Controller
             if ($shippingProvider === 'tapin') {
                 $error = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
             } elseif ($shippingProvider === 'postex') {
-                $error = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state);
+                $error = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state, $manualCityCode);
             } else {
                 $error = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
             }
@@ -446,17 +456,23 @@ class PrintController extends Controller
      * ثبت سفارش از طریق پستکس
      * @return string|null خطا یا null اگه موفق بود
      */
-    private function registerViaPostex(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
+    private function registerViaPostex(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state, ?int $manualCityCode = null): ?string
     {
         $postex = new PostexService();
         if (!$postex->isConfigured()) {
             return 'پستکس تنظیم نشده (API Key خالی)';
         }
 
-        // یافتن کد شهر مقصد
-        $toCityCode = $postex->findCityCode($city, $state);
-        if (!$toCityCode) {
-            Log::warning('Postex: city code not found', ['order' => $order->order_number, 'city' => $city, 'state' => $state]);
+        // اگه کد شهر دستی داده شده، از همون استفاده کن
+        if ($manualCityCode) {
+            $toCityCode = $manualCityCode;
+            Log::info('Postex: using manual city code', ['order' => $order->order_number, 'city_code' => $manualCityCode]);
+        } else {
+            // یافتن کد شهر مقصد به صورت خودکار
+            $toCityCode = $postex->findCityCode($city, $state);
+            if (!$toCityCode) {
+                Log::warning('Postex: city code not found', ['order' => $order->order_number, 'city' => $city, 'state' => $state]);
+            }
         }
 
         $result = $postex->createShipment([
