@@ -214,7 +214,8 @@
             </div>
             <div style="flex:2;min-width:180px;">
                 <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">شهر:</label>
-                <select id="postex-city" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+                <input type="text" id="postex-city-filter" oninput="filterCityDropdown()" placeholder="فیلتر نام شهر..." style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:5px 5px 0 0;font-size:10px;font-family:'Vazirmatn',Tahoma;display:none;" dir="rtl">
+                <select id="postex-city" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:0 0 5px 5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
                     <option value="">ابتدا استان را انتخاب کنید...</option>
                 </select>
             </div>
@@ -534,14 +535,19 @@
             });
         }
 
+        // ذخیره همه شهرها برای فیلتر client-side
+        var allLoadedCities = [];
+
         // بارگذاری شهرهای استان انتخاب شده
         function loadProvinceCities() {
             var provinceId = document.getElementById('postex-province').value;
             var citySelect = document.getElementById('postex-city');
             var statusEl = document.getElementById('postex-city-status');
+            var filterInput = document.getElementById('postex-city-filter');
 
             if (!provinceId) {
                 citySelect.innerHTML = '<option value="">ابتدا استان را انتخاب کنید...</option>';
+                if (filterInput) filterInput.style.display = 'none';
                 return;
             }
 
@@ -556,36 +562,69 @@
                 var cities = data.data || [];
                 if (cities.length === 0) {
                     citySelect.innerHTML = '<option value="">شهری یافت نشد</option>';
-                    if (statusEl) statusEl.textContent = 'شهری برای این استان یافت نشد';
+                    if (statusEl) statusEl.textContent = 'شهری یافت نشد';
+                    if (filterInput) filterInput.style.display = 'none';
                     return;
                 }
 
-                var orderCity = @json(($shipping['city'] ?? '') ?: ($billing['city'] ?? ''));
-                var html = '<option value="">انتخاب شهر (' + cities.length + ' شهر)...</option>';
-                var autoSelected = false;
+                allLoadedCities = cities;
+                var isFallback = data.fallback || false;
 
-                cities.forEach(function(c) {
-                    var code = c.code || c.id || '';
-                    var name = c.name || c.title || '';
-                    var selected = '';
-                    // اگه نام شهر سفارش با شهر پستکس مطابقت داره، auto-select کن
-                    if (!autoSelected && orderCity && (name === orderCity || name.indexOf(orderCity) !== -1 || orderCity.indexOf(name) !== -1)) {
-                        selected = ' selected';
-                        autoSelected = true;
-                    }
-                    html += '<option value="' + code + '"' + selected + '>' + name + ' (کد: ' + code + ')</option>';
-                });
-
-                citySelect.innerHTML = html;
-                if (statusEl) {
-                    statusEl.textContent = cities.length + ' شهر بارگذاری شد' + (autoSelected ? ' — شهر سفارش خودکار انتخاب شد' : '');
-                    statusEl.style.color = autoSelected ? '#059669' : '#888';
+                // نمایش فیلتر اگه تعداد زیاده
+                if (filterInput) {
+                    filterInput.style.display = cities.length > 50 ? 'block' : 'none';
+                    filterInput.value = '';
                 }
+
+                populateCityDropdown(cities, isFallback);
             })
             .catch(function() {
                 citySelect.innerHTML = '<option value="">خطا در بارگذاری</option>';
                 if (statusEl) statusEl.textContent = 'خطا در دریافت شهرها';
             });
+        }
+
+        function populateCityDropdown(cities, isFallback) {
+            var citySelect = document.getElementById('postex-city');
+            var statusEl = document.getElementById('postex-city-status');
+            var orderCity = @json(($shipping['city'] ?? '') ?: ($billing['city'] ?? ''));
+
+            var html = '<option value="">انتخاب شهر (' + cities.length + ' شهر)...</option>';
+            var autoSelected = false;
+
+            cities.forEach(function(c) {
+                var code = c.code || c.id || '';
+                var name = c.name || c.title || '';
+                var selected = '';
+                if (!autoSelected && orderCity && (name === orderCity || name.indexOf(orderCity) !== -1 || orderCity.indexOf(name) !== -1)) {
+                    selected = ' selected';
+                    autoSelected = true;
+                }
+                html += '<option value="' + code + '"' + selected + '>' + name + ' (کد: ' + code + ')</option>';
+            });
+
+            citySelect.innerHTML = html;
+            if (statusEl) {
+                var msg = cities.length + ' شهر';
+                if (isFallback) msg += ' (همه شهرها — فیلتر استان در API کار نکرد)';
+                if (autoSelected) msg += ' — شهر «' + orderCity + '» خودکار انتخاب شد';
+                statusEl.textContent = msg;
+                statusEl.style.color = autoSelected ? '#059669' : (isFallback ? '#d97706' : '#888');
+            }
+        }
+
+        // فیلتر client-side برای dropdown شهر
+        function filterCityDropdown() {
+            var q = (document.getElementById('postex-city-filter').value || '').trim();
+            if (!q) {
+                populateCityDropdown(allLoadedCities, false);
+                return;
+            }
+            var filtered = allLoadedCities.filter(function(c) {
+                var name = c.name || c.title || '';
+                return name.indexOf(q) !== -1;
+            });
+            populateCityDropdown(filtered, false);
         }
 
         // ثبت با شهر انتخاب شده
