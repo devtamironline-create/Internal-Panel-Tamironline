@@ -15,6 +15,7 @@ class LandingController extends Controller
             $data = [
                 'page_title'         => TechnicianSetting::get('page_title',         $defaults['page_title']),
                 'brand_name'         => TechnicianSetting::get('brand_name',          $defaults['brand_name']),
+                'brand_logo'         => TechnicianSetting::get('brand_logo',          null),
                 'hero_title'         => TechnicianSetting::get('hero_title',          $defaults['hero_title']),
                 'hero_subtitle'      => TechnicianSetting::get('hero_subtitle',       $defaults['hero_subtitle']),
                 'hero_description'   => TechnicianSetting::get('hero_description',    $defaults['hero_description']),
@@ -37,6 +38,7 @@ class LandingController extends Controller
             $data = [
                 'page_title'         => $defaults['page_title'],
                 'brand_name'         => $defaults['brand_name'],
+                'brand_logo'         => null,
                 'hero_title'         => $defaults['hero_title'],
                 'hero_subtitle'      => $defaults['hero_subtitle'],
                 'hero_description'   => $defaults['hero_description'],

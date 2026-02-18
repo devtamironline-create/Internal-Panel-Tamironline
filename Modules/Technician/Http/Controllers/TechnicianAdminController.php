@@ -4,6 +4,7 @@ namespace Modules\Technician\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Modules\Technician\Models\TechnicianSetting;
 
 class TechnicianAdminController extends Controller
@@ -27,6 +28,7 @@ class TechnicianAdminController extends Controller
         $settings = [
             'page_title'         => TechnicianSetting::get('page_title',         $defaults['page_title']),
             'brand_name'         => TechnicianSetting::get('brand_name',          $defaults['brand_name']),
+            'brand_logo'         => TechnicianSetting::get('brand_logo',          null),
             'hero_title'         => TechnicianSetting::get('hero_title',          $defaults['hero_title']),
             'hero_subtitle'      => TechnicianSetting::get('hero_subtitle',       $defaults['hero_subtitle']),
             'hero_description'   => TechnicianSetting::get('hero_description',    $defaults['hero_description']),
@@ -68,6 +70,15 @@ class TechnicianAdminController extends Controller
             }
         }
 
+        // آپلود لوگوی صفحه عمومی
+        if ($request->hasFile('brand_logo')) {
+            $request->validate(['brand_logo' => 'image|max:2048']);
+            $old = TechnicianSetting::get('brand_logo');
+            if ($old) Storage::disk('public')->delete($old);
+            $path = $request->file('brand_logo')->store('technician', 'public');
+            TechnicianSetting::set('brand_logo', $path);
+        }
+
         // فیلدهای JSON
         $jsonFields = ['benefits', 'steps', 'requirements', 'faq'];
         foreach ($jsonFields as $field) {
@@ -83,6 +94,20 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.settings')
             ->with('success', 'تنظیمات صفحه جذب تکنسین با موفقیت ذخیره شد.');
+    }
+
+    /**
+     * حذف لوگوی صفحه عمومی
+     */
+    public function deleteLogo()
+    {
+        $this->checkAccess();
+        $old = TechnicianSetting::get('brand_logo');
+        if ($old) Storage::disk('public')->delete($old);
+        TechnicianSetting::set('brand_logo', null);
+
+        return redirect()->route('technician.admin.settings')
+            ->with('success', 'لوگو حذف شد.');
     }
 
     /**

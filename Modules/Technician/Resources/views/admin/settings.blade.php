@@ -35,7 +35,7 @@
     </div>
     @endif
 
-    <form method="POST" action="{{ route('technician.admin.settings.update') }}" x-data="{ activeTab: 'hero' }">
+    <form method="POST" action="{{ route('technician.admin.settings.update') }}" enctype="multipart/form-data" x-data="{ activeTab: 'hero' }">
         @csrf
         @method('PUT')
 
@@ -206,6 +206,26 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">نام برند (لوگو و فوتر)</label>
                     <input type="text" name="brand_name" value="{{ $settings['brand_name'] }}"
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">لوگوی صفحه عمومی</label>
+                    <div class="flex items-start gap-4">
+                        @if($settings['brand_logo'])
+                            <div class="relative">
+                                <img src="{{ asset('storage/' . $settings['brand_logo']) }}" alt="Logo" class="h-16 max-w-[160px] object-contain rounded-lg border border-gray-200 bg-gray-50 p-1">
+                                <a href="{{ route('technician.admin.settings.delete-logo') }}"
+                                   onclick="return confirm('آیا مطمئن هستید؟')"
+                                   class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </a>
+                            </div>
+                        @endif
+                        <div class="flex-1">
+                            <input type="file" name="brand_logo" accept="image/*"
+                                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <p class="text-xs text-gray-400 mt-1">فرمت‌های مجاز: JPG, PNG, SVG, WebP (حداکثر 2MB) — اگه خالی بذاری، نام برند نمایش داده میشه</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
                     <p class="font-medium text-gray-800 mb-2">لینک صفحه عمومی:</p>
