@@ -61,14 +61,16 @@
             <p class="text-base md:text-lg text-blue-100 max-w-2xl mx-auto leading-relaxed mb-10">
                 {{ $hero_description }}
             </p>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <div class="flex flex-col sm:flex-row gap-3 justify-center mt-8">
                 <a href="#register-form"
-                   class="px-8 py-4 bg-white text-blue-900 font-black text-lg rounded-xl hover:bg-blue-50 transition-colors shadow-lg">
-                    {{ $hero_cta_text }} ←
+                   class="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-blue-900 font-bold text-sm rounded-full hover:bg-blue-50 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+                    {{ $hero_cta_text }}
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 </a>
                 <a href="#how-it-works"
-                   class="px-8 py-4 bg-white/10 backdrop-blur border border-white/30 text-white font-semibold text-lg rounded-xl hover:bg-white/20 transition-colors">
+                   class="inline-flex items-center gap-2 px-6 py-2.5 bg-white/10 backdrop-blur border border-white/25 text-white font-medium text-sm rounded-full hover:bg-white/20 transition-all">
                     بیشتر بدان
+                    <svg class="w-4 h-4 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </a>
             </div>
         </div>
