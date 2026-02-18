@@ -238,7 +238,12 @@
         {{-- TAB: دعوت به عمل --}}
         <div x-show="activeTab === 'cta'" class="space-y-4">
             <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-                <h2 class="font-bold text-gray-800 text-base border-b pb-3">بخش پایین صفحه (CTA)</h2>
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">محتوای بخش CTA</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">بج (نوار کوچک بالای عنوان)</label>
+                    <input type="text" name="cta_badge" value="{{ $settings['cta_badge'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="مثال: در حال پذیرش تکنسین">
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">عنوان</label>
                     <input type="text" name="cta_title" value="{{ $settings['cta_title'] }}"
@@ -250,9 +255,42 @@
                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none">{{ $settings['cta_description'] }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">متن دکمه</label>
-                    <input type="text" name="cta_button_text" value="{{ $settings['cta_button_text'] }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">متن پاورقی (زیر دکمه‌ها)</label>
+                    <input type="text" name="cta_footnote" value="{{ $settings['cta_footnote'] }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="مثال: پاسخگویی ۲۴ ساعته · بدون نیاز به قرار قبلی">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">دکمه اول</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">متن دکمه</label>
+                        <input type="text" name="cta_button_text" value="{{ $settings['cta_button_text'] }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">لینک دکمه</label>
+                        <input type="text" name="cta_button_link" value="{{ $settings['cta_button_link'] }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono" dir="ltr" placeholder="mailto:... یا https://...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">دکمه دوم (تلفن)</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">متن دکمه</label>
+                        <input type="text" name="cta_phone_text" value="{{ $settings['cta_phone_text'] }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">شماره تلفن</label>
+                        <input type="text" name="cta_phone" value="{{ $settings['cta_phone'] }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono" dir="ltr" placeholder="02100000000">
+                        <p class="text-xs text-gray-400 mt-1">بدون tel: — فقط شماره</p>
+                    </div>
                 </div>
             </div>
         </div>

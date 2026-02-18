@@ -47,7 +47,12 @@ class TechnicianAdminController extends Controller
             'faq_json'           => TechnicianSetting::get('faq',                 $defaults['faq']),
             'cta_title'          => TechnicianSetting::get('cta_title',           $defaults['cta_title']),
             'cta_description'    => TechnicianSetting::get('cta_description',     $defaults['cta_description']),
+            'cta_badge'          => TechnicianSetting::get('cta_badge',           $defaults['cta_badge']),
             'cta_button_text'    => TechnicianSetting::get('cta_button_text',     $defaults['cta_button_text']),
+            'cta_button_link'    => TechnicianSetting::get('cta_button_link',     $defaults['cta_button_link']),
+            'cta_phone_text'     => TechnicianSetting::get('cta_phone_text',      $defaults['cta_phone_text']),
+            'cta_phone'          => TechnicianSetting::get('cta_phone',           $defaults['cta_phone']),
+            'cta_footnote'       => TechnicianSetting::get('cta_footnote',        $defaults['cta_footnote']),
         ];
 
         return view('technician::admin.settings', compact('settings'));
@@ -65,7 +70,8 @@ class TechnicianAdminController extends Controller
             'hero_title', 'hero_subtitle', 'hero_description', 'hero_cta_text', 'hero_badge',
             'hero_overlay_color', 'hero_overlay_opacity',
             'benefits_title', 'steps_title', 'requirements_title', 'faq_title',
-            'cta_title', 'cta_description', 'cta_button_text',
+            'cta_title', 'cta_description', 'cta_badge',
+            'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
         ];
 
         foreach ($simpleFields as $field) {

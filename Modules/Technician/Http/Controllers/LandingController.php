@@ -34,7 +34,12 @@ class LandingController extends Controller
                 'faq'                => TechnicianSetting::getJson('faq',              json_decode($defaults['faq'], true)),
                 'cta_title'          => TechnicianSetting::get('cta_title',           $defaults['cta_title']),
                 'cta_description'    => TechnicianSetting::get('cta_description',     $defaults['cta_description']),
+                'cta_badge'          => TechnicianSetting::get('cta_badge',           $defaults['cta_badge']),
                 'cta_button_text'    => TechnicianSetting::get('cta_button_text',     $defaults['cta_button_text']),
+                'cta_button_link'    => TechnicianSetting::get('cta_button_link',     $defaults['cta_button_link']),
+                'cta_phone_text'     => TechnicianSetting::get('cta_phone_text',      $defaults['cta_phone_text']),
+                'cta_phone'          => TechnicianSetting::get('cta_phone',           $defaults['cta_phone']),
+                'cta_footnote'       => TechnicianSetting::get('cta_footnote',        $defaults['cta_footnote']),
             ];
         } catch (\Exception $e) {
             // اگه جدول هنوز migrate نشده یا DB در دسترس نیست، از defaults استفاده کن
@@ -60,7 +65,12 @@ class LandingController extends Controller
                 'faq'                => json_decode($defaults['faq'], true),
                 'cta_title'          => $defaults['cta_title'],
                 'cta_description'    => $defaults['cta_description'],
+                'cta_badge'          => $defaults['cta_badge'],
                 'cta_button_text'    => $defaults['cta_button_text'],
+                'cta_button_link'    => $defaults['cta_button_link'],
+                'cta_phone_text'     => $defaults['cta_phone_text'],
+                'cta_phone'          => $defaults['cta_phone'],
+                'cta_footnote'       => $defaults['cta_footnote'],
             ];
         }
 

@@ -76,7 +76,12 @@ class TechnicianSetting extends Model
             ], JSON_UNESCAPED_UNICODE),
             'cta_title'          => 'آماده‌ای شروع کنی؟',
             'cta_description'    => 'همین الان ثبت‌نام کن و اولین سفارشت را دریافت کن.',
+            'cta_badge'          => 'در حال پذیرش تکنسین',
             'cta_button_text'    => 'ثبت‌نام تکنسین',
+            'cta_button_link'    => 'mailto:join@tamironline.ir',
+            'cta_phone_text'     => 'تماس با ما',
+            'cta_phone'          => '02100000000',
+            'cta_footnote'       => 'پاسخگویی ۲۴ ساعته · بدون نیاز به قرار قبلی',
             'brand_name'         => 'تعمیر آنلاین',
         ];
     }

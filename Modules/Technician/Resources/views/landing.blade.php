@@ -201,25 +201,31 @@
             <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-white/5 rounded-full"></div>
         </div>
         <div class="max-w-2xl mx-auto px-4 sm:px-6 relative z-10">
+            @if($cta_badge)
             <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
                 <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                در حال پذیرش تکنسین
+                {{ $cta_badge }}
             </div>
+            @endif
             <h2 class="text-3xl md:text-4xl font-black mb-4 leading-tight">{{ $cta_title }}</h2>
             <p class="text-blue-100 text-lg mb-10 leading-relaxed">{{ $cta_description }}</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="mailto:join@tamironline.ir"
+                <a href="{{ $cta_button_link }}"
                    class="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-blue-900 font-black text-lg rounded-2xl hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     {{ $cta_button_text }}
                 </a>
-                <a href="tel:02100000000"
+                @if($cta_phone)
+                <a href="tel:{{ $cta_phone }}"
                    class="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur border border-white/30 text-white font-bold text-lg rounded-2xl hover:bg-white/20 transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    تماس با ما
+                    {{ $cta_phone_text }}
                 </a>
+                @endif
             </div>
-            <p class="mt-8 text-blue-200/70 text-sm">پاسخگویی ۲۴ ساعته · بدون نیاز به قرار قبلی</p>
+            @if($cta_footnote)
+            <p class="mt-8 text-blue-200/70 text-sm">{{ $cta_footnote }}</p>
+            @endif
         </div>
     </section>
 
