@@ -12,7 +12,17 @@ class TechnicianRegistration extends Model
         'mobile',
         'national_code',
         'birth_date',
+        'first_name',
+        'last_name',
+        'father_name',
+        'mobile_verified_at',
+        'identity_verified',
         'current_step',
         'status',
+    ];
+
+    protected $casts = [
+        'mobile_verified_at' => 'datetime',
+        'identity_verified' => 'boolean',
     ];
 }

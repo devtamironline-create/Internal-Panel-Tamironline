@@ -4,8 +4,11 @@ namespace Modules\Technician\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Modules\SMS\Services\OTPService;
 use Modules\Technician\Models\TechnicianRegistration;
 use Modules\Technician\Models\TechnicianSetting;
+use Modules\Technician\Services\ZohalService;
 
 class RegistrationController extends Controller
 {
@@ -31,7 +34,54 @@ class RegistrationController extends Controller
     }
 
     /**
-     * ذخیره مرحله اول: موبایل، کدملی، تاریخ تولد
+     * ارسال کد OTP به شماره موبایل
+     */
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ], [
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'mobile.regex'    => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
+        ]);
+
+        // بررسی تکراری نبودن موبایل
+        $existing = TechnicianRegistration::where('mobile', $request->mobile)->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'این شماره موبایل قبلاً ثبت شده است.',
+            ], 422);
+        }
+
+        $otpService = app(OTPService::class);
+        $result = $otpService->send($request->mobile);
+
+        return response()->json($result);
+    }
+
+    /**
+     * تایید کد OTP
+     */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'code'   => ['required', 'string', 'size:6'],
+        ], [
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'code.required'   => 'کد تایید الزامی است.',
+            'code.size'       => 'کد تایید باید ۶ رقم باشد.',
+        ]);
+
+        $otpService = app(OTPService::class);
+        $result = $otpService->verify($request->mobile, $request->code);
+
+        return response()->json($result);
+    }
+
+    /**
+     * ذخیره مرحله اول: تایید هویت + ثبت اطلاعات
      */
     public function storeStep1(Request $request)
     {
@@ -50,7 +100,11 @@ class RegistrationController extends Controller
 
         // اعتبارسنجی کد ملی
         if (!$this->validateNationalCode($request->national_code)) {
-            return back()->withErrors(['national_code' => 'کد ملی وارد شده معتبر نیست.'])->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'کد ملی وارد شده معتبر نیست.',
+                'field'   => 'national_code',
+            ], 422);
         }
 
         // بررسی تکراری نبودن
@@ -59,24 +113,81 @@ class RegistrationController extends Controller
             ->first();
 
         if ($existing) {
-            if ($existing->mobile === $request->mobile) {
-                return back()->withErrors(['mobile' => 'این شماره موبایل قبلاً ثبت شده است.'])->withInput();
-            }
-            return back()->withErrors(['national_code' => 'این کد ملی قبلاً ثبت شده است.'])->withInput();
+            $field = $existing->mobile === $request->mobile ? 'mobile' : 'national_code';
+            $msg = $field === 'mobile'
+                ? 'این شماره موبایل قبلاً ثبت شده است.'
+                : 'این کد ملی قبلاً ثبت شده است.';
+
+            return response()->json([
+                'success' => false,
+                'message' => $msg,
+                'field'   => $field,
+            ], 422);
         }
 
+        $zohal = new ZohalService();
+
+        // ۱) شاهکار: تطابق موبایل و کد ملی
+        $shahkar = $zohal->shahkar($request->mobile, $request->national_code);
+
+        if (!$shahkar['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $shahkar['message'],
+            ], 503);
+        }
+
+        if (!$shahkar['matched']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شماره موبایل و کد ملی با هم مطابقت ندارند.',
+                'field'   => 'national_code',
+            ], 422);
+        }
+
+        // ۲) استعلام هویت: دریافت نام و نام خانوادگی
+        $identity = $zohal->nationalIdentityInquiry($request->national_code, $request->birth_date);
+
+        if (!$identity['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $identity['message'],
+            ], 503);
+        }
+
+        if (!$identity['matched']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کد ملی و تاریخ تولد با هم مطابقت ندارند.',
+                'field'   => 'birth_date',
+            ], 422);
+        }
+
+        // ذخیره اطلاعات
         $registration = TechnicianRegistration::create([
-            'mobile'        => $request->mobile,
-            'national_code' => $request->national_code,
-            'birth_date'    => $request->birth_date,
-            'current_step'  => 2,
-            'status'        => 'incomplete',
+            'mobile'              => $request->mobile,
+            'national_code'       => $request->national_code,
+            'birth_date'          => $request->birth_date,
+            'first_name'          => $identity['first_name'],
+            'last_name'           => $identity['last_name'],
+            'father_name'         => $identity['father_name'],
+            'mobile_verified_at'  => now(),
+            'identity_verified'   => true,
+            'current_step'        => 2,
+            'status'              => 'incomplete',
         ]);
 
-        // فعلاً به صفحه موفقیت ریدایرکت می‌کنیم (مراحل بعدی اضافه خواهد شد)
-        return redirect()->route('technician.register')
-            ->with('success', 'مرحله اول با موفقیت ثبت شد.')
-            ->with('registration_id', $registration->id);
+        Log::info('Technician registration step 1 completed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'اطلاعات هویتی با موفقیت تایید شد.',
+            'first_name' => $identity['first_name'],
+            'last_name'  => $identity['last_name'],
+        ]);
     }
 
     /**

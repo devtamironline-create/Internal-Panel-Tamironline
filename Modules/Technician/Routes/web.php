@@ -10,6 +10,8 @@ Route::get('/join-technician', [LandingController::class, 'show'])->name('techni
 
 // فرآیند ثبت‌نام تکنسین (بدون نیاز به لاگین)
 Route::get('/join-technician/register', [RegistrationController::class, 'showForm'])->name('technician.register');
+Route::post('/join-technician/register/send-otp', [RegistrationController::class, 'sendOtp'])->name('technician.register.send-otp');
+Route::post('/join-technician/register/verify-otp', [RegistrationController::class, 'verifyOtp'])->name('technician.register.verify-otp');
 Route::post('/join-technician/register/step1', [RegistrationController::class, 'storeStep1'])->name('technician.register.step1');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
