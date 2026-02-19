@@ -48,12 +48,12 @@ class RegistrationController extends Controller
             'mobile.regex'    => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
         ]);
 
-        // بررسی تکراری نبودن موبایل
+        // فقط ثبت‌نام‌های تایید شده نهایی بلاک شوند
         $existing = TechnicianRegistration::where('mobile', $request->mobile)->first();
-        if ($existing) {
+        if ($existing && $existing->status === 'approved') {
             return response()->json([
                 'success' => false,
-                'message' => 'این شماره موبایل قبلاً ثبت شده است.',
+                'message' => 'ثبت‌نام شما قبلاً تکمیل و تایید شده است.',
             ], 422);
         }
 
@@ -79,6 +79,19 @@ class RegistrationController extends Controller
 
         $otpService = app(OTPService::class);
         $result = $otpService->verify($request->mobile, $request->code);
+
+        // اگر OTP تایید شد، بررسی ثبت‌نام قبلی برای ادامه از مرحله مناسب
+        if ($result['success'] ?? false) {
+            $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
+            if ($registration && $registration->identity_verified) {
+                $result['resume'] = [
+                    'current_step' => $registration->current_step,
+                    'first_name'   => $registration->first_name,
+                    'last_name'    => $registration->last_name,
+                    'father_name'  => $registration->father_name,
+                ];
+            }
+        }
 
         return response()->json($result);
     }

@@ -536,9 +536,24 @@
             $.post('{{ route("technician.register.verify-otp") }}', { mobile: currentMobile, code: code })
                 .done(function(res) {
                     if (res.success) {
-                        $('#mobileDisplay').val(currentMobile);
-                        goToPhase('C');
-                        initDatePicker();
+                        // بررسی ثبت‌نام قبلی: اگه مرحله ۱ تمومه، مستقیم برو مرحله ۲
+                        if (res.resume && res.resume.current_step >= 2) {
+                            verifiedFirstName = res.resume.first_name || '';
+                            verifiedLastName = res.resume.last_name || '';
+                            verifiedFatherName = res.resume.father_name || '';
+
+                            $('#step2FirstName').val(verifiedFirstName);
+                            $('#step2LastName').val(verifiedLastName);
+                            $('#step2FatherName').val(verifiedFatherName);
+                            $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
+
+                            goToPhase('D');
+                        } else {
+                            // کاربر جدید: برو مرحله احراز هویت
+                            $('#mobileDisplay').val(currentMobile);
+                            goToPhase('C');
+                            initDatePicker();
+                        }
                     } else {
                         showFieldError('otpError', res.message);
                     }
