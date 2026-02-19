@@ -299,6 +299,7 @@ class RegistrationController extends Controller
         $request->validate([
             'mobile'               => ['required', 'regex:/^09[0-9]{9}$/'],
             'field_of_study'       => ['nullable', 'string', 'max:255'],
+            'education_level'      => ['nullable', 'in:diploma,associate,bachelor,master,doctorate'],
             'has_business_license' => ['required', 'in:0,1'],
             'has_shop'             => ['required', 'in:0,1'],
             'shop_address'         => ['nullable', 'required_if:has_shop,1', 'string', 'max:1000'],
@@ -338,6 +339,7 @@ class RegistrationController extends Controller
         // به‌روزرسانی اطلاعات
         $registration->update([
             'field_of_study'       => $request->field_of_study,
+            'education_level'      => $request->education_level,
             'has_business_license' => (bool) $request->has_business_license,
             'has_shop'             => (bool) $request->has_shop,
             'shop_address'         => $request->has_shop ? $request->shop_address : null,

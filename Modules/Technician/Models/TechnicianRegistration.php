@@ -23,6 +23,7 @@ class TechnicianRegistration extends Model
         'province',
         'city',
         'field_of_study',
+        'education_level',
         'has_business_license',
         'has_shop',
         'shop_address',

@@ -376,6 +376,20 @@
 
                 <div class="space-y-5">
 
+                    {{-- مقطع تحصیلی --}}
+                    <div>
+                        <label for="education_level" class="block text-sm font-semibold text-gray-600 mb-1.5">مقطع تحصیلی</label>
+                        <select id="education_level"
+                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
+                            <option value="">انتخاب کنید...</option>
+                            <option value="diploma">دیپلم</option>
+                            <option value="associate">کاردانی</option>
+                            <option value="bachelor">کارشناسی</option>
+                            <option value="master">کارشناسی ارشد</option>
+                            <option value="doctorate">دکتری</option>
+                        </select>
+                    </div>
+
                     {{-- رشته تحصیلی --}}
                     <div>
                         <label for="field_of_study" class="block text-sm font-semibold text-gray-600 mb-1.5">رشته تحصیلی</label>
@@ -1012,6 +1026,7 @@
 
             $.post('{{ route("technician.register.step3") }}', {
                 mobile: currentMobile,
+                education_level: $('#education_level').val(),
                 field_of_study: $('#field_of_study').val().trim(),
                 has_business_license: hasLicense,
                 has_shop: hasShop,
