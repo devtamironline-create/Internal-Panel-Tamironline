@@ -287,6 +287,73 @@ class RegistrationController extends Controller
     }
 
     /**
+     * ذخیره مرحله سوم: اطلاعات تکمیلی
+     */
+    public function storeStep3(Request $request)
+    {
+        $request->validate([
+            'mobile'               => ['required', 'regex:/^09[0-9]{9}$/'],
+            'field_of_study'       => ['nullable', 'string', 'max:255'],
+            'has_business_license' => ['required', 'in:0,1'],
+            'has_shop'             => ['required', 'in:0,1'],
+            'shop_address'         => ['nullable', 'required_if:has_shop,1', 'string', 'max:1000'],
+            'shop_phone'           => ['nullable', 'required_if:has_shop,1', 'string', 'max:20'],
+            'work_experiences'     => ['nullable', 'array', 'max:10'],
+            'work_experiences.*.title'    => ['required', 'string', 'max:255'],
+            'work_experiences.*.company'  => ['required', 'string', 'max:255'],
+            'work_experiences.*.duration' => ['required', 'string', 'max:100'],
+            'certificates'         => ['nullable', 'array', 'max:10'],
+            'certificates.*.title'       => ['required', 'string', 'max:255'],
+            'certificates.*.institution' => ['required', 'string', 'max:255'],
+        ], [
+            'mobile.required'              => 'شماره موبایل الزامی است.',
+            'has_business_license.required' => 'وضعیت پروانه کسب الزامی است.',
+            'has_shop.required'             => 'وضعیت مغازه/دفتر الزامی است.',
+            'shop_address.required_if'      => 'آدرس مغازه/دفتر الزامی است.',
+            'shop_phone.required_if'        => 'تلفن مغازه/دفتر الزامی است.',
+            'work_experiences.*.title.required'    => 'عنوان شغل الزامی است.',
+            'work_experiences.*.company.required'  => 'محل کار الزامی است.',
+            'work_experiences.*.duration.required' => 'مدت فعالیت الزامی است.',
+            'certificates.*.title.required'        => 'عنوان مدرک/دوره الزامی است.',
+            'certificates.*.institution.required'  => 'نام موسسه/مرکز الزامی است.',
+        ]);
+
+        // پیدا کردن رکورد ثبت‌نام
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('current_step', '>=', 3)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
+            ], 422);
+        }
+
+        // به‌روزرسانی اطلاعات
+        $registration->update([
+            'field_of_study'       => $request->field_of_study,
+            'has_business_license' => (bool) $request->has_business_license,
+            'has_shop'             => (bool) $request->has_shop,
+            'shop_address'         => $request->has_shop ? $request->shop_address : null,
+            'shop_phone'           => $request->has_shop ? $request->shop_phone : null,
+            'work_experiences'     => $request->work_experiences ?? [],
+            'certificates'         => $request->certificates ?? [],
+            'current_step'         => 4,
+        ]);
+
+        Log::info('Technician registration step 3 completed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اطلاعات تکمیلی با موفقیت ثبت شد.',
+        ]);
+    }
+
+    /**
      * اعتبارسنجی کد ملی ایران
      */
     private function validateNationalCode(string $code): bool

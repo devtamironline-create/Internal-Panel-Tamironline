@@ -150,7 +150,7 @@
                 <div class="flex-1 mx-2 h-px bg-gray-200"></div>
                 <div class="flex items-center gap-1.5" id="stepIndicator3">
                     <div class="step-circle w-7 h-7 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xs font-bold">۳</div>
-                    <span class="step-label text-[11px] font-medium text-gray-400">تخصص</span>
+                    <span class="step-label text-[11px] font-medium text-gray-400">اطلاعات تکمیلی</span>
                 </div>
                 <div class="flex-1 mx-2 h-px bg-gray-200"></div>
                 <div class="flex items-center gap-1.5" id="stepIndicator4">
@@ -361,18 +361,133 @@
                 </div>
             </div>
 
-            {{-- ===== فاز E: تکمیل مرحله ۲ ===== --}}
+            {{-- ===== فاز E: اطلاعات تکمیلی (مرحله ۳) ===== --}}
             <div id="phaseE" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">اطلاعات شخصی ثبت شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">اطلاعات تکمیلی</h2>
+                    <p class="text-xs text-gray-400 mt-1">لطفاً اطلاعات زیر را تکمیل کنید</p>
+                </div>
+
+                <div class="space-y-5">
+
+                    {{-- رشته تحصیلی --}}
+                    <div>
+                        <label for="field_of_study" class="block text-sm font-semibold text-gray-600 mb-1.5">رشته تحصیلی</label>
+                        <input type="text" id="field_of_study" placeholder="مثال: برق، مکانیک، تاسیسات..."
+                               class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300">
+                    </div>
+
+                    {{-- پروانه کسب --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا پروانه کسب دارید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_business_license" value="1" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_business_license" value="0" class="hidden peer" checked>
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- مغازه/دفتر --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا مغازه یا دفتر کار دارید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_shop" value="1" class="hidden peer" onchange="toggleShopFields(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_shop" value="0" class="hidden peer" checked onchange="toggleShopFields(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- فیلدهای مغازه --}}
+                    <div id="shopFields" class="space-y-4 hidden">
+                        <div>
+                            <label for="shop_address" class="block text-sm font-semibold text-gray-600 mb-1.5">آدرس مغازه/دفتر</label>
+                            <textarea id="shop_address" rows="2" placeholder="آدرس کامل مغازه یا دفتر کار..."
+                                      class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 resize-none"></textarea>
+                            <p id="shopAddressError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                        </div>
+                        <div>
+                            <label for="shop_phone" class="block text-sm font-semibold text-gray-600 mb-1.5">تلفن مغازه/دفتر</label>
+                            <input type="tel" id="shop_phone" placeholder="شماره تلفن ثابت" maxlength="15" dir="ltr"
+                                   class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                            <p id="shopPhoneError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                        </div>
+                    </div>
+
+                    {{-- سوابق شغلی --}}
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-semibold text-gray-600">سوابق شغلی</label>
+                            <button type="button" onclick="addWorkExperience()"
+                                    class="text-xs text-brand-blue font-bold hover:underline flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                افزودن سابقه
+                            </button>
+                        </div>
+                        <div id="workExperiencesList" class="space-y-3">
+                            {{-- آیتم‌ها به صورت داینامیک اضافه می‌شوند --}}
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">در صورت داشتن سابقه شغلی مرتبط، آن را اضافه کنید.</p>
+                    </div>
+
+                    {{-- مدارک و دوره‌ها --}}
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-semibold text-gray-600">مدارک و دوره‌های آموزشی</label>
+                            <button type="button" onclick="addCertificate()"
+                                    class="text-xs text-brand-blue font-bold hover:underline flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                افزودن مدرک
+                            </button>
+                        </div>
+                        <div id="certificatesList" class="space-y-3">
+                            {{-- آیتم‌ها به صورت داینامیک اضافه می‌شوند --}}
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">دوره‌ها و مدارک مرتبط با حرفه خود را اضافه کنید.</p>
+                    </div>
+
+                    <p id="step3GeneralError" class="text-red-500 text-xs hidden"></p>
+
+                    <button id="btnStep3" onclick="submitStep3()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ثبت و ادامه
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز F: تکمیل مرحله ۳ ===== --}}
+            <div id="phaseF" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">اطلاعات شخصی ثبت شد</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">اطلاعات تکمیلی ثبت شد</h2>
                     <p class="text-sm text-gray-500 mb-6">
                         <span id="verifiedName" class="font-bold text-brand-blue"></span>
                         اطلاعات شما با موفقیت ذخیره شد
                     </p>
-
                     <p class="text-xs text-gray-400">مرحله بعدی به زودی فعال می‌شود...</p>
                 </div>
             </div>
@@ -417,7 +532,7 @@
             hideAlert();
 
             // پراگرس بار
-            const progress = { A: 8, B: 16, C: 25, D: 55, E: 60 };
+            const progress = { A: 8, B: 16, C: 25, D: 55, E: 75, F: 80 };
             $('#progressBar').css('width', (progress[phase] || 8) + '%');
 
             // به‌روزرسانی نوار مراحل
@@ -436,7 +551,7 @@
 
         function updateStepIndicators(phase) {
             // مراحل: A,B,C = step1 | D,E = step2
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 2 };
+            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 3 };
             const currentStep = phaseToStep[phase] || 1;
 
             for (let i = 1; i <= 4; i++) {
@@ -474,7 +589,7 @@
 
         function showFieldError(id, msg) { $('#' + id).text(msg).removeClass('hidden'); }
         function hideFieldError(id) { $('#' + id).text('').addClass('hidden'); }
-        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideAlert(); }
+        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideAlert(); }
 
         function setLoading(btnId, loading) {
             const btn = $('#' + btnId);
@@ -752,6 +867,151 @@
             })
             .always(function() {
                 setLoading('btnStep2', false);
+            });
+        }
+
+        // ===== فاز E: مرحله ۳ - اطلاعات تکمیلی =====
+
+        function toggleShopFields(show) {
+            if (show) {
+                $('#shopFields').removeClass('hidden');
+            } else {
+                $('#shopFields').addClass('hidden');
+                $('#shop_address').val('');
+                $('#shop_phone').val('');
+            }
+        }
+
+        let workExpCounter = 0;
+        function addWorkExperience() {
+            const idx = workExpCounter++;
+            const html = `
+                <div class="bg-gray-50 rounded-xl p-3 space-y-2 relative" id="workExp_${idx}">
+                    <button type="button" onclick="$('#workExp_${idx}').remove()" class="absolute top-2 left-2 text-red-400 hover:text-red-600 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <input type="text" placeholder="عنوان شغل" class="work-exp-title form-input w-full px-3 py-2 rounded-lg text-sm bg-white outline-none placeholder:text-gray-300">
+                    <input type="text" placeholder="محل کار / نام شرکت" class="work-exp-company form-input w-full px-3 py-2 rounded-lg text-sm bg-white outline-none placeholder:text-gray-300">
+                    <input type="text" placeholder="مدت فعالیت (مثال: ۲ سال)" class="work-exp-duration form-input w-full px-3 py-2 rounded-lg text-sm bg-white outline-none placeholder:text-gray-300">
+                </div>
+            `;
+            $('#workExperiencesList').append(html);
+        }
+
+        let certCounter = 0;
+        function addCertificate() {
+            const idx = certCounter++;
+            const html = `
+                <div class="bg-gray-50 rounded-xl p-3 space-y-2 relative" id="cert_${idx}">
+                    <button type="button" onclick="$('#cert_${idx}').remove()" class="absolute top-2 left-2 text-red-400 hover:text-red-600 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <input type="text" placeholder="عنوان مدرک / دوره" class="cert-title form-input w-full px-3 py-2 rounded-lg text-sm bg-white outline-none placeholder:text-gray-300">
+                    <input type="text" placeholder="نام موسسه / مرکز آموزشی" class="cert-institution form-input w-full px-3 py-2 rounded-lg text-sm bg-white outline-none placeholder:text-gray-300">
+                </div>
+            `;
+            $('#certificatesList').append(html);
+        }
+
+        function collectWorkExperiences() {
+            const items = [];
+            $('#workExperiencesList > div').each(function() {
+                const title = $(this).find('.work-exp-title').val().trim();
+                const company = $(this).find('.work-exp-company').val().trim();
+                const duration = $(this).find('.work-exp-duration').val().trim();
+                if (title || company || duration) {
+                    items.push({ title, company, duration });
+                }
+            });
+            return items;
+        }
+
+        function collectCertificates() {
+            const items = [];
+            $('#certificatesList > div').each(function() {
+                const title = $(this).find('.cert-title').val().trim();
+                const institution = $(this).find('.cert-institution').val().trim();
+                if (title || institution) {
+                    items.push({ title, institution });
+                }
+            });
+            return items;
+        }
+
+        function submitStep3() {
+            clearAllErrors();
+            hideFieldError('step3GeneralError');
+            hideFieldError('shopAddressError');
+            hideFieldError('shopPhoneError');
+
+            const hasShop = $('input[name="has_shop"]:checked').val();
+            const hasLicense = $('input[name="has_business_license"]:checked').val();
+
+            let hasError = false;
+
+            // اگر مغازه دارد، آدرس و تلفن الزامی
+            if (hasShop === '1') {
+                if (!$('#shop_address').val().trim()) {
+                    showFieldError('shopAddressError', 'آدرس مغازه/دفتر الزامی است.');
+                    hasError = true;
+                }
+                if (!$('#shop_phone').val().trim()) {
+                    showFieldError('shopPhoneError', 'تلفن مغازه/دفتر الزامی است.');
+                    hasError = true;
+                }
+            }
+
+            // بررسی سوابق شغلی (اگر اضافه شده، همه فیلدها پر باشد)
+            const workExps = collectWorkExperiences();
+            for (let i = 0; i < workExps.length; i++) {
+                if (!workExps[i].title || !workExps[i].company || !workExps[i].duration) {
+                    showFieldError('step3GeneralError', 'لطفاً تمام فیلدهای سوابق شغلی را تکمیل کنید.');
+                    hasError = true;
+                    break;
+                }
+            }
+
+            // بررسی مدارک (اگر اضافه شده، همه فیلدها پر باشد)
+            const certs = collectCertificates();
+            for (let i = 0; i < certs.length; i++) {
+                if (!certs[i].title || !certs[i].institution) {
+                    showFieldError('step3GeneralError', 'لطفاً تمام فیلدهای مدارک و دوره‌ها را تکمیل کنید.');
+                    hasError = true;
+                    break;
+                }
+            }
+
+            if (hasError) return;
+
+            setLoading('btnStep3', true);
+
+            $.post('{{ route("technician.register.step3") }}', {
+                mobile: currentMobile,
+                field_of_study: $('#field_of_study').val().trim(),
+                has_business_license: hasLicense,
+                has_shop: hasShop,
+                shop_address: $('#shop_address').val().trim(),
+                shop_phone: $('#shop_phone').val().trim(),
+                work_experiences: workExps.length ? workExps : null,
+                certificates: certs.length ? certs : null
+            })
+            .done(function(res) {
+                if (res.success) {
+                    goToPhase('F');
+                } else {
+                    showAlert(res.message, 'error');
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                if (res?.message) {
+                    showAlert(res.message, 'error');
+                } else {
+                    showAlert('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.', 'error');
+                }
+            })
+            .always(function() {
+                setLoading('btnStep3', false);
             });
         }
 

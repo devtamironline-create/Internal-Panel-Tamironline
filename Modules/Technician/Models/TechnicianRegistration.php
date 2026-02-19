@@ -22,6 +22,13 @@ class TechnicianRegistration extends Model
         'marital_status',
         'province',
         'city',
+        'field_of_study',
+        'has_business_license',
+        'has_shop',
+        'shop_address',
+        'shop_phone',
+        'work_experiences',
+        'certificates',
         'current_step',
         'status',
     ];
@@ -29,5 +36,9 @@ class TechnicianRegistration extends Model
     protected $casts = [
         'mobile_verified_at' => 'datetime',
         'identity_verified' => 'boolean',
+        'has_business_license' => 'boolean',
+        'has_shop' => 'boolean',
+        'work_experiences' => 'array',
+        'certificates' => 'array',
     ];
 }
