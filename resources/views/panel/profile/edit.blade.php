@@ -71,8 +71,7 @@
                 <input type="text" name="birth_date" id="birth_date"
                     value="{{ old('birth_date', $customer->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($customer->birth_date)->format('Y/m/d') : '') }}"
                     class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all cursor-pointer @error('birth_date') border-red-500 @enderror"
-                    dir="ltr" placeholder="انتخاب تاریخ" readonly
-                    data-jdp data-jdp-min-date="1330/01/01" data-jdp-max-date="1410/12/29">
+                    dir="ltr" placeholder="انتخاب تاریخ" readonly>
                 @error('birth_date')
                 <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                 @enderror
@@ -123,17 +122,39 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
+<link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">
+<style>
+    .datepicker-container { z-index: 9999 !important; border-radius: 12px !important; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important; }
+    .datepicker-plot-area { font-family: inherit !important; }
+    .datepicker-plot-area .datepicker-header { background: #10b981 !important; }
+    .datepicker-plot-area .datepicker-header .btn { color: #fff !important; }
+    .datepicker-plot-area .table-days td.selected span { background: #10b981 !important; }
+</style>
 @endpush
 
 @push('scripts')
-<script src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
+<script src="/vendor/js/jquery.min.js"></script>
+<script src="/vendor/js/persian-date.min.js"></script>
+<script src="/vendor/js/persian-datepicker.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        jalaliDatepicker.startWatch({
-            persianDigits: false,
+    $(document).ready(function() {
+        $("#birth_date").pDatepicker({
+            format: 'YYYY/MM/DD',
             autoClose: true,
-            time: false
+            persianDigits: false,
+            initialValue: false,
+            observer: true,
+            calendar: { persian: { locale: 'fa' } },
+            toolbox: {
+                calendarSwitch: { enabled: false },
+                todayButton: { enabled: true, text: { fa: 'امروز' } },
+                submitButton: { enabled: false }
+            },
+            navigator: { enabled: true, scroll: { enabled: true } },
+            timePicker: { enabled: false },
+            maxDate: new persianDate().subtract('year', 10).endOf('year').unix() * 1000,
+            minDate: new persianDate().subtract('year', 90).startOf('year').unix() * 1000,
+            responsive: true,
         });
     });
 </script>

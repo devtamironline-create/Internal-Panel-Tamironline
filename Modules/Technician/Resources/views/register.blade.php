@@ -8,10 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-    <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <script src="/vendor/js/jquery.min.js"></script>
+    <link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">
+    <script src="/vendor/js/persian-date.min.js"></script>
+    <script src="/vendor/js/persian-datepicker.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
