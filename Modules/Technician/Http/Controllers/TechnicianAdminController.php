@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Modules\Technician\Models\ApplianceCategory;
+use Modules\Technician\Models\TechnicianRegistration;
 use Modules\Technician\Models\TechnicianSetting;
 
 class TechnicianAdminController extends Controller
@@ -170,6 +171,76 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.settings')
             ->with('success', 'تنظیمات به مقادیر پیش‌فرض بازگشت.');
+    }
+
+    /**
+     * لیست درخواست‌های ثبت‌نام تکنسین
+     */
+    public function registrations(Request $request)
+    {
+        $this->checkAccess();
+
+        $query = TechnicianRegistration::query()->orderByDesc('created_at');
+
+        // فیلتر وضعیت
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // جستجو
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('national_code', 'like', "%{$search}%");
+            });
+        }
+
+        $registrations = $query->paginate(20)->withQueryString();
+
+        return view('technician::admin.registrations', compact('registrations'));
+    }
+
+    /**
+     * جزئیات درخواست ثبت‌نام
+     */
+    public function registrationShow($id)
+    {
+        $this->checkAccess();
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        // واکشی نام دستگاه‌ها از دیتابیس
+        $applianceNames = [];
+        if (!empty($registration->appliance_categories)) {
+            $applianceNames = ApplianceCategory::whereIn('id', $registration->appliance_categories)
+                ->pluck('name')
+                ->toArray();
+        }
+
+        return view('technician::admin.registration-show', compact('registration', 'applianceNames'));
+    }
+
+    /**
+     * تغییر وضعیت درخواست ثبت‌نام
+     */
+    public function registrationUpdateStatus(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'status' => ['required', 'in:pending,approved,rejected'],
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+        $registration->update(['status' => $request->status]);
+
+        $statusLabels = ['pending' => 'در انتظار بررسی', 'approved' => 'تایید شده', 'rejected' => 'رد شده'];
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'وضعیت به «' . $statusLabels[$request->status] . '» تغییر یافت.');
     }
 
     /**

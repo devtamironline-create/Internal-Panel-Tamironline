@@ -26,6 +26,11 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::get('/settings/delete-logo', [TechnicianAdminController::class, 'deleteLogo'])->name('settings.delete-logo');
     Route::get('/settings/delete-hero-bg', [TechnicianAdminController::class, 'deleteHeroBg'])->name('settings.delete-hero-bg');
 
+    // لیست درخواست‌ها
+    Route::get('/registrations', [TechnicianAdminController::class, 'registrations'])->name('registrations');
+    Route::get('/registrations/{id}', [TechnicianAdminController::class, 'registrationShow'])->name('registrations.show');
+    Route::put('/registrations/{id}/status', [TechnicianAdminController::class, 'registrationUpdateStatus'])->name('registrations.update-status');
+
     // مدیریت دسته‌بندی دستگاه‌ها
     Route::get('/appliance-categories', [TechnicianAdminController::class, 'applianceCategories'])->name('appliance-categories');
     Route::post('/appliance-categories', [TechnicianAdminController::class, 'storeApplianceCategory'])->name('appliance-categories.store');
