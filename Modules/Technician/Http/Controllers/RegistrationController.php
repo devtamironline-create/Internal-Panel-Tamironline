@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\SMS\Services\OTPService;
+use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
 use Modules\Technician\Models\TechnicianSetting;
 use Modules\Technician\Services\ZohalService;
@@ -28,11 +29,13 @@ class RegistrationController extends Controller
         }
 
         $provinces = require base_path('Modules/Technician/Data/iran_provinces.php');
+        $applianceCategories = ApplianceCategory::active()->ordered()->get();
 
         return view('technician::register', [
-            'brand_name' => $brandName,
-            'brand_logo' => $brandLogo,
-            'provinces'  => $provinces,
+            'brand_name'           => $brandName,
+            'brand_logo'           => $brandLogo,
+            'provinces'            => $provinces,
+            'appliance_categories' => $applianceCategories,
         ]);
     }
 
@@ -415,6 +418,59 @@ class RegistrationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'مناطق تحت پوشش با موفقیت ثبت شد.',
+        ]);
+    }
+
+    /**
+     * ذخیره مرحله پنجم: زمینه فعالیت
+     */
+    public function storeStep5(Request $request)
+    {
+        $request->validate([
+            'mobile'                => ['required', 'regex:/^09[0-9]{9}$/'],
+            'activity_type'         => ['required', 'in:install,repair,install_repair'],
+            'appliance_categories'  => ['required', 'array', 'min:1'],
+            'appliance_categories.*' => ['integer', 'exists:appliance_categories,id'],
+            'transportation_method' => ['required', 'in:motorcycle,car,none'],
+        ], [
+            'mobile.required'               => 'شماره موبایل الزامی است.',
+            'activity_type.required'        => 'انتخاب زمینه فعالیت الزامی است.',
+            'activity_type.in'              => 'زمینه فعالیت انتخاب شده معتبر نیست.',
+            'appliance_categories.required' => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
+            'appliance_categories.min'      => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
+            'transportation_method.required' => 'انتخاب نحوه ارائه خدمات الزامی است.',
+            'transportation_method.in'       => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
+        ]);
+
+        // پیدا کردن رکورد ثبت‌نام
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('current_step', '>=', 5)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
+            ], 422);
+        }
+
+        // به‌روزرسانی اطلاعات
+        $registration->update([
+            'activity_type'         => $request->activity_type,
+            'appliance_categories'  => $request->appliance_categories,
+            'transportation_method' => $request->transportation_method,
+            'current_step'          => 6,
+            'status'                => 'pending',
+        ]);
+
+        Log::info('Technician registration step 5 completed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ثبت‌نام شما با موفقیت تکمیل شد. پس از بررسی و تایید اطلاعات، از طریق پیامک به شما اطلاع‌رسانی خواهد شد.',
         ]);
     }
 

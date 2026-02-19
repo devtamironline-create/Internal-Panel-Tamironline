@@ -160,7 +160,7 @@
                 <div class="flex-1 mx-1 h-px bg-gray-200"></div>
                 <div class="flex items-center gap-1" id="stepIndicator5">
                     <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۵</div>
-                    <span class="step-label text-[10px] font-medium text-gray-400">مدارک</span>
+                    <span class="step-label text-[10px] font-medium text-gray-400">فعالیت</span>
                 </div>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-1 mt-3">
@@ -609,18 +609,114 @@
                 </div>
             </div>
 
-            {{-- ===== فاز G: تکمیل ===== --}}
+            {{-- ===== فاز G: زمینه فعالیت (مرحله ۵) ===== --}}
             <div id="phaseG" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">مناطق تحت پوشش ثبت شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">زمینه فعالیت</h2>
+                    <p class="text-xs text-gray-400 mt-1">نوع فعالیت و دستگاه‌هایی که سرویس می‌دهید را مشخص کنید</p>
+                </div>
+
+                <div class="space-y-5">
+
+                    {{-- زمینه فعالیت --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">زمینه فعالیت شما:</label>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="activity_type" value="install" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    نصب
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="activity_type" value="repair" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    تعمیر
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="activity_type" value="install_repair" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    نصب و تعمیر
+                                </div>
+                            </label>
+                        </div>
+                        <p id="activityTypeError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- دستگاه‌ها --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">دستگاه‌هایی که سرویس می‌دهید:</label>
+                        <div class="grid grid-cols-2 gap-2" id="applianceCategoriesGrid">
+                            @foreach($appliance_categories as $cat)
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="appliance_category" value="{{ $cat->id }}" class="hidden peer appliance-cat-cb">
+                                <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    {{ $cat->name }}
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+                        <p id="applianceCategoriesError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- نحوه ارائه خدمات --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">نحوه ارائه خدمات به مشتریان:</label>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="transportation_method" value="motorcycle" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    موتور
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="transportation_method" value="car" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خودرو
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="transportation_method" value="none" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all leading-tight">
+                                    وسیله نقلیه ندارم
+                                </div>
+                            </label>
+                        </div>
+                        <p id="transportationError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    <p id="step5GeneralError" class="text-red-500 text-xs hidden"></p>
+
+                    <button id="btnStep5" onclick="submitStep5()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ثبت نهایی
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز H: تکمیل ثبت‌نام ===== --}}
+            <div id="phaseH" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">مناطق تحت پوشش ثبت شد</h2>
-                    <p class="text-sm text-gray-500 mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">ثبت‌نام شما با موفقیت تکمیل شد!</h2>
+                    <p class="text-sm text-gray-500 mb-3">
                         <span id="verifiedName" class="font-bold text-brand-blue"></span>
-                        اطلاعات شما با موفقیت ذخیره شد
+                        از اعتماد شما سپاسگزاریم.
                     </p>
-                    <p class="text-xs text-gray-400">مرحله بعدی به زودی فعال می‌شود...</p>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mx-4 mt-4">
+                        <p class="text-sm text-brand-blue font-semibold mb-1">در انتظار بررسی</p>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            اطلاعات شما در حال بررسی است. پس از تایید، از طریق پیامک به شماره موبایل ثبت‌شده اطلاع‌رسانی خواهد شد.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -664,7 +760,7 @@
             hideAlert();
 
             // پراگرس بار
-            const progress = { A: 8, B: 16, C: 25, D: 45, E: 60, F: 80, G: 100 };
+            const progress = { A: 8, B: 12, C: 20, D: 35, E: 50, F: 65, G: 85, H: 100 };
             $('#progressBar').css('width', (progress[phase] || 8) + '%');
 
             // به‌روزرسانی نوار مراحل
@@ -687,8 +783,8 @@
         }
 
         function updateStepIndicators(phase) {
-            // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5 };
+            // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5 | H = done
+            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5 };
             const currentStep = phaseToStep[phase] || 1;
 
             for (let i = 1; i <= 5; i++) {
@@ -726,7 +822,7 @@
 
         function showFieldError(id, msg) { $('#' + id).text(msg).removeClass('hidden'); }
         function hideFieldError(id) { $('#' + id).text('').addClass('hidden'); }
-        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideFieldError('tehranDistrictsError'); hideFieldError('step4GeneralError'); hideAlert(); }
+        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideFieldError('tehranDistrictsError'); hideFieldError('step4GeneralError'); hideFieldError('activityTypeError'); hideFieldError('applianceCategoriesError'); hideFieldError('transportationError'); hideFieldError('step5GeneralError'); hideAlert(); }
 
         function setLoading(btnId, loading) {
             const btn = $('#' + btnId);
@@ -823,8 +919,10 @@
                             $('#step2FatherName').val(verifiedFatherName);
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
-                            // اگر مرحله ۳ تکمیل شده، برو مرحله ۴ (مناطق تحت پوشش)
-                            if (res.resume.current_step >= 4) {
+                            // هدایت به مرحله مناسب
+                            if (res.resume.current_step >= 5) {
+                                goToPhase('G');
+                            } else if (res.resume.current_step >= 4) {
                                 goToPhase('F');
                             } else if (res.resume.current_step >= 3) {
                                 goToPhase('E');
@@ -1317,6 +1415,67 @@
             })
             .always(function() {
                 setLoading('btnStep4', false);
+            });
+        }
+
+        // ===== فاز G: مرحله ۵ - زمینه فعالیت =====
+
+        function submitStep5() {
+            clearAllErrors();
+
+            const activityType = $('input[name="activity_type"]:checked').val();
+            const transportationMethod = $('input[name="transportation_method"]:checked').val();
+
+            let hasError = false;
+
+            if (!activityType) {
+                showFieldError('activityTypeError', 'لطفاً زمینه فعالیت خود را انتخاب کنید.');
+                hasError = true;
+            }
+
+            // جمع‌آوری دستگاه‌ها
+            const applianceCategories = [];
+            $('.appliance-cat-cb:checked').each(function() {
+                applianceCategories.push(parseInt($(this).val()));
+            });
+
+            if (applianceCategories.length === 0) {
+                showFieldError('applianceCategoriesError', 'لطفاً حداقل یک دستگاه را انتخاب کنید.');
+                hasError = true;
+            }
+
+            if (!transportationMethod) {
+                showFieldError('transportationError', 'لطفاً نحوه ارائه خدمات را انتخاب کنید.');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            setLoading('btnStep5', true);
+
+            $.post('{{ route("technician.register.step5") }}', {
+                mobile: currentMobile,
+                activity_type: activityType,
+                appliance_categories: applianceCategories,
+                transportation_method: transportationMethod
+            })
+            .done(function(res) {
+                if (res.success) {
+                    goToPhase('H');
+                } else {
+                    showFieldError('step5GeneralError', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                if (res?.message) {
+                    showFieldError('step5GeneralError', res.message);
+                } else {
+                    showAlert('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.', 'error');
+                }
+            })
+            .always(function() {
+                setLoading('btnStep5', false);
             });
         }
 

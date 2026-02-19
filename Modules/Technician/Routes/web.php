@@ -16,6 +16,7 @@ Route::post('/join-technician/register/step1', [RegistrationController::class, '
 Route::post('/join-technician/register/step2', [RegistrationController::class, 'storeStep2'])->name('technician.register.step2');
 Route::post('/join-technician/register/step3', [RegistrationController::class, 'storeStep3'])->name('technician.register.step3');
 Route::post('/join-technician/register/step4', [RegistrationController::class, 'storeStep4'])->name('technician.register.step4');
+Route::post('/join-technician/register/step5', [RegistrationController::class, 'storeStep5'])->name('technician.register.step5');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {
@@ -24,4 +25,10 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::post('/settings/reset', [TechnicianAdminController::class, 'resetDefaults'])->name('settings.reset');
     Route::get('/settings/delete-logo', [TechnicianAdminController::class, 'deleteLogo'])->name('settings.delete-logo');
     Route::get('/settings/delete-hero-bg', [TechnicianAdminController::class, 'deleteHeroBg'])->name('settings.delete-hero-bg');
+
+    // مدیریت دسته‌بندی دستگاه‌ها
+    Route::get('/appliance-categories', [TechnicianAdminController::class, 'applianceCategories'])->name('appliance-categories');
+    Route::post('/appliance-categories', [TechnicianAdminController::class, 'storeApplianceCategory'])->name('appliance-categories.store');
+    Route::put('/appliance-categories/{id}', [TechnicianAdminController::class, 'updateApplianceCategory'])->name('appliance-categories.update');
+    Route::delete('/appliance-categories/{id}', [TechnicianAdminController::class, 'deleteApplianceCategory'])->name('appliance-categories.delete');
 });

@@ -34,6 +34,9 @@ class TechnicianRegistration extends Model
         'tehran_province_cities',
         'alborz_cities',
         'other_provinces_cities',
+        'activity_type',
+        'appliance_categories',
+        'transportation_method',
         'current_step',
         'status',
     ];
@@ -48,5 +51,6 @@ class TechnicianRegistration extends Model
         'tehran_districts' => 'array',
         'tehran_province_cities' => 'array',
         'alborz_cities' => 'array',
+        'appliance_categories' => 'array',
     ];
 }

@@ -5,6 +5,7 @@ namespace Modules\Technician\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianSetting;
 
 class TechnicianAdminController extends Controller
@@ -169,5 +170,84 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.settings')
             ->with('success', 'تنظیمات به مقادیر پیش‌فرض بازگشت.');
+    }
+
+    /**
+     * لیست دسته‌بندی دستگاه‌ها
+     */
+    public function applianceCategories()
+    {
+        $this->checkAccess();
+
+        $categories = ApplianceCategory::ordered()->get();
+
+        return view('technician::admin.appliance-categories', compact('categories'));
+    }
+
+    /**
+     * افزودن دسته‌بندی دستگاه
+     */
+    public function storeApplianceCategory(Request $request)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:appliance_categories,name'],
+        ], [
+            'name.required' => 'نام دستگاه الزامی است.',
+            'name.unique'   => 'این دستگاه قبلاً اضافه شده است.',
+        ]);
+
+        $maxOrder = ApplianceCategory::max('sort_order') ?? 0;
+
+        ApplianceCategory::create([
+            'name'       => $request->name,
+            'sort_order' => $maxOrder + 1,
+            'is_active'  => true,
+        ]);
+
+        return redirect()->route('technician.admin.appliance-categories')
+            ->with('success', 'دستگاه «' . $request->name . '» با موفقیت اضافه شد.');
+    }
+
+    /**
+     * ویرایش دسته‌بندی دستگاه
+     */
+    public function updateApplianceCategory(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $category = ApplianceCategory::findOrFail($id);
+
+        $request->validate([
+            'name'      => ['required', 'string', 'max:255', 'unique:appliance_categories,name,' . $id],
+            'is_active' => ['required', 'boolean'],
+        ], [
+            'name.required' => 'نام دستگاه الزامی است.',
+            'name.unique'   => 'این دستگاه قبلاً اضافه شده است.',
+        ]);
+
+        $category->update([
+            'name'      => $request->name,
+            'is_active' => $request->is_active,
+        ]);
+
+        return redirect()->route('technician.admin.appliance-categories')
+            ->with('success', 'دستگاه «' . $request->name . '» با موفقیت ویرایش شد.');
+    }
+
+    /**
+     * حذف دسته‌بندی دستگاه
+     */
+    public function deleteApplianceCategory($id)
+    {
+        $this->checkAccess();
+
+        $category = ApplianceCategory::findOrFail($id);
+        $name = $category->name;
+        $category->delete();
+
+        return redirect()->route('technician.admin.appliance-categories')
+            ->with('success', 'دستگاه «' . $name . '» حذف شد.');
     }
 }
