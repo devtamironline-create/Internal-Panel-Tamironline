@@ -59,13 +59,63 @@
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* دیت‌پیکر */
-        .datepicker-plot-area { font-family: 'Vazirmatn', Tahoma, sans-serif !important; }
-        .datepicker-container { z-index: 9999 !important; border-radius: 12px !important; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important; border: 1px solid #e0e0e0 !important; }
-        .datepicker-plot-area .datepicker-header { background: #1a5276 !important; }
-        .datepicker-plot-area .datepicker-header .btn { color: #fff !important; }
-        .datepicker-plot-area .table-days td.selected span { background: #1a5276 !important; }
+        /* دیت‌پیکر - فیکس تداخل Tailwind preflight */
+        .datepicker-container {
+            z-index: 9999 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+            border: 1px solid #e0e0e0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+        }
+        .datepicker-container * {
+            border-color: #e0e0e0;
+        }
+        .datepicker-plot-area {
+            font-family: 'Vazirmatn', Tahoma, sans-serif !important;
+            background: #fff !important;
+            border-radius: 12px !important;
+        }
+        .datepicker-plot-area .datepicker-header {
+            background: #1a5276 !important;
+            padding: 8px 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+        }
+        .datepicker-plot-area .datepicker-header .btn {
+            color: #fff !important;
+            background: transparent !important;
+            cursor: pointer !important;
+            font-size: 16px !important;
+            padding: 4px 8px !important;
+        }
+        .datepicker-container table {
+            width: 100% !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .datepicker-container td,
+        .datepicker-container th {
+            padding: 5px !important;
+            text-align: center !important;
+            border: none !important;
+        }
+        .datepicker-container td span {
+            display: inline-block !important;
+            width: 32px !important;
+            height: 32px !important;
+            line-height: 32px !important;
+            border-radius: 50% !important;
+            cursor: pointer !important;
+        }
+        .datepicker-container td span:hover {
+            background: #f0f0f0 !important;
+        }
+        .datepicker-plot-area .table-days td.selected span { background: #1a5276 !important; color: #fff !important; }
         .datepicker-plot-area .table-days td.today span { color: #f0b929 !important; font-weight: 700; }
+        .datepicker-container .toolbox { background: #f9f9f9 !important; padding: 4px !important; border-top: 1px solid #e0e0e0 !important; }
+        .datepicker-container .toolbox .btn-today { color: #1a5276 !important; cursor: pointer !important; }
     </style>
 </head>
 <body dir="rtl">
@@ -508,6 +558,27 @@
 
         // ===== رویدادها =====
         $(document).ready(function() {
+            // دیباگ: بررسی container دیت‌پیکر بعد کلیک
+            $(document).on('click', '#birth_date', function() {
+                setTimeout(function() {
+                    var containers = document.querySelectorAll('.datepicker-container');
+                    console.log('[DatePicker] click - containers found:', containers.length);
+                    for (var i = 0; i < containers.length; i++) {
+                        var c = containers[i];
+                        var style = window.getComputedStyle(c);
+                        console.log('[DatePicker] container:', {
+                            display: style.display,
+                            visibility: style.visibility,
+                            width: c.offsetWidth,
+                            height: c.offsetHeight,
+                            top: style.top,
+                            left: style.left,
+                            position: style.position
+                        });
+                    }
+                }, 200);
+            });
+
             // فقط عدد در اینپوت‌ها
             $('#mobile, #national_code').on('input', function() {
                 this.value = this.value.replace(/[^0-9]/g, '');
