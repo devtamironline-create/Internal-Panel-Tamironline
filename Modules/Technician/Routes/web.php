@@ -2,10 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Technician\Http\Controllers\LandingController;
+use Modules\Technician\Http\Controllers\RegistrationController;
 use Modules\Technician\Http\Controllers\TechnicianAdminController;
 
 // صفحه عمومی جذب تکنسین (بدون نیاز به لاگین)
 Route::get('/join-technician', [LandingController::class, 'show'])->name('technician.landing');
+
+// فرآیند ثبت‌نام تکنسین (بدون نیاز به لاگین)
+Route::get('/join-technician/register', [RegistrationController::class, 'showForm'])->name('technician.register');
+Route::post('/join-technician/register/step1', [RegistrationController::class, 'storeStep1'])->name('technician.register.step1');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {
