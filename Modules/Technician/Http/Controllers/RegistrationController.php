@@ -85,10 +85,15 @@ class RegistrationController extends Controller
             $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
             if ($registration && $registration->identity_verified) {
                 $result['resume'] = [
-                    'current_step' => $registration->current_step,
-                    'first_name'   => $registration->first_name,
-                    'last_name'    => $registration->last_name,
-                    'father_name'  => $registration->father_name,
+                    'current_step'      => $registration->current_step,
+                    'first_name'        => $registration->first_name,
+                    'last_name'         => $registration->last_name,
+                    'father_name'       => $registration->father_name,
+                    'shenasname_number' => $registration->shenasname_number,
+                    'gender'            => $registration->gender,
+                    'marital_status'    => $registration->marital_status,
+                    'province'          => $registration->province,
+                    'city'              => $registration->city,
                 ];
             }
         }

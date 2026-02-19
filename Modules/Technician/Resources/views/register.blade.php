@@ -675,7 +675,7 @@
             $.post('{{ route("technician.register.verify-otp") }}', { mobile: currentMobile, code: code })
                 .done(function(res) {
                     if (res.success) {
-                        // بررسی ثبت‌نام قبلی: اگه مرحله ۱ تمومه، مستقیم برو مرحله ۲
+                        // بررسی ثبت‌نام قبلی: هدایت به مرحله مناسب
                         if (res.resume && res.resume.current_step >= 2) {
                             verifiedFirstName = res.resume.first_name || '';
                             verifiedLastName = res.resume.last_name || '';
@@ -686,7 +686,32 @@
                             $('#step2FatherName').val(verifiedFatherName);
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
-                            goToPhase('D');
+                            // اگر مرحله ۲ تکمیل شده، برو مرحله ۳
+                            if (res.resume.current_step >= 3) {
+                                goToPhase('E');
+                            } else {
+                                // مرحله ۲ هنوز تکمیل نشده، فیلدها رو پر کن
+                                if (res.resume.shenasname_number) {
+                                    $('#shenasname_number').val(res.resume.shenasname_number);
+                                }
+                                if (res.resume.gender) {
+                                    $('#gender').val(res.resume.gender);
+                                }
+                                if (res.resume.marital_status) {
+                                    $('#marital_status').val(res.resume.marital_status);
+                                }
+                                if (res.resume.province) {
+                                    initProvinceDropdown();
+                                    $('#province').val(res.resume.province).trigger('change');
+                                    // شهر بعد از لود شدن لیست ست می‌شود
+                                    setTimeout(function() {
+                                        if (res.resume.city) {
+                                            $('#city').val(res.resume.city);
+                                        }
+                                    }, 100);
+                                }
+                                goToPhase('D');
+                            }
                         } else {
                             // کاربر جدید: برو مرحله احراز هویت
                             $('#mobileDisplay').val(currentMobile);
