@@ -68,8 +68,11 @@
             <!-- Birth Date -->
             <div>
                 <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-2">تاریخ تولد</label>
-                <input type="date" name="birth_date" id="birth_date" value="{{ old('birth_date', $customer->birth_date?->format('Y-m-d')) }}"
-                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all @error('birth_date') border-red-500 @enderror">
+                <input type="text" name="birth_date" id="birth_date"
+                    value="{{ old('birth_date', $customer->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($customer->birth_date)->format('Y/m/d') : '') }}"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all cursor-pointer @error('birth_date') border-red-500 @enderror"
+                    dir="ltr" placeholder="انتخاب تاریخ" readonly
+                    data-jdp data-jdp-min-date="1330/01/01" data-jdp-max-date="1410/12/29">
                 @error('birth_date')
                 <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                 @enderror
@@ -118,3 +121,20 @@
     </form>
 </div>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        jalaliDatepicker.startWatch({
+            persianDigits: false,
+            autoClose: true,
+            time: false
+        });
+    });
+</script>
+@endpush
