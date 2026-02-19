@@ -311,6 +311,30 @@
                         <p id="shenasnameError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
+                    {{-- جنسیت --}}
+                    <div>
+                        <label for="gender" class="block text-sm font-semibold text-gray-600 mb-1.5">جنسیت</label>
+                        <select id="gender"
+                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
+                            <option value="">انتخاب کنید...</option>
+                            <option value="male">مرد</option>
+                            <option value="female">زن</option>
+                        </select>
+                        <p id="genderError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- وضعیت تاهل --}}
+                    <div>
+                        <label for="marital_status" class="block text-sm font-semibold text-gray-600 mb-1.5">وضعیت تاهل</label>
+                        <select id="marital_status"
+                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
+                            <option value="">انتخاب کنید...</option>
+                            <option value="single">مجرد</option>
+                            <option value="married">متاهل</option>
+                        </select>
+                        <p id="maritalError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
                     {{-- استان --}}
                     <div>
                         <label for="province" class="block text-sm font-semibold text-gray-600 mb-1.5">استان محل سکونت</label>
@@ -450,7 +474,7 @@
 
         function showFieldError(id, msg) { $('#' + id).text(msg).removeClass('hidden'); }
         function hideFieldError(id) { $('#' + id).text('').addClass('hidden'); }
-        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideAlert(); }
+        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideAlert(); }
 
         function setLoading(btnId, loading) {
             const btn = $('#' + btnId);
@@ -659,6 +683,8 @@
             clearAllErrors();
 
             const shenasname = $('#shenasname_number').val().trim();
+            const gender = $('#gender').val();
+            const maritalStatus = $('#marital_status').val();
             const province = $('#province').val();
             const city = $('#city').val();
 
@@ -666,6 +692,16 @@
 
             if (!shenasname || !/^[0-9]{1,10}$/.test(shenasname)) {
                 showFieldError('shenasnameError', 'شماره شناسنامه باید عددی باشد.');
+                hasError = true;
+            }
+
+            if (!gender) {
+                showFieldError('genderError', 'انتخاب جنسیت الزامی است.');
+                hasError = true;
+            }
+
+            if (!maritalStatus) {
+                showFieldError('maritalError', 'انتخاب وضعیت تاهل الزامی است.');
                 hasError = true;
             }
 
@@ -686,6 +722,8 @@
             $.post('{{ route("technician.register.step2") }}', {
                 mobile: currentMobile,
                 shenasname_number: shenasname,
+                gender: gender,
+                marital_status: maritalStatus,
                 province: province,
                 city: city
             })
@@ -694,7 +732,7 @@
                     goToPhase('E');
                 } else {
                     if (res.field) {
-                        const errorMap = { shenasname_number: 'shenasnameError', province: 'provinceError', city: 'cityError' };
+                        const errorMap = { shenasname_number: 'shenasnameError', gender: 'genderError', marital_status: 'maritalError', province: 'provinceError', city: 'cityError' };
                         showFieldError(errorMap[res.field] || 'shenasnameError', res.message);
                     } else {
                         showAlert(res.message, 'error');

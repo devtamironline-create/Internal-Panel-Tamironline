@@ -218,12 +218,18 @@ class RegistrationController extends Controller
         $request->validate([
             'mobile'            => ['required', 'regex:/^09[0-9]{9}$/'],
             'shenasname_number' => ['required', 'regex:/^[0-9]{1,10}$/'],
+            'gender'            => ['required', 'in:male,female'],
+            'marital_status'    => ['required', 'in:single,married'],
             'province'          => ['required', 'string'],
             'city'              => ['required', 'string'],
         ], [
             'mobile.required'            => 'شماره موبایل الزامی است.',
             'shenasname_number.required' => 'شماره شناسنامه الزامی است.',
             'shenasname_number.regex'    => 'شماره شناسنامه باید عددی باشد.',
+            'gender.required'            => 'انتخاب جنسیت الزامی است.',
+            'gender.in'                  => 'جنسیت انتخاب شده معتبر نیست.',
+            'marital_status.required'    => 'انتخاب وضعیت تاهل الزامی است.',
+            'marital_status.in'          => 'وضعیت تاهل انتخاب شده معتبر نیست.',
             'province.required'          => 'انتخاب استان الزامی است.',
             'city.required'              => 'انتخاب شهر الزامی است.',
         ]);
@@ -262,6 +268,8 @@ class RegistrationController extends Controller
         // به‌روزرسانی اطلاعات
         $registration->update([
             'shenasname_number' => $request->shenasname_number,
+            'gender'            => $request->gender,
+            'marital_status'    => $request->marital_status,
             'province'          => $request->province,
             'city'              => $request->city,
             'current_step'      => 3,
