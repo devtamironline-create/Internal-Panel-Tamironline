@@ -460,10 +460,15 @@
         // ===== دیت‌پیکر =====
         function initDatePicker() {
             if ($('#birth_date').data('pDatepicker')) return;
+            if (typeof $.fn.pDatepicker === 'undefined') {
+                console.error('persian-datepicker not loaded');
+                return;
+            }
             $("#birth_date").pDatepicker({
                 format: 'YYYY/MM/DD',
                 autoClose: true,
                 initialValue: false,
+                persianDigits: false,
                 observer: true,
                 calendar: { persian: { locale: 'fa' } },
                 toolbox: {
@@ -485,6 +490,14 @@
 
         // ===== رویدادها =====
         $(document).ready(function() {
+            // دیت‌پیکر رو همون اول init کن
+            initDatePicker();
+
+            // fallback: اگه کلیک شد و هنوز init نشده بود
+            $('#birth_date').on('click focus', function() {
+                initDatePicker();
+            });
+
             // فقط عدد در اینپوت‌ها
             $('#mobile, #national_code').on('input', function() {
                 this.value = this.value.replace(/[^0-9]/g, '');
