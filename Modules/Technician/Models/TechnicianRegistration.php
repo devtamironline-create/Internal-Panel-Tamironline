@@ -17,6 +17,9 @@ class TechnicianRegistration extends Model
         'father_name',
         'mobile_verified_at',
         'identity_verified',
+        'shenasname_number',
+        'province',
+        'city',
         'current_step',
         'status',
     ];

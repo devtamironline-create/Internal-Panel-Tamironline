@@ -27,9 +27,12 @@ class RegistrationController extends Controller
             $brandLogo = null;
         }
 
+        $provinces = require base_path('Modules/Technician/Data/iran_provinces.php');
+
         return view('technician::register', [
             'brand_name' => $brandName,
             'brand_logo' => $brandLogo,
+            'provinces'  => $provinces,
         ]);
     }
 
@@ -183,10 +186,82 @@ class RegistrationController extends Controller
         ]);
 
         return response()->json([
-            'success'    => true,
-            'message'    => 'اطلاعات هویتی با موفقیت تایید شد.',
-            'first_name' => $identity['first_name'],
-            'last_name'  => $identity['last_name'],
+            'success'     => true,
+            'message'     => 'اطلاعات هویتی با موفقیت تایید شد.',
+            'first_name'  => $identity['first_name'],
+            'last_name'   => $identity['last_name'],
+            'father_name' => $identity['father_name'],
+        ]);
+    }
+
+    /**
+     * ذخیره مرحله دوم: اطلاعات شخصی
+     */
+    public function storeStep2(Request $request)
+    {
+        $provinces = require base_path('Modules/Technician/Data/iran_provinces.php');
+        $provinceNames = array_keys($provinces);
+
+        $request->validate([
+            'mobile'            => ['required', 'regex:/^09[0-9]{9}$/'],
+            'shenasname_number' => ['required', 'regex:/^[0-9]{1,10}$/'],
+            'province'          => ['required', 'string'],
+            'city'              => ['required', 'string'],
+        ], [
+            'mobile.required'            => 'شماره موبایل الزامی است.',
+            'shenasname_number.required' => 'شماره شناسنامه الزامی است.',
+            'shenasname_number.regex'    => 'شماره شناسنامه باید عددی باشد.',
+            'province.required'          => 'انتخاب استان الزامی است.',
+            'city.required'              => 'انتخاب شهر الزامی است.',
+        ]);
+
+        // اعتبارسنجی استان
+        if (!in_array($request->province, $provinceNames)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'استان انتخاب شده معتبر نیست.',
+                'field'   => 'province',
+            ], 422);
+        }
+
+        // اعتبارسنجی شهر
+        $cities = $provinces[$request->province] ?? [];
+        if (!in_array($request->city, $cities)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شهر انتخاب شده معتبر نیست.',
+                'field'   => 'city',
+            ], 422);
+        }
+
+        // پیدا کردن رکورد ثبت‌نام
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('identity_verified', true)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا مرحله احراز هویت را تکمیل کنید.',
+            ], 422);
+        }
+
+        // به‌روزرسانی اطلاعات
+        $registration->update([
+            'shenasname_number' => $request->shenasname_number,
+            'province'          => $request->province,
+            'city'              => $request->city,
+            'current_step'      => 3,
+        ]);
+
+        Log::info('Technician registration step 2 completed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اطلاعات شخصی با موفقیت ثبت شد.',
         ]);
     }
 

@@ -13,6 +13,7 @@ Route::get('/join-technician/register', [RegistrationController::class, 'showFor
 Route::post('/join-technician/register/send-otp', [RegistrationController::class, 'sendOtp'])->name('technician.register.send-otp');
 Route::post('/join-technician/register/verify-otp', [RegistrationController::class, 'verifyOtp'])->name('technician.register.verify-otp');
 Route::post('/join-technician/register/step1', [RegistrationController::class, 'storeStep1'])->name('technician.register.step1');
+Route::post('/join-technician/register/step2', [RegistrationController::class, 'storeStep2'])->name('technician.register.step2');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {
