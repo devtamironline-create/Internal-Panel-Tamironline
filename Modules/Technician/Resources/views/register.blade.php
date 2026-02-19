@@ -275,6 +275,11 @@
             // پراگرس بار
             const progress = { A: 10, B: 20, C: 50, D: 100 };
             $('#progressBar').css('width', (progress[phase] || 10) + '%');
+
+            // وقتی فاز C نمایش داده شد، دیت‌پیکر رو init کن
+            if (phase === 'C') {
+                setTimeout(initDatePicker, 300);
+            }
         }
 
         // ===== پیام‌ها =====
@@ -458,46 +463,51 @@
         }
 
         // ===== دیت‌پیکر =====
+        let datePickerReady = false;
+
         function initDatePicker() {
-            if ($('#birth_date').data('pDatepicker')) return;
-            if (typeof $.fn.pDatepicker === 'undefined') {
-                console.error('persian-datepicker not loaded');
+            if (datePickerReady) return;
+
+            console.log('[DatePicker] jQuery:', typeof $);
+            console.log('[DatePicker] $.fn.persianDatepicker:', typeof $.fn.persianDatepicker);
+            console.log('[DatePicker] $.fn.pDatepicker:', typeof $.fn.pDatepicker);
+            console.log('[DatePicker] #birth_date visible:', $('#birth_date').is(':visible'));
+
+            if (typeof $.fn.persianDatepicker === 'undefined') {
+                console.error('[DatePicker] persian-datepicker plugin NOT loaded!');
                 return;
             }
-            $("#birth_date").pDatepicker({
-                format: 'YYYY/MM/DD',
-                autoClose: true,
-                initialValue: false,
-                persianDigits: false,
-                observer: true,
-                calendar: { persian: { locale: 'fa' } },
-                toolbox: {
-                    calendarSwitch: { enabled: false },
-                    todayButton: { enabled: true, text: { fa: 'امروز' } },
-                    submitButton: { enabled: false }
-                },
-                navigator: {
-                    enabled: true,
-                    scroll: { enabled: true },
-                    text: { btnNextText: '<', btnPrevText: '>' }
-                },
-                timePicker: { enabled: false },
-                maxDate: new persianDate().subtract('year', 18).endOf('year').unix() * 1000,
-                minDate: new persianDate().subtract('year', 80).startOf('year').unix() * 1000,
-                responsive: true,
-            });
+
+            try {
+                $("#birth_date").persianDatepicker({
+                    format: 'YYYY/MM/DD',
+                    autoClose: true,
+                    persianDigits: false,
+                    initialValue: false,
+                    observer: true,
+                    calendar: { persian: { locale: 'fa' } },
+                    toolbox: {
+                        calendarSwitch: { enabled: false },
+                        todayButton: { enabled: true, text: { fa: 'امروز' } },
+                        submitButton: { enabled: false }
+                    },
+                    navigator: {
+                        enabled: true,
+                        scroll: { enabled: true },
+                        text: { btnNextText: '<', btnPrevText: '>' }
+                    },
+                    timePicker: { enabled: false },
+                    responsive: true,
+                });
+                datePickerReady = true;
+                console.log('[DatePicker] initialized OK');
+            } catch(e) {
+                console.error('[DatePicker] init error:', e);
+            }
         }
 
         // ===== رویدادها =====
         $(document).ready(function() {
-            // دیت‌پیکر رو همون اول init کن
-            initDatePicker();
-
-            // fallback: اگه کلیک شد و هنوز init نشده بود
-            $('#birth_date').on('click focus', function() {
-                initDatePicker();
-            });
-
             // فقط عدد در اینپوت‌ها
             $('#mobile, #national_code').on('input', function() {
                 this.value = this.value.replace(/[^0-9]/g, '');
