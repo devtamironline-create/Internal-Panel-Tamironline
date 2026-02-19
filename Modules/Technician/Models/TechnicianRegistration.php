@@ -30,6 +30,10 @@ class TechnicianRegistration extends Model
         'shop_phone',
         'work_experiences',
         'certificates',
+        'tehran_districts',
+        'tehran_province_cities',
+        'alborz_cities',
+        'other_provinces_cities',
         'current_step',
         'status',
     ];
@@ -41,5 +45,8 @@ class TechnicianRegistration extends Model
         'has_shop' => 'boolean',
         'work_experiences' => 'array',
         'certificates' => 'array',
+        'tehran_districts' => 'array',
+        'tehran_province_cities' => 'array',
+        'alborz_cities' => 'array',
     ];
 }

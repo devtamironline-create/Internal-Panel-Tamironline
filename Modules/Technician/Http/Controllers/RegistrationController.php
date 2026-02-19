@@ -361,6 +361,64 @@ class RegistrationController extends Controller
     }
 
     /**
+     * ذخیره مرحله چهارم: مناطق تحت پوشش
+     */
+    public function storeStep4(Request $request)
+    {
+        $request->validate([
+            'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
+            'tehran_districts'       => ['nullable', 'array'],
+            'tehran_districts.*'     => ['integer', 'min:1', 'max:22'],
+            'tehran_province_cities' => ['nullable', 'array'],
+            'tehran_province_cities.*' => ['string', 'max:255'],
+            'alborz_cities'          => ['nullable', 'array'],
+            'alborz_cities.*'        => ['string', 'max:255'],
+            'other_provinces_cities'  => ['nullable', 'string', 'max:2000'],
+        ], [
+            'mobile.required' => 'شماره موبایل الزامی است.',
+        ]);
+
+        // حداقل یک منطقه تهران باید انتخاب شود
+        if (empty($request->tehran_districts)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.',
+            ], 422);
+        }
+
+        // پیدا کردن رکورد ثبت‌نام
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('current_step', '>=', 4)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
+            ], 422);
+        }
+
+        // به‌روزرسانی اطلاعات
+        $registration->update([
+            'tehran_districts'       => $request->tehran_districts ?? [],
+            'tehran_province_cities' => $request->tehran_province_cities ?? [],
+            'alborz_cities'          => $request->alborz_cities ?? [],
+            'other_provinces_cities'  => $request->other_provinces_cities,
+            'current_step'           => 5,
+        ]);
+
+        Log::info('Technician registration step 4 completed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'مناطق تحت پوشش با موفقیت ثبت شد.',
+        ]);
+    }
+
+    /**
      * اعتبارسنجی کد ملی ایران
      */
     private function validateNationalCode(string $code): bool

@@ -15,6 +15,7 @@ Route::post('/join-technician/register/verify-otp', [RegistrationController::cla
 Route::post('/join-technician/register/step1', [RegistrationController::class, 'storeStep1'])->name('technician.register.step1');
 Route::post('/join-technician/register/step2', [RegistrationController::class, 'storeStep2'])->name('technician.register.step2');
 Route::post('/join-technician/register/step3', [RegistrationController::class, 'storeStep3'])->name('technician.register.step3');
+Route::post('/join-technician/register/step4', [RegistrationController::class, 'storeStep4'])->name('technician.register.step4');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {

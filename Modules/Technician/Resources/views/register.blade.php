@@ -138,24 +138,29 @@
         {{-- نوار مراحل --}}
         <div class="px-6 py-4 bg-gray-50/50">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5" id="stepIndicator1">
-                    <div class="step-circle w-7 h-7 rounded-full bg-brand-blue text-white flex items-center justify-center text-xs font-bold">۱</div>
-                    <span class="step-label text-[11px] font-bold text-brand-blue">احراز هویت</span>
+                <div class="flex items-center gap-1" id="stepIndicator1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-[10px] font-bold">۱</div>
+                    <span class="step-label text-[10px] font-bold text-brand-blue">احراز هویت</span>
                 </div>
-                <div class="flex-1 mx-2 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1.5" id="stepIndicator2">
-                    <div class="step-circle w-7 h-7 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xs font-bold">۲</div>
-                    <span class="step-label text-[11px] font-medium text-gray-400">اطلاعات شخصی</span>
+                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
+                <div class="flex items-center gap-1" id="stepIndicator2">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۲</div>
+                    <span class="step-label text-[10px] font-medium text-gray-400">شخصی</span>
                 </div>
-                <div class="flex-1 mx-2 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1.5" id="stepIndicator3">
-                    <div class="step-circle w-7 h-7 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xs font-bold">۳</div>
-                    <span class="step-label text-[11px] font-medium text-gray-400">اطلاعات تکمیلی</span>
+                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
+                <div class="flex items-center gap-1" id="stepIndicator3">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۳</div>
+                    <span class="step-label text-[10px] font-medium text-gray-400">تکمیلی</span>
                 </div>
-                <div class="flex-1 mx-2 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1.5" id="stepIndicator4">
-                    <div class="step-circle w-7 h-7 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xs font-bold">۴</div>
-                    <span class="step-label text-[11px] font-medium text-gray-400">مدارک</span>
+                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
+                <div class="flex items-center gap-1" id="stepIndicator4">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۴</div>
+                    <span class="step-label text-[10px] font-medium text-gray-400">مناطق</span>
+                </div>
+                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
+                <div class="flex items-center gap-1" id="stepIndicator5">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۵</div>
+                    <span class="step-label text-[10px] font-medium text-gray-400">مدارک</span>
                 </div>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-1 mt-3">
@@ -491,13 +496,126 @@
                 </div>
             </div>
 
-            {{-- ===== فاز F: تکمیل مرحله ۳ ===== --}}
+            {{-- ===== فاز F: مناطق تحت پوشش (مرحله ۴) ===== --}}
             <div id="phaseF" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">اطلاعات تکمیلی ثبت شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">مناطق تحت پوشش</h2>
+                    <p class="text-xs text-gray-400 mt-1">مشخص کنید در کدام مناطق می‌توانید خدمات ارائه دهید</p>
+                </div>
+
+                <div class="space-y-5">
+
+                    {{-- مناطق تهران --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">مناطق تهران که می‌توانید سرویس ارائه دهید:</label>
+                        <div class="grid grid-cols-4 gap-2" id="tehranDistrictsGrid">
+                            {{-- گزینه همه مناطق --}}
+                            <label class="col-span-4 cursor-pointer">
+                                <input type="checkbox" id="allTehranDistricts" class="hidden peer" onchange="toggleAllDistricts(this)">
+                                <div class="form-input text-center py-2.5 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    همه مناطق
+                                </div>
+                            </label>
+                            @for($i = 1; $i <= 22; $i++)
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="tehran_district" value="{{ $i }}" class="hidden peer tehran-district-cb" onchange="checkAllDistrictsState()">
+                                <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    منطقه {{ $i }}
+                                </div>
+                            </label>
+                            @endfor
+                        </div>
+                        <p id="tehranDistrictsError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- شهرهای استان تهران (غیر از تهران) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا در شهرهای دیگر استان تهران هم می‌توانید خدمات ارائه دهید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_tehran_cities" value="1" class="hidden peer" onchange="toggleTehranCities(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_tehran_cities" value="0" class="hidden peer" checked onchange="toggleTehranCities(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                        <div id="tehranCitiesGrid" class="hidden mt-3 grid grid-cols-3 gap-2">
+                            {{-- شهرهای استان تهران بجز تهران --}}
+                        </div>
+                    </div>
+
+                    {{-- شهرهای استان البرز --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا در شهرهای استان البرز هم می‌توانید خدمات ارائه دهید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_alborz_cities" value="1" class="hidden peer" onchange="toggleAlborzCities(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_alborz_cities" value="0" class="hidden peer" checked onchange="toggleAlborzCities(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                        <div id="alborzCitiesGrid" class="hidden mt-3 grid grid-cols-3 gap-2">
+                            {{-- شهرهای استان البرز --}}
+                        </div>
+                    </div>
+
+                    {{-- سایر استان‌ها --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا در استان‌های دیگر هم می‌توانید خدمات ارائه دهید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_other_provinces" value="1" class="hidden peer" onchange="toggleOtherProvinces(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_other_provinces" value="0" class="hidden peer" checked onchange="toggleOtherProvinces(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                        <div id="otherProvincesField" class="hidden mt-3">
+                            <textarea id="other_provinces_cities" rows="3" placeholder="نام استان و شهرهایی که می‌توانید خدمات ارائه دهید را بنویسید..."
+                                      class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <p id="step4GeneralError" class="text-red-500 text-xs hidden"></p>
+
+                    <button id="btnStep4" onclick="submitStep4()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ثبت و ادامه
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز G: تکمیل ===== --}}
+            <div id="phaseG" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">اطلاعات تکمیلی ثبت شد</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">مناطق تحت پوشش ثبت شد</h2>
                     <p class="text-sm text-gray-500 mb-6">
                         <span id="verifiedName" class="font-bold text-brand-blue"></span>
                         اطلاعات شما با موفقیت ذخیره شد
@@ -546,7 +664,7 @@
             hideAlert();
 
             // پراگرس بار
-            const progress = { A: 8, B: 16, C: 25, D: 55, E: 75, F: 80 };
+            const progress = { A: 8, B: 16, C: 25, D: 45, E: 60, F: 80, G: 100 };
             $('#progressBar').css('width', (progress[phase] || 8) + '%');
 
             // به‌روزرسانی نوار مراحل
@@ -561,14 +679,19 @@
             if (phase === 'D') {
                 initProvinceDropdown();
             }
+
+            // وقتی فاز F نمایش داده شد، شهرهای استان تهران و البرز رو پر کن
+            if (phase === 'F') {
+                initCoverageAreaCities();
+            }
         }
 
         function updateStepIndicators(phase) {
-            // مراحل: A,B,C = step1 | D,E = step2
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 3 };
+            // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5
+            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5 };
             const currentStep = phaseToStep[phase] || 1;
 
-            for (let i = 1; i <= 4; i++) {
+            for (let i = 1; i <= 5; i++) {
                 const indicator = $('#stepIndicator' + i);
                 const circle = indicator.find('.step-circle');
                 const label = indicator.find('.step-label');
@@ -603,7 +726,7 @@
 
         function showFieldError(id, msg) { $('#' + id).text(msg).removeClass('hidden'); }
         function hideFieldError(id) { $('#' + id).text('').addClass('hidden'); }
-        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideAlert(); }
+        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideFieldError('tehranDistrictsError'); hideFieldError('step4GeneralError'); hideAlert(); }
 
         function setLoading(btnId, loading) {
             const btn = $('#' + btnId);
@@ -700,8 +823,10 @@
                             $('#step2FatherName').val(verifiedFatherName);
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
-                            // اگر مرحله ۲ تکمیل شده، برو مرحله ۳
-                            if (res.resume.current_step >= 3) {
+                            // اگر مرحله ۳ تکمیل شده، برو مرحله ۴ (مناطق تحت پوشش)
+                            if (res.resume.current_step >= 4) {
+                                goToPhase('F');
+                            } else if (res.resume.current_step >= 3) {
                                 goToPhase('E');
                             } else {
                                 // مرحله ۲ هنوز تکمیل نشده، فیلدها رو پر کن
@@ -1052,6 +1177,146 @@
             })
             .always(function() {
                 setLoading('btnStep3', false);
+            });
+        }
+
+        // ===== فاز F: مرحله ۴ - مناطق تحت پوشش =====
+
+        let coverageCitiesReady = false;
+
+        function initCoverageAreaCities() {
+            if (coverageCitiesReady) return;
+
+            // شهرهای استان تهران (بدون تهران)
+            const tehranCities = (iranProvinces['تهران'] || []).filter(c => c !== 'تهران');
+            const tehranGrid = $('#tehranCitiesGrid');
+            tehranGrid.empty();
+            tehranCities.forEach(function(city) {
+                tehranGrid.append(`
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tehran_province_city" value="${city}" class="hidden peer">
+                        <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                            ${city}
+                        </div>
+                    </label>
+                `);
+            });
+
+            // شهرهای استان البرز
+            const alborzCities = iranProvinces['البرز'] || [];
+            const alborzGrid = $('#alborzCitiesGrid');
+            alborzGrid.empty();
+            alborzCities.forEach(function(city) {
+                alborzGrid.append(`
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="alborz_city" value="${city}" class="hidden peer">
+                        <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                            ${city}
+                        </div>
+                    </label>
+                `);
+            });
+
+            coverageCitiesReady = true;
+        }
+
+        function toggleAllDistricts(el) {
+            const checked = el.checked;
+            $('.tehran-district-cb').each(function() {
+                this.checked = checked;
+            });
+        }
+
+        function checkAllDistrictsState() {
+            const all = $('.tehran-district-cb').length;
+            const checked = $('.tehran-district-cb:checked').length;
+            $('#allTehranDistricts').prop('checked', all === checked);
+        }
+
+        function toggleTehranCities(show) {
+            if (show) {
+                $('#tehranCitiesGrid').removeClass('hidden');
+            } else {
+                $('#tehranCitiesGrid').addClass('hidden');
+                $('input[name="tehran_province_city"]').prop('checked', false);
+            }
+        }
+
+        function toggleAlborzCities(show) {
+            if (show) {
+                $('#alborzCitiesGrid').removeClass('hidden');
+            } else {
+                $('#alborzCitiesGrid').addClass('hidden');
+                $('input[name="alborz_city"]').prop('checked', false);
+            }
+        }
+
+        function toggleOtherProvinces(show) {
+            if (show) {
+                $('#otherProvincesField').removeClass('hidden');
+            } else {
+                $('#otherProvincesField').addClass('hidden');
+                $('#other_provinces_cities').val('');
+            }
+        }
+
+        function submitStep4() {
+            clearAllErrors();
+            hideFieldError('tehranDistrictsError');
+            hideFieldError('step4GeneralError');
+
+            // جمع‌آوری مناطق تهران
+            const tehranDistricts = [];
+            $('.tehran-district-cb:checked').each(function() {
+                tehranDistricts.push(parseInt($(this).val()));
+            });
+
+            if (tehranDistricts.length === 0) {
+                showFieldError('tehranDistrictsError', 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.');
+                return;
+            }
+
+            // جمع‌آوری شهرهای استان تهران
+            const tehranProvinceCities = [];
+            $('input[name="tehran_province_city"]:checked').each(function() {
+                tehranProvinceCities.push($(this).val());
+            });
+
+            // جمع‌آوری شهرهای البرز
+            const alborzCities = [];
+            $('input[name="alborz_city"]:checked').each(function() {
+                alborzCities.push($(this).val());
+            });
+
+            // سایر استان‌ها
+            const otherProvincesCities = $('#other_provinces_cities').val().trim();
+
+            setLoading('btnStep4', true);
+
+            $.post('{{ route("technician.register.step4") }}', {
+                mobile: currentMobile,
+                tehran_districts: tehranDistricts,
+                tehran_province_cities: tehranProvinceCities.length ? tehranProvinceCities : null,
+                alborz_cities: alborzCities.length ? alborzCities : null,
+                other_provinces_cities: otherProvincesCities || null
+            })
+            .done(function(res) {
+                if (res.success) {
+                    goToPhase('G');
+                } else {
+                    showFieldError('step4GeneralError', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                if (res?.message) {
+                    showFieldError('step4GeneralError', res.message);
+                } else {
+                    showAlert('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.', 'error');
+                }
+            })
+            .always(function() {
+                setLoading('btnStep4', false);
             });
         }
 
