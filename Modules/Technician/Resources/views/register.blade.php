@@ -401,6 +401,7 @@
                         <select id="education_level"
                                 class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
                             <option value="">انتخاب کنید...</option>
+                            <option value="below_diploma">زیر دیپلم</option>
                             <option value="diploma">دیپلم</option>
                             <option value="associate">کاردانی</option>
                             <option value="bachelor">کارشناسی</option>
@@ -467,6 +468,60 @@
                             <input type="tel" id="shop_phone" placeholder="شماره تلفن ثابت" maxlength="15" dir="ltr"
                                    class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
                             <p id="shopPhoneError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                        </div>
+                    </div>
+
+                    {{-- همکاری با شرکت‌ها --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا در حال حاضر با شرکت‌ها یا مجموعه‌های همکار در حوزه فعالیت ما همکاری دارید؟</label>
+                        <div class="flex gap-3 mb-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_cooperation" value="1" class="hidden peer" onchange="toggleCooperationFields(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_cooperation" value="0" class="hidden peer" checked onchange="toggleCooperationFields(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                        <div id="cooperationFields" class="hidden">
+                            <textarea id="cooperation_companies" rows="2" placeholder="نام شرکت‌ها یا مجموعه‌ها..."
+                                      class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 resize-none"></textarea>
+                            <p id="cooperationError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                        </div>
+                    </div>
+
+                    {{-- معرف --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">در صورت داشتن معرف: نام و شماره تماس</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="referrer_name" placeholder="نام معرف"
+                                   class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300">
+                            <input type="tel" id="referrer_phone" placeholder="شماره تماس معرف" dir="ltr"
+                                   class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                        </div>
+                    </div>
+
+                    {{-- هم‌صنفی‌ها --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">لطفاً نام و شماره تماس دو نفر از هم‌صنفی‌های آشنا با شما را ذکر نمایید</label>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" id="colleague1_name" placeholder="نام نفر اول"
+                                       class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300">
+                                <input type="tel" id="colleague1_phone" placeholder="شماره تماس نفر اول" dir="ltr"
+                                       class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" id="colleague2_name" placeholder="نام نفر دوم"
+                                       class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300">
+                                <input type="tel" id="colleague2_phone" placeholder="شماره تماس نفر دوم" dir="ltr"
+                                       class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                            </div>
                         </div>
                     </div>
 
@@ -1174,6 +1229,15 @@
             }
         }
 
+        function toggleCooperationFields(show) {
+            if (show) {
+                $('#cooperationFields').removeClass('hidden');
+            } else {
+                $('#cooperationFields').addClass('hidden');
+                $('#cooperation_companies').val('');
+            }
+        }
+
         let workExpCounter = 0;
         function addWorkExperience() {
             const idx = workExpCounter++;
@@ -1238,6 +1302,7 @@
 
             const hasShop = $('input[name="has_shop"]:checked').val();
             const hasLicense = $('input[name="has_business_license"]:checked').val();
+            const hasCooperation = $('input[name="has_cooperation"]:checked').val();
 
             let hasError = false;
 
@@ -1249,6 +1314,14 @@
                 }
                 if (!$('#shop_phone').val().trim()) {
                     showFieldError('shopPhoneError', 'تلفن مغازه/دفتر الزامی است.');
+                    hasError = true;
+                }
+            }
+
+            // اگر همکاری دارد، نام شرکت‌ها الزامی
+            if (hasCooperation === '1') {
+                if (!$('#cooperation_companies').val().trim()) {
+                    showFieldError('cooperationError', 'لطفاً نام شرکت‌ها را وارد کنید.');
                     hasError = true;
                 }
             }
@@ -1285,6 +1358,14 @@
                 has_shop: hasShop,
                 shop_address: $('#shop_address').val().trim(),
                 shop_phone: $('#shop_phone').val().trim(),
+                has_cooperation: hasCooperation,
+                cooperation_companies: hasCooperation === '1' ? $('#cooperation_companies').val().trim() : null,
+                referrer_name: $('#referrer_name').val().trim(),
+                referrer_phone: $('#referrer_phone').val().trim(),
+                colleague1_name: $('#colleague1_name').val().trim(),
+                colleague1_phone: $('#colleague1_phone').val().trim(),
+                colleague2_name: $('#colleague2_name').val().trim(),
+                colleague2_phone: $('#colleague2_phone').val().trim(),
                 work_experiences: workExps.length ? workExps : null,
                 certificates: certs.length ? certs : null
             })

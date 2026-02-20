@@ -6,7 +6,7 @@
     $statusColors = ['incomplete' => 'gray', 'pending' => 'amber', 'approved' => 'green', 'rejected' => 'red'];
     $activityLabels = ['install' => 'نصب', 'repair' => 'تعمیر', 'install_repair' => 'نصب و تعمیر'];
     $transportLabels = ['motorcycle' => 'موتور', 'car' => 'خودرو', 'none' => 'وسیله نقلیه ندارم'];
-    $educationLabels = ['diploma' => 'دیپلم', 'associate' => 'کاردانی', 'bachelor' => 'کارشناسی', 'master' => 'کارشناسی ارشد', 'doctorate' => 'دکتری'];
+    $educationLabels = ['below_diploma' => 'زیر دیپلم', 'diploma' => 'دیپلم', 'associate' => 'کاردانی', 'bachelor' => 'کارشناسی', 'master' => 'کارشناسی ارشد', 'doctorate' => 'دکتری'];
     $genderLabels = ['male' => 'مرد', 'female' => 'زن'];
     $maritalLabels = ['single' => 'مجرد', 'married' => 'متاهل'];
     $color = $statusColors[$registration->status] ?? 'gray';
@@ -150,6 +150,34 @@
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">تلفن مغازه</dt>
                     <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->shop_phone }}</dd>
+                </div>
+                @endif
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">همکاری با شرکت‌ها</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $registration->has_cooperation ? 'بله' : 'خیر' }}</dd>
+                </div>
+                @if($registration->has_cooperation && $registration->cooperation_companies)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">نام شرکت‌ها</dt>
+                    <dd class="text-sm font-medium text-gray-800 text-left max-w-[200px]">{{ $registration->cooperation_companies }}</dd>
+                </div>
+                @endif
+                @if($registration->referrer_name)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">معرف</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $registration->referrer_name }} @if($registration->referrer_phone)<span class="text-gray-400 mx-1">|</span><span dir="ltr">{{ $registration->referrer_phone }}</span>@endif</dd>
+                </div>
+                @endif
+                @if($registration->colleague1_name)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">هم‌صنفی اول</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $registration->colleague1_name }} @if($registration->colleague1_phone)<span class="text-gray-400 mx-1">|</span><span dir="ltr">{{ $registration->colleague1_phone }}</span>@endif</dd>
+                </div>
+                @endif
+                @if($registration->colleague2_name)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">هم‌صنفی دوم</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $registration->colleague2_name }} @if($registration->colleague2_phone)<span class="text-gray-400 mx-1">|</span><span dir="ltr">{{ $registration->colleague2_phone }}</span>@endif</dd>
                 </div>
                 @endif
             </dl>
