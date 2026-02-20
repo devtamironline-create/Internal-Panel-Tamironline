@@ -909,7 +909,7 @@
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-green-700 mb-2">تبریک! درخواست شما تایید شد</h2>
+                    <h2 class="text-lg font-bold text-green-700 mb-2">احراز هویت تایید شد!</h2>
                     <p class="text-sm text-gray-500 mb-4">
                         <span class="font-bold text-brand-blue" id="approvedName"></span>
                         عزیز، خوش‌آمدید به خانواده تعمیر آنلاین.
@@ -922,6 +922,10 @@
                             <li class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded-full bg-brand-blue text-white flex items-center justify-center text-[10px] font-bold shrink-0">۱</span>
                                 مطالعه و امضای قرارداد همکاری
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-gray-300 text-white flex items-center justify-center text-[10px] font-bold shrink-0">۲</span>
+                                آپلود مدارک
                             </li>
                         </ul>
                     </div>
@@ -1003,7 +1007,7 @@
                     </div>
                     <h2 class="text-lg font-bold text-green-700 mb-2">قرارداد با موفقیت امضا شد!</h2>
                     <p class="text-sm text-gray-500 mb-4">
-                        برای تکمیل فرآیند، مراحل آپلود مدارک و احراز هویت ویدیویی باقی‌مانده است.
+                        برای تکمیل فرآیند، مرحله آپلود مدارک باقی‌مانده است.
                     </p>
                     <button onclick="goToPhase('N')" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
                         ادامه: آپلود مدارک
@@ -1181,10 +1185,10 @@
                         <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                             <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <span class="text-xs text-green-600 font-bold">قرارداد امضا شد</span>
+                        <span class="text-xs text-green-600 font-bold">درخواست شما تایید شد</span>
                     </div>
                     <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
-                    <p class="text-xs text-gray-400 mt-1">جهت تایید نهایی هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
+                    <p class="text-xs text-gray-400 mt-1">جهت تایید هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
                 </div>
 
                 <div class="space-y-4">
@@ -1477,11 +1481,18 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // بررسی وضعیت تایید، قرارداد، مدارک و بایومتریک
-                            if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded && res.resume.biometric_status === 'verified') {
+                            // ترتیب: بایومتریک → قرارداد → مدارک → تکمیل
+                            if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified' && res.resume.contract_signed && res.resume.documents_uploaded) {
                                 goToPhase('M');
-                            } else if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded) {
-                                // مدارک آپلود شده ولی بایومتریک انجام نشده
+                            } else if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified' && res.resume.contract_signed) {
+                                // قرارداد امضا شده ولی مدارک آپلود نشده
+                                goToPhase('N');
+                            } else if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified') {
+                                // بایومتریک تایید شده، برو قرارداد
+                                $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                                goToPhase('J');
+                            } else if (res.resume.status === 'approved') {
+                                // بایومتریک انجام نشده یا در حال بررسی
                                 if (res.resume.biometric_status === 'pending') {
                                     goToPhase('C2');
                                     initBiometricCamera();
@@ -1491,12 +1502,6 @@
                                     goToPhase('C2');
                                     initBiometricCamera();
                                 }
-                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
-                                // قرارداد امضا شده ولی مدارک آپلود نشده
-                                goToPhase('N');
-                            } else if (res.resume.status === 'approved') {
-                                $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
-                                goToPhase('J');
                             } else if (res.resume.status === 'rejected') {
                                 $('#rejectedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 if (res.resume.rejection_reason) {
@@ -1715,8 +1720,7 @@
                 contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        goToPhase('C2');
-                        initBiometricCamera();
+                        goToPhase('M');
                     } else {
                         showFieldError('docGeneralError', res.message || 'خطا در آپلود مدارک');
                     }
@@ -1903,8 +1907,9 @@
                         if (res.status === 'verified') {
                             clearInterval(biometricPollInterval);
                             stopBiometricCamera();
-                            // رفتن به صفحه تکمیل نهایی
-                            goToPhase('M');
+                            // رفتن به مرحله قرارداد
+                            $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                            goToPhase('J');
                         } else if (res.status === 'rejected') {
                             clearInterval(biometricPollInterval);
                             $('#biometricPendingBox').addClass('hidden');

@@ -612,7 +612,7 @@ class RegistrationController extends Controller
         $registration->update([
             'contract_signed_at' => now(),
             'contract_signature' => $request->signature,
-            'current_step'       => 7,
+            'current_step'       => 8,
         ]);
 
         Log::info('Technician contract signed', [
@@ -714,6 +714,7 @@ class RegistrationController extends Controller
 
         $registration->update(array_merge($paths, [
             'documents_uploaded' => true,
+            'current_step'      => 9,
         ]));
 
         Log::info('Technician documents uploaded', [
@@ -805,6 +806,7 @@ class RegistrationController extends Controller
             'biometric_session_id'  => $livenessResult['session_id'],
             'biometric_status'      => 'pending',
             'biometric_reject_reason' => null,
+            'current_step'          => 7,
         ]);
 
         Log::info('Biometric liveness session created', [
