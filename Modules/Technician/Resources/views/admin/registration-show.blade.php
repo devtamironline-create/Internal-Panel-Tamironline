@@ -136,6 +136,8 @@
                             5 => '۵- مناطق تحت پوشش',
                             6 => '۶- تکمیل (منتظر بررسی)',
                             7 => '۷- امضای قرارداد',
+                            8 => '۸- آپلود مدارک',
+                            9 => '۹- احراز هویت ویدیویی',
                         ];
                     @endphp
                     @foreach($stepOptions as $value => $label)
@@ -151,6 +153,9 @@
             مرحله فعلی: <span class="font-bold text-gray-600">{{ $stepOptions[$registration->current_step] ?? $registration->current_step }}</span>
             @if($registration->contract_signed_at)
                 | <span class="text-green-600 font-bold">قرارداد امضا شده</span>
+            @endif
+            @if($registration->documents_uploaded)
+                | <span class="text-green-600 font-bold">مدارک آپلود شده</span>
             @endif
             @if($registration->biometric_status)
                 | <span class="font-bold {{ $registration->biometric_status === 'verified' ? 'text-green-600' : ($registration->biometric_status === 'rejected' ? 'text-red-600' : 'text-amber-600') }}">
@@ -412,6 +417,130 @@
         </div>
 
     </div>
+
+    {{-- مدارک آپلود شده --}}
+    @if($registration->documents_uploaded)
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            مدارک آپلود شده
+        </h2>
+        @php
+            $documents = [
+                ['field' => 'doc_national_card_front', 'label' => 'روی کارت ملی'],
+                ['field' => 'doc_national_card_back', 'label' => 'پشت کارت ملی'],
+                ['field' => 'doc_birth_certificate_p1', 'label' => 'شناسنامه صفحه ۱'],
+                ['field' => 'doc_birth_certificate_p2', 'label' => 'شناسنامه صفحه ۲'],
+                ['field' => 'doc_criminal_record', 'label' => 'گواهی سوپیشینه'],
+                ['field' => 'doc_photo_3x4', 'label' => 'عکس ۳×۴'],
+                ['field' => 'doc_lease_agreement', 'label' => 'اجاره‌نامه'],
+                ['field' => 'doc_utility_bill', 'label' => 'قبض آب/برق'],
+            ];
+        @endphp
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            @foreach($documents as $doc)
+                <div class="text-center">
+                    <p class="text-xs font-semibold text-gray-600 mb-1.5">{{ $doc['label'] }}</p>
+                    @if($registration->{$doc['field']})
+                        <a href="{{ asset('storage/' . $registration->{$doc['field']}) }}" target="_blank" class="block group">
+                            <div class="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
+                                <img src="{{ asset('storage/' . $registration->{$doc['field']}) }}" alt="{{ $doc['label'] }}" class="w-full h-full object-cover">
+                            </div>
+                            <span class="text-xs text-blue-500 mt-1 inline-block group-hover:underline">مشاهده</span>
+                        </a>
+                    @else
+                        <div class="aspect-[3/4] bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
+                            <span class="text-xs text-gray-300">آپلود نشده</span>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- اطلاعات قرارداد و بایومتریک --}}
+    @if($registration->contract_signed_at || $registration->biometric_status)
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {{-- قرارداد --}}
+        @if($registration->contract_signed_at)
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                اطلاعات قرارداد
+            </h2>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">وضعیت</dt>
+                    <dd class="text-sm font-bold text-green-600">امضا شده</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">تاریخ امضا</dt>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->contract_signed_at->format('Y/m/d H:i') }}</dd>
+                </div>
+                @if($registration->contract_signature)
+                <div>
+                    <dt class="text-xs text-gray-500 mb-2">امضای دیجیتال</dt>
+                    <dd class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                        <img src="{{ $registration->contract_signature }}" alt="امضا" class="max-h-24 mx-auto">
+                    </dd>
+                </div>
+                @endif
+            </dl>
+        </div>
+        @endif
+
+        {{-- بایومتریک --}}
+        @if($registration->biometric_status)
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                احراز هویت ویدیویی
+            </h2>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">وضعیت</dt>
+                    <dd>
+                        @if($registration->biometric_status === 'verified')
+                            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 text-green-700">تایید شده</span>
+                        @elseif($registration->biometric_status === 'rejected')
+                            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-700">رد شده</span>
+                        @else
+                            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-700">در حال بررسی</span>
+                        @endif
+                    </dd>
+                </div>
+                @if($registration->national_card_serial)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">سریال کارت ملی</dt>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->national_card_serial }}</dd>
+                </div>
+                @endif
+                @if($registration->biometric_session_id)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">شناسه نشست</dt>
+                    <dd class="text-xs font-mono text-gray-600" dir="ltr">{{ $registration->biometric_session_id }}</dd>
+                </div>
+                @endif
+                @if($registration->biometric_verified_at)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">تاریخ تایید</dt>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->biometric_verified_at->format('Y/m/d H:i') }}</dd>
+                </div>
+                @endif
+                @if($registration->biometric_status === 'rejected' && $registration->biometric_reject_reason)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">دلیل رد</dt>
+                    <dd class="text-sm font-medium text-red-600">{{ $registration->biometric_reject_reason }}</dd>
+                </div>
+                @endif
+            </dl>
+        </div>
+        @endif
+
+    </div>
+    @endif
 
 </div>
 @endsection
