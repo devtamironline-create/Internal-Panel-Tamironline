@@ -454,6 +454,7 @@ class RegistrationController extends Controller
             'repair_skill'          => ['required', 'in:board_repair,parts_only,both'],
             'board_repair_experience' => ['nullable', 'in:none,beginner,intermediate,advanced,expert'],
             'additional_notes'      => ['nullable', 'string', 'max:2000'],
+            'agreement'             => ['required', 'in:yes'],
         ], [
             'mobile.required'               => 'شماره موبایل الزامی است.',
             'activity_type.required'        => 'انتخاب زمینه فعالیت الزامی است.',
@@ -464,6 +465,8 @@ class RegistrationController extends Controller
             'transportation_method.in'       => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
             'repair_skill.required'         => 'لطفاً نوع تعمیرات خود را مشخص کنید.',
             'repair_skill.in'               => 'نوع تعمیرات انتخاب شده معتبر نیست.',
+            'agreement.required'            => 'موافقت با شرایط همکاری الزامی است.',
+            'agreement.in'                  => 'موافقت با شرایط همکاری الزامی است.',
         ]);
 
         // پیدا کردن رکورد ثبت‌نام

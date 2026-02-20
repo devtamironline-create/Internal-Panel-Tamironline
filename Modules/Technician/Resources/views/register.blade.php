@@ -810,14 +810,58 @@
 
                     <p id="step5GeneralError" class="text-red-500 text-xs hidden"></p>
 
+                    <button id="btnGoToAgreement" onclick="goToAgreement()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ادامه
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز H: موافقت‌نامه ===== --}}
+            <div id="phaseH" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">اطلاعات فعالیت ثبت شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">شرایط همکاری</h2>
+                </div>
+
+                <div class="space-y-5">
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <p class="text-sm text-gray-700 leading-relaxed text-justify">
+                            تعمیرکار محترم، پس از ارزیابی اولیه توسط مجموعه «تعمیر آنلاین»، در صورت تأیید، لازم است تصویر مدارک شناسایی، مدارک شغلی و گواهی عدم سوءپیشینه را در سامانه بارگذاری نمایید. همچنین قرارداد به‌صورت الکترونیکی منعقد خواهد شد و به‌منظور تضمین حسن انجام کار، سفته الکترونیکی به مبلغ دویست میلیون تومان دریافت می‌گردد.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">آیا با این شرایط موافق هستید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="agreement" value="yes" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:text-green-700 font-semibold transition-all">
+                                    بلی، موافقم
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="agreement" value="no" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                        <p id="agreementError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
                     <button id="btnStep5" onclick="submitStep5()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
                         ثبت نهایی
                     </button>
                 </div>
             </div>
 
-            {{-- ===== فاز H: تکمیل ثبت‌نام ===== --}}
-            <div id="phaseH" class="phase">
+            {{-- ===== فاز I: تکمیل ثبت‌نام ===== --}}
+            <div id="phaseI" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -900,7 +944,7 @@
 
         function updateStepIndicators(phase) {
             // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5 | H = done
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5 };
+            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5, I: 5 };
             const currentStep = phaseToStep[phase] || 1;
 
             for (let i = 1; i <= 5; i++) {
@@ -1036,7 +1080,9 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            if (res.resume.current_step >= 5) {
+                            if (res.resume.current_step >= 6) {
+                                goToPhase('I');
+                            } else if (res.resume.current_step >= 5) {
                                 goToPhase('G');
                             } else if (res.resume.current_step >= 4) {
                                 goToPhase('F');
@@ -1578,7 +1624,10 @@
 
         // ===== فاز G: مرحله ۵ - زمینه فعالیت =====
 
-        function submitStep5() {
+        // داده‌های موقت مرحله ۵
+        let step5Data = {};
+
+        function goToAgreement() {
             clearAllErrors();
 
             const activityType = $('input[name="activity_type"]:checked').val();
@@ -1591,7 +1640,6 @@
                 hasError = true;
             }
 
-            // جمع‌آوری دستگاه‌ها
             const applianceCategories = [];
             $('.appliance-cat-cb:checked').each(function() {
                 applianceCategories.push(parseInt($(this).val()));
@@ -1615,9 +1663,8 @@
 
             if (hasError) return;
 
-            setLoading('btnStep5', true);
-
-            $.post('{{ route("technician.register.step5") }}', {
+            // ذخیره داده‌ها برای ارسال بعدی
+            step5Data = {
                 mobile: currentMobile,
                 activity_type: activityType,
                 appliance_categories: applianceCategories,
@@ -1625,10 +1672,32 @@
                 repair_skill: repairSkill,
                 board_repair_experience: $('#board_repair_experience').val(),
                 additional_notes: $('#additional_notes').val().trim()
-            })
+            };
+
+            goToPhase('H');
+        }
+
+        function submitStep5() {
+            clearAllErrors();
+
+            const agreement = $('input[name="agreement"]:checked').val();
+            if (!agreement) {
+                showFieldError('agreementError', 'لطفاً یکی از گزینه‌ها را انتخاب کنید.');
+                return;
+            }
+            if (agreement === 'no') {
+                showFieldError('agreementError', 'برای تکمیل ثبت‌نام، موافقت با شرایط همکاری الزامی است.');
+                return;
+            }
+
+            step5Data.agreement = 'yes';
+
+            setLoading('btnStep5', true);
+
+            $.post('{{ route("technician.register.step5") }}', step5Data)
             .done(function(res) {
                 if (res.success) {
-                    goToPhase('H');
+                    goToPhase('I');
                 } else {
                     showFieldError('step5GeneralError', res.message);
                 }
