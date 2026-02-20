@@ -23,6 +23,7 @@ Route::post('/join-technician/register/step5', [RegistrationController::class, '
 Route::post('/join-technician/register/get-contract', [RegistrationController::class, 'getContract'])->name('technician.register.get-contract');
 Route::post('/join-technician/register/send-contract-otp', [RegistrationController::class, 'sendContractOtp'])->name('technician.register.send-contract-otp');
 Route::post('/join-technician/register/sign-contract', [RegistrationController::class, 'signContract'])->name('technician.register.sign-contract');
+Route::post('/join-technician/register/upload-documents', [RegistrationController::class, 'uploadDocuments'])->name('technician.register.upload-documents');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {

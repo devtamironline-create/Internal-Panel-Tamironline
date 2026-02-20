@@ -60,6 +60,12 @@ class TechnicianRegistration extends Model
         'rejection_reason',
         'contract_signed_at',
         'contract_signature',
+        'doc_national_card_front',
+        'doc_national_card_back',
+        'doc_birth_certificate_p1',
+        'doc_birth_certificate_p2',
+        'doc_criminal_record',
+        'documents_uploaded',
     ];
 
     protected $casts = [
@@ -76,5 +82,6 @@ class TechnicianRegistration extends Model
         'tehran_province_cities' => 'array',
         'alborz_cities' => 'array',
         'appliance_categories' => 'array',
+        'documents_uploaded' => 'boolean',
     ];
 }

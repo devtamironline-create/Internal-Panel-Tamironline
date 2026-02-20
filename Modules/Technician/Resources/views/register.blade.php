@@ -995,7 +995,7 @@
                 </div>
             </div>
 
-            {{-- ===== فاز L: قرارداد امضا شد → ادامه به بایومتریک ===== --}}
+            {{-- ===== فاز L: قرارداد امضا شد → ادامه به آپلود مدارک ===== --}}
             <div id="phaseL" class="phase">
                 <div class="text-center py-6">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
@@ -1003,10 +1003,122 @@
                     </div>
                     <h2 class="text-lg font-bold text-green-700 mb-2">قرارداد با موفقیت امضا شد!</h2>
                     <p class="text-sm text-gray-500 mb-4">
-                        برای تکمیل نهایی فرآیند، مرحله احراز هویت ویدیویی باقی‌مانده است.
+                        برای تکمیل فرآیند، مراحل آپلود مدارک و احراز هویت ویدیویی باقی‌مانده است.
                     </p>
-                    <button onclick="goToPhase('C2'); initBiometricCamera();" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
-                        ادامه: احراز هویت ویدیویی
+                    <button onclick="goToPhase('N')" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ادامه: آپلود مدارک
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز N: آپلود مدارک ===== --}}
+            <div id="phaseN" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">قرارداد امضا شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">آپلود مدارک</h2>
+                    <p class="text-xs text-gray-400 mt-1">تصاویر مدارک زیر را آپلود کنید</p>
+                </div>
+
+                <div class="space-y-4">
+                    {{-- کارت ملی (رو) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">تصویر روی کارت ملی</label>
+                        <div class="doc-upload-box" data-field="national_card_front">
+                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_national_card_front" onchange="previewDocImage(this, 'national_card_front')">
+                            <div id="preview_national_card_front" class="hidden relative">
+                                <img class="w-full rounded-xl" alt="پیش‌نمایش">
+                                <button type="button" onclick="removeDocImage('national_card_front')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
+                            </div>
+                            <label for="file_national_card_front" id="placeholder_national_card_front" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                                <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                            </label>
+                        </div>
+                        <p id="docError_national_card_front" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- کارت ملی (پشت) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">تصویر پشت کارت ملی</label>
+                        <div class="doc-upload-box" data-field="national_card_back">
+                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_national_card_back" onchange="previewDocImage(this, 'national_card_back')">
+                            <div id="preview_national_card_back" class="hidden relative">
+                                <img class="w-full rounded-xl" alt="پیش‌نمایش">
+                                <button type="button" onclick="removeDocImage('national_card_back')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
+                            </div>
+                            <label for="file_national_card_back" id="placeholder_national_card_back" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                                <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                            </label>
+                        </div>
+                        <p id="docError_national_card_back" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- شناسنامه صفحه اول --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">صفحه اول شناسنامه</label>
+                        <div class="doc-upload-box" data-field="birth_certificate_p1">
+                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_birth_certificate_p1" onchange="previewDocImage(this, 'birth_certificate_p1')">
+                            <div id="preview_birth_certificate_p1" class="hidden relative">
+                                <img class="w-full rounded-xl" alt="پیش‌نمایش">
+                                <button type="button" onclick="removeDocImage('birth_certificate_p1')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
+                            </div>
+                            <label for="file_birth_certificate_p1" id="placeholder_birth_certificate_p1" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                                <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                            </label>
+                        </div>
+                        <p id="docError_birth_certificate_p1" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- شناسنامه صفحه دوم --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">صفحه دوم شناسنامه</label>
+                        <div class="doc-upload-box" data-field="birth_certificate_p2">
+                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_birth_certificate_p2" onchange="previewDocImage(this, 'birth_certificate_p2')">
+                            <div id="preview_birth_certificate_p2" class="hidden relative">
+                                <img class="w-full rounded-xl" alt="پیش‌نمایش">
+                                <button type="button" onclick="removeDocImage('birth_certificate_p2')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
+                            </div>
+                            <label for="file_birth_certificate_p2" id="placeholder_birth_certificate_p2" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                                <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                            </label>
+                        </div>
+                        <p id="docError_birth_certificate_p2" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- گواهی سوپیشینه --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">گواهی عدم سوء‌پیشینه</label>
+                        <div class="doc-upload-box" data-field="criminal_record">
+                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_criminal_record" onchange="previewDocImage(this, 'criminal_record')">
+                            <div id="preview_criminal_record" class="hidden relative">
+                                <img class="w-full rounded-xl" alt="پیش‌نمایش">
+                                <button type="button" onclick="removeDocImage('criminal_record')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
+                            </div>
+                            <label for="file_criminal_record" id="placeholder_criminal_record" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                                <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                            </label>
+                        </div>
+                        <p id="docError_criminal_record" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        فرمت‌های مجاز: JPG، PNG — حداکثر حجم هر فایل: ۵ مگابایت
+                    </p>
+
+                    <p id="docGeneralError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+
+                    <button type="button" id="btnSubmitDocs" onclick="submitDocuments()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors mt-2">
+                        ارسال مدارک و ادامه
                     </button>
                 </div>
             </div>
@@ -1314,11 +1426,11 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // بررسی وضعیت تایید، قرارداد و بایومتریک
-                            if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.biometric_status === 'verified') {
+                            // بررسی وضعیت تایید، قرارداد، مدارک و بایومتریک
+                            if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded && res.resume.biometric_status === 'verified') {
                                 goToPhase('M');
-                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
-                                // قرارداد امضا شده ولی بایومتریک انجام نشده
+                            } else if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded) {
+                                // مدارک آپلود شده ولی بایومتریک انجام نشده
                                 if (res.resume.biometric_status === 'pending') {
                                     goToPhase('C2');
                                     initBiometricCamera();
@@ -1328,6 +1440,9 @@
                                     goToPhase('C2');
                                     initBiometricCamera();
                                 }
+                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
+                                // قرارداد امضا شده ولی مدارک آپلود نشده
+                                goToPhase('N');
                             } else if (res.resume.status === 'approved') {
                                 $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 goToPhase('J');
@@ -1469,6 +1584,106 @@
         let biometricChunks = [];
         let biometricBlob = null;
         let biometricRecordTimer = null;
+        // ===== فاز N: آپلود مدارک =====
+        const docFields = ['national_card_front', 'national_card_back', 'birth_certificate_p1', 'birth_certificate_p2', 'criminal_record'];
+
+        function previewDocImage(input, fieldName) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // بررسی نوع فایل
+            if (!file.type.startsWith('image/')) {
+                showFieldError('docError_' + fieldName, 'فقط فایل تصویری مجاز است.');
+                input.value = '';
+                return;
+            }
+            // بررسی حجم (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showFieldError('docError_' + fieldName, 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+                input.value = '';
+                return;
+            }
+
+            hideFieldError('docError_' + fieldName);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = $('#preview_' + fieldName);
+                preview.find('img').attr('src', e.target.result);
+                preview.removeClass('hidden');
+                $('#placeholder_' + fieldName).addClass('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeDocImage(fieldName) {
+            $('#file_' + fieldName).val('');
+            $('#preview_' + fieldName).addClass('hidden').find('img').attr('src', '');
+            $('#placeholder_' + fieldName).removeClass('hidden');
+        }
+
+        function submitDocuments() {
+            hideFieldError('docGeneralError');
+            docFields.forEach(f => hideFieldError('docError_' + f));
+
+            // بررسی همه فایل‌ها انتخاب شده‌اند
+            const labels = {
+                'national_card_front': 'تصویر روی کارت ملی',
+                'national_card_back': 'تصویر پشت کارت ملی',
+                'birth_certificate_p1': 'صفحه اول شناسنامه',
+                'birth_certificate_p2': 'صفحه دوم شناسنامه',
+                'criminal_record': 'گواهی عدم سوء‌پیشینه'
+            };
+
+            let hasError = false;
+            docFields.forEach(function(f) {
+                const input = document.getElementById('file_' + f);
+                if (!input.files || !input.files[0]) {
+                    showFieldError('docError_' + f, labels[f] + ' الزامی است.');
+                    hasError = true;
+                }
+            });
+
+            if (hasError) return;
+
+            setLoading('btnSubmitDocs', true);
+
+            const formData = new FormData();
+            formData.append('mobile', currentMobile);
+            docFields.forEach(function(f) {
+                formData.append(f, document.getElementById('file_' + f).files[0]);
+            });
+
+            $.ajax({
+                url: '{{ route("technician.register.upload-documents") }}',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        goToPhase('C2');
+                        initBiometricCamera();
+                    } else {
+                        showFieldError('docGeneralError', res.message || 'خطا در آپلود مدارک');
+                    }
+                },
+                error: function(xhr) {
+                    const res = xhr.responseJSON;
+                    if (res?.errors) {
+                        Object.keys(res.errors).forEach(function(key) {
+                            showFieldError('docError_' + key, res.errors[key][0]);
+                        });
+                    } else {
+                        showFieldError('docGeneralError', res?.message || 'خطا در آپلود مدارک');
+                    }
+                },
+                complete: function() {
+                    setLoading('btnSubmitDocs', false);
+                }
+            });
+        }
+
+        // ===== فاز C2: بایومتریک =====
         let biometricRecordSeconds = 0;
         let biometricPollInterval = null;
 

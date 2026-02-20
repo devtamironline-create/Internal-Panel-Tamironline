@@ -82,9 +82,10 @@ class RegistrationController extends Controller
                 $result['resume'] = [
                     'current_step'      => $registration->current_step,
                     'status'            => $registration->status,
-                    'contract_signed'   => (bool) $registration->contract_signed_at,
-                    'rejection_reason'  => $registration->rejection_reason,
-                    'biometric_status'  => $registration->biometric_status,
+                    'contract_signed'    => (bool) $registration->contract_signed_at,
+                    'documents_uploaded' => (bool) $registration->documents_uploaded,
+                    'rejection_reason'   => $registration->rejection_reason,
+                    'biometric_status'   => $registration->biometric_status,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
@@ -640,6 +641,74 @@ class RegistrationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'قرارداد با موفقیت امضا شد.',
+        ]);
+    }
+
+    /**
+     * آپلود مدارک (کارت ملی، شناسنامه، سوپیشینه)
+     */
+    public function uploadDocuments(Request $request)
+    {
+        $request->validate([
+            'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
+            'national_card_front'    => ['required', 'image', 'max:5120'],
+            'national_card_back'     => ['required', 'image', 'max:5120'],
+            'birth_certificate_p1'   => ['required', 'image', 'max:5120'],
+            'birth_certificate_p2'   => ['required', 'image', 'max:5120'],
+            'criminal_record'        => ['required', 'image', 'max:5120'],
+        ], [
+            'mobile.required'                => 'شماره موبایل الزامی است.',
+            'national_card_front.required'   => 'تصویر روی کارت ملی الزامی است.',
+            'national_card_front.image'      => 'فایل باید تصویر باشد.',
+            'national_card_front.max'        => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'national_card_back.required'    => 'تصویر پشت کارت ملی الزامی است.',
+            'national_card_back.image'       => 'فایل باید تصویر باشد.',
+            'national_card_back.max'         => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'birth_certificate_p1.required'  => 'تصویر صفحه اول شناسنامه الزامی است.',
+            'birth_certificate_p1.image'     => 'فایل باید تصویر باشد.',
+            'birth_certificate_p1.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'birth_certificate_p2.required'  => 'تصویر صفحه دوم شناسنامه الزامی است.',
+            'birth_certificate_p2.image'     => 'فایل باید تصویر باشد.',
+            'birth_certificate_p2.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'criminal_record.required'       => 'تصویر گواهی سوپیشینه الزامی است.',
+            'criminal_record.image'          => 'فایل باید تصویر باشد.',
+            'criminal_record.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->whereNotNull('contract_signed_at')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست.',
+            ], 422);
+        }
+
+        // ذخیره فایل‌ها
+        $folder = 'technician-documents/' . $registration->id;
+
+        $paths = [];
+        $paths['doc_national_card_front']  = $request->file('national_card_front')->store($folder, 'public');
+        $paths['doc_national_card_back']   = $request->file('national_card_back')->store($folder, 'public');
+        $paths['doc_birth_certificate_p1'] = $request->file('birth_certificate_p1')->store($folder, 'public');
+        $paths['doc_birth_certificate_p2'] = $request->file('birth_certificate_p2')->store($folder, 'public');
+        $paths['doc_criminal_record']      = $request->file('criminal_record')->store($folder, 'public');
+
+        $registration->update(array_merge($paths, [
+            'documents_uploaded' => true,
+        ]));
+
+        Log::info('Technician documents uploaded', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'مدارک با موفقیت آپلود شد.',
         ]);
     }
 
