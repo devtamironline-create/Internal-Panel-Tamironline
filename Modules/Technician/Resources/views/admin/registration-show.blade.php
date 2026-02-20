@@ -6,6 +6,8 @@
     $statusColors = ['incomplete' => 'gray', 'pending' => 'amber', 'approved' => 'green', 'rejected' => 'red'];
     $activityLabels = ['install' => 'نصب', 'repair' => 'تعمیر', 'install_repair' => 'نصب و تعمیر'];
     $transportLabels = ['motorcycle' => 'موتور', 'car' => 'خودرو', 'none' => 'وسیله نقلیه ندارم'];
+    $repairSkillLabels = ['board_repair' => 'تعمیر برد و قطعات', 'parts_only' => 'صرفاً تعویض قطعات', 'both' => 'هر دو'];
+    $boardExpLabels = ['none' => 'تجربه‌ای ندارم', 'beginner' => 'مبتدی (کمتر از ۱ سال)', 'intermediate' => 'متوسط (۱ تا ۳ سال)', 'advanced' => 'حرفه‌ای (۳ تا ۵ سال)', 'expert' => 'متخصص (بیش از ۵ سال)'];
     $educationLabels = ['below_diploma' => 'زیر دیپلم', 'diploma' => 'دیپلم', 'associate' => 'کاردانی', 'bachelor' => 'کارشناسی', 'master' => 'کارشناسی ارشد', 'doctorate' => 'دکتری'];
     $genderLabels = ['male' => 'مرد', 'female' => 'زن'];
     $maritalLabels = ['single' => 'مجرد', 'married' => 'متاهل'];
@@ -288,6 +290,20 @@
                         @endforelse
                     </dd>
                 </div>
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">نوع تعمیرات</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $repairSkillLabels[$registration->repair_skill] ?? '—' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">سابقه تعمیر برد</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $boardExpLabels[$registration->board_repair_experience] ?? '—' }}</dd>
+                </div>
+                @if($registration->additional_notes)
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">توضیحات تکمیلی</dt>
+                    <dd class="text-sm text-gray-800">{{ $registration->additional_notes }}</dd>
+                </div>
+                @endif
             </dl>
         </div>
 

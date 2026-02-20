@@ -46,6 +46,9 @@ class TechnicianRegistration extends Model
         'activity_type',
         'appliance_categories',
         'transportation_method',
+        'repair_skill',
+        'board_repair_experience',
+        'additional_notes',
         'current_step',
         'status',
     ];

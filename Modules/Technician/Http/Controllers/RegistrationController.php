@@ -451,6 +451,9 @@ class RegistrationController extends Controller
             'appliance_categories'  => ['required', 'array', 'min:1'],
             'appliance_categories.*' => ['integer', 'exists:appliance_categories,id'],
             'transportation_method' => ['required', 'in:motorcycle,car,none'],
+            'repair_skill'          => ['required', 'in:board_repair,parts_only,both'],
+            'board_repair_experience' => ['nullable', 'in:none,beginner,intermediate,advanced,expert'],
+            'additional_notes'      => ['nullable', 'string', 'max:2000'],
         ], [
             'mobile.required'               => 'شماره موبایل الزامی است.',
             'activity_type.required'        => 'انتخاب زمینه فعالیت الزامی است.',
@@ -459,6 +462,8 @@ class RegistrationController extends Controller
             'appliance_categories.min'      => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
             'transportation_method.required' => 'انتخاب نحوه ارائه خدمات الزامی است.',
             'transportation_method.in'       => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
+            'repair_skill.required'         => 'لطفاً نوع تعمیرات خود را مشخص کنید.',
+            'repair_skill.in'               => 'نوع تعمیرات انتخاب شده معتبر نیست.',
         ]);
 
         // پیدا کردن رکورد ثبت‌نام
@@ -475,10 +480,13 @@ class RegistrationController extends Controller
 
         // به‌روزرسانی اطلاعات
         $registration->update([
-            'activity_type'         => $request->activity_type,
-            'appliance_categories'  => $request->appliance_categories,
-            'transportation_method' => $request->transportation_method,
-            'current_step'          => 6,
+            'activity_type'           => $request->activity_type,
+            'appliance_categories'    => $request->appliance_categories,
+            'transportation_method'   => $request->transportation_method,
+            'repair_skill'            => $request->repair_skill,
+            'board_repair_experience' => $request->board_repair_experience,
+            'additional_notes'        => $request->additional_notes,
+            'current_step'            => 6,
             'status'                => 'pending',
         ]);
 

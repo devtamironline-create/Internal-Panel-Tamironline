@@ -761,6 +761,53 @@
                         <p id="transportationError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
+                    {{-- نوع تعمیر --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">آیا در حوزه تخصصی خود تعمیر بردهای الکترونیکی و قطعات مکانیکی دستگاه‌ها را انجام می‌دهید یا صرفاً تعویض قطعات انجام می‌شود؟</label>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="repair_skill" value="board_repair" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all leading-tight">
+                                    تعمیر برد و قطعات
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="repair_skill" value="parts_only" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all leading-tight">
+                                    صرفاً تعویض قطعات
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="repair_skill" value="both" class="hidden peer">
+                                <div class="form-input text-center py-3 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all leading-tight">
+                                    هر دو
+                                </div>
+                            </label>
+                        </div>
+                        <p id="repairSkillError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- سابقه تعمیرات بردهای الکترونیکی --}}
+                    <div>
+                        <label for="board_repair_experience" class="block text-sm font-semibold text-gray-600 mb-1.5">میزان آشنایی و سابقه کاری در زمینه تعمیرات بردهای الکترونیکی</label>
+                        <select id="board_repair_experience"
+                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
+                            <option value="">انتخاب کنید...</option>
+                            <option value="none">تجربه‌ای ندارم</option>
+                            <option value="beginner">مبتدی (کمتر از ۱ سال)</option>
+                            <option value="intermediate">متوسط (۱ تا ۳ سال)</option>
+                            <option value="advanced">حرفه‌ای (۳ تا ۵ سال)</option>
+                            <option value="expert">متخصص (بیش از ۵ سال)</option>
+                        </select>
+                    </div>
+
+                    {{-- توضیحات تکمیلی --}}
+                    <div>
+                        <label for="additional_notes" class="block text-sm font-semibold text-gray-600 mb-1.5">در صورت داشتن هرگونه توضیح یا نکته تکمیلی، لطفاً در این بخش درج شود</label>
+                        <textarea id="additional_notes" rows="3" placeholder="توضیحات تکمیلی..."
+                                  class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 resize-none"></textarea>
+                    </div>
+
                     <p id="step5GeneralError" class="text-red-500 text-xs hidden"></p>
 
                     <button id="btnStep5" onclick="submitStep5()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
@@ -1560,6 +1607,12 @@
                 hasError = true;
             }
 
+            const repairSkill = $('input[name="repair_skill"]:checked').val();
+            if (!repairSkill) {
+                showFieldError('repairSkillError', 'لطفاً نوع تعمیرات خود را مشخص کنید.');
+                hasError = true;
+            }
+
             if (hasError) return;
 
             setLoading('btnStep5', true);
@@ -1568,7 +1621,10 @@
                 mobile: currentMobile,
                 activity_type: activityType,
                 appliance_categories: applianceCategories,
-                transportation_method: transportationMethod
+                transportation_method: transportationMethod,
+                repair_skill: repairSkill,
+                board_repair_experience: $('#board_repair_experience').val(),
+                additional_notes: $('#additional_notes').val().trim()
             })
             .done(function(res) {
                 if (res.success) {
