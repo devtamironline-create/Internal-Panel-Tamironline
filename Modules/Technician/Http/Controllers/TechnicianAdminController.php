@@ -266,21 +266,32 @@ class TechnicianAdminController extends Controller
         $this->checkAccess();
 
         $request->validate([
-            'current_step' => ['required', 'integer', 'min:1', 'max:7'],
+            'current_step' => ['required', 'integer', 'min:1', 'max:9'],
         ], [
             'current_step.required' => 'مرحله الزامی است.',
             'current_step.min'      => 'مرحله نمی‌تواند کمتر از ۱ باشد.',
-            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۷ باشد.',
+            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۹ باشد.',
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
 
         $data = ['current_step' => $request->current_step];
 
+        // اگر مرحله به قبل از مدارک برگشت، مدارک ریست شود
+        if ($request->current_step < 9) {
+            $data['documents_uploaded'] = false;
+        }
+
         // اگر مرحله به قبل از قرارداد برگشت، وضعیت قرارداد ریست شود
-        if ($request->current_step < 7) {
+        if ($request->current_step < 8) {
             $data['contract_signed_at'] = null;
             $data['contract_signature'] = null;
+        }
+
+        // اگر مرحله به قبل از بایومتریک برگشت، بایومتریک ریست شود
+        if ($request->current_step < 7) {
+            $data['biometric_status'] = null;
+            $data['biometric_reject_reason'] = null;
         }
 
         // اگر مرحله به قبل از تایید برگشت، وضعیت ریست شود
