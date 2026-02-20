@@ -94,10 +94,22 @@
                         </td>
                         <td class="px-4 py-3 text-gray-500 text-xs">{{ $reg->created_at->format('Y/m/d H:i') }}</td>
                         <td class="px-4 py-3">
-                            <a href="{{ route('technician.admin.registrations.show', $reg->id) }}"
-                               class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
-                                مشاهده جزئیات
-                            </a>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('technician.admin.registrations.show', $reg->id) }}"
+                                   class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
+                                    مشاهده
+                                </a>
+                                @can('delete-technician')
+                                <form method="POST" action="{{ route('technician.admin.registrations.destroy', $reg->id) }}"
+                                      onsubmit="return confirm('آیا از حذف این درخواست اطمینان دارید؟ این عمل قابل بازگشت نیست.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium hover:underline">
+                                        حذف
+                                    </button>
+                                </form>
+                                @endcan
+                            </div>
                         </td>
                     </tr>
                     @endforeach

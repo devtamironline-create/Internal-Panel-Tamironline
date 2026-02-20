@@ -244,6 +244,23 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * حذف درخواست ثبت‌نام
+     */
+    public function registrationDestroy($id)
+    {
+        if (!auth()->user()->can('delete-technician')) {
+            abort(403);
+        }
+
+        $registration = TechnicianRegistration::findOrFail($id);
+        $name = trim($registration->first_name . ' ' . $registration->last_name);
+        $registration->delete();
+
+        return redirect()->route('technician.admin.registrations')
+            ->with('success', 'درخواست ثبت‌نام' . ($name ? ' «' . $name . '»' : '') . ' با موفقیت حذف شد.');
+    }
+
+    /**
      * لیست دسته‌بندی دستگاه‌ها
      */
     public function applianceCategories()
