@@ -106,6 +106,12 @@
                     <dt class="text-xs text-gray-500">وضعیت تاهل</dt>
                     <dd class="text-sm font-medium text-gray-800">{{ $maritalLabels[$registration->marital_status] ?? '—' }}</dd>
                 </div>
+                @if($registration->marital_status === 'married')
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">تعداد فرزندان</dt>
+                    <dd class="text-sm font-medium text-gray-800">{{ $registration->children_count ?? 0 }}</dd>
+                </div>
+                @endif
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">استان / شهر</dt>
                     <dd class="text-sm font-medium text-gray-800">{{ $registration->province ?? '—' }} / {{ $registration->city ?? '—' }}</dd>

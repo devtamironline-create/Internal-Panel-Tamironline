@@ -228,6 +228,7 @@ class RegistrationController extends Controller
             'shenasname_number' => ['required', 'regex:/^[0-9]{1,10}$/'],
             'gender'            => ['required', 'in:male,female'],
             'marital_status'    => ['required', 'in:single,married'],
+            'children_count'    => ['nullable', 'integer', 'min:0', 'max:5'],
             'province'          => ['required', 'string'],
             'city'              => ['required', 'string'],
         ], [
@@ -278,6 +279,7 @@ class RegistrationController extends Controller
             'shenasname_number' => $request->shenasname_number,
             'gender'            => $request->gender,
             'marital_status'    => $request->marital_status,
+            'children_count'    => $request->marital_status === 'married' ? $request->children_count : null,
             'province'          => $request->province,
             'city'              => $request->city,
             'current_step'      => 3,

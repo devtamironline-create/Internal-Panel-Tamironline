@@ -331,13 +331,27 @@
                     {{-- وضعیت تاهل --}}
                     <div>
                         <label for="marital_status" class="block text-sm font-semibold text-gray-600 mb-1.5">وضعیت تاهل</label>
-                        <select id="marital_status"
+                        <select id="marital_status" onchange="toggleChildrenCount()"
                                 class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
                             <option value="">انتخاب کنید...</option>
                             <option value="single">مجرد</option>
                             <option value="married">متاهل</option>
                         </select>
                         <p id="maritalError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- تعداد فرزندان --}}
+                    <div id="childrenCountWrapper" class="hidden">
+                        <label for="children_count" class="block text-sm font-semibold text-gray-600 mb-1.5">تعداد فرزندان</label>
+                        <select id="children_count"
+                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
+                            <option value="0">بدون فرزند</option>
+                            <option value="1">۱</option>
+                            <option value="2">۲</option>
+                            <option value="3">۳</option>
+                            <option value="4">۴</option>
+                            <option value="5">۵ و بیشتر</option>
+                        </select>
                     </div>
 
                     {{-- استان --}}
@@ -936,6 +950,10 @@
                                 }
                                 if (res.resume.marital_status) {
                                     $('#marital_status').val(res.resume.marital_status);
+                                    toggleChildrenCount();
+                                    if (res.resume.marital_status === 'married' && res.resume.children_count !== null) {
+                                        $('#children_count').val(res.resume.children_count);
+                                    }
                                 }
                                 if (res.resume.province) {
                                     initProvinceDropdown();
@@ -1041,6 +1059,16 @@
         }
 
         // ===== فاز D: مرحله ۲ - اطلاعات شخصی =====
+        function toggleChildrenCount() {
+            const wrapper = document.getElementById('childrenCountWrapper');
+            if ($('#marital_status').val() === 'married') {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+                $('#children_count').val('0');
+            }
+        }
+
         let provinceDropdownReady = false;
 
         function initProvinceDropdown() {
@@ -1062,6 +1090,7 @@
             const shenasname = $('#shenasname_number').val().trim();
             const gender = $('#gender').val();
             const maritalStatus = $('#marital_status').val();
+            const childrenCount = maritalStatus === 'married' ? $('#children_count').val() : null;
             const province = $('#province').val();
             const city = $('#city').val();
 
@@ -1101,6 +1130,7 @@
                 shenasname_number: shenasname,
                 gender: gender,
                 marital_status: maritalStatus,
+                children_count: childrenCount,
                 province: province,
                 city: city
             })

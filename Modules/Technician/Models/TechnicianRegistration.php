@@ -20,6 +20,7 @@ class TechnicianRegistration extends Model
         'shenasname_number',
         'gender',
         'marital_status',
+        'children_count',
         'province',
         'city',
         'field_of_study',
