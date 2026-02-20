@@ -152,6 +152,11 @@
             @if($registration->contract_signed_at)
                 | <span class="text-green-600 font-bold">قرارداد امضا شده</span>
             @endif
+            @if($registration->biometric_status)
+                | <span class="font-bold {{ $registration->biometric_status === 'verified' ? 'text-green-600' : ($registration->biometric_status === 'rejected' ? 'text-red-600' : 'text-amber-600') }}">
+                    احراز هویت ویدیویی: {{ $registration->biometric_status === 'verified' ? 'تایید شده' : ($registration->biometric_status === 'rejected' ? 'رد شده' : 'در حال بررسی') }}
+                </span>
+            @endif
         </p>
         @if($errors->has('current_step'))
         <p class="text-red-500 text-xs mt-1">{{ $errors->first('current_step') }}</p>
@@ -182,6 +187,10 @@
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">کد ملی</dt>
                     <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->national_code }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">سریال کارت ملی</dt>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->national_card_serial ?? '—' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">شماره شناسنامه</dt>

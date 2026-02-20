@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'join-technician/register/biometric-callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

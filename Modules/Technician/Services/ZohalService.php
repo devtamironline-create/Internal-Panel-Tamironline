@@ -123,4 +123,158 @@ class ZohalService
             ];
         }
     }
+
+    /**
+     * آپلود مدیا بایومتریک (ویدیو سلفی)
+     */
+    public function uploadBiometricMedia(string $filePath): array
+    {
+        try {
+            $response = Http::timeout(60)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->attach('file', file_get_contents($filePath), 'selfie.webm')
+                ->post($this->baseUrl . '/services/biometric/media/', [
+                    'type' => 'selfie_video',
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Zohal Biometric Media upload failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'خطا در آپلود ویدیو به سرویس احراز هویت',
+                ];
+            }
+
+            $data = $response->json();
+
+            if (($data['result'] ?? 0) == 1 && isset($data['response_body']['id'])) {
+                return [
+                    'success' => true,
+                    'media_id' => $data['response_body']['id'],
+                    'message' => 'ویدیو با موفقیت آپلود شد',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Zohal Biometric Media exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+            ];
+        }
+    }
+
+    /**
+     * ایجاد جلسه Liveness بایومتریک
+     */
+    public function createLivenessSession(string $mediaId, string $nationalCode, string $birthDate, string $nationalCardSerial, string $callbackUrl): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->post($this->baseUrl . '/services/biometric/session/liveness/', [
+                    'national_code' => $nationalCode,
+                    'birth_date' => $birthDate,
+                    'national_card_serial' => $nationalCardSerial,
+                    'media' => [
+                        'selfie_video' => $mediaId,
+                    ],
+                    'callback_url' => $callbackUrl,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Zohal Liveness Session failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'خطا در ایجاد جلسه احراز هویت',
+                ];
+            }
+
+            $data = $response->json();
+
+            if (($data['result'] ?? 0) == 1 && isset($data['response_body']['session_id'])) {
+                return [
+                    'success' => true,
+                    'session_id' => $data['response_body']['session_id'],
+                    'status' => $data['response_body']['status'] ?? 'pending',
+                    'message' => 'جلسه احراز هویت ایجاد شد',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Zohal Liveness Session exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+            ];
+        }
+    }
+
+    /**
+     * دریافت نتیجه جلسه Liveness
+     */
+    public function getLivenessResult(string $sessionId): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->get($this->baseUrl . '/services/biometric/session/' . $sessionId . '/result');
+
+            if ($response->failed()) {
+                Log::error('Zohal Liveness Result failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'خطا در دریافت نتیجه احراز هویت',
+                ];
+            }
+
+            $data = $response->json();
+
+            if (($data['result'] ?? 0) == 1 && isset($data['response_body'])) {
+                $body = $data['response_body'];
+                return [
+                    'success' => true,
+                    'status' => $body['status'] ?? 'pending',
+                    'result' => $body['result'] ?? null,
+                    'reason' => $body['reason'] ?? null,
+                    'completed_at' => $body['completed_at'] ?? null,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Zohal Liveness Result exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+            ];
+        }
+    }
 }

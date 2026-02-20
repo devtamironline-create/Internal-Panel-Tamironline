@@ -84,6 +84,7 @@ class RegistrationController extends Controller
                     'status'            => $registration->status,
                     'contract_signed'   => (bool) $registration->contract_signed_at,
                     'rejection_reason'  => $registration->rejection_reason,
+                    'biometric_status'  => $registration->biometric_status,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
@@ -640,6 +641,207 @@ class RegistrationController extends Controller
             'success' => true,
             'message' => 'قرارداد با موفقیت امضا شد.',
         ]);
+    }
+
+    /**
+     * آپلود ویدیو سلفی و شروع احراز هویت بایومتریک
+     */
+    public function submitBiometric(Request $request)
+    {
+        $request->validate([
+            'mobile'              => ['required', 'regex:/^09[0-9]{9}$/'],
+            'national_card_serial' => ['required', 'string', 'regex:/^[0-9A-Za-z]{10}$/'],
+            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:20480'],
+        ], [
+            'mobile.required'              => 'شماره موبایل الزامی است.',
+            'national_card_serial.required' => 'سریال کارت ملی الزامی است.',
+            'national_card_serial.regex'    => 'فرمت سریال کارت ملی معتبر نیست.',
+            'video.required'               => 'ویدیو سلفی الزامی است.',
+            'video.mimetypes'              => 'فرمت ویدیو معتبر نیست.',
+            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۲۰ مگابایت باشد.',
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('identity_verified', true)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا مراحل احراز هویت اولیه را تکمیل کنید.',
+            ], 422);
+        }
+
+        // اگر قبلاً تایید شده، اجازه ارسال مجدد نده
+        if ($registration->biometric_status === 'verified') {
+            return response()->json([
+                'success' => false,
+                'message' => 'احراز هویت ویدیویی شما قبلاً تایید شده است.',
+            ], 422);
+        }
+
+        // ذخیره سریال کارت ملی
+        $registration->update(['national_card_serial' => $request->national_card_serial]);
+
+        $zohal = new ZohalService();
+
+        // ۱) آپلود ویدیو
+        $videoPath = $request->file('video')->getRealPath();
+        $uploadResult = $zohal->uploadBiometricMedia($videoPath);
+
+        if (!$uploadResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $uploadResult['message'],
+            ], 503);
+        }
+
+        $mediaId = $uploadResult['media_id'];
+
+        // ۲) ایجاد جلسه Liveness
+        $callbackUrl = route('technician.register.biometric-callback');
+        $livenessResult = $zohal->createLivenessSession(
+            $mediaId,
+            $registration->national_code,
+            $registration->birth_date,
+            $request->national_card_serial,
+            $callbackUrl
+        );
+
+        if (!$livenessResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $livenessResult['message'],
+            ], 503);
+        }
+
+        // ذخیره اطلاعات session
+        $registration->update([
+            'biometric_media_id'    => $mediaId,
+            'biometric_session_id'  => $livenessResult['session_id'],
+            'biometric_status'      => 'pending',
+            'biometric_reject_reason' => null,
+        ]);
+
+        Log::info('Biometric liveness session created', [
+            'registration_id' => $registration->id,
+            'session_id' => $livenessResult['session_id'],
+        ]);
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'ویدیو ارسال شد. لطفاً منتظر نتیجه بمانید.',
+            'session_id' => $livenessResult['session_id'],
+        ]);
+    }
+
+    /**
+     * بررسی وضعیت احراز هویت بایومتریک (polling)
+     */
+    public function checkBiometricStatus(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->whereNotNull('biometric_session_id')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'جلسه احراز هویت یافت نشد.',
+            ], 422);
+        }
+
+        // اگر هنوز pending هست، از زحل بپرس
+        if ($registration->biometric_status === 'pending') {
+            $zohal = new ZohalService();
+            $result = $zohal->getLivenessResult($registration->biometric_session_id);
+
+            if ($result['success'] && $result['status'] === 'completed') {
+                $this->processBiometricResult($registration, $result);
+            }
+        }
+
+        $reasonLabels = [
+            'REJECT_FACE_NOT_MATCH_ID' => 'چهره با تصویر کارت ملی مطابقت ندارد',
+            'VIDEO_NOT_LIVE' => 'ویدیو زنده تشخیص داده نشد',
+            'VIDEO_BAD_LIGHT' => 'نور ویدیو مناسب نیست. لطفاً در محیط روشن‌تر ضبط کنید',
+            'VIDEO_BAD_QUALITY' => 'کیفیت ویدیو مناسب نیست',
+            'PERSON_TOO_FAR_AWAY' => 'صورت شما خیلی دور است. لطفاً نزدیک‌تر بگیرید',
+            'MORE_THAN_ONE_PERSON' => 'بیش از یک نفر در تصویر شناسایی شد',
+            'NO_PERSON_DETECTED' => 'چهره‌ای در ویدیو شناسایی نشد',
+        ];
+
+        $rejectReason = $registration->biometric_reject_reason;
+        $rejectMessage = $reasonLabels[$rejectReason] ?? $rejectReason;
+
+        return response()->json([
+            'success' => true,
+            'status'  => $registration->biometric_status,
+            'reason'  => $rejectMessage,
+        ]);
+    }
+
+    /**
+     * Webhook callback از زحل
+     */
+    public function biometricCallback(Request $request)
+    {
+        Log::info('Biometric callback received', $request->all());
+
+        $sessionId = $request->input('response_body.session_id') ?? $request->input('session_id');
+
+        if (!$sessionId) {
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        $registration = TechnicianRegistration::where('biometric_session_id', $sessionId)->first();
+
+        if (!$registration) {
+            Log::warning('Biometric callback: registration not found', ['session_id' => $sessionId]);
+            return response()->json(['status' => 'not_found'], 200);
+        }
+
+        // دریافت نتیجه از زحل
+        $zohal = new ZohalService();
+        $result = $zohal->getLivenessResult($sessionId);
+
+        if ($result['success'] && $result['status'] === 'completed') {
+            $this->processBiometricResult($registration, $result);
+        }
+
+        return response()->json(['status' => 'ok'], 200);
+    }
+
+    /**
+     * پردازش نتیجه بایومتریک
+     */
+    private function processBiometricResult(TechnicianRegistration $registration, array $result): void
+    {
+        if ($result['result'] === 'accepted' || $result['result'] === 'approved') {
+            $registration->update([
+                'biometric_status'      => 'verified',
+                'biometric_verified_at' => now(),
+                'biometric_reject_reason' => null,
+            ]);
+
+            Log::info('Biometric verification passed', [
+                'registration_id' => $registration->id,
+            ]);
+        } else {
+            $registration->update([
+                'biometric_status'        => 'rejected',
+                'biometric_reject_reason' => $result['reason'] ?? 'UNKNOWN',
+            ]);
+
+            Log::info('Biometric verification rejected', [
+                'registration_id' => $registration->id,
+                'reason' => $result['reason'] ?? 'unknown',
+            ]);
+        }
     }
 
     /**

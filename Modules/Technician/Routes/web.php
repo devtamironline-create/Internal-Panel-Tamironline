@@ -13,6 +13,9 @@ Route::get('/join-technician/register', [RegistrationController::class, 'showFor
 Route::post('/join-technician/register/send-otp', [RegistrationController::class, 'sendOtp'])->name('technician.register.send-otp');
 Route::post('/join-technician/register/verify-otp', [RegistrationController::class, 'verifyOtp'])->name('technician.register.verify-otp');
 Route::post('/join-technician/register/step1', [RegistrationController::class, 'storeStep1'])->name('technician.register.step1');
+Route::post('/join-technician/register/biometric', [RegistrationController::class, 'submitBiometric'])->name('technician.register.biometric');
+Route::post('/join-technician/register/biometric-status', [RegistrationController::class, 'checkBiometricStatus'])->name('technician.register.biometric-status');
+Route::post('/join-technician/register/biometric-callback', [RegistrationController::class, 'biometricCallback'])->name('technician.register.biometric-callback');
 Route::post('/join-technician/register/step2', [RegistrationController::class, 'storeStep2'])->name('technician.register.step2');
 Route::post('/join-technician/register/step3', [RegistrationController::class, 'storeStep3'])->name('technician.register.step3');
 Route::post('/join-technician/register/step4', [RegistrationController::class, 'storeStep4'])->name('technician.register.step4');

@@ -273,6 +273,91 @@
                 </div>
             </div>
 
+            {{-- ===== فاز C2: احراز هویت ویدیویی ===== --}}
+            <div id="phaseC2" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">اطلاعات هویتی تایید شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
+                    <p class="text-xs text-gray-400 mt-1">جهت تایید هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
+                </div>
+
+                <div class="space-y-4">
+                    {{-- سریال کارت ملی --}}
+                    <div>
+                        <label for="national_card_serial" class="block text-sm font-semibold text-gray-600 mb-1.5">سریال پشت کارت ملی</label>
+                        <input type="text" id="national_card_serial" placeholder="مثال: 1A2345678B" maxlength="10" dir="ltr"
+                               class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                        <p class="text-xs text-gray-400 mt-1">سریال ۱۰ رقمی پشت کارت ملی هوشمند</p>
+                        <p id="cardSerialError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- پیش‌نمایش دوربین --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">ضبط ویدیو سلفی</label>
+                        <div class="relative bg-black rounded-xl overflow-hidden" style="aspect-ratio: 4/3;">
+                            <video id="biometricPreview" autoplay playsinline muted class="w-full h-full object-cover" style="transform: scaleX(-1);"></video>
+                            <div id="biometricOverlay" class="absolute inset-0 flex items-center justify-center">
+                                <div class="border-2 border-dashed border-white/40 rounded-full" style="width: 65%; height: 80%;"></div>
+                            </div>
+                            {{-- شمارنده --}}
+                            <div id="biometricCountdown" class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg hidden">
+                                <span id="biometricTimer">00:00</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>صورت خود را در کادر بیضی قرار دهید. نور کافی و پس‌زمینه ساده داشته باشید.</span>
+                        </div>
+                    </div>
+
+                    {{-- دکمه‌ها --}}
+                    <div id="biometricActions">
+                        <button type="button" id="btnStartRecord" onclick="startBiometricRecording()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                            شروع ضبط ویدیو
+                        </button>
+                        <button type="button" id="btnStopRecord" onclick="stopBiometricRecording()" class="hidden w-full py-3 bg-gray-700 hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            توقف ضبط
+                        </button>
+                        <button type="button" id="btnSubmitBiometric" onclick="submitBiometric()" class="hidden w-full py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors mt-2">
+                            ارسال ویدیو و تایید هویت
+                        </button>
+                        <button type="button" id="btnRetryBiometric" onclick="retryBiometricRecording()" class="hidden w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors mt-2">
+                            ضبط مجدد
+                        </button>
+                    </div>
+
+                    <p id="biometricError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+
+                    {{-- وضعیت بررسی --}}
+                    <div id="biometricPendingBox" class="hidden">
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                            <div class="animate-spin w-8 h-8 border-3 border-blue-300 border-t-blue-600 rounded-full mx-auto mb-3"></div>
+                            <p class="text-sm font-bold text-blue-700 mb-1">در حال بررسی...</p>
+                            <p class="text-xs text-gray-500">ویدیوی شما در حال پردازش است. لطفاً صبر کنید.</p>
+                        </div>
+                    </div>
+
+                    {{-- رد شده --}}
+                    <div id="biometricRejectedBox" class="hidden">
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                            <svg class="w-8 h-8 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                            <p class="text-sm font-bold text-red-700 mb-1">احراز هویت رد شد</p>
+                            <p id="biometricRejectReason" class="text-xs text-gray-600 mb-3"></p>
+                            <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors">
+                                تلاش مجدد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- ===== فاز D: اطلاعات شخصی (مرحله ۲) ===== --}}
             <div id="phaseD" class="phase">
                 <div class="mb-5">
@@ -1236,31 +1321,41 @@
                             } else if (res.resume.current_step >= 3) {
                                 goToPhase('E');
                             } else {
-                                // مرحله ۲ هنوز تکمیل نشده، فیلدها رو پر کن
-                                if (res.resume.shenasname_number) {
-                                    $('#shenasname_number').val(res.resume.shenasname_number);
-                                }
-                                if (res.resume.gender) {
-                                    $('#gender').val(res.resume.gender);
-                                }
-                                if (res.resume.marital_status) {
-                                    $('#marital_status').val(res.resume.marital_status);
-                                    toggleChildrenCount();
-                                    if (res.resume.marital_status === 'married' && res.resume.children_count !== null) {
-                                        $('#children_count').val(res.resume.children_count);
+                                // بررسی وضعیت احراز هویت ویدیویی
+                                if (res.resume.biometric_status !== 'verified') {
+                                    goToPhase('C2');
+                                    initBiometricCamera();
+                                    // اگر pending هست، شروع polling
+                                    if (res.resume.biometric_status === 'pending') {
+                                        showBiometricPending();
+                                        startBiometricPolling();
                                     }
-                                }
-                                if (res.resume.province) {
-                                    initProvinceDropdown();
-                                    $('#province').val(res.resume.province).trigger('change');
-                                    // شهر بعد از لود شدن لیست ست می‌شود
-                                    setTimeout(function() {
-                                        if (res.resume.city) {
-                                            $('#city').val(res.resume.city);
+                                } else {
+                                    // بایومتریک تایید شده، برو مرحله ۲
+                                    if (res.resume.shenasname_number) {
+                                        $('#shenasname_number').val(res.resume.shenasname_number);
+                                    }
+                                    if (res.resume.gender) {
+                                        $('#gender').val(res.resume.gender);
+                                    }
+                                    if (res.resume.marital_status) {
+                                        $('#marital_status').val(res.resume.marital_status);
+                                        toggleChildrenCount();
+                                        if (res.resume.marital_status === 'married' && res.resume.children_count !== null) {
+                                            $('#children_count').val(res.resume.children_count);
                                         }
-                                    }, 100);
+                                    }
+                                    if (res.resume.province) {
+                                        initProvinceDropdown();
+                                        $('#province').val(res.resume.province).trigger('change');
+                                        setTimeout(function() {
+                                            if (res.resume.city) {
+                                                $('#city').val(res.resume.city);
+                                            }
+                                        }, 100);
+                                    }
+                                    goToPhase('D');
                                 }
-                                goToPhase('D');
                             }
                         } else {
                             // کاربر جدید: برو مرحله احراز هویت
@@ -1332,7 +1427,8 @@
                     $('#step2FatherName').val(verifiedFatherName);
                     $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
-                    goToPhase('D');
+                    goToPhase('C2');
+                    initBiometricCamera();
                 } else {
                     if (res.field) showFieldError(res.field === 'national_code' ? 'nationalCodeError' : 'birthDateError', res.message);
                     else showAlert(res.message, 'error');
@@ -1351,6 +1447,202 @@
             .always(function() {
                 setLoading('btnVerifyIdentity', false);
             });
+        }
+
+        // ===== فاز C2: احراز هویت ویدیویی =====
+        let biometricStream = null;
+        let biometricRecorder = null;
+        let biometricChunks = [];
+        let biometricBlob = null;
+        let biometricRecordTimer = null;
+        let biometricRecordSeconds = 0;
+        let biometricPollInterval = null;
+
+        function initBiometricCamera() {
+            if (biometricStream) return; // already initialized
+
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: false
+            })
+            .then(function(stream) {
+                biometricStream = stream;
+                document.getElementById('biometricPreview').srcObject = stream;
+            })
+            .catch(function(err) {
+                console.error('Camera error:', err);
+                showFieldError('biometricError', 'دسترسی به دوربین امکان‌پذیر نیست. لطفاً مجوز دسترسی را فعال کنید.');
+            });
+        }
+
+        function startBiometricRecording() {
+            hideFieldError('biometricError');
+
+            const serial = $('#national_card_serial').val().trim();
+            if (!/^[0-9A-Za-z]{10}$/.test(serial)) {
+                showFieldError('cardSerialError', 'سریال کارت ملی باید ۱۰ کاراکتر (عدد و حرف) باشد.');
+                return;
+            }
+            hideFieldError('cardSerialError');
+
+            if (!biometricStream) {
+                showFieldError('biometricError', 'دوربین آماده نیست. لطفاً مجوز دسترسی را بررسی کنید.');
+                return;
+            }
+
+            biometricChunks = [];
+            biometricBlob = null;
+            biometricRecordSeconds = 0;
+
+            try {
+                biometricRecorder = new MediaRecorder(biometricStream, {
+                    mimeType: 'video/webm;codecs=vp8'
+                });
+            } catch (e) {
+                biometricRecorder = new MediaRecorder(biometricStream);
+            }
+
+            biometricRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) biometricChunks.push(e.data);
+            };
+
+            biometricRecorder.onstop = function() {
+                biometricBlob = new Blob(biometricChunks, { type: biometricRecorder.mimeType || 'video/webm' });
+                // نمایش دکمه‌ها
+                $('#btnStopRecord').addClass('hidden');
+                $('#btnSubmitBiometric').removeClass('hidden');
+                $('#btnRetryBiometric').removeClass('hidden');
+                $('#biometricCountdown').addClass('hidden');
+                clearInterval(biometricRecordTimer);
+            };
+
+            biometricRecorder.start(100);
+
+            // نمایش شمارنده
+            $('#btnStartRecord').addClass('hidden');
+            $('#btnStopRecord').removeClass('hidden');
+            $('#btnSubmitBiometric').addClass('hidden');
+            $('#btnRetryBiometric').addClass('hidden');
+            $('#biometricCountdown').removeClass('hidden');
+
+            biometricRecordTimer = setInterval(function() {
+                biometricRecordSeconds++;
+                let m = Math.floor(biometricRecordSeconds / 60);
+                let s = biometricRecordSeconds % 60;
+                $('#biometricTimer').text((m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s);
+
+                // حداکثر ۱۰ ثانیه ضبط
+                if (biometricRecordSeconds >= 10) {
+                    stopBiometricRecording();
+                }
+            }, 1000);
+        }
+
+        function stopBiometricRecording() {
+            if (biometricRecorder && biometricRecorder.state === 'recording') {
+                biometricRecorder.stop();
+            }
+        }
+
+        function retryBiometricRecording() {
+            biometricBlob = null;
+            biometricChunks = [];
+            $('#btnStartRecord').removeClass('hidden');
+            $('#btnStopRecord').addClass('hidden');
+            $('#btnSubmitBiometric').addClass('hidden');
+            $('#btnRetryBiometric').addClass('hidden');
+            hideFieldError('biometricError');
+        }
+
+        function retryBiometricFull() {
+            $('#biometricRejectedBox').addClass('hidden');
+            $('#biometricActions').removeClass('hidden');
+            retryBiometricRecording();
+        }
+
+        function submitBiometric() {
+            hideFieldError('biometricError');
+
+            if (!biometricBlob) {
+                showFieldError('biometricError', 'لطفاً ابتدا ویدیو ضبط کنید.');
+                return;
+            }
+
+            const serial = $('#national_card_serial').val().trim();
+
+            const formData = new FormData();
+            formData.append('mobile', currentMobile);
+            formData.append('national_card_serial', serial);
+            formData.append('video', biometricBlob, 'selfie.webm');
+
+            setLoading('btnSubmitBiometric', true);
+
+            $.ajax({
+                url: '{{ route("technician.register.biometric") }}',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+            })
+            .done(function(res) {
+                if (res.success) {
+                    showBiometricPending();
+                    startBiometricPolling();
+                } else {
+                    showFieldError('biometricError', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                showFieldError('biometricError', res?.message || 'خطا در ارسال ویدیو.');
+            })
+            .always(function() {
+                setLoading('btnSubmitBiometric', false);
+            });
+        }
+
+        function showBiometricPending() {
+            $('#biometricActions').addClass('hidden');
+            $('#biometricPendingBox').removeClass('hidden');
+            $('#biometricRejectedBox').addClass('hidden');
+        }
+
+        function startBiometricPolling() {
+            if (biometricPollInterval) clearInterval(biometricPollInterval);
+
+            biometricPollInterval = setInterval(function() {
+                $.post('{{ route("technician.register.biometric-status") }}', {
+                    mobile: currentMobile
+                })
+                .done(function(res) {
+                    if (res.success) {
+                        if (res.status === 'verified') {
+                            clearInterval(biometricPollInterval);
+                            stopBiometricCamera();
+                            // رفتن به مرحله بعد
+                            goToPhase('D');
+                        } else if (res.status === 'rejected') {
+                            clearInterval(biometricPollInterval);
+                            $('#biometricPendingBox').addClass('hidden');
+                            $('#biometricRejectedBox').removeClass('hidden');
+                            $('#biometricRejectReason').text(res.reason || 'احراز هویت ناموفق بود.');
+                            $('#biometricActions').removeClass('hidden');
+                        }
+                        // اگر pending باشه، ادامه polling
+                    }
+                });
+            }, 5000); // هر ۵ ثانیه
+        }
+
+        function stopBiometricCamera() {
+            if (biometricStream) {
+                biometricStream.getTracks().forEach(function(track) { track.stop(); });
+                biometricStream = null;
+            }
+            if (biometricPollInterval) {
+                clearInterval(biometricPollInterval);
+            }
         }
 
         // ===== فاز D: مرحله ۲ - اطلاعات شخصی =====
