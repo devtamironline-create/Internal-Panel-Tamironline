@@ -58,6 +58,8 @@ class TechnicianAdminController extends Controller
             'cta_phone_text'     => TechnicianSetting::get('cta_phone_text',      $defaults['cta_phone_text']),
             'cta_phone'          => TechnicianSetting::get('cta_phone',           $defaults['cta_phone']),
             'cta_footnote'       => TechnicianSetting::get('cta_footnote',        $defaults['cta_footnote']),
+            'contract_text'      => TechnicianSetting::get('contract_text',       ''),
+            'contract_sms_template' => TechnicianSetting::get('contract_sms_template', ''),
         ];
 
         return view('technician::admin.settings', compact('settings'));
@@ -78,6 +80,7 @@ class TechnicianAdminController extends Controller
             'benefits_title', 'steps_title', 'requirements_title', 'faq_title',
             'cta_title', 'cta_description', 'cta_badge',
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
+            'contract_text', 'contract_sms_template',
         ];
 
         foreach ($simpleFields as $field) {

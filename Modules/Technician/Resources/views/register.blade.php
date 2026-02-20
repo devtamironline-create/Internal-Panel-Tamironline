@@ -860,7 +860,7 @@
                 </div>
             </div>
 
-            {{-- ===== فاز I: تکمیل ثبت‌نام ===== --}}
+            {{-- ===== فاز I: تکمیل ثبت‌نام (در انتظار بررسی) ===== --}}
             <div id="phaseI" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
@@ -875,6 +875,97 @@
                         <p class="text-sm text-brand-blue font-semibold mb-1">در انتظار بررسی</p>
                         <p class="text-xs text-gray-500 leading-relaxed">
                             اطلاعات شما در حال بررسی است. پس از تایید، از طریق پیامک به شماره موبایل ثبت‌شده اطلاع‌رسانی خواهد شد.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ===== فاز J: تبریک تایید + ادامه مراحل ===== --}}
+            <div id="phaseJ" class="phase">
+                <div class="text-center py-6">
+                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-green-700 mb-2">تبریک! درخواست شما تایید شد</h2>
+                    <p class="text-sm text-gray-500 mb-4">
+                        <span class="font-bold text-brand-blue" id="approvedName"></span>
+                        عزیز، خوش‌آمدید به خانواده تعمیر آنلاین.
+                    </p>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mx-4 mb-5 text-right">
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            برای تکمیل فرآیند همکاری، لازم است مراحل زیر را تکمیل نمایید:
+                        </p>
+                        <ul class="mt-3 space-y-2 text-xs text-gray-600">
+                            <li class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-brand-blue text-white flex items-center justify-center text-[10px] font-bold shrink-0">۱</span>
+                                مطالعه و امضای قرارداد همکاری
+                            </li>
+                        </ul>
+                    </div>
+                    <button onclick="loadContract()" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        شروع مراحل
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز K: قرارداد + امضا ===== --}}
+            <div id="phaseK" class="phase">
+                <div class="mb-4">
+                    <h2 class="text-base font-bold text-gray-800">قرارداد همکاری</h2>
+                    <p class="text-xs text-gray-400 mt-1">لطفاً متن قرارداد را با دقت مطالعه نمایید</p>
+                </div>
+
+                <div class="space-y-4">
+                    {{-- متن قرارداد --}}
+                    <div id="contractContent" class="bg-white border border-gray-200 rounded-xl p-4 max-h-[400px] overflow-y-auto text-sm text-gray-700 leading-relaxed prose prose-sm">
+                        <p class="text-center text-gray-400">در حال بارگذاری قرارداد...</p>
+                    </div>
+
+                    {{-- تایید مطالعه --}}
+                    <label class="flex items-start gap-3 cursor-pointer bg-gray-50 rounded-xl p-3">
+                        <input type="checkbox" id="contractRead" class="mt-1 w-4 h-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue">
+                        <span class="text-xs text-gray-600">متن قرارداد را به طور کامل مطالعه کردم و با تمامی مفاد آن موافقم.</span>
+                    </label>
+
+                    {{-- دکمه امضا --}}
+                    <button id="btnOpenSignature" onclick="openSignaturePad()" disabled
+                            class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        امضای قرارداد
+                    </button>
+
+                    {{-- باکس امضا --}}
+                    <div id="signatureSection" class="hidden">
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-2 bg-white">
+                            <p class="text-xs text-gray-500 text-center mb-2">لطفاً در کادر زیر امضا کنید</p>
+                            <canvas id="signatureCanvas" class="w-full border border-gray-200 rounded-lg bg-white" style="height: 200px; touch-action: none;"></canvas>
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="clearSignature()" class="flex-1 py-2 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                                    پاک کردن
+                                </button>
+                                <button type="button" id="btnSubmitSignature" onclick="submitSignature()" class="flex-1 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">
+                                    تایید و ارسال امضا
+                                </button>
+                            </div>
+                        </div>
+                        <p id="signatureError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ===== فاز L: تکمیل قرارداد ===== --}}
+            <div id="phaseL" class="phase">
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">قرارداد با موفقیت امضا شد!</h2>
+                    <p class="text-sm text-gray-500 mb-3">
+                        از همکاری شما سپاسگزاریم. اطلاعات تکمیلی از طریق پیامک ارسال خواهد شد.
+                    </p>
+                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 mx-4 mt-4">
+                        <p class="text-sm text-green-700 font-semibold mb-1">فرآیند تکمیل شد</p>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            قرارداد همکاری شما ثبت شد. تیم ما به زودی با شما تماس خواهد گرفت.
                         </p>
                     </div>
                 </div>
@@ -944,7 +1035,7 @@
 
         function updateStepIndicators(phase) {
             // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5 | H = done
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5, I: 5 };
+            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5, I: 5, J: 5, K: 5, L: 5 };
             const currentStep = phaseToStep[phase] || 1;
 
             for (let i = 1; i <= 5; i++) {
@@ -1080,7 +1171,13 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            if (res.resume.current_step >= 6) {
+                            // بررسی وضعیت تایید و قرارداد
+                            if (res.resume.status === 'approved' && res.resume.contract_signed) {
+                                goToPhase('L');
+                            } else if (res.resume.status === 'approved') {
+                                $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                                goToPhase('J');
+                            } else if (res.resume.current_step >= 6) {
                                 goToPhase('I');
                             } else if (res.resume.current_step >= 5) {
                                 goToPhase('G');
@@ -1712,6 +1809,124 @@
             })
             .always(function() {
                 setLoading('btnStep5', false);
+            });
+        }
+
+        // ===== فاز J-K-L: قرارداد و امضا =====
+
+        function loadContract() {
+            $.post('{{ route("technician.register.get-contract") }}', {
+                mobile: currentMobile
+            })
+            .done(function(res) {
+                if (res.success) {
+                    $('#contractContent').html(res.contract || '<p class="text-center text-gray-400">متن قرارداد هنوز تنظیم نشده است.</p>');
+                    goToPhase('K');
+                } else {
+                    showAlert(res.message, 'error');
+                }
+            })
+            .fail(function() {
+                showAlert('خطا در بارگذاری قرارداد.', 'error');
+            });
+        }
+
+        // فعال کردن دکمه امضا بعد از تیک زدن
+        $(document).on('change', '#contractRead', function() {
+            $('#btnOpenSignature').prop('disabled', !this.checked);
+        });
+
+        let signaturePadCtx = null;
+        let isDrawing = false;
+        let signatureEmpty = true;
+
+        function openSignaturePad() {
+            $('#signatureSection').removeClass('hidden');
+            initSignatureCanvas();
+            // اسکرول به باکس امضا
+            document.getElementById('signatureSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function initSignatureCanvas() {
+            const canvas = document.getElementById('signatureCanvas');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 200;
+            signaturePadCtx = canvas.getContext('2d');
+            signaturePadCtx.strokeStyle = '#1a1a1a';
+            signaturePadCtx.lineWidth = 2;
+            signaturePadCtx.lineCap = 'round';
+            signaturePadCtx.lineJoin = 'round';
+            signatureEmpty = true;
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDraw);
+            canvas.addEventListener('mouseleave', stopDraw);
+
+            // Touch events
+            canvas.addEventListener('touchstart', function(e) { e.preventDefault(); startDraw(e.touches[0]); });
+            canvas.addEventListener('touchmove', function(e) { e.preventDefault(); draw(e.touches[0]); });
+            canvas.addEventListener('touchend', function(e) { e.preventDefault(); stopDraw(); });
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            const canvas = document.getElementById('signatureCanvas');
+            const rect = canvas.getBoundingClientRect();
+            signaturePadCtx.beginPath();
+            signaturePadCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const canvas = document.getElementById('signatureCanvas');
+            const rect = canvas.getBoundingClientRect();
+            signaturePadCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            signaturePadCtx.stroke();
+            signatureEmpty = false;
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        function clearSignature() {
+            const canvas = document.getElementById('signatureCanvas');
+            signaturePadCtx.clearRect(0, 0, canvas.width, canvas.height);
+            signatureEmpty = true;
+        }
+
+        function submitSignature() {
+            hideFieldError('signatureError');
+
+            if (signatureEmpty) {
+                showFieldError('signatureError', 'لطفاً امضای خود را در کادر بالا ثبت کنید.');
+                return;
+            }
+
+            const canvas = document.getElementById('signatureCanvas');
+            const signatureData = canvas.toDataURL('image/png');
+
+            setLoading('btnSubmitSignature', true);
+
+            $.post('{{ route("technician.register.sign-contract") }}', {
+                mobile: currentMobile,
+                signature: signatureData
+            })
+            .done(function(res) {
+                if (res.success) {
+                    goToPhase('L');
+                } else {
+                    showFieldError('signatureError', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                showFieldError('signatureError', res?.message || 'خطا در ارسال امضا.');
+            })
+            .always(function() {
+                setLoading('btnSubmitSignature', false);
             });
         }
 

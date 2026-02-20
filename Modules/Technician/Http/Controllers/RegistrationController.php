@@ -5,6 +5,7 @@ namespace Modules\Technician\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\SMS\Services\KavenegarService;
 use Modules\SMS\Services\OTPService;
 use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
@@ -51,12 +52,12 @@ class RegistrationController extends Controller
             'mobile.regex'    => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
         ]);
 
-        // فقط ثبت‌نام‌های تایید شده نهایی بلاک شوند
+        // فقط ثبت‌نام‌هایی که قرارداد امضا کرده‌اند بلاک شوند
         $existing = TechnicianRegistration::where('mobile', $request->mobile)->first();
-        if ($existing && $existing->status === 'approved') {
+        if ($existing && $existing->status === 'approved' && $existing->contract_signed_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'ثبت‌نام شما قبلاً تکمیل و تایید شده است.',
+                'message' => 'ثبت‌نام شما قبلاً تکمیل شده است.',
             ], 422);
         }
 
@@ -89,12 +90,15 @@ class RegistrationController extends Controller
             if ($registration && $registration->identity_verified) {
                 $result['resume'] = [
                     'current_step'      => $registration->current_step,
+                    'status'            => $registration->status,
+                    'contract_signed'   => (bool) $registration->contract_signed_at,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
                     'shenasname_number' => $registration->shenasname_number,
                     'gender'            => $registration->gender,
                     'marital_status'    => $registration->marital_status,
+                    'children_count'    => $registration->children_count,
                     'province'          => $registration->province,
                     'city'              => $registration->city,
                 ];
@@ -501,6 +505,107 @@ class RegistrationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'ثبت‌نام شما با موفقیت تکمیل شد. پس از بررسی و تایید اطلاعات، از طریق پیامک به شما اطلاع‌رسانی خواهد شد.',
+        ]);
+    }
+
+    /**
+     * دریافت متن قرارداد
+     */
+    public function getContract(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->whereNull('contract_signed_at')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست.',
+            ], 422);
+        }
+
+        $contractText = TechnicianSetting::get('contract_text', '');
+
+        // جایگزینی متغیرها
+        $contractText = str_replace(
+            ['{name}', '{national_code}', '{mobile}', '{date}'],
+            [
+                $registration->first_name . ' ' . $registration->last_name,
+                $registration->national_code,
+                $registration->mobile,
+                now()->format('Y/m/d'),
+            ],
+            $contractText
+        );
+
+        return response()->json([
+            'success' => true,
+            'contract' => $contractText,
+        ]);
+    }
+
+    /**
+     * امضای قرارداد
+     */
+    public function signContract(Request $request)
+    {
+        $request->validate([
+            'mobile'    => ['required', 'regex:/^09[0-9]{9}$/'],
+            'signature' => ['required', 'string'],
+        ], [
+            'mobile.required'    => 'شماره موبایل الزامی است.',
+            'signature.required' => 'امضای شما الزامی است.',
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->whereNull('contract_signed_at')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست.',
+            ], 422);
+        }
+
+        $registration->update([
+            'contract_signed_at' => now(),
+            'contract_signature' => $request->signature,
+            'current_step'       => 7,
+        ]);
+
+        Log::info('Technician contract signed', [
+            'registration_id' => $registration->id,
+            'mobile' => $request->mobile,
+        ]);
+
+        // ارسال پیامک تایید قرارداد
+        $smsTemplate = TechnicianSetting::get('contract_sms_template', '');
+        if ($smsTemplate) {
+            try {
+                $kavenegarService = app(KavenegarService::class);
+                $kavenegarService->sendTemplate(
+                    $registration->mobile,
+                    $smsTemplate,
+                    ['token' => $registration->first_name . ' ' . $registration->last_name]
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to send contract SMS', [
+                    'registration_id' => $registration->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'قرارداد با موفقیت امضا شد.',
         ]);
     }
 

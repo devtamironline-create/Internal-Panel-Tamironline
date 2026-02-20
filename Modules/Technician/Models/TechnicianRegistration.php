@@ -52,10 +52,13 @@ class TechnicianRegistration extends Model
         'current_step',
         'status',
         'rejection_reason',
+        'contract_signed_at',
+        'contract_signature',
     ];
 
     protected $casts = [
         'mobile_verified_at' => 'datetime',
+        'contract_signed_at' => 'datetime',
         'identity_verified' => 'boolean',
         'has_business_license' => 'boolean',
         'has_shop' => 'boolean',

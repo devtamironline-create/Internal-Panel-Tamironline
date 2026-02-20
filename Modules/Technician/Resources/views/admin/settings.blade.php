@@ -56,6 +56,7 @@
                 ['requirements', 'شرایط'],
                 ['faq', 'سوالات'],
                 ['cta', 'دعوت به عمل'],
+                ['contract', 'قرارداد'],
                 ['general', 'عمومی'],
             ] as [$tab, $label])
             <button type="button" @click="activeTab = '{{ $tab }}'"
@@ -354,6 +355,37 @@
                     <code class="bg-gray-100 px-2 py-1 rounded text-xs" dir="ltr">{{ url('/join-technician') }}</code>
                     <a href="{{ route('technician.landing') }}" target="_blank"
                        class="mr-3 text-blue-600 hover:underline text-xs">باز کردن ←</a>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: قرارداد --}}
+        <div x-show="activeTab === 'contract'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">متن قرارداد همکاری</h2>
+                <p class="text-xs text-gray-500">متن قرارداد را با استفاده از ویرایشگر زیر تنظیم کنید. این متن پس از تأیید تکنسین به او نمایش داده می‌شود.</p>
+                <div>
+                    <textarea name="contract_text" class="rich-editor">{!! $settings['contract_text'] ?? '' !!}</textarea>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="text-xs text-amber-700 font-semibold mb-1">متغیرهای قابل استفاده در متن قرارداد:</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-amber-600" dir="ltr">
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{name}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{national_code}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{mobile}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{date}</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات پیامک قرارداد</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">نام تمپلیت پیامک (کاوه‌نگار)</label>
+                    <input type="text" name="contract_sms_template" value="{{ $settings['contract_sms_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                           placeholder="contract-signed">
+                    <p class="text-xs text-gray-400 mt-1">نام تمپلیت ثبت‌شده در پنل کاوه‌نگار برای ارسال پیامک پس از امضای قرارداد</p>
                 </div>
             </div>
         </div>
