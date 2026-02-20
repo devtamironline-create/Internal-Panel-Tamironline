@@ -259,6 +259,53 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * تغییر مرحله ثبت‌نام
+     */
+    public function registrationUpdateStep(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'current_step' => ['required', 'integer', 'min:1', 'max:7'],
+        ], [
+            'current_step.required' => 'مرحله الزامی است.',
+            'current_step.min'      => 'مرحله نمی‌تواند کمتر از ۱ باشد.',
+            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۷ باشد.',
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        $data = ['current_step' => $request->current_step];
+
+        // اگر مرحله به قبل از قرارداد برگشت، وضعیت قرارداد ریست شود
+        if ($request->current_step < 7) {
+            $data['contract_signed_at'] = null;
+            $data['contract_signature'] = null;
+        }
+
+        // اگر مرحله به قبل از تایید برگشت، وضعیت ریست شود
+        if ($request->current_step < 6) {
+            $data['status'] = 'pending';
+            $data['rejection_reason'] = null;
+        }
+
+        $registration->update($data);
+
+        $stepLabels = [
+            1 => 'احراز هویت',
+            2 => 'اطلاعات شخصی',
+            3 => 'اطلاعات تکمیلی',
+            4 => 'حوزه فعالیت',
+            5 => 'مناطق تحت پوشش',
+            6 => 'تکمیل (منتظر بررسی)',
+            7 => 'امضای قرارداد',
+        ];
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'مرحله به «' . ($stepLabels[$request->current_step] ?? $request->current_step) . '» تغییر یافت.');
+    }
+
+    /**
      * حذف درخواست ثبت‌نام
      */
     public function registrationDestroy($id)

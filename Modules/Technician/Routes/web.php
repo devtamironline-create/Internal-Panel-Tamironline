@@ -33,6 +33,7 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::get('/registrations', [TechnicianAdminController::class, 'registrations'])->name('registrations');
     Route::get('/registrations/{id}', [TechnicianAdminController::class, 'registrationShow'])->name('registrations.show');
     Route::put('/registrations/{id}/status', [TechnicianAdminController::class, 'registrationUpdateStatus'])->name('registrations.update-status');
+    Route::put('/registrations/{id}/step', [TechnicianAdminController::class, 'registrationUpdateStep'])->name('registrations.update-step');
     Route::delete('/registrations/{id}', [TechnicianAdminController::class, 'registrationDestroy'])->name('registrations.destroy');
 
     // مدیریت دسته‌بندی دستگاه‌ها

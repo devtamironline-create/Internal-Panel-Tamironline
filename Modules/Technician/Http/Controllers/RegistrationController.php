@@ -52,15 +52,6 @@ class RegistrationController extends Controller
             'mobile.regex'    => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
         ]);
 
-        // فقط ثبت‌نام‌هایی که قرارداد امضا کرده‌اند بلاک شوند
-        $existing = TechnicianRegistration::where('mobile', $request->mobile)->first();
-        if ($existing && $existing->status === 'approved' && $existing->contract_signed_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ثبت‌نام شما قبلاً تکمیل شده است.',
-            ], 422);
-        }
-
         $otpService = app(OTPService::class);
         $result = $otpService->send($request->mobile);
 

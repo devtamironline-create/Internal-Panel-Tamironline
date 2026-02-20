@@ -116,6 +116,48 @@
         </div>
     </div>
 
+    {{-- تغییر مرحله ثبت‌نام --}}
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            مرحله فعلی ثبت‌نام
+        </h2>
+        <form method="POST" action="{{ route('technician.admin.registrations.update-step', $registration->id) }}" class="flex items-end gap-3">
+            @csrf
+            @method('PUT')
+            <div class="flex-1">
+                <select name="current_step" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none">
+                    @php
+                        $stepOptions = [
+                            1 => '۱- احراز هویت',
+                            2 => '۲- اطلاعات شخصی',
+                            3 => '۳- اطلاعات تکمیلی',
+                            4 => '۴- حوزه فعالیت',
+                            5 => '۵- مناطق تحت پوشش',
+                            6 => '۶- تکمیل (منتظر بررسی)',
+                            7 => '۷- امضای قرارداد',
+                        ];
+                    @endphp
+                    @foreach($stepOptions as $value => $label)
+                        <option value="{{ $value }}" @if($registration->current_step == $value) selected @endif>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap">
+                تغییر مرحله
+            </button>
+        </form>
+        <p class="text-xs text-gray-400 mt-2">
+            مرحله فعلی: <span class="font-bold text-gray-600">{{ $stepOptions[$registration->current_step] ?? $registration->current_step }}</span>
+            @if($registration->contract_signed_at)
+                | <span class="text-green-600 font-bold">قرارداد امضا شده</span>
+            @endif
+        </p>
+        @if($errors->has('current_step'))
+        <p class="text-red-500 text-xs mt-1">{{ $errors->first('current_step') }}</p>
+        @endif
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {{-- اطلاعات هویتی --}}
