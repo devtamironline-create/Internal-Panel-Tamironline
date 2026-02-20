@@ -14,7 +14,10 @@ return new class extends Migration
             $table->string('doc_birth_certificate_p1')->nullable()->after('doc_national_card_back');
             $table->string('doc_birth_certificate_p2')->nullable()->after('doc_birth_certificate_p1');
             $table->string('doc_criminal_record')->nullable()->after('doc_birth_certificate_p2');
-            $table->boolean('documents_uploaded')->default(false)->after('doc_criminal_record');
+            $table->string('doc_photo_3x4')->nullable()->after('doc_criminal_record');
+            $table->string('doc_lease_agreement')->nullable()->after('doc_photo_3x4');
+            $table->string('doc_utility_bill')->nullable()->after('doc_lease_agreement');
+            $table->boolean('documents_uploaded')->default(false)->after('doc_utility_bill');
         });
     }
 
@@ -27,6 +30,9 @@ return new class extends Migration
                 'doc_birth_certificate_p1',
                 'doc_birth_certificate_p2',
                 'doc_criminal_record',
+                'doc_photo_3x4',
+                'doc_lease_agreement',
+                'doc_utility_bill',
                 'documents_uploaded',
             ]);
         });

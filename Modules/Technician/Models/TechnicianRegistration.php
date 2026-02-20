@@ -65,6 +65,9 @@ class TechnicianRegistration extends Model
         'doc_birth_certificate_p1',
         'doc_birth_certificate_p2',
         'doc_criminal_record',
+        'doc_photo_3x4',
+        'doc_lease_agreement',
+        'doc_utility_bill',
         'documents_uploaded',
     ];
 

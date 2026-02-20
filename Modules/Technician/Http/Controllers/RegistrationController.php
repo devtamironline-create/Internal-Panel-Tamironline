@@ -645,7 +645,7 @@ class RegistrationController extends Controller
     }
 
     /**
-     * آپلود مدارک (کارت ملی، شناسنامه، سوپیشینه)
+     * آپلود مدارک (کارت ملی، شناسنامه، سوپیشینه، عکس ۳×۴، اجاره‌نامه، قبض)
      */
     public function uploadDocuments(Request $request)
     {
@@ -656,6 +656,9 @@ class RegistrationController extends Controller
             'birth_certificate_p1'   => ['required', 'image', 'max:5120'],
             'birth_certificate_p2'   => ['required', 'image', 'max:5120'],
             'criminal_record'        => ['required', 'image', 'max:5120'],
+            'photo_3x4'             => ['required', 'image', 'max:5120'],
+            'lease_agreement'        => ['required', 'image', 'max:5120'],
+            'utility_bill'           => ['required', 'image', 'max:5120'],
         ], [
             'mobile.required'                => 'شماره موبایل الزامی است.',
             'national_card_front.required'   => 'تصویر روی کارت ملی الزامی است.',
@@ -673,6 +676,15 @@ class RegistrationController extends Controller
             'criminal_record.required'       => 'تصویر گواهی سوپیشینه الزامی است.',
             'criminal_record.image'          => 'فایل باید تصویر باشد.',
             'criminal_record.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'photo_3x4.required'             => 'عکس ۳×۴ الزامی است.',
+            'photo_3x4.image'                => 'فایل باید تصویر باشد.',
+            'photo_3x4.max'                  => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'lease_agreement.required'       => 'تصویر اجاره‌نامه الزامی است.',
+            'lease_agreement.image'          => 'فایل باید تصویر باشد.',
+            'lease_agreement.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'utility_bill.required'          => 'تصویر قبض آب یا برق الزامی است.',
+            'utility_bill.image'             => 'فایل باید تصویر باشد.',
+            'utility_bill.max'               => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
@@ -696,6 +708,9 @@ class RegistrationController extends Controller
         $paths['doc_birth_certificate_p1'] = $request->file('birth_certificate_p1')->store($folder, 'public');
         $paths['doc_birth_certificate_p2'] = $request->file('birth_certificate_p2')->store($folder, 'public');
         $paths['doc_criminal_record']      = $request->file('criminal_record')->store($folder, 'public');
+        $paths['doc_photo_3x4']            = $request->file('photo_3x4')->store($folder, 'public');
+        $paths['doc_lease_agreement']      = $request->file('lease_agreement')->store($folder, 'public');
+        $paths['doc_utility_bill']         = $request->file('utility_bill')->store($folder, 'public');
 
         $registration->update(array_merge($paths, [
             'documents_uploaded' => true,
