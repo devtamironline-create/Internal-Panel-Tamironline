@@ -92,6 +92,7 @@ class RegistrationController extends Controller
                     'current_step'      => $registration->current_step,
                     'status'            => $registration->status,
                     'contract_signed'   => (bool) $registration->contract_signed_at,
+                    'rejection_reason'  => $registration->rejection_reason,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
@@ -550,17 +551,58 @@ class RegistrationController extends Controller
     }
 
     /**
-     * امضای قرارداد
+     * ارسال کد تایید قرارداد
+     */
+    public function sendContractOtp(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->whereNull('contract_signed_at')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست.',
+            ], 422);
+        }
+
+        $otpService = app(OTPService::class);
+        $result = $otpService->send($request->mobile);
+
+        return response()->json($result);
+    }
+
+    /**
+     * امضای قرارداد (با تایید کد)
      */
     public function signContract(Request $request)
     {
         $request->validate([
             'mobile'    => ['required', 'regex:/^09[0-9]{9}$/'],
             'signature' => ['required', 'string'],
+            'code'      => ['required', 'string', 'size:6'],
         ], [
             'mobile.required'    => 'شماره موبایل الزامی است.',
             'signature.required' => 'امضای شما الزامی است.',
+            'code.required'      => 'کد تایید الزامی است.',
+            'code.size'          => 'کد تایید باید ۶ رقم باشد.',
         ]);
+
+        // تایید کد OTP
+        $otpService = app(OTPService::class);
+        $otpResult = $otpService->verify($request->mobile, $request->code);
+
+        if (!($otpResult['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $otpResult['message'] ?? 'کد تایید نامعتبر است.',
+            ], 422);
+        }
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
             ->where('status', 'approved')

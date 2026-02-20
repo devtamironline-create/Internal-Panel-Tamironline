@@ -880,6 +880,29 @@
                 </div>
             </div>
 
+            {{-- ===== فاز رد شده ===== --}}
+            <div id="phaseRejected" class="phase">
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-red-600 mb-2">درخواست شما رد شد</h2>
+                    <p class="text-sm text-gray-500 mb-3">
+                        <span id="rejectedName" class="font-bold text-brand-blue"></span>
+                        متاسفانه درخواست شما مورد تایید قرار نگرفت.
+                    </p>
+                    <div id="rejectionReasonBox" class="bg-red-50 border border-red-200 rounded-xl p-4 mx-4 mt-4 text-right hidden">
+                        <p class="text-sm text-red-700 font-semibold mb-1">دلیل رد درخواست:</p>
+                        <p id="rejectionReasonText" class="text-sm text-gray-700 leading-relaxed"></p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mx-4 mt-3">
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            در صورت داشتن سوال می‌توانید با پشتیبانی تماس بگیرید.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {{-- ===== فاز J: تبریک تایید + ادامه مراحل ===== --}}
             <div id="phaseJ" class="phase">
                 <div class="text-center py-6">
@@ -942,11 +965,31 @@
                                 <button type="button" onclick="clearSignature()" class="flex-1 py-2 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors">
                                     پاک کردن
                                 </button>
-                                <button type="button" id="btnSubmitSignature" onclick="submitSignature()" class="flex-1 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">
-                                    تایید و ارسال امضا
+                                <button type="button" id="btnSendContractOtp" onclick="sendContractOtp()" class="flex-1 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">
+                                    تایید و ارسال کد
                                 </button>
                             </div>
                         </div>
+
+                        {{-- بخش وارد کردن کد تایید --}}
+                        <div id="contractOtpSection" class="hidden mt-3">
+                            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                                <p class="text-xs text-gray-600 text-center mb-2">کد تایید به شماره موبایل شما ارسال شد</p>
+                                <input type="text" id="contractOtpCode" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+                                       class="w-full text-center text-lg font-bold tracking-[0.5em] border border-gray-300 rounded-lg py-2 focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+                                       placeholder="------">
+                                <button type="button" id="btnSubmitSignature" onclick="submitSignature()" class="w-full mt-2 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors">
+                                    تایید نهایی و ثبت قرارداد
+                                </button>
+                                <div class="flex items-center justify-between mt-2">
+                                    <button type="button" id="btnResendContractOtp" onclick="sendContractOtp()" disabled class="text-xs text-brand-blue disabled:text-gray-400">
+                                        ارسال مجدد کد
+                                    </button>
+                                    <span id="contractOtpTimer" class="text-xs text-gray-400"></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <p id="signatureError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
                 </div>
@@ -1177,6 +1220,13 @@
                             } else if (res.resume.status === 'approved') {
                                 $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 goToPhase('J');
+                            } else if (res.resume.status === 'rejected') {
+                                $('#rejectedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                                if (res.resume.rejection_reason) {
+                                    $('#rejectionReasonText').text(res.resume.rejection_reason);
+                                    $('#rejectionReasonBox').removeClass('hidden');
+                                }
+                                goToPhase('Rejected');
                             } else if (res.resume.current_step >= 6) {
                                 goToPhase('I');
                             } else if (res.resume.current_step >= 5) {
@@ -1897,8 +1947,66 @@
             signatureEmpty = true;
         }
 
+        let contractOtpInterval = null;
+
+        function sendContractOtp() {
+            hideFieldError('signatureError');
+
+            if (signatureEmpty) {
+                showFieldError('signatureError', 'لطفاً امضای خود را در کادر بالا ثبت کنید.');
+                return;
+            }
+
+            setLoading('btnSendContractOtp', true);
+
+            $.post('{{ route("technician.register.send-contract-otp") }}', {
+                mobile: currentMobile
+            })
+            .done(function(res) {
+                if (res.success) {
+                    $('#contractOtpSection').removeClass('hidden');
+                    $('#contractOtpCode').val('').focus();
+                    startContractOtpTimer(res.expires_in || 120);
+                } else {
+                    showFieldError('signatureError', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                showFieldError('signatureError', res?.message || 'خطا در ارسال کد تایید.');
+            })
+            .always(function() {
+                setLoading('btnSendContractOtp', false);
+            });
+        }
+
+        function startContractOtpTimer(seconds) {
+            let remaining = seconds;
+            $('#btnResendContractOtp').prop('disabled', true);
+            if (contractOtpInterval) clearInterval(contractOtpInterval);
+
+            contractOtpInterval = setInterval(function() {
+                remaining--;
+                let m = Math.floor(remaining / 60);
+                let s = remaining % 60;
+                $('#contractOtpTimer').text((m > 0 ? m + ':' : '') + (s < 10 ? '0' : '') + s);
+
+                if (remaining <= 0) {
+                    clearInterval(contractOtpInterval);
+                    $('#contractOtpTimer').text('');
+                    $('#btnResendContractOtp').prop('disabled', false);
+                }
+            }, 1000);
+        }
+
         function submitSignature() {
             hideFieldError('signatureError');
+
+            const code = $('#contractOtpCode').val().trim();
+            if (!code || code.length !== 6) {
+                showFieldError('signatureError', 'لطفاً کد تایید ۶ رقمی را وارد کنید.');
+                return;
+            }
 
             if (signatureEmpty) {
                 showFieldError('signatureError', 'لطفاً امضای خود را در کادر بالا ثبت کنید.');
@@ -1912,10 +2020,12 @@
 
             $.post('{{ route("technician.register.sign-contract") }}', {
                 mobile: currentMobile,
-                signature: signatureData
+                signature: signatureData,
+                code: code
             })
             .done(function(res) {
                 if (res.success) {
+                    if (contractOtpInterval) clearInterval(contractOtpInterval);
                     goToPhase('L');
                 } else {
                     showFieldError('signatureError', res.message);
