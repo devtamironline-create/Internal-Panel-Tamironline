@@ -41,25 +41,78 @@
     </div>
     @endif
 
+    {{-- دلیل رد --}}
+    @if($registration->status === 'rejected' && $registration->rejection_reason)
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            <div>
+                <h3 class="text-sm font-bold text-red-700">دلیل رد درخواست</h3>
+                <p class="text-sm text-red-600 mt-1">{{ $registration->rejection_reason }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- تغییر وضعیت --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{ showRejectForm: false }">
         <h2 class="text-sm font-bold text-gray-800 mb-3">تغییر وضعیت</h2>
+
+        @if($errors->has('rejection_reason'))
+        <div class="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs mb-3">
+            {{ $errors->first('rejection_reason') }}
+        </div>
+        @endif
+
         <div class="flex gap-2">
-            @foreach(['pending' => 'در انتظار بررسی', 'approved' => 'تایید', 'rejected' => 'رد'] as $status => $label)
-                @if($registration->status !== $status)
-                <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="status" value="{{ $status }}">
-                    <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                        {{ $status === 'approved' ? 'bg-green-100 text-green-700 hover:bg-green-200' : '' }}
-                        {{ $status === 'rejected' ? 'bg-red-100 text-red-700 hover:bg-red-200' : '' }}
-                        {{ $status === 'pending' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : '' }}">
-                        {{ $label }}
+            @if($registration->status !== 'pending')
+            <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="pending">
+                <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200">
+                    در انتظار بررسی
+                </button>
+            </form>
+            @endif
+
+            @if($registration->status !== 'approved')
+            <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="approved">
+                <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200">
+                    تایید
+                </button>
+            </form>
+            @endif
+
+            @if($registration->status !== 'rejected')
+            <button @click="showRejectForm = !showRejectForm" type="button"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200">
+                رد
+            </button>
+            @endif
+        </div>
+
+        {{-- فرم دلیل رد --}}
+        <div x-show="showRejectForm" x-transition class="mt-4 pt-4 border-t border-gray-100">
+            <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="rejected">
+                <label class="block text-xs font-semibold text-gray-600 mb-1.5">دلیل رد درخواست:</label>
+                <textarea name="rejection_reason" rows="3" required placeholder="دلیل رد درخواست را وارد کنید..."
+                          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none resize-none">{{ old('rejection_reason') }}</textarea>
+                <div class="flex gap-2 mt-3">
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                        تایید رد درخواست
                     </button>
-                </form>
-                @endif
-            @endforeach
+                    <button @click="showRejectForm = false" type="button" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                        انصراف
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

@@ -231,11 +231,23 @@ class TechnicianAdminController extends Controller
         $this->checkAccess();
 
         $request->validate([
-            'status' => ['required', 'in:pending,approved,rejected'],
+            'status'           => ['required', 'in:pending,approved,rejected'],
+            'rejection_reason' => ['nullable', 'required_if:status,rejected', 'string', 'max:1000'],
+        ], [
+            'rejection_reason.required_if' => 'لطفاً دلیل رد درخواست را وارد کنید.',
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
-        $registration->update(['status' => $request->status]);
+
+        $data = ['status' => $request->status];
+
+        if ($request->status === 'rejected') {
+            $data['rejection_reason'] = $request->rejection_reason;
+        } else {
+            $data['rejection_reason'] = null;
+        }
+
+        $registration->update($data);
 
         $statusLabels = ['pending' => 'در انتظار بررسی', 'approved' => 'تایید شده', 'rejected' => 'رد شده'];
 

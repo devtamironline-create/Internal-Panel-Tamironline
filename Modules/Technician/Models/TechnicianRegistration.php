@@ -51,6 +51,7 @@ class TechnicianRegistration extends Model
         'additional_notes',
         'current_step',
         'status',
+        'rejection_reason',
     ];
 
     protected $casts = [
