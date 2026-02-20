@@ -273,91 +273,6 @@
                 </div>
             </div>
 
-            {{-- ===== فاز C2: احراز هویت ویدیویی ===== --}}
-            <div id="phaseC2" class="phase">
-                <div class="mb-5">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <span class="text-xs text-green-600 font-bold">اطلاعات هویتی تایید شد</span>
-                    </div>
-                    <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
-                    <p class="text-xs text-gray-400 mt-1">جهت تایید هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
-                </div>
-
-                <div class="space-y-4">
-                    {{-- سریال کارت ملی --}}
-                    <div>
-                        <label for="national_card_serial" class="block text-sm font-semibold text-gray-600 mb-1.5">سریال پشت کارت ملی</label>
-                        <input type="text" id="national_card_serial" placeholder="مثال: 1A2345678B" maxlength="10" dir="ltr"
-                               class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
-                        <p class="text-xs text-gray-400 mt-1">سریال ۱۰ رقمی پشت کارت ملی هوشمند</p>
-                        <p id="cardSerialError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
-                    </div>
-
-                    {{-- پیش‌نمایش دوربین --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">ضبط ویدیو سلفی</label>
-                        <div class="relative bg-black rounded-xl overflow-hidden" style="aspect-ratio: 4/3;">
-                            <video id="biometricPreview" autoplay playsinline muted class="w-full h-full object-cover" style="transform: scaleX(-1);"></video>
-                            <div id="biometricOverlay" class="absolute inset-0 flex items-center justify-center">
-                                <div class="border-2 border-dashed border-white/40 rounded-full" style="width: 65%; height: 80%;"></div>
-                            </div>
-                            {{-- شمارنده --}}
-                            <div id="biometricCountdown" class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg hidden">
-                                <span id="biometricTimer">00:00</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span>صورت خود را در کادر بیضی قرار دهید. نور کافی و پس‌زمینه ساده داشته باشید.</span>
-                        </div>
-                    </div>
-
-                    {{-- دکمه‌ها --}}
-                    <div id="biometricActions">
-                        <button type="button" id="btnStartRecord" onclick="startBiometricRecording()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
-                            شروع ضبط ویدیو
-                        </button>
-                        <button type="button" id="btnStopRecord" onclick="stopBiometricRecording()" class="hidden w-full py-3 bg-gray-700 hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                            توقف ضبط
-                        </button>
-                        <button type="button" id="btnSubmitBiometric" onclick="submitBiometric()" class="hidden w-full py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors mt-2">
-                            ارسال ویدیو و تایید هویت
-                        </button>
-                        <button type="button" id="btnRetryBiometric" onclick="retryBiometricRecording()" class="hidden w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors mt-2">
-                            ضبط مجدد
-                        </button>
-                    </div>
-
-                    <p id="biometricError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
-
-                    {{-- وضعیت بررسی --}}
-                    <div id="biometricPendingBox" class="hidden">
-                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                            <div class="animate-spin w-8 h-8 border-3 border-blue-300 border-t-blue-600 rounded-full mx-auto mb-3"></div>
-                            <p class="text-sm font-bold text-blue-700 mb-1">در حال بررسی...</p>
-                            <p class="text-xs text-gray-500">ویدیوی شما در حال پردازش است. لطفاً صبر کنید.</p>
-                        </div>
-                    </div>
-
-                    {{-- رد شده --}}
-                    <div id="biometricRejectedBox" class="hidden">
-                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-                            <svg class="w-8 h-8 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                            <p class="text-sm font-bold text-red-700 mb-1">احراز هویت رد شد</p>
-                            <p id="biometricRejectReason" class="text-xs text-gray-600 mb-3"></p>
-                            <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors">
-                                تلاش مجدد
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {{-- ===== فاز D: اطلاعات شخصی (مرحله ۲) ===== --}}
             <div id="phaseD" class="phase">
                 <div class="mb-5">
@@ -1080,20 +995,120 @@
                 </div>
             </div>
 
-            {{-- ===== فاز L: تکمیل قرارداد ===== --}}
+            {{-- ===== فاز L: قرارداد امضا شد → ادامه به بایومتریک ===== --}}
             <div id="phaseL" class="phase">
+                <div class="text-center py-6">
+                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-green-700 mb-2">قرارداد با موفقیت امضا شد!</h2>
+                    <p class="text-sm text-gray-500 mb-4">
+                        برای تکمیل نهایی فرآیند، مرحله احراز هویت ویدیویی باقی‌مانده است.
+                    </p>
+                    <button onclick="goToPhase('C2'); initBiometricCamera();" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ادامه: احراز هویت ویدیویی
+                    </button>
+                </div>
+            </div>
+
+            {{-- ===== فاز C2: احراز هویت ویدیویی ===== --}}
+            <div id="phaseC2" class="phase">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-xs text-green-600 font-bold">قرارداد امضا شد</span>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
+                    <p class="text-xs text-gray-400 mt-1">جهت تایید نهایی هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
+                </div>
+
+                <div class="space-y-4">
+                    {{-- سریال کارت ملی --}}
+                    <div>
+                        <label for="national_card_serial" class="block text-sm font-semibold text-gray-600 mb-1.5">سریال پشت کارت ملی</label>
+                        <input type="text" id="national_card_serial" placeholder="مثال: 1A2345678B" maxlength="10" dir="ltr"
+                               class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
+                        <p class="text-xs text-gray-400 mt-1">سریال ۱۰ رقمی پشت کارت ملی هوشمند</p>
+                        <p id="cardSerialError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
+                    {{-- پیش‌نمایش دوربین --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">ضبط ویدیو سلفی</label>
+                        <div class="relative bg-black rounded-xl overflow-hidden" style="aspect-ratio: 4/3;">
+                            <video id="biometricPreview" autoplay playsinline muted class="w-full h-full object-cover" style="transform: scaleX(-1);"></video>
+                            <div id="biometricOverlay" class="absolute inset-0 flex items-center justify-center">
+                                <div class="border-2 border-dashed border-white/40 rounded-full" style="width: 65%; height: 80%;"></div>
+                            </div>
+                            <div id="biometricCountdown" class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg hidden">
+                                <span id="biometricTimer">00:00</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>صورت خود را در کادر بیضی قرار دهید. نور کافی و پس‌زمینه ساده داشته باشید.</span>
+                        </div>
+                    </div>
+
+                    {{-- دکمه‌ها --}}
+                    <div id="biometricActions">
+                        <button type="button" id="btnStartRecord" onclick="startBiometricRecording()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                            شروع ضبط ویدیو
+                        </button>
+                        <button type="button" id="btnStopRecord" onclick="stopBiometricRecording()" class="hidden w-full py-3 bg-gray-700 hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            توقف ضبط
+                        </button>
+                        <button type="button" id="btnSubmitBiometric" onclick="submitBiometric()" class="hidden w-full py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors mt-2">
+                            ارسال ویدیو و تایید هویت
+                        </button>
+                        <button type="button" id="btnRetryBiometric" onclick="retryBiometricRecording()" class="hidden w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors mt-2">
+                            ضبط مجدد
+                        </button>
+                    </div>
+
+                    <p id="biometricError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+
+                    {{-- وضعیت بررسی --}}
+                    <div id="biometricPendingBox" class="hidden">
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                            <div class="animate-spin w-8 h-8 border-3 border-blue-300 border-t-blue-600 rounded-full mx-auto mb-3"></div>
+                            <p class="text-sm font-bold text-blue-700 mb-1">در حال بررسی...</p>
+                            <p class="text-xs text-gray-500">ویدیوی شما در حال پردازش است. لطفاً صبر کنید.</p>
+                        </div>
+                    </div>
+
+                    {{-- رد شده --}}
+                    <div id="biometricRejectedBox" class="hidden">
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                            <svg class="w-8 h-8 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                            <p class="text-sm font-bold text-red-700 mb-1">احراز هویت رد شد</p>
+                            <p id="biometricRejectReason" class="text-xs text-gray-600 mb-3"></p>
+                            <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors">
+                                تلاش مجدد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ===== فاز M: تکمیل نهایی ===== --}}
+            <div id="phaseM" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">قرارداد با موفقیت امضا شد!</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">فرآیند با موفقیت تکمیل شد!</h2>
                     <p class="text-sm text-gray-500 mb-3">
                         از همکاری شما سپاسگزاریم. اطلاعات تکمیلی از طریق پیامک ارسال خواهد شد.
                     </p>
                     <div class="bg-green-50 border border-green-100 rounded-xl p-4 mx-4 mt-4">
-                        <p class="text-sm text-green-700 font-semibold mb-1">فرآیند تکمیل شد</p>
+                        <p class="text-sm text-green-700 font-semibold mb-1">همه مراحل تکمیل شد</p>
                         <p class="text-xs text-gray-500 leading-relaxed">
-                            قرارداد همکاری شما ثبت شد. تیم ما به زودی با شما تماس خواهد گرفت.
+                            قرارداد و احراز هویت ویدیویی شما ثبت شد. تیم ما به زودی با شما تماس خواهد گرفت.
                         </p>
                     </div>
                 </div>
@@ -1299,9 +1314,20 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // بررسی وضعیت تایید و قرارداد
-                            if (res.resume.status === 'approved' && res.resume.contract_signed) {
-                                goToPhase('L');
+                            // بررسی وضعیت تایید، قرارداد و بایومتریک
+                            if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.biometric_status === 'verified') {
+                                goToPhase('M');
+                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
+                                // قرارداد امضا شده ولی بایومتریک انجام نشده
+                                if (res.resume.biometric_status === 'pending') {
+                                    goToPhase('C2');
+                                    initBiometricCamera();
+                                    showBiometricPending();
+                                    startBiometricPolling();
+                                } else {
+                                    goToPhase('C2');
+                                    initBiometricCamera();
+                                }
                             } else if (res.resume.status === 'approved') {
                                 $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 goToPhase('J');
@@ -1321,41 +1347,30 @@
                             } else if (res.resume.current_step >= 3) {
                                 goToPhase('E');
                             } else {
-                                // بررسی وضعیت احراز هویت ویدیویی
-                                if (res.resume.biometric_status !== 'verified') {
-                                    goToPhase('C2');
-                                    initBiometricCamera();
-                                    // اگر pending هست، شروع polling
-                                    if (res.resume.biometric_status === 'pending') {
-                                        showBiometricPending();
-                                        startBiometricPolling();
-                                    }
-                                } else {
-                                    // بایومتریک تایید شده، برو مرحله ۲
-                                    if (res.resume.shenasname_number) {
-                                        $('#shenasname_number').val(res.resume.shenasname_number);
-                                    }
-                                    if (res.resume.gender) {
-                                        $('#gender').val(res.resume.gender);
-                                    }
-                                    if (res.resume.marital_status) {
-                                        $('#marital_status').val(res.resume.marital_status);
-                                        toggleChildrenCount();
-                                        if (res.resume.marital_status === 'married' && res.resume.children_count !== null) {
-                                            $('#children_count').val(res.resume.children_count);
-                                        }
-                                    }
-                                    if (res.resume.province) {
-                                        initProvinceDropdown();
-                                        $('#province').val(res.resume.province).trigger('change');
-                                        setTimeout(function() {
-                                            if (res.resume.city) {
-                                                $('#city').val(res.resume.city);
-                                            }
-                                        }, 100);
-                                    }
-                                    goToPhase('D');
+                                // مرحله ۲ هنوز تکمیل نشده، فیلدها رو پر کن
+                                if (res.resume.shenasname_number) {
+                                    $('#shenasname_number').val(res.resume.shenasname_number);
                                 }
+                                if (res.resume.gender) {
+                                    $('#gender').val(res.resume.gender);
+                                }
+                                if (res.resume.marital_status) {
+                                    $('#marital_status').val(res.resume.marital_status);
+                                    toggleChildrenCount();
+                                    if (res.resume.marital_status === 'married' && res.resume.children_count !== null) {
+                                        $('#children_count').val(res.resume.children_count);
+                                    }
+                                }
+                                if (res.resume.province) {
+                                    initProvinceDropdown();
+                                    $('#province').val(res.resume.province).trigger('change');
+                                    setTimeout(function() {
+                                        if (res.resume.city) {
+                                            $('#city').val(res.resume.city);
+                                        }
+                                    }, 100);
+                                }
+                                goToPhase('D');
                             }
                         } else {
                             // کاربر جدید: برو مرحله احراز هویت
@@ -1427,8 +1442,7 @@
                     $('#step2FatherName').val(verifiedFatherName);
                     $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
-                    goToPhase('C2');
-                    initBiometricCamera();
+                    goToPhase('D');
                 } else {
                     if (res.field) showFieldError(res.field === 'national_code' ? 'nationalCodeError' : 'birthDateError', res.message);
                     else showAlert(res.message, 'error');
@@ -1620,8 +1634,8 @@
                         if (res.status === 'verified') {
                             clearInterval(biometricPollInterval);
                             stopBiometricCamera();
-                            // رفتن به مرحله بعد
-                            goToPhase('D');
+                            // رفتن به صفحه تکمیل نهایی
+                            goToPhase('M');
                         } else if (res.status === 'rejected') {
                             clearInterval(biometricPollInterval);
                             $('#biometricPendingBox').addClass('hidden');
