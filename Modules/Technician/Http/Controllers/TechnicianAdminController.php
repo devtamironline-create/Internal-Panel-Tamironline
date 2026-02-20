@@ -277,24 +277,34 @@ class TechnicianAdminController extends Controller
 
         $data = ['current_step' => $request->current_step];
 
-        // اگر مرحله به قبل از مدارک برگشت، مدارک ریست شود
+        // ست کردن فلگ‌های پیش‌نیاز بر اساس مرحله جدید (جلو بردن)
+        if ($request->current_step >= 6) {
+            $data['status'] = $registration->status === 'rejected' ? 'approved' : $registration->status;
+            if ($registration->status === 'pending') {
+                $data['status'] = 'approved';
+            }
+        }
+        if ($request->current_step >= 8 && $registration->biometric_status !== 'verified') {
+            // مرحله ۸ (قرارداد) به بالا = بایومتریک تایید شده
+            $data['biometric_status'] = 'verified';
+        }
+        if ($request->current_step >= 9 && !$registration->contract_signed_at) {
+            // مرحله ۹ (مدارک) = قرارداد امضا شده
+            $data['contract_signed_at'] = now();
+        }
+
+        // ریست کردن فلگ‌ها در صورت برگشت به مرحله قبلی
         if ($request->current_step < 9) {
             $data['documents_uploaded'] = false;
         }
-
-        // اگر مرحله به قبل از قرارداد برگشت، وضعیت قرارداد ریست شود
         if ($request->current_step < 8) {
             $data['contract_signed_at'] = null;
             $data['contract_signature'] = null;
         }
-
-        // اگر مرحله به قبل از بایومتریک برگشت، بایومتریک ریست شود
         if ($request->current_step < 7) {
             $data['biometric_status'] = null;
             $data['biometric_reject_reason'] = null;
         }
-
-        // اگر مرحله به قبل از تایید برگشت، وضعیت ریست شود
         if ($request->current_step < 6) {
             $data['status'] = 'pending';
             $data['rejection_reason'] = null;
@@ -309,7 +319,9 @@ class TechnicianAdminController extends Controller
             4 => 'حوزه فعالیت',
             5 => 'مناطق تحت پوشش',
             6 => 'تکمیل (منتظر بررسی)',
-            7 => 'امضای قرارداد',
+            7 => 'احراز هویت ویدیویی',
+            8 => 'امضای قرارداد',
+            9 => 'آپلود مدارک',
         ];
 
         return redirect()->route('technician.admin.registrations.show', $id)
