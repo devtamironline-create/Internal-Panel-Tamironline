@@ -236,9 +236,10 @@ class LeaveRequest extends Model
         $employeeSettings = EmployeeSetting::getOrCreate($this->user_id);
 
         if ($this->leaveType->slug === 'annual' || $this->leaveType->slug === 'hourly') {
-            // Convert hours to days if hourly (8 hours = 1 day)
+            $salarySettings = \Modules\Salary\Models\SalarySetting::get();
+            $dailyHours = $salarySettings->daily_work_hours ?? 8;
             $daysToDeduct = $this->leaveType->is_hourly
-                ? $this->hours_count / 8
+                ? $this->hours_count / $dailyHours
                 : $this->days_count;
 
             $employeeSettings->decrement('annual_leave_balance', $daysToDeduct);
