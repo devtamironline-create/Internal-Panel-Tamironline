@@ -34,6 +34,7 @@ class User extends Authenticatable
         'is_active',
         'is_staff',
         'can_add_group_members',
+        'warehouse_role',
         'last_login_at',
         'last_login_ip',
     ];
