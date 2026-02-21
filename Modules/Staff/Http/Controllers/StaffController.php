@@ -97,7 +97,12 @@ class StaffController extends Controller
 
         // Convert Jalali birth_date to Gregorian
         if (!empty($validated['birth_date'])) {
-            $userData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $validated['birth_date'])->toCarbon();
+            try {
+                $birthDateStr = $this->persianToLatin($validated['birth_date']);
+                $userData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $birthDateStr)->toCarbon();
+            } catch (\Exception $e) {
+                // تاریخ نامعتبر - ذخیره نمی‌شود
+            }
         }
 
         // Handle avatar upload
@@ -153,7 +158,14 @@ class StaffController extends Controller
 
         // Convert Jalali birth_date to Gregorian
         if (!empty($validated['birth_date'])) {
-            $updateData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $validated['birth_date'])->toCarbon();
+            try {
+                $birthDateStr = $this->persianToLatin($validated['birth_date']);
+                $updateData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $birthDateStr)->toCarbon();
+            } catch (\Exception $e) {
+                $updateData['birth_date'] = null;
+            }
+        } else {
+            $updateData['birth_date'] = null;
         }
 
         // Handle avatar upload
@@ -195,5 +207,17 @@ class StaffController extends Controller
         }
         $staff->update(['is_active' => !$staff->is_active]);
         return back()->with('success', 'وضعیت تغییر کرد');
+    }
+
+    protected function persianToLatin(string $string): string
+    {
+        $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        $latin = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        $string = str_replace($persian, $latin, $string);
+        $string = str_replace($arabic, $latin, $string);
+
+        return $string;
     }
 }
