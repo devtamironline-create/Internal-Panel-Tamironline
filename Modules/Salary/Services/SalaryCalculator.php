@@ -305,16 +305,36 @@ class SalaryCalculator
         $startDate = Jalalian::fromFormat('Y/m/d', $this->year . '/' . $this->month . '/01')->toCarbon();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $leaves = LeaveRequest::where('user_id', $this->user->id)
+        $leaves = LeaveRequest::with('leaveType')
+            ->where('user_id', $this->user->id)
             ->where('status', LeaveRequest::STATUS_APPROVED)
             ->where(function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate]);
+                    ->orWhereBetween('end_date', [$startDate, $endDate])
+                    ->orWhere(function ($q) use ($startDate, $endDate) {
+                        $q->where('start_date', '<', $startDate)
+                            ->where('end_date', '>', $endDate);
+                    });
             })
             ->get();
 
-        $leaveDays = $leaves->sum('days_count');
-        $leaveHours = $leaves->sum('hours_count');
+        // شمارش روز به روز برای محاسبه دقیق مرخصی‌های بین‌ماهی
+        $leaveDays = 0;
+        $leaveHours = 0;
+
+        foreach ($leaves as $leave) {
+            if ($leave->leaveType && $leave->leaveType->is_hourly) {
+                $leaveHours += (float) $leave->hours_count;
+            } else {
+                $current = $leave->start_date->copy();
+                while ($current <= $leave->end_date) {
+                    if ($current->between($startDate, $endDate)) {
+                        $leaveDays++;
+                    }
+                    $current->addDay();
+                }
+            }
+        }
 
         // Convert to minutes
         $leaveMinutes = ($leaveDays * $this->settings->daily_work_hours * 60) + ($leaveHours * 60);
