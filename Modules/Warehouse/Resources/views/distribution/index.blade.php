@@ -3,6 +3,7 @@
 @section('main')
 @php
     $isReady = \Modules\Warehouse\Models\StaffReadiness::isUserReadyToday(auth()->id());
+    $isEligibleOperator = \Modules\Warehouse\Http\Controllers\StaffDistributionController::isEligibleOperator(auth()->id());
 @endphp
 <div class="space-y-6">
     <!-- Header -->
@@ -17,6 +18,7 @@
     </div>
 
     <!-- دکمه آماده‌ام / نیستم -->
+    @if($isEligibleOperator)
     <div class="bg-white rounded-xl shadow-sm p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -54,8 +56,60 @@
             </form>
         </div>
     </div>
+    @else
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div class="flex items-center gap-3 text-amber-800">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            <p class="text-sm font-medium">شما به عنوان مسئول پردازش سفارشات انتخاب نشده‌اید. با مدیر سیستم تماس بگیرید.</p>
+        </div>
+    </div>
+    @endif
 
     @canany(['manage-warehouse', 'manage-permissions'])
+    <!-- انتخاب مسئولین پردازش سفارشات -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-900">مسئولین پردازش سفارشات</h2>
+            <p class="text-sm text-gray-500 mt-1">مشخص کنید کدام اپراتورها مجاز به دریافت و پردازش سفارشات هستند.</p>
+        </div>
+
+        <form action="{{ route('warehouse.distribution.update-eligible-users') }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            @if($warehouseStaff->isEmpty())
+                <div class="text-center py-6 text-gray-500">
+                    <p>هیچ کاربر فعالی با دسترسی انبار یافت نشد.</p>
+                </div>
+            @else
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                    @foreach($warehouseStaff as $staff)
+                        @php
+                            $isStaffEligible = empty($eligibleUserIds) || in_array($staff->id, $eligibleUserIds);
+                        @endphp
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors {{ $isStaffEligible ? 'border-brand-300 bg-brand-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                            <input type="checkbox" name="eligible_users[]" value="{{ $staff->id }}" {{ $isStaffEligible ? 'checked' : '' }}
+                                   class="rounded text-brand-600 focus:ring-brand-500">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-xs text-gray-600">
+                                    {{ $staff->initials ?? mb_substr($staff->full_name ?? $staff->name, 0, 2) }}
+                                </div>
+                                <span class="font-medium text-gray-900 truncate">{{ $staff->full_name ?? $staff->name }}</span>
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-400">اگر هیچ‌کس انتخاب نشده باشد، همه اپراتورها مجاز خواهند بود.</p>
+                    <button type="submit" class="px-5 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium">
+                        ذخیره مسئولین
+                    </button>
+                </div>
+            @endif
+        </form>
+    </div>
+
     <!-- وضعیت مسئولین انبار -->
     <div class="bg-white rounded-xl shadow-sm p-6">
         <div class="flex items-center justify-between mb-4">

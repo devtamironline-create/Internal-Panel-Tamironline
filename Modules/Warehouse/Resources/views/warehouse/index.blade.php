@@ -14,8 +14,8 @@
             <h1 class="text-xl font-bold text-gray-900">لیست سفارشات</h1>
         </div>
         <div class="flex items-center gap-3">
-            <!-- دکمه آماده‌ام -->
-            @if($distributionActive || ($isReadyToday ?? false))
+            <!-- دکمه آماده‌ام (فقط اپراتورهای مجاز) -->
+            @if(($distributionActive || ($isReadyToday ?? false)) && ($isEligibleOperator ?? false))
             <form action="{{ route('warehouse.distribution.toggle-readiness') }}" method="POST" class="inline">
                 @csrf
                 @if($isReadyToday ?? false)

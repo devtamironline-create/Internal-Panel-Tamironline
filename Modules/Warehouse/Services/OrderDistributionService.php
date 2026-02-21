@@ -26,8 +26,14 @@ class OrderDistributionService
     {
         $readyUserIds = StaffReadiness::todayReadyUserIds();
 
+        // فقط اپراتورهای مجاز (اگه تنظیم شده باشه)
+        $eligibleIds = \Modules\Warehouse\Http\Controllers\StaffDistributionController::getEligibleOperatorIds();
+        if (!empty($eligibleIds)) {
+            $readyUserIds = array_values(array_intersect($readyUserIds, $eligibleIds));
+        }
+
         if (empty($readyUserIds)) {
-            return ['success' => false, 'message' => 'هیچ مسئول انباری امروز آماده نیست.'];
+            return ['success' => false, 'message' => 'هیچ مسئول مجازی امروز آماده نیست.'];
         }
 
         // سفارشات pending که هنوز تخصیص نشدن

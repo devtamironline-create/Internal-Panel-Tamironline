@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseBoxSize;
+use Modules\Warehouse\Http\Controllers\StaffDistributionController;
 use Modules\Warehouse\Models\OrderAssignment;
 use Modules\Warehouse\Models\StaffReadiness;
 use Modules\Warehouse\Models\WarehouseOrder;
@@ -84,6 +85,7 @@ class WarehouseController extends Controller
         $distributionActive = count(StaffReadiness::todayReadyUserIds()) > 0;
         $isAdmin = auth()->user()->can('manage-warehouse') || auth()->user()->can('manage-permissions');
         $isReadyToday = StaffReadiness::isUserReadyToday(auth()->id());
+        $isEligibleOperator = StaffDistributionController::isEligibleOperator(auth()->id());
 
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
         if (!empty($search)) {
@@ -155,7 +157,7 @@ class WarehouseController extends Controller
         return view('warehouse::warehouse.index', compact(
             'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search',
             'shippingTypes', 'shippingFilter', 'paymentMethods', 'paymentFilter', 'boxSizes',
-            'distributionActive', 'isAdmin', 'isReadyToday',
+            'distributionActive', 'isAdmin', 'isReadyToday', 'isEligibleOperator',
         ));
     }
 
