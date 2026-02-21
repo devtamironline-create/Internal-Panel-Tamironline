@@ -23,6 +23,7 @@ class Attendance extends Model
         'lunch_start',
         'lunch_end',
         'lunch_minutes',
+        'extra_lunch_minutes',
         'late_minutes',
         'early_leave_minutes',
         'overtime_minutes',
@@ -240,6 +241,7 @@ class Attendance extends Model
         $attendance->update([
             'lunch_end' => $now->format('H:i:s'),
             'lunch_minutes' => $lunchMinutes,
+            'extra_lunch_minutes' => $extraLunchMinutes,
         ]);
 
         return $attendance;
