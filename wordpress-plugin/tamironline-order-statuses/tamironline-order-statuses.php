@@ -41,6 +41,12 @@ class TamirOnline_Order_Statuses {
             'color'       => '#6366f1', // indigo
             'background'  => '#eef2ff',
         ],
+        'wc-delivered' => [
+            'label'       => 'تحویل شده',
+            'label_count' => 'تحویل شده <span class="count">(%s)</span>',
+            'color'       => '#10b981', // emerald
+            'background'  => '#ecfdf5',
+        ],
         'wc-returned' => [
             'label'       => 'مرجوعی',
             'label_count' => 'مرجوعی <span class="count">(%s)</span>',
@@ -57,7 +63,7 @@ class TamirOnline_Order_Statuses {
         'supply_wait' => 'supply-wait',
         'packed'      => 'packed',
         'shipped'     => 'shipped',
-        'delivered'   => 'completed',
+        'delivered'   => 'delivered',
         'returned'    => 'returned',
     ];
 
@@ -106,13 +112,19 @@ class TamirOnline_Order_Statuses {
         $new_statuses = [];
 
         foreach ($statuses as $key => $label) {
-            $new_statuses[$key] = $label;
+            // تغییر لیبل "در حال انجام" به "در حال پردازش"
+            if ($key === 'wc-processing') {
+                $new_statuses[$key] = 'در حال پردازش';
+            } else {
+                $new_statuses[$key] = $label;
+            }
 
             // بعد از processing وضعیت‌های جدید رو اضافه کن
             if ($key === 'wc-processing') {
                 $new_statuses['wc-supply-wait'] = self::$custom_statuses['wc-supply-wait']['label'];
                 $new_statuses['wc-packed']      = self::$custom_statuses['wc-packed']['label'];
                 $new_statuses['wc-shipped']     = self::$custom_statuses['wc-shipped']['label'];
+                $new_statuses['wc-delivered']   = self::$custom_statuses['wc-delivered']['label'];
             }
         }
 
@@ -212,51 +224,255 @@ class TamirOnline_Order_Statuses {
             }
         ";
 
+        // استایل تب‌ها
+        echo "
+            /* تب‌های فیلتر وضعیت */
+            .tamironline-tabs-wrap {
+                margin-bottom: 14px !important;
+            }
+            .tamironline-tab-buttons {
+                display: flex !important;
+                gap: 0 !important;
+                margin-bottom: 0 !important;
+                border-bottom: 2px solid #e2e8f0 !important;
+            }
+            .tamironline-tab-btn {
+                padding: 10px 20px !important;
+                border: none !important;
+                background: transparent !important;
+                cursor: pointer !important;
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                color: #64748b !important;
+                border-bottom: 2px solid transparent !important;
+                margin-bottom: -2px !important;
+                transition: all 0.2s !important;
+                font-family: Tahoma, sans-serif !important;
+            }
+            .tamironline-tab-btn:hover {
+                color: #334155 !important;
+                background: #f8fafc !important;
+            }
+            .tamironline-tab-btn.active {
+                color: #1e40af !important;
+                border-bottom-color: #1e40af !important;
+                background: #eff6ff !important;
+            }
+            .tamironline-tab-content {
+                background: #fff !important;
+                border: 1px solid #e2e8f0 !important;
+                border-top: none !important;
+                border-radius: 0 0 10px 10px !important;
+                padding: 14px 18px !important;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+            }
+            .tamironline-tab-panel {
+                display: none !important;
+            }
+            .tamironline-tab-panel.active {
+                display: block !important;
+            }
+            .tamironline-tab-panel .subsubsub {
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                width: 100% !important;
+                line-height: 2.4em !important;
+            }
+            .tamironline-dot {
+                display: inline-block !important;
+                width: 10px !important;
+                height: 10px !important;
+                border-radius: 50% !important;
+                margin-left: 6px !important;
+                margin-right: 2px !important;
+                vertical-align: middle !important;
+            }
+        ";
+
         echo '</style>';
 
-        // جاوااسکریپت: استایل مستقیم روی المان‌ها بدون وابستگی به CSS class
+        // JSON داده وضعیت‌ها برای جاوااسکریپت
+        $status_json = wp_json_encode(
+            array_combine(
+                array_map(function($slug) { return str_replace('wc-', '', $slug); }, array_keys(self::$custom_statuses)),
+                array_values(self::$custom_statuses)
+            )
+        );
+
+        // لیست وضعیت‌های اصلی (تب اول)
+        $main_statuses = ['all', 'pending', 'processing', 'on-hold',
+            'supply-wait', 'packed', 'shipped', 'delivered',
+            'completed', 'cancelled', 'refunded', 'failed', 'returned', 'checkout-draft', 'trash'];
+
+        $main_json = wp_json_encode($main_statuses);
+
         echo '<script id="tamironline-order-js">
             document.addEventListener("DOMContentLoaded", function() {
-                var statusMap = ' . wp_json_encode(
-                    array_combine(
-                        array_map(function($slug) { return str_replace('wc-', '', $slug); }, array_keys(self::$custom_statuses)),
-                        array_values(self::$custom_statuses)
-                    )
-                ) . ';
+                var statusMap = ' . $status_json . ';
+                var mainStatuses = ' . $main_json . ';
 
-                // پیدا کردن لینک‌های فیلتر و اضافه کردن نقطه رنگی
-                document.querySelectorAll(".subsubsub li a, .subsubsub a").forEach(function(link) {
+                var subsubsub = document.querySelector(".subsubsub");
+                if (!subsubsub) return;
+
+                // اضافه کردن نقطه رنگی به لینک‌های وضعیت کاستوم
+                subsubsub.querySelectorAll("li a").forEach(function(link) {
                     var href = link.getAttribute("href") || "";
                     var text = link.textContent || "";
 
                     Object.keys(statusMap).forEach(function(status) {
                         var data = statusMap[status];
-                        // چک لینک با چند الگوی مختلف
                         if (href.indexOf("post_status=wc-" + status) !== -1 ||
                             href.indexOf("status=" + status) !== -1 ||
                             href.indexOf("&status=" + status) !== -1 ||
                             text.indexOf(data.label) !== -1) {
 
-                            // نقطه رنگی قبل از متن
                             if (!link.querySelector(".tamironline-dot")) {
                                 var dot = document.createElement("span");
                                 dot.className = "tamironline-dot";
-                                dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:" + data.color + ";margin-left:6px;margin-right:2px;vertical-align:middle;box-shadow:0 0 0 2px " + data.color + "25;";
+                                dot.style.background = data.color;
+                                dot.style.boxShadow = "0 0 0 2px " + data.color + "25";
                                 link.insertBefore(dot, link.firstChild);
                             }
-
-                            // رنگ لینک
                             link.style.color = data.color;
                             link.style.fontWeight = "700";
                         }
                     });
                 });
 
+                // جداسازی آیتم‌ها به دو گروه: اصلی و سایر
+                var allItems = Array.from(subsubsub.querySelectorAll("li"));
+                var mainItems = [];
+                var otherItems = [];
+
+                allItems.forEach(function(li) {
+                    var link = li.querySelector("a");
+                    if (!link) return;
+                    var href = link.getAttribute("href") || "";
+                    var isMain = false;
+
+                    mainStatuses.forEach(function(st) {
+                        if (st === "all" && (href.indexOf("all_posts=1") !== -1 || href.indexOf("post_type=shop_order") !== -1 && href.indexOf("post_status") === -1 && href.indexOf("status=") === -1)) {
+                            isMain = true;
+                        } else if (st === "trash" && href.indexOf("post_status=trash") !== -1) {
+                            isMain = true;
+                        } else if (href.indexOf("post_status=wc-" + st) !== -1 || href.indexOf("status=" + st) !== -1) {
+                            isMain = true;
+                        }
+                    });
+
+                    // اگر لینک current هست و "همه" داره، اصلیه
+                    if (link.classList.contains("current") && link.textContent.indexOf("\u0647\u0645\u0647") !== -1) {
+                        isMain = true;
+                    }
+
+                    if (isMain) {
+                        mainItems.push(li.cloneNode(true));
+                    } else {
+                        otherItems.push(li.cloneNode(true));
+                    }
+                });
+
+                // اگر سایر خالیه، تب نذار
+                if (otherItems.length === 0) {
+                    return;
+                }
+
+                // ساختار تب‌ها
+                var wrap = document.createElement("div");
+                wrap.className = "tamironline-tabs-wrap";
+
+                var btnBar = document.createElement("div");
+                btnBar.className = "tamironline-tab-buttons";
+
+                var btn1 = document.createElement("button");
+                btn1.type = "button";
+                btn1.className = "tamironline-tab-btn active";
+                btn1.textContent = "\u0648\u0636\u0639\u06cc\u062a\u200c\u0647\u0627\u06cc \u0633\u0641\u0627\u0631\u0634";
+
+                var btn2 = document.createElement("button");
+                btn2.type = "button";
+                btn2.className = "tamironline-tab-btn";
+                btn2.textContent = "\u0633\u0627\u06cc\u0631 (" + otherItems.length + ")";
+
+                btnBar.appendChild(btn1);
+                btnBar.appendChild(btn2);
+
+                var content = document.createElement("div");
+                content.className = "tamironline-tab-content";
+
+                // تب ۱: وضعیت‌های اصلی
+                var panel1 = document.createElement("div");
+                panel1.className = "tamironline-tab-panel active";
+                var ul1 = document.createElement("ul");
+                ul1.className = "subsubsub";
+                mainItems.forEach(function(item, i) {
+                    // حذف جداکننده | از آخرین آیتم
+                    if (i === mainItems.length - 1) {
+                        var nodes = item.childNodes;
+                        for (var n = nodes.length - 1; n >= 0; n--) {
+                            if (nodes[n].nodeType === 3 && nodes[n].textContent.indexOf("|") !== -1) {
+                                nodes[n].textContent = nodes[n].textContent.replace("|", "");
+                            }
+                        }
+                    }
+                    ul1.appendChild(item);
+                });
+                panel1.appendChild(ul1);
+
+                // تب ۲: سایر وضعیت‌ها
+                var panel2 = document.createElement("div");
+                panel2.className = "tamironline-tab-panel";
+                var ul2 = document.createElement("ul");
+                ul2.className = "subsubsub";
+                otherItems.forEach(function(item, i) {
+                    if (i === otherItems.length - 1) {
+                        var nodes = item.childNodes;
+                        for (var n = nodes.length - 1; n >= 0; n--) {
+                            if (nodes[n].nodeType === 3 && nodes[n].textContent.indexOf("|") !== -1) {
+                                nodes[n].textContent = nodes[n].textContent.replace("|", "");
+                            }
+                        }
+                    }
+                    ul2.appendChild(item);
+                });
+                panel2.appendChild(ul2);
+
+                content.appendChild(panel1);
+                content.appendChild(panel2);
+                wrap.appendChild(btnBar);
+                wrap.appendChild(content);
+
+                // جایگزین کردن subsubsub قبلی
+                subsubsub.parentNode.insertBefore(wrap, subsubsub);
+                subsubsub.style.display = "none";
+
+                // تغییر تب
+                btn1.addEventListener("click", function() {
+                    btn1.classList.add("active");
+                    btn2.classList.remove("active");
+                    panel1.classList.add("active");
+                    panel2.classList.remove("active");
+                });
+                btn2.addEventListener("click", function() {
+                    btn2.classList.add("active");
+                    btn1.classList.remove("active");
+                    panel2.classList.add("active");
+                    panel1.classList.remove("active");
+                });
+
+                // اگه وضعیت فعال تو تب سایر هست، اون تب رو فعال کن
+                if (panel2.querySelector("a.current")) {
+                    btn2.click();
+                }
+
                 // استایل بج‌های وضعیت در جدول
-                document.querySelectorAll("mark, span, td").forEach(function(el) {
+                document.querySelectorAll("mark.order-status").forEach(function(el) {
                     var cls = el.className || "";
                     Object.keys(statusMap).forEach(function(status) {
-                        if (cls.indexOf(status) !== -1 || cls.indexOf("status-" + status) !== -1) {
+                        if (cls.indexOf("status-" + status) !== -1) {
                             var data = statusMap[status];
                             el.style.cssText += "background:" + data.background + " !important;color:" + data.color + " !important;font-weight:700 !important;border-radius:5px !important;padding:4px 12px !important;border:1px solid " + data.color + "40 !important;";
                         }
@@ -672,13 +888,15 @@ class TamirOnline_Order_Statuses {
                 <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;">
                     <h3 style="margin: 0 0 12px; font-size: 14px; color: #374151;">مسیر تغییر وضعیت سفارش:</h3>
                     <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; direction: ltr; font-size: 13px;">
-                        <span style="background: #dbeafe; color: #1d4ed8; padding: 6px 14px; border-radius: 6px; font-weight: 700;">در حال انجام</span>
+                        <span style="background: #dbeafe; color: #1d4ed8; padding: 6px 14px; border-radius: 6px; font-weight: 700;">در حال پردازش</span>
                         <span style="color: #9ca3af; font-size: 18px;">&#8594;</span>
                         <span style="background: <?php echo self::$custom_statuses['wc-supply-wait']['background']; ?>; color: <?php echo self::$custom_statuses['wc-supply-wait']['color']; ?>; padding: 6px 14px; border-radius: 6px; font-weight: 700; border: 1px solid <?php echo self::$custom_statuses['wc-supply-wait']['color']; ?>30;"><?php echo self::$custom_statuses['wc-supply-wait']['label']; ?></span>
                         <span style="color: #9ca3af; font-size: 18px;">&#8594;</span>
                         <span style="background: <?php echo self::$custom_statuses['wc-packed']['background']; ?>; color: <?php echo self::$custom_statuses['wc-packed']['color']; ?>; padding: 6px 14px; border-radius: 6px; font-weight: 700; border: 1px solid <?php echo self::$custom_statuses['wc-packed']['color']; ?>30;"><?php echo self::$custom_statuses['wc-packed']['label']; ?></span>
                         <span style="color: #9ca3af; font-size: 18px;">&#8594;</span>
                         <span style="background: <?php echo self::$custom_statuses['wc-shipped']['background']; ?>; color: <?php echo self::$custom_statuses['wc-shipped']['color']; ?>; padding: 6px 14px; border-radius: 6px; font-weight: 700; border: 1px solid <?php echo self::$custom_statuses['wc-shipped']['color']; ?>30;"><?php echo self::$custom_statuses['wc-shipped']['label']; ?></span>
+                        <span style="color: #9ca3af; font-size: 18px;">&#8594;</span>
+                        <span style="background: <?php echo self::$custom_statuses['wc-delivered']['background']; ?>; color: <?php echo self::$custom_statuses['wc-delivered']['color']; ?>; padding: 6px 14px; border-radius: 6px; font-weight: 700; border: 1px solid <?php echo self::$custom_statuses['wc-delivered']['color']; ?>30;"><?php echo self::$custom_statuses['wc-delivered']['label']; ?></span>
                         <span style="color: #9ca3af; font-size: 18px;">&#8594;</span>
                         <span style="background: #dcfce7; color: #16a34a; padding: 6px 14px; border-radius: 6px; font-weight: 700;">تکمیل شده</span>
                     </div>
