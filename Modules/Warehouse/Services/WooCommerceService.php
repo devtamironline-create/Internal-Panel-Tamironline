@@ -470,7 +470,7 @@ class WooCommerceService
         'supply_wait' => 'supply-wait',
         'packed'      => 'packed',
         'shipped'     => 'shipped',
-        'delivered'   => 'completed',
+        'delivered'   => 'delivered',
         'returned'    => 'returned',
     ];
 
@@ -488,6 +488,7 @@ class WooCommerceService
         'supply-wait' => 'در انتظار تامین',
         'packed'      => 'در صف ارسال (اسکن)',
         'shipped'     => 'ارسال شده',
+        'delivered'   => 'تحویل شده',
         'returned'    => 'مرجوعی',
     ];
 
