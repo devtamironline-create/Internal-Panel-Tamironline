@@ -191,11 +191,13 @@ class SalaryCalculator
         $housingAllowance = $this->settings->getDailyHousingAllowance() * $workDays;
         $foodAllowance = $this->settings->getDailyFoodAllowance() * $workDays;
         $marriageAllowance = $isMarried ? ($this->settings->getDailyMarriageAllowance() * $workDays) : 0;
+        $seniorityDaily = $this->settings->seniority_daily_rate * $seniorityYears;
+        $seniorityMonthly = $seniorityDaily * $workDays;
         $childAllowance = $this->settings->getDailyChildAllowance() * $workDays * $childrenCount;
 
         $totalBenefits = $fixedInsuranceSalary + $housingAllowance + $foodAllowance +
-            $marriageAllowance + $childAllowance;
-        $totalInsuranceBase = $totalBenefits - $childAllowance;
+            $marriageAllowance + $seniorityDaily + $seniorityMonthly + $childAllowance;
+        $totalInsuranceBase = $totalBenefits - $seniorityMonthly - $childAllowance;
 
         // مابه‌التفاوت
         $monthlyNonInsurance = ($dailyAgreedWage - $dailyInsuranceWage) * $workDays;
@@ -234,6 +236,8 @@ class SalaryCalculator
             'housing_allowance' => round($housingAllowance),
             'food_allowance' => round($foodAllowance),
             'marriage_allowance' => round($marriageAllowance),
+            'seniority_daily' => round($seniorityDaily),
+            'seniority_monthly' => round($seniorityMonthly),
             'child_allowance' => round($childAllowance),
             'total_benefits' => round($totalBenefits),
 
