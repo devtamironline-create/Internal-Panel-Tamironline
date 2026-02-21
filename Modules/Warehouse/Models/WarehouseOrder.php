@@ -362,33 +362,46 @@ class WarehouseOrder extends Model
 
         $this->save();
 
-        // سینک وضعیت به ووکامرس (در بکگراند، خطا مانع عملیات نمیشه)
-        $this->syncStatusToWc($newStatus);
+        // سینک وضعیت به ووکامرس (خطا مانع عملیات نمیشه)
+        $this->wcSyncResult = $this->syncStatusToWc($newStatus);
 
         return $this;
     }
 
     /**
      * سینک وضعیت به ووکامرس
+     * @return array|null نتیجه سینک (null = سفارش ووکامرسی نیست)
      */
-    public function syncStatusToWc(?string $status = null): void
+    public function syncStatusToWc(?string $status = null): ?array
     {
         $status = $status ?? $this->status;
 
         if (!$this->wc_order_id) {
-            return;
+            return null;
         }
 
         try {
             $wcService = new \Modules\Warehouse\Services\WooCommerceService();
-            $wcService->syncPanelStatusToWc($this, $status);
+            $result = $wcService->syncPanelStatusToWc($this, $status);
+
+            if (!$result['success']) {
+                \Illuminate\Support\Facades\Log::warning('WC status sync failed', [
+                    'order_id' => $this->id,
+                    'wc_order_id' => $this->wc_order_id,
+                    'status' => $status,
+                    'result' => $result['message'] ?? '',
+                ]);
+            }
+
+            return $result;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('WC status sync failed silently', [
+            \Illuminate\Support\Facades\Log::warning('WC status sync exception', [
                 'order_id' => $this->id,
                 'wc_order_id' => $this->wc_order_id,
                 'status' => $status,
                 'error' => $e->getMessage(),
             ]);
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 

@@ -272,11 +272,25 @@ class WarehouseController extends Controller
             ['from' => $oldStatus, 'to' => $request->status]
         );
 
+        // بررسی نتیجه سینک ووکامرس
+        $wcSync = $order->wcSyncResult ?? null;
+        $wcSyncFailed = $wcSync && !$wcSync['success'];
+
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'وضعیت با موفقیت تغییر کرد.']);
+            $response = ['success' => true, 'message' => 'وضعیت با موفقیت تغییر کرد.'];
+            if ($wcSync) {
+                $response['wc_sync'] = $wcSync;
+            }
+            return response()->json($response);
         }
 
-        return redirect()->back()->with('success', 'وضعیت با موفقیت تغییر کرد.');
+        $msg = 'وضعیت با موفقیت تغییر کرد.';
+        if ($wcSyncFailed) {
+            return redirect()->back()
+                ->with('success', $msg)
+                ->with('error', 'خطای سینک ووکامرس: ' . ($wcSync['message'] ?? 'نامشخص'));
+        }
+        return redirect()->back()->with('success', $msg);
     }
 
     public function markSupplyWait(Request $request, WarehouseOrder $order)
@@ -393,6 +407,7 @@ class WarehouseController extends Controller
 
         $orders = WarehouseOrder::whereIn('id', $validated['order_ids'])->get();
         $count = 0;
+        $wcSyncFails = 0;
 
         foreach ($orders as $order) {
             $order->update([
@@ -400,18 +415,28 @@ class WarehouseController extends Controller
                 'status_changed_at' => now(),
             ]);
             // سینک وضعیت به ووکامرس
-            $order->syncStatusToWc($validated['status']);
+            $result = $order->syncStatusToWc($validated['status']);
+            if ($result && !$result['success']) {
+                $wcSyncFails++;
+            }
             $count++;
+        }
+
+        $statusLabel = WarehouseOrder::statusLabels()[$validated['status']];
+        $msg = "{$count} سفارش به وضعیت «{$statusLabel}» تغییر کرد.";
+        if ($wcSyncFails > 0) {
+            $msg .= " ({$wcSyncFails} سفارش سینک ووکامرس ناموفق)";
         }
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => "{$count} سفارش به وضعیت «" . WarehouseOrder::statusLabels()[$validated['status']] . "» تغییر کرد.",
+                'message' => $msg,
+                'wc_sync_fails' => $wcSyncFails,
             ]);
         }
 
-        return redirect()->back()->with('success', "{$count} سفارش تغییر وضعیت داده شد.");
+        return redirect()->back()->with('success', $msg);
     }
 
     /**
