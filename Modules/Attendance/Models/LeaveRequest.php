@@ -159,6 +159,10 @@ class LeaveRequest extends Model
             $endTime = \Carbon\Carbon::createFromTimeString($data['end_time']);
             // Calculate difference in minutes and convert to hours (decimal)
             $diffInMinutes = $startTime->diffInMinutes($endTime, false);
+            if ($diffInMinutes < 0) {
+                [$startTime, $endTime] = [$endTime, $startTime];
+                $diffInMinutes = abs($diffInMinutes);
+            }
             $hoursCount = round($diffInMinutes / 60, 2);
         }
 
