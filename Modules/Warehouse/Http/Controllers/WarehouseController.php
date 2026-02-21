@@ -316,6 +316,11 @@ class WarehouseController extends Controller
             abort(403);
         }
 
+        // چک آمادگی اپراتور
+        if (StaffDistributionController::isEligibleOperator(auth()->id()) && !StaffReadiness::isUserReadyToday(auth()->id())) {
+            return back()->with('error', 'ابتدا دکمه «آماده‌ام» را بزنید.');
+        }
+
         $request->validate([
             'unavailable_items' => 'required|array|min:1',
             'unavailable_items.*' => 'exists:warehouse_order_items,id',
@@ -570,6 +575,11 @@ class WarehouseController extends Controller
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
             abort(403);
+        }
+
+        // چک آمادگی اپراتور
+        if (StaffDistributionController::isEligibleOperator(auth()->id()) && !StaffReadiness::isUserReadyToday(auth()->id())) {
+            return response()->json(['success' => false, 'message' => 'ابتدا دکمه «آماده‌ام» را بزنید.'], 403);
         }
 
         $validated = $request->validate([

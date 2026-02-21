@@ -69,6 +69,30 @@
             @endforeach
         </div>
 
+        <!-- بنر آمادگی اپراتور -->
+        @if(($isEligibleOperator ?? false) && !($isReadyToday ?? false) && $currentStatus === 'pending')
+        <div class="p-4 border-b border-gray-100">
+            <div class="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-amber-800 text-sm">برای شروع پردازش سفارشات، دکمه آماده‌ام را بزنید</p>
+                        <p class="text-xs text-amber-600 mt-0.5">تا زمانی که آماده نشوید، امکان پیشبرد سفارشات وجود ندارد.</p>
+                    </div>
+                </div>
+                <form action="{{ route('warehouse.distribution.toggle-readiness') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap">
+                        <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        آماده‌ام
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
+
         <!-- Search Bar -->
         <div class="p-4 border-b border-gray-100">
             <form action="{{ route('warehouse.index') }}" method="GET" class="flex items-center gap-3">
@@ -510,6 +534,11 @@
 
                         {{-- Action Buttons --}}
                         @canany(['manage-warehouse', 'manage-permissions'])
+                        @if(!($isEligibleOperator ?? false) || !($isReadyToday ?? false))
+                        <div class="flex items-center gap-2 opacity-50">
+                            <span class="text-xs text-gray-400 italic">برای پردازش ابتدا «آماده‌ام» بزنید</span>
+                        </div>
+                        @else
                         <div class="flex items-center gap-2">
                             @php
                                 $itemsData = $order->items->load('product.bundleItems.childProduct')->map(function($i) {
@@ -546,6 +575,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                             </button>
                         </div>
+                        @endif
                         @endcanany
                     </div>
                 </div>
