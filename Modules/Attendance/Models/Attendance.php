@@ -119,7 +119,7 @@ class Attendance extends Model
         $toleranceTime = $workStartTime->copy()->addMinutes($settings->late_tolerance_minutes);
 
         $lateMinutes = 0;
-        if ($now->format('H:i:s') > $toleranceTime->format('H:i:s')) {
+        if ($now->gt($toleranceTime)) {
             $lateMinutes = $now->diffInMinutes($workStartTime);
         }
 
@@ -163,9 +163,9 @@ class Attendance extends Model
         $earlyLeaveMinutes = 0;
         $overtimeMinutes = 0;
 
-        if ($now->format('H:i:s') < $workEndTime->format('H:i:s')) {
+        if ($now->lt($workEndTime)) {
             $earlyLeaveMinutes = $workEndTime->diffInMinutes($now);
-        } elseif ($now->format('H:i:s') > $workEndTime->format('H:i:s')) {
+        } elseif ($now->gt($workEndTime)) {
             $overtimeMinutes = $now->diffInMinutes($workEndTime);
         }
 
