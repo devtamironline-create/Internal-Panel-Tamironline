@@ -88,8 +88,9 @@ class AttendanceController extends Controller
             }
 
             // Verify IP if required
-            if ($settings->isVerificationRequired('ip') && !empty($settings->allowed_ips)) {
-                if (!in_array($request->ip(), $settings->allowed_ips)) {
+            $allowedIps = $settings->allowed_ips ?? [];
+            if ($settings->isVerificationRequired('ip') && !empty($allowedIps)) {
+                if (!in_array($request->ip(), $allowedIps)) {
                     return response()->json([
                         'success' => false,
                         'message' => 'آدرس IP شما مجاز نیست'
