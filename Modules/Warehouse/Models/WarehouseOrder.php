@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WarehouseOrder extends Model
@@ -323,6 +324,11 @@ class WarehouseOrder extends Model
     public function shippingTypeRelation(): BelongsTo
     {
         return $this->belongsTo(WarehouseShippingType::class, 'shipping_type', 'slug');
+    }
+
+    public function assignment(): HasOne
+    {
+        return $this->hasOne(OrderAssignment::class, 'warehouse_order_id');
     }
 
     // Scopes

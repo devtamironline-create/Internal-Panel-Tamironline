@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Warehouse\Models\OrderLog;
 use Modules\Warehouse\Models\WarehouseBoxSize;
+use Modules\Warehouse\Models\OrderAssignment;
+use Modules\Warehouse\Models\StaffReadiness;
 use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingType;
@@ -66,7 +68,7 @@ class WarehouseController extends Controller
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
-        $query = WarehouseOrder::with(['creator', 'assignee', 'items']);
+        $query = WarehouseOrder::with(['creator', 'assignee', 'items', 'assignment']);
 
         // فیلتر نوع ارسال
         if (!empty($shippingFilter) && $shippingFilter !== 'all') {
@@ -78,6 +80,11 @@ class WarehouseController extends Controller
             $query->whereRaw("JSON_EXTRACT(wc_order_data, '$.payment_method') = ?", [$paymentFilter]);
         }
 
+        // بررسی آیا سیستم تقسیم‌بندی فعال هست (حداقل یه نفر امروز آماده باشه)
+        $distributionActive = count(StaffReadiness::todayReadyUserIds()) > 0;
+        $isAdmin = auth()->user()->can('manage-warehouse') || auth()->user()->can('manage-permissions');
+        $isReadyToday = StaffReadiness::isUserReadyToday(auth()->id());
+
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
         if (!empty($search)) {
             $query->search($search)->orderBy('created_at', 'asc');
@@ -86,6 +93,13 @@ class WarehouseController extends Controller
             $normalOrders = $orders;
         } else {
             $query->byStatus($currentStatus);
+
+            // فیلتر تقسیم‌بندی: در وضعیت pending، غیر-ادمین‌ها فقط سفارشات خودشون رو می‌بینن
+            if ($currentStatus === WarehouseOrder::STATUS_PENDING && $distributionActive && !$isAdmin) {
+                $query->whereHas('assignment', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            }
 
             // وضعیت‌هایی که صفحه‌بندی نمیخوان - همه رو نشون بده
             $noPaginationStatuses = [
@@ -141,6 +155,7 @@ class WarehouseController extends Controller
         return view('warehouse::warehouse.index', compact(
             'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search',
             'shippingTypes', 'shippingFilter', 'paymentMethods', 'paymentFilter', 'boxSizes',
+            'distributionActive', 'isAdmin', 'isReadyToday',
         ));
     }
 

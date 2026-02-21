@@ -13,6 +13,7 @@ use Modules\Warehouse\Http\Controllers\PostexController;
 use Modules\Warehouse\Http\Controllers\ExitScanController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 use Modules\Warehouse\Http\Controllers\OrderPresenceController;
+use Modules\Warehouse\Http\Controllers\StaffDistributionController;
 
 
 /*
@@ -108,6 +109,15 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         ->where('order', '[0-9]+');
     Route::post('/{order}/returned', [DispatchController::class, 'markReturned'])->name('warehouse.dispatch.returned')
         ->where('order', '[0-9]+');
+
+    // Staff Distribution (تقسیم‌بندی سفارشات)
+    Route::prefix('distribution')->group(function () {
+        Route::get('/', [StaffDistributionController::class, 'index'])->name('warehouse.distribution.index');
+        Route::post('/toggle-readiness', [StaffDistributionController::class, 'toggleReadiness'])->name('warehouse.distribution.toggle-readiness');
+        Route::post('/distribute', [StaffDistributionController::class, 'distribute'])->name('warehouse.distribution.distribute');
+        Route::put('/settings', [StaffDistributionController::class, 'updateSettings'])->name('warehouse.distribution.update-settings');
+        Route::post('/reset', [StaffDistributionController::class, 'resetAssignments'])->name('warehouse.distribution.reset');
+    });
 
     // Settings
     Route::prefix('settings')->group(function () {

@@ -13,12 +13,32 @@
         <div>
             <h1 class="text-xl font-bold text-gray-900">لیست سفارشات</h1>
         </div>
-        @canany(['manage-warehouse', 'manage-permissions'])
-        <a href="{{ route('warehouse.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-            + سفارش جدید
-        </a>
-        @endcanany
+        <div class="flex items-center gap-3">
+            <!-- دکمه آماده‌ام -->
+            @if($distributionActive || ($isReadyToday ?? false))
+            <form action="{{ route('warehouse.distribution.toggle-readiness') }}" method="POST" class="inline">
+                @csrf
+                @if($isReadyToday ?? false)
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 border border-green-300 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors text-sm font-medium group">
+                        <span class="w-2 h-2 bg-green-500 rounded-full group-hover:bg-red-500"></span>
+                        <span class="group-hover:hidden">آماده</span>
+                        <span class="hidden group-hover:inline">خروج</span>
+                    </button>
+                @else
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-300 rounded-lg hover:bg-green-50 hover:text-green-600 hover:border-green-300 transition-colors text-sm font-medium">
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        آماده‌ام
+                    </button>
+                @endif
+            </form>
+            @endif
+            @canany(['manage-warehouse', 'manage-permissions'])
+            <a href="{{ route('warehouse.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                + سفارش جدید
+            </a>
+            @endcanany
+        </div>
     </div>
 
     <!-- Status Tabs -->
