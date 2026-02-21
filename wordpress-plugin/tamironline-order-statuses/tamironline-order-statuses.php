@@ -127,138 +127,143 @@ class TamirOnline_Order_Statuses {
     // =========================================================================
 
     public static function admin_styles() {
-        $screen = get_current_screen();
-        $is_orders_page = $screen && (
-            $screen->id === 'edit-shop_order' ||
-            $screen->id === 'woocommerce_page_wc-orders' ||
-            strpos($screen->id, 'shop_order') !== false ||
-            strpos($screen->id, 'wc-orders') !== false
-        );
+        // استایل‌ها بدون وابستگی به get_current_screen - روی همه صفحات ادمین لود میشه
+        echo '<style id="tamironline-order-styles">';
 
-        echo '<style>';
-
-        // استایل‌های عمومی برای همه صفحات ادمین
         foreach (self::$custom_statuses as $slug => $data) {
             $clean = str_replace('wc-', '', $slug);
             echo "
-                /* بج وضعیت در لیست سفارشات */
+                /* بج وضعیت - همه حالت‌های ممکن WC */
                 .order-status.status-{$clean},
-                mark.order-status.status-{$clean} {
+                mark.order-status.status-{$clean},
+                .order-status.status-wc-{$clean},
+                td.column-order_status mark.{$clean}::after,
+                td mark.order-status.status-{$clean}::after,
+                .wc-orders-list-table mark.order-status.status-{$clean},
+                .wc-order-status--{$clean},
+                span.{$clean},
+                .order-status-{$clean} {
                     background: {$data['background']} !important;
                     color: {$data['color']} !important;
-                    font-weight: 700;
-                    border-radius: 4px;
-                    padding: 4px 10px;
-                    line-height: 1.5em;
-                    display: inline-block;
-                    border: 1px solid {$data['color']}30;
-                }
-
-                /* آیکون وضعیت در ستون وضعیت */
-                .widefat .column-order_status mark.{$clean}::after,
-                .wc-orders-list-table .column-order_status mark.{$clean}::after {
-                    color: {$data['color']} !important;
-                    background: {$data['background']} !important;
-                }
-
-                /* HPOS: جدول جدید سفارشات */
-                .wc-orders-list-table .order-status.status-{$clean} {
-                    background: {$data['background']} !important;
-                    color: {$data['color']} !important;
-                    font-weight: 700;
-                    border-radius: 4px;
-                    padding: 4px 10px;
-                    border: 1px solid {$data['color']}30;
-                }
-
-                /* نقطه رنگی کنار وضعیت در فیلتر بالا */
-                .subsubsub li.{$clean} a::before,
-                .subsubsub li.{$clean} a.current::before {
-                    content: '';
-                    display: inline-block;
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                    background: {$data['color']};
-                    margin-left: 6px;
-                    vertical-align: middle;
-                }
-                .subsubsub li.{$clean} a:hover,
-                .subsubsub li.{$clean} a.current {
-                    color: {$data['color']} !important;
-                    font-weight: 700;
+                    font-weight: 700 !important;
+                    border-radius: 5px !important;
+                    padding: 4px 12px !important;
+                    line-height: 1.6em !important;
+                    display: inline-block !important;
+                    border: 1px solid {$data['color']}40 !important;
+                    box-shadow: 0 1px 2px {$data['color']}15 !important;
                 }
             ";
         }
 
-        // استایل عمومی نوار فیلتر وضعیت بالای لیست سفارشات
-        if ($is_orders_page) {
-            echo "
-                /* بهبود ظاهر نوار فیلتر وضعیت‌ها */
-                .subsubsub {
-                    direction: rtl;
-                    width: 100%;
-                    background: #fff;
-                    padding: 12px 16px;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-                    line-height: 2.2em;
-                }
-                .subsubsub li {
-                    display: inline-block;
-                    margin: 0 2px;
-                }
-                .subsubsub li a {
-                    text-decoration: none;
-                    padding: 4px 8px;
-                    border-radius: 6px;
-                    transition: background 0.2s;
-                }
-                .subsubsub li a:hover {
-                    background: #f0f0f1;
-                }
-                .subsubsub li a.current {
-                    background: #f0f0f1;
-                    font-weight: 700;
-                }
-                .subsubsub li a .count {
-                    color: #999;
-                    font-size: 0.9em;
-                }
-
-                /* بهبود ظاهر ستون وضعیت */
-                td.column-order_status,
-                td.column-wc_actions {
-                    vertical-align: middle;
-                }
-            ";
-        }
+        // استایل نوار فیلتر وضعیت - بدون شرط صفحه
+        echo "
+            /* نوار فیلتر وضعیت بالای لیست */
+            .edit-shop_order .subsubsub,
+            .woocommerce_page_wc-orders .subsubsub,
+            .post-type-shop_order .subsubsub {
+                width: 100% !important;
+                background: #fff !important;
+                padding: 14px 18px !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 10px !important;
+                margin-bottom: 14px !important;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+                line-height: 2.4em !important;
+                box-sizing: border-box !important;
+            }
+            .edit-shop_order .subsubsub li,
+            .woocommerce_page_wc-orders .subsubsub li,
+            .post-type-shop_order .subsubsub li {
+                display: inline-block !important;
+                margin: 2px 0 !important;
+            }
+            .edit-shop_order .subsubsub li a,
+            .woocommerce_page_wc-orders .subsubsub li a,
+            .post-type-shop_order .subsubsub li a {
+                text-decoration: none !important;
+                padding: 5px 10px !important;
+                border-radius: 6px !important;
+                transition: all 0.2s !important;
+            }
+            .edit-shop_order .subsubsub li a:hover,
+            .woocommerce_page_wc-orders .subsubsub li a:hover,
+            .post-type-shop_order .subsubsub li a:hover {
+                background: #f0f4f8 !important;
+            }
+            .edit-shop_order .subsubsub li a.current,
+            .woocommerce_page_wc-orders .subsubsub li a.current,
+            .post-type-shop_order .subsubsub li a.current {
+                background: #edf2f7 !important;
+                font-weight: 700 !important;
+                color: #1a202c !important;
+            }
+            .edit-shop_order .subsubsub li a .count,
+            .woocommerce_page_wc-orders .subsubsub li a .count,
+            .post-type-shop_order .subsubsub li a .count {
+                color: #a0aec0 !important;
+                font-size: 0.88em !important;
+            }
+            /* جدا کننده | بین وضعیت‌ها */
+            .edit-shop_order .subsubsub li::after,
+            .woocommerce_page_wc-orders .subsubsub li::after,
+            .post-type-shop_order .subsubsub li::after {
+                color: #e2e8f0 !important;
+            }
+        ";
 
         echo '</style>';
 
-        // جاوااسکریپت برای اضافه کردن کلاس به آیتم‌های فیلتر
-        if ($is_orders_page) {
-            echo '<script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    var customStatuses = ' . wp_json_encode(array_map(function($slug) {
-                        return str_replace('wc-', '', $slug);
-                    }, array_keys(self::$custom_statuses))) . ';
+        // جاوااسکریپت: استایل مستقیم روی المان‌ها بدون وابستگی به CSS class
+        echo '<script id="tamironline-order-js">
+            document.addEventListener("DOMContentLoaded", function() {
+                var statusMap = ' . wp_json_encode(
+                    array_combine(
+                        array_map(function($slug) { return str_replace('wc-', '', $slug); }, array_keys(self::$custom_statuses)),
+                        array_values(self::$custom_statuses)
+                    )
+                ) . ';
 
-                    document.querySelectorAll(".subsubsub li a").forEach(function(link) {
-                        var href = link.getAttribute("href") || "";
-                        customStatuses.forEach(function(status) {
-                            var statusSlug = status.replace("-", "");
-                            if (href.indexOf("post_status=wc-" + status) !== -1 ||
-                                href.indexOf("status=" + status) !== -1) {
-                                link.parentElement.classList.add(status);
+                // پیدا کردن لینک‌های فیلتر و اضافه کردن نقطه رنگی
+                document.querySelectorAll(".subsubsub li a, .subsubsub a").forEach(function(link) {
+                    var href = link.getAttribute("href") || "";
+                    var text = link.textContent || "";
+
+                    Object.keys(statusMap).forEach(function(status) {
+                        var data = statusMap[status];
+                        // چک لینک با چند الگوی مختلف
+                        if (href.indexOf("post_status=wc-" + status) !== -1 ||
+                            href.indexOf("status=" + status) !== -1 ||
+                            href.indexOf("&status=" + status) !== -1 ||
+                            text.indexOf(data.label) !== -1) {
+
+                            // نقطه رنگی قبل از متن
+                            if (!link.querySelector(".tamironline-dot")) {
+                                var dot = document.createElement("span");
+                                dot.className = "tamironline-dot";
+                                dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:" + data.color + ";margin-left:6px;margin-right:2px;vertical-align:middle;box-shadow:0 0 0 2px " + data.color + "25;";
+                                link.insertBefore(dot, link.firstChild);
                             }
-                        });
+
+                            // رنگ لینک
+                            link.style.color = data.color;
+                            link.style.fontWeight = "700";
+                        }
                     });
                 });
-            </script>';
-        }
+
+                // استایل بج‌های وضعیت در جدول
+                document.querySelectorAll("mark, span, td").forEach(function(el) {
+                    var cls = el.className || "";
+                    Object.keys(statusMap).forEach(function(status) {
+                        if (cls.indexOf(status) !== -1 || cls.indexOf("status-" + status) !== -1) {
+                            var data = statusMap[status];
+                            el.style.cssText += "background:" + data.background + " !important;color:" + data.color + " !important;font-weight:700 !important;border-radius:5px !important;padding:4px 12px !important;border:1px solid " + data.color + "40 !important;";
+                        }
+                    });
+                });
+            });
+        </script>';
     }
 
     // =========================================================================
