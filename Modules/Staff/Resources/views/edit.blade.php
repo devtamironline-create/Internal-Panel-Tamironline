@@ -76,7 +76,17 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">تاریخ تولد</label>
-                    <input type="text" name="birth_date" id="birth_date" value="{{ old('birth_date', isset($staff) && $staff->birth_date ? \Morilog\Jalali\Jalalian::fromCarbon($staff->birth_date)->format('Y/m/d') : '') }}" class="jalali-datepicker w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer" dir="ltr" placeholder="انتخاب تاریخ" readonly>
+                    @php
+                        $birthDateJalali = '';
+                        if (isset($staff) && $staff->birth_date) {
+                            try {
+                                $birthDateJalali = \Morilog\Jalali\Jalalian::fromCarbon($staff->birth_date)->format('Y/m/d');
+                            } catch (\Exception $e) {
+                                $birthDateJalali = '';
+                            }
+                        }
+                    @endphp
+                    <input type="text" name="birth_date" id="birth_date" value="{{ old('birth_date', $birthDateJalali) }}" class="jalali-datepicker w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer" dir="ltr" placeholder="انتخاب تاریخ" readonly>
                     @error('birth_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div></div>
