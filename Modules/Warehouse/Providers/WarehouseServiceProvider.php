@@ -9,6 +9,7 @@ use Modules\Warehouse\Console\AutoDeliverOrders;
 use Modules\Warehouse\Console\CheckWcOrderUpdates;
 use Modules\Warehouse\Console\FixVariationWeightsCommand;
 use Modules\Warehouse\Console\SyncWooCommerceOrders;
+use Modules\Warehouse\Console\SyncStatusToWooCommerce;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -44,6 +45,7 @@ class WarehouseServiceProvider extends ServiceProvider
             CheckWcOrderUpdates::class,
             FixVariationWeightsCommand::class,
             AutoDeliverOrders::class,
+            SyncStatusToWooCommerce::class,
         ]);
     }
 
@@ -59,6 +61,11 @@ class WarehouseServiceProvider extends ServiceProvider
             // بررسی تغییرات سفارشات فعال در ووکامرس
             $schedule->command('warehouse:check-wc-updates')
                 ->everyFiveMinutes()
+                ->withoutOverlapping()
+                ->runInBackground();
+            // سینک وضعیت سفارشات پنل به ووکامرس
+            $schedule->command('warehouse:sync-status-to-wc')
+                ->everyTenMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
             // تحویل خودکار سفارشات ارسال شده
