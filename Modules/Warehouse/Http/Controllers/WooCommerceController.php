@@ -4,6 +4,7 @@ namespace Modules\Warehouse\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Warehouse\Models\WarehouseOrder;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\WooCommerceService;
 
@@ -26,7 +27,14 @@ class WooCommerceController extends Controller
         $statusMap = WooCommerceService::WC_STATUS_MAP;
         $wcStatusLabels = WooCommerceService::WC_STATUS_LABELS;
 
-        return view('warehouse::woocommerce.index', compact('settings', 'lastSync', 'statusSyncEnabled', 'statusMap', 'wcStatusLabels'));
+        // آمار سفارشات ووکامرسی به تفکیک وضعیت (برای سینک مجدد)
+        $wcOrderCounts = WarehouseOrder::whereNotNull('wc_order_id')
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        return view('warehouse::woocommerce.index', compact('settings', 'lastSync', 'statusSyncEnabled', 'statusMap', 'wcStatusLabels', 'wcOrderCounts'));
     }
 
     public function saveSettings(Request $request)
@@ -190,6 +198,94 @@ class WooCommerceController extends Controller
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Fix variation weight error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * سینک مجدد وضعیت سفارشات پنل به ووکامرس
+     */
+    public function bulkResyncToWc(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            return response()->json(['success' => false, 'message' => 'دسترسی ندارید.'], 403);
+        }
+
+        $validated = $request->validate([
+            'statuses' => 'required|array|min:1',
+            'statuses.*' => 'string|in:' . implode(',', WarehouseOrder::$statuses),
+        ]);
+
+        try {
+            $service = new WooCommerceService();
+
+            // سفارشاتی که wc_order_id دارن و وضعیتشون توی لیست هست
+            $orders = WarehouseOrder::whereNotNull('wc_order_id')
+                ->whereIn('status', $validated['statuses'])
+                ->get();
+
+            if ($orders->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'هیچ سفارش ووکامرسی با این وضعیت‌ها پیدا نشد.',
+                    'total' => 0,
+                ]);
+            }
+
+            $success = 0;
+            $failed = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($orders as $order) {
+                $map = WooCommerceService::WC_STATUS_MAP;
+                $wcStatus = $map[$order->status] ?? null;
+
+                if (!$wcStatus) {
+                    $skipped++;
+                    continue;
+                }
+
+                $result = $service->updateOrderStatus($order->wc_order_id, $wcStatus);
+
+                if ($result['success']) {
+                    $success++;
+                } else {
+                    $failed++;
+                    // فقط ۱۰ خطای اول رو ذخیره کن
+                    if (count($errors) < 10) {
+                        $errors[] = "سفارش {$order->order_number}: " . ($result['message'] ?? 'نامشخص');
+                    }
+                }
+            }
+
+            $statusLabels = WarehouseOrder::statusLabels();
+            $selectedLabels = collect($validated['statuses'])
+                ->map(fn($s) => $statusLabels[$s] ?? $s)
+                ->implode('، ');
+
+            $message = "سینک مجدد {$orders->count()} سفارش ({$selectedLabels}):\n";
+            $message .= "موفق: {$success} | ناموفق: {$failed}";
+            if ($skipped > 0) {
+                $message .= " | رد شده: {$skipped}";
+            }
+            if (!empty($errors)) {
+                $message .= "\n\nخطاها:\n" . implode("\n", $errors);
+                if ($failed > count($errors)) {
+                    $message .= "\n... و " . ($failed - count($errors)) . " خطای دیگر";
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'total' => $orders->count(),
+                'synced' => $success,
+                'failed' => $failed,
+                'skipped' => $skipped,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Bulk resync to WC error', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'خطا: ' . $e->getMessage()]);
         }
     }

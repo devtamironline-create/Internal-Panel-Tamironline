@@ -193,6 +193,42 @@
         </div>
 
         <p class="text-xs text-gray-400 mt-3">توجه: سینک فقط برای سفارشاتی انجام می‌شود که از ووکامرس وارد شده باشند. سفارشات دستی پنل سینک نمی‌شوند.</p>
+
+        <!-- Bulk Resync to WC -->
+        @if(!empty($wcOrderCounts))
+        <div class="mt-6 pt-6 border-t">
+            <h3 class="text-sm font-bold text-gray-700 mb-3">سینک مجدد وضعیت به ووکامرس</h3>
+            <p class="text-xs text-gray-500 mb-4">اگر وضعیت سفارشات در پنل و ووکامرس هماهنگ نیست، وضعیت‌های مورد نظر را انتخاب کنید و سینک مجدد بزنید.</p>
+
+            <div class="flex flex-wrap gap-3 mb-4">
+                @php
+                    $resyncStatuses = ['packed', 'shipped', 'delivered', 'returned', 'supply_wait'];
+                @endphp
+                @foreach($resyncStatuses as $rs)
+                    @php $count = $wcOrderCounts[$rs] ?? 0; @endphp
+                    @if($count > 0)
+                    <label class="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 border">
+                        <input type="checkbox" class="resync-status-cb w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                               value="{{ $rs }}" {{ in_array($rs, ['shipped', 'delivered']) ? 'checked' : '' }}>
+                        <span class="text-sm text-gray-700">{{ $panelLabels[$rs] ?? $rs }}</span>
+                        <span class="text-xs text-gray-400">({{ $count }})</span>
+                    </label>
+                    @endif
+                @endforeach
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="bulkResyncToWc()" id="resync-btn"
+                        class="px-5 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm flex items-center gap-2">
+                    <svg class="w-5 h-5" id="resync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span id="resync-text">سینک مجدد به ووکامرس</span>
+                </button>
+                <span class="text-xs text-gray-400" id="resync-hint">وضعیت سفارشات انتخاب شده مجدد به ووکامرس ارسال می‌شود</span>
+            </div>
+
+            <div id="resync-result" class="hidden mt-4 p-4 rounded-lg text-sm whitespace-pre-line"></div>
+        </div>
+        @endif
     </div>
 
     <!-- Product Sync Card (Full Width) -->
@@ -673,6 +709,57 @@ function fixVariationWeights() {
         icon.classList.remove('animate-spin');
         text.textContent = 'رفع variations';
         showResult('fix-zero-result', false, 'خطا: ' + err.message);
+    });
+}
+
+function bulkResyncToWc() {
+    var checkboxes = document.querySelectorAll('.resync-status-cb:checked');
+    if (checkboxes.length === 0) {
+        alert('حداقل یک وضعیت را انتخاب کنید.');
+        return;
+    }
+
+    var statuses = Array.from(checkboxes).map(function(cb) { return cb.value; });
+    if (!confirm('سینک مجدد وضعیت سفارشات به ووکامرس؟\nاین عملیات ممکن است چند دقیقه طول بکشد.')) return;
+
+    var btn = document.getElementById('resync-btn');
+    var icon = document.getElementById('resync-icon');
+    var text = document.getElementById('resync-text');
+    var hint = document.getElementById('resync-hint');
+
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+    text.textContent = 'در حال سینک مجدد...';
+    hint.textContent = 'لطفا صبر کنید، این عملیات ممکن است چند دقیقه طول بکشد';
+    document.getElementById('resync-result').classList.add('hidden');
+
+    fetch('{{ route("warehouse.woocommerce.bulk-resync-to-wc") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ statuses: statuses }),
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('سرور خطا برگرداند (HTTP ' + r.status + ')');
+        return r.json();
+    })
+    .then(function(data) {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'سینک مجدد به ووکامرس';
+        hint.textContent = 'وضعیت سفارشات انتخاب شده مجدد به ووکامرس ارسال می‌شود';
+        showResult('resync-result', data.success, data.message);
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        text.textContent = 'سینک مجدد به ووکامرس';
+        hint.textContent = 'وضعیت سفارشات انتخاب شده مجدد به ووکامرس ارسال می‌شود';
+        showResult('resync-result', false, 'خطا: ' + err.message);
     });
 }
 </script>

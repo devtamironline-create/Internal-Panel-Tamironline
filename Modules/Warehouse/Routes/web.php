@@ -140,6 +140,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/fix-zero-weight', [WooCommerceController::class, 'fixZeroWeightProducts'])->name('warehouse.woocommerce.fix-zero-weight');
         Route::post('/fix-zero-weight-variations', [WooCommerceController::class, 'fixZeroWeightVariations'])->name('warehouse.woocommerce.fix-zero-weight-variations');
         Route::post('/debug-product-weight', [WooCommerceController::class, 'debugProductWeight'])->name('warehouse.woocommerce.debug-product-weight');
+        Route::post('/bulk-resync-to-wc', [WooCommerceController::class, 'bulkResyncToWc'])->name('warehouse.woocommerce.bulk-resync-to-wc');
         Route::get('/products-catalog', [WooCommerceController::class, 'productsCatalog'])->name('warehouse.woocommerce.products-catalog');
     });
 
