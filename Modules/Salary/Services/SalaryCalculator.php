@@ -4,6 +4,7 @@ namespace Modules\Salary\Services;
 
 use App\Models\User;
 use Modules\Attendance\Models\Attendance;
+use Modules\Attendance\Models\AttendanceSetting;
 use Modules\Attendance\Models\EmployeeSetting;
 use Modules\Attendance\Models\LeaveRequest;
 use Modules\Salary\Models\Salary;
@@ -269,10 +270,21 @@ class SalaryCalculator
         $overtimeMinutes = $attendances->sum('overtime_minutes');
         $absentDays = $attendances->where('status', Attendance::STATUS_ABSENT)->count();
 
-        // TODO: جداسازی اضافه‌کاری عادی و تعطیل
-        // فعلا همه را عادی در نظر می‌گیریم
-        $overtimeRegularMinutes = $overtimeMinutes;
+        // جداسازی اضافه‌کاری عادی و تعطیل بر اساس تنظیمات روزهای کاری
+        $attendanceSettings = AttendanceSetting::get();
+        $overtimeRegularMinutes = 0;
         $overtimeHolidayMinutes = 0;
+
+        foreach ($attendances as $attendance) {
+            if ($attendance->overtime_minutes > 0) {
+                $iranianDayOfWeek = ($attendance->date->dayOfWeek + 1) % 7;
+                if ($attendanceSettings->isWorkingDay($iranianDayOfWeek)) {
+                    $overtimeRegularMinutes += $attendance->overtime_minutes;
+                } else {
+                    $overtimeHolidayMinutes += $attendance->overtime_minutes;
+                }
+            }
+        }
 
         return [
             'work_days' => $workDays,
