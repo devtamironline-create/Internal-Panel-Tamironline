@@ -250,9 +250,18 @@ class LeaveRequest extends Model
 
     protected function markAttendanceAsLeave(): void
     {
+        $settings = AttendanceSetting::get();
+        $workingDays = $settings->working_days ?? [0, 1, 2, 3, 4];
         $currentDate = $this->start_date->copy();
 
         while ($currentDate <= $this->end_date) {
+            // رد کردن روزهای غیرکاری (آخر هفته/تعطیلات)
+            $iranianDayOfWeek = ($currentDate->dayOfWeek + 1) % 7;
+            if (!in_array($iranianDayOfWeek, $workingDays)) {
+                $currentDate->addDay();
+                continue;
+            }
+
             Attendance::updateOrCreate(
                 [
                     'user_id' => $this->user_id,
