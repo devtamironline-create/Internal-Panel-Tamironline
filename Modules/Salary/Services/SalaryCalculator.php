@@ -76,6 +76,9 @@ class SalaryCalculator
 
         // ۴. محاسبه اضافه‌کاری
         // نرخ دقیقه‌ای = حقوق توافقی ÷ 30 ÷ 9 ÷ 60
+        if ($this->settings->monthly_work_days <= 0 || $this->settings->daily_work_hours <= 0) {
+            throw new \InvalidArgumentException('تنظیمات ساعت/روز کاری نامعتبر است');
+        }
         $minuteRate = $dailyAgreedWage / $this->settings->monthly_work_days /
             $this->settings->daily_work_hours / 60;
 
