@@ -231,7 +231,9 @@ class TechnicianAdminController extends Controller
      */
     public function registrationUpdateStatus(Request $request, $id)
     {
-        $this->checkAccess();
+        if (!auth()->user()->can('approve-technician') && !auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
 
         $request->validate([
             'status'           => ['required', 'in:pending,approved,rejected'],
@@ -333,7 +335,7 @@ class TechnicianAdminController extends Controller
      */
     public function registrationDestroy($id)
     {
-        if (!auth()->user()->can('delete-technician')) {
+        if (!auth()->user()->can('delete-technician') && !auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
             abort(403);
         }
 

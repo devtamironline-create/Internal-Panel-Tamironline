@@ -58,6 +58,8 @@ class PermissionSeeder extends Seeder
 
             // تکنسین
             'manage-technicians' => 'مدیریت تکنسین‌ها',
+            'approve-technician' => 'تایید/رد درخواست تکنسین',
+            'delete-technician' => 'حذف درخواست تکنسین',
 
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',

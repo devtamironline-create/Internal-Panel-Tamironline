@@ -121,6 +121,8 @@ class PermissionController extends Controller
             'view-warehouse' => 'مشاهده انبار',
             'manage-warehouse' => 'مدیریت انبار',
             'manage-technicians' => 'مدیریت تکنسین‌ها',
+            'approve-technician' => 'تایید/رد درخواست تکنسین',
+            'delete-technician' => 'حذف درخواست تکنسین',
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
         ];
