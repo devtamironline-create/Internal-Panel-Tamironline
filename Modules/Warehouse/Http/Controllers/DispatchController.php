@@ -231,9 +231,8 @@ class DispatchController extends Controller
             ]);
         }
 
-        // سفارشات پستی از هر وضعیتی (pending یا packed) میتونن ارسال بشن
-        $canShip = $order->status === WarehouseOrder::STATUS_PACKED
-            || ($order->shipping_type === 'post' && $order->status === WarehouseOrder::STATUS_PENDING);
+        // فقط سفارشات در وضعیت packed (انتظار اسکن) قابل ارسال هستند
+        $canShip = $order->status === WarehouseOrder::STATUS_PACKED;
 
         if (!$canShip) {
             return response()->json([
