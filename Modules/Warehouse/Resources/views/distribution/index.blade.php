@@ -224,6 +224,66 @@
             </form>
         </div>
     </div>
+    <!-- تنظیمات نوع ارسال به مسئولین (Shipping Map) -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-900">تخصیص مسئول بر اساس نوع ارسال</h2>
+            <p class="text-sm text-gray-500 mt-1">مشخص کنید هر نوع ارسال به کدام مسئول(ها) تخصیص داده شود. سفارشاتی که نوع ارسالشان تعریف نشده باشد، به صورت چرخشی تقسیم می‌شوند.</p>
+        </div>
+
+        <form action="{{ route('warehouse.distribution.update-shipping-map') }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            @if($shippingTypes->isEmpty())
+                <div class="text-center py-6 text-gray-500">
+                    <p>هیچ نوع ارسال فعالی تعریف نشده.</p>
+                </div>
+            @else
+                <div class="space-y-4 mb-6">
+                    @foreach($shippingTypes as $type)
+                        <div class="border rounded-lg p-4 {{ !empty($shippingMap[$type->slug]) ? 'border-brand-300 bg-brand-50/30' : 'border-gray-200' }}">
+                            <div class="flex items-center gap-3 mb-3">
+                                @if($type->is_priority)
+                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                @else
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                @endif
+                                <span class="font-bold text-gray-900">{{ $type->name }}</span>
+                                <span class="text-xs text-gray-400">({{ $type->slug }})</span>
+                                @if($type->is_priority)
+                                    <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">فوری</span>
+                                @endif
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                @foreach($warehouseStaff as $staff)
+                                    @php
+                                        $isAssigned = in_array($staff->id, $shippingMap[$type->slug] ?? []);
+                                    @endphp
+                                    <label class="flex items-center gap-2 p-2 border rounded-md cursor-pointer transition-colors text-sm {{ $isAssigned ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                        <input type="checkbox"
+                                               name="shipping_map[{{ $type->slug }}][]"
+                                               value="{{ $staff->id }}"
+                                               {{ $isAssigned ? 'checked' : '' }}
+                                               class="rounded text-brand-600 focus:ring-brand-500">
+                                        <span class="truncate {{ $isAssigned ? 'font-medium text-brand-800' : 'text-gray-700' }}">{{ $staff->full_name ?? $staff->name }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-400">با ذخیره، الگوریتم تقسیم‌بندی نیز به «بر اساس نوع ارسال» تغییر می‌کند.</p>
+                    <button type="submit" class="px-6 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium">
+                        ذخیره تنظیمات ارسال
+                    </button>
+                </div>
+            @endif
+        </form>
+    </div>
     @endcanany
 </div>
 

@@ -118,6 +118,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::put('/settings', [StaffDistributionController::class, 'updateSettings'])->name('warehouse.distribution.update-settings');
         Route::put('/eligible-users', [StaffDistributionController::class, 'updateEligibleUsers'])->name('warehouse.distribution.update-eligible-users');
         Route::post('/reset', [StaffDistributionController::class, 'resetAssignments'])->name('warehouse.distribution.reset');
+        Route::put('/shipping-map', [StaffDistributionController::class, 'updateShippingMap'])->name('warehouse.distribution.update-shipping-map');
     });
 
     // Settings

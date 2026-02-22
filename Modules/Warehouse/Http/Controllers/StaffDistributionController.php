@@ -88,6 +88,10 @@ class StaffDistributionController extends Controller
             ->whereDoesntHave('assignment')
             ->count();
 
+        // نوع‌های ارسال فعال و mapping فعلی
+        $shippingTypes = \Modules\Warehouse\Models\WarehouseShippingType::getActiveTypes();
+        $shippingMap = json_decode(WarehouseSetting::get('distribution_shipping_map', '{}'), true) ?: [];
+
         return view('warehouse::distribution.index', compact(
             'warehouseStaff',
             'todayReadiness',
@@ -95,7 +99,9 @@ class StaffDistributionController extends Controller
             'currentStrategy',
             'strategies',
             'unassignedCount',
-            'eligibleUserIds'
+            'eligibleUserIds',
+            'shippingTypes',
+            'shippingMap'
         ));
     }
 
@@ -150,6 +156,43 @@ class StaffDistributionController extends Controller
         WarehouseSetting::set('distribution_eligible_users', json_encode(array_map('intval', $userIds)));
 
         return back()->with('success', 'لیست مسئولین پردازش سفارشات ذخیره شد.');
+    }
+
+    /**
+     * ذخیره mapping نوع ارسال به مسئولین
+     */
+    public function updateShippingMap(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'shipping_map' => 'nullable|array',
+            'shipping_map.*' => 'nullable|array',
+            'shipping_map.*.*' => 'exists:users,id',
+        ]);
+
+        $rawMap = $request->input('shipping_map', []);
+
+        // فقط slug هایی که اپراتور دارن رو نگه دار
+        $map = [];
+        foreach ($rawMap as $slug => $userIds) {
+            $filtered = array_values(array_filter(array_map('intval', $userIds ?? [])));
+            if (!empty($filtered)) {
+                $map[$slug] = $filtered;
+            }
+        }
+
+        WarehouseSetting::set('distribution_shipping_map', json_encode($map));
+
+        // اگه الگوریتم shipping_type نیست، اتوماتیک تغییرش بده
+        $currentStrategy = WarehouseSetting::get('distribution_strategy');
+        if ($currentStrategy !== \Modules\Warehouse\Services\OrderDistributionService::STRATEGY_SHIPPING_TYPE) {
+            WarehouseSetting::set('distribution_strategy', \Modules\Warehouse\Services\OrderDistributionService::STRATEGY_SHIPPING_TYPE);
+        }
+
+        return back()->with('success', 'تنظیمات نوع ارسال و مسئولین ذخیره شد.');
     }
 
     /**
