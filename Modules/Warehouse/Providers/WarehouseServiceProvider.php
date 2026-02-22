@@ -11,6 +11,7 @@ use Modules\Warehouse\Console\FixVariationWeightsCommand;
 use Modules\Warehouse\Console\SyncWooCommerceOrders;
 use Modules\Warehouse\Console\AutoDistributeOrders;
 use Modules\Warehouse\Console\SyncStatusToWooCommerce;
+use Modules\Warehouse\Console\CleanupOldSyncedOrders;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -48,6 +49,7 @@ class WarehouseServiceProvider extends ServiceProvider
             AutoDeliverOrders::class,
             SyncStatusToWooCommerce::class,
             AutoDistributeOrders::class,
+            CleanupOldSyncedOrders::class,
         ]);
     }
 
