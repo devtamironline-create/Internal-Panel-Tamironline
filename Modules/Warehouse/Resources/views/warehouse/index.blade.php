@@ -272,6 +272,7 @@
             @php
                 $prioritySlugs = \Modules\Warehouse\Models\WarehouseShippingType::getPrioritySlugs();
                 $shownUrgentHeader = false;
+                $shownPickupHeader = false;
                 $shownNormalHeader = false;
             @endphp
 
@@ -279,6 +280,7 @@
             @forelse($orders as $order)
                 @php
                     $isUrgent = in_array($order->shipping_type, $prioritySlugs);
+                    $isPickup = $order->shipping_type === 'pickup';
                 @endphp
 
                 {{-- نمایش header ارسال‌های فوری (یک بار) --}}
@@ -314,10 +316,50 @@
                     </div>
                 @endif
 
-                {{-- نمایش header سفارش‌های عادی (یک بار، بعد از آخرین فوری) --}}
-                @if(!$isUrgent && !$shownNormalHeader && $shownUrgentHeader)
+                {{-- نمایش header تحویل حضوری (یک بار) --}}
+                @if($isPickup && !$shownPickupHeader)
+                    @php $shownPickupHeader = true; @endphp
+                    {{-- جداکننده اگه قبلش فوری بود --}}
+                    @if($shownUrgentHeader)
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t-2 border-dashed border-gray-200"></div></div>
+                        </div>
+                    @endif
+                    <div class="relative mb-6 {{ $shownUrgentHeader ? '' : '-mt-2' }}">
+                        <div class="absolute inset-0 bg-gradient-to-l from-emerald-500/10 via-emerald-500/5 to-transparent rounded-2xl blur-xl"></div>
+                        <div class="relative bg-gradient-to-l from-emerald-600 to-teal-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl backdrop-blur-sm">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-black text-white drop-shadow-md">تحویل حضوری</h2>
+                                        <p class="text-xs text-white/80 mt-0.5">مشتری برای دریافت مراجعه می‌کند</p>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-medium text-white/80">تعداد:</span>
+                                        <span class="text-xl font-black text-white">{{ $pickupOrders->count() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- نمایش header سفارش‌های عادی (یک بار، بعد از فوری یا حضوری) --}}
+                @if(!$isUrgent && !$isPickup && !$shownNormalHeader && ($shownUrgentHeader || $shownPickupHeader))
                     @php $shownNormalHeader = true; @endphp
-                    <div class="relative mb-6 mt-8">
+                    {{-- جداکننده --}}
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t-2 border-dashed border-gray-200"></div></div>
+                    </div>
+                    <div class="relative mb-6">
                         <div class="absolute inset-0 bg-gradient-to-l from-blue-500/10 via-blue-500/5 to-transparent rounded-2xl blur-xl"></div>
                         <div class="relative bg-gradient-to-l from-blue-600 to-sky-500 rounded-2xl p-4 shadow-lg shadow-blue-500/20">
                             <div class="flex items-center justify-between">

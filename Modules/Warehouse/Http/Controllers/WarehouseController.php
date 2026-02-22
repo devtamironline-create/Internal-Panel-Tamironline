@@ -103,6 +103,7 @@ class WarehouseController extends Controller
             $query->search($search)->orderBy('created_at', 'asc');
             $orders = $query->get();
             $urgentOrders = collect();
+            $pickupOrders = collect();
             $normalOrders = $orders;
         } else {
             $query->byStatus($currentStatus);
@@ -133,19 +134,27 @@ class WarehouseController extends Controller
                     ->orderBy('created_at', 'asc')
                     ->get();
 
-                // سفارشات عادی - ترتیب: قدیم به جدید
-                $normalOrders = (clone $query)
+                // سفارشات حضوری - ترتیب: قدیم به جدید
+                $pickupOrders = (clone $query)
+                    ->where('shipping_type', 'pickup')
                     ->whereNotIn('shipping_type', $prioritySlugs)
                     ->orderBy('created_at', 'asc')
                     ->get();
 
+                // سفارشات عادی - ترتیب: قدیم به جدید
+                $normalOrders = (clone $query)
+                    ->whereNotIn('shipping_type', array_merge($prioritySlugs, ['pickup']))
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+
                 // ترکیب برای متغیر $orders (برای سازگاری با کدهای قدیمی)
-                $orders = $urgentOrders->concat($normalOrders);
+                $orders = $urgentOrders->concat($pickupOrders)->concat($normalOrders);
             } else {
                 // برای وضعیت‌های دیگه که صفحه‌بندی دارن - روش قدیمی
                 $query->orderBy('created_at', 'asc');
                 $orders = $query->paginate(20)->appends($request->query());
                 $urgentOrders = collect();
+                $pickupOrders = collect();
                 $normalOrders = $orders;
             }
         }
@@ -163,7 +172,7 @@ class WarehouseController extends Controller
             ->values();
 
         return view('warehouse::warehouse.index', compact(
-            'orders', 'urgentOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search',
+            'orders', 'urgentOrders', 'pickupOrders', 'normalOrders', 'currentStatus', 'statusCounts', 'search',
             'shippingTypes', 'shippingFilter', 'paymentMethods', 'paymentFilter', 'boxSizes',
             'distributionActive', 'isAdmin', 'isReadyToday', 'isEligibleOperator',
         ));
