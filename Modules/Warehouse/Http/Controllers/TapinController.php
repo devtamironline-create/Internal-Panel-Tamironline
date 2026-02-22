@@ -160,15 +160,22 @@ class TapinController extends Controller
         }
 
         $validated = $request->validate([
-            'provider' => 'required|in:amadest,tapin',
+            'provider' => 'required|in:amadest,tapin,postex,cod24',
         ]);
 
         WarehouseSetting::set('shipping_provider', $validated['provider']);
 
+        $providerNames = [
+            'amadest' => 'آمادست',
+            'tapin'   => 'تاپین',
+            'postex'  => 'پستکس',
+            'cod24'   => 'COD24',
+        ];
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'سرویس‌دهنده ارسال تغییر کرد: ' . ($validated['provider'] === 'tapin' ? 'تاپین' : 'آمادست'),
+                'message' => 'سرویس‌دهنده ارسال تغییر کرد: ' . ($providerNames[$validated['provider']] ?? $validated['provider']),
             ]);
         }
 

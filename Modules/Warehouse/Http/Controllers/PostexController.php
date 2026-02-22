@@ -421,7 +421,7 @@ class PostexController extends Controller
         }
 
         $validated = $request->validate([
-            'provider' => 'required|in:amadest,tapin,postex',
+            'provider' => 'required|in:amadest,tapin,postex,cod24',
         ]);
 
         WarehouseSetting::set('shipping_provider', $validated['provider']);
@@ -430,6 +430,7 @@ class PostexController extends Controller
             'amadest' => 'آمادست',
             'tapin' => 'تاپین',
             'postex' => 'پستکس',
+            'cod24' => 'COD24',
         ];
 
         if ($request->wantsJson()) {

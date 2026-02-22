@@ -13,7 +13,11 @@
                 <p class="text-gray-600 mt-1">پیشخوان مجازی پست - ثبت و رهگیری مرسولات</p>
             </div>
         </div>
-        <a href="{{ route('warehouse.amadest.index') }}" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">تنظیمات آمادست</a>
+        <div class="flex gap-2">
+            <a href="{{ route('warehouse.amadest.index') }}" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">تنظیمات آمادست</a>
+            <a href="{{ route('warehouse.postex.index') }}" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">تنظیمات پستکس</a>
+            <a href="{{ route('warehouse.cod24.index') }}" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">تنظیمات COD24</a>
+        </div>
     </div>
 
     <!-- Provider Selector -->
@@ -30,10 +34,22 @@
                         class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($settings['shipping_provider'] ?? 'amadest') === 'tapin' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
                         تاپین
                     </button>
+                    <button onclick="setProvider('postex')" id="btn-postex"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($settings['shipping_provider'] ?? 'amadest') === 'postex' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                        پستکس
+                    </button>
+                    <button onclick="setProvider('cod24')" id="btn-cod24"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($settings['shipping_provider'] ?? 'amadest') === 'cod24' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                        COD24
+                    </button>
                 </div>
             </div>
             <span id="provider-status" class="text-xs text-gray-500">
-                @if(($settings['shipping_provider'] ?? 'amadest') === 'tapin')
+                @if(($settings['shipping_provider'] ?? 'amadest') === 'cod24')
+                    سفارشات از طریق COD24 ثبت می‌شوند
+                @elseif(($settings['shipping_provider'] ?? 'amadest') === 'postex')
+                    سفارشات از طریق پستکس ثبت می‌شوند
+                @elseif(($settings['shipping_provider'] ?? 'amadest') === 'tapin')
                     سفارشات از طریق تاپین ثبت می‌شوند
                 @else
                     سفارشات از طریق آمادست ثبت می‌شوند

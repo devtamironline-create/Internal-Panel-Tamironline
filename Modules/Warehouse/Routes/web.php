@@ -10,6 +10,7 @@ use Modules\Warehouse\Http\Controllers\ReprintRequestController;
 use Modules\Warehouse\Http\Controllers\DispatchController;
 use Modules\Warehouse\Http\Controllers\TapinController;
 use Modules\Warehouse\Http\Controllers\PostexController;
+use Modules\Warehouse\Http\Controllers\Cod24Controller;
 use Modules\Warehouse\Http\Controllers\ExitScanController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 use Modules\Warehouse\Http\Controllers\OrderPresenceController;
@@ -202,5 +203,19 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::get('/probe-endpoints', [PostexController::class, 'probeEndpoints'])->name('warehouse.postex.probe-endpoints');
         Route::get('/cities/sample', [PostexController::class, 'sampleCities'])->name('warehouse.postex.cities-sample');
         Route::get('/debug-find-city', [PostexController::class, 'debugFindCity'])->name('warehouse.postex.debug-find-city');
+    });
+
+    // COD24 Integration
+    Route::prefix('cod24')->group(function () {
+        Route::get('/', [Cod24Controller::class, 'index'])->name('warehouse.cod24.index');
+        Route::post('/save', [Cod24Controller::class, 'saveSettings'])->name('warehouse.cod24.save');
+        Route::post('/test', [Cod24Controller::class, 'testConnection'])->name('warehouse.cod24.test');
+        Route::get('/wallet', [Cod24Controller::class, 'getWalletBalance'])->name('warehouse.cod24.wallet');
+        Route::get('/states', [Cod24Controller::class, 'getStates'])->name('warehouse.cod24.states');
+        Route::get('/cities', [Cod24Controller::class, 'getCities'])->name('warehouse.cod24.cities');
+        Route::post('/calculate-price', [Cod24Controller::class, 'calculatePrice'])->name('warehouse.cod24.calculate-price');
+        Route::post('/track', [Cod24Controller::class, 'track'])->name('warehouse.cod24.track');
+        Route::post('/barcode-status', [Cod24Controller::class, 'getBarcodeStatus'])->name('warehouse.cod24.barcode-status');
+        Route::post('/set-provider', [Cod24Controller::class, 'setProvider'])->name('warehouse.cod24.set-provider');
     });
 });

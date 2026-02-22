@@ -12,6 +12,7 @@ use Modules\Warehouse\Models\WarehouseProduct;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Services\AmadestService;
 use Modules\Warehouse\Services\PostexService;
+use Modules\Warehouse\Services\Cod24Service;
 use Modules\Warehouse\Services\TapinService;
 use Modules\SMS\Services\KavenegarService;
 
@@ -232,6 +233,17 @@ class PrintController extends Controller
             $order->refresh();
         }
 
+        // اگه سرویس COD24 هست ولی بارکد قدیمی داره، پاک کن تا دوباره ثبت بشه
+        $cod24Registered = ($wcData['cod24']['registered'] ?? false);
+        if ($order->shipping_type === 'post' && $shippingProvider === 'cod24' && !empty($order->amadest_barcode) && !$cod24Registered) {
+            Log::info('Clearing old barcode for COD24 re-registration', [
+                'order' => $order->order_number,
+                'old_barcode' => $order->amadest_barcode,
+            ]);
+            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
+            $order->refresh();
+        }
+
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
             try {
                 $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
@@ -255,6 +267,8 @@ class PrintController extends Controller
                     $registrationError = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
                 } elseif ($shippingProvider === 'postex') {
                     $registrationError = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state);
+                } elseif ($shippingProvider === 'cod24') {
+                    $registrationError = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state);
                 } else {
                     $registrationError = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
                 }
@@ -325,6 +339,10 @@ class PrintController extends Controller
             unset($wcData['postex']['registered']);
             $order->wc_order_data = $wcData;
         }
+        if (isset($wcData['cod24']['registered'])) {
+            unset($wcData['cod24']['registered']);
+            $order->wc_order_data = $wcData;
+        }
         $order->save();
 
         $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
@@ -341,6 +359,8 @@ class PrintController extends Controller
                 $error = $this->registerViaTapin($order, $wcData, $fullAddress, $postcode, $city, $state);
             } elseif ($shippingProvider === 'postex') {
                 $error = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state, $manualCityCode);
+            } elseif ($shippingProvider === 'cod24') {
+                $error = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state);
             } else {
                 $error = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
             }
@@ -694,5 +714,66 @@ class PrintController extends Controller
             'postcode_sent' => $postcode,
         ]);
         return 'تاپین: ' . $error;
+    }
+
+    /**
+     * ثبت سفارش از طریق COD24
+     * @return string|null خطا یا null اگه موفق بود
+     */
+    private function registerViaCod24(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
+    {
+        $cod24 = new Cod24Service();
+        if (!$cod24->isConfigured()) {
+            return 'COD24 تنظیم نشده (نام کاربری یا رمز عبور خالی)';
+        }
+
+        $toCityCode = $cod24->findCityCode($city, $state);
+        if (!$toCityCode) {
+            Log::warning('Cod24: city code not found', ['order' => $order->order_number, 'city' => $city, 'state' => $state]);
+        }
+
+        $result = $cod24->createShipment([
+            'external_order_id'    => $order->order_number,
+            'recipient_name'       => $order->customer_name,
+            'recipient_mobile'     => $order->customer_mobile,
+            'recipient_address'    => $fullAddress ?: 'آدرس نامشخص',
+            'recipient_postal_code'=> $postcode,
+            'recipient_city'       => $city,
+            'to_city_code'         => $toCityCode,
+            'weight'               => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
+            'value'                => (int)($wcData['total'] ?? 100000),
+            'description'          => 'سفارش ' . $order->order_number,
+        ]);
+
+        Log::info('Cod24 auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
+
+        if ($result['success'] ?? false) {
+            $barcode = $result['data']['barcode'] ?? null;
+            if ($barcode) {
+                $order->amadest_barcode    = (string) $barcode;
+                $order->tracking_code      = $order->tracking_code ?: (string) $barcode;
+                $order->post_tracking_code = (string) $barcode;
+                $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+                $wcDataCurrent['cod24']['registered'] = true;
+                $wcDataCurrent['cod24']['barcode']    = (string) $barcode;
+                $order->wc_order_data = $wcDataCurrent;
+                $order->save();
+                Log::info('Cod24 barcode saved', ['order' => $order->order_number, 'barcode' => $barcode]);
+                OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, 'ثبت در COD24 — بارکد: ' . $barcode, [
+                    'provider' => 'cod24',
+                    'barcode'  => $barcode,
+                ]);
+                return null;
+            }
+            return 'COD24: ثبت شد ولی بارکد دریافت نشد';
+        }
+
+        $error = $result['message'] ?? 'خطای نامشخص';
+        Log::warning('Cod24 auto-register failed', ['order' => $order->order_number, 'error' => $error]);
+        OrderLog::log($order, OrderLog::ACTION_SHIPPING_FAILED, 'خطای ثبت COD24: ' . $error, [
+            'provider' => 'cod24',
+            'error'    => $error,
+        ]);
+        return 'COD24: ' . $error;
     }
 }
