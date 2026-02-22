@@ -153,27 +153,42 @@ class WooCommerceService
         // واحد وزن رو بگیر و کش کن (برای toGrams)
         $this->getWeightUnit();
 
-        $result = $this->fetchOrders(1, 100, $wcStatus);
-
-        if (!$result['success']) {
-            return $result;
-        }
-
-        if (empty($result['orders'])) {
-            WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
-            return [
-                'success' => true,
-                'message' => 'سفارشی با وضعیت انتخاب شده در ووکامرس یافت نشد.',
-                'imported' => 0,
-                'skipped' => 0,
-                'failed' => 0,
-            ];
-        }
-
         $imported = 0;
         $skipped = 0;
         $failed = 0;
         $lastError = '';
+        $page = 1;
+        $perPage = 100;
+        $totalFound = 0;
+
+        do {
+            $result = $this->fetchOrders($page, $perPage, $wcStatus);
+
+            if (!$result['success']) {
+                // اگه صفحه اول خطا داد، برگردون
+                if ($page === 1) {
+                    return $result;
+                }
+                break;
+            }
+
+            if (empty($result['orders'])) {
+                // اگه صفحه اول خالی بود، پیام مناسب بده
+                if ($page === 1) {
+                    WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
+                    return [
+                        'success' => true,
+                        'message' => 'سفارشی با وضعیت انتخاب شده در ووکامرس یافت نشد.',
+                        'imported' => 0,
+                        'skipped' => 0,
+                        'failed' => 0,
+                    ];
+                }
+                break;
+            }
+
+            $totalPages = $result['total_pages'] ?? 1;
+            $totalFound += count($result['orders']);
 
         // دریافت وزن محصولات از جدول محلی (warehouse_products)
         $allLineItems = collect($result['orders'])->flatMap(fn($o) => $o['line_items'] ?? []);
@@ -309,12 +324,14 @@ class WooCommerceService
             }
         }
 
+            $page++;
+        } while ($page <= $totalPages);
+
         // ریکلکولیت وزن سفارشات موجود (باندل‌ها ممکنه بعد از سینک محصولات وزنشون تغییر کنه)
         $this->updateExistingOrderWeights();
 
         WarehouseSetting::set('wc_last_sync', now()->toDateTimeString());
 
-        $totalFound = count($result['orders']);
         $message = "از {$totalFound} سفارش: وارد شده: {$imported} | تکراری: {$skipped} | خطا: {$failed}";
         if ($failed > 0 && $lastError) {
             $message .= "\nآخرین خطا: " . \Illuminate\Support\Str::limit($lastError, 150);
