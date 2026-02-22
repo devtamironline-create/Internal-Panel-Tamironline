@@ -153,18 +153,13 @@ class WarehouseController extends Controller
         $shippingTypes = WarehouseShippingType::getActiveTypes();
         $boxSizes = WarehouseBoxSize::active()->ordered()->get();
 
-        // گرفتن لیست نحوه‌های خرید موجود از سفارشات
+        // گرفتن لیست نحوه‌های خرید موجود از سفارشات (با کوئری مستقیم بجای لود کل دیتا)
         $paymentMethods = WarehouseOrder::whereNotNull('wc_order_data')
+            ->selectRaw("DISTINCT JSON_UNQUOTE(JSON_EXTRACT(wc_order_data, '$.payment_method')) as method, JSON_UNQUOTE(JSON_EXTRACT(wc_order_data, '$.payment_method_title')) as title")
+            ->whereRaw("JSON_EXTRACT(wc_order_data, '$.payment_method') IS NOT NULL")
+            ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(wc_order_data, '$.payment_method')) != ''")
             ->get()
-            ->pluck('wc_order_data')
-            ->map(function($data) {
-                return [
-                    'method' => $data['payment_method'] ?? null,
-                    'title' => $data['payment_method_title'] ?? $data['payment_method'] ?? null,
-                ];
-            })
-            ->filter(fn($p) => !empty($p['method']))
-            ->unique('method')
+            ->map(fn($row) => ['method' => $row->method, 'title' => $row->title ?: $row->method])
             ->values();
 
         return view('warehouse::warehouse.index', compact(
