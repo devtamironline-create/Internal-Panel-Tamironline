@@ -69,6 +69,20 @@ class WarehouseController extends Controller
 
         $statusCounts = WarehouseOrder::getStatusCounts();
 
+        // شمارش pending رو برای اپراتورها فیلتر کن
+        $distributionActive = count(StaffReadiness::todayReadyUserIds()) > 0;
+        $isEligibleOperator = StaffDistributionController::isEligibleOperator(auth()->id());
+        $isSuperAdmin = auth()->user()->can('manage-permissions');
+        if ($distributionActive && !$isSuperAdmin && $isEligibleOperator) {
+            $statusCounts['pending'] = WarehouseOrder::byStatus(WarehouseOrder::STATUS_PENDING)
+                ->where(function ($q) {
+                    $q->whereHas('assignment', function ($sub) {
+                        $sub->where('user_id', auth()->id());
+                    })->orWhere('assigned_to', auth()->id());
+                })
+                ->count();
+        }
+
         $query = WarehouseOrder::with(['creator', 'assignee', 'items', 'assignment']);
 
         // فیلتر نوع ارسال
@@ -81,11 +95,8 @@ class WarehouseController extends Controller
             $query->whereRaw("JSON_EXTRACT(wc_order_data, '$.payment_method') = ?", [$paymentFilter]);
         }
 
-        // بررسی آیا سیستم تقسیم‌بندی فعال هست (حداقل یه نفر امروز آماده باشه)
-        $distributionActive = count(StaffReadiness::todayReadyUserIds()) > 0;
-        $isAdmin = auth()->user()->can('manage-warehouse') || auth()->user()->can('manage-permissions');
+        $isAdmin = $isSuperAdmin;
         $isReadyToday = StaffReadiness::isUserReadyToday(auth()->id());
-        $isEligibleOperator = StaffDistributionController::isEligibleOperator(auth()->id());
 
         // اگر سرچ هست، در همه وضعیت‌ها جستجو کن
         if (!empty($search)) {
@@ -96,10 +107,12 @@ class WarehouseController extends Controller
         } else {
             $query->byStatus($currentStatus);
 
-            // فیلتر تقسیم‌بندی: در وضعیت pending، غیر-ادمین‌ها فقط سفارشات خودشون رو می‌بینن
-            if ($currentStatus === WarehouseOrder::STATUS_PENDING && $distributionActive && !$isAdmin) {
-                $query->whereHas('assignment', function ($q) {
-                    $q->where('user_id', auth()->id());
+            // فیلتر تقسیم‌بندی: در وضعیت pending، اپراتورهای مجاز فقط سفارشات تخصیص‌داده‌شده خودشون رو می‌بینن
+            if ($currentStatus === WarehouseOrder::STATUS_PENDING && $distributionActive && !$isAdmin && $isEligibleOperator) {
+                $query->where(function ($q) {
+                    $q->whereHas('assignment', function ($sub) {
+                        $sub->where('user_id', auth()->id());
+                    })->orWhere('assigned_to', auth()->id());
                 });
             }
 
