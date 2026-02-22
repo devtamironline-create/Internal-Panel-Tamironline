@@ -280,6 +280,20 @@ class WarehouseController extends Controller
 
         $oldStatus = $order->status;
 
+        // وقتی از انتظار تامین برمیگرده به پردازش، نوع ارسال اصلی رو بازگردون
+        if ($oldStatus === WarehouseOrder::STATUS_SUPPLY_WAIT && $request->status === WarehouseOrder::STATUS_PENDING) {
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            if (!empty($wcData['original_shipping_type'])) {
+                $restoredType = $wcData['original_shipping_type'];
+                $order->shipping_type = $restoredType;
+                unset($wcData['original_shipping_type']);
+                $order->wc_order_data = $wcData;
+                $order->save();
+
+                OrderLog::log($order, OrderLog::ACTION_STATUS_CHANGED, 'نوع ارسال بازگردانی شد به: ' . $restoredType);
+            }
+        }
+
         // وقتی از آماده ارسال برمیگرده به پردازش، بارکدهای ارسال رو پاک کن
         if ($oldStatus === WarehouseOrder::STATUS_PACKED && $request->status === WarehouseOrder::STATUS_PENDING) {
             $oldBarcode = $order->amadest_barcode;
@@ -364,11 +378,15 @@ class WarehouseController extends Controller
         }
 
         // Change shipping type: post → urgent (فوری), courier → emergency (اضطراری)
+        // ذخیره نوع ارسال اصلی برای بازگردانی بعد از تامین
         $shippingMap = [
             'post' => 'urgent',
             'courier' => 'emergency',
         ];
         if (isset($shippingMap[$order->shipping_type])) {
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            $wcData['original_shipping_type'] = $order->shipping_type;
+            $order->wc_order_data = $wcData;
             $order->shipping_type = $shippingMap[$order->shipping_type];
         }
 
