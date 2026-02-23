@@ -188,7 +188,8 @@
         btn.disabled = true;
         btn.textContent = 'در حال ذخیره...';
 
-        fetch(`/admin/technician/registrations/${currentNoteRegId}/note`, {
+        const url = `{{ route('technician.admin.registrations.update-note', '') }}/${currentNoteRegId}`;
+        fetch(url, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
