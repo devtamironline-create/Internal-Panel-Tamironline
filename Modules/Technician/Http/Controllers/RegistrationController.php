@@ -902,6 +902,24 @@ class RegistrationController extends Controller
                 ]);
                 $this->processBiometricResult($registration, $result);
                 $registration->refresh();
+            } elseif (
+                $result['status'] === 'pending'
+                && !empty($result['completed_at'])
+            ) {
+                // Session stuck: Zohal has completed_at but status is still pending
+                // This means the session failed/errored on Zohal's side
+                Log::warning('Biometric polling: stuck session detected', [
+                    'registration_id' => $registration->id,
+                    'completed_at' => $result['completed_at'],
+                    'result_value' => $result['result'] ?? null,
+                    'reason' => $result['reason'] ?? null,
+                ]);
+
+                $registration->update([
+                    'biometric_status'        => 'rejected',
+                    'biometric_reject_reason' => 'SESSION_STUCK',
+                ]);
+                $registration->refresh();
             } else {
                 Log::info('Biometric polling: still waiting', [
                     'registration_id' => $registration->id,
@@ -918,6 +936,8 @@ class RegistrationController extends Controller
             'PERSON_TOO_FAR_AWAY' => 'صورت شما خیلی دور است. لطفاً نزدیک‌تر بگیرید',
             'MORE_THAN_ONE_PERSON' => 'بیش از یک نفر در تصویر شناسایی شد',
             'NO_PERSON_DETECTED' => 'چهره‌ای در ویدیو شناسایی نشد',
+            'SESSION_STUCK' => 'سرویس احراز هویت پاسخ نهایی نداد. لطفاً مجدداً ویدیو ضبط کنید',
+            'UNDEFINED' => 'خطای نامشخص از سرویس احراز هویت. لطفاً مجدداً تلاش کنید',
         ];
 
         $rejectReason = $registration->biometric_reject_reason;
