@@ -11,6 +11,7 @@ use Modules\Warehouse\Models\WarehouseProductBundleItem;
 use Modules\Warehouse\Models\WarehouseSetting;
 use Modules\Warehouse\Models\WarehouseShippingRule;
 use Modules\Warehouse\Models\WarehouseShippingType;
+use Modules\Warehouse\Models\WarehouseWcShippingMethod;
 
 class WooCommerceService
 {

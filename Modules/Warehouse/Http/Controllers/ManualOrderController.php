@@ -35,7 +35,7 @@ class ManualOrderController extends Controller
                 $paymentGateways = $wcService->fetchPaymentGateways();
                 $shippingCosts = $wcService->getShippingCostsMap();
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Failed to fetch WC data', ['error' => $e->getMessage()]);
         }
 
@@ -356,7 +356,7 @@ class ManualOrderController extends Controller
                 $paymentGateways = $wcService->fetchPaymentGateways();
                 $shippingCosts = $wcService->getShippingCostsMap();
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Failed to fetch WC data', ['error' => $e->getMessage()]);
         }
 
