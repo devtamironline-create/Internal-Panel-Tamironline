@@ -390,6 +390,12 @@
                             لیست سفارشات
                         </a>
                         @canany(['manage-warehouse', 'manage-permissions'])
+                        <a href="{{ route('warehouse.manual-order.create') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.manual-order.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            ثبت سفارش دستی
+                        </a>
+                        @endcanany
+                        @canany(['manage-warehouse', 'manage-permissions'])
                         <a href="{{ route('warehouse.packing.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.packing.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                             ایستگاه بسته‌بندی
