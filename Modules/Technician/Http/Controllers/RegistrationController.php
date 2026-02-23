@@ -740,7 +740,7 @@ class RegistrationController extends Controller
         $request->validate([
             'mobile'              => ['required', 'regex:/^09[0-9]{9}$/'],
             'national_card_serial' => ['required', 'string', 'regex:/^[0-9A-Za-z]{10}$/'],
-            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:20480'],
+            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:2048'],
         ], [
             'mobile.required'              => 'شماره موبایل الزامی است.',
             'national_card_serial.required' => 'سریال کارت ملی الزامی است.',
@@ -748,7 +748,7 @@ class RegistrationController extends Controller
             'video.required'               => 'ویدیو سلفی الزامی است.',
             'video.uploaded'               => 'آپلود ویدیو ناموفق بود. لطفاً مجدداً ضبط و ارسال کنید.',
             'video.mimetypes'              => 'فرمت ویدیو معتبر نیست.',
-            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۲۰ مگابایت باشد.',
+            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۲ مگابایت باشد. لطفاً ویدیوی کوتاه‌تر ضبط کنید.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)

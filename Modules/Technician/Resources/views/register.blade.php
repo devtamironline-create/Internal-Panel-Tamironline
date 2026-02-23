@@ -1818,10 +1818,17 @@
 
             try {
                 biometricRecorder = new MediaRecorder(biometricStream, {
-                    mimeType: 'video/webm;codecs=vp8'
+                    mimeType: 'video/webm;codecs=vp8',
+                    videoBitsPerSecond: 500000 // ~500kbps to keep under 2MB for 10s
                 });
             } catch (e) {
-                biometricRecorder = new MediaRecorder(biometricStream);
+                try {
+                    biometricRecorder = new MediaRecorder(biometricStream, {
+                        videoBitsPerSecond: 500000
+                    });
+                } catch (e2) {
+                    biometricRecorder = new MediaRecorder(biometricStream);
+                }
             }
 
             biometricRecorder.ondataavailable = function(e) {
