@@ -331,6 +331,26 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * ذخیره یادداشت ادمین
+     */
+    public function registrationUpdateNote(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'admin_notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+        $registration->update(['admin_notes' => $request->admin_notes]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'یادداشت با موفقیت ذخیره شد.',
+        ]);
+    }
+
+    /**
      * حذف درخواست ثبت‌نام
      */
     public function registrationDestroy($id)

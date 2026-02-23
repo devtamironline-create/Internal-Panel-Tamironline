@@ -58,6 +58,7 @@ class TechnicianRegistration extends Model
         'current_step',
         'status',
         'rejection_reason',
+        'admin_notes',
         'contract_signed_at',
         'contract_signature',
         'doc_national_card_front',
