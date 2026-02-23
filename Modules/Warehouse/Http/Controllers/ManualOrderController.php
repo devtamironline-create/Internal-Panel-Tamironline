@@ -273,7 +273,7 @@ class ManualOrderController extends Controller
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
                 'product_name' => $item['name'],
-                'product_sku' => $product->sku ?? null,
+                'product_sku' => $product?->sku,
                 'wc_product_id' => $item['wc_product_id'],
                 'quantity' => $item['quantity'],
                 'price' => $item['price'],
@@ -329,7 +329,7 @@ class ManualOrderController extends Controller
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
                 'product_name' => $item['name'],
-                'product_sku' => $product->sku ?? null,
+                'product_sku' => $product?->sku,
                 'wc_product_id' => $item['wc_product_id'],
                 'quantity' => $item['quantity'],
                 'price' => $item['price'],
@@ -478,7 +478,7 @@ class ManualOrderController extends Controller
             WarehouseOrderItem::create([
                 'warehouse_order_id' => $order->id,
                 'product_name' => $item['name'],
-                'product_sku' => $product->sku ?? null,
+                'product_sku' => $product?->sku,
                 'wc_product_id' => $item['wc_product_id'],
                 'quantity' => $item['quantity'],
                 'price' => $item['price'],
@@ -659,7 +659,7 @@ class ManualOrderController extends Controller
      */
     public function validateCoupon(Request $request)
     {
-        $code = $request->get('code', '');
+        $code = $request->input('code', '');
         if (empty($code)) {
             return response()->json(['valid' => false, 'message' => 'کد تخفیف را وارد کنید.']);
         }
