@@ -173,41 +173,59 @@ class ManualOrderController extends Controller
         }
 
         // ارسال به ووکامرس
-        $wcService = new WooCommerceService();
         $wcCreated = false;
         $wcResult = null;
 
-        if ($wcService->isConfigured()) {
-            $wcResult = $wcService->createOrder($wcOrderData);
-            $wcCreated = $wcResult['success'] ?? false;
+        try {
+            $wcService = new WooCommerceService();
+            if ($wcService->isConfigured()) {
+                $wcResult = $wcService->createOrder($wcOrderData);
+                $wcCreated = $wcResult['success'] ?? false;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WC create order failed in store', ['error' => $e->getMessage()]);
         }
 
-        if ($wcCreated) {
-            // سفارش در WC ساخته شد - سینک به پنل
-            $wcOrder = $wcResult['order'];
-            $wcOrderId = $wcOrder['id'];
+        try {
+            if ($wcCreated) {
+                // سفارش در WC ساخته شد - سینک به پنل
+                $wcOrder = $wcResult['order'];
+                $wcOrderId = $wcOrder['id'];
 
-            $order = $this->createLocalOrder($wcOrder, $validated, $customerName);
+                $order = $this->createLocalOrder($wcOrder, $validated, $customerName);
 
-            OrderLog::log($order, OrderLog::ACTION_CREATED, 'سفارش دستی ایجاد شد و در ووکامرس ثبت شد (WC #' . $wcOrderId . ')');
+                OrderLog::log($order, OrderLog::ACTION_CREATED, 'سفارش دستی ایجاد شد و در ووکامرس ثبت شد (WC #' . $wcOrderId . ')');
+
+                if ($request->expectsJson()) {
+                    return response()->json(['redirect' => route('warehouse.show', $order)]);
+                }
+                return redirect()->route('warehouse.show', $order)
+                    ->with('success', 'سفارش دستی با موفقیت ثبت شد. شماره سفارش ووکامرس: #' . ($wcOrder['number'] ?? $wcOrderId));
+            } else {
+                // WC در دسترس نبود - ذخیره لوکال با علامت سینک نشده
+                $order = $this->createLocalOrderWithoutWc($validated, $customerName, $wcOrderData);
+
+                $errorMsg = $wcResult ? ($wcResult['message'] ?? '') : 'ووکامرس در دسترس نیست';
+                OrderLog::log($order, OrderLog::ACTION_CREATED, 'سفارش دستی ایجاد شد (بدون سینک WC: ' . $errorMsg . ')');
+
+                if ($request->expectsJson()) {
+                    return response()->json(['redirect' => route('warehouse.show', $order)]);
+                }
+                return redirect()->route('warehouse.show', $order)
+                    ->with('warning', 'سفارش ثبت شد ولی سینک با ووکامرس انجام نشد.');
+            }
+        } catch (\Throwable $e) {
+            Log::error('Manual order store failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             if ($request->expectsJson()) {
-                return response()->json(['redirect' => route('warehouse.show', $order)]);
+                return response()->json(['message' => 'خطا در ثبت سفارش: ' . $e->getMessage()], 500);
             }
-            return redirect()->route('warehouse.show', $order)
-                ->with('success', 'سفارش دستی با موفقیت ثبت شد. شماره سفارش ووکامرس: #' . ($wcOrder['number'] ?? $wcOrderId));
-        } else {
-            // WC در دسترس نبود - ذخیره لوکال با علامت سینک نشده
-            $order = $this->createLocalOrderWithoutWc($validated, $customerName, $wcOrderData);
-
-            $errorMsg = $wcResult ? ($wcResult['message'] ?? '') : 'ووکامرس در دسترس نیست';
-            OrderLog::log($order, OrderLog::ACTION_CREATED, 'سفارش دستی ایجاد شد (بدون سینک WC: ' . $errorMsg . ')');
-
-            if ($request->expectsJson()) {
-                return response()->json(['redirect' => route('warehouse.show', $order)]);
-            }
-            return redirect()->route('warehouse.show', $order)
-                ->with('warning', 'سفارش ثبت شد ولی سینک با ووکامرس انجام نشد. در اولین سینک بعدی ارسال خواهد شد.');
+            return redirect()->back()->withInput()
+                ->with('error', 'خطا در ثبت سفارش: ' . $e->getMessage());
         }
     }
 
