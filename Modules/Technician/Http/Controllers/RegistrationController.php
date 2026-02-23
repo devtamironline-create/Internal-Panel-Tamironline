@@ -746,6 +746,7 @@ class RegistrationController extends Controller
             'national_card_serial.required' => 'سریال کارت ملی الزامی است.',
             'national_card_serial.regex'    => 'فرمت سریال کارت ملی معتبر نیست.',
             'video.required'               => 'ویدیو سلفی الزامی است.',
+            'video.uploaded'               => 'آپلود ویدیو ناموفق بود. لطفاً مجدداً ضبط و ارسال کنید.',
             'video.mimetypes'              => 'فرمت ویدیو معتبر نیست.',
             'video.max'                    => 'حجم ویدیو نباید بیشتر از ۲۰ مگابایت باشد.',
         ]);
