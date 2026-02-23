@@ -302,7 +302,7 @@ class RegistrationController extends Controller
         $request->validate([
             'mobile'               => ['required', 'regex:/^09[0-9]{9}$/'],
             'field_of_study'       => ['nullable', 'string', 'max:255'],
-            'education_level'      => ['nullable', 'in:below_diploma,diploma,associate,bachelor,master,doctorate'],
+            'education_level'      => ['required', 'in:below_diploma,diploma,associate,bachelor,master,doctorate'],
             'has_business_license' => ['required', 'in:0,1'],
             'has_shop'             => ['required', 'in:0,1'],
             'shop_address'         => ['nullable', 'required_if:has_shop,1', 'string', 'max:1000'],
@@ -315,7 +315,7 @@ class RegistrationController extends Controller
             'colleague1_phone'     => ['nullable', 'string', 'max:20'],
             'colleague2_name'      => ['nullable', 'string', 'max:255'],
             'colleague2_phone'     => ['nullable', 'string', 'max:20'],
-            'work_experiences'     => ['nullable', 'array', 'max:10'],
+            'work_experiences'     => ['required', 'array', 'min:1', 'max:10'],
             'work_experiences.*.title'    => ['required', 'string', 'max:255'],
             'work_experiences.*.company'  => ['required', 'string', 'max:255'],
             'work_experiences.*.duration' => ['required', 'string', 'max:100'],
@@ -324,6 +324,9 @@ class RegistrationController extends Controller
             'certificates.*.institution' => ['required', 'string', 'max:255'],
         ], [
             'mobile.required'              => 'شماره موبایل الزامی است.',
+            'education_level.required'     => 'انتخاب مقطع تحصیلی الزامی است.',
+            'work_experiences.required'    => 'حداقل یک سابقه شغلی الزامی است.',
+            'work_experiences.min'         => 'حداقل یک سابقه شغلی الزامی است.',
             'has_business_license.required' => 'وضعیت پروانه کسب الزامی است.',
             'has_shop.required'             => 'وضعیت مغازه/دفتر الزامی است.',
             'shop_address.required_if'      => 'آدرس مغازه/دفتر الزامی است.',
@@ -387,6 +390,7 @@ class RegistrationController extends Controller
     {
         $request->validate([
             'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
+            'serves_tehran'          => ['nullable', 'in:0,1'],
             'tehran_districts'       => ['nullable', 'array'],
             'tehran_districts.*'     => ['integer', 'min:1', 'max:22'],
             'tehran_province_cities' => ['nullable', 'array'],
@@ -398,8 +402,8 @@ class RegistrationController extends Controller
             'mobile.required' => 'شماره موبایل الزامی است.',
         ]);
 
-        // حداقل یک منطقه تهران باید انتخاب شود
-        if (empty($request->tehran_districts)) {
+        // اگر خدمات تهران انتخاب شده، حداقل یک منطقه باید انتخاب شود
+        if ($request->serves_tehran == '1' && empty($request->tehran_districts)) {
             return response()->json([
                 'success' => false,
                 'message' => 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.',
@@ -420,7 +424,7 @@ class RegistrationController extends Controller
 
         // به‌روزرسانی اطلاعات
         $registration->update([
-            'tehran_districts'       => $request->tehran_districts ?? [],
+            'tehran_districts'       => $request->serves_tehran == '1' ? ($request->tehran_districts ?? []) : [],
             'tehran_province_cities' => $request->tehran_province_cities ?? [],
             'alborz_cities'          => $request->alborz_cities ?? [],
             'other_provinces_cities'  => $request->other_provinces_cities,

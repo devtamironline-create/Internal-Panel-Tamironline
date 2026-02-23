@@ -397,7 +397,7 @@
 
                     {{-- مقطع تحصیلی --}}
                     <div>
-                        <label for="education_level" class="block text-sm font-semibold text-gray-600 mb-1.5">مقطع تحصیلی</label>
+                        <label for="education_level" class="block text-sm font-semibold text-gray-600 mb-1.5">مقطع تحصیلی <span class="text-red-500">*</span></label>
                         <select id="education_level"
                                 class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
                             <option value="">انتخاب کنید...</option>
@@ -408,6 +408,7 @@
                             <option value="master">کارشناسی ارشد</option>
                             <option value="doctorate">دکتری</option>
                         </select>
+                        <p id="educationLevelError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- رشته تحصیلی --}}
@@ -528,7 +529,7 @@
                     {{-- سوابق شغلی --}}
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <label class="block text-sm font-semibold text-gray-600">سوابق شغلی</label>
+                            <label class="block text-sm font-semibold text-gray-600">سوابق شغلی <span class="text-red-500">*</span></label>
                             <button type="button" onclick="addWorkExperience()"
                                     class="text-xs text-brand-blue font-bold hover:underline flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -538,7 +539,8 @@
                         <div id="workExperiencesList" class="space-y-3">
                             {{-- آیتم‌ها به صورت داینامیک اضافه می‌شوند --}}
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">در صورت داشتن سابقه شغلی مرتبط، آن را اضافه کنید.</p>
+                        <p class="text-xs text-gray-400 mt-1">حداقل یک سابقه شغلی الزامی است.</p>
+                        <p id="workExperienceError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- مدارک و دوره‌ها --}}
@@ -580,8 +582,27 @@
 
                 <div class="space-y-5">
 
-                    {{-- مناطق تهران --}}
+                    {{-- سوال خدمات تهران --}}
                     <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا قصد ارائه خدمات در شهر تهران را دارید؟</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="serves_tehran" value="1" class="hidden peer" onchange="toggleTehranDistricts(true)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    بله
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="serves_tehran" value="0" class="hidden peer" onchange="toggleTehranDistricts(false)">
+                                <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                    خیر
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- مناطق تهران --}}
+                    <div id="tehranDistrictsSection" style="display: none;">
                         <label class="block text-sm font-semibold text-gray-600 mb-2">مناطق تهران که می‌توانید سرویس ارائه دهید:</label>
                         <div class="grid grid-cols-4 gap-2" id="tehranDistrictsGrid">
                             {{-- گزینه همه مناطق --}}
@@ -2117,6 +2138,8 @@
         function submitStep3() {
             clearAllErrors();
             hideFieldError('step3GeneralError');
+            hideFieldError('educationLevelError');
+            hideFieldError('workExperienceError');
             hideFieldError('shopAddressError');
             hideFieldError('shopPhoneError');
 
@@ -2125,6 +2148,19 @@
             const hasCooperation = $('input[name="has_cooperation"]:checked').val();
 
             let hasError = false;
+
+            // بررسی مقطع تحصیلی (الزامی)
+            if (!$('#education_level').val()) {
+                showFieldError('educationLevelError', 'انتخاب مقطع تحصیلی الزامی است.');
+                hasError = true;
+            }
+
+            // بررسی سوابق شغلی (حداقل یکی الزامی)
+            const workExpsCheck = collectWorkExperiences();
+            if (workExpsCheck.length === 0) {
+                showFieldError('workExperienceError', 'حداقل یک سابقه شغلی الزامی است.');
+                hasError = true;
+            }
 
             // اگر مغازه دارد، آدرس و تلفن الزامی
             if (hasShop === '1') {
@@ -2249,6 +2285,18 @@
             coverageCitiesReady = true;
         }
 
+        function toggleTehranDistricts(show) {
+            if (show) {
+                $('#tehranDistrictsSection').slideDown(200);
+            } else {
+                $('#tehranDistrictsSection').slideUp(200);
+                // پاک کردن تیک‌های مناطق
+                $('.tehran-district-cb').prop('checked', false);
+                $('#allTehranDistricts').prop('checked', false);
+                hideFieldError('tehranDistrictsError');
+            }
+        }
+
         function toggleAllDistricts(el) {
             const checked = el.checked;
             $('.tehran-district-cb').each(function() {
@@ -2294,15 +2342,19 @@
             hideFieldError('tehranDistrictsError');
             hideFieldError('step4GeneralError');
 
+            const servesTehran = $('input[name="serves_tehran"]:checked').val();
+
             // جمع‌آوری مناطق تهران
             const tehranDistricts = [];
-            $('.tehran-district-cb:checked').each(function() {
-                tehranDistricts.push(parseInt($(this).val()));
-            });
+            if (servesTehran === '1') {
+                $('.tehran-district-cb:checked').each(function() {
+                    tehranDistricts.push(parseInt($(this).val()));
+                });
 
-            if (tehranDistricts.length === 0) {
-                showFieldError('tehranDistrictsError', 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.');
-                return;
+                if (tehranDistricts.length === 0) {
+                    showFieldError('tehranDistrictsError', 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.');
+                    return;
+                }
             }
 
             // جمع‌آوری شهرهای استان تهران
@@ -2324,7 +2376,8 @@
 
             $.post('{{ route("technician.register.step4") }}', {
                 mobile: currentMobile,
-                tehran_districts: tehranDistricts,
+                serves_tehran: servesTehran || '0',
+                tehran_districts: tehranDistricts.length ? tehranDistricts : null,
                 tehran_province_cities: tehranProvinceCities.length ? tehranProvinceCities : null,
                 alborz_cities: alborzCities.length ? alborzCities : null,
                 other_provinces_cities: otherProvincesCities || null
