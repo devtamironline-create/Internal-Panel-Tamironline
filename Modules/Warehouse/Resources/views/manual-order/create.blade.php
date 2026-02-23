@@ -229,11 +229,22 @@
                     <div class="space-y-2">
                         @foreach($shippingTypes as $type)
                         <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition"
-                               :class="form.shipping_type === '{{ $type->slug }}' ? 'border-brand-500 bg-brand-50' : 'border-gray-200'">
+                               :class="form.shipping_type === '{{ $type->slug }}' ? 'border-brand-500 bg-brand-50' : 'border-gray-200'"
+                               @click="selectShippingType('{{ $type->slug }}')">
                             <input type="radio" x-model="form.shipping_type" value="{{ $type->slug }}" class="text-brand-600 focus:ring-brand-500">
-                            <div>
-                                <div class="font-medium text-sm">{{ $type->name }}</div>
-                                <div class="text-xs text-gray-500">{{ $type->timer_label }}</div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-sm">{{ $type->name }}</span>
+                                    @if(isset($shippingCosts[$type->slug]))
+                                    <span class="text-xs font-medium text-brand-600" dir="ltr">{{ number_format($shippingCosts[$type->slug]['cost']) }} تومان</span>
+                                    @endif
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ $type->timer_label }}
+                                    @if(isset($shippingCosts[$type->slug]) && $shippingCosts[$type->slug]['zone_name'])
+                                    <span class="text-gray-400">| {{ $shippingCosts[$type->slug]['zone_name'] }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </label>
                         @endforeach
@@ -242,6 +253,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">هزینه ارسال (تومان)</label>
                         <input type="number" x-model.number="form.shipping_cost" min="0" dir="ltr"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm">
+                        <p class="text-xs text-gray-400 mt-1">هزینه از ووکامرس خوانده شده. در صورت نیاز قابل تغییر است.</p>
                     </div>
                 </div>
 
@@ -339,6 +351,7 @@ function manualOrder() {
             customer_note: '',
             items: [],
         },
+        shippingCostsMap: @json(collect($shippingCosts)->mapWithKeys(fn($v, $k) => [$k => $v['cost']])),
         submitting: false,
         productSearch: '',
         productResults: [],
@@ -352,6 +365,18 @@ function manualOrder() {
         couponMessage: '',
         couponValid: false,
         couponData: null,
+
+        init() {
+            // ست کردن هزینه اولیه بر اساس نوع ارسال پیش‌فرض
+            this.selectShippingType(this.form.shipping_type);
+        },
+
+        selectShippingType(slug) {
+            this.form.shipping_type = slug;
+            if (this.shippingCostsMap[slug] !== undefined) {
+                this.form.shipping_cost = this.shippingCostsMap[slug];
+            }
+        },
 
         formatPrice(num) {
             if (!num) return '0';

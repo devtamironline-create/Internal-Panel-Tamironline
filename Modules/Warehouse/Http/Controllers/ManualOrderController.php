@@ -26,15 +26,17 @@ class ManualOrderController extends Controller
 
         $shippingTypes = WarehouseShippingType::getActiveTypes();
 
-        // روش‌های پرداخت از ووکامرس
+        // روش‌های پرداخت و هزینه ارسال از ووکامرس
         $paymentGateways = [];
+        $shippingCosts = [];
         try {
             $wcService = new WooCommerceService();
             if ($wcService->isConfigured()) {
                 $paymentGateways = $wcService->fetchPaymentGateways();
+                $shippingCosts = $wcService->getShippingCostsMap();
             }
         } catch (\Exception $e) {
-            Log::warning('Failed to fetch payment gateways', ['error' => $e->getMessage()]);
+            Log::warning('Failed to fetch WC data', ['error' => $e->getMessage()]);
         }
 
         // روش‌های پرداخت پیش‌فرض اگه WC در دسترس نبود
@@ -46,7 +48,7 @@ class ManualOrderController extends Controller
             ];
         }
 
-        return view('warehouse::manual-order.create', compact('shippingTypes', 'paymentGateways'));
+        return view('warehouse::manual-order.create', compact('shippingTypes', 'paymentGateways', 'shippingCosts'));
     }
 
     /**
@@ -347,13 +349,15 @@ class ManualOrderController extends Controller
         $shippingTypes = WarehouseShippingType::getActiveTypes();
 
         $paymentGateways = [];
+        $shippingCosts = [];
         try {
             $wcService = new WooCommerceService();
             if ($wcService->isConfigured()) {
                 $paymentGateways = $wcService->fetchPaymentGateways();
+                $shippingCosts = $wcService->getShippingCostsMap();
             }
         } catch (\Exception $e) {
-            Log::warning('Failed to fetch payment gateways', ['error' => $e->getMessage()]);
+            Log::warning('Failed to fetch WC data', ['error' => $e->getMessage()]);
         }
 
         if (empty($paymentGateways)) {
@@ -384,7 +388,7 @@ class ManualOrderController extends Controller
             'shipping_cost' => collect($wcData['shipping_lines'] ?? [])->sum(fn($l) => (float)($l['total'] ?? 0)),
         ];
 
-        return view('warehouse::manual-order.edit', compact('order', 'shippingTypes', 'paymentGateways', 'orderInfo'));
+        return view('warehouse::manual-order.edit', compact('order', 'shippingTypes', 'paymentGateways', 'shippingCosts', 'orderInfo'));
     }
 
     /**

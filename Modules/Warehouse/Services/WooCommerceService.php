@@ -2004,6 +2004,96 @@ class WooCommerceService
     }
 
     /**
+     * دریافت نقشه هزینه ارسال بر اساس نوع ارسال داخلی
+     * از روش‌های ارسال WC و mapping جدول warehouse_wc_shipping_methods
+     */
+    public function getShippingCostsMap(): array
+    {
+        $costsMap = [];
+
+        // اول: از جدول mapping محلی بخون (اگه قبلاً سینک شده و هزینه داره)
+        $wcMethods = WarehouseWcShippingMethod::whereNotNull('mapped_shipping_type')
+            ->where('enabled', true)
+            ->get();
+
+        foreach ($wcMethods as $method) {
+            $rawData = $method->raw_data ?? [];
+            $cost = $rawData['settings']['cost']['value'] ?? $rawData['cost'] ?? null;
+
+            if ($cost !== null && $method->mapped_shipping_type) {
+                // اگه هنوز هزینه ست نشده یا هزینه جدید بیشتر دقته
+                if (!isset($costsMap[$method->mapped_shipping_type])) {
+                    $costsMap[$method->mapped_shipping_type] = [
+                        'cost' => (float) $cost,
+                        'method_title' => $method->method_title,
+                        'zone_name' => $method->zone_name,
+                    ];
+                }
+            }
+        }
+
+        // دوم: اگه mapping محلی نبود، مستقیم از WC API بخون
+        if (empty($costsMap) && $this->isConfigured()) {
+            $methods = $this->fetchShippingMethods();
+            foreach ($methods as $method) {
+                $cost = $method['settings']['cost']['value'] ?? null;
+                if ($cost === null) continue;
+
+                // auto-detect نوع ارسال از عنوان متد
+                $slug = $this->detectShippingTypeFromMethodTitle(
+                    $method['method_title'] ?? '',
+                    $method['method_id'] ?? ''
+                );
+
+                if ($slug && !isset($costsMap[$slug])) {
+                    $costsMap[$slug] = [
+                        'cost' => (float) $cost,
+                        'method_title' => $method['method_title'],
+                        'zone_name' => $method['zone_name'] ?? '',
+                    ];
+                }
+            }
+        }
+
+        // ارسال رایگان و تحویل حضوری = 0
+        if (!isset($costsMap['pickup'])) {
+            $costsMap['pickup'] = ['cost' => 0, 'method_title' => 'تحویل حضوری', 'zone_name' => ''];
+        }
+
+        return $costsMap;
+    }
+
+    /**
+     * تشخیص نوع ارسال از عنوان متد WC
+     */
+    protected function detectShippingTypeFromMethodTitle(string $title, string $methodId): ?string
+    {
+        $title = mb_strtolower($title);
+        $methodId = strtolower($methodId);
+
+        if (str_contains($title, 'حضوری') || str_contains($methodId, 'local_pickup') || str_contains($methodId, 'pickup')) {
+            return 'pickup';
+        }
+        if (str_contains($title, 'فوری') || str_contains($title, 'urgent') || str_contains($title, 'express')) {
+            return 'urgent';
+        }
+        if (str_contains($title, 'اضطراری') || str_contains($title, 'emergency')) {
+            return 'emergency';
+        }
+        if (str_contains($title, 'پیک') || str_contains($methodId, 'courier') || str_contains($methodId, 'local_delivery')) {
+            return 'courier';
+        }
+        if (str_contains($title, 'پست') || str_contains($title, 'پیشتاز')) {
+            return 'post';
+        }
+        if (str_contains($methodId, 'flat_rate') || str_contains($methodId, 'free_shipping')) {
+            return 'post';
+        }
+
+        return null;
+    }
+
+    /**
      * دریافت روش‌های پرداخت فعال ووکامرس
      */
     public function fetchPaymentGateways(): array
