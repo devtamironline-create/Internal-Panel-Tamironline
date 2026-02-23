@@ -15,6 +15,7 @@ use Modules\Warehouse\Http\Controllers\ExitScanController;
 use Modules\Warehouse\Http\Controllers\SettingsController;
 use Modules\Warehouse\Http\Controllers\OrderPresenceController;
 use Modules\Warehouse\Http\Controllers\StaffDistributionController;
+use Modules\Warehouse\Http\Controllers\ManualOrderController;
 
 
 /*
@@ -139,6 +140,19 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::delete('/shipping-rule/{shippingRule}', [SettingsController::class, 'deleteShippingRule'])->name('warehouse.settings.shipping-rule.delete');
         // Working Hours
         Route::put('/working-hours', [SettingsController::class, 'updateWorkingHours'])->name('warehouse.settings.working-hours.update');
+    });
+
+    // Manual Order (سفارش دستی)
+    Route::prefix('manual-order')->group(function () {
+        Route::get('/create', [ManualOrderController::class, 'create'])->name('warehouse.manual-order.create');
+        Route::post('/', [ManualOrderController::class, 'store'])->name('warehouse.manual-order.store');
+        Route::get('/{order}/edit', [ManualOrderController::class, 'edit'])->name('warehouse.manual-order.edit')
+            ->where('order', '[0-9]+');
+        Route::put('/{order}', [ManualOrderController::class, 'update'])->name('warehouse.manual-order.update')
+            ->where('order', '[0-9]+');
+        Route::get('/search-products', [ManualOrderController::class, 'searchProducts'])->name('warehouse.manual-order.search-products');
+        Route::get('/search-customers', [ManualOrderController::class, 'searchCustomers'])->name('warehouse.manual-order.search-customers');
+        Route::post('/validate-coupon', [ManualOrderController::class, 'validateCoupon'])->name('warehouse.manual-order.validate-coupon');
     });
 
     // WooCommerce Integration

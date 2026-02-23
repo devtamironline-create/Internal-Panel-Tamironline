@@ -737,7 +737,7 @@ class WooCommerceService
      * فیلتر کردن آیتم‌هایی که زیرمجموعه پکیج هستن
      * ووکامرس هم پکیج رو میفرسته هم زیرمجموعه‌هاش رو جداگانه - زیرمجموعه‌ها تکراری هستن
      */
-    protected function filterBundleChildren(array $lineItems): array
+    public function filterBundleChildren(array $lineItems): array
     {
         return array_values(array_filter($lineItems, function ($item) {
             foreach ($item['meta_data'] ?? [] as $meta) {
@@ -910,6 +910,9 @@ class WooCommerceService
                             'width' => (float)($dims['width'] ?? 0),
                             'height' => (float)($dims['height'] ?? 0),
                             'price' => (float)($product['price'] ?? 0),
+                            'stock_quantity' => $product['stock_quantity'] ?? null,
+                            'stock_status' => $product['stock_status'] ?? 'instock',
+                            'manage_stock' => (bool)($product['manage_stock'] ?? false),
                             'type' => $productType,
                             'parent_id' => null,
                             'status' => $product['status'] ?? 'publish',
@@ -1054,6 +1057,9 @@ class WooCommerceService
                             'width' => (float)($dims['width'] ?? 0),
                             'height' => (float)($dims['height'] ?? 0),
                             'price' => (float)($variation['price'] ?? 0),
+                            'stock_quantity' => $variation['stock_quantity'] ?? null,
+                            'stock_status' => $variation['stock_status'] ?? 'instock',
+                            'manage_stock' => (bool)($variation['manage_stock'] ?? false),
                             'type' => 'variation',
                             'parent_id' => $productId,
                             'status' => $variation['status'] ?? 'publish',
@@ -1796,5 +1802,236 @@ class WooCommerceService
             'failed' => $totalFailed,
             'details' => $details,
         ];
+    }
+
+    /**
+     * ساخت سفارش در ووکامرس
+     */
+    public function createOrder(array $orderData): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        try {
+            $response = Http::timeout(30)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->post($this->siteUrl . '/wp-json/wc/v3/orders', $orderData);
+
+            if ($response->successful()) {
+                $wcOrder = $response->json();
+                return [
+                    'success' => true,
+                    'order' => $wcOrder,
+                    'wc_order_id' => $wcOrder['id'],
+                    'order_number' => $wcOrder['number'] ?? $wcOrder['id'],
+                ];
+            }
+
+            $errorBody = $response->json();
+            $errorMessage = $errorBody['message'] ?? ('HTTP ' . $response->status());
+
+            Log::warning('WC create order failed', [
+                'http_status' => $response->status(),
+                'response' => $errorMessage,
+            ]);
+
+            return ['success' => false, 'message' => 'خطا در ایجاد سفارش ووکامرس: ' . $errorMessage];
+        } catch (\Exception $e) {
+            Log::error('WC create order exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * ویرایش سفارش در ووکامرس
+     */
+    public function updateWcOrder(int $wcOrderId, array $orderData): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        try {
+            $response = Http::timeout(30)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->put($this->siteUrl . '/wp-json/wc/v3/orders/' . $wcOrderId, $orderData);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'order' => $response->json(),
+                ];
+            }
+
+            $errorBody = $response->json();
+            $errorMessage = $errorBody['message'] ?? ('HTTP ' . $response->status());
+
+            return ['success' => false, 'message' => 'خطا در ویرایش سفارش ووکامرس: ' . $errorMessage];
+        } catch (\Exception $e) {
+            Log::error('WC update order exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'خطا: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * جستجوی مشتریان ووکامرس
+     */
+    public function searchCustomers(string $search): array
+    {
+        if (!$this->isConfigured()) {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/customers', [
+                    'search' => $search,
+                    'per_page' => 10,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Exception $e) {
+            Log::warning('WC customer search failed', ['error' => $e->getMessage()]);
+        }
+
+        return [];
+    }
+
+    /**
+     * اعتبارسنجی کد تخفیف ووکامرس
+     */
+    public function validateCoupon(string $code): array
+    {
+        if (!$this->isConfigured()) {
+            return ['valid' => false, 'message' => 'تنظیمات ووکامرس کامل نیست.'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/coupons', [
+                    'code' => $code,
+                ]);
+
+            if ($response->successful()) {
+                $coupons = $response->json();
+                if (empty($coupons)) {
+                    return ['valid' => false, 'message' => 'کد تخفیف یافت نشد.'];
+                }
+
+                $coupon = $coupons[0];
+
+                // بررسی تاریخ انقضا
+                if (!empty($coupon['date_expires'])) {
+                    $expires = \Carbon\Carbon::parse($coupon['date_expires']);
+                    if ($expires->isPast()) {
+                        return ['valid' => false, 'message' => 'کد تخفیف منقضی شده است.'];
+                    }
+                }
+
+                // بررسی تعداد استفاده
+                if (!empty($coupon['usage_limit']) && ($coupon['usage_count'] ?? 0) >= $coupon['usage_limit']) {
+                    return ['valid' => false, 'message' => 'سقف استفاده از کد تخفیف پر شده.'];
+                }
+
+                return [
+                    'valid' => true,
+                    'coupon' => $coupon,
+                    'code' => $coupon['code'],
+                    'amount' => $coupon['amount'],
+                    'discount_type' => $coupon['discount_type'],
+                    'description' => $coupon['description'] ?? '',
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::warning('WC coupon validation failed', ['error' => $e->getMessage()]);
+        }
+
+        return ['valid' => false, 'message' => 'خطا در بررسی کد تخفیف.'];
+    }
+
+    /**
+     * دریافت روش‌های ارسال ووکامرس (از zones)
+     */
+    public function fetchShippingMethods(): array
+    {
+        if (!$this->isConfigured()) {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones');
+
+            if (!$response->successful()) {
+                return [];
+            }
+
+            $zones = $response->json();
+            $methods = [];
+
+            foreach ($zones as $zone) {
+                $methodsResponse = Http::timeout(15)
+                    ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                    ->get($this->siteUrl . '/wp-json/wc/v3/shipping/zones/' . $zone['id'] . '/methods');
+
+                if ($methodsResponse->successful()) {
+                    foreach ($methodsResponse->json() as $method) {
+                        if ($method['enabled'] ?? false) {
+                            $methods[] = [
+                                'zone_id' => $zone['id'],
+                                'zone_name' => $zone['name'],
+                                'method_id' => $method['method_id'],
+                                'method_title' => $method['title'] ?? $method['method_title'],
+                                'instance_id' => $method['instance_id'] ?? null,
+                                'settings' => $method['settings'] ?? [],
+                            ];
+                        }
+                    }
+                }
+            }
+
+            return $methods;
+        } catch (\Exception $e) {
+            Log::warning('WC shipping methods fetch failed', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * دریافت روش‌های پرداخت فعال ووکامرس
+     */
+    public function fetchPaymentGateways(): array
+    {
+        if (!$this->isConfigured()) {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->get($this->siteUrl . '/wp-json/wc/v3/payment_gateways');
+
+            if ($response->successful()) {
+                return collect($response->json())
+                    ->filter(fn($gw) => ($gw['enabled'] ?? false))
+                    ->map(fn($gw) => [
+                        'id' => $gw['id'],
+                        'title' => $gw['title'],
+                        'description' => $gw['description'] ?? '',
+                    ])
+                    ->values()
+                    ->toArray();
+            }
+        } catch (\Exception $e) {
+            Log::warning('WC payment gateways fetch failed', ['error' => $e->getMessage()]);
+        }
+
+        return [];
     }
 }

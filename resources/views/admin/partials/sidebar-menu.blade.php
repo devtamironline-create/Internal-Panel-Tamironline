@@ -39,6 +39,14 @@
                 سفارشات
             </a>
         </li>
+        @can('manage-warehouse')
+        <li>
+            <a href="{{ route('warehouse.manual-order.create') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('warehouse.manual-order.*') ? 'bg-slate-700/50 text-white' : '' }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                ثبت سفارش دستی
+            </a>
+        </li>
+        @endcan
         @can('warehouse.reprint-invoice')
         <li>
             <a href="{{ route('warehouse.reprint-requests.index') }}" class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('warehouse.reprint-requests.*') ? 'bg-slate-700/50 text-white' : '' }}">

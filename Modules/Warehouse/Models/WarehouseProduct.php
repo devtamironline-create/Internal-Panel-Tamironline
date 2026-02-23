@@ -10,7 +10,8 @@ class WarehouseProduct extends Model
     protected $fillable = [
         'wc_product_id', 'name', 'sku', 'weight',
         'length', 'width', 'height',
-        'price', 'type', 'parent_id', 'status',
+        'price', 'stock_quantity', 'stock_status', 'manage_stock',
+        'type', 'parent_id', 'status',
     ];
 
     protected $casts = [
@@ -21,7 +22,34 @@ class WarehouseProduct extends Model
         'price' => 'decimal:0',
         'wc_product_id' => 'integer',
         'parent_id' => 'integer',
+        'stock_quantity' => 'integer',
+        'manage_stock' => 'boolean',
     ];
+
+    /**
+     * فقط محصولات موجود (در انبار)
+     */
+    public function scopeInStock($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('stock_status', 'instock')
+              ->orWhere('stock_status', 'onbackorder');
+        });
+    }
+
+    /**
+     * آیا محصول موجود هست؟
+     */
+    public function getIsInStockAttribute(): bool
+    {
+        if ($this->stock_status === 'outofstock') {
+            return false;
+        }
+        if ($this->manage_stock && $this->stock_quantity !== null && $this->stock_quantity <= 0) {
+            return false;
+        }
+        return true;
+    }
 
     public function variations(): HasMany
     {
