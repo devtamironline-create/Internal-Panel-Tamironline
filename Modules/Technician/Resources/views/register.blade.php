@@ -648,7 +648,7 @@
 
                     {{-- شهرهای استان البرز --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا در شهرهای استان البرز هم می‌توانید خدمات ارائه دهید؟</label>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا قصد ارائه خدمات در شهرهای استان البرز را دارید؟</label>
                         <div class="flex gap-3">
                             <label class="flex-1 cursor-pointer">
                                 <input type="radio" name="has_alborz_cities" value="1" class="hidden peer" onchange="toggleAlborzCities(true)">
