@@ -776,7 +776,19 @@ class RegistrationController extends Controller
 
         // ۱) آپلود ویدیو
         $videoPath = $request->file('video')->getRealPath();
+
+        Log::info('Biometric: Step 1 - Uploading video', [
+            'registration_id' => $registration->id,
+            'file_size' => $request->file('video')->getSize(),
+            'mime_type' => $request->file('video')->getMimeType(),
+        ]);
+
         $uploadResult = $zohal->uploadBiometricMedia($videoPath);
+
+        Log::info('Biometric: Step 1 - Upload result', [
+            'registration_id' => $registration->id,
+            'result' => $uploadResult,
+        ]);
 
         if (!$uploadResult['success']) {
             return response()->json([
@@ -789,6 +801,13 @@ class RegistrationController extends Controller
 
         // ۲) ایجاد جلسه Liveness
         $callbackUrl = route('technician.register.biometric-callback');
+
+        Log::info('Biometric: Step 2 - Creating liveness session', [
+            'registration_id' => $registration->id,
+            'media_id' => $mediaId,
+            'callback_url' => $callbackUrl,
+        ]);
+
         $livenessResult = $zohal->createLivenessSession(
             $mediaId,
             $registration->national_code,
@@ -796,6 +815,11 @@ class RegistrationController extends Controller
             $request->national_card_serial,
             $callbackUrl
         );
+
+        Log::info('Biometric: Step 2 - Liveness result', [
+            'registration_id' => $registration->id,
+            'result' => $livenessResult,
+        ]);
 
         if (!$livenessResult['success']) {
             return response()->json([
@@ -813,7 +837,7 @@ class RegistrationController extends Controller
             'current_step'          => 7,
         ]);
 
-        Log::info('Biometric liveness session created', [
+        Log::info('Biometric: Session created and saved', [
             'registration_id' => $registration->id,
             'session_id' => $livenessResult['session_id'],
         ]);
@@ -850,8 +874,39 @@ class RegistrationController extends Controller
             $zohal = new ZohalService();
             $result = $zohal->getLivenessResult($registration->biometric_session_id);
 
-            if ($result['success'] && $result['status'] === 'completed') {
+            Log::info('Biometric polling: Zohal result', [
+                'registration_id' => $registration->id,
+                'session_id' => $registration->biometric_session_id,
+                'zohal_result' => $result,
+            ]);
+
+            if (!$result['success']) {
+                // API خطا داده - به فرانت اطلاع بده ولی هنوز pending بمونه
+                Log::warning('Biometric polling: Zohal API failed', [
+                    'registration_id' => $registration->id,
+                    'result' => $result,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'status'  => 'pending',
+                    'reason'  => null,
+                    'debug'   => 'خطا از سرویس زحل: ' . ($result['message'] ?? 'نامشخص'),
+                ]);
+            }
+
+            if ($result['status'] === 'completed') {
+                Log::info('Biometric polling: session completed, processing result', [
+                    'registration_id' => $registration->id,
+                    'result_value' => $result['result'] ?? null,
+                    'reason' => $result['reason'] ?? null,
+                ]);
                 $this->processBiometricResult($registration, $result);
+                $registration->refresh();
+            } else {
+                Log::info('Biometric polling: still waiting', [
+                    'registration_id' => $registration->id,
+                    'zohal_status' => $result['status'] ?? 'unknown',
+                ]);
             }
         }
 

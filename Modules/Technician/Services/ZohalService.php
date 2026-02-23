@@ -130,6 +130,12 @@ class ZohalService
     public function uploadBiometricMedia(string $filePath): array
     {
         try {
+            Log::info('Zohal uploadBiometricMedia: starting', [
+                'file_size' => filesize($filePath),
+                'base_url' => $this->baseUrl,
+                'has_token' => !empty($this->token),
+            ]);
+
             $response = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->token,
@@ -139,14 +145,15 @@ class ZohalService
                     'type' => 'selfie_video',
                 ]);
 
+            Log::info('Zohal uploadBiometricMedia: response', [
+                'http_status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             if ($response->failed()) {
-                Log::error('Zohal Biometric Media upload failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
                 return [
                     'success' => false,
-                    'message' => 'خطا در آپلود ویدیو به سرویس احراز هویت',
+                    'message' => 'خطا در آپلود ویدیو به سرویس احراز هویت (HTTP ' . $response->status() . ')',
                 ];
             }
 
@@ -160,15 +167,16 @@ class ZohalService
                 ];
             }
 
+            Log::warning('Zohal uploadBiometricMedia: unexpected response format', ['data' => $data]);
             return [
                 'success' => false,
-                'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: ' . json_encode($data),
             ];
         } catch (\Exception $e) {
-            Log::error('Zohal Biometric Media exception', ['error' => $e->getMessage()]);
+            Log::error('Zohal Biometric Media exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
             ];
         }
     }
@@ -179,29 +187,38 @@ class ZohalService
     public function createLivenessSession(string $mediaId, string $nationalCode, string $birthDate, string $nationalCardSerial, string $callbackUrl): array
     {
         try {
+            $payload = [
+                'national_code' => $nationalCode,
+                'birth_date' => $birthDate,
+                'national_card_serial' => $nationalCardSerial,
+                'media' => [
+                    'selfie_video' => $mediaId,
+                ],
+                'callback_url' => $callbackUrl,
+            ];
+
+            Log::info('Zohal createLivenessSession: starting', [
+                'media_id' => $mediaId,
+                'national_code' => substr($nationalCode, 0, 3) . '****',
+                'callback_url' => $callbackUrl,
+            ]);
+
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $this->token,
                 ])
-                ->post($this->baseUrl . '/services/biometric/session/liveness/', [
-                    'national_code' => $nationalCode,
-                    'birth_date' => $birthDate,
-                    'national_card_serial' => $nationalCardSerial,
-                    'media' => [
-                        'selfie_video' => $mediaId,
-                    ],
-                    'callback_url' => $callbackUrl,
-                ]);
+                ->post($this->baseUrl . '/services/biometric/session/liveness/', $payload);
+
+            Log::info('Zohal createLivenessSession: response', [
+                'http_status' => $response->status(),
+                'body' => $response->body(),
+            ]);
 
             if ($response->failed()) {
-                Log::error('Zohal Liveness Session failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
                 return [
                     'success' => false,
-                    'message' => 'خطا در ایجاد جلسه احراز هویت',
+                    'message' => 'خطا در ایجاد جلسه احراز هویت (HTTP ' . $response->status() . ')',
                 ];
             }
 
@@ -216,15 +233,16 @@ class ZohalService
                 ];
             }
 
+            Log::warning('Zohal createLivenessSession: unexpected response format', ['data' => $data]);
             return [
                 'success' => false,
-                'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: ' . json_encode($data),
             ];
         } catch (\Exception $e) {
-            Log::error('Zohal Liveness Session exception', ['error' => $e->getMessage()]);
+            Log::error('Zohal Liveness Session exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
             ];
         }
     }
@@ -235,20 +253,24 @@ class ZohalService
     public function getLivenessResult(string $sessionId): array
     {
         try {
+            Log::info('Zohal getLivenessResult: checking session', ['session_id' => $sessionId]);
+
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->token,
                 ])
                 ->get($this->baseUrl . '/services/biometric/session/' . $sessionId . '/result');
 
+            Log::info('Zohal getLivenessResult: response', [
+                'session_id' => $sessionId,
+                'http_status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             if ($response->failed()) {
-                Log::error('Zohal Liveness Result failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
                 return [
                     'success' => false,
-                    'message' => 'خطا در دریافت نتیجه احراز هویت',
+                    'message' => 'خطا در دریافت نتیجه احراز هویت (HTTP ' . $response->status() . ')',
                 ];
             }
 
@@ -265,15 +287,19 @@ class ZohalService
                 ];
             }
 
+            Log::warning('Zohal getLivenessResult: unexpected response format', [
+                'session_id' => $sessionId,
+                'data' => $data,
+            ]);
             return [
                 'success' => false,
                 'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
             ];
         } catch (\Exception $e) {
-            Log::error('Zohal Liveness Result exception', ['error' => $e->getMessage()]);
+            Log::error('Zohal Liveness Result exception', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت',
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
             ];
         }
     }

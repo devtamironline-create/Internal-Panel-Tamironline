@@ -1266,6 +1266,20 @@
                             <div class="animate-spin w-8 h-8 border-3 border-blue-300 border-t-blue-600 rounded-full mx-auto mb-3"></div>
                             <p class="text-sm font-bold text-blue-700 mb-1">در حال بررسی...</p>
                             <p class="text-xs text-gray-500">ویدیوی شما در حال پردازش است. لطفاً صبر کنید.</p>
+                            <p id="biometricPollDebug" class="text-xs text-gray-400 mt-2 hidden"></p>
+                            <p id="biometricPollCount" class="text-xs text-gray-400 mt-1"></p>
+                        </div>
+                    </div>
+
+                    {{-- خطا در بررسی --}}
+                    <div id="biometricErrorBox" class="hidden">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                            <svg class="w-8 h-8 text-amber-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                            <p class="text-sm font-bold text-amber-700 mb-1">خطا در بررسی احراز هویت</p>
+                            <p id="biometricErrorDetail" class="text-xs text-gray-600 mb-3"></p>
+                            <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 transition-colors">
+                                تلاش مجدد
+                            </button>
                         </div>
                     </div>
 
@@ -1916,14 +1930,37 @@
             $('#biometricRejectedBox').addClass('hidden');
         }
 
+        var biometricPollAttempts = 0;
+        var biometricMaxPollAttempts = 60; // حداکثر ۵ دقیقه (60 × 5 ثانیه)
+        var biometricPollErrors = 0;
+
         function startBiometricPolling() {
             if (biometricPollInterval) clearInterval(biometricPollInterval);
+            biometricPollAttempts = 0;
+            biometricPollErrors = 0;
 
             biometricPollInterval = setInterval(function() {
+                biometricPollAttempts++;
+                $('#biometricPollCount').text('بررسی ' + biometricPollAttempts + ' از ' + biometricMaxPollAttempts);
+
+                if (biometricPollAttempts >= biometricMaxPollAttempts) {
+                    clearInterval(biometricPollInterval);
+                    $('#biometricPendingBox').addClass('hidden');
+                    $('#biometricErrorDetail').text('پس از ' + biometricMaxPollAttempts + ' بار تلاش، نتیجه‌ای دریافت نشد. لطفاً مجدداً تلاش کنید.');
+                    $('#biometricErrorBox').removeClass('hidden');
+                    return;
+                }
+
                 $.post('{{ route("technician.register.biometric-status") }}', {
                     mobile: currentMobile
                 })
                 .done(function(res) {
+                    biometricPollErrors = 0; // ریست شمارنده خطا
+
+                    if (res.debug) {
+                        $('#biometricPollDebug').text(res.debug).removeClass('hidden');
+                    }
+
                     if (res.success) {
                         if (res.status === 'verified') {
                             clearInterval(biometricPollInterval);
@@ -1934,11 +1971,23 @@
                         } else if (res.status === 'rejected') {
                             clearInterval(biometricPollInterval);
                             $('#biometricPendingBox').addClass('hidden');
+                            $('#biometricErrorBox').addClass('hidden');
                             $('#biometricRejectedBox').removeClass('hidden');
                             $('#biometricRejectReason').text(res.reason || 'احراز هویت ناموفق بود.');
                             $('#biometricActions').removeClass('hidden');
                         }
                         // اگر pending باشه، ادامه polling
+                    }
+                })
+                .fail(function(xhr) {
+                    biometricPollErrors++;
+                    console.error('Biometric poll error #' + biometricPollErrors, xhr.status, xhr.responseText);
+
+                    if (biometricPollErrors >= 5) {
+                        clearInterval(biometricPollInterval);
+                        $('#biometricPendingBox').addClass('hidden');
+                        $('#biometricErrorDetail').text('خطا در ارتباط با سرور (HTTP ' + xhr.status + '). لطفاً مجدداً تلاش کنید.');
+                        $('#biometricErrorBox').removeClass('hidden');
                     }
                 });
             }, 5000); // هر ۵ ثانیه
