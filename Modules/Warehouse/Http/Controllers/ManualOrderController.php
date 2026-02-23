@@ -61,6 +61,7 @@ class ManualOrderController extends Controller
         }
 
         $validated = $request->validate([
+            'customer_id' => 'nullable|integer',
             'customer_first_name' => 'required|string|max:255',
             'customer_last_name' => 'required|string|max:255',
             'customer_mobile' => 'required|string|max:20',
@@ -111,11 +112,16 @@ class ManualOrderController extends Controller
             ],
             'payment_method' => $validated['payment_method'],
             'payment_method_title' => $validated['payment_method_title'] ?? $validated['payment_method'],
-            'set_paid' => in_array($validated['payment_method'], ['online', 'bacs']),
+            'set_paid' => true,
             'line_items' => [],
             'shipping_lines' => [],
             'coupon_lines' => [],
         ];
+
+        // اتصال به مشتری موجود در ووکامرس
+        if (!empty($validated['customer_id'])) {
+            $wcOrderData['customer_id'] = $validated['customer_id'];
+        }
 
         // آیتم‌های سفارش
         foreach ($validated['items'] as $item) {

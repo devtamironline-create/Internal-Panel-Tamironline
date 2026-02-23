@@ -334,6 +334,7 @@
 function manualOrder() {
     return {
         form: {
+            customer_id: null,
             customer_first_name: '',
             customer_last_name: '',
             customer_mobile: '',
@@ -481,6 +482,7 @@ function manualOrder() {
         },
 
         selectCustomer(customer) {
+            this.form.customer_id = customer.id || null;
             this.form.customer_first_name = customer.first_name || '';
             this.form.customer_last_name = customer.last_name || '';
             this.form.customer_mobile = customer.phone || customer.billing?.phone || '';
