@@ -2006,57 +2006,84 @@ class WooCommerceService
 
     /**
      * دریافت نقشه هزینه ارسال بر اساس نوع ارسال داخلی
-     * از روش‌های ارسال WC و mapping جدول warehouse_wc_shipping_methods
+     * ۱. از جدول mapping محلی (warehouse_wc_shipping_methods)
+     * ۲. فالبک: از WC API
+     * ۳. فالبک: از میانگین هزینه ارسال سفارشات اخیر
      */
     public function getShippingCostsMap(): array
     {
         $costsMap = [];
 
-        // اول: از جدول mapping محلی بخون (اگه قبلاً سینک شده و هزینه داره)
-        $wcMethods = WarehouseWcShippingMethod::whereNotNull('mapped_shipping_type')
-            ->where('enabled', true)
-            ->get();
+        // ۱. از جدول mapping محلی بخون
+        try {
+            $wcMethods = WarehouseWcShippingMethod::whereNotNull('mapped_shipping_type')
+                ->where('enabled', true)
+                ->get();
 
-        foreach ($wcMethods as $method) {
-            $rawData = $method->raw_data ?? [];
-            $cost = $rawData['settings']['cost']['value'] ?? $rawData['cost'] ?? null;
+            foreach ($wcMethods as $method) {
+                $rawData = $method->raw_data ?? [];
+                // ساختارهای مختلفی که هزینه میتونه ذخیره شده باشه
+                $cost = $rawData['settings']['cost']['value']
+                    ?? $rawData['cost']
+                    ?? $rawData['settings']['cost']
+                    ?? null;
 
-            if ($cost !== null && $method->mapped_shipping_type) {
-                // اگه هنوز هزینه ست نشده یا هزینه جدید بیشتر دقته
-                if (!isset($costsMap[$method->mapped_shipping_type])) {
-                    $costsMap[$method->mapped_shipping_type] = [
-                        'cost' => (float) $cost,
-                        'method_title' => $method->method_title,
-                        'zone_name' => $method->zone_name,
-                    ];
+                if ($cost !== null && $method->mapped_shipping_type) {
+                    if (!isset($costsMap[$method->mapped_shipping_type])) {
+                        $costsMap[$method->mapped_shipping_type] = [
+                            'cost' => (float) $cost,
+                            'method_title' => $method->method_title,
+                            'zone_name' => $method->zone_name,
+                        ];
+                    }
                 }
             }
+        } catch (\Throwable $e) {
+            // جدول ممکنه وجود نداشته باشه
         }
 
-        // دوم: اگه mapping محلی نبود، مستقیم از WC API بخون
+        // ۲. فالبک: از WC API
         if (empty($costsMap) && $this->isConfigured()) {
-            $methods = $this->fetchShippingMethods();
-            foreach ($methods as $method) {
-                $cost = $method['settings']['cost']['value'] ?? null;
-                if ($cost === null) continue;
+            try {
+                $methods = $this->fetchShippingMethods();
+                foreach ($methods as $method) {
+                    $cost = $method['settings']['cost']['value']
+                        ?? $method['settings']['cost']
+                        ?? null;
+                    if ($cost === null) continue;
 
-                // auto-detect نوع ارسال از عنوان متد
-                $slug = $this->detectShippingTypeFromMethodTitle(
-                    $method['method_title'] ?? '',
-                    $method['method_id'] ?? ''
-                );
+                    $slug = $this->detectShippingTypeFromMethodTitle(
+                        $method['method_title'] ?? '',
+                        $method['method_id'] ?? ''
+                    );
 
-                if ($slug && !isset($costsMap[$slug])) {
-                    $costsMap[$slug] = [
-                        'cost' => (float) $cost,
-                        'method_title' => $method['method_title'],
-                        'zone_name' => $method['zone_name'] ?? '',
-                    ];
+                    if ($slug && !isset($costsMap[$slug])) {
+                        $costsMap[$slug] = [
+                            'cost' => (float) $cost,
+                            'method_title' => $method['method_title'],
+                            'zone_name' => $method['zone_name'] ?? '',
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('WC shipping methods API failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // ۳. فالبک: از سفارشات اخیر (واقعی‌ترین داده)
+        if (empty($costsMap)) {
+            $costsMap = $this->getShippingCostsFromOrders();
+        } else {
+            // حتی اگه از روش‌های بالا هزینه داشتیم، نوع‌هایی که نبودن رو از سفارشات پر کن
+            $orderCosts = $this->getShippingCostsFromOrders();
+            foreach ($orderCosts as $slug => $data) {
+                if (!isset($costsMap[$slug])) {
+                    $costsMap[$slug] = $data;
                 }
             }
         }
 
-        // ارسال رایگان و تحویل حضوری = 0
+        // تحویل حضوری = 0
         if (!isset($costsMap['pickup'])) {
             $costsMap['pickup'] = ['cost' => 0, 'method_title' => 'تحویل حضوری', 'zone_name' => ''];
         }
@@ -2092,6 +2119,60 @@ class WooCommerceService
         }
 
         return null;
+    }
+
+    /**
+     * استخراج هزینه ارسال از سفارشات اخیر (فالبک)
+     * از wc_order_data.shipping_lines[].total آخرین سفارش هر نوع ارسال
+     */
+    protected function getShippingCostsFromOrders(): array
+    {
+        $costsMap = [];
+
+        try {
+            $shippingTypes = WarehouseShippingType::where('is_active', true)->pluck('slug')->toArray();
+
+            foreach ($shippingTypes as $slug) {
+                // آخرین سفارش از هر نوع ارسال که wc_order_data داره
+                $order = WarehouseOrder::where('shipping_type', $slug)
+                    ->whereNotNull('wc_order_data')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if (!$order) continue;
+
+                $wcData = $order->wc_order_data;
+                if (!is_array($wcData)) continue;
+
+                $shippingLines = $wcData['shipping_lines'] ?? [];
+                $shippingTotal = 0;
+                $methodTitle = '';
+
+                foreach ($shippingLines as $line) {
+                    $shippingTotal += (float) ($line['total'] ?? 0);
+                    if (empty($methodTitle)) {
+                        $methodTitle = $line['method_title'] ?? '';
+                    }
+                }
+
+                // اگه shipping_total مستقیم هم بود
+                if ($shippingTotal == 0 && isset($wcData['shipping_total'])) {
+                    $shippingTotal = (float) $wcData['shipping_total'];
+                }
+
+                if ($shippingTotal > 0) {
+                    $costsMap[$slug] = [
+                        'cost' => $shippingTotal,
+                        'method_title' => $methodTitle ?: $slug,
+                        'zone_name' => 'از سفارشات اخیر',
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to get shipping costs from orders', ['error' => $e->getMessage()]);
+        }
+
+        return $costsMap;
     }
 
     /**
