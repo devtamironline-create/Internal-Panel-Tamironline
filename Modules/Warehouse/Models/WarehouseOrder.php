@@ -434,7 +434,8 @@ class WarehouseOrder extends Model
     {
         $jalali = \Morilog\Jalali\Jalalian::now();
         $prefix = 'WH-' . $jalali->format('Ymd');
-        $lastOrder = self::where('order_number', 'like', $prefix . '%')
+        $lastOrder = self::withTrashed()
+            ->where('order_number', 'like', $prefix . '%')
             ->orderBy('order_number', 'desc')
             ->first();
         $newNumber = $lastOrder ? ((int) substr($lastOrder->order_number, -4)) + 1 : 1;
