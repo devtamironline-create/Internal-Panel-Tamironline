@@ -199,8 +199,13 @@ class ZohalService
 
             Log::info('Zohal createLivenessSession: starting', [
                 'media_id' => $mediaId,
-                'national_code' => substr($nationalCode, 0, 3) . '****',
+                'national_code' => substr($nationalCode, 0, 3) . '****' . substr($nationalCode, -2),
+                'birth_date' => $birthDate,
+                'birth_date_length' => strlen($birthDate),
+                'national_card_serial' => substr($nationalCardSerial, 0, 3) . '****' . substr($nationalCardSerial, -2),
+                'national_card_serial_length' => strlen($nationalCardSerial),
                 'callback_url' => $callbackUrl,
+                'full_payload_keys' => array_keys($payload),
             ]);
 
             $response = Http::timeout($this->timeout)
