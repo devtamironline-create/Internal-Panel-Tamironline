@@ -584,7 +584,7 @@
 
                     {{-- سوال خدمات تهران --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا قصد ارائه خدمات در شهر و استان تهران را دارید؟</label>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">آیا قصد ارائه خدمات در شهرهای استان تهران را دارید؟</label>
                         <div class="flex gap-3">
                             <label class="flex-1 cursor-pointer">
                                 <input type="radio" name="serves_tehran" value="1" class="hidden peer" onchange="toggleTehranDistricts(true)">
