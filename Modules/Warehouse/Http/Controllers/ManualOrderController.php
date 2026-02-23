@@ -88,19 +88,23 @@ class ManualOrderController extends Controller
         $customerName = trim($validated['customer_first_name'] . ' ' . $validated['customer_last_name']);
 
         // ساخت داده سفارش WooCommerce
+        $billingData = [
+            'first_name' => $validated['customer_first_name'],
+            'last_name' => $validated['customer_last_name'],
+            'phone' => $validated['customer_mobile'],
+            'address_1' => $validated['address'],
+            'city' => $validated['city'],
+            'state' => $validated['state'],
+            'postcode' => $validated['postcode'],
+            'country' => 'IR',
+        ];
+        if (!empty($validated['customer_email'])) {
+            $billingData['email'] = $validated['customer_email'];
+        }
+
         $wcOrderData = [
             'status' => 'processing',
-            'billing' => [
-                'first_name' => $validated['customer_first_name'],
-                'last_name' => $validated['customer_last_name'],
-                'phone' => $validated['customer_mobile'],
-                'email' => $validated['customer_email'] ?? '',
-                'address_1' => $validated['address'],
-                'city' => $validated['city'],
-                'state' => $validated['state'],
-                'postcode' => $validated['postcode'],
-                'country' => 'IR',
-            ],
+            'billing' => $billingData,
             'shipping' => [
                 'first_name' => $validated['customer_first_name'],
                 'last_name' => $validated['customer_last_name'],
