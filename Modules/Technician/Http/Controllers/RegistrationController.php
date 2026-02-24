@@ -844,6 +844,24 @@ class RegistrationController extends Controller
             'video_path'      => $videoPath,
         ]);
 
+        // ارسال پیامک اطلاع‌رسانی ارسال ویدیو
+        $smsTemplate = TechnicianSetting::get('sms_biometric_submitted_template', '');
+        if ($smsTemplate) {
+            try {
+                $kavenegarService = app(KavenegarService::class);
+                $kavenegarService->sendTemplate(
+                    $registration->mobile,
+                    $smsTemplate,
+                    ['token' => $registration->first_name . ' ' . $registration->last_name]
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to send biometric submitted SMS', [
+                    'registration_id' => $registration->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'ویدیو با موفقیت ارسال شد.',

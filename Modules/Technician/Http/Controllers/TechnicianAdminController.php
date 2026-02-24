@@ -4,7 +4,9 @@ namespace Modules\Technician\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Modules\SMS\Services\KavenegarService;
 use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
 use Modules\Technician\Models\TechnicianSetting;
@@ -62,6 +64,9 @@ class TechnicianAdminController extends Controller
             'contract_sms_template' => TechnicianSetting::get('contract_sms_template', ''),
             'default_commission_percent' => TechnicianSetting::get('default_commission_percent', ''),
             'default_promissory_note_amount' => TechnicianSetting::get('default_promissory_note_amount', ''),
+            'sms_approved_template' => TechnicianSetting::get('sms_approved_template', ''),
+            'sms_rejected_template' => TechnicianSetting::get('sms_rejected_template', ''),
+            'sms_biometric_submitted_template' => TechnicianSetting::get('sms_biometric_submitted_template', ''),
         ];
 
         return view('technician::admin.settings', compact('settings'));
@@ -84,6 +89,7 @@ class TechnicianAdminController extends Controller
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
             'contract_text', 'contract_sms_template',
             'default_commission_percent', 'default_promissory_note_amount',
+            'sms_approved_template', 'sms_rejected_template', 'sms_biometric_submitted_template',
         ];
 
         foreach ($simpleFields as $field) {
@@ -257,6 +263,9 @@ class TechnicianAdminController extends Controller
 
         $registration->update($data);
 
+        // ارسال پیامک اطلاع‌رسانی
+        $this->sendStatusSms($registration, $request->status);
+
         $statusLabels = ['pending' => 'در انتظار بررسی', 'approved' => 'تایید شده', 'rejected' => 'رد شده'];
 
         return redirect()->route('technician.admin.registrations.show', $id)
@@ -359,6 +368,9 @@ class TechnicianAdminController extends Controller
                 'biometric_reject_reason' => null,
             ]);
 
+            // ارسال پیامک تایید
+            $this->sendStatusSms($registration, 'approved');
+
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'ویدیو احراز هویت تایید شد.');
         }
@@ -369,6 +381,9 @@ class TechnicianAdminController extends Controller
             'biometric_reject_reason' => $request->reject_reason ?: 'ویدیو مورد تایید نیست. لطفاً مجدداً ضبط کنید.',
             'biometric_verified_at'   => null,
         ]);
+
+        // ارسال پیامک رد
+        $this->sendStatusSms($registration, 'rejected');
 
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'ویدیو احراز هویت رد شد.');
@@ -516,5 +531,41 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.appliance-categories')
             ->with('success', 'دستگاه «' . $name . '» حذف شد.');
+    }
+
+    /**
+     * ارسال پیامک اطلاع‌رسانی بر اساس وضعیت
+     */
+    private function sendStatusSms(TechnicianRegistration $registration, string $status): void
+    {
+        $templateKey = match ($status) {
+            'approved' => 'sms_approved_template',
+            'rejected' => 'sms_rejected_template',
+            default => null,
+        };
+
+        if (!$templateKey) {
+            return;
+        }
+
+        $template = TechnicianSetting::get($templateKey, '');
+        if (empty($template)) {
+            return;
+        }
+
+        try {
+            $kavenegarService = app(KavenegarService::class);
+            $kavenegarService->sendTemplate(
+                $registration->mobile,
+                $template,
+                ['token' => $registration->first_name . ' ' . $registration->last_name]
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to send technician status SMS', [
+                'registration_id' => $registration->id,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -57,6 +57,7 @@
                 ['faq', 'سوالات'],
                 ['cta', 'دعوت به عمل'],
                 ['contract', 'قرارداد'],
+                ['sms', 'پیامک'],
                 ['general', 'عمومی'],
             ] as [$tab, $label])
             <button type="button" @click="activeTab = '{{ $tab }}'"
@@ -424,6 +425,65 @@
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
                            placeholder="contract-signed">
                     <p class="text-xs text-gray-400 mt-1">نام تمپلیت ثبت‌شده در پنل کاوه‌نگار برای ارسال پیامک پس از امضای قرارداد</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB: پیامک --}}
+        <div x-show="activeTab === 'sms'" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات پیامک اطلاع‌رسانی</h2>
+                <p class="text-xs text-gray-500">نام تمپلیت‌های ثبت‌شده در پنل کاوه‌نگار را وارد کنید. در صورت خالی بودن هر فیلد، پیامک مربوطه ارسال نمی‌شود.</p>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p class="text-xs text-blue-700 font-semibold mb-1">توکن‌های قابل استفاده در تمپلیت کاوه‌نگار:</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-blue-600" dir="ltr">
+                        <code class="bg-blue-100 px-1.5 py-0.5 rounded">token = نام و نام خانوادگی</code>
+                    </div>
+                    <p class="text-xs text-blue-600 mt-2">
+                        در پنل کاوه‌نگار تمپلیت را با <code class="bg-blue-100 px-1 rounded" dir="ltr">%token%</code> بسازید تا نام تکنسین جایگزین شود.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                تمپلیت پیامک تایید درخواست
+                            </span>
+                        </label>
+                        <input type="text" name="sms_approved_template" value="{{ $settings['sms_approved_template'] ?? '' }}" dir="ltr"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                               placeholder="technician-approved">
+                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین هنگام تایید درخواست ثبت‌نام توسط ادمین</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                تمپلیت پیامک رد درخواست
+                            </span>
+                        </label>
+                        <input type="text" name="sms_rejected_template" value="{{ $settings['sms_rejected_template'] ?? '' }}" dir="ltr"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                               placeholder="technician-rejected">
+                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین هنگام رد درخواست ثبت‌نام توسط ادمین</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                تمپلیت پیامک ارسال ویدیو احراز هویت
+                            </span>
+                        </label>
+                        <input type="text" name="sms_biometric_submitted_template" value="{{ $settings['sms_biometric_submitted_template'] ?? '' }}" dir="ltr"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                               placeholder="technician-biometric-submitted">
+                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین پس از آپلود ویدیو احراز هویت</p>
+                    </div>
                 </div>
             </div>
         </div>
