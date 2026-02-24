@@ -527,56 +527,79 @@ class RegistrationController extends Controller
             ], 422);
         }
 
-        $contractText = TechnicianSetting::get('contract_text', '');
+        try {
+            $contractText = TechnicianSetting::get('contract_text', '');
 
-        // درصد کارمزد: ابتدا مقدار اختصاصی تکنسین، سپس تنظیمات عمومی
-        $commissionPercent = $registration->commission_percent
-            ?? TechnicianSetting::get('default_commission_percent', '');
+            // درصد کارمزد: ابتدا مقدار اختصاصی تکنسین، سپس تنظیمات عمومی
+            $commissionPercent = null;
+            try {
+                $commissionPercent = $registration->commission_percent;
+            } catch (\Exception $e) {}
+            $commissionPercent = $commissionPercent ?? TechnicianSetting::get('default_commission_percent', '');
 
-        // مبلغ سفته: ابتدا مقدار اختصاصی تکنسین، سپس تنظیمات عمومی
-        $promissoryNoteAmount = $registration->promissory_note_amount
-            ?? TechnicianSetting::get('default_promissory_note_amount', '');
+            // مبلغ سفته: ابتدا مقدار اختصاصی تکنسین، سپس تنظیمات عمومی
+            $promissoryNoteAmount = null;
+            try {
+                $promissoryNoteAmount = $registration->promissory_note_amount;
+            } catch (\Exception $e) {}
+            $promissoryNoteAmount = $promissoryNoteAmount ?? TechnicianSetting::get('default_promissory_note_amount', '');
 
-        // عنوان جنسیت
-        $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
+            // عنوان جنسیت
+            $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
 
-        // آدرس از استان و شهر
-        $address = trim(($registration->province ?? '') . '، ' . ($registration->city ?? ''), '، ');
+            // آدرس از استان و شهر
+            $address = trim(($registration->province ?? '') . '، ' . ($registration->city ?? ''), '، ');
 
-        // تاریخ شمسی
-        $jalaliDate = \Morilog\Jalali\Jalalian::now()->format('Y/m/d');
+            // تاریخ شمسی
+            try {
+                $jalaliDate = \Morilog\Jalali\Jalalian::now()->format('Y/m/d');
+            } catch (\Exception $e) {
+                $jalaliDate = now()->format('Y/m/d');
+            }
 
-        // جایگزینی متغیرها
-        $contractText = str_replace(
-            [
-                '{gender_title}',
-                '{name}',
-                '{father_name}',
-                '{national_code}',
-                '{address}',
-                '{mobile}',
-                '{date}',
-                '{commission_percent}',
-                '{promissory_note_amount}',
-            ],
-            [
-                $genderTitle,
-                $registration->first_name . ' ' . $registration->last_name,
-                $registration->father_name ?? '',
-                $registration->national_code,
-                $address,
-                $registration->mobile,
-                $jalaliDate,
-                $commissionPercent,
-                $promissoryNoteAmount ? number_format((float) $promissoryNoteAmount) : '',
-            ],
-            $contractText
-        );
+            // جایگزینی متغیرها
+            $contractText = str_replace(
+                [
+                    '{gender_title}',
+                    '{name}',
+                    '{father_name}',
+                    '{national_code}',
+                    '{address}',
+                    '{mobile}',
+                    '{date}',
+                    '{commission_percent}',
+                    '{promissory_note_amount}',
+                ],
+                [
+                    $genderTitle,
+                    $registration->first_name . ' ' . $registration->last_name,
+                    $registration->father_name ?? '',
+                    $registration->national_code,
+                    $address,
+                    $registration->mobile,
+                    $jalaliDate,
+                    $commissionPercent,
+                    $promissoryNoteAmount ? number_format((float) $promissoryNoteAmount) : '',
+                ],
+                $contractText
+            );
 
-        return response()->json([
-            'success' => true,
-            'contract' => $contractText,
-        ]);
+            return response()->json([
+                'success' => true,
+                'contract' => $contractText,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Contract loading failed', [
+                'registration_id' => $registration->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در بارگذاری قرارداد: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

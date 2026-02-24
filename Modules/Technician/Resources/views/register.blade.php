@@ -2565,8 +2565,13 @@
                     showAlert(res.message, 'error');
                 }
             })
-            .fail(function() {
-                showAlert('خطا در بارگذاری قرارداد.', 'error');
+            .fail(function(xhr) {
+                var msg = 'خطا در بارگذاری قرارداد.';
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.message) msg = data.message;
+                } catch(e) {}
+                showAlert(msg, 'error');
             });
         }
 
