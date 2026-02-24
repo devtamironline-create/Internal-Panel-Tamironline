@@ -548,7 +548,9 @@ class RegistrationController extends Controller
             $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
 
             // آدرس از استان و شهر
-            $address = trim(($registration->province ?? '') . '، ' . ($registration->city ?? ''), '، ');
+            $province = $registration->province ?? '';
+            $city = $registration->city ?? '';
+            $address = $province && $city ? $province . '، ' . $city : ($province ?: $city);
 
             // تاریخ شمسی
             try {
