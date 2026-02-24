@@ -40,6 +40,7 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::put('/registrations/{id}/step', [TechnicianAdminController::class, 'registrationUpdateStep'])->name('registrations.update-step');
     Route::put('/registrations/{id}/note', [TechnicianAdminController::class, 'registrationUpdateNote'])->name('registrations.update-note');
     Route::put('/registrations/{id}/contract-fields', [TechnicianAdminController::class, 'registrationUpdateContractFields'])->name('registrations.update-contract-fields');
+    Route::put('/registrations/{id}/biometric-review', [TechnicianAdminController::class, 'registrationBiometricReview'])->name('registrations.biometric-review');
     Route::delete('/registrations/{id}', [TechnicianAdminController::class, 'registrationDestroy'])->name('registrations.destroy');
 
     // مدیریت دسته‌بندی دستگاه‌ها

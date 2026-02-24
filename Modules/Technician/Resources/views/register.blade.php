@@ -1214,10 +1214,21 @@
                         <span class="text-xs text-green-600 font-bold">مدارک آپلود شد</span>
                     </div>
                     <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
-                    <p class="text-xs text-gray-400 mt-1">جهت تایید هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
+                    <p class="text-xs text-gray-400 mt-1">لطفاً متن زیر را با صدای بلند بخوانید و ویدیو سلفی ضبط کنید</p>
                 </div>
 
                 <div class="space-y-4">
+                    {{-- متن خوانشی --}}
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <p class="text-xs text-blue-600 font-bold mb-2 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                            هنگام ضبط ویدیو، این متن را با صدای بلند بخوانید:
+                        </p>
+                        <p class="text-sm font-bold text-gray-800 leading-relaxed text-center py-2">
+                            «اینجانب به عنوان تکنسین تعمیرآنلاین، صحت اطلاعات ارائه‌شده را تایید می‌کنم.»
+                        </p>
+                    </div>
+
                     {{-- سریال کارت ملی --}}
                     <div>
                         <label for="national_card_serial" class="block text-sm font-semibold text-gray-600 mb-1.5">سریال پشت کارت ملی</label>
@@ -1235,13 +1246,17 @@
                             <div id="biometricOverlay" class="absolute inset-0 flex items-center justify-center">
                                 <div class="border-2 border-dashed border-white/40 rounded-full" style="width: 65%; height: 80%;"></div>
                             </div>
+                            {{-- متن روی ویدیو هنگام ضبط --}}
+                            <div id="biometricRecordingText" class="absolute bottom-0 left-0 right-0 bg-black/60 px-3 py-2 text-center hidden">
+                                <p class="text-white text-[11px] font-bold leading-relaxed">اینجانب به عنوان تکنسین تعمیرآنلاین، صحت اطلاعات ارائه‌شده را تایید می‌کنم.</p>
+                            </div>
                             <div id="biometricCountdown" class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg hidden">
                                 <span id="biometricTimer">00:00</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span>صورت خود را در کادر بیضی قرار دهید. نور کافی و پس‌زمینه ساده داشته باشید.</span>
+                            <span>صورت خود را در کادر قرار دهید و متن بالا را با صدای بلند بخوانید.</span>
                         </div>
                     </div>
 
@@ -1256,7 +1271,7 @@
                             توقف ضبط
                         </button>
                         <button type="button" id="btnSubmitBiometric" onclick="submitBiometric()" class="hidden w-full py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors mt-2">
-                            ارسال ویدیو و تایید هویت
+                            ارسال ویدیو
                         </button>
                         <button type="button" id="btnRetryBiometric" onclick="retryBiometricRecording()" class="hidden w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors mt-2">
                             ضبط مجدد
@@ -1265,37 +1280,14 @@
 
                     <p id="biometricError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
 
-                    {{-- وضعیت بررسی --}}
-                    <div id="biometricPendingBox" class="hidden">
-                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                            <div class="animate-spin w-8 h-8 border-3 border-blue-300 border-t-blue-600 rounded-full mx-auto mb-3"></div>
-                            <p class="text-sm font-bold text-blue-700 mb-1">در حال بررسی...</p>
-                            <p class="text-xs text-gray-500">ویدیوی شما در حال پردازش است. لطفاً صبر کنید.</p>
-                            <p id="biometricPollDebug" class="text-xs text-gray-400 mt-2 hidden"></p>
-                            <p id="biometricPollCount" class="text-xs text-gray-400 mt-1"></p>
-                        </div>
-                    </div>
-
-                    {{-- خطا در بررسی --}}
-                    <div id="biometricErrorBox" class="hidden">
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                            <svg class="w-8 h-8 text-amber-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                            <p class="text-sm font-bold text-amber-700 mb-1">خطا در بررسی احراز هویت</p>
-                            <p id="biometricErrorDetail" class="text-xs text-gray-600 mb-3"></p>
-                            <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 transition-colors">
-                                تلاش مجدد
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- رد شده --}}
+                    {{-- رد شده توسط اپراتور --}}
                     <div id="biometricRejectedBox" class="hidden">
                         <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
                             <svg class="w-8 h-8 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                            <p class="text-sm font-bold text-red-700 mb-1">احراز هویت رد شد</p>
+                            <p class="text-sm font-bold text-red-700 mb-1">ویدیو احراز هویت رد شد</p>
                             <p id="biometricRejectReason" class="text-xs text-gray-600 mb-3"></p>
                             <button type="button" onclick="retryBiometricFull()" class="px-6 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors">
-                                تلاش مجدد
+                                ضبط مجدد ویدیو
                             </button>
                         </div>
                     </div>
@@ -1308,14 +1300,15 @@
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">فرآیند با موفقیت تکمیل شد!</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">همه مراحل تکمیل شد!</h2>
                     <p class="text-sm text-gray-500 mb-3">
-                        از همکاری شما سپاسگزاریم. اطلاعات تکمیلی از طریق پیامک ارسال خواهد شد.
+                        از همکاری شما سپاسگزاریم.
                     </p>
-                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 mx-4 mt-4">
-                        <p class="text-sm text-green-700 font-semibold mb-1">همه مراحل تکمیل شد</p>
-                        <p class="text-xs text-gray-500 leading-relaxed">
-                            قرارداد و احراز هویت ویدیویی شما ثبت شد. تیم ما به زودی با شما تماس خواهد گرفت.
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mx-4 mt-4">
+                        <svg class="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-sm text-blue-700 font-bold mb-1">اطلاعات و ویدیو شما در حال بررسی است</p>
+                        <p class="text-xs text-gray-600 leading-relaxed">
+                            اطلاعات و ویدیوی احراز هویت شما تا <span class="font-bold text-blue-700">۴۸ ساعت آینده</span> بررسی و نتیجه از طریق پیامک به شما اعلام خواهد شد.
                         </p>
                     </div>
                 </div>
@@ -1584,10 +1577,16 @@
                                 isApproved = true;
                                 highestCompletedStep = 7;
                                 if (res.resume.biometric_status === 'pending') {
+                                    // ویدیو ارسال شده، منتظر بررسی اپراتور
+                                    highestCompletedStep = 8;
+                                    goToPhase('M');
+                                } else if (res.resume.biometric_status === 'rejected') {
+                                    // ویدیو رد شده، اجازه ضبط مجدد
                                     goToPhase('C2');
                                     initBiometricCamera();
-                                    showBiometricPending();
-                                    startBiometricPolling();
+                                    $('#biometricRejectedBox').removeClass('hidden');
+                                    $('#biometricRejectReason').text(res.resume.biometric_reject_reason || 'ویدیو رد شده است. لطفاً مجدداً ضبط کنید.');
+                                    $('#biometricActions').addClass('hidden');
                                 } else {
                                     goToPhase('C2');
                                     initBiometricCamera();
@@ -1916,17 +1915,19 @@
                 $('#btnSubmitBiometric').removeClass('hidden');
                 $('#btnRetryBiometric').removeClass('hidden');
                 $('#biometricCountdown').addClass('hidden');
+                $('#biometricRecordingText').addClass('hidden');
                 clearInterval(biometricRecordTimer);
             };
 
             biometricRecorder.start(100);
 
-            // نمایش شمارنده
+            // نمایش شمارنده و متن خوانشی روی ویدیو
             $('#btnStartRecord').addClass('hidden');
             $('#btnStopRecord').removeClass('hidden');
             $('#btnSubmitBiometric').addClass('hidden');
             $('#btnRetryBiometric').addClass('hidden');
             $('#biometricCountdown').removeClass('hidden');
+            $('#biometricRecordingText').removeClass('hidden');
 
             biometricRecordTimer = setInterval(function() {
                 biometricRecordSeconds++;
@@ -1990,8 +1991,9 @@
             })
             .done(function(res) {
                 if (res.success) {
-                    showBiometricPending();
-                    startBiometricPolling();
+                    stopBiometricCamera();
+                    highestCompletedStep = 8;
+                    goToPhase('M');
                 } else {
                     showFieldError('biometricError', res.message);
                 }

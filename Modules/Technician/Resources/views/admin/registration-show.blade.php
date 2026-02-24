@@ -582,7 +582,7 @@
         @endif
 
         {{-- بایومتریک --}}
-        @if($registration->biometric_status)
+        @if($registration->biometric_status || $registration->biometric_video_path)
         <div class="bg-white rounded-xl border border-gray-200 p-5">
             <h2 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -597,7 +597,7 @@
                         @elseif($registration->biometric_status === 'rejected')
                             <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-700">رد شده</span>
                         @else
-                            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-700">در حال بررسی</span>
+                            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-700">در انتظار بررسی</span>
                         @endif
                     </dd>
                 </div>
@@ -605,12 +605,6 @@
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">سریال کارت ملی</dt>
                     <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->national_card_serial }}</dd>
-                </div>
-                @endif
-                @if($registration->biometric_session_id)
-                <div class="flex justify-between">
-                    <dt class="text-xs text-gray-500">شناسه نشست</dt>
-                    <dd class="text-xs font-mono text-gray-600" dir="ltr">{{ $registration->biometric_session_id }}</dd>
                 </div>
                 @endif
                 @if($registration->biometric_verified_at)
@@ -626,6 +620,48 @@
                 </div>
                 @endif
             </dl>
+
+            {{-- پخش ویدیو --}}
+            @if($registration->biometric_video_path)
+            <div class="mt-4">
+                <label class="text-xs text-gray-500 font-bold mb-2 block">ویدیو احراز هویت:</label>
+                <video controls class="w-full rounded-xl bg-black" style="max-height: 300px;">
+                    <source src="{{ asset('storage/' . $registration->biometric_video_path) }}" type="video/webm">
+                    <source src="{{ asset('storage/' . $registration->biometric_video_path) }}" type="video/mp4">
+                    مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                </video>
+            </div>
+            @endif
+
+            {{-- دکمه‌های تایید/رد --}}
+            @if($registration->biometric_status === 'pending')
+            <div class="mt-4 space-y-3">
+                <div class="flex gap-2">
+                    <form method="POST" action="{{ route('technician.admin.registrations.biometric-review', $registration->id) }}" class="flex-1">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition-colors">
+                            تایید ویدیو
+                        </button>
+                    </form>
+                    <button type="button" onclick="document.getElementById('biometricRejectForm{{ $registration->id }}').classList.toggle('hidden')"
+                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">
+                        رد ویدیو
+                    </button>
+                </div>
+                <form method="POST" action="{{ route('technician.admin.registrations.biometric-review', $registration->id) }}" id="biometricRejectForm{{ $registration->id }}" class="hidden">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="action" value="reject">
+                    <textarea name="reject_reason" rows="2" placeholder="دلیل رد ویدیو..."
+                              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none mb-2"></textarea>
+                    <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">
+                        ثبت رد ویدیو
+                    </button>
+                </form>
+            </div>
+            @endif
         </div>
         @endif
 

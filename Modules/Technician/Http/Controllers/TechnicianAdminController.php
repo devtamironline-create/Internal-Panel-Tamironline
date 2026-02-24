@@ -339,6 +339,42 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * بررسی ویدیو احراز هویت (تایید/رد)
+     */
+    public function registrationBiometricReview(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'reject_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if ($request->action === 'approve') {
+            $registration->update([
+                'biometric_status'        => 'verified',
+                'biometric_verified_at'   => now(),
+                'biometric_reject_reason' => null,
+            ]);
+
+            return redirect()->route('technician.admin.registrations.show', $id)
+                ->with('success', 'ویدیو احراز هویت تایید شد.');
+        }
+
+        // رد ویدیو
+        $registration->update([
+            'biometric_status'        => 'rejected',
+            'biometric_reject_reason' => $request->reject_reason ?: 'ویدیو مورد تایید نیست. لطفاً مجدداً ضبط کنید.',
+            'biometric_verified_at'   => null,
+        ]);
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'ویدیو احراز هویت رد شد.');
+    }
+
+    /**
      * ذخیره یادداشت ادمین
      */
     public function registrationUpdateNote(Request $request, $id)

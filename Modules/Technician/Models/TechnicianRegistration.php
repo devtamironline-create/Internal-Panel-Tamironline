@@ -21,6 +21,7 @@ class TechnicianRegistration extends Model
         'biometric_status',
         'biometric_session_id',
         'biometric_media_id',
+        'biometric_video_path',
         'biometric_reject_reason',
         'biometric_verified_at',
         'shenasname_number',

@@ -790,14 +790,14 @@ class RegistrationController extends Controller
     }
 
     /**
-     * آپلود ویدیو سلفی و شروع احراز هویت بایومتریک
+     * آپلود ویدیو سلفی (ذخیره محلی — بررسی توسط اپراتور)
      */
     public function submitBiometric(Request $request)
     {
         $request->validate([
             'mobile'              => ['required', 'regex:/^09[0-9]{9}$/'],
             'national_card_serial' => ['required', 'string', 'regex:/^[0-9A-Za-z]{10}$/'],
-            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:2048'],
+            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:10240'],
         ], [
             'mobile.required'              => 'شماره موبایل الزامی است.',
             'national_card_serial.required' => 'سریال کارت ملی الزامی است.',
@@ -805,7 +805,7 @@ class RegistrationController extends Controller
             'video.required'               => 'ویدیو سلفی الزامی است.',
             'video.uploaded'               => 'آپلود ویدیو ناموفق بود. لطفاً مجدداً ضبط و ارسال کنید.',
             'video.mimetypes'              => 'فرمت ویدیو معتبر نیست.',
-            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۲ مگابایت باشد. لطفاً ویدیوی کوتاه‌تر ضبط کنید.',
+            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۱۰ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
@@ -827,88 +827,31 @@ class RegistrationController extends Controller
             ], 422);
         }
 
-        // ذخیره سریال کارت ملی
-        $registration->update(['national_card_serial' => $request->national_card_serial]);
+        // ذخیره ویدیو به صورت محلی
+        $folder = 'technician-biometric/' . $registration->id;
+        $videoPath = $request->file('video')->store($folder, 'public');
 
-        $zohal = new ZohalService();
-
-        // ۱) آپلود ویدیو
-        $videoPath = $request->file('video')->getRealPath();
-
-        Log::info('Biometric: Step 1 - Uploading video', [
-            'registration_id' => $registration->id,
-            'file_size' => $request->file('video')->getSize(),
-            'mime_type' => $request->file('video')->getMimeType(),
-        ]);
-
-        $uploadResult = $zohal->uploadBiometricMedia($videoPath);
-
-        Log::info('Biometric: Step 1 - Upload result', [
-            'registration_id' => $registration->id,
-            'result' => $uploadResult,
-        ]);
-
-        if (!$uploadResult['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $uploadResult['message'],
-            ], 503);
-        }
-
-        $mediaId = $uploadResult['media_id'];
-
-        // ۲) ایجاد جلسه Liveness
-        $callbackUrl = route('technician.register.biometric-callback');
-
-        Log::info('Biometric: Step 2 - Creating liveness session', [
-            'registration_id' => $registration->id,
-            'media_id' => $mediaId,
-            'callback_url' => $callbackUrl,
-        ]);
-
-        $livenessResult = $zohal->createLivenessSession(
-            $mediaId,
-            $registration->national_code,
-            $registration->birth_date,
-            $request->national_card_serial,
-            $callbackUrl
-        );
-
-        Log::info('Biometric: Step 2 - Liveness result', [
-            'registration_id' => $registration->id,
-            'result' => $livenessResult,
-        ]);
-
-        if (!$livenessResult['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $livenessResult['message'],
-            ], 503);
-        }
-
-        // ذخیره اطلاعات session
         $registration->update([
-            'biometric_media_id'    => $mediaId,
-            'biometric_session_id'  => $livenessResult['session_id'],
-            'biometric_status'      => 'pending',
+            'national_card_serial'    => $request->national_card_serial,
+            'biometric_video_path'    => $videoPath,
+            'biometric_status'        => 'pending',
             'biometric_reject_reason' => null,
-            'current_step'          => 9,
+            'current_step'            => 9,
         ]);
 
-        Log::info('Biometric: Session created and saved', [
+        Log::info('Biometric video uploaded locally', [
             'registration_id' => $registration->id,
-            'session_id' => $livenessResult['session_id'],
+            'video_path'      => $videoPath,
         ]);
 
         return response()->json([
-            'success'    => true,
-            'message'    => 'ویدیو ارسال شد. لطفاً منتظر نتیجه بمانید.',
-            'session_id' => $livenessResult['session_id'],
+            'success' => true,
+            'message' => 'ویدیو با موفقیت ارسال شد.',
         ]);
     }
 
     /**
-     * بررسی وضعیت احراز هویت بایومتریک (polling)
+     * بررسی وضعیت احراز هویت بایومتریک
      */
     public function checkBiometricStatus(Request $request)
     {
@@ -917,154 +860,21 @@ class RegistrationController extends Controller
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
-            ->whereNotNull('biometric_session_id')
+            ->whereNotNull('biometric_video_path')
             ->first();
 
         if (!$registration) {
             return response()->json([
                 'success' => false,
-                'message' => 'جلسه احراز هویت یافت نشد.',
+                'message' => 'ویدیو احراز هویت یافت نشد.',
             ], 422);
         }
-
-        // اگر هنوز pending هست، از زحل بپرس
-        if ($registration->biometric_status === 'pending') {
-            $zohal = new ZohalService();
-            $result = $zohal->getLivenessResult($registration->biometric_session_id);
-
-            Log::info('Biometric polling: Zohal result', [
-                'registration_id' => $registration->id,
-                'session_id' => $registration->biometric_session_id,
-                'zohal_result' => $result,
-            ]);
-
-            if (!$result['success']) {
-                // API خطا داده - به فرانت اطلاع بده ولی هنوز pending بمونه
-                Log::warning('Biometric polling: Zohal API failed', [
-                    'registration_id' => $registration->id,
-                    'result' => $result,
-                ]);
-                return response()->json([
-                    'success' => true,
-                    'status'  => 'pending',
-                    'reason'  => null,
-                    'debug'   => 'خطا از سرویس زحل: ' . ($result['message'] ?? 'نامشخص'),
-                ]);
-            }
-
-            if ($result['status'] === 'completed') {
-                Log::info('Biometric polling: session completed, processing result', [
-                    'registration_id' => $registration->id,
-                    'result_value' => $result['result'] ?? null,
-                    'reason' => $result['reason'] ?? null,
-                ]);
-                $this->processBiometricResult($registration, $result);
-                $registration->refresh();
-            } elseif (
-                $result['status'] === 'pending'
-                && !empty($result['completed_at'])
-            ) {
-                // Session stuck: Zohal has completed_at but status is still pending
-                // This means the session failed/errored on Zohal's side
-                Log::warning('Biometric polling: stuck session detected', [
-                    'registration_id' => $registration->id,
-                    'completed_at' => $result['completed_at'],
-                    'result_value' => $result['result'] ?? null,
-                    'reason' => $result['reason'] ?? null,
-                ]);
-
-                $registration->update([
-                    'biometric_status'        => 'rejected',
-                    'biometric_reject_reason' => 'SESSION_STUCK',
-                ]);
-                $registration->refresh();
-            } else {
-                Log::info('Biometric polling: still waiting', [
-                    'registration_id' => $registration->id,
-                    'zohal_status' => $result['status'] ?? 'unknown',
-                ]);
-            }
-        }
-
-        $reasonLabels = [
-            'REJECT_FACE_NOT_MATCH_ID' => 'چهره با تصویر کارت ملی مطابقت ندارد',
-            'VIDEO_NOT_LIVE' => 'ویدیو زنده تشخیص داده نشد',
-            'VIDEO_BAD_LIGHT' => 'نور ویدیو مناسب نیست. لطفاً در محیط روشن‌تر ضبط کنید',
-            'VIDEO_BAD_QUALITY' => 'کیفیت ویدیو مناسب نیست',
-            'PERSON_TOO_FAR_AWAY' => 'صورت شما خیلی دور است. لطفاً نزدیک‌تر بگیرید',
-            'MORE_THAN_ONE_PERSON' => 'بیش از یک نفر در تصویر شناسایی شد',
-            'NO_PERSON_DETECTED' => 'چهره‌ای در ویدیو شناسایی نشد',
-            'SESSION_STUCK' => 'سرویس احراز هویت پاسخ نهایی نداد. لطفاً مجدداً ویدیو ضبط کنید',
-            'UNDEFINED' => 'خطای نامشخص از سرویس احراز هویت. لطفاً مجدداً تلاش کنید',
-        ];
-
-        $rejectReason = $registration->biometric_reject_reason;
-        $rejectMessage = $reasonLabels[$rejectReason] ?? $rejectReason;
 
         return response()->json([
             'success' => true,
             'status'  => $registration->biometric_status,
-            'reason'  => $rejectMessage,
+            'reason'  => $registration->biometric_reject_reason,
         ]);
-    }
-
-    /**
-     * Webhook callback از زحل
-     */
-    public function biometricCallback(Request $request)
-    {
-        Log::info('Biometric callback received', $request->all());
-
-        $sessionId = $request->input('response_body.session_id') ?? $request->input('session_id');
-
-        if (!$sessionId) {
-            return response()->json(['status' => 'ignored'], 200);
-        }
-
-        $registration = TechnicianRegistration::where('biometric_session_id', $sessionId)->first();
-
-        if (!$registration) {
-            Log::warning('Biometric callback: registration not found', ['session_id' => $sessionId]);
-            return response()->json(['status' => 'not_found'], 200);
-        }
-
-        // دریافت نتیجه از زحل
-        $zohal = new ZohalService();
-        $result = $zohal->getLivenessResult($sessionId);
-
-        if ($result['success'] && $result['status'] === 'completed') {
-            $this->processBiometricResult($registration, $result);
-        }
-
-        return response()->json(['status' => 'ok'], 200);
-    }
-
-    /**
-     * پردازش نتیجه بایومتریک
-     */
-    private function processBiometricResult(TechnicianRegistration $registration, array $result): void
-    {
-        if ($result['result'] === 'accepted' || $result['result'] === 'approved') {
-            $registration->update([
-                'biometric_status'      => 'verified',
-                'biometric_verified_at' => now(),
-                'biometric_reject_reason' => null,
-            ]);
-
-            Log::info('Biometric verification passed', [
-                'registration_id' => $registration->id,
-            ]);
-        } else {
-            $registration->update([
-                'biometric_status'        => 'rejected',
-                'biometric_reject_reason' => $result['reason'] ?? 'UNKNOWN',
-            ]);
-
-            Log::info('Biometric verification rejected', [
-                'registration_id' => $registration->id,
-                'reason' => $result['reason'] ?? 'unknown',
-            ]);
-        }
     }
 
     /**
