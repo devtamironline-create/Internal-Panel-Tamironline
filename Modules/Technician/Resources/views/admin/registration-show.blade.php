@@ -122,24 +122,55 @@
             <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             مرحله فعلی ثبت‌نام
         </h2>
+
+        {{-- نوار مراحل بصری --}}
+        @php
+            $stepOptions = [
+                1 => '۱- احراز هویت',
+                2 => '۲- اطلاعات شخصی',
+                3 => '۳- اطلاعات تکمیلی',
+                4 => '۴- حوزه فعالیت',
+                5 => '۵- مناطق تحت پوشش',
+                6 => '۶- تکمیل (منتظر بررسی)',
+                7 => '۷- امضای قرارداد',
+                8 => '۸- آپلود مدارک',
+                9 => '۹- احراز هویت ویدیویی',
+            ];
+            $visualSteps = [
+                1 => 'هویت', 2 => 'شخصی', 3 => 'تکمیلی', 4 => 'فعالیت',
+                5 => 'مناطق', 6 => 'بررسی', 7 => 'قرارداد', 8 => 'مدارک', 9 => 'ویدیو'
+            ];
+            $currentStep = $registration->current_step;
+        @endphp
+        <div class="overflow-x-auto pb-2 mb-4" style="scrollbar-width: thin;">
+            <div class="flex items-center gap-0 min-w-max">
+                @foreach($visualSteps as $num => $label)
+                    <div class="flex items-center gap-0.5 shrink-0">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold
+                            {{ $num < $currentStep ? 'bg-green-500 text-white' : ($num == $currentStep ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400') }}">
+                            @if($num < $currentStep)
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            @else
+                                {{ $loop->iteration > 9 ? $num : ['','۱','۲','۳','۴','۵','۶','۷','۸','۹'][$num] }}
+                            @endif
+                        </div>
+                        <span class="text-[9px] whitespace-nowrap {{ $num < $currentStep ? 'text-green-600 font-bold' : ($num == $currentStep ? 'text-indigo-600 font-bold' : 'text-gray-400 font-medium') }}">{{ $label }}</span>
+                    </div>
+                    @if($num < 9)
+                    <div class="flex-shrink-0 w-3 h-px mx-0.5 {{ $num < $currentStep ? 'bg-green-400' : 'bg-gray-200' }}"></div>
+                    @endif
+                @endforeach
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-1 mt-2">
+                <div class="h-full rounded-full bg-indigo-600 transition-all duration-500" style="width: {{ min(100, max(5, ($currentStep / 9) * 100)) }}%"></div>
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('technician.admin.registrations.update-step', $registration->id) }}" class="flex items-end gap-3">
             @csrf
             @method('PUT')
             <div class="flex-1">
                 <select name="current_step" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none">
-                    @php
-                        $stepOptions = [
-                            1 => '۱- احراز هویت',
-                            2 => '۲- اطلاعات شخصی',
-                            3 => '۳- اطلاعات تکمیلی',
-                            4 => '۴- حوزه فعالیت',
-                            5 => '۵- مناطق تحت پوشش',
-                            6 => '۶- تکمیل (منتظر بررسی)',
-                            7 => '۷- احراز هویت ویدیویی',
-                            8 => '۸- امضای قرارداد',
-                            9 => '۹- آپلود مدارک',
-                        ];
-                    @endphp
                     @foreach($stepOptions as $value => $label)
                         <option value="{{ $value }}" @if($registration->current_step == $value) selected @endif>{{ $label }}</option>
                     @endforeach

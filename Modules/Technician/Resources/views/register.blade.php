@@ -57,6 +57,12 @@
         .phase.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* تب‌های مراحل - اسکرول افقی */
+        .overflow-x-auto::-webkit-scrollbar { height: 3px; }
+        .overflow-x-auto::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        [id^="stepIndicator"]:hover .step-circle { transform: scale(1.1); }
+        [id^="stepIndicator"] .step-circle { transition: all 0.2s; }
+
         .btn-loading { pointer-events: none; opacity: 0.7; }
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -135,36 +141,28 @@
             <p class="text-sm text-gray-400 mt-1">ثبت‌نام تکنسین</p>
         </div>
 
-        {{-- نوار مراحل --}}
-        <div class="px-6 py-4 bg-gray-50/50">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1" id="stepIndicator1">
-                    <div class="step-circle w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-[10px] font-bold">۱</div>
-                    <span class="step-label text-[10px] font-bold text-brand-blue">احراز هویت</span>
-                </div>
-                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1" id="stepIndicator2">
-                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۲</div>
-                    <span class="step-label text-[10px] font-medium text-gray-400">شخصی</span>
-                </div>
-                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1" id="stepIndicator3">
-                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۳</div>
-                    <span class="step-label text-[10px] font-medium text-gray-400">تکمیلی</span>
-                </div>
-                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1" id="stepIndicator4">
-                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۴</div>
-                    <span class="step-label text-[10px] font-medium text-gray-400">مناطق</span>
-                </div>
-                <div class="flex-1 mx-1 h-px bg-gray-200"></div>
-                <div class="flex items-center gap-1" id="stepIndicator5">
-                    <div class="step-circle w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-[10px] font-bold">۵</div>
-                    <span class="step-label text-[10px] font-medium text-gray-400">فعالیت</span>
+        {{-- نوار مراحل (اسکرول افقی) --}}
+        <div class="px-4 py-3 bg-gray-50/50">
+            <div class="overflow-x-auto pb-1 -mx-1" style="scrollbar-width: thin;">
+                <div class="flex items-center gap-0 min-w-max px-1">
+                    @php
+                        $stepLabels = ['هویت', 'شخصی', 'تکمیلی', 'مناطق', 'فعالیت', 'قرارداد', 'مدارک', 'ویدیو'];
+                        $stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸'];
+                    @endphp
+                    @foreach($stepLabels as $i => $label)
+                        @php $num = $i + 1; @endphp
+                        <div class="flex items-center gap-0.5 cursor-pointer select-none shrink-0" id="stepIndicator{{ $num }}" onclick="onStepClick({{ $num }})">
+                            <div class="step-circle w-5 h-5 rounded-full {{ $num === 1 ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400' }} flex items-center justify-center text-[9px] font-bold transition-all">{{ $stepNumbers[$i] }}</div>
+                            <span class="step-label text-[9px] {{ $num === 1 ? 'font-bold text-brand-blue' : 'font-medium text-gray-400' }} transition-all whitespace-nowrap">{{ $label }}</span>
+                        </div>
+                        @if($num < 8)
+                        <div class="flex-shrink-0 w-3 h-px bg-gray-200 mx-0.5 step-line" id="stepLine{{ $num }}"></div>
+                        @endif
+                    @endforeach
                 </div>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-1 mt-3">
-                <div id="progressBar" class="h-full rounded-full bg-brand-blue transition-all duration-500" style="width: 8%"></div>
+            <div class="w-full bg-gray-200 rounded-full h-1 mt-2">
+                <div id="progressBar" class="h-full rounded-full bg-brand-blue transition-all duration-500" style="width: 5%"></div>
             </div>
         </div>
 
@@ -948,6 +946,10 @@
                                 <span class="w-5 h-5 rounded-full bg-gray-300 text-white flex items-center justify-center text-[10px] font-bold shrink-0">۲</span>
                                 آپلود مدارک
                             </li>
+                            <li class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-gray-300 text-white flex items-center justify-center text-[10px] font-bold shrink-0">۳</span>
+                                احراز هویت ویدیویی
+                            </li>
                         </ul>
                     </div>
                     <button onclick="loadContract()" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
@@ -1028,9 +1030,9 @@
                     </div>
                     <h2 class="text-lg font-bold text-green-700 mb-2">قرارداد با موفقیت امضا شد!</h2>
                     <p class="text-sm text-gray-500 mb-4">
-                        برای تکمیل فرآیند، مرحله آپلود مدارک باقی‌مانده است.
+                        برای تکمیل فرآیند، آپلود مدارک و احراز هویت ویدیویی باقی‌مانده است.
                     </p>
-                    <button onclick="goToPhase('N')" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                    <button onclick="highestCompletedStep = Math.max(highestCompletedStep, 6); goToPhase('N')" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
                         ادامه: آپلود مدارک
                     </button>
                 </div>
@@ -1206,7 +1208,7 @@
                         <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                             <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <span class="text-xs text-green-600 font-bold">درخواست شما تایید شد</span>
+                        <span class="text-xs text-green-600 font-bold">مدارک آپلود شد</span>
                     </div>
                     <h2 class="text-base font-bold text-gray-800">احراز هویت ویدیویی</h2>
                     <p class="text-xs text-gray-400 mt-1">جهت تایید هویت، یک ویدیوی کوتاه سلفی ضبط کنید</p>
@@ -1350,17 +1352,39 @@
         });
 
         // ===== مدیریت فازها =====
+        let highestCompletedStep = 0; // بالاترین مرحله تکمیل شده
+        let isApproved = false; // آیا توسط ادمین تایید شده
+        let currentPhase = 'A'; // فاز فعلی
+        const stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸'];
+
+        // نگاشت فاز به مرحله (۸ مرحله)
+        // 1=هویت(A,B,C) | 2=شخصی(D) | 3=تکمیلی(E) | 4=مناطق(F) | 5=فعالیت(G,H) | 6=قرارداد(J,K,L) | 7=مدارک(N) | 8=ویدیو(C2)
+        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, J:6, K:6, L:6, N:7, C2:8, M:8 };
+
+        // نگاشت مرحله به اولین فاز آن (برای کلیک روی تب)
+        const stepToPhase = { 1:'A', 2:'D', 3:'E', 4:'F', 5:'G', 6:'J', 7:'N', 8:'C2' };
+
         function goToPhase(phase) {
             $('.phase').removeClass('active');
             $('#phase' + phase).addClass('active');
             hideAlert();
+            currentPhase = phase;
 
             // پراگرس بار
-            const progress = { A: 8, B: 12, C: 20, D: 35, E: 50, F: 65, G: 85, H: 100 };
-            $('#progressBar').css('width', (progress[phase] || 8) + '%');
+            const progress = { A:5, B:8, C:12, D:20, E:32, F:44, G:56, H:62, I:62, J:68, K:75, L:82, N:88, C2:94, M:100, Rejected:62 };
+            $('#progressBar').css('width', (progress[phase] || 5) + '%');
+
+            // به‌روزرسانی بالاترین مرحله تکمیل شده
+            const step = phaseToStep[phase] || 1;
+            if (step > highestCompletedStep + 1) {
+                highestCompletedStep = step - 1;
+            }
 
             // به‌روزرسانی نوار مراحل
             updateStepIndicators(phase);
+
+            // اسکرول تب فعال به دید
+            scrollStepIntoView(step);
 
             // وقتی فاز C نمایش داده شد، دیت‌پیکر رو init کن
             if (phase === 'C') {
@@ -1378,30 +1402,61 @@
             }
         }
 
+        function scrollStepIntoView(step) {
+            const el = document.getElementById('stepIndicator' + step);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
         function updateStepIndicators(phase) {
-            // مراحل: A,B,C = step1 | D = step2 | E = step3 | F = step4 | G = step5 | H = done
-            const phaseToStep = { A: 1, B: 1, C: 1, D: 2, E: 3, F: 4, G: 5, H: 5, I: 5, J: 5, K: 5, L: 5 };
             const currentStep = phaseToStep[phase] || 1;
 
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 8; i++) {
                 const indicator = $('#stepIndicator' + i);
                 const circle = indicator.find('.step-circle');
                 const label = indicator.find('.step-label');
+                const line = $('#stepLine' + i);
 
                 if (i < currentStep) {
                     // تکمیل شده
                     circle.removeClass('bg-gray-200 text-gray-400 bg-brand-blue text-white').addClass('bg-green-500 text-white');
-                    circle.html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>');
+                    circle.html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>');
                     label.removeClass('text-gray-400 text-brand-blue font-medium').addClass('text-green-600 font-bold');
+                    if (line.length) line.removeClass('bg-gray-200').addClass('bg-green-400');
                 } else if (i === currentStep) {
                     // فعال
                     circle.removeClass('bg-gray-200 text-gray-400 bg-green-500').addClass('bg-brand-blue text-white');
+                    circle.html(stepNumbers[i-1]);
                     label.removeClass('text-gray-400 text-green-600 font-medium').addClass('text-brand-blue font-bold');
+                    if (line.length) line.removeClass('bg-green-400').addClass('bg-gray-200');
                 } else {
                     // غیرفعال
                     circle.removeClass('bg-brand-blue text-white bg-green-500').addClass('bg-gray-200 text-gray-400');
+                    circle.html(stepNumbers[i-1]);
                     label.removeClass('text-brand-blue text-green-600 font-bold').addClass('text-gray-400 font-medium');
+                    if (line.length) line.removeClass('bg-green-400').addClass('bg-gray-200');
                 }
+            }
+        }
+
+        // کلیک روی تب‌های بالا
+        function onStepClick(stepNum) {
+            const currentStep = phaseToStep[currentPhase] || 1;
+
+            // اگر تایید شده، نمی‌تواند به مراحل قبل از تایید (1-5) برگردد
+            if (isApproved && stepNum <= 5) return;
+
+            // فقط مراحل تکمیل شده یا مرحله فعلی قابل کلیک هستند
+            if (stepNum > highestCompletedStep + 1) return;
+
+            // اگر روی مرحله فعلی هستیم، کاری نکن
+            if (stepNum === currentStep) return;
+
+            // رفتن به فاز مربوطه
+            const targetPhase = stepToPhase[stepNum];
+            if (targetPhase) {
+                goToPhase(targetPhase);
             }
         }
 
@@ -1516,18 +1571,15 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // ترتیب: بایومتریک → قرارداد → مدارک → تکمیل
-                            if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified' && res.resume.contract_signed && res.resume.documents_uploaded) {
+                            // ترتیب جدید: قرارداد → مدارک → بایومتریک → تکمیل
+                            if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded && res.resume.biometric_status === 'verified') {
+                                isApproved = true;
+                                highestCompletedStep = 8;
                                 goToPhase('M');
-                            } else if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified' && res.resume.contract_signed) {
-                                // قرارداد امضا شده ولی مدارک آپلود نشده
-                                goToPhase('N');
-                            } else if (res.resume.status === 'approved' && res.resume.biometric_status === 'verified') {
-                                // بایومتریک تایید شده، برو قرارداد
-                                $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
-                                goToPhase('J');
-                            } else if (res.resume.status === 'approved') {
-                                // بایومتریک انجام نشده یا در حال بررسی
+                            } else if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded) {
+                                // مدارک آپلود شده، بایومتریک انجام نشده
+                                isApproved = true;
+                                highestCompletedStep = 7;
                                 if (res.resume.biometric_status === 'pending') {
                                     goToPhase('C2');
                                     initBiometricCamera();
@@ -1537,6 +1589,17 @@
                                     goToPhase('C2');
                                     initBiometricCamera();
                                 }
+                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
+                                // قرارداد امضا شده ولی مدارک آپلود نشده
+                                isApproved = true;
+                                highestCompletedStep = 6;
+                                goToPhase('N');
+                            } else if (res.resume.status === 'approved') {
+                                // تایید شده، قرارداد امضا نشده
+                                isApproved = true;
+                                highestCompletedStep = 5;
+                                $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                                goToPhase('J');
                             } else if (res.resume.status === 'rejected') {
                                 $('#rejectedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 if (res.resume.rejection_reason) {
@@ -1545,12 +1608,16 @@
                                 }
                                 goToPhase('Rejected');
                             } else if (res.resume.current_step >= 6) {
+                                highestCompletedStep = 5;
                                 goToPhase('I');
                             } else if (res.resume.current_step >= 5) {
+                                highestCompletedStep = 4;
                                 goToPhase('G');
                             } else if (res.resume.current_step >= 4) {
+                                highestCompletedStep = 3;
                                 goToPhase('F');
                             } else if (res.resume.current_step >= 3) {
+                                highestCompletedStep = 2;
                                 goToPhase('E');
                             } else {
                                 // مرحله ۲ هنوز تکمیل نشده، فیلدها رو پر کن
@@ -1576,6 +1643,7 @@
                                         }
                                     }, 100);
                                 }
+                                highestCompletedStep = 1;
                                 goToPhase('D');
                             }
                         } else {
@@ -1648,6 +1716,7 @@
                     $('#step2FatherName').val(verifiedFatherName);
                     $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
+                    highestCompletedStep = Math.max(highestCompletedStep, 1);
                     goToPhase('D');
                 } else {
                     if (res.field) showFieldError(res.field === 'national_code' ? 'nationalCodeError' : 'birthDateError', res.message);
@@ -1755,7 +1824,9 @@
                 contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        goToPhase('M');
+                        highestCompletedStep = 7;
+                        goToPhase('C2');
+                        initBiometricCamera();
                     } else {
                         showFieldError('docGeneralError', res.message || 'خطا در آپلود مدارک');
                     }
@@ -1972,9 +2043,9 @@
                         if (res.status === 'verified') {
                             clearInterval(biometricPollInterval);
                             stopBiometricCamera();
-                            // رفتن به مرحله قرارداد
-                            $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
-                            goToPhase('J');
+                            // رفتن به مرحله تکمیل نهایی (ویدیو آخرین مرحله است)
+                            highestCompletedStep = 8;
+                            goToPhase('M');
                         } else if (res.status === 'rejected') {
                             clearInterval(biometricPollInterval);
                             $('#biometricPendingBox').addClass('hidden');
@@ -2088,6 +2159,7 @@
             })
             .done(function(res) {
                 if (res.success) {
+                    highestCompletedStep = Math.max(highestCompletedStep, 2);
                     goToPhase('E');
                 } else {
                     if (res.field) {
@@ -2283,6 +2355,7 @@
             })
             .done(function(res) {
                 if (res.success) {
+                    highestCompletedStep = Math.max(highestCompletedStep, 3);
                     goToPhase('F');
                 } else {
                     showAlert(res.message, 'error');
@@ -2440,6 +2513,7 @@
             })
             .done(function(res) {
                 if (res.success) {
+                    highestCompletedStep = Math.max(highestCompletedStep, 4);
                     goToPhase('G');
                 } else {
                     showFieldError('step4GeneralError', res.message);
@@ -2533,6 +2607,7 @@
             $.post('{{ route("technician.register.step5") }}', step5Data)
             .done(function(res) {
                 if (res.success) {
+                    highestCompletedStep = 5;
                     goToPhase('I');
                 } else {
                     showFieldError('step5GeneralError', res.message);
@@ -2560,6 +2635,7 @@
             .done(function(res) {
                 if (res.success) {
                     $('#contractContent').html(res.contract || '<p class="text-center text-gray-400">متن قرارداد هنوز تنظیم نشده است.</p>');
+                    highestCompletedStep = Math.max(highestCompletedStep, 5);
                     goToPhase('K');
                 } else {
                     showAlert(res.message, 'error');
@@ -2720,6 +2796,7 @@
             .done(function(res) {
                 if (res.success) {
                     if (contractOtpInterval) clearInterval(contractOtpInterval);
+                    highestCompletedStep = 6;
                     goToPhase('L');
                 } else {
                     showFieldError('signatureError', res.message);

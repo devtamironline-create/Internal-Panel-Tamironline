@@ -73,8 +73,18 @@
                         <td class="px-4 py-3 text-gray-600 dir-ltr text-left" dir="ltr">{{ $reg->mobile }}</td>
                         <td class="px-4 py-3 text-gray-600 dir-ltr text-left" dir="ltr">{{ $reg->national_code }}</td>
                         <td class="px-4 py-3">
-                            <span class="text-xs px-2 py-0.5 rounded-full {{ $reg->current_step >= 6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
-                                {{ $reg->current_step >= 6 ? 'تکمیل' : 'مرحله ' . $reg->current_step . ' از 5' }}
+                            @php
+                                $stepLabel = match(true) {
+                                    $reg->current_step >= 9 => 'ویدیو',
+                                    $reg->current_step >= 8 => 'مدارک',
+                                    $reg->current_step >= 7 => 'قرارداد',
+                                    $reg->current_step >= 6 => 'تکمیل',
+                                    default => 'مرحله ' . $reg->current_step . ' از ۵',
+                                };
+                                $stepColor = $reg->current_step >= 6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
+                            @endphp
+                            <span class="text-xs px-2 py-0.5 rounded-full {{ $stepColor }}">
+                                {{ $stepLabel }}
                             </span>
                         </td>
                         <td class="px-4 py-3">
