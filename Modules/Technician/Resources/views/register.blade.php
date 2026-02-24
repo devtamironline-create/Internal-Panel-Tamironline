@@ -642,6 +642,7 @@
                         <div id="tehranCitiesGrid" class="hidden mt-3 grid grid-cols-3 gap-2">
                             {{-- شهرهای استان تهران بجز تهران --}}
                         </div>
+                        <p id="tehranCitiesError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- شهرهای استان البرز --}}
@@ -664,6 +665,7 @@
                         <div id="alborzCitiesGrid" class="hidden mt-3 grid grid-cols-3 gap-2">
                             {{-- شهرهای استان البرز --}}
                         </div>
+                        <p id="alborzCitiesError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- سایر استان‌ها --}}
@@ -687,6 +689,7 @@
                             <textarea id="other_provinces_cities" rows="3" placeholder="نام استان و شهرهایی که می‌توانید خدمات ارائه دهید را بنویسید..."
                                       class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 resize-none"></textarea>
                         </div>
+                        <p id="otherProvincesError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     <p id="step4GeneralError" class="text-red-500 text-xs hidden"></p>
@@ -2469,9 +2472,17 @@
         function submitStep4() {
             clearAllErrors();
             hideFieldError('tehranDistrictsError');
+            hideFieldError('tehranCitiesError');
+            hideFieldError('alborzCitiesError');
+            hideFieldError('otherProvincesError');
             hideFieldError('step4GeneralError');
 
             const servesTehran = $('input[name="serves_tehran"]:checked').val();
+            const hasTehranCities = $('input[name="has_tehran_cities"]:checked').val();
+            const hasAlborzCities = $('input[name="has_alborz_cities"]:checked').val();
+            const hasOtherProvinces = $('input[name="has_other_provinces"]:checked').val();
+
+            let hasError = false;
 
             // جمع‌آوری مناطق تهران
             const tehranDistricts = [];
@@ -2482,7 +2493,7 @@
 
                 if (tehranDistricts.length === 0) {
                     showFieldError('tehranDistrictsError', 'لطفاً حداقل یک منطقه تهران را انتخاب کنید.');
-                    return;
+                    hasError = true;
                 }
             }
 
@@ -2492,14 +2503,41 @@
                 tehranProvinceCities.push($(this).val());
             });
 
+            // اگر بله زده ولی شهری انتخاب نکرده
+            if (hasTehranCities === '1' && tehranProvinceCities.length === 0) {
+                showFieldError('tehranCitiesError', 'لطفاً حداقل یک شهر استان تهران را انتخاب کنید.');
+                hasError = true;
+            }
+
             // جمع‌آوری شهرهای البرز
             const alborzCities = [];
             $('input[name="alborz_city"]:checked').each(function() {
                 alborzCities.push($(this).val());
             });
 
+            // اگر بله زده ولی شهری انتخاب نکرده
+            if (hasAlborzCities === '1' && alborzCities.length === 0) {
+                showFieldError('alborzCitiesError', 'لطفاً حداقل یک شهر استان البرز را انتخاب کنید.');
+                hasError = true;
+            }
+
             // سایر استان‌ها
             const otherProvincesCities = $('#other_provinces_cities').val().trim();
+
+            // اگر بله زده ولی چیزی ننوشته
+            if (hasOtherProvinces === '1' && !otherProvincesCities) {
+                showFieldError('otherProvincesError', 'لطفاً نام استان و شهرها را وارد کنید.');
+                hasError = true;
+            }
+
+            // حداقل یکی از ۴ بخش باید «بله» باشد
+            const hasAnyArea = servesTehran === '1' || hasTehranCities === '1' || hasAlborzCities === '1' || hasOtherProvinces === '1';
+            if (!hasAnyArea) {
+                showFieldError('step4GeneralError', 'لطفاً حداقل یک منطقه تحت پوشش را انتخاب کنید.');
+                hasError = true;
+            }
+
+            if (hasError) return;
 
             setLoading('btnStep4', true);
 
