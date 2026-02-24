@@ -544,7 +544,7 @@ class RegistrationController extends Controller
         $address = trim(($registration->province ?? '') . '، ' . ($registration->city ?? ''), '، ');
 
         // تاریخ شمسی
-        $jalaliDate = jdate(now())->format('Y/m/d');
+        $jalaliDate = \Morilog\Jalali\Jalalian::now()->format('Y/m/d');
 
         // جایگزینی متغیرها
         $contractText = str_replace(
