@@ -370,10 +370,48 @@
                 <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p class="text-xs text-amber-700 font-semibold mb-1">متغیرهای قابل استفاده در متن قرارداد:</p>
                     <div class="flex flex-wrap gap-2 text-xs text-amber-600" dir="ltr">
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{gender_title}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{name}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{father_name}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{national_code}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{address}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{mobile}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{date}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{commission_percent}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{promissory_note_amount}</code>
+                    </div>
+                    <p class="text-xs text-amber-600 mt-2">
+                        <strong>توضیح:</strong>
+                        gender_title = آقای/خانم |
+                        father_name = نام پدر |
+                        address = استان، شهر |
+                        date = تاریخ شمسی |
+                        commission_percent = درصد کارمزد |
+                        promissory_note_amount = مبلغ سفته (با فرمت عددی)
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات مالی پیش‌فرض قرارداد</h2>
+                <p class="text-xs text-gray-500">مقادیر پیش‌فرض برای همه تکنسین‌ها. در صورت نیاز می‌توانید برای هر تکنسین مقدار اختصاصی تنظیم کنید.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">درصد کارمزد پیش‌فرض</label>
+                        <div class="relative">
+                            <input type="number" name="default_commission_percent" value="{{ $settings['default_commission_percent'] ?? '' }}"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   min="0" max="100" step="0.01" placeholder="مثلاً: 30">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">درصد سهم تعمیرکار از هر فاکتور</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">مبلغ سفته پیش‌فرض (ریال)</label>
+                        <input type="text" name="default_promissory_note_amount" value="{{ $settings['default_promissory_note_amount'] ?? '' }}"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="مثلاً: 5000000000">
+                        <p class="text-xs text-gray-400 mt-1">مبلغ سفته ضمانت به ریال</p>
                     </div>
                 </div>
             </div>

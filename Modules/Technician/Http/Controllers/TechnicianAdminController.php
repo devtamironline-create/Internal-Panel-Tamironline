@@ -60,6 +60,8 @@ class TechnicianAdminController extends Controller
             'cta_footnote'       => TechnicianSetting::get('cta_footnote',        $defaults['cta_footnote']),
             'contract_text'      => TechnicianSetting::get('contract_text',       ''),
             'contract_sms_template' => TechnicianSetting::get('contract_sms_template', ''),
+            'default_commission_percent' => TechnicianSetting::get('default_commission_percent', ''),
+            'default_promissory_note_amount' => TechnicianSetting::get('default_promissory_note_amount', ''),
         ];
 
         return view('technician::admin.settings', compact('settings'));
@@ -81,6 +83,7 @@ class TechnicianAdminController extends Controller
             'cta_title', 'cta_description', 'cta_badge',
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
             'contract_text', 'contract_sms_template',
+            'default_commission_percent', 'default_promissory_note_amount',
         ];
 
         foreach ($simpleFields as $field) {
@@ -347,6 +350,34 @@ class TechnicianAdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'یادداشت با موفقیت ذخیره شد.',
+        ]);
+    }
+
+    /**
+     * ذخیره فیلدهای مالی قرارداد (اختصاصی هر تکنسین)
+     */
+    public function registrationUpdateContractFields(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'commission_percent'      => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'promissory_note_amount'  => ['nullable', 'string', 'max:50'],
+        ], [
+            'commission_percent.numeric' => 'درصد کارمزد باید عدد باشد.',
+            'commission_percent.min'     => 'درصد کارمزد نمی‌تواند منفی باشد.',
+            'commission_percent.max'     => 'درصد کارمزد نمی‌تواند بیشتر از ۱۰۰ باشد.',
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+        $registration->update([
+            'commission_percent'     => $request->commission_percent,
+            'promissory_note_amount' => $request->promissory_note_amount,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اطلاعات مالی قرارداد با موفقیت ذخیره شد.',
         ]);
     }
 
