@@ -508,7 +508,7 @@ class Cod24Service
      * تعلیق سفارش برای تولید بارکد پستی
      * POST /api/Order/suspendOrder
      */
-    public function suspendOrder(string $barcode): array
+    public function suspendOrder(string $serial): array
     {
         if (!$this->isConfigured()) {
             return ['success' => false, 'message' => 'تنظیمات COD24 کامل نیست'];
@@ -518,25 +518,20 @@ class Cod24Service
             $response = Http::timeout(30)
                 ->withHeaders($this->getHeaders())
                 ->post($this->endpoint('Order/suspendOrder'), [
-                    'barcode' => $barcode,
+                    'serial'  => $serial,
+                    'barcode' => $serial,
                 ]);
 
             $body = $response->json() ?? [];
             Log::info('Cod24 suspendOrder response', [
-                'barcode' => $barcode,
-                'status'  => $response->status(),
-                'body'    => $body,
+                'serial' => $serial,
+                'status' => $response->status(),
+                'body'   => $body,
             ]);
 
             if ($response->successful()) {
-                // استخراج بارکد پستی از پاسخ
-                $postBarcode = $body['postBarcode']
-                    ?? $body['data']['postBarcode']
-                    ?? $body['postalBarcode']
-                    ?? $body['data']['postalBarcode']
-                    ?? $body['barcodePosti']
-                    ?? $body['data']['barcodePosti']
-                    ?? null;
+                // استخراج بارکد پستی از پاسخ — تمام فیلدهای محتمل
+                $postBarcode = $this->extractPostBarcode($body);
 
                 return [
                     'success'      => true,
@@ -548,9 +543,45 @@ class Cod24Service
             $errorMsg = $body['message'] ?? $body['errorMessage'] ?? $response->body();
             return ['success' => false, 'message' => 'COD24 suspendOrder (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
-            Log::error('Cod24 suspendOrder error', ['barcode' => $barcode, 'error' => $e->getMessage()]);
+            Log::error('Cod24 suspendOrder error', ['serial' => $serial, 'error' => $e->getMessage()]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * استخراج بارکد پستی از پاسخ API
+     */
+    protected function extractPostBarcode(array $body): ?string
+    {
+        // بررسی تمام فیلدهای محتمل در سطوح مختلف
+        $roots = [$body, $body['data'] ?? [], $body['result'] ?? []];
+
+        $fieldNames = [
+            'postBarcode', 'postalBarcode', 'barcodePosti', 'postCode',
+            'post_barcode', 'postal_barcode', 'barcodePost',
+            'trackingCode', 'postTrackingCode',
+        ];
+
+        foreach ($roots as $root) {
+            if (!is_array($root)) continue;
+            foreach ($fieldNames as $field) {
+                $val = $root[$field] ?? null;
+                if (!empty($val) && is_string($val) && strlen($val) > 10) {
+                    return $val;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * استخراج بارکد پستی از پاسخ getBarcodeStatus
+     * public برای استفاده در PrintController
+     */
+    public function extractPostBarcodeFromStatus(array $data): ?string
+    {
+        return $this->extractPostBarcode($data);
     }
 
     /**
