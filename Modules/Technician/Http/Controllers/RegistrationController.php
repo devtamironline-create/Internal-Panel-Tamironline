@@ -306,7 +306,7 @@ class RegistrationController extends Controller
     {
         $request->validate([
             'mobile'               => ['required', 'regex:/^09[0-9]{9}$/'],
-            'field_of_study'       => ['nullable', 'string', 'max:255'],
+            'field_of_study'       => ['required', 'string', 'max:255'],
             'education_level'      => ['required', 'in:below_diploma,diploma,associate,bachelor,master,doctorate'],
             'has_business_license' => ['required', 'in:0,1'],
             'has_shop'             => ['required', 'in:0,1'],
@@ -329,6 +329,7 @@ class RegistrationController extends Controller
             'certificates.*.institution' => ['required', 'string', 'max:255'],
         ], [
             'mobile.required'              => 'شماره موبایل الزامی است.',
+            'field_of_study.required'      => 'رشته تحصیلی الزامی است.',
             'education_level.required'     => 'انتخاب مقطع تحصیلی الزامی است.',
             'work_experiences.required'    => 'حداقل یک سابقه شغلی الزامی است.',
             'work_experiences.min'         => 'حداقل یک سابقه شغلی الزامی است.',

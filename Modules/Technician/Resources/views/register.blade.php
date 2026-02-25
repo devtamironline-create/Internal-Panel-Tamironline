@@ -419,9 +419,10 @@
 
                     {{-- رشته تحصیلی --}}
                     <div>
-                        <label for="field_of_study" class="block text-sm font-semibold text-gray-600 mb-1.5">رشته تحصیلی</label>
+                        <label for="field_of_study" class="block text-sm font-semibold text-gray-600 mb-1.5">رشته تحصیلی <span class="text-red-500">*</span></label>
                         <input type="text" id="field_of_study" placeholder="مثال: برق، مکانیک، تاسیسات..."
                                class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300">
+                        <p id="fieldOfStudyError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- پروانه کسب --}}
@@ -2363,6 +2364,7 @@
             clearAllErrors();
             hideFieldError('step3GeneralError');
             hideFieldError('educationLevelError');
+            hideFieldError('fieldOfStudyError');
             hideFieldError('workExperienceError');
             hideFieldError('shopAddressError');
             hideFieldError('shopPhoneError');
@@ -2376,6 +2378,12 @@
             // بررسی مقطع تحصیلی (الزامی)
             if (!$('#education_level').val()) {
                 showFieldError('educationLevelError', 'انتخاب مقطع تحصیلی الزامی است.');
+                hasError = true;
+            }
+
+            // بررسی رشته تحصیلی (الزامی)
+            if (!$('#field_of_study').val().trim()) {
+                showFieldError('fieldOfStudyError', 'رشته تحصیلی الزامی است.');
                 hasError = true;
             }
 
