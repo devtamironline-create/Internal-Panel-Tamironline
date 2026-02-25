@@ -1821,6 +1821,7 @@
             $.ajax({
                 url: '{{ route("technician.register.upload-documents") }}',
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                 data: formData,
                 processData: false,
                 contentType: false,
