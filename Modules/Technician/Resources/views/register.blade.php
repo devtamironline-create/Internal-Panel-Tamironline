@@ -1406,6 +1406,11 @@
             if (phase === 'F') {
                 initCoverageAreaCities();
             }
+
+            // وقتی فاز C2 نمایش داده شد، دوربین بایومتریک رو روشن کن
+            if (phase === 'C2') {
+                initBiometricCamera();
+            }
         }
 
         function scrollStepIntoView(step) {
