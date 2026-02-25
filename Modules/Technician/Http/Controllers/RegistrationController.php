@@ -761,14 +761,14 @@ class RegistrationController extends Controller
         $request->validate([
             'mobile'     => ['required', 'regex:/^09[0-9]{9}$/'],
             'field_name' => ['required', 'string', 'in:' . implode(',', array_keys($allowedFields))],
-            'file'       => ['required', 'image', 'max:5120'],
+            'file'       => ['required', 'file', 'mimes:jpeg,jpg,png,gif,webp,pdf', 'max:5120'],
         ], [
             'mobile.required'     => 'شماره موبایل الزامی است.',
             'field_name.required' => 'نام فیلد الزامی است.',
             'field_name.in'       => 'نام فیلد نامعتبر است.',
             'file.required'       => 'فایل الزامی است.',
-            'file.image'          => 'فایل باید تصویر باشد.',
-            'file.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'file.mimes'          => 'فایل باید تصویر یا PDF باشد.',
+            'file.max'            => 'حجم فایل نباید بیشتر از ۵ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)

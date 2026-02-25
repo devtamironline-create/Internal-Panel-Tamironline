@@ -1154,7 +1154,7 @@
                             </div>
                             <label for="file_criminal_record" id="placeholder_criminal_record" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
                                 <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <span class="text-xs text-gray-400">برای انتخاب تصویر کلیک کنید</span>
+                                <span class="text-xs text-gray-400">تصویر یا PDF انتخاب کنید</span>
                             </label>
                         </div>
                         <p id="docError_criminal_record" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
@@ -1785,15 +1785,18 @@
             const file = input.files[0];
             if (!file) return;
 
+            const isPdf = file.type === 'application/pdf';
+            const isImage = file.type.startsWith('image/');
+
             // بررسی نوع فایل
-            if (!file.type.startsWith('image/')) {
-                showFieldError('docError_' + fieldName, 'فقط فایل تصویری مجاز است.');
+            if (!isImage && !isPdf) {
+                showFieldError('docError_' + fieldName, 'فقط فایل تصویری یا PDF مجاز است.');
                 input.value = '';
                 return;
             }
             // بررسی حجم (5MB)
             if (file.size > 5 * 1024 * 1024) {
-                showFieldError('docError_' + fieldName, 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+                showFieldError('docError_' + fieldName, 'حجم فایل نباید بیشتر از ۵ مگابایت باشد.');
                 input.value = '';
                 return;
             }
@@ -1801,14 +1804,26 @@
             hideFieldError('docError_' + fieldName);
 
             // نمایش پیش‌نمایش
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = $('#preview_' + fieldName);
-                preview.find('img').attr('src', e.target.result);
+            const preview = $('#preview_' + fieldName);
+            if (isPdf) {
+                // نمایش آیکون PDF به جای تصویر
+                preview.find('img').addClass('hidden');
+                preview.find('.pdf-preview').remove();
+                preview.prepend('<div class="pdf-preview flex flex-col items-center justify-center py-6 bg-red-50 rounded-xl"><svg class="w-12 h-12 text-red-500 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 13h1c.55 0 1 .45 1 1s-.45 1-1 1H9v1.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V13.5c0-.55.45-1 1-1h-.5zm3 0h1c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5h-1c-.28 0-.5-.22-.5-.5v-3c0-.28.22-.5.5-.5zm1 3c.28 0 .5-.22.5-.5v-1c0-.28-.22-.5-.5-.5H12v2h.5zm2-3h2c.28 0 .5.22.5.5s-.22.5-.5.5H15v.5h1c.28 0 .5.22.5.5s-.22.5-.5.5h-1v1c0 .28-.22.5-.5.5s-.5-.22-.5-.5v-3c0-.28.22-.5.5-.5z"/></svg><span class="text-xs text-red-600 font-medium">' + file.name + '</span></div>');
                 preview.removeClass('hidden');
                 $('#placeholder_' + fieldName).addClass('hidden');
-            };
-            reader.readAsDataURL(file);
+            } else {
+                // نمایش پیش‌نمایش تصویر
+                preview.find('.pdf-preview').remove();
+                preview.find('img').removeClass('hidden');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.find('img').attr('src', e.target.result);
+                    preview.removeClass('hidden');
+                    $('#placeholder_' + fieldName).addClass('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
 
             // آپلود فوری — صف‌بندی شده تا همزمان نشوند
             uploadQueue = uploadQueue.then(function() {
