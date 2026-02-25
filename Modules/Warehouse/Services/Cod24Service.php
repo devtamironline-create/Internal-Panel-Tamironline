@@ -524,19 +524,23 @@ class Cod24Service
         }
 
         try {
-            // API آرایه‌ای از آبجکت‌ها می‌خواد
+            // API آرایه‌ای از آبجکت‌ها می‌خواد — دقیقاً مطابق پلاگین رسمی COD24
+            // serial: int, idOrderShop: string (strval)
             $payload = [
                 [
                     'serial'      => (int) $serial,
-                    'idOrderShop' => (int) preg_replace('/\D/', '', $orderShopId ?: $serial) ?: 0,
+                    'idOrderShop' => (string) ($orderShopId ?: $serial),
                 ],
             ];
 
-            Log::info('Cod24 suspendOrder request', ['serial' => $serial, 'payload' => $payload]);
+            $jsonBody = json_encode($payload);
+            Log::info('Cod24 suspendOrder request', ['serial' => $serial, 'json' => $jsonBody]);
 
+            // ارسال مستقیم JSON — Http::post با آرایه عددی درست کار نمی‌کنه
             $response = Http::timeout(30)
                 ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/suspendOrder'), $payload);
+                ->withBody($jsonBody, 'application/json')
+                ->post($this->endpoint('Order/suspendOrder'));
 
             $body = $response->json() ?? [];
             Log::info('Cod24 suspendOrder response', [
@@ -573,7 +577,17 @@ class Cod24Service
                 return ['success' => false, 'message' => 'COD24 suspend: ' . $errorMsg];
             }
 
-            $errorMsg = $body['message'] ?? $body[0]['message'] ?? $response->body();
+            $errorMsg = $body['message'] ?? $body[0]['message'] ?? '';
+            if (!empty($body['errors'])) {
+                $details = [];
+                foreach ($body['errors'] as $err) {
+                    $details[] = is_array($err) ? ($err['message'] ?? json_encode($err, JSON_UNESCAPED_UNICODE)) : (string) $err;
+                }
+                $errorMsg .= ' | جزئیات: ' . implode(' — ', $details);
+            }
+            if (empty(trim($errorMsg))) {
+                $errorMsg = substr($response->body(), 0, 500);
+            }
             return ['success' => false, 'message' => 'COD24 suspendOrder (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Cod24 suspendOrder error', ['serial' => $serial, 'error' => $e->getMessage()]);
