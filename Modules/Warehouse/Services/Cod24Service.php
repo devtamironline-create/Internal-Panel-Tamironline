@@ -334,7 +334,7 @@ class Cod24Service
         }
 
         $payload = [
-            'idOrderShop'          => (string) $orderNo,
+            'idOrderShop'          => (int) preg_replace('/\D/', '', $orderNo) ?: 0,
             'cityCode'             => $cityCode,
             'idTypeSend'           => $idTypeSend,
             'idPayMethod'          => $idPayMethod,
@@ -528,7 +528,7 @@ class Cod24Service
             $payload = [
                 [
                     'serial'      => (int) $serial,
-                    'idOrderShop' => (string) ($orderShopId ?: $serial),
+                    'idOrderShop' => (int) preg_replace('/\D/', '', $orderShopId ?: $serial) ?: 0,
                 ],
             ];
 
