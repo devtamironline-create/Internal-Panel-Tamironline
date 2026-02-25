@@ -371,9 +371,17 @@ class PrintController extends Controller
                 return response()->json(['success' => false, 'message' => $error]);
             }
 
+            $wcDataFresh = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            $cod24Info = $wcDataFresh['cod24'] ?? [];
+            $msg = 'ثبت شد! بارکد: ' . ($order->amadest_barcode ?? 'نامشخص');
+            if ($shippingProvider === 'cod24') {
+                $msg .= ' | معلق: ' . (!empty($cod24Info['suspended']) ? 'بله' : 'خیر');
+                $msg .= ' | بارکد پستی: ' . ($cod24Info['post_barcode'] ?? $order->post_tracking_code ?? 'هنوز صادر نشده');
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'ثبت شد! بارکد: ' . ($order->amadest_barcode ?? 'نامشخص'),
+                'message' => $msg,
                 'barcode' => $order->amadest_barcode,
             ]);
         } catch (\Exception $e) {

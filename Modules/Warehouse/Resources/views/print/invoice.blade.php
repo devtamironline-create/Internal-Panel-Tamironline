@@ -180,6 +180,22 @@
     </div>
     @endif
 
+    {{-- باکس اطلاعات COD24 --}}
+    @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post')
+    @php
+        $cod24Data = $order->wc_order_data['cod24'] ?? [];
+    @endphp
+    <div class="no-print" style="background:#f0f9ff;border:1px solid #7dd3fc;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+        <div style="font-weight:bold;color:#0369a1;margin-bottom:6px;">وضعیت COD24</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <span>ثبت شده: <strong style="color:{{ !empty($cod24Data['registered']) ? '#16a34a' : '#dc2626' }}">{{ !empty($cod24Data['registered']) ? 'بله' : 'خیر' }}</strong></span>
+            <span>سریال: <strong>{{ $cod24Data['barcode'] ?? $order->amadest_barcode ?? '—' }}</strong></span>
+            <span>معلق (suspend): <strong style="color:{{ !empty($cod24Data['suspended']) ? '#16a34a' : '#dc2626' }}">{{ !empty($cod24Data['suspended']) ? 'بله' : 'خیر' }}</strong></span>
+            <span>بارکد پستی: <strong style="color:{{ !empty($cod24Data['post_barcode']) ? '#16a34a' : '#f59e0b' }}">{{ $cod24Data['post_barcode'] ?? $order->post_tracking_code ?? 'هنوز صادر نشده' }}</strong></span>
+        </div>
+    </div>
+    @endif
+
     {{-- انتخاب استان و شهر پستکس - فقط وقتی سرویس پستکس هست --}}
     @if(($shippingProvider ?? 'amadest') === 'postex' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
     <div class="no-print" id="postex-city-selector" style="background:#f5f3ff;border:1px solid #c4b5fd;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;">
