@@ -592,8 +592,10 @@ class Cod24Service
     protected function extractBarcode(array $body): ?string
     {
         $candidates = [
+            $body['serial'] ?? null,
             $body['barcode'] ?? null,
             $body['cod24Barcode'] ?? null,
+            $body['data']['serial'] ?? null,
             $body['data']['barcode'] ?? null,
             $body['data']['cod24Barcode'] ?? null,
             $body['data'][0]['barcode'] ?? null,
