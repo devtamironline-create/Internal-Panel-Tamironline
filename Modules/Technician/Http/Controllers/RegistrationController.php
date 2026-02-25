@@ -513,17 +513,31 @@ class RegistrationController extends Controller
     {
         $request->validate([
             'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ], [
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'mobile.regex'    => 'شماره موبایل معتبر نیست.',
         ]);
 
-        $registration = TechnicianRegistration::where('mobile', $request->mobile)
-            ->where('status', 'approved')
-            ->whereNull('contract_signed_at')
-            ->first();
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
 
         if (!$registration) {
             return response()->json([
                 'success' => false,
-                'message' => 'درخواست معتبر نیست.',
+                'message' => 'ثبت‌نامی با این شماره موبایل یافت نشد. لطفاً مجدداً وارد شوید.',
+            ], 422);
+        }
+
+        if ($registration->status !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست شما هنوز تأیید نشده است.',
+            ], 422);
+        }
+
+        if ($registration->contract_signed_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'قرارداد قبلاً امضا شده است.',
             ], 422);
         }
 

@@ -970,7 +970,7 @@
 
                 <div class="space-y-4">
                     {{-- متن قرارداد --}}
-                    <div id="contractContent" class="bg-white border border-gray-200 rounded-xl p-4 max-h-[400px] overflow-y-auto text-sm text-gray-700 leading-relaxed prose prose-sm">
+                    <div id="contractContent" class="bg-white border border-gray-200 rounded-xl p-4 max-h-[70vh] overflow-y-auto text-sm text-gray-700 leading-relaxed prose prose-sm">
                         <p class="text-center text-gray-400">در حال بارگذاری قرارداد...</p>
                     </div>
 
@@ -2742,6 +2742,16 @@
         // ===== فاز J-K-L: قرارداد و امضا =====
 
         function loadContract() {
+            if (!currentMobile) {
+                showAlert('نشست شما منقضی شده است. لطفاً صفحه را رفرش کرده و مجدداً وارد شوید.', 'error');
+                return;
+            }
+
+            // نمایش حالت بارگذاری
+            var $btn = $('[onclick="loadContract()"]');
+            var btnOriginal = $btn.html();
+            $btn.prop('disabled', true).html('<svg class="w-4 h-4 animate-spin inline-block ml-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> در حال بارگذاری...');
+
             $.post('{{ route("technician.register.get-contract") }}', {
                 mobile: currentMobile
             })
@@ -2761,6 +2771,9 @@
                     if (data.message) msg = data.message;
                 } catch(e) {}
                 showAlert(msg, 'error');
+            })
+            .always(function() {
+                $btn.prop('disabled', false).html(btnOriginal);
             });
         }
 
