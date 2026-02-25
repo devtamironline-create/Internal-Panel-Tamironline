@@ -505,6 +505,55 @@ class Cod24Service
     }
 
     /**
+     * تعلیق سفارش برای تولید بارکد پستی
+     * POST /api/Order/suspendOrder
+     */
+    public function suspendOrder(string $barcode): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'تنظیمات COD24 کامل نیست'];
+        }
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders($this->getHeaders())
+                ->post($this->endpoint('Order/suspendOrder'), [
+                    'barcode' => $barcode,
+                ]);
+
+            $body = $response->json() ?? [];
+            Log::info('Cod24 suspendOrder response', [
+                'barcode' => $barcode,
+                'status'  => $response->status(),
+                'body'    => $body,
+            ]);
+
+            if ($response->successful()) {
+                // استخراج بارکد پستی از پاسخ
+                $postBarcode = $body['postBarcode']
+                    ?? $body['data']['postBarcode']
+                    ?? $body['postalBarcode']
+                    ?? $body['data']['postalBarcode']
+                    ?? $body['barcodePosti']
+                    ?? $body['data']['barcodePosti']
+                    ?? null;
+
+                return [
+                    'success'      => true,
+                    'data'         => $body,
+                    'post_barcode' => $postBarcode,
+                ];
+            }
+
+            $errorMsg = $body['message'] ?? $body['errorMessage'] ?? $response->body();
+            return ['success' => false, 'message' => 'COD24 suspendOrder (HTTP ' . $response->status() . '): ' . $errorMsg];
+        } catch (\Exception $e) {
+            Log::error('Cod24 suspendOrder error', ['barcode' => $barcode, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * پیدا کردن کد شهر بر اساس نام شهر
      */
     public function findCityCode(string $cityName, string $provinceName = ''): ?int

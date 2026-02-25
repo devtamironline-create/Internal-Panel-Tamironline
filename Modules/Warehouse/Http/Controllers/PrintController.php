@@ -750,18 +750,61 @@ class PrintController extends Controller
         if ($result['success'] ?? false) {
             $barcode = $result['data']['barcode'] ?? null;
             if ($barcode) {
+                // مرحله ۲: تعلیق سفارش برای تولید بارکد پستی
+                $suspendResult = $cod24->suspendOrder($barcode);
+                Log::info('Cod24 suspendOrder result', [
+                    'order'   => $order->order_number,
+                    'barcode' => $barcode,
+                    'success' => $suspendResult['success'] ?? false,
+                    'data'    => $suspendResult['data'] ?? null,
+                ]);
+
+                // بارکد پستی ممکنه در پاسخ suspend بیاد
+                $postBarcode = $suspendResult['post_barcode'] ?? null;
+
+                // اگر بارکد پستی در پاسخ suspend نبود، از getBarcodeStatus می‌گیریم
+                if (empty($postBarcode)) {
+                    $statusResult = $cod24->getBarcodeStatus($barcode);
+                    if ($statusResult['success'] ?? false) {
+                        $statusData = $statusResult['data'] ?? [];
+                        $postBarcode = $statusData['postBarcode']
+                            ?? $statusData['postalBarcode']
+                            ?? $statusData['barcodePosti']
+                            ?? null;
+                        Log::info('Cod24 getBarcodeStatus for post barcode', [
+                            'order'        => $order->order_number,
+                            'post_barcode' => $postBarcode,
+                            'status_data'  => $statusData,
+                        ]);
+                    }
+                }
+
                 $order->amadest_barcode    = (string) $barcode;
                 $order->tracking_code      = $order->tracking_code ?: (string) $barcode;
-                $order->post_tracking_code = (string) $barcode;
+                $order->post_tracking_code = !empty($postBarcode) ? (string) $postBarcode : (string) $barcode;
                 $wcDataCurrent = is_array($order->wc_order_data) ? $order->wc_order_data : [];
-                $wcDataCurrent['cod24']['registered'] = true;
-                $wcDataCurrent['cod24']['barcode']    = (string) $barcode;
+                $wcDataCurrent['cod24']['registered']   = true;
+                $wcDataCurrent['cod24']['barcode']      = (string) $barcode;
+                $wcDataCurrent['cod24']['suspended']     = ($suspendResult['success'] ?? false);
+                if (!empty($postBarcode)) {
+                    $wcDataCurrent['cod24']['post_barcode'] = (string) $postBarcode;
+                }
                 $order->wc_order_data = $wcDataCurrent;
                 $order->save();
-                Log::info('Cod24 barcode saved', ['order' => $order->order_number, 'barcode' => $barcode]);
-                OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, 'ثبت در COD24 — بارکد: ' . $barcode, [
-                    'provider' => 'cod24',
-                    'barcode'  => $barcode,
+
+                $logMsg = 'ثبت در COD24 — بارکد: ' . $barcode;
+                if (!empty($postBarcode)) {
+                    $logMsg .= ' — بارکد پستی: ' . $postBarcode;
+                }
+                if (!($suspendResult['success'] ?? false)) {
+                    $logMsg .= ' — [هشدار: خطا در suspend]';
+                }
+                Log::info('Cod24 barcode saved', ['order' => $order->order_number, 'barcode' => $barcode, 'post_barcode' => $postBarcode]);
+                OrderLog::log($order, OrderLog::ACTION_SHIPPING_REGISTERED, $logMsg, [
+                    'provider'     => 'cod24',
+                    'barcode'      => $barcode,
+                    'post_barcode' => $postBarcode,
+                    'suspended'    => ($suspendResult['success'] ?? false),
                 ]);
                 return null;
             }
