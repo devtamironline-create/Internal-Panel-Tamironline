@@ -666,6 +666,92 @@
                 </div>
             </div>
 
+            {{-- ۶. پیامک تایید ویدیو احراز هویت --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-teal-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک تایید ویدیو احراز هویت</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی تایید ویدیو به تکنسین</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-teal-400 inline-block"></span> ادمین ویدیو احراز هویت را <strong class="text-teal-600">تایید</strong> می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">TechnicianAdminController::registrationBiometricReview()</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_biometric_approved_template" value="{{ $settings['sms_biometric_approved_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left font-mono"
+                           placeholder="biometric-approved">
+                </div>
+                <div class="mt-3 bg-teal-50 rounded-lg p-3">
+                    <p class="text-xs text-teal-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-teal-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-teal-200" dir="rtl">%token% عزیز، ویدیو احراز هویت شما تایید شد. ثبت‌نام شما در تامیرآنلاین تکمیل شده است.</p>
+                </div>
+            </div>
+
+            {{-- ۷. پیامک رد ویدیو احراز هویت --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-orange-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک رد ویدیو احراز هویت</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی رد ویدیو به تکنسین</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block"></span> ادمین ویدیو احراز هویت را <strong class="text-orange-600">رد</strong> می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">TechnicianAdminController::registrationBiometricReview()</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_biometric_rejected_template" value="{{ $settings['sms_biometric_rejected_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent text-left font-mono"
+                           placeholder="biometric-rejected">
+                </div>
+                <div class="mt-3 bg-orange-50 rounded-lg p-3">
+                    <p class="text-xs text-orange-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-orange-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-orange-200" dir="rtl">%token% عزیز، متاسفانه ویدیو احراز هویت شما تایید نشد. لطفاً مجدداً ویدیو ضبط و ارسال کنید.</p>
+                </div>
+            </div>
+
         </div>
 
         {{-- Save Button --}}

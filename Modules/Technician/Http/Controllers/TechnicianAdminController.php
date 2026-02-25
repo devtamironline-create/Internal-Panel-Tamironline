@@ -89,7 +89,8 @@ class TechnicianAdminController extends Controller
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
             'contract_text', 'contract_sms_template',
             'default_commission_percent', 'default_promissory_note_amount',
-            'sms_otp_template', 'sms_approved_template', 'sms_rejected_template', 'sms_biometric_submitted_template',
+            'sms_otp_template', 'sms_approved_template', 'sms_rejected_template',
+            'sms_biometric_submitted_template', 'sms_biometric_approved_template', 'sms_biometric_rejected_template',
         ];
 
         foreach ($simpleFields as $field) {
@@ -368,8 +369,8 @@ class TechnicianAdminController extends Controller
                 'biometric_reject_reason' => null,
             ]);
 
-            // ارسال پیامک تایید
-            $this->sendStatusSms($registration, 'approved');
+            // ارسال پیامک تایید ویدیو
+            $this->sendStatusSms($registration, 'approved', 'biometric');
 
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'ویدیو احراز هویت تایید شد.');
@@ -382,8 +383,8 @@ class TechnicianAdminController extends Controller
             'biometric_verified_at'   => null,
         ]);
 
-        // ارسال پیامک رد
-        $this->sendStatusSms($registration, 'rejected');
+        // ارسال پیامک رد ویدیو
+        $this->sendStatusSms($registration, 'rejected', 'biometric');
 
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'ویدیو احراز هویت رد شد.');
@@ -536,11 +537,13 @@ class TechnicianAdminController extends Controller
     /**
      * ارسال پیامک اطلاع‌رسانی بر اساس وضعیت
      */
-    private function sendStatusSms(TechnicianRegistration $registration, string $status): void
+    private function sendStatusSms(TechnicianRegistration $registration, string $status, string $context = 'registration'): void
     {
-        $templateKey = match ($status) {
-            'approved' => 'sms_approved_template',
-            'rejected' => 'sms_rejected_template',
+        $templateKey = match ("{$context}_{$status}") {
+            'registration_approved' => 'sms_approved_template',
+            'registration_rejected' => 'sms_rejected_template',
+            'biometric_approved'    => 'sms_biometric_approved_template',
+            'biometric_rejected'    => 'sms_biometric_rejected_template',
             default => null,
         };
 
