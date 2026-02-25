@@ -507,20 +507,29 @@ class Cod24Service
     /**
      * تعلیق سفارش برای تولید بارکد پستی
      * POST /api/Order/suspendOrder
+     * پارامتر: آرایه‌ای از آبجکت‌ها [{"serial": int, "idOrderShop": "string"}]
+     * پاسخ: [{"barcode": "...", "isSuccess": true, "code": 0}]
      */
-    public function suspendOrder(string $serial): array
+    public function suspendOrder(string $serial, string $orderShopId = ''): array
     {
         if (!$this->isConfigured()) {
             return ['success' => false, 'message' => 'تنظیمات COD24 کامل نیست'];
         }
 
         try {
+            // API آرایه‌ای از آبجکت‌ها می‌خواد
+            $payload = [
+                [
+                    'serial'      => (int) $serial,
+                    'idOrderShop' => (string) ($orderShopId ?: $serial),
+                ],
+            ];
+
+            Log::info('Cod24 suspendOrder request', ['serial' => $serial, 'payload' => $payload]);
+
             $response = Http::timeout(30)
                 ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/suspendOrder'), [
-                    'serial'  => $serial,
-                    'barcode' => $serial,
-                ]);
+                ->post($this->endpoint('Order/suspendOrder'), $payload);
 
             $body = $response->json() ?? [];
             Log::info('Cod24 suspendOrder response', [
@@ -530,17 +539,34 @@ class Cod24Service
             ]);
 
             if ($response->successful()) {
-                // استخراج بارکد پستی از پاسخ — تمام فیلدهای محتمل
-                $postBarcode = $this->extractPostBarcode($body);
+                // پاسخ آرایه‌ای از نتایج هست — اولین آیتم رو بگیر
+                $item = $body[0] ?? $body;
+                $isSuccess = $item['isSuccess'] ?? false;
+                $code = $item['code'] ?? -1;
+                $postBarcode = $item['barcode'] ?? null;
 
-                return [
-                    'success'      => true,
-                    'data'         => $body,
-                    'post_barcode' => $postBarcode,
-                ];
+                if ($isSuccess && $code == 0 && !empty($postBarcode)) {
+                    return [
+                        'success'      => true,
+                        'data'         => $body,
+                        'post_barcode' => (string) $postBarcode,
+                    ];
+                }
+
+                // ممکنه suspend موفق باشه ولی بارکد نداشته باشه
+                if ($isSuccess) {
+                    return [
+                        'success'      => true,
+                        'data'         => $body,
+                        'post_barcode' => !empty($postBarcode) ? (string) $postBarcode : null,
+                    ];
+                }
+
+                $errorMsg = $item['message'] ?? $item['errorMessage'] ?? json_encode($body, JSON_UNESCAPED_UNICODE);
+                return ['success' => false, 'message' => 'COD24 suspend: ' . $errorMsg];
             }
 
-            $errorMsg = $body['message'] ?? $body['errorMessage'] ?? $response->body();
+            $errorMsg = $body['message'] ?? $body[0]['message'] ?? $response->body();
             return ['success' => false, 'message' => 'COD24 suspendOrder (HTTP ' . $response->status() . '): ' . $errorMsg];
         } catch (\Exception $e) {
             Log::error('Cod24 suspendOrder error', ['serial' => $serial, 'error' => $e->getMessage()]);

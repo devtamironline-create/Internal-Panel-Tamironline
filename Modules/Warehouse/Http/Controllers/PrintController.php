@@ -759,7 +759,7 @@ class PrintController extends Controller
             $barcode = $result['data']['barcode'] ?? null;
             if ($barcode) {
                 // مرحله ۲: تعلیق سفارش برای تولید بارکد پستی
-                $suspendResult = $cod24->suspendOrder($barcode);
+                $suspendResult = $cod24->suspendOrder($barcode, $order->order_number);
                 Log::info('Cod24 suspendOrder result', [
                     'order'   => $order->order_number,
                     'barcode' => $barcode,
