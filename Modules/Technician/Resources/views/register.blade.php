@@ -820,7 +820,7 @@
 
                     {{-- سابقه تعمیرات بردهای الکترونیکی --}}
                     <div>
-                        <label for="board_repair_experience" class="block text-sm font-semibold text-gray-600 mb-1.5">میزان آشنایی و سابقه کاری در زمینه تعمیرات بردهای الکترونیکی</label>
+                        <label for="board_repair_experience" class="block text-sm font-semibold text-gray-600 mb-1.5">میزان آشنایی و سابقه کاری در زمینه تعمیرات بردهای الکترونیکی <span class="text-red-500">*</span></label>
                         <select id="board_repair_experience"
                                 class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none cursor-pointer appearance-none">
                             <option value="">انتخاب کنید...</option>
@@ -830,6 +830,7 @@
                             <option value="advanced">حرفه‌ای (۳ تا ۵ سال)</option>
                             <option value="expert">متخصص (بیش از ۵ سال)</option>
                         </select>
+                        <p id="boardRepairExpError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- توضیحات تکمیلی --}}
@@ -2707,6 +2708,11 @@
             const repairSkill = $('input[name="repair_skill"]:checked').val();
             if (!repairSkill) {
                 showFieldError('repairSkillError', 'لطفاً نوع تعمیرات خود را مشخص کنید.');
+                hasError = true;
+            }
+
+            if (!$('#board_repair_experience').val()) {
+                showFieldError('boardRepairExpError', 'لطفاً میزان سابقه تعمیرات برد را مشخص کنید.');
                 hasError = true;
             }
 

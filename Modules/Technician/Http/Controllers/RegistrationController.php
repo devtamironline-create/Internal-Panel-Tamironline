@@ -460,7 +460,7 @@ class RegistrationController extends Controller
             'appliance_categories.*' => ['integer', 'exists:appliance_categories,id'],
             'transportation_method' => ['required', 'in:motorcycle,car,none'],
             'repair_skill'          => ['required', 'in:board_repair,parts_only,both'],
-            'board_repair_experience' => ['nullable', 'in:none,beginner,intermediate,advanced,expert'],
+            'board_repair_experience' => ['required', 'in:none,beginner,intermediate,advanced,expert'],
             'additional_notes'      => ['nullable', 'string', 'max:2000'],
             'agreement'             => ['required', 'in:yes'],
         ], [
@@ -473,6 +473,8 @@ class RegistrationController extends Controller
             'transportation_method.in'       => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
             'repair_skill.required'         => 'لطفاً نوع تعمیرات خود را مشخص کنید.',
             'repair_skill.in'               => 'نوع تعمیرات انتخاب شده معتبر نیست.',
+            'board_repair_experience.required' => 'لطفاً میزان سابقه تعمیرات برد را مشخص کنید.',
+            'board_repair_experience.in'       => 'مقدار انتخاب شده معتبر نیست.',
             'agreement.required'            => 'موافقت با شرایط همکاری الزامی است.',
             'agreement.in'                  => 'موافقت با شرایط همکاری الزامی است.',
         ]);
