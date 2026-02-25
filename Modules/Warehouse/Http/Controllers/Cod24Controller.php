@@ -243,6 +243,13 @@ class Cod24Controller extends Controller
         }
         $results['getPostCities'] = $postCitiesResult ? array_merge($postCitiesResult, ['found' => true, 'total' => count($postCities)]) : ['found' => false, 'total' => count($postCities)];
 
+        // نمونه ۳ شهر اول — برای دیباگ فیلدها
+        $results['postCities_sample'] = array_slice($postCities, 0, 3);
+        // نمونه getCities
+        if (!empty($stateCities)) {
+            $results['getCities_sample'] = array_slice($stateCities, 0, 3);
+        }
+
         // ۴) نتیجه نهایی findCityCode
         $finalCode = $service->findCityCode($city, $state);
         $results['final_findCityCode'] = $finalCode;

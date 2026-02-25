@@ -382,6 +382,14 @@ function testCityResolve() {
             html += '<details class="mt-2"><summary class="text-xs text-gray-500 cursor-pointer">فیلدهای خام getPostCities</summary><pre class="text-xs bg-gray-50 p-2 mt-1 rounded overflow-x-auto" dir="ltr">' + JSON.stringify(r.getPostCities.raw, null, 2) + '</pre></details>';
         }
 
+        // نمونه ساختار ۳ شهر اول — دیباگ فیلدها
+        if (r.postCities_sample && r.postCities_sample.length > 0) {
+            html += '<details class="mt-2" open><summary class="text-xs text-red-600 font-bold cursor-pointer">⚠ نمونه ۳ شهر اول getPostCities (فیلدهای واقعی)</summary><pre class="text-xs bg-red-50 p-2 mt-1 rounded overflow-x-auto" dir="ltr">' + JSON.stringify(r.postCities_sample, null, 2) + '</pre></details>';
+        }
+        if (r.getCities_sample && r.getCities_sample.length > 0) {
+            html += '<details class="mt-2" open><summary class="text-xs text-blue-600 font-bold cursor-pointer">⚠ نمونه ۳ شهر اول getCities (فیلدهای واقعی)</summary><pre class="text-xs bg-blue-50 p-2 mt-1 rounded overflow-x-auto" dir="ltr">' + JSON.stringify(r.getCities_sample, null, 2) + '</pre></details>';
+        }
+
         html += '</div>';
         const div = document.getElementById('test-city-result');
         div.classList.remove('hidden','bg-red-50','text-red-800','bg-gray-50','text-gray-600');
