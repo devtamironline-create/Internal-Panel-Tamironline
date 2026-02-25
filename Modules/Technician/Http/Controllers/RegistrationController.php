@@ -753,25 +753,48 @@ class RegistrationController extends Controller
         // اطمینان از وجود دایرکتوری ذخیره‌سازی
         $storagePath = storage_path('app/public/' . $folder);
         if (!is_dir($storagePath)) {
-            mkdir($storagePath, 0755, true);
+            if (!mkdir($storagePath, 0755, true) && !is_dir($storagePath)) {
+                Log::error('uploadSingleDocument: cannot create directory', [
+                    'path' => $storagePath,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در ایجاد پوشه ذخیره‌سازی.',
+                ], 500);
+            }
+        }
+
+        // بررسی قابل نوشتن بودن دایرکتوری
+        if (!is_writable($storagePath)) {
+            Log::error('uploadSingleDocument: directory not writable', [
+                'path' => $storagePath,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'پوشه ذخیره‌سازی قابل نوشتن نیست.',
+            ], 500);
+        }
+
+        $file = $request->file('file');
+        if (!$file || !$file->isValid()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت فایل: ' . ($file ? $file->getErrorMessage() : 'فایل دریافت نشد'),
+            ], 422);
         }
 
         try {
-            $file = $request->file('file');
-            if (!$file || !$file->isValid()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'خطا در دریافت فایل. لطفاً مجدداً تلاش کنید.',
-                ], 422);
-            }
-
             // حذف فایل قبلی در صورت وجود
             $oldPath = $registration->{$dbColumn};
             if ($oldPath) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
             }
 
-            $path = $file->store($folder, 'public');
+            // ذخیره با move دستی به جای store — مطمئن‌تر
+            $fileName = $fieldName . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($storagePath, $fileName);
+            $path = $folder . '/' . $fileName;
+
             $registration->update([$dbColumn => $path]);
 
             Log::info('Technician single document uploaded', [
@@ -784,15 +807,16 @@ class RegistrationController extends Controller
                 'message' => 'فایل با موفقیت آپلود شد.',
             ]);
         } catch (\Exception $e) {
-            Log::error('uploadSingleDocument: file storage failed', [
+            Log::error('uploadSingleDocument: failed', [
                 'registration_id' => $registration->id,
                 'field' => $fieldName,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ذخیره فایل. لطفاً مجدداً تلاش کنید.',
+                'message' => 'خطا در ذخیره فایل: ' . $e->getMessage(),
             ], 500);
         }
     }

@@ -1749,8 +1749,9 @@
         // ===== فاز N: آپلود مدارک =====
         const docFields = ['national_card_front', 'national_card_back', 'birth_certificate_p1', 'birth_certificate_p2', 'criminal_record', 'photo_3x4', 'lease_agreement', 'utility_bill'];
 
-        // وضعیت آپلود هر فایل
+        // وضعیت آپلود هر فایل + صف آپلود
         const docUploadStatus = {};
+        let uploadQueue = Promise.resolve();
 
         function previewDocImage(input, fieldName) {
             const file = input.files[0];
@@ -1781,49 +1782,55 @@
             };
             reader.readAsDataURL(file);
 
-            // آپلود فوری فایل به سرور
-            uploadSingleDoc(fieldName, file);
+            // آپلود فوری — صف‌بندی شده تا همزمان نشوند
+            uploadQueue = uploadQueue.then(function() {
+                return uploadSingleDoc(fieldName, file);
+            });
         }
 
         function uploadSingleDoc(fieldName, file) {
-            const box = $('.doc-upload-box[data-field="' + fieldName + '"]');
-            const preview = $('#preview_' + fieldName);
+            return new Promise(function(resolve) {
+                const preview = $('#preview_' + fieldName);
 
-            // نمایش وضعیت در حال آپلود
-            preview.find('.doc-upload-status').remove();
-            preview.append('<div class="doc-upload-status absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-center text-xs py-1 rounded-b-xl">در حال آپلود...</div>');
+                // نمایش وضعیت در حال آپلود
+                preview.find('.doc-upload-status').remove();
+                preview.append('<div class="doc-upload-status absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-center text-xs py-1 rounded-b-xl">در حال آپلود...</div>');
 
-            const formData = new FormData();
-            formData.append('mobile', currentMobile);
-            formData.append('field_name', fieldName);
-            formData.append('file', file);
+                const formData = new FormData();
+                formData.append('mobile', currentMobile);
+                formData.append('field_name', fieldName);
+                formData.append('file', file);
 
-            $.ajax({
-                url: '{{ route("technician.register.upload-single-document") }}',
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(res) {
-                    if (res.success) {
-                        docUploadStatus[fieldName] = true;
-                        preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-green-500').text('آپلود شد');
-                        hideFieldError('docError_' + fieldName);
+                $.ajax({
+                    url: '{{ route("technician.register.upload-single-document") }}',
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(res) {
+                        if (res.success) {
+                            docUploadStatus[fieldName] = true;
+                            preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-green-500').text('آپلود شد');
+                            hideFieldError('docError_' + fieldName);
+                        } else {
+                            docUploadStatus[fieldName] = false;
+                            preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا — دوباره انتخاب کنید');
+                            showFieldError('docError_' + fieldName, res.message || 'خطا در آپلود');
+                        }
                         updateDocProgress();
-                    } else {
+                        resolve();
+                    },
+                    error: function(xhr) {
                         docUploadStatus[fieldName] = false;
-                        preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا در آپلود');
-                        showFieldError('docError_' + fieldName, res.message || 'خطا در آپلود');
+                        const res = xhr.responseJSON;
+                        const msg = res?.errors?.file?.[0] || res?.message || 'خطا در آپلود فایل';
+                        preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا — دوباره انتخاب کنید');
+                        showFieldError('docError_' + fieldName, msg);
+                        updateDocProgress();
+                        resolve();
                     }
-                },
-                error: function(xhr) {
-                    docUploadStatus[fieldName] = false;
-                    const res = xhr.responseJSON;
-                    const msg = res?.errors?.file?.[0] || res?.message || 'خطا در آپلود فایل';
-                    preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا در آپلود');
-                    showFieldError('docError_' + fieldName, msg);
-                }
+                });
             });
         }
 
