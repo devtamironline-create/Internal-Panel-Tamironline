@@ -1051,7 +1051,7 @@
                         <span class="text-xs text-green-600 font-bold">قرارداد امضا شد</span>
                     </div>
                     <h2 class="text-base font-bold text-gray-800">آپلود مدارک</h2>
-                    <p class="text-xs text-gray-400 mt-1">تصاویر مدارک زیر را آپلود کنید</p>
+                    <p class="text-xs text-gray-400 mt-1">هر تصویر بلافاصله پس از انتخاب آپلود می‌شود</p>
                 </div>
 
                 <div class="space-y-4">
@@ -1199,7 +1199,7 @@
                     <p id="docGeneralError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
 
                     <button type="button" id="btnSubmitDocs" onclick="submitDocuments()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors mt-2">
-                        ارسال مدارک و ادامه
+                        تایید و ادامه (0 از 8 آپلود شده)
                     </button>
                 </div>
             </div>
@@ -1749,6 +1749,9 @@
         // ===== فاز N: آپلود مدارک =====
         const docFields = ['national_card_front', 'national_card_back', 'birth_certificate_p1', 'birth_certificate_p2', 'criminal_record', 'photo_3x4', 'lease_agreement', 'utility_bill'];
 
+        // وضعیت آپلود هر فایل
+        const docUploadStatus = {};
+
         function previewDocImage(input, fieldName) {
             const file = input.files[0];
             if (!file) return;
@@ -1767,6 +1770,8 @@
             }
 
             hideFieldError('docError_' + fieldName);
+
+            // نمایش پیش‌نمایش
             const reader = new FileReader();
             reader.onload = function(e) {
                 const preview = $('#preview_' + fieldName);
@@ -1775,19 +1780,74 @@
                 $('#placeholder_' + fieldName).addClass('hidden');
             };
             reader.readAsDataURL(file);
+
+            // آپلود فوری فایل به سرور
+            uploadSingleDoc(fieldName, file);
+        }
+
+        function uploadSingleDoc(fieldName, file) {
+            const box = $('.doc-upload-box[data-field="' + fieldName + '"]');
+            const preview = $('#preview_' + fieldName);
+
+            // نمایش وضعیت در حال آپلود
+            preview.find('.doc-upload-status').remove();
+            preview.append('<div class="doc-upload-status absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-center text-xs py-1 rounded-b-xl">در حال آپلود...</div>');
+
+            const formData = new FormData();
+            formData.append('mobile', currentMobile);
+            formData.append('field_name', fieldName);
+            formData.append('file', file);
+
+            $.ajax({
+                url: '{{ route("technician.register.upload-single-document") }}',
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        docUploadStatus[fieldName] = true;
+                        preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-green-500').text('آپلود شد');
+                        hideFieldError('docError_' + fieldName);
+                        updateDocProgress();
+                    } else {
+                        docUploadStatus[fieldName] = false;
+                        preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا در آپلود');
+                        showFieldError('docError_' + fieldName, res.message || 'خطا در آپلود');
+                    }
+                },
+                error: function(xhr) {
+                    docUploadStatus[fieldName] = false;
+                    const res = xhr.responseJSON;
+                    const msg = res?.errors?.file?.[0] || res?.message || 'خطا در آپلود فایل';
+                    preview.find('.doc-upload-status').removeClass('bg-blue-500').addClass('bg-red-500').text('خطا در آپلود');
+                    showFieldError('docError_' + fieldName, msg);
+                }
+            });
+        }
+
+        function updateDocProgress() {
+            const uploaded = Object.values(docUploadStatus).filter(v => v === true).length;
+            const total = docFields.length;
+            const btn = $('#btnSubmitDocs');
+            btn.text('تایید و ادامه (' + uploaded + ' از ' + total + ' آپلود شده)');
         }
 
         function removeDocImage(fieldName) {
             $('#file_' + fieldName).val('');
             $('#preview_' + fieldName).addClass('hidden').find('img').attr('src', '');
+            $('#preview_' + fieldName).find('.doc-upload-status').remove();
             $('#placeholder_' + fieldName).removeClass('hidden');
+            delete docUploadStatus[fieldName];
+            updateDocProgress();
         }
 
         function submitDocuments() {
             hideFieldError('docGeneralError');
             docFields.forEach(f => hideFieldError('docError_' + f));
 
-            // بررسی همه فایل‌ها انتخاب شده‌اند
+            // بررسی اینکه همه فایل‌ها آپلود شده‌اند
             const labels = {
                 'national_card_front': 'تصویر روی کارت ملی',
                 'national_card_back': 'تصویر پشت کارت ملی',
@@ -1801,48 +1861,38 @@
 
             let hasError = false;
             docFields.forEach(function(f) {
-                const input = document.getElementById('file_' + f);
-                if (!input.files || !input.files[0]) {
-                    showFieldError('docError_' + f, labels[f] + ' الزامی است.');
+                if (!docUploadStatus[f]) {
+                    showFieldError('docError_' + f, labels[f] + ' آپلود نشده است.');
                     hasError = true;
                 }
             });
 
-            if (hasError) return;
+            if (hasError) {
+                showFieldError('docGeneralError', 'لطفاً ابتدا همه مدارک را آپلود کنید.');
+                return;
+            }
 
             setLoading('btnSubmitDocs', true);
 
-            const formData = new FormData();
-            formData.append('mobile', currentMobile);
-            docFields.forEach(function(f) {
-                formData.append(f, document.getElementById('file_' + f).files[0]);
-            });
-
+            // فقط بررسی سمت سرور که همه مدارک ثبت شده‌اند
             $.ajax({
                 url: '{{ route("technician.register.upload-documents") }}',
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                data: formData,
-                processData: false,
-                contentType: false,
+                data: JSON.stringify({ mobile: currentMobile }),
+                contentType: 'application/json',
                 success: function(res) {
                     if (res.success) {
                         highestCompletedStep = 7;
                         goToPhase('C2');
                         initBiometricCamera();
                     } else {
-                        showFieldError('docGeneralError', res.message || 'خطا در آپلود مدارک');
+                        showFieldError('docGeneralError', res.message || 'خطا در تایید مدارک');
                     }
                 },
                 error: function(xhr) {
                     const res = xhr.responseJSON;
-                    if (res?.errors) {
-                        Object.keys(res.errors).forEach(function(key) {
-                            showFieldError('docError_' + key, res.errors[key][0]);
-                        });
-                    } else {
-                        showFieldError('docGeneralError', res?.message || 'خطا در آپلود مدارک');
-                    }
+                    showFieldError('docGeneralError', res?.message || 'خطا در تایید مدارک');
                 },
                 complete: function() {
                     setLoading('btnSubmitDocs', false);

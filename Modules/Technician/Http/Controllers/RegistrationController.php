@@ -706,61 +706,32 @@ class RegistrationController extends Controller
     }
 
     /**
-     * آپلود مدارک (کارت ملی، شناسنامه، سوپیشینه، عکس ۳×۴، اجاره‌نامه، قبض)
+     * آپلود تکی هر مدرک — هنگام انتخاب فایل بلافاصله ارسال و ذخیره می‌شود
      */
-    public function uploadDocuments(Request $request)
+    public function uploadSingleDocument(Request $request)
     {
-        // بررسی اولیه: اگر PHP محدودیت حجم POST را اعمال کرده باشد،
-        // $_FILES و $_POST خالی می‌شوند و فایل‌ها دریافت نمی‌شوند.
-        if (empty($request->all()) && empty($request->allFiles())) {
-            Log::warning('uploadDocuments: empty request - likely post_max_size exceeded', [
-                'content_length' => $request->server('CONTENT_LENGTH'),
-                'post_max_size' => ini_get('post_max_size'),
-                'upload_max_filesize' => ini_get('upload_max_filesize'),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حجم فایل‌ها بیش از حد مجاز سرور است. لطفاً تصاویر را با حجم کمتر ارسال کنید.',
-            ], 422);
-        }
+        $allowedFields = [
+            'national_card_front'  => 'doc_national_card_front',
+            'national_card_back'   => 'doc_national_card_back',
+            'birth_certificate_p1' => 'doc_birth_certificate_p1',
+            'birth_certificate_p2' => 'doc_birth_certificate_p2',
+            'criminal_record'      => 'doc_criminal_record',
+            'photo_3x4'           => 'doc_photo_3x4',
+            'lease_agreement'      => 'doc_lease_agreement',
+            'utility_bill'         => 'doc_utility_bill',
+        ];
 
         $request->validate([
-            'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
-            'national_card_front'    => ['required', 'image', 'max:5120'],
-            'national_card_back'     => ['required', 'image', 'max:5120'],
-            'birth_certificate_p1'   => ['required', 'image', 'max:5120'],
-            'birth_certificate_p2'   => ['required', 'image', 'max:5120'],
-            'criminal_record'        => ['required', 'image', 'max:5120'],
-            'photo_3x4'             => ['required', 'image', 'max:5120'],
-            'lease_agreement'        => ['required', 'image', 'max:5120'],
-            'utility_bill'           => ['required', 'image', 'max:5120'],
+            'mobile'     => ['required', 'regex:/^09[0-9]{9}$/'],
+            'field_name' => ['required', 'string', 'in:' . implode(',', array_keys($allowedFields))],
+            'file'       => ['required', 'image', 'max:5120'],
         ], [
-            'mobile.required'                => 'شماره موبایل الزامی است.',
-            'national_card_front.required'   => 'تصویر روی کارت ملی الزامی است.',
-            'national_card_front.image'      => 'فایل باید تصویر باشد.',
-            'national_card_front.max'        => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'national_card_back.required'    => 'تصویر پشت کارت ملی الزامی است.',
-            'national_card_back.image'       => 'فایل باید تصویر باشد.',
-            'national_card_back.max'         => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p1.required'  => 'تصویر صفحه اول شناسنامه الزامی است.',
-            'birth_certificate_p1.image'     => 'فایل باید تصویر باشد.',
-            'birth_certificate_p1.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p2.required'  => 'تصویر صفحه دوم شناسنامه الزامی است.',
-            'birth_certificate_p2.image'     => 'فایل باید تصویر باشد.',
-            'birth_certificate_p2.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'criminal_record.required'       => 'تصویر گواهی سوپیشینه الزامی است.',
-            'criminal_record.image'          => 'فایل باید تصویر باشد.',
-            'criminal_record.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'photo_3x4.required'             => 'عکس ۳×۴ الزامی است.',
-            'photo_3x4.image'                => 'فایل باید تصویر باشد.',
-            'photo_3x4.max'                  => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'lease_agreement.required'       => 'تصویر اجاره‌نامه الزامی است.',
-            'lease_agreement.image'          => 'فایل باید تصویر باشد.',
-            'lease_agreement.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'utility_bill.required'          => 'تصویر قبض آب یا برق الزامی است.',
-            'utility_bill.image'             => 'فایل باید تصویر باشد.',
-            'utility_bill.max'               => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'mobile.required'     => 'شماره موبایل الزامی است.',
+            'field_name.required' => 'نام فیلد الزامی است.',
+            'field_name.in'       => 'نام فیلد نامعتبر است.',
+            'file.required'       => 'فایل الزامی است.',
+            'file.image'          => 'فایل باید تصویر باشد.',
+            'file.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
@@ -775,7 +746,8 @@ class RegistrationController extends Controller
             ], 422);
         }
 
-        // ذخیره فایل‌ها
+        $fieldName = $request->field_name;
+        $dbColumn = $allowedFields[$fieldName];
         $folder = 'technician-documents/' . $registration->id;
 
         // اطمینان از وجود دایرکتوری ذخیره‌سازی
@@ -784,66 +756,110 @@ class RegistrationController extends Controller
             mkdir($storagePath, 0755, true);
         }
 
-        $fileFields = [
-            'national_card_front'  => 'doc_national_card_front',
-            'national_card_back'   => 'doc_national_card_back',
-            'birth_certificate_p1' => 'doc_birth_certificate_p1',
-            'birth_certificate_p2' => 'doc_birth_certificate_p2',
-            'criminal_record'      => 'doc_criminal_record',
-            'photo_3x4'           => 'doc_photo_3x4',
-            'lease_agreement'      => 'doc_lease_agreement',
-            'utility_bill'         => 'doc_utility_bill',
-        ];
-
-        $paths = [];
         try {
-            foreach ($fileFields as $inputName => $dbColumn) {
-                $file = $request->file($inputName);
-                if (!$file || !$file->isValid()) {
-                    Log::error('uploadDocuments: invalid file', [
-                        'field' => $inputName,
-                        'registration_id' => $registration->id,
-                        'error' => $file ? $file->getErrorMessage() : 'file is null',
-                    ]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'خطا در دریافت فایل. لطفاً مجدداً تلاش کنید.',
-                    ], 422);
-                }
-                $paths[$dbColumn] = $file->store($folder, 'public');
+            $file = $request->file('file');
+            if (!$file || !$file->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در دریافت فایل. لطفاً مجدداً تلاش کنید.',
+                ], 422);
             }
-        } catch (\Exception $e) {
-            Log::error('uploadDocuments: file storage failed', [
+
+            // حذف فایل قبلی در صورت وجود
+            $oldPath = $registration->{$dbColumn};
+            if ($oldPath) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+            }
+
+            $path = $file->store($folder, 'public');
+            $registration->update([$dbColumn => $path]);
+
+            Log::info('Technician single document uploaded', [
                 'registration_id' => $registration->id,
-                'mobile' => $request->mobile,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'field' => $fieldName,
             ]);
 
-            // پاکسازی فایل‌های ذخیره‌شده قبل از خطا
-            foreach ($paths as $path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
-            }
+            return response()->json([
+                'success' => true,
+                'message' => 'فایل با موفقیت آپلود شد.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('uploadSingleDocument: file storage failed', [
+                'registration_id' => $registration->id,
+                'field' => $fieldName,
+                'error' => $e->getMessage(),
+            ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ذخیره فایل‌ها. لطفاً مجدداً تلاش کنید.',
+                'message' => 'خطا در ذخیره فایل. لطفاً مجدداً تلاش کنید.',
             ], 500);
         }
+    }
 
-        $registration->update(array_merge($paths, [
+    /**
+     * بررسی اینکه همه مدارک آپلود شده‌اند — دکمه «مرحله بعدی» فقط این را فراخوانی می‌کند
+     */
+    public function uploadDocuments(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+        ], [
+            'mobile.required' => 'شماره موبایل الزامی است.',
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->whereNotNull('contract_signed_at')
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست.',
+            ], 422);
+        }
+
+        // بررسی اینکه همه مدارک آپلود شده‌اند
+        $requiredDocs = [
+            'doc_national_card_front'  => 'تصویر روی کارت ملی',
+            'doc_national_card_back'   => 'تصویر پشت کارت ملی',
+            'doc_birth_certificate_p1' => 'صفحه اول شناسنامه',
+            'doc_birth_certificate_p2' => 'صفحه دوم شناسنامه',
+            'doc_criminal_record'      => 'گواهی عدم سوء‌پیشینه',
+            'doc_photo_3x4'           => 'عکس ۳×۴',
+            'doc_lease_agreement'      => 'اجاره‌نامه',
+            'doc_utility_bill'         => 'قبض آب یا برق',
+        ];
+
+        $missing = [];
+        foreach ($requiredDocs as $column => $label) {
+            if (empty($registration->{$column})) {
+                $missing[] = $label;
+            }
+        }
+
+        if (!empty($missing)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لطفاً ابتدا همه مدارک را آپلود کنید.',
+                'missing' => $missing,
+            ], 422);
+        }
+
+        $registration->update([
             'documents_uploaded' => true,
             'current_step'      => 8,
-        ]));
+        ]);
 
-        Log::info('Technician documents uploaded', [
+        Log::info('Technician documents verified complete', [
             'registration_id' => $registration->id,
             'mobile' => $request->mobile,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'مدارک با موفقیت آپلود شد.',
+            'message' => 'مدارک با موفقیت تایید شد.',
         ]);
     }
 
