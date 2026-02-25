@@ -1167,9 +1167,9 @@
                         <p id="docError_photo_3x4" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
-                    {{-- اجاره‌نامه --}}
+                    {{-- سند ملکی یا اجاره‌نامه --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">اجاره‌نامه</label>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">تصویر سند ملکی یا اجاره‌نامه محل سکونت</label>
                         <div class="doc-upload-box" data-field="lease_agreement">
                             <input type="file" accept="image/*" class="hidden doc-file-input" id="file_lease_agreement" onchange="previewDocImage(this, 'lease_agreement')">
                             <div id="preview_lease_agreement" class="hidden relative">
@@ -1872,7 +1872,7 @@
                 'birth_certificate_p2': 'صفحه دوم شناسنامه',
                 'criminal_record': 'گواهی عدم سوء‌پیشینه',
                 'photo_3x4': 'عکس ۳×۴',
-                'lease_agreement': 'اجاره‌نامه',
+                'lease_agreement': 'تصویر سند ملکی یا اجاره‌نامه محل سکونت',
                 'utility_bill': 'قبض آب یا برق'
             };
 
