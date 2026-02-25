@@ -712,39 +712,39 @@ class RegistrationController extends Controller
     {
         $request->validate([
             'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
-            'national_card_front'    => ['required', 'image', 'max:5120'],
-            'national_card_back'     => ['required', 'image', 'max:5120'],
-            'birth_certificate_p1'   => ['required', 'image', 'max:5120'],
-            'birth_certificate_p2'   => ['required', 'image', 'max:5120'],
-            'criminal_record'        => ['required', 'image', 'max:5120'],
-            'photo_3x4'             => ['required', 'image', 'max:5120'],
-            'lease_agreement'        => ['required', 'image', 'max:5120'],
-            'utility_bill'           => ['required', 'image', 'max:5120'],
+            'national_card_front'    => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'national_card_back'     => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'birth_certificate_p1'   => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'birth_certificate_p2'   => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'criminal_record'        => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'photo_3x4'             => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'lease_agreement'        => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'utility_bill'           => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ], [
             'mobile.required'                => 'شماره موبایل الزامی است.',
             'national_card_front.required'   => 'تصویر روی کارت ملی الزامی است.',
-            'national_card_front.image'      => 'فایل باید تصویر باشد.',
+            'national_card_front.mimes'      => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'national_card_front.max'        => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'national_card_back.required'    => 'تصویر پشت کارت ملی الزامی است.',
-            'national_card_back.image'       => 'فایل باید تصویر باشد.',
+            'national_card_back.mimes'       => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'national_card_back.max'         => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'birth_certificate_p1.required'  => 'تصویر صفحه اول شناسنامه الزامی است.',
-            'birth_certificate_p1.image'     => 'فایل باید تصویر باشد.',
+            'birth_certificate_p1.mimes'     => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'birth_certificate_p1.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'birth_certificate_p2.required'  => 'تصویر صفحه دوم شناسنامه الزامی است.',
-            'birth_certificate_p2.image'     => 'فایل باید تصویر باشد.',
+            'birth_certificate_p2.mimes'     => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'birth_certificate_p2.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'criminal_record.required'       => 'تصویر گواهی سوپیشینه الزامی است.',
-            'criminal_record.image'          => 'فایل باید تصویر باشد.',
+            'criminal_record.mimes'          => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'criminal_record.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'photo_3x4.required'             => 'عکس ۳×۴ الزامی است.',
-            'photo_3x4.image'                => 'فایل باید تصویر باشد.',
+            'photo_3x4.mimes'               => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'photo_3x4.max'                  => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'lease_agreement.required'       => 'تصویر اجاره‌نامه الزامی است.',
-            'lease_agreement.image'          => 'فایل باید تصویر باشد.',
+            'lease_agreement.mimes'          => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'lease_agreement.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
             'utility_bill.required'          => 'تصویر قبض آب یا برق الزامی است.',
-            'utility_bill.image'             => 'فایل باید تصویر باشد.',
+            'utility_bill.mimes'             => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
             'utility_bill.max'               => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
         ]);
 
@@ -760,33 +760,54 @@ class RegistrationController extends Controller
             ], 422);
         }
 
-        // ذخیره فایل‌ها
-        $folder = 'technician-documents/' . $registration->id;
+        try {
+            // ذخیره فایل‌ها
+            $folder = 'technician-documents/' . $registration->id;
 
-        $paths = [];
-        $paths['doc_national_card_front']  = $request->file('national_card_front')->store($folder, 'public');
-        $paths['doc_national_card_back']   = $request->file('national_card_back')->store($folder, 'public');
-        $paths['doc_birth_certificate_p1'] = $request->file('birth_certificate_p1')->store($folder, 'public');
-        $paths['doc_birth_certificate_p2'] = $request->file('birth_certificate_p2')->store($folder, 'public');
-        $paths['doc_criminal_record']      = $request->file('criminal_record')->store($folder, 'public');
-        $paths['doc_photo_3x4']            = $request->file('photo_3x4')->store($folder, 'public');
-        $paths['doc_lease_agreement']      = $request->file('lease_agreement')->store($folder, 'public');
-        $paths['doc_utility_bill']         = $request->file('utility_bill')->store($folder, 'public');
+            $docFields = [
+                'national_card_front', 'national_card_back',
+                'birth_certificate_p1', 'birth_certificate_p2',
+                'criminal_record', 'photo_3x4',
+                'lease_agreement', 'utility_bill',
+            ];
 
-        $registration->update(array_merge($paths, [
-            'documents_uploaded' => true,
-            'current_step'      => 8,
-        ]));
+            $paths = [];
+            foreach ($docFields as $field) {
+                $file = $request->file($field);
+                if (!$file) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "فایل {$field} دریافت نشد.",
+                    ], 422);
+                }
+                $paths['doc_' . $field] = $file->store($folder, 'public');
+            }
 
-        Log::info('Technician documents uploaded', [
-            'registration_id' => $registration->id,
-            'mobile' => $request->mobile,
-        ]);
+            $registration->update(array_merge($paths, [
+                'documents_uploaded' => true,
+                'current_step'      => 8,
+            ]));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'مدارک با موفقیت آپلود شد.',
-        ]);
+            Log::info('Technician documents uploaded', [
+                'registration_id' => $registration->id,
+                'mobile' => $request->mobile,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'مدارک با موفقیت آپلود شد.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Technician document upload failed', [
+                'mobile' => $request->mobile,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ذخیره مدارک: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
