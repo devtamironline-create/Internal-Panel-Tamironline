@@ -639,7 +639,14 @@ class Cod24Service
         $cityName = trim($cityName);
         if (empty($cityName)) return null;
 
-        // نقشه دستی ادمین (اولویت بالا)
+        // ترجمه کد ووکامرس (FRS) به فارسی (فارس)
+        $wcMap = TapinService::getWcStateMap();
+        $provincePersian = trim($provinceName);
+        if (!empty($provincePersian) && isset($wcMap[strtoupper($provincePersian)])) {
+            $provincePersian = $wcMap[strtoupper($provincePersian)];
+        }
+
+        // ۱) نقشه دستی ادمین (اولویت بالا)
         $cityMapRaw = WarehouseSetting::get('cod24_city_map', '');
         if (!empty($cityMapRaw)) {
             foreach (explode("\n", $cityMapRaw) as $line) {
@@ -652,15 +659,64 @@ class Cod24Service
             }
         }
 
-        // جستجو در شهرهای پستی
-        $cities = $this->getPostCities();
-        foreach ($cities as $city) {
-            $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
-            if ($cName === $cityName || str_contains($cName, $cityName) || str_contains($cityName, $cName)) {
-                return (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0) ?: null;
+        // ۲) جستجوی دقیق: اول استان رو پیدا کن، بعد شهرهای اون استان رو بگرد
+        if (!empty($provincePersian)) {
+            $cod24StateCode = $this->findStateCode($provincePersian);
+            if ($cod24StateCode) {
+                $stateCities = $this->getCities($cod24StateCode);
+                $found = $this->matchCityInList($cityName, $stateCities);
+                if ($found) return $found;
             }
         }
 
+        // ۳) فالبک: جستجو در تمام شهرهای پستی (فقط exact match)
+        $allCities = $this->getPostCities();
+        $found = $this->matchCityInList($cityName, $allCities);
+        if ($found) return $found;
+
+        Log::warning('Cod24 findCityCode: city not found', [
+            'city' => $cityName, 'province' => $provincePersian,
+        ]);
+        return null;
+    }
+
+    /**
+     * پیدا کردن کد استان COD24 بر اساس نام فارسی
+     */
+    protected function findStateCode(string $provincePersian): ?int
+    {
+        $states = $this->getStates();
+        foreach ($states as $st) {
+            $sName = $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
+            if ($sName === $provincePersian || str_contains($sName, $provincePersian) || str_contains($provincePersian, $sName)) {
+                $code = (int) ($st['code'] ?? $st['stateCode'] ?? $st['id'] ?? 0);
+                if ($code > 0) return $code;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * جستجوی شهر در لیست — اول exact match بعد substring match
+     */
+    protected function matchCityInList(string $cityName, array $cities): ?int
+    {
+        // مرحله ۱: exact match
+        foreach ($cities as $city) {
+            $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
+            if ($cName === $cityName) {
+                $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
+                if ($code > 0) return $code;
+            }
+        }
+        // مرحله ۲: substring match (فقط اگه exact نداشتیم)
+        foreach ($cities as $city) {
+            $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
+            if (!empty($cName) && (str_contains($cName, $cityName) || str_contains($cityName, $cName))) {
+                $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
+                if ($code > 0) return $code;
+            }
+        }
         return null;
     }
 

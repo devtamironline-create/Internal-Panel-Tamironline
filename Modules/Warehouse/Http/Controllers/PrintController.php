@@ -252,7 +252,10 @@ class PrintController extends Controller
                 $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
                 $city = ($shipping['city'] ?? '') ?: ($billing['city'] ?? '');
                 $state = ($shipping['state'] ?? '') ?: ($billing['state'] ?? '');
-                $fullAddress = implode('، ', array_filter([$state, $city, $address]));
+                // ترجمه کد استان ووکامرس (FRS) به فارسی (فارس) برای آدرس
+                $wcMap = TapinService::getWcStateMap();
+                $statePersian = $wcMap[strtoupper($state)] ?? $state;
+                $fullAddress = implode('، ', array_filter([$statePersian, $city, $address]));
                 $postcode = ($shipping['postcode'] ?? '') ?: ($billing['postcode'] ?? '');
 
                 Log::info('Shipping auto-register attempt', [
