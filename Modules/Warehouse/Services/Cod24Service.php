@@ -720,10 +720,12 @@ class Cod24Service
      */
     protected function findStateCode(string $provincePersian): ?int
     {
+        $normalizedSearch = $this->normalizePersian($provincePersian);
         $states = $this->getStates();
         foreach ($states as $st) {
             $sName = $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
-            if ($sName === $provincePersian || str_contains($sName, $provincePersian) || str_contains($provincePersian, $sName)) {
+            $normalizedName = $this->normalizePersian($sName);
+            if ($normalizedName === $normalizedSearch || str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName)) {
                 $code = (int) ($st['code'] ?? $st['stateCode'] ?? $st['id'] ?? 0);
                 if ($code > 0) return $code;
             }
@@ -732,14 +734,17 @@ class Cod24Service
     }
 
     /**
-     * جستجوی شهر در لیست — اول exact match بعد substring match
+     * جستجوی شهر در لیست — با نرمال‌سازی حروف عربی/فارسی
      */
     protected function matchCityInList(string $cityName, array $cities): ?int
     {
-        // مرحله ۱: exact match
+        $normalizedSearch = $this->normalizePersian($cityName);
+
+        // مرحله ۱: exact match (بعد از normalize)
         foreach ($cities as $city) {
             $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
-            if ($cName === $cityName) {
+            $normalizedName = $this->normalizePersian($cName);
+            if ($normalizedName === $normalizedSearch) {
                 $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
                 if ($code > 0) return $code;
             }
@@ -747,7 +752,8 @@ class Cod24Service
         // مرحله ۲: substring match (فقط اگه exact نداشتیم)
         foreach ($cities as $city) {
             $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
-            if (!empty($cName) && (str_contains($cName, $cityName) || str_contains($cityName, $cName))) {
+            $normalizedName = $this->normalizePersian($cName);
+            if (!empty($normalizedName) && (str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName))) {
                 $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
                 if ($code > 0) return $code;
             }
@@ -851,6 +857,19 @@ class Cod24Service
             $mobile = '0' . $mobile;
         }
         return $mobile;
+    }
+
+    /**
+     * نرمال‌سازی حروف عربی/فارسی — حل مشکل ي vs ی و ك vs ک
+     * COD24 ممکنه ي عربی (U+064A) بفرسته ولی WC ی فارسی (U+06CC) داره
+     */
+    protected function normalizePersian(string $text): string
+    {
+        return str_replace(
+            ['ي', 'ك', 'ە', "\xC2\xA0", '  '],
+            ['ی', 'ک', 'ه', ' ', ' '],
+            trim($text)
+        );
     }
 
     protected function normalizePostalCode(?string $postalCode): string

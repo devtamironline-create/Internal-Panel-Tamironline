@@ -199,14 +199,19 @@ class Cod24Controller extends Controller
         }
         $results['manual_map'] = $manualCode ? ['code' => $manualCode, 'found' => true] : ['found' => false];
 
+        // تابع نرمال‌سازی عربی/فارسی
+        $normalize = fn(string $s) => str_replace(['ي', 'ك', 'ە', "\xC2\xA0", '  '], ['ی', 'ک', 'ه', ' ', ' '], trim($s));
+        $nCity = $normalize($city);
+
         // ۲) getCities (بر اساس استان)
         $stateCode = null;
         $getCitiesResult = null;
         if (!empty($statePersian)) {
+            $nState = $normalize($statePersian);
             $states = $service->getStates();
             foreach ($states as $st) {
-                $sName = $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
-                if ($sName === $statePersian || str_contains($sName, $statePersian) || str_contains($statePersian, $sName)) {
+                $sName = $normalize($st['name'] ?? $st['stateName'] ?? $st['title'] ?? '');
+                if ($sName === $nState || str_contains($sName, $nState) || str_contains($nState, $sName)) {
                     $stateCode = (int) ($st['code'] ?? $st['stateCode'] ?? $st['id'] ?? 0);
                     break;
                 }
@@ -215,7 +220,8 @@ class Cod24Controller extends Controller
                 $stateCities = $service->getCities($stateCode);
                 foreach ($stateCities as $c) {
                     $cName = $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
-                    if ($cName === $city || str_contains($cName, $city) || str_contains($city, $cName)) {
+                    $nName = $normalize($cName);
+                    if ($nName === $nCity || str_contains($nName, $nCity) || str_contains($nCity, $nName)) {
                         $getCitiesResult = ['code' => (int) ($c['code'] ?? $c['cityCode'] ?? $c['id'] ?? 0), 'name' => $cName, 'raw' => $c];
                         break;
                     }
@@ -229,7 +235,8 @@ class Cod24Controller extends Controller
         $postCities = $service->getPostCities();
         foreach ($postCities as $c) {
             $cName = $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
-            if ($cName === $city || str_contains($cName, $city) || str_contains($city, $cName)) {
+            $nName = $normalize($cName);
+            if ($nName === $nCity || str_contains($nName, $nCity) || str_contains($nCity, $nName)) {
                 $postCitiesResult = ['code' => (int) ($c['code'] ?? $c['cityCode'] ?? $c['id'] ?? 0), 'name' => $cName, 'raw' => $c];
                 break;
             }
