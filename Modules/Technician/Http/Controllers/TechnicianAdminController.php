@@ -89,7 +89,7 @@ class TechnicianAdminController extends Controller
             'cta_button_text', 'cta_button_link', 'cta_phone_text', 'cta_phone', 'cta_footnote',
             'contract_text', 'contract_sms_template',
             'default_commission_percent', 'default_promissory_note_amount',
-            'sms_approved_template', 'sms_rejected_template', 'sms_biometric_submitted_template',
+            'sms_otp_template', 'sms_approved_template', 'sms_rejected_template', 'sms_biometric_submitted_template',
         ];
 
         foreach ($simpleFields as $field) {

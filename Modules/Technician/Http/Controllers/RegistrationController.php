@@ -54,7 +54,8 @@ class RegistrationController extends Controller
         ]);
 
         $otpService = app(OTPService::class);
-        $result = $otpService->send($request->mobile);
+        $otpTemplate = TechnicianSetting::get('sms_otp_template') ?: null;
+        $result = $otpService->send($request->mobile, $otpTemplate);
 
         return response()->json($result);
     }
@@ -651,7 +652,8 @@ class RegistrationController extends Controller
         }
 
         $otpService = app(OTPService::class);
-        $result = $otpService->send($request->mobile);
+        $otpTemplate = TechnicianSetting::get('sms_otp_template') ?: null;
+        $result = $otpService->send($request->mobile, $otpTemplate);
 
         return response()->json($result);
     }

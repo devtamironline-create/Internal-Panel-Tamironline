@@ -430,20 +430,71 @@
                 </h3>
                 <ol class="text-xs text-amber-700 space-y-1.5 list-decimal list-inside mr-1">
                     <li>وارد پنل <a href="https://panel.kavenegar.com" target="_blank" class="underline font-medium">کاوه‌نگار</a> شوید و از بخش «تنظیمات &raquo; الگوی پیامک» یک الگوی جدید بسازید.</li>
-                    <li>در متن الگو از <code class="bg-amber-100 px-1 rounded font-mono" dir="ltr">%token%</code> به عنوان جایگزین <strong>نام تکنسین</strong> استفاده کنید.</li>
-                    <li>الگو را برای تایید ارسال کنید. پس از تایید، <strong>نام الگو</strong> (مثلاً <code class="bg-amber-100 px-1 rounded font-mono" dir="ltr">technician-approved</code>) را در فیلد مربوطه وارد کنید.</li>
+                    <li>در متن الگو از <code class="bg-amber-100 px-1 rounded font-mono" dir="ltr">%token%</code> استفاده کنید. مقدار هر توکن در جدول زیر مشخص شده.</li>
+                    <li>الگو را برای تایید ارسال کنید. پس از تایید، <strong>نام الگو</strong> را در فیلد مربوطه وارد کنید.</li>
                     <li>در صورت خالی بودن هر فیلد، پیامک مربوطه ارسال <strong>نخواهد شد</strong>.</li>
                 </ol>
                 <div class="mt-3 bg-amber-100 rounded-lg p-2.5">
                     <p class="text-xs text-amber-800 font-semibold mb-1">توکن‌های قابل استفاده:</p>
-                    <div class="flex flex-wrap gap-2" dir="ltr">
-                        <code class="bg-white text-amber-900 px-2 py-0.5 rounded text-xs font-mono">%token% = نام و نام‌خانوادگی تکنسین</code>
-                    </div>
+                    <table class="w-full text-xs mt-1">
+                        <tbody>
+                            <tr class="border-b border-amber-200">
+                                <td class="py-1 pl-3 font-mono text-amber-900 font-bold" dir="ltr">%token%</td>
+                                <td class="py-1 text-amber-700">در الگوهای اطلاع‌رسانی = <strong>نام و نام‌خانوادگی تکنسین</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pl-3 font-mono text-amber-900 font-bold" dir="ltr">%token%</td>
+                                <td class="py-1 text-amber-700">در الگوی کد تایید = <strong>کد ۶ رقمی OTP</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
                     <p class="text-xs text-amber-600 mt-1.5">توجه: فاصله در نام به نقطه تبدیل می‌شود. مثلاً «علی محمدی» ارسال می‌شود: <code class="font-mono bg-white px-1 rounded" dir="ltr">علی.محمدی</code></p>
                 </div>
             </div>
 
-            {{-- ۱. پیامک تایید درخواست --}}
+            {{-- ۱. پیامک کد تایید (OTP) --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-yellow-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک کد تایید (OTP)</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">ارسال کد ۶ رقمی تایید هویت به تکنسین</p>
+                    </div>
+                </div>
+                {{-- اطلاعات ارسال --}}
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = کد ۶ رقمی</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span> ورود شماره موبایل در فرم ثبت‌نام</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span> هنگام امضای قرارداد</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_otp_template" value="{{ $settings['sms_otp_template'] ?? config('sms.templates.otp', 'verify') }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-left font-mono"
+                           placeholder="verify">
+                    <p class="text-xs text-gray-400 mt-1">پیش‌فرض: <code class="font-mono" dir="ltr">verify</code> — اگر تغییر ندهید از مقدار فایل تنظیمات سرور استفاده می‌شود.</p>
+                </div>
+                <div class="mt-3 bg-yellow-50 rounded-lg p-3">
+                    <p class="text-xs text-yellow-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-yellow-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-yellow-200" dir="rtl">کد تایید شما در تامیرآنلاین: %token%</p>
+                </div>
+            </div>
+
+            {{-- ۲. پیامک تایید درخواست --}}
             <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-green-500">
                 <div class="flex items-start gap-3 mb-3">
                     <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -451,7 +502,27 @@
                     </div>
                     <div class="flex-1">
                         <h3 class="text-sm font-bold text-gray-800">پیامک تایید درخواست</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: وقتی ادمین درخواست ثبت‌نام تکنسین را <strong class="text-green-600">تایید</strong> می‌کند</p>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی تایید درخواست همکاری</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span> ادمین درخواست ثبت‌نام را <strong class="text-green-600">تایید</strong> می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">TechnicianAdminController::sendStatusSms()</span>
                     </div>
                 </div>
                 <div>
@@ -466,7 +537,7 @@
                 </div>
             </div>
 
-            {{-- ۲. پیامک رد درخواست --}}
+            {{-- ۳. پیامک رد درخواست --}}
             <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-red-500">
                 <div class="flex items-start gap-3 mb-3">
                     <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -474,7 +545,27 @@
                     </div>
                     <div class="flex-1">
                         <h3 class="text-sm font-bold text-gray-800">پیامک رد درخواست</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: وقتی ادمین درخواست ثبت‌نام تکنسین را <strong class="text-red-600">رد</strong> می‌کند</p>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی رد درخواست همکاری</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-red-400 inline-block"></span> ادمین درخواست ثبت‌نام را <strong class="text-red-600">رد</strong> می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">TechnicianAdminController::sendStatusSms()</span>
                     </div>
                 </div>
                 <div>
@@ -489,7 +580,7 @@
                 </div>
             </div>
 
-            {{-- ۳. پیامک امضای قرارداد --}}
+            {{-- ۴. پیامک امضای قرارداد --}}
             <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-purple-500">
                 <div class="flex items-start gap-3 mb-3">
                     <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -497,7 +588,27 @@
                     </div>
                     <div class="flex-1">
                         <h3 class="text-sm font-bold text-gray-800">پیامک امضای قرارداد</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: بلافاصله پس از اینکه تکنسین <strong class="text-purple-600">قرارداد را امضا</strong> می‌کند</p>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی ثبت موفق قرارداد</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block"></span> تکنسین <strong class="text-purple-600">قرارداد را امضا</strong> می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">RegistrationController::signContract()</span>
                     </div>
                 </div>
                 <div>
@@ -512,7 +623,7 @@
                 </div>
             </div>
 
-            {{-- ۴. پیامک ارسال ویدیو احراز هویت --}}
+            {{-- ۵. پیامک ارسال ویدیو احراز هویت --}}
             <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-blue-500">
                 <div class="flex items-start gap-3 mb-3">
                     <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -520,7 +631,27 @@
                     </div>
                     <div class="flex-1">
                         <h3 class="text-sm font-bold text-gray-800">پیامک ارسال ویدیو احراز هویت</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: پس از اینکه تکنسین <strong class="text-blue-600">ویدیو احراز هویت</strong> خود را آپلود می‌کند</p>
+                        <p class="text-xs text-gray-500 mt-0.5">تایید دریافت ویدیو از تکنسین</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">گیرنده:</span>
+                            <span class="font-medium text-gray-700">تکنسین (شماره موبایل ثبت‌شده)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-gray-400">توکن:</span>
+                            <code class="font-mono text-gray-700 bg-white px-1.5 py-0.5 rounded border" dir="ltr">%token% = نام تکنسین</code>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">زمان ارسال:</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span> تکنسین <strong class="text-blue-600">ویدیو احراز هویت</strong> را آپلود می‌کند</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        <span class="font-medium text-gray-600">محل ارسال در کد:</span>
+                        <span class="font-mono text-gray-600">RegistrationController::submitBiometric()</span>
                     </div>
                 </div>
                 <div>

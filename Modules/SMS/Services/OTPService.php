@@ -27,10 +27,10 @@ class OTPService
         return str_pad(random_int(0, pow(10, $this->length) - 1), $this->length, '0', STR_PAD_LEFT);
     }
 
-    public function send(string $mobile): array
+    public function send(string $mobile, ?string $template = null): array
     {
         $mobile = $this->normalizeMobile($mobile);
-        
+
         $lastSentKey = "otp_last_sent_{$mobile}";
         $lastSent = Cache::get($lastSentKey);
         
@@ -61,8 +61,8 @@ class OTPService
             Log::info("OTP Code for {$mobile}: {$code}");
         }
 
-        $template = config('sms.templates.otp', 'verify');
-        $result = $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
+        $templateName = $template ?? config('sms.templates.otp', 'verify');
+        $result = $this->sms->sendTemplate($mobile, $templateName, ['token' => $code]);
 
         if ($result['success']) {
             return [
