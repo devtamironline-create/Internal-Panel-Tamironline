@@ -710,6 +710,21 @@ class RegistrationController extends Controller
      */
     public function uploadDocuments(Request $request)
     {
+        // بررسی اولیه: اگر PHP محدودیت حجم POST را اعمال کرده باشد،
+        // $_FILES و $_POST خالی می‌شوند و فایل‌ها دریافت نمی‌شوند.
+        if (empty($request->all()) && empty($request->allFiles())) {
+            Log::warning('uploadDocuments: empty request - likely post_max_size exceeded', [
+                'content_length' => $request->server('CONTENT_LENGTH'),
+                'post_max_size' => ini_get('post_max_size'),
+                'upload_max_filesize' => ini_get('upload_max_filesize'),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حجم فایل‌ها بیش از حد مجاز سرور است. لطفاً تصاویر را با حجم کمتر ارسال کنید.',
+            ], 422);
+        }
+
         $request->validate([
             'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
             'national_card_front'    => ['required', 'image', 'max:5120'],
@@ -763,15 +778,58 @@ class RegistrationController extends Controller
         // ذخیره فایل‌ها
         $folder = 'technician-documents/' . $registration->id;
 
+        // اطمینان از وجود دایرکتوری ذخیره‌سازی
+        $storagePath = storage_path('app/public/' . $folder);
+        if (!is_dir($storagePath)) {
+            mkdir($storagePath, 0755, true);
+        }
+
+        $fileFields = [
+            'national_card_front'  => 'doc_national_card_front',
+            'national_card_back'   => 'doc_national_card_back',
+            'birth_certificate_p1' => 'doc_birth_certificate_p1',
+            'birth_certificate_p2' => 'doc_birth_certificate_p2',
+            'criminal_record'      => 'doc_criminal_record',
+            'photo_3x4'           => 'doc_photo_3x4',
+            'lease_agreement'      => 'doc_lease_agreement',
+            'utility_bill'         => 'doc_utility_bill',
+        ];
+
         $paths = [];
-        $paths['doc_national_card_front']  = $request->file('national_card_front')->store($folder, 'public');
-        $paths['doc_national_card_back']   = $request->file('national_card_back')->store($folder, 'public');
-        $paths['doc_birth_certificate_p1'] = $request->file('birth_certificate_p1')->store($folder, 'public');
-        $paths['doc_birth_certificate_p2'] = $request->file('birth_certificate_p2')->store($folder, 'public');
-        $paths['doc_criminal_record']      = $request->file('criminal_record')->store($folder, 'public');
-        $paths['doc_photo_3x4']            = $request->file('photo_3x4')->store($folder, 'public');
-        $paths['doc_lease_agreement']      = $request->file('lease_agreement')->store($folder, 'public');
-        $paths['doc_utility_bill']         = $request->file('utility_bill')->store($folder, 'public');
+        try {
+            foreach ($fileFields as $inputName => $dbColumn) {
+                $file = $request->file($inputName);
+                if (!$file || !$file->isValid()) {
+                    Log::error('uploadDocuments: invalid file', [
+                        'field' => $inputName,
+                        'registration_id' => $registration->id,
+                        'error' => $file ? $file->getErrorMessage() : 'file is null',
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'خطا در دریافت فایل. لطفاً مجدداً تلاش کنید.',
+                    ], 422);
+                }
+                $paths[$dbColumn] = $file->store($folder, 'public');
+            }
+        } catch (\Exception $e) {
+            Log::error('uploadDocuments: file storage failed', [
+                'registration_id' => $registration->id,
+                'mobile' => $request->mobile,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // پاکسازی فایل‌های ذخیره‌شده قبل از خطا
+            foreach ($paths as $path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ذخیره فایل‌ها. لطفاً مجدداً تلاش کنید.',
+            ], 500);
+        }
 
         $registration->update(array_merge($paths, [
             'documents_uploaded' => true,
