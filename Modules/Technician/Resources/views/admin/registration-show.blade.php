@@ -577,9 +577,13 @@
                 </div>
                 @if($registration->contract_signature)
                 <div>
-                    <dt class="text-xs text-gray-500 mb-2">امضای دیجیتال</dt>
-                    <dd class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                        <img src="{{ $registration->contract_signature }}" alt="امضا" class="max-h-24 mx-auto">
+                    <dt class="text-xs text-gray-500 mb-2">نمونه امضا</dt>
+                    <dd class="bg-white rounded-lg p-4 border-2 border-gray-200">
+                        @if(str_starts_with($registration->contract_signature, 'data:'))
+                            <img src="{{ $registration->contract_signature }}" alt="امضا" class="max-h-32 mx-auto">
+                        @else
+                            <img src="{{ asset('storage/' . $registration->contract_signature) }}" alt="امضا" class="max-h-32 mx-auto">
+                        @endif
                     </dd>
                 </div>
                 @endif

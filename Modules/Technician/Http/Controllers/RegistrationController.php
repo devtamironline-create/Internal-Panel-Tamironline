@@ -5,6 +5,7 @@ namespace Modules\Technician\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Modules\SMS\Services\KavenegarService;
 use Modules\SMS\Services\OTPService;
 use Modules\Technician\Models\ApplianceCategory;
@@ -694,9 +695,21 @@ class RegistrationController extends Controller
             ], 422);
         }
 
+        // ذخیره امضا به صورت فایل PNG
+        $signaturePath = null;
+        if ($request->signature && str_starts_with($request->signature, 'data:image/png;base64,')) {
+            $base64Data = substr($request->signature, strlen('data:image/png;base64,'));
+            $imageData = base64_decode($base64Data);
+            if ($imageData) {
+                $fileName = 'signatures/' . $registration->id . '_' . time() . '.png';
+                Storage::disk('public')->put($fileName, $imageData);
+                $signaturePath = $fileName;
+            }
+        }
+
         $registration->update([
             'contract_signed_at' => now(),
-            'contract_signature' => $request->signature,
+            'contract_signature' => $signaturePath ?? $request->signature,
             'current_step'       => 7,
         ]);
 
