@@ -429,8 +429,8 @@
                     <svg id="amadest-barcode"></svg>
                 </div>
                 <div class="barcode-meta">
-                    <span class="barcode-label">بارکد ارسال</span>
-                    <span class="barcode-code">{{ $amadestCode }}</span>
+                    <span class="barcode-label">کد رهگیری پست</span>
+                    <span class="barcode-code">{{ $postCode ?: $amadestCode }}</span>
                 </div>
             </div>
             @endif
