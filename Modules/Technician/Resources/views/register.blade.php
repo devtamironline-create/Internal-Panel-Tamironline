@@ -794,7 +794,7 @@
 
                     {{-- نوع تعمیر --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-2">آیا در حوزه تخصصی خود تعمیر بردهای الکترونیکی و قطعات مکانیکی دستگاه‌ها را انجام می‌دهید یا صرفاً تعویض قطعات انجام می‌شود؟</label>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">آیا در حوزه تخصصی خود تعمیر بردهای الکترونیکی و قطعات مکانیکی دستگاه‌ها را انجام می‌دهید یا صرفاً تعویض قطعات انجام می‌شود؟ <span class="text-red-500">*</span></label>
                         <div class="flex gap-2">
                             <label class="flex-1 cursor-pointer">
                                 <input type="radio" name="repair_skill" value="board_repair" class="hidden peer">
