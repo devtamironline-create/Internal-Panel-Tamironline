@@ -193,6 +193,11 @@
             <span>معلق (suspend): <strong style="color:{{ !empty($cod24Data['suspended']) ? '#16a34a' : '#dc2626' }}">{{ !empty($cod24Data['suspended']) ? 'بله' : 'خیر' }}</strong></span>
             <span>بارکد پستی: <strong style="color:{{ !empty($cod24Data['post_barcode']) ? '#16a34a' : '#f59e0b' }}">{{ $cod24Data['post_barcode'] ?? $order->post_tracking_code ?? 'هنوز صادر نشده' }}</strong></span>
         </div>
+        @if(!empty($cod24Data['suspend_error']))
+        <div style="margin-top:6px;color:#dc2626;background:#fef2f2;padding:4px 8px;border-radius:4px;">
+            <strong>خطای suspend:</strong> {{ $cod24Data['suspend_error'] }}
+        </div>
+        @endif
     </div>
     @endif
 

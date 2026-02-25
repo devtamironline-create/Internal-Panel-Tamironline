@@ -791,6 +791,11 @@ class PrintController extends Controller
                 $wcDataCurrent['cod24']['registered']   = true;
                 $wcDataCurrent['cod24']['barcode']      = (string) $barcode;
                 $wcDataCurrent['cod24']['suspended']     = ($suspendResult['success'] ?? false);
+                if (!($suspendResult['success'] ?? false)) {
+                    $wcDataCurrent['cod24']['suspend_error'] = $suspendResult['message'] ?? 'خطای نامشخص';
+                } else {
+                    unset($wcDataCurrent['cod24']['suspend_error']);
+                }
                 if (!empty($postBarcode)) {
                     $wcDataCurrent['cod24']['post_barcode'] = (string) $postBarcode;
                 }
