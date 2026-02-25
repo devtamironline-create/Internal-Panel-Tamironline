@@ -1129,7 +1129,7 @@
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
                             <p class="text-xs text-gray-700 leading-relaxed text-justify">
                                 برای آشنایی با نحوه دریافت گواهی عدم سوءپیشینه،
-                                <a href="https://www.aparat.com/v/zedkgg4" target="_blank" class="text-blue-600 font-semibold hover:underline">ویدئوی زیر</a>
+                                <a href="https://www.aparat.com/v/zedkgg4" target="_blank" class="text-blue-600 font-semibold hover:underline">ویدئو</a>
                                 را مشاهده کنید.
                             </p>
                             <p class="text-xs text-gray-700 leading-relaxed text-justify mt-1">
