@@ -95,6 +95,7 @@ class RegistrationController extends Controller
                     'children_count'    => $registration->children_count,
                     'province'          => $registration->province,
                     'city'              => $registration->city,
+                    'address'           => $registration->address,
                 ];
             }
         }
@@ -229,6 +230,7 @@ class RegistrationController extends Controller
             'children_count'    => ['nullable', 'integer', 'min:0', 'max:5'],
             'province'          => ['required', 'string'],
             'city'              => ['required', 'string'],
+            'address'           => ['required', 'string', 'max:1000'],
         ], [
             'mobile.required'            => 'شماره موبایل الزامی است.',
             'shenasname_number.required' => 'شماره شناسنامه الزامی است.',
@@ -239,6 +241,8 @@ class RegistrationController extends Controller
             'marital_status.in'          => 'وضعیت تاهل انتخاب شده معتبر نیست.',
             'province.required'          => 'انتخاب استان الزامی است.',
             'city.required'              => 'انتخاب شهر الزامی است.',
+            'address.required'           => 'آدرس محل سکونت الزامی است.',
+            'address.max'                => 'آدرس نباید بیشتر از ۱۰۰۰ کاراکتر باشد.',
         ]);
 
         // اعتبارسنجی استان
@@ -280,6 +284,7 @@ class RegistrationController extends Controller
             'children_count'    => $request->marital_status === 'married' ? $request->children_count : null,
             'province'          => $request->province,
             'city'              => $request->city,
+            'address'           => $request->address,
             'current_step'      => 3,
         ]);
 
@@ -561,10 +566,12 @@ class RegistrationController extends Controller
             // عنوان جنسیت
             $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
 
-            // آدرس از استان و شهر
+            // آدرس کامل: استان، شهر، آدرس محل سکونت
             $province = $registration->province ?? '';
             $city = $registration->city ?? '';
-            $address = $province && $city ? $province . '، ' . $city : ($province ?: $city);
+            $fullAddress = $registration->address ?? '';
+            $addressParts = array_filter([$province, $city, $fullAddress]);
+            $address = implode('، ', $addressParts);
 
             // تاریخ شمسی
             try {

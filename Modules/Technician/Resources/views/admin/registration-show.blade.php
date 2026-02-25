@@ -317,6 +317,12 @@
                     <dt class="text-xs text-gray-500">استان / شهر</dt>
                     <dd class="text-sm font-medium text-gray-800">{{ $registration->province ?? '—' }} / {{ $registration->city ?? '—' }}</dd>
                 </div>
+                @if($registration->address)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">آدرس محل سکونت</dt>
+                    <dd class="text-sm font-medium text-gray-800 text-left max-w-[200px]">{{ $registration->address }}</dd>
+                </div>
+                @endif
             </dl>
         </div>
 

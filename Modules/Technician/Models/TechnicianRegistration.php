@@ -30,6 +30,7 @@ class TechnicianRegistration extends Model
         'children_count',
         'province',
         'city',
+        'address',
         'field_of_study',
         'education_level',
         'has_business_license',
