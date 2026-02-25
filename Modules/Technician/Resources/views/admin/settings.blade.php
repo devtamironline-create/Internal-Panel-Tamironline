@@ -417,75 +417,124 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات پیامک قرارداد</h2>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">نام تمپلیت پیامک (کاوه‌نگار)</label>
-                    <input type="text" name="contract_sms_template" value="{{ $settings['contract_sms_template'] ?? '' }}" dir="ltr"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
-                           placeholder="contract-signed">
-                    <p class="text-xs text-gray-400 mt-1">نام تمپلیت ثبت‌شده در پنل کاوه‌نگار برای ارسال پیامک پس از امضای قرارداد</p>
-                </div>
-            </div>
         </div>
 
         {{-- TAB: پیامک --}}
         <div x-show="activeTab === 'sms'" class="space-y-4">
-            <div class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-                <h2 class="font-bold text-gray-800 text-base border-b pb-3">تنظیمات پیامک اطلاع‌رسانی</h2>
-                <p class="text-xs text-gray-500">نام تمپلیت‌های ثبت‌شده در پنل کاوه‌نگار را وارد کنید. در صورت خالی بودن هر فیلد، پیامک مربوطه ارسال نمی‌شود.</p>
 
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <p class="text-xs text-blue-700 font-semibold mb-1">توکن‌های قابل استفاده در تمپلیت کاوه‌نگار:</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-blue-600" dir="ltr">
-                        <code class="bg-blue-100 px-1.5 py-0.5 rounded">token = نام و نام خانوادگی</code>
+            {{-- راهنمای کلی --}}
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    راهنمای تنظیم الگوی پیامک کاوه‌نگار
+                </h3>
+                <ol class="text-xs text-amber-700 space-y-1.5 list-decimal list-inside mr-1">
+                    <li>وارد پنل <a href="https://panel.kavenegar.com" target="_blank" class="underline font-medium">کاوه‌نگار</a> شوید و از بخش «تنظیمات &raquo; الگوی پیامک» یک الگوی جدید بسازید.</li>
+                    <li>در متن الگو از <code class="bg-amber-100 px-1 rounded font-mono" dir="ltr">%token%</code> به عنوان جایگزین <strong>نام تکنسین</strong> استفاده کنید.</li>
+                    <li>الگو را برای تایید ارسال کنید. پس از تایید، <strong>نام الگو</strong> (مثلاً <code class="bg-amber-100 px-1 rounded font-mono" dir="ltr">technician-approved</code>) را در فیلد مربوطه وارد کنید.</li>
+                    <li>در صورت خالی بودن هر فیلد، پیامک مربوطه ارسال <strong>نخواهد شد</strong>.</li>
+                </ol>
+                <div class="mt-3 bg-amber-100 rounded-lg p-2.5">
+                    <p class="text-xs text-amber-800 font-semibold mb-1">توکن‌های قابل استفاده:</p>
+                    <div class="flex flex-wrap gap-2" dir="ltr">
+                        <code class="bg-white text-amber-900 px-2 py-0.5 rounded text-xs font-mono">%token% = نام و نام‌خانوادگی تکنسین</code>
                     </div>
-                    <p class="text-xs text-blue-600 mt-2">
-                        در پنل کاوه‌نگار تمپلیت را با <code class="bg-blue-100 px-1 rounded" dir="ltr">%token%</code> بسازید تا نام تکنسین جایگزین شود.
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            <span class="inline-flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                                تمپلیت پیامک تایید درخواست
-                            </span>
-                        </label>
-                        <input type="text" name="sms_approved_template" value="{{ $settings['sms_approved_template'] ?? '' }}" dir="ltr"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
-                               placeholder="technician-approved">
-                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین هنگام تایید درخواست ثبت‌نام توسط ادمین</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            <span class="inline-flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                                تمپلیت پیامک رد درخواست
-                            </span>
-                        </label>
-                        <input type="text" name="sms_rejected_template" value="{{ $settings['sms_rejected_template'] ?? '' }}" dir="ltr"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
-                               placeholder="technician-rejected">
-                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین هنگام رد درخواست ثبت‌نام توسط ادمین</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            <span class="inline-flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                تمپلیت پیامک ارسال ویدیو احراز هویت
-                            </span>
-                        </label>
-                        <input type="text" name="sms_biometric_submitted_template" value="{{ $settings['sms_biometric_submitted_template'] ?? '' }}" dir="ltr"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
-                               placeholder="technician-biometric-submitted">
-                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین پس از آپلود ویدیو احراز هویت</p>
-                    </div>
+                    <p class="text-xs text-amber-600 mt-1.5">توجه: فاصله در نام به نقطه تبدیل می‌شود. مثلاً «علی محمدی» ارسال می‌شود: <code class="font-mono bg-white px-1 rounded" dir="ltr">علی.محمدی</code></p>
                 </div>
             </div>
+
+            {{-- ۱. پیامک تایید درخواست --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-green-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک تایید درخواست</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: وقتی ادمین درخواست ثبت‌نام تکنسین را <strong class="text-green-600">تایید</strong> می‌کند</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_approved_template" value="{{ $settings['sms_approved_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent text-left font-mono"
+                           placeholder="technician-approved">
+                </div>
+                <div class="mt-3 bg-green-50 rounded-lg p-3">
+                    <p class="text-xs text-green-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-green-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-green-200" dir="rtl">%token% عزیز، درخواست همکاری شما در تامیرآنلاین تایید شد. لطفاً وارد پنل شوید و مراحل بعدی را تکمیل کنید.</p>
+                </div>
+            </div>
+
+            {{-- ۲. پیامک رد درخواست --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-red-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک رد درخواست</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: وقتی ادمین درخواست ثبت‌نام تکنسین را <strong class="text-red-600">رد</strong> می‌کند</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_rejected_template" value="{{ $settings['sms_rejected_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent text-left font-mono"
+                           placeholder="technician-rejected">
+                </div>
+                <div class="mt-3 bg-red-50 rounded-lg p-3">
+                    <p class="text-xs text-red-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-red-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-red-200" dir="rtl">%token% عزیز، متاسفانه درخواست همکاری شما در تامیرآنلاین در حال حاضر تایید نشد. در صورت تمایل می‌توانید مجدداً اقدام کنید.</p>
+                </div>
+            </div>
+
+            {{-- ۳. پیامک امضای قرارداد --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-purple-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک امضای قرارداد</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: بلافاصله پس از اینکه تکنسین <strong class="text-purple-600">قرارداد را امضا</strong> می‌کند</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="contract_sms_template" value="{{ $settings['contract_sms_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-left font-mono"
+                           placeholder="contract-signed">
+                </div>
+                <div class="mt-3 bg-purple-50 rounded-lg p-3">
+                    <p class="text-xs text-purple-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-purple-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-purple-200" dir="rtl">%token% عزیز، قرارداد همکاری شما با تامیرآنلاین ثبت شد. لطفاً مدارک و ویدیو احراز هویت خود را بارگذاری کنید.</p>
+                </div>
+            </div>
+
+            {{-- ۴. پیامک ارسال ویدیو احراز هویت --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-blue-500">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-gray-800">پیامک ارسال ویدیو احراز هویت</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">زمان ارسال: پس از اینکه تکنسین <strong class="text-blue-600">ویدیو احراز هویت</strong> خود را آپلود می‌کند</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
+                    <input type="text" name="sms_biometric_submitted_template" value="{{ $settings['sms_biometric_submitted_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left font-mono"
+                           placeholder="biometric-submitted">
+                </div>
+                <div class="mt-3 bg-blue-50 rounded-lg p-3">
+                    <p class="text-xs text-blue-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-blue-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-blue-200" dir="rtl">%token% عزیز، ویدیو احراز هویت شما دریافت شد و در حال بررسی است. نتیجه از طریق پیامک اطلاع‌رسانی خواهد شد.</p>
+                </div>
+            </div>
+
         </div>
 
         {{-- Save Button --}}
