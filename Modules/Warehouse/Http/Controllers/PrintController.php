@@ -271,7 +271,14 @@ class PrintController extends Controller
                 } elseif ($shippingProvider === 'postex') {
                     $registrationError = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state);
                 } elseif ($shippingProvider === 'cod24') {
-                    $registrationError = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state);
+                    // اگه شهر خالیه، ثبت خودکار رو رد کن — بذار کاربر از dropdown انتخاب کنه
+                    $cod24 = new \Modules\Warehouse\Services\Cod24Service();
+                    $autoCityCode = $cod24->findCityCode($city, $state);
+                    if (!empty($city) && $autoCityCode) {
+                        $registrationError = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state);
+                    } else {
+                        $registrationError = 'شهر مقصد در اطلاعات سفارش پیدا نشد. لطفاً از بخش پایین شهر را انتخاب کنید.';
+                    }
                 } else {
                     $registrationError = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
                 }
