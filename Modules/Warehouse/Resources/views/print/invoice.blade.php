@@ -428,6 +428,10 @@
                 <div class="barcode-item">
                     <svg id="amadest-barcode"></svg>
                 </div>
+                <div class="barcode-meta">
+                    <span class="barcode-label">بارکد ارسال</span>
+                    <span class="barcode-code">{{ $amadestCode }}</span>
+                </div>
             </div>
             @endif
 
