@@ -329,7 +329,7 @@ class Cod24Service
         }
 
         $payload = [
-            'idOrder'              => (string) $orderNo,
+            'idOrderShop'          => (string) $orderNo,
             'cityCode'             => $cityCode,
             'idTypeSend'           => $idTypeSend,
             'idPayMethod'          => $idPayMethod,
@@ -342,16 +342,10 @@ class Cod24Service
             'address'              => $address,
             'nonStandardPackage'   => false,
             'finalPayAmountCustomer' => $value,
+            'requestOrderProducts' => $this->buildProducts($data),
             'totalWeight'          => $weight,
-            'idOrderShop'          => 0,
-            'packagingPrice'       => 0,
             'contentParcell'       => $data['description'] ?? 'کالا',
             'idCartonType'         => 0,
-            'idPacketType'         => (int) WarehouseSetting::get('cod24_id_packet_type', 1),
-            'requestOrderProducts' => $this->buildProducts($data),
-            'fragile'              => false,
-            'liquid'               => false,
-            'prePrintBarcode'      => '',
             'isCalcSrvByWeight'    => true,
         ];
 
