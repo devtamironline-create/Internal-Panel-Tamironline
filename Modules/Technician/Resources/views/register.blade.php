@@ -1126,8 +1126,18 @@
                     {{-- گواهی سوپیشینه --}}
                     <div>
                         <label class="block text-sm font-semibold text-gray-600 mb-1.5">گواهی عدم سوء‌پیشینه</label>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                            <p class="text-xs text-gray-700 leading-relaxed text-justify">
+                                برای آشنایی با نحوه دریافت گواهی عدم سوءپیشینه،
+                                <a href="https://www.aparat.com/v/zedkgg4" target="_blank" class="text-blue-600 font-semibold hover:underline">ویدئوی زیر</a>
+                                را مشاهده کنید.
+                            </p>
+                            <p class="text-xs text-gray-700 leading-relaxed text-justify mt-1">
+                                پس از دریافت گواهی، لطفاً فایل PDF مربوط به آن را در قسمت زیر بارگذاری نمایید.
+                            </p>
+                        </div>
                         <div class="doc-upload-box" data-field="criminal_record">
-                            <input type="file" accept="image/*" class="hidden doc-file-input" id="file_criminal_record" onchange="previewDocImage(this, 'criminal_record')">
+                            <input type="file" accept="image/*,.pdf" class="hidden doc-file-input" id="file_criminal_record" onchange="previewDocImage(this, 'criminal_record')">
                             <div id="preview_criminal_record" class="hidden relative">
                                 <img class="w-full rounded-xl" alt="پیش‌نمایش">
                                 <button type="button" onclick="removeDocImage('criminal_record')" class="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">✕</button>
