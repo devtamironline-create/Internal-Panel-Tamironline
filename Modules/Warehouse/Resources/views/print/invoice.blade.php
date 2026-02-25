@@ -170,6 +170,9 @@
         @if($order->shipping_type === 'post' && (empty($order->amadest_barcode) || !empty($registrationError) || ($shippingProvider ?? 'amadest') === 'postex'))
         <button onclick="retryRegister()" id="retryBtn" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">ثبت مجدد در {{ $providerLabel }}</button>
         @endif
+        @if($order->shipping_type === 'post' && !empty($order->amadest_barcode))
+        <button onclick="clearAndReRegister()" id="clearBarcodeBtn" style="padding:6px 14px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma;">پاک کردن بارکد و ثبت مجدد در {{ $providerLabel }}</button>
+        @endif
     </div>
     @if(!empty($registrationError))
     <div class="no-print" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:8px 12px;margin:60px 10px 0;border-radius:6px;font-size:11px;">
@@ -533,6 +536,40 @@
                 alert('خطا در ارتباط');
                 btn.disabled = false;
                 btn.textContent = 'ثبت مجدد';
+            });
+        }
+
+        function clearAndReRegister() {
+            if (!confirm('بارکد فعلی پاک شده و سفارش مجدد در {{ $providerLabel }} ثبت می‌شود. ادامه می‌دهید؟')) return;
+            var btn = document.getElementById('clearBarcodeBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = 'در حال پاک‌سازی و ثبت مجدد...';
+
+            fetch('/warehouse/{{ $order->id }}/retry-register', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    alert('موفق! ' + data.message);
+                    location.reload();
+                } else {
+                    alert('خطا: ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'پاک کردن بارکد و ثبت مجدد';
+                }
+            })
+            .catch(function() {
+                alert('خطا در ارتباط');
+                btn.disabled = false;
+                btn.textContent = 'پاک کردن بارکد و ثبت مجدد';
             });
         }
 
