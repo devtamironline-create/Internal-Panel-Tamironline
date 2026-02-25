@@ -212,6 +212,25 @@
         </div>
     </div>
 
+    <!-- City Resolve Test -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">تست تشخیص شهر</h2>
+                <p class="text-xs text-gray-500">ببینید هر شهر به چه کدی resolve می‌شه و از کجا</p>
+            </div>
+        </div>
+        <div class="flex gap-2 mb-3">
+            <input type="text" id="test-city-name" dir="rtl" placeholder="نام شهر (مثلاً شیراز)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <input type="text" id="test-city-state" dir="ltr" placeholder="کد استان WC (مثلاً FRS)" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <button onclick="testCityResolve()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">تست</button>
+        </div>
+        <div id="test-city-result" class="hidden mt-3 p-4 rounded-lg text-sm"></div>
+    </div>
+
     <!-- Tracking -->
     <div class="bg-white rounded-xl shadow-sm p-6 max-w-xl">
         <div class="flex items-center gap-3 mb-4">
@@ -310,6 +329,66 @@ function loadStates() {
         }
     })
     .catch(() => showResult('states-result', false, 'خطا در ارتباط'));
+}
+
+function testCityResolve() {
+    const city = (document.getElementById('test-city-name').value || '').trim();
+    const state = (document.getElementById('test-city-state').value || '').trim();
+    if (!city) { showResult('test-city-result', false, 'نام شهر را وارد کنید'); return; }
+    showLoading('test-city-result', 'در حال تست...');
+    fetch('{{ route("warehouse.cod24.test-city") }}?city=' + encodeURIComponent(city) + '&state=' + encodeURIComponent(state), { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) { showResult('test-city-result', false, data.message); return; }
+        const r = data.results;
+        let html = '<div class="space-y-2">';
+        html += '<div class="font-bold text-gray-800">شهر: ' + data.city + ' | استان: ' + data.state_persian + ' (' + data.state_raw + ')</div>';
+        html += '<hr class="my-2">';
+
+        // نقشه دستی
+        html += '<div class="flex items-center gap-2">';
+        html += r.manual_map.found ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-600">&#10007;</span>';
+        html += '<span class="font-medium">نقشه دستی:</span> ';
+        html += r.manual_map.found ? '<span class="font-mono font-bold text-green-700">' + r.manual_map.code + '</span>' : '<span class="text-gray-500">یافت نشد</span>';
+        html += '</div>';
+
+        // getCities
+        html += '<div class="flex items-center gap-2">';
+        html += r.getCities.found ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-600">&#10007;</span>';
+        html += '<span class="font-medium">getCities (استان ' + (r.getCities.stateCode || '-') + '):</span> ';
+        html += r.getCities.found ? '<span class="font-mono font-bold text-blue-700">' + r.getCities.code + '</span> (' + (r.getCities.name || '') + ')' : '<span class="text-gray-500">یافت نشد</span>';
+        html += '</div>';
+
+        // getPostCities
+        html += '<div class="flex items-center gap-2">';
+        html += r.getPostCities.found ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-600">&#10007;</span>';
+        html += '<span class="font-medium">getPostCities (' + r.getPostCities.total + ' شهر):</span> ';
+        html += r.getPostCities.found ? '<span class="font-mono font-bold text-purple-700">' + r.getPostCities.code + '</span> (' + (r.getPostCities.name || '') + ')' : '<span class="text-gray-500">یافت نشد</span>';
+        html += '</div>';
+
+        // نتیجه نهایی
+        html += '<hr class="my-2">';
+        html += '<div class="flex items-center gap-2 text-lg">';
+        html += '<span class="font-bold">نتیجه findCityCode:</span> ';
+        html += r.final_findCityCode ? '<span class="font-mono font-bold text-green-800 bg-green-100 px-2 py-1 rounded">' + r.final_findCityCode + '</span>' : '<span class="text-red-700 font-bold">NULL — از فالبک استفاده می‌شه</span>';
+        html += '</div>';
+        html += '<div class="text-xs text-gray-500 mt-1">فالبک: ' + (r.fallback_city_code || 'تنظیم نشده') + '</div>';
+
+        // نمایش فیلدهای خام
+        if (r.getCities.found && r.getCities.raw) {
+            html += '<details class="mt-2"><summary class="text-xs text-gray-500 cursor-pointer">فیلدهای خام getCities</summary><pre class="text-xs bg-gray-50 p-2 mt-1 rounded overflow-x-auto" dir="ltr">' + JSON.stringify(r.getCities.raw, null, 2) + '</pre></details>';
+        }
+        if (r.getPostCities.found && r.getPostCities.raw) {
+            html += '<details class="mt-2"><summary class="text-xs text-gray-500 cursor-pointer">فیلدهای خام getPostCities</summary><pre class="text-xs bg-gray-50 p-2 mt-1 rounded overflow-x-auto" dir="ltr">' + JSON.stringify(r.getPostCities.raw, null, 2) + '</pre></details>';
+        }
+
+        html += '</div>';
+        const div = document.getElementById('test-city-result');
+        div.classList.remove('hidden','bg-red-50','text-red-800','bg-gray-50','text-gray-600');
+        div.classList.add('bg-orange-50','text-orange-900');
+        div.innerHTML = html;
+    })
+    .catch(() => showResult('test-city-result', false, 'خطا در ارتباط'));
 }
 
 function searchCity() {

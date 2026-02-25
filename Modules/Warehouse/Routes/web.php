@@ -227,6 +227,7 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::get('/wallet', [Cod24Controller::class, 'getWalletBalance'])->name('warehouse.cod24.wallet');
         Route::get('/states', [Cod24Controller::class, 'getStates'])->name('warehouse.cod24.states');
         Route::get('/cities', [Cod24Controller::class, 'getCities'])->name('warehouse.cod24.cities');
+        Route::get('/test-city', [Cod24Controller::class, 'testCityResolve'])->name('warehouse.cod24.test-city');
         Route::post('/calculate-price', [Cod24Controller::class, 'calculatePrice'])->name('warehouse.cod24.calculate-price');
         Route::post('/track', [Cod24Controller::class, 'track'])->name('warehouse.cod24.track');
         Route::post('/barcode-status', [Cod24Controller::class, 'getBarcodeStatus'])->name('warehouse.cod24.barcode-status');

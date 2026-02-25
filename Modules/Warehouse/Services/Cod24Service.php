@@ -319,16 +319,23 @@ class Cod24Service
         $postalCode = $this->normalizePostalCode($data['recipient_postal_code'] ?? '');
         $address    = $data['recipient_address'] ?? 'آدرس نامشخص';
         $cityCode   = (int) ($data['to_city_code'] ?? 0);
+        $citySource = $cityCode ? 'findCityCode' : '';
         $weight     = (int) ($data['weight'] ?? 500);
         $value      = (int) ($data['value'] ?? 0);
         $orderNo    = $data['external_order_id'] ?? '';
 
         if (empty($cityCode)) {
             $cityCode = (int) WarehouseSetting::get('cod24_fallback_city_code', 0);
+            $citySource = 'fallback';
             if (empty($cityCode)) {
-                return ['success' => false, 'message' => 'کد شهر مقصد یافت نشد — شهر "' . ($data['recipient_city'] ?? '?') . '" در سیستم COD24 ثبت نشده.'];
+                return ['success' => false, 'message' => 'کد شهر مقصد یافت نشد — شهر "' . ($data['recipient_city'] ?? '?') . '" در نقشه شهرها یا API پیدا نشد. لطفاً کد صحیح را از جستجوی شهرها پیدا کنید و در "نقشه کد شهرهای دستی" وارد کنید.'];
             }
         }
+
+        Log::info('Cod24 createShipment cityCode', [
+            'order' => $orderNo, 'city' => $data['recipient_city'] ?? '?',
+            'cityCode' => $cityCode, 'source' => $citySource,
+        ]);
 
         // کد پستی باید ۱۰ رقم باشه وگرنه ۰۰۰۰۰۰۰۰۰۰ بفرست (مطابق پلاگین رسمی)
         if (empty($postalCode) || strlen($postalCode) != 10) {
@@ -380,6 +387,8 @@ class Cod24Service
                 $isSuccess = $body['isSuccess'] ?? $body['success'] ?? $body['status'] ?? null;
                 if ($isSuccess === false || $isSuccess === 0) {
                     $msg = $body['message'] ?? $body['errorMessage'] ?? json_encode($body, JSON_UNESCAPED_UNICODE);
+                    $msg .= ' [کد شهر ارسالی: ' . $cityCode . ' — منبع: ' . $citySource . ' — شهر: ' . ($data['recipient_city'] ?? '?') . ']';
+                    $msg .= ' — برای رفع: کد صحیح شهر را در تنظیمات COD24 > "نقشه کد شهرهای دستی" وارد کنید';
                     return ['success' => false, 'message' => 'COD24: ' . $msg];
                 }
 
@@ -641,16 +650,16 @@ class Cod24Service
         $cityName = trim($cityName);
         if (empty($cityName)) return null;
 
-        // پاک کردن کش قدیمی تا شهرهای تازه بگیره
-        Cache::forget('cod24_post_cities');
-        Cache::forget('cod24_states');
-
         // ترجمه کد ووکامرس (FRS) به فارسی (فارس)
         $wcMap = TapinService::getWcStateMap();
         $provincePersian = trim($provinceName);
         if (!empty($provincePersian) && isset($wcMap[strtoupper($provincePersian)])) {
             $provincePersian = $wcMap[strtoupper($provincePersian)];
         }
+
+        Log::info('Cod24 findCityCode: start', [
+            'city' => $cityName, 'province_raw' => $provinceName, 'province_fa' => $provincePersian,
+        ]);
 
         // ۱) نقشه دستی ادمین (اولویت بالا)
         $cityMapRaw = WarehouseSetting::get('cod24_city_map', '');
@@ -660,28 +669,24 @@ class Cod24Service
                 if (empty($line) || !str_contains($line, ':')) continue;
                 [$mapCity, $mapCode] = explode(':', $line, 2);
                 if (trim($mapCity) === $cityName && is_numeric(trim($mapCode))) {
+                    Log::info('Cod24 findCityCode: found in manual map', ['city' => $cityName, 'code' => (int) trim($mapCode)]);
                     return (int) trim($mapCode);
                 }
             }
         }
 
-        // ۲) جستجو فقط در شهرهای پستی (کد پستی معتبر برای addOrder)
-        //    getCities() کد عمومی برمی‌گردونه که addOrder قبول نمی‌کنه!
-        $allPostCities = $this->getPostCities();
-
-        // اگه استان داریم، اول سعی کن فیلتر کنی
+        // ۲) جستجو بر اساس استان (getCities) — اگه استان داریم
         if (!empty($provincePersian)) {
             $cod24StateCode = $this->findStateCode($provincePersian);
+            Log::info('Cod24 findCityCode: state lookup', ['province' => $provincePersian, 'stateCode' => $cod24StateCode]);
             if ($cod24StateCode) {
-                // فیلتر شهرهای پستی بر اساس کد استان (اگه فیلد stateCode وجود داشته باشه)
-                $stateCities = array_values(array_filter($allPostCities, function ($c) use ($cod24StateCode) {
-                    return (int) ($c['stateCode'] ?? $c['state_code'] ?? 0) === $cod24StateCode;
-                }));
+                $stateCities = $this->getCities($cod24StateCode);
+                Log::info('Cod24 findCityCode: getCities result', ['stateCode' => $cod24StateCode, 'count' => count($stateCities)]);
                 if (!empty($stateCities)) {
                     $found = $this->matchCityInList($cityName, $stateCities);
                     if ($found) {
-                        Log::info('Cod24 findCityCode: found via state filter', [
-                            'city' => $cityName, 'province' => $provincePersian, 'code' => $found,
+                        Log::info('Cod24 findCityCode: ✓ found via getCities(state)', [
+                            'city' => $cityName, 'stateCode' => $cod24StateCode, 'cityCode' => $found, 'source' => 'getCities',
                         ]);
                         return $found;
                     }
@@ -689,17 +694,23 @@ class Cod24Service
             }
         }
 
-        // فالبک: جستجو در تمام شهرهای پستی
-        $found = $this->matchCityInList($cityName, $allPostCities);
-        if ($found) {
-            Log::info('Cod24 findCityCode: found via global postCities', [
-                'city' => $cityName, 'code' => $found,
-            ]);
-            return $found;
+        // ۳) جستجو در شهرهای پستی (getPostCities)
+        $allPostCities = $this->getPostCities();
+        Log::info('Cod24 findCityCode: getPostCities count', ['count' => count($allPostCities)]);
+        if (!empty($allPostCities)) {
+            $found = $this->matchCityInList($cityName, $allPostCities);
+            if ($found) {
+                Log::info('Cod24 findCityCode: ✓ found via getPostCities', [
+                    'city' => $cityName, 'cityCode' => $found, 'source' => 'getPostCities',
+                ]);
+                return $found;
+            }
         }
 
-        Log::warning('Cod24 findCityCode: city not found', [
+        Log::warning('Cod24 findCityCode: ✗ city not found anywhere', [
             'city' => $cityName, 'province' => $provincePersian,
+            'getCities_count' => isset($stateCities) ? count($stateCities) : 'N/A',
+            'postCities_count' => count($allPostCities),
         ]);
         return null;
     }

@@ -159,6 +159,99 @@ class Cod24Controller extends Controller
         ]);
     }
 
+    /**
+     * تست resolve شهر — نشون می‌ده کد شهر از کجا و چطوری پیدا می‌شه
+     */
+    public function testCityResolve(Request $request)
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $city = trim($request->get('city', ''));
+        $state = trim($request->get('state', ''));
+        if (empty($city)) {
+            return response()->json(['success' => false, 'message' => 'نام شهر را وارد کنید']);
+        }
+
+        $service = new Cod24Service();
+
+        // ترجمه کد استان
+        $wcMap = \Modules\Warehouse\Services\TapinService::getWcStateMap();
+        $statePersian = isset($wcMap[strtoupper($state)]) ? $wcMap[strtoupper($state)] : $state;
+
+        // تست هر دو API
+        $results = [];
+
+        // ۱) نقشه دستی
+        $manualCode = null;
+        $cityMapRaw = \Modules\Warehouse\Models\WarehouseSetting::get('cod24_city_map', '');
+        if (!empty($cityMapRaw)) {
+            foreach (explode("\n", $cityMapRaw) as $line) {
+                $line = trim($line);
+                if (empty($line) || !str_contains($line, ':')) continue;
+                [$mapCity, $mapCode] = explode(':', $line, 2);
+                if (trim($mapCity) === $city && is_numeric(trim($mapCode))) {
+                    $manualCode = (int) trim($mapCode);
+                    break;
+                }
+            }
+        }
+        $results['manual_map'] = $manualCode ? ['code' => $manualCode, 'found' => true] : ['found' => false];
+
+        // ۲) getCities (بر اساس استان)
+        $stateCode = null;
+        $getCitiesResult = null;
+        if (!empty($statePersian)) {
+            $states = $service->getStates();
+            foreach ($states as $st) {
+                $sName = $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
+                if ($sName === $statePersian || str_contains($sName, $statePersian) || str_contains($statePersian, $sName)) {
+                    $stateCode = (int) ($st['code'] ?? $st['stateCode'] ?? $st['id'] ?? 0);
+                    break;
+                }
+            }
+            if ($stateCode) {
+                $stateCities = $service->getCities($stateCode);
+                foreach ($stateCities as $c) {
+                    $cName = $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
+                    if ($cName === $city || str_contains($cName, $city) || str_contains($city, $cName)) {
+                        $getCitiesResult = ['code' => (int) ($c['code'] ?? $c['cityCode'] ?? $c['id'] ?? 0), 'name' => $cName, 'raw' => $c];
+                        break;
+                    }
+                }
+            }
+        }
+        $results['getCities'] = $getCitiesResult ? array_merge($getCitiesResult, ['found' => true, 'stateCode' => $stateCode]) : ['found' => false, 'stateCode' => $stateCode, 'statePersian' => $statePersian];
+
+        // ۳) getPostCities
+        $postCitiesResult = null;
+        $postCities = $service->getPostCities();
+        foreach ($postCities as $c) {
+            $cName = $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
+            if ($cName === $city || str_contains($cName, $city) || str_contains($city, $cName)) {
+                $postCitiesResult = ['code' => (int) ($c['code'] ?? $c['cityCode'] ?? $c['id'] ?? 0), 'name' => $cName, 'raw' => $c];
+                break;
+            }
+        }
+        $results['getPostCities'] = $postCitiesResult ? array_merge($postCitiesResult, ['found' => true, 'total' => count($postCities)]) : ['found' => false, 'total' => count($postCities)];
+
+        // ۴) نتیجه نهایی findCityCode
+        $finalCode = $service->findCityCode($city, $state);
+        $results['final_findCityCode'] = $finalCode;
+
+        // فالبک
+        $results['fallback_city_code'] = (int) \Modules\Warehouse\Models\WarehouseSetting::get('cod24_fallback_city_code', 0);
+
+        return response()->json([
+            'success' => true,
+            'city' => $city,
+            'state_raw' => $state,
+            'state_persian' => $statePersian,
+            'results' => $results,
+        ]);
+    }
+
     public function calculatePrice(Request $request)
     {
         if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
