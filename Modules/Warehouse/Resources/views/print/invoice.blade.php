@@ -162,6 +162,7 @@
             $providerLabel = match($shippingProvider ?? 'amadest') {
                 'tapin'  => 'تاپین',
                 'postex' => 'پستکس',
+                'cod24'  => 'COD24',
                 default  => 'آمادست',
             };
         @endphp
