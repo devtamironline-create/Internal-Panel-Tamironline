@@ -551,6 +551,10 @@
             var citySelect = document.getElementById('postex-city');
             var cityCode = citySelect ? citySelect.value : '';
 
+            // اگه selector COD24 وجود داره و شهر انتخاب شده، از اون استفاده کن
+            var cod24CitySelect = document.getElementById('cod24-city');
+            var cod24CityCode = cod24CitySelect ? cod24CitySelect.value : '';
+
             var btn = document.getElementById('retryBtn');
             if (!btn) return;
             btn.disabled = true;
@@ -559,6 +563,9 @@
             var bodyData = {};
             if (cityCode) {
                 bodyData.postex_city_code = parseInt(cityCode);
+            }
+            if (cod24CityCode) {
+                bodyData.cod24_city_code = parseInt(cod24CityCode);
             }
 
             fetch('/warehouse/{{ $order->id }}/retry-register', {
