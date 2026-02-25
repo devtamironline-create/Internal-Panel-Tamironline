@@ -723,10 +723,10 @@ class Cod24Service
         $normalizedSearch = $this->normalizePersian($provincePersian);
         $states = $this->getStates();
         foreach ($states as $st) {
-            $sName = $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
+            $sName = $st['stateNameFa'] ?? $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
             $normalizedName = $this->normalizePersian($sName);
-            if ($normalizedName === $normalizedSearch || str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName)) {
-                $code = (int) ($st['code'] ?? $st['stateCode'] ?? $st['id'] ?? 0);
+            if (!empty($normalizedName) && ($normalizedName === $normalizedSearch || str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName))) {
+                $code = (int) ($st['stateCode'] ?? $st['code'] ?? $st['id'] ?? 0);
                 if ($code > 0) return $code;
             }
         }
@@ -742,19 +742,19 @@ class Cod24Service
 
         // مرحله ۱: exact match (بعد از normalize)
         foreach ($cities as $city) {
-            $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
+            $cName = $city['cityNameFa'] ?? $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
             $normalizedName = $this->normalizePersian($cName);
             if ($normalizedName === $normalizedSearch) {
-                $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
+                $code = (int) ($city['cityCode'] ?? $city['code'] ?? $city['id'] ?? 0);
                 if ($code > 0) return $code;
             }
         }
         // مرحله ۲: substring match (فقط اگه exact نداشتیم)
         foreach ($cities as $city) {
-            $cName = $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
+            $cName = $city['cityNameFa'] ?? $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
             $normalizedName = $this->normalizePersian($cName);
             if (!empty($normalizedName) && (str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName))) {
-                $code = (int) ($city['code'] ?? $city['cityCode'] ?? $city['id'] ?? 0);
+                $code = (int) ($city['cityCode'] ?? $city['code'] ?? $city['id'] ?? 0);
                 if ($code > 0) return $code;
             }
         }

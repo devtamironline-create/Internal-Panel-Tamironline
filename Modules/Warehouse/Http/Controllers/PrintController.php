@@ -329,6 +329,9 @@ class PrintController extends Controller
         if ($request && $request->has('postex_city_code') && (int) $request->input('postex_city_code') > 0) {
             $manualCityCode = (int) $request->input('postex_city_code');
         }
+        if ($request && $request->has('cod24_city_code') && (int) $request->input('cod24_city_code') > 0) {
+            $manualCityCode = (int) $request->input('cod24_city_code');
+        }
 
         // پاک کردن بارکد قبلی و فلگ registered برای ثبت مجدد
         $order->amadest_barcode = null;
@@ -363,7 +366,7 @@ class PrintController extends Controller
             } elseif ($shippingProvider === 'postex') {
                 $error = $this->registerViaPostex($order, $wcData, $fullAddress, $postcode, $city, $state, $manualCityCode);
             } elseif ($shippingProvider === 'cod24') {
-                $error = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state);
+                $error = $this->registerViaCod24($order, $wcData, $fullAddress, $postcode, $city, $state, $manualCityCode);
             } else {
                 $error = $this->registerViaAmadest($order, $wcData, $fullAddress, $postcode, $city, $state);
             }
@@ -731,14 +734,15 @@ class PrintController extends Controller
      * ثبت سفارش از طریق COD24
      * @return string|null خطا یا null اگه موفق بود
      */
-    private function registerViaCod24(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state): ?string
+    private function registerViaCod24(WarehouseOrder $order, array $wcData, string $fullAddress, string $postcode, string $city, string $state, ?int $manualCityCode = null): ?string
     {
         $cod24 = new Cod24Service();
         if (!$cod24->isConfigured()) {
             return 'COD24 تنظیم نشده (نام کاربری یا رمز عبور خالی)';
         }
 
-        $toCityCode = $cod24->findCityCode($city, $state);
+        // اگه کد شهر دستی انتخاب شده، اون رو استفاده کن
+        $toCityCode = $manualCityCode ?: $cod24->findCityCode($city, $state);
         if (!$toCityCode) {
             Log::warning('Cod24: city code not found', ['order' => $order->order_number, 'city' => $city, 'state' => $state]);
         }

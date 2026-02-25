@@ -201,6 +201,30 @@
     </div>
     @endif
 
+    {{-- انتخاب دستی شهر COD24 - فقط وقتی سرویس cod24 و هنوز ثبت نشده --}}
+    @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
+    <div class="no-print" id="cod24-city-selector" style="background:#ecfdf5;border:1px solid #6ee7b7;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;">
+        <div style="font-weight:bold;color:#065f46;margin-bottom:6px;">انتخاب استان و شهر مقصد COD24</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:120px;">
+                <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">استان:</label>
+                <select id="cod24-province" onchange="loadCod24Cities()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+                    <option value="">در حال بارگذاری...</option>
+                </select>
+            </div>
+            <div style="flex:2;min-width:180px;">
+                <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">شهر:</label>
+                <input type="text" id="cod24-city-filter" oninput="filterCod24Cities()" placeholder="فیلتر نام شهر..." style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:5px 5px 0 0;font-size:10px;font-family:'Vazirmatn',Tahoma;display:none;" dir="rtl">
+                <select id="cod24-city" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:0 0 5px 5px;font-size:11px;font-family:'Vazirmatn',Tahoma;">
+                    <option value="">ابتدا استان را انتخاب کنید...</option>
+                </select>
+            </div>
+            <button onclick="retryWithCod24City()" style="padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-family:'Vazirmatn',Tahoma;white-space:nowrap;">ثبت در COD24</button>
+        </div>
+        <div id="cod24-city-status" style="font-size:10px;color:#888;margin-top:4px;"></div>
+    </div>
+    @endif
+
     {{-- انتخاب استان و شهر پستکس - فقط وقتی سرویس پستکس هست --}}
     @if(($shippingProvider ?? 'amadest') === 'postex' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
     <div class="no-print" id="postex-city-selector" style="background:#f5f3ff;border:1px solid #c4b5fd;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;">
@@ -729,6 +753,158 @@
         @if(($shippingProvider ?? 'amadest') === 'postex' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
         if (document.getElementById('postex-province') && document.getElementById('postex-province').value) {
             loadProvinceCities();
+        }
+        @endif
+
+        // ===== COD24 City Selector =====
+        @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
+        var cod24AllCities = [];
+        var cod24OrderCity = @json(($order->wc_order_data['shipping']['city'] ?? '') ?: ($order->wc_order_data['billing']['city'] ?? ''));
+        var cod24OrderState = @json(($order->wc_order_data['shipping']['state'] ?? '') ?: ($order->wc_order_data['billing']['state'] ?? ''));
+
+        // بارگذاری لیست استان‌ها
+        (function loadCod24States() {
+            fetch('{{ route("warehouse.cod24.states") }}')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var sel = document.getElementById('cod24-province');
+                if (!sel || !data.success) return;
+                sel.innerHTML = '<option value="">انتخاب استان...</option>';
+                var autoSelect = null;
+
+                // نگاشت WC state code → stateCode
+                var wcStateMap = {
+                    'THR':8,'GIL':15,'MZN':20,'EAZ':1,'WAZ':2,'KRD':12,'KRH':5,'HDN':13,
+                    'LRS':16,'CHB':14,'KHZ':6,'FRS':7,'BHR':18,'HRZ':22,'SBN':11,'RKH':9,
+                    'NKH':29,'SKH':10,'ESF':4,'YZD':31,'KRN':8,'SMN':19,'QHM':25,'QZN':26,
+                    'ZJN':27,'MKZ':17,'ILM':3,'KBD':24,'ABZ':30,'ADL':28,'GLS':23
+                };
+
+                (data.data || []).forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.code;
+                    opt.textContent = s.name;
+                    sel.appendChild(opt);
+
+                    // auto-select based on WC state
+                    if (cod24OrderState) {
+                        var normalizedName = (s.name || '').replace(/\s+/g, '');
+                        if (normalizedName && cod24OrderState.toUpperCase() === normalizedName.toUpperCase()) {
+                            autoSelect = s.code;
+                        }
+                    }
+                });
+
+                // اگه WC state code داریم (مثل FRS)، سعی کن match کنیم
+                if (!autoSelect && cod24OrderState && cod24OrderState.length <= 3) {
+                    // جستجو بر اساس نام فارسی
+                    var wcMap = @json(\Modules\Warehouse\Services\TapinService::getWcStateMap());
+                    var persianName = wcMap[cod24OrderState.toUpperCase()] || '';
+                    if (persianName) {
+                        (data.data || []).forEach(function(s) {
+                            if (!autoSelect && s.name && s.name.indexOf(persianName) !== -1) {
+                                autoSelect = s.code;
+                            }
+                        });
+                    }
+                }
+
+                if (autoSelect) {
+                    sel.value = autoSelect;
+                    loadCod24Cities();
+                }
+            });
+        })();
+
+        function loadCod24Cities() {
+            var stateCode = document.getElementById('cod24-province').value;
+            var citySelect = document.getElementById('cod24-city');
+            var statusEl = document.getElementById('cod24-city-status');
+            var filterInput = document.getElementById('cod24-city-filter');
+            citySelect.innerHTML = '<option value="">در حال بارگذاری...</option>';
+            if (filterInput) filterInput.style.display = 'none';
+
+            var url = '{{ route("warehouse.cod24.cities") }}?state_code=' + (stateCode || '');
+            fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                cod24AllCities = data.data || [];
+                populateCod24Dropdown(cod24AllCities);
+            })
+            .catch(function() {
+                citySelect.innerHTML = '<option value="">خطا در بارگذاری</option>';
+            });
+        }
+
+        function populateCod24Dropdown(cities) {
+            var citySelect = document.getElementById('cod24-city');
+            var statusEl = document.getElementById('cod24-city-status');
+            var filterInput = document.getElementById('cod24-city-filter');
+
+            citySelect.innerHTML = '<option value="">انتخاب شهر (' + cities.length + ' شهر)...</option>';
+            var autoSelected = false;
+            var normalizeFA = function(s) { return (s||'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/ة/g,'ه').trim(); };
+            var nOrderCity = normalizeFA(cod24OrderCity);
+
+            cities.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c.code;
+                opt.textContent = c.name + ' (' + c.code + ')';
+                citySelect.appendChild(opt);
+                if (!autoSelected && nOrderCity && normalizeFA(c.name) === nOrderCity) {
+                    opt.selected = true;
+                    autoSelected = true;
+                }
+            });
+
+            if (filterInput) filterInput.style.display = cities.length > 15 ? 'block' : 'none';
+
+            if (statusEl) {
+                var msg = autoSelected ? '✓ شهر «' + cod24OrderCity + '» خودکار انتخاب شد' : (cities.length > 0 ? 'لطفاً شهر را انتخاب کنید' : 'شهری یافت نشد');
+                statusEl.textContent = msg;
+                statusEl.style.color = autoSelected ? '#059669' : '#888';
+            }
+        }
+
+        function filterCod24Cities() {
+            var q = (document.getElementById('cod24-city-filter').value || '').trim();
+            if (!q) {
+                populateCod24Dropdown(cod24AllCities);
+                return;
+            }
+            var normalizeFA = function(s) { return (s||'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/ة/g,'ه').trim(); };
+            var nq = normalizeFA(q);
+            var filtered = cod24AllCities.filter(function(c) {
+                return normalizeFA(c.name).indexOf(nq) !== -1;
+            });
+            populateCod24Dropdown(filtered);
+        }
+
+        function retryWithCod24City() {
+            var cityCode = document.getElementById('cod24-city').value;
+            if (!cityCode) {
+                alert('لطفاً ابتدا شهر را انتخاب کنید');
+                return;
+            }
+            var statusEl = document.getElementById('cod24-city-status');
+            if (statusEl) { statusEl.textContent = 'در حال ثبت...'; statusEl.style.color = '#0369a1'; }
+
+            fetch('{{ route("warehouse.retry-register", $order->id) }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                body: JSON.stringify({ cod24_city_code: parseInt(cityCode) }),
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (statusEl) {
+                    statusEl.textContent = data.message || (data.success ? 'ثبت شد!' : 'خطا');
+                    statusEl.style.color = data.success ? '#059669' : '#dc2626';
+                }
+                if (data.success) { setTimeout(function() { location.reload(); }, 1500); }
+            })
+            .catch(function() {
+                if (statusEl) { statusEl.textContent = 'خطا در ارتباط'; statusEl.style.color = '#dc2626'; }
+            });
         }
         @endif
     </script>
