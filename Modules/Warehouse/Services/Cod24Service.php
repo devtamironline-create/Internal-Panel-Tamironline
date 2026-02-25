@@ -328,6 +328,11 @@ class Cod24Service
             }
         }
 
+        // کد پستی باید ۱۰ رقم باشه وگرنه ۰۰۰۰۰۰۰۰۰۰ بفرست (مطابق پلاگین رسمی)
+        if (empty($postalCode) || strlen($postalCode) != 10) {
+            $postalCode = '0000000000';
+        }
+
         $payload = [
             'idOrderShop'          => (string) $orderNo,
             'cityCode'             => $cityCode,
@@ -341,9 +346,9 @@ class Cod24Service
             'nationalCode'         => '',
             'address'              => $address,
             'nonStandardPackage'   => false,
-            'finalPayAmountCustomer' => $value,
+            'finalPayAmountCustomer' => (float) $value,
             'requestOrderProducts' => $this->buildProducts($data),
-            'totalWeight'          => $weight,
+            'totalWeight'          => (int) $weight,
             'contentParcell'       => $data['description'] ?? 'کالا',
             'idCartonType'         => 0,
             'isCalcSrvByWeight'    => true,
@@ -380,6 +385,14 @@ class Cod24Service
             }
 
             $errorMsg = $body['message'] ?? $body['errorMessage'] ?? '';
+            // نمایش جزئیات خطاهای validation
+            if (!empty($body['errors'])) {
+                $details = [];
+                foreach ($body['errors'] as $err) {
+                    $details[] = is_array($err) ? ($err['message'] ?? json_encode($err, JSON_UNESCAPED_UNICODE)) : (string) $err;
+                }
+                $errorMsg .= ' | جزئیات: ' . implode(' — ', $details);
+            }
             if (empty(trim($errorMsg))) {
                 $errorMsg = json_encode($body, JSON_UNESCAPED_UNICODE) ?: substr($response->body(), 0, 500);
             }
