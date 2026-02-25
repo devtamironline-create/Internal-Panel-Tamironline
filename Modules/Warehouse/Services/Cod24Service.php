@@ -206,6 +206,8 @@ class Cod24Service
             if ($response->successful()) {
                 $data = $this->unwrapList($response->json() ?? []);
                 if (!empty($data)) {
+                    // لاگ ساختار اولین شهر برای دیباگ فیلدها
+                    Log::info('Cod24 getPostCities sample', ['first_item' => $data[0] ?? [], 'total' => count($data)]);
                     Cache::put('cod24_post_cities', $data, 86400);
                     return $data;
                 }
@@ -639,6 +641,10 @@ class Cod24Service
         $cityName = trim($cityName);
         if (empty($cityName)) return null;
 
+        // پاک کردن کش قدیمی تا شهرهای تازه بگیره
+        Cache::forget('cod24_post_cities');
+        Cache::forget('cod24_states');
+
         // ترجمه کد ووکامرس (FRS) به فارسی (فارس)
         $wcMap = TapinService::getWcStateMap();
         $provincePersian = trim($provinceName);
@@ -659,20 +665,38 @@ class Cod24Service
             }
         }
 
-        // ۲) جستجوی دقیق: اول استان رو پیدا کن، بعد شهرهای اون استان رو بگرد
+        // ۲) جستجو فقط در شهرهای پستی (کد پستی معتبر برای addOrder)
+        //    getCities() کد عمومی برمی‌گردونه که addOrder قبول نمی‌کنه!
+        $allPostCities = $this->getPostCities();
+
+        // اگه استان داریم، اول سعی کن فیلتر کنی
         if (!empty($provincePersian)) {
             $cod24StateCode = $this->findStateCode($provincePersian);
             if ($cod24StateCode) {
-                $stateCities = $this->getCities($cod24StateCode);
-                $found = $this->matchCityInList($cityName, $stateCities);
-                if ($found) return $found;
+                // فیلتر شهرهای پستی بر اساس کد استان (اگه فیلد stateCode وجود داشته باشه)
+                $stateCities = array_values(array_filter($allPostCities, function ($c) use ($cod24StateCode) {
+                    return (int) ($c['stateCode'] ?? $c['state_code'] ?? 0) === $cod24StateCode;
+                }));
+                if (!empty($stateCities)) {
+                    $found = $this->matchCityInList($cityName, $stateCities);
+                    if ($found) {
+                        Log::info('Cod24 findCityCode: found via state filter', [
+                            'city' => $cityName, 'province' => $provincePersian, 'code' => $found,
+                        ]);
+                        return $found;
+                    }
+                }
             }
         }
 
-        // ۳) فالبک: جستجو در تمام شهرهای پستی (فقط exact match)
-        $allCities = $this->getPostCities();
-        $found = $this->matchCityInList($cityName, $allCities);
-        if ($found) return $found;
+        // فالبک: جستجو در تمام شهرهای پستی
+        $found = $this->matchCityInList($cityName, $allPostCities);
+        if ($found) {
+            Log::info('Cod24 findCityCode: found via global postCities', [
+                'city' => $cityName, 'code' => $found,
+            ]);
+            return $found;
+        }
 
         Log::warning('Cod24 findCityCode: city not found', [
             'city' => $cityName, 'province' => $provincePersian,
