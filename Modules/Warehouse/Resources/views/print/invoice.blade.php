@@ -403,13 +403,13 @@
 
         {{-- Barcodes Section --}}
         @php
-            $amadestCode = $order->amadest_barcode ?: $order->tracking_code;
             $postCode = $order->post_tracking_code;
-            $showAmadest = !empty($amadestCode) && $order->shipping_type === 'post';
+            $postBarcodeValue = $postCode ?: $order->amadest_barcode ?: $order->tracking_code;
+            $showPostBarcode = !empty($postBarcodeValue) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
             $showOrderBarcode = $order->shipping_type !== 'post' && !empty($order->barcode);
         @endphp
-        @if($showAmadest || $showPostQR || $showOrderBarcode)
+        @if($showPostBarcode || $showPostQR || $showOrderBarcode)
         <div class="barcode-section">
             @if($showOrderBarcode)
             <div class="barcode-list">
@@ -423,14 +423,14 @@
             </div>
             @endif
 
-            @if($showAmadest)
+            @if($showPostBarcode)
             <div class="barcode-list">
                 <div class="barcode-item">
-                    <svg id="amadest-barcode"></svg>
+                    <svg id="post-barcode"></svg>
                 </div>
                 <div class="barcode-meta">
                     <span class="barcode-label">کد رهگیری پست</span>
-                    <span class="barcode-code">{{ $postCode ?: $amadestCode }}</span>
+                    <span class="barcode-code">{{ $postBarcodeValue }}</span>
                 </div>
             </div>
             @endif
@@ -462,8 +462,8 @@
         });
         @endif
 
-        @if($showAmadest)
-        JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
+        @if($showPostBarcode)
+        JsBarcode("#post-barcode", "{{ $postBarcodeValue }}", {
             format: "CODE128",
             width: 2,
             height: 45,
