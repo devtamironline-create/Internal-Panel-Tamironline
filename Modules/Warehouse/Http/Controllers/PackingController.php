@@ -28,7 +28,8 @@ class PackingController extends Controller
         $barcode = trim($request->barcode);
 
         $order = WarehouseOrder::with('items')
-            ->where('barcode', $barcode)
+            ->where('post_tracking_code', $barcode)
+            ->orWhere('barcode', $barcode)
             ->orWhere('order_number', $barcode)
             ->orWhere('amadest_barcode', $barcode)
             ->orWhere('tracking_code', $barcode)
@@ -39,7 +40,8 @@ class PackingController extends Controller
             $numericBarcode = preg_replace('/\D/', '', $barcode);
             if ($numericBarcode) {
                 $order = WarehouseOrder::with('items')
-                    ->where('order_number', 'like', '%' . $numericBarcode)
+                    ->where('post_tracking_code', 'like', '%' . $numericBarcode)
+                    ->orWhere('order_number', 'like', '%' . $numericBarcode)
                     ->orWhere('barcode', 'like', '%' . $numericBarcode)
                     ->first();
             }

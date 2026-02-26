@@ -24,7 +24,8 @@ class ExitScanController extends Controller
 
         $barcode = trim($request->barcode);
 
-        $order = WarehouseOrder::where('barcode', $barcode)
+        $order = WarehouseOrder::where('post_tracking_code', $barcode)
+            ->orWhere('barcode', $barcode)
             ->orWhere('order_number', $barcode)
             ->orWhere('amadest_barcode', $barcode)
             ->orWhere('tracking_code', $barcode)
@@ -33,7 +34,8 @@ class ExitScanController extends Controller
         if (!$order) {
             $numericBarcode = preg_replace('/\D/', '', $barcode);
             if ($numericBarcode) {
-                $order = WarehouseOrder::where('order_number', 'like', '%' . $numericBarcode)
+                $order = WarehouseOrder::where('post_tracking_code', 'like', '%' . $numericBarcode)
+                    ->orWhere('order_number', 'like', '%' . $numericBarcode)
                     ->orWhere('barcode', 'like', '%' . $numericBarcode)
                     ->first();
             }

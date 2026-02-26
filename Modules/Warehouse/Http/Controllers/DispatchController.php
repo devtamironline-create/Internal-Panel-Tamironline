@@ -182,8 +182,9 @@ class DispatchController extends Controller
 
         $barcode = trim($request->barcode);
 
-        // Search by barcode, order_number, or amadest_barcode
-        $order = WarehouseOrder::where('barcode', $barcode)
+        // Search by post_tracking_code, barcode, order_number, or amadest_barcode
+        $order = WarehouseOrder::where('post_tracking_code', $barcode)
+            ->orWhere('barcode', $barcode)
             ->orWhere('order_number', $barcode)
             ->orWhere('amadest_barcode', $barcode)
             ->orWhere('tracking_code', $barcode)
@@ -193,7 +194,8 @@ class DispatchController extends Controller
             // Try numeric-only match (barcode scanners sometimes add/strip prefixes)
             $numericBarcode = preg_replace('/\D/', '', $barcode);
             if ($numericBarcode) {
-                $order = WarehouseOrder::where('order_number', 'like', '%' . $numericBarcode)
+                $order = WarehouseOrder::where('post_tracking_code', 'like', '%' . $numericBarcode)
+                    ->orWhere('order_number', 'like', '%' . $numericBarcode)
                     ->orWhere('barcode', 'like', '%' . $numericBarcode)
                     ->first();
             }
