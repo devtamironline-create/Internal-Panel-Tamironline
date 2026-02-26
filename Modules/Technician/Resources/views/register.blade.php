@@ -863,7 +863,7 @@
                 <div class="space-y-5">
                     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
                         <p class="text-sm text-gray-700 leading-relaxed text-justify">
-                            اینجانب، با قرارداد همکاری با تعمیرآنلاین، اعلام می‌کنم که کلیه اطلاعات ارائه شده صحیح و مطابق واقعیت است.
+                            اینجانت، برای قرارداد همکاری با تعمیرآنلاین، اعلام می‌کنم که کلیه اطلاعات ارائه شده صحیح و مطابق واقعیت است.
                         </p>
                     </div>
 
