@@ -67,6 +67,8 @@ class TechnicianAdminController extends Controller
             'sms_approved_template' => TechnicianSetting::get('sms_approved_template', ''),
             'sms_rejected_template' => TechnicianSetting::get('sms_rejected_template', ''),
             'sms_biometric_submitted_template' => TechnicianSetting::get('sms_biometric_submitted_template', ''),
+            'sms_biometric_rejected_template' => TechnicianSetting::get('sms_biometric_rejected_template', ''),
+            'sms_final_approved_template' => TechnicianSetting::get('sms_final_approved_template', ''),
         ];
 
         return view('technician::admin.settings', compact('settings'));
