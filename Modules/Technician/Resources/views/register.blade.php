@@ -516,7 +516,7 @@
 
                     {{-- هم‌صنفی‌ها --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">لطفاً نام و شماره تماس دو نفر از هم‌صنفی‌های آشنا با شما را ذکر نمایید</label>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">لطفاً نام و شماره تماس دو نفر از هم‌صنفی‌های آشنا با شما را ذکر نمایید <span class="text-red-500">*</span></label>
                         <div class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
                                 <input type="text" id="colleague1_name" placeholder="نام نفر اول"
@@ -531,6 +531,7 @@
                                        class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none placeholder:text-gray-300 text-left">
                             </div>
                         </div>
+                        <p id="colleagueError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
                     {{-- سوابق شغلی --}}
@@ -2384,6 +2385,7 @@
             hideFieldError('workExperienceError');
             hideFieldError('shopAddressError');
             hideFieldError('shopPhoneError');
+            hideFieldError('colleagueError');
 
             const hasShop = $('input[name="has_shop"]:checked').val();
             const hasLicense = $('input[name="has_business_license"]:checked').val();
@@ -2428,6 +2430,13 @@
                     showFieldError('cooperationError', 'لطفاً نام شرکت‌ها را وارد کنید.');
                     hasError = true;
                 }
+            }
+
+            // بررسی هم‌صنفی‌ها (الزامی)
+            if (!$('#colleague1_name').val().trim() || !$('#colleague1_phone').val().trim() ||
+                !$('#colleague2_name').val().trim() || !$('#colleague2_phone').val().trim()) {
+                showFieldError('colleagueError', 'نام و شماره تماس هر دو نفر هم‌صنفی الزامی است.');
+                hasError = true;
             }
 
             // بررسی سوابق شغلی (اگر اضافه شده، همه فیلدها پر باشد)
