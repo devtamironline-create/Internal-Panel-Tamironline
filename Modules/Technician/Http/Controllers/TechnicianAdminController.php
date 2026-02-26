@@ -90,7 +90,7 @@ class TechnicianAdminController extends Controller
             'contract_text', 'contract_sms_template',
             'default_commission_percent', 'default_promissory_note_amount',
             'sms_otp_template', 'sms_approved_template', 'sms_rejected_template',
-            'sms_biometric_submitted_template', 'sms_biometric_approved_template', 'sms_biometric_rejected_template',
+            'sms_biometric_submitted_template', 'sms_biometric_rejected_template', 'sms_final_approved_template',
         ];
 
         foreach ($simpleFields as $field) {
@@ -369,9 +369,6 @@ class TechnicianAdminController extends Controller
                 'biometric_reject_reason' => null,
             ]);
 
-            // ارسال پیامک تایید ویدیو
-            $this->sendStatusSms($registration, 'approved', 'biometric');
-
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'ویدیو احراز هویت تایید شد.');
         }
@@ -388,6 +385,31 @@ class TechnicianAdminController extends Controller
 
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'ویدیو احراز هویت رد شد.');
+    }
+
+    /**
+     * تایید نهایی تکنسین
+     */
+    public function registrationFinalApprove($id)
+    {
+        $this->checkAccess();
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if ($registration->status === 'final_approved') {
+            return redirect()->route('technician.admin.registrations.show', $id)
+                ->with('success', 'این تکنسین قبلاً تایید نهایی شده است.');
+        }
+
+        $registration->update([
+            'status' => 'final_approved',
+            'final_approved_at' => now(),
+        ]);
+
+        $this->sendStatusSms($registration, 'approved', 'final');
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'تکنسین با موفقیت تایید نهایی شد.');
     }
 
     /**
@@ -542,8 +564,8 @@ class TechnicianAdminController extends Controller
         $templateKey = match ("{$context}_{$status}") {
             'registration_approved' => 'sms_approved_template',
             'registration_rejected' => 'sms_rejected_template',
-            'biometric_approved'    => 'sms_biometric_approved_template',
             'biometric_rejected'    => 'sms_biometric_rejected_template',
+            'final_approved'        => 'sms_final_approved_template',
             default => null,
         };
 

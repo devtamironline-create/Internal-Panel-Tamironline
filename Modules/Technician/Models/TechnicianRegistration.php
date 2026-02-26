@@ -74,12 +74,14 @@ class TechnicianRegistration extends Model
         'doc_lease_agreement',
         'doc_utility_bill',
         'documents_uploaded',
+        'final_approved_at',
     ];
 
     protected $casts = [
         'mobile_verified_at' => 'datetime',
         'contract_signed_at' => 'datetime',
         'biometric_verified_at' => 'datetime',
+        'final_approved_at' => 'datetime',
         'identity_verified' => 'boolean',
         'has_business_license' => 'boolean',
         'has_shop' => 'boolean',

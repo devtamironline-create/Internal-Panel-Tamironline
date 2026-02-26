@@ -666,15 +666,15 @@
                 </div>
             </div>
 
-            {{-- ۶. پیامک تایید ویدیو احراز هویت --}}
-            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-teal-500">
+            {{-- ۶. پیامک تایید نهایی --}}
+            <div class="bg-white rounded-xl shadow-sm p-5 border-r-4 border-emerald-500">
                 <div class="flex items-start gap-3 mb-3">
-                    <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-sm font-bold text-gray-800">پیامک تایید ویدیو احراز هویت</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی تایید ویدیو به تکنسین</p>
+                        <h3 class="text-sm font-bold text-gray-800">پیامک تایید نهایی</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">اطلاع‌رسانی تایید نهایی و فعال‌سازی تکنسین</p>
                     </div>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-2.5 mb-3">
@@ -690,22 +690,22 @@
                     </div>
                     <div class="mt-2 text-xs text-gray-500">
                         <span class="font-medium text-gray-600">زمان ارسال:</span>
-                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-teal-400 inline-block"></span> ادمین ویدیو احراز هویت را <strong class="text-teal-600">تایید</strong> می‌کند</span>
+                        <span class="inline-flex items-center gap-1 mr-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> ادمین دکمه <strong class="text-emerald-600">تایید نهایی</strong> را می‌زند</span>
                     </div>
                     <div class="mt-1 text-xs text-gray-500">
                         <span class="font-medium text-gray-600">محل ارسال در کد:</span>
-                        <span class="font-mono text-gray-600">TechnicianAdminController::registrationBiometricReview()</span>
+                        <span class="font-mono text-gray-600">TechnicianAdminController::registrationFinalApprove()</span>
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">نام الگو در کاوه‌نگار</label>
-                    <input type="text" name="sms_biometric_approved_template" value="{{ $settings['sms_biometric_approved_template'] ?? '' }}" dir="ltr"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left font-mono"
-                           placeholder="biometric-approved">
+                    <input type="text" name="sms_final_approved_template" value="{{ $settings['sms_final_approved_template'] ?? '' }}" dir="ltr"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-left font-mono"
+                           placeholder="final-approved">
                 </div>
-                <div class="mt-3 bg-teal-50 rounded-lg p-3">
-                    <p class="text-xs text-teal-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
-                    <p class="text-xs text-teal-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-teal-200" dir="rtl">%token% عزیز، ویدیو احراز هویت شما تایید شد. ثبت‌نام شما در تامیرآنلاین تکمیل شده است.</p>
+                <div class="mt-3 bg-emerald-50 rounded-lg p-3">
+                    <p class="text-xs text-emerald-700 font-semibold mb-1">نمونه الگو برای ثبت در کاوه‌نگار:</p>
+                    <p class="text-xs text-emerald-800 bg-white rounded px-3 py-2 font-mono leading-relaxed border border-emerald-200" dir="rtl">%token% عزیز، ثبت‌نام شما در تامیرآنلاین تایید نهایی شد. به خانواده تامیرآنلاین خوش آمدید!</p>
                 </div>
             </div>
 

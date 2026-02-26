@@ -27,6 +27,7 @@
                     <option value="incomplete" {{ request('status') === 'incomplete' ? 'selected' : '' }}>ناقص</option>
                     <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
                     <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>تایید شده</option>
+                    <option value="final_approved" {{ request('status') === 'final_approved' ? 'selected' : '' }}>تایید نهایی</option>
                     <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>رد شده</option>
                 </select>
             </div>
@@ -97,6 +98,9 @@
                                     @break
                                 @case('approved')
                                     <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">تایید شده</span>
+                                    @break
+                                @case('final_approved')
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">تایید نهایی</span>
                                     @break
                                 @case('rejected')
                                     <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">رد شده</span>
