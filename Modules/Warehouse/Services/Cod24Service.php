@@ -59,8 +59,8 @@ class Cod24Service
                 }
 
                 if (!empty($token)) {
-                    // توکن رو برای ۲۳ ساعت کش کن
-                    Cache::put($cacheKey, $token, 82800);
+                    // توکن رو برای ۱ ساعت کش کن (جلوگیری از expire شدن و خطای 401)
+                    Cache::put($cacheKey, $token, 3600);
                     WarehouseSetting::set('cod24_token', $token);
                     return $token;
                 }
@@ -90,6 +90,36 @@ class Cod24Service
     protected function endpoint(string $path): string
     {
         return $this->apiUrl . '/api/' . ltrim($path, '/');
+    }
+
+    /**
+     * ارسال درخواست با توکن — در صورت خطای 401 توکن رو رفرش کن و دوباره تلاش کن
+     */
+    protected function authenticatedRequest(string $method, string $url, array $data = [], ?string $rawBody = null, int $timeout = 15): \Illuminate\Http\Client\Response
+    {
+        $attempt = function () use ($method, $url, $data, $rawBody, $timeout) {
+            $request = Http::timeout($timeout)->withHeaders($this->getHeaders());
+
+            if ($rawBody !== null) {
+                return $request->withBody($rawBody, 'application/json')->post($url);
+            }
+
+            return match (strtolower($method)) {
+                'get'  => $request->get($url, $data),
+                default => $request->post($url, $data),
+            };
+        };
+
+        $response = $attempt();
+
+        // اگه 401 گرفتیم، توکن رو رفرش کن و دوباره تلاش کن
+        if ($response->status() === 401) {
+            Log::warning('Cod24: got 401, refreshing token and retrying', ['url' => $url]);
+            $this->getToken(forceRefresh: true);
+            $response = $attempt();
+        }
+
+        return $response;
     }
 
     /**
@@ -135,9 +165,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Wallet/getWalletAmount'));
+            $response = $this->authenticatedRequest('post', $this->endpoint('Wallet/getWalletAmount'));
 
             if ($response->successful()) {
                 $data = $response->json() ?? [];
@@ -169,9 +197,7 @@ class Cod24Service
         if (!empty($cached)) return $cached;
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('State/getStates'));
+            $response = $this->authenticatedRequest('post', $this->endpoint('State/getStates'));
 
             if ($response->successful()) {
                 $data = $this->unwrapList($response->json() ?? []);
@@ -199,9 +225,7 @@ class Cod24Service
         if (!empty($cached)) return $cached;
 
         try {
-            $response = Http::timeout(20)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('City/getPostCities'));
+            $response = $this->authenticatedRequest('post', $this->endpoint('City/getPostCities'), timeout: 20);
 
             if ($response->successful()) {
                 $data = $this->unwrapList($response->json() ?? []);
@@ -233,9 +257,7 @@ class Cod24Service
 
         try {
             $payload = $stateCode ? ['stateCode' => $stateCode] : [];
-            $response = Http::timeout(20)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('City/getCities'), $payload);
+            $response = $this->authenticatedRequest('post', $this->endpoint('City/getCities'), $payload, timeout: 20);
 
             if ($response->successful()) {
                 $data = $this->unwrapList($response->json() ?? []);
@@ -260,9 +282,7 @@ class Cod24Service
     public function getCity(int $code): array
     {
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->endpoint('City/getCity'), ['code' => $code]);
+            $response = $this->authenticatedRequest('get', $this->endpoint('City/getCity'), ['code' => $code]);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json() ?? []];
@@ -286,9 +306,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/getPostPrice'), $data);
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/getPostPrice'), $data);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json() ?? []];
@@ -366,9 +384,7 @@ class Cod24Service
         Log::info('Cod24 createShipment payload', ['order' => $orderNo, 'payload' => $payload]);
 
         try {
-            $response = Http::timeout(30)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/addOrder'), $payload);
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/addOrder'), $payload, timeout: 30);
 
             $body = $response->json() ?? [];
             Log::info('Cod24 createShipment response', [
@@ -425,9 +441,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/getBarcodes'), $params);
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/getBarcodes'), $params);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json() ?? []];
@@ -451,9 +465,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/getBarcodeStatus'), [
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/getBarcodeStatus'), [
                     'barcode' => $barcode,
                 ]);
 
@@ -479,9 +491,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->get($this->apiUrl . '/tracking/' . $barcode);
+            $response = $this->authenticatedRequest('get', $this->apiUrl . '/tracking/' . $barcode);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json() ?? ['body' => $response->body()]];
@@ -505,9 +515,7 @@ class Cod24Service
         }
 
         try {
-            $response = Http::timeout(15)
-                ->withHeaders($this->getHeaders())
-                ->post($this->endpoint('Order/cancelOrder'), [
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/cancelOrder'), [
                     'barcode' => $barcode,
                 ]);
 
@@ -548,10 +556,7 @@ class Cod24Service
             Log::info('Cod24 suspendOrder request', ['serial' => $serial, 'json' => $jsonBody]);
 
             // ارسال مستقیم JSON — Http::post با آرایه عددی درست کار نمی‌کنه
-            $response = Http::timeout(30)
-                ->withHeaders($this->getHeaders())
-                ->withBody($jsonBody, 'application/json')
-                ->post($this->endpoint('Order/suspendOrder'));
+            $response = $this->authenticatedRequest('post', $this->endpoint('Order/suspendOrder'), rawBody: $jsonBody, timeout: 30);
 
             $body = $response->json() ?? [];
             Log::info('Cod24 suspendOrder response', [
