@@ -54,6 +54,66 @@
     </div>
     @endif
 
+    {{-- دکمه تایید نهایی --}}
+    @if(
+        $registration->status === 'approved'
+        && $registration->contract_signed_at
+        && $registration->biometric_status === 'verified'
+        && $registration->documents_uploaded
+    )
+    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-300 p-6" x-data="{ confirm: false }">
+        <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-base font-bold text-emerald-800">تایید نهایی تکنسین</h2>
+                <p class="text-sm text-emerald-600 mt-1">تمامی مراحل تکمیل شده است: قرارداد امضا شده، مدارک آپلود شده، و ویدیو احراز هویت تایید شده است.</p>
+
+                <div x-show="!confirm" class="mt-4">
+                    <button @click="confirm = true" type="button"
+                            class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
+                        تایید نهایی و فعال‌سازی تکنسین
+                    </button>
+                </div>
+
+                <div x-show="confirm" x-transition class="mt-4 bg-white rounded-lg p-4 border border-emerald-200">
+                    <p class="text-sm text-gray-700 font-medium mb-3">آیا از تایید نهایی <strong>{{ $registration->first_name }} {{ $registration->last_name }}</strong> اطمینان دارید؟</p>
+                    <div class="flex gap-2">
+                        <form method="POST" action="{{ route('technician.admin.registrations.final-approve', $registration->id) }}">
+                            @csrf
+                            @method('PUT')
+                            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors">
+                                بله، تایید نهایی
+                            </button>
+                        </form>
+                        <button @click="confirm = false" type="button" class="px-5 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                            انصراف
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- نشان تایید نهایی --}}
+    @if($registration->status === 'final_approved')
+    <div class="bg-emerald-50 rounded-xl border border-emerald-200 p-5">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-emerald-800">تایید نهایی انجام شده</h3>
+                <p class="text-xs text-emerald-600 mt-0.5">
+                    تاریخ تایید نهایی: {{ $registration->final_approved_at ? $registration->final_approved_at->format('Y/m/d H:i') : '—' }}
+                </p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- تغییر وضعیت --}}
     <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{ showRejectForm: false }">
         <h2 class="text-sm font-bold text-gray-800 mb-3">تغییر وضعیت</h2>
@@ -678,65 +738,6 @@
     </div>
     @endif
 
-    {{-- دکمه تایید نهایی --}}
-    @if(
-        $registration->status === 'approved'
-        && $registration->contract_signed_at
-        && $registration->biometric_status === 'verified'
-        && $registration->documents_uploaded
-    )
-    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-300 p-6" x-data="{ confirm: false }">
-        <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            </div>
-            <div class="flex-1">
-                <h2 class="text-base font-bold text-emerald-800">تایید نهایی تکنسین</h2>
-                <p class="text-sm text-emerald-600 mt-1">تمامی مراحل تکمیل شده است: قرارداد امضا شده، مدارک آپلود شده، و ویدیو احراز هویت تایید شده است.</p>
-
-                <div x-show="!confirm" class="mt-4">
-                    <button @click="confirm = true" type="button"
-                            class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
-                        تایید نهایی و فعال‌سازی تکنسین
-                    </button>
-                </div>
-
-                <div x-show="confirm" x-transition class="mt-4 bg-white rounded-lg p-4 border border-emerald-200">
-                    <p class="text-sm text-gray-700 font-medium mb-3">آیا از تایید نهایی <strong>{{ $registration->first_name }} {{ $registration->last_name }}</strong> اطمینان دارید؟</p>
-                    <div class="flex gap-2">
-                        <form method="POST" action="{{ route('technician.admin.registrations.final-approve', $registration->id) }}">
-                            @csrf
-                            @method('PUT')
-                            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors">
-                                بله، تایید نهایی
-                            </button>
-                        </form>
-                        <button @click="confirm = false" type="button" class="px-5 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                            انصراف
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- نشان تایید نهایی --}}
-    @if($registration->status === 'final_approved')
-    <div class="bg-emerald-50 rounded-xl border border-emerald-200 p-5">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            </div>
-            <div>
-                <h3 class="text-sm font-bold text-emerald-800">تایید نهایی انجام شده</h3>
-                <p class="text-xs text-emerald-600 mt-0.5">
-                    تاریخ تایید نهایی: {{ $registration->final_approved_at ? $registration->final_approved_at->format('Y/m/d H:i') : '—' }}
-                </p>
-            </div>
-        </div>
-    </div>
-    @endif
 
 </div>
 @endsection
