@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="{{ asset('js/vendor/JsBarcode.all.min.js') }}"></script>
     <script>
         JsBarcode("#barcode", "{{ $order->barcode }}", { format: "CODE128", width: 2.5, height: 55, displayValue: true, fontSize: 12, margin: 5 });
     </script>

@@ -446,9 +446,9 @@
         @endif
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="{{ asset('js/vendor/JsBarcode.all.min.js') }}"></script>
     @if($showPostQR)
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="{{ asset('js/vendor/qrcode.min.js') }}"></script>
     @endif
     <script>
         @if($showOrderBarcode)
