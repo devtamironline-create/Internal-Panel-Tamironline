@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>فاکتور سفارش {{ $order->order_number }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="/css/fonts.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl; padding: 10px; font-size: 11px; color: #333; }

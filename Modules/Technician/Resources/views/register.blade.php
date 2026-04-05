@@ -6,7 +6,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ثبت‌نام تکنسین | {{ $brand_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/jquery.min.js"></script>
     <link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">

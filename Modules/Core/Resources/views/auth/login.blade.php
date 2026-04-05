@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $isAdmin ? 'ورود به پنل مدیریت' : 'ورود به حساب کاربری' }} | تعمیرآنلاین</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/tailwind.min.js"></script>
     <script defer src="/vendor/js/alpine.min.js"></script>
     <style>
