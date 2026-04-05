@@ -789,7 +789,7 @@ class Cod24Service
 
     /**
      * تبدیل سایز کارتن انتخابی به idCartonType برای COD24
-     * sort_order کارتن = شماره نوع کارتن در COD24
+     * نام کارتن (مثلاً "4") = شماره نوع کارتن در COD24
      */
     protected function resolveCartonType(?int $boxSizeId): int
     {
@@ -802,7 +802,8 @@ class Cod24Service
             return 0;
         }
 
-        return (int) $boxSize->sort_order;
+        // نام کارتن عدد سایز هست (مثلاً "4")
+        return (int) $boxSize->name;
     }
 
     /**
