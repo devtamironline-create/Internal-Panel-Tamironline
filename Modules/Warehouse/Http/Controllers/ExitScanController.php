@@ -24,7 +24,8 @@ class ExitScanController extends Controller
 
         $barcode = trim($request->barcode);
 
-        $order = WarehouseOrder::where('barcode', $barcode)
+        $order = WarehouseOrder::where('post_tracking_code', $barcode)
+            ->orWhere('barcode', $barcode)
             ->orWhere('order_number', $barcode)
             ->orWhere('amadest_barcode', $barcode)
             ->orWhere('tracking_code', $barcode)

@@ -405,7 +405,9 @@
         @php
             $amadestCode = $order->amadest_barcode ?: $order->tracking_code;
             $postCode = $order->post_tracking_code;
-            $showAmadest = !empty($amadestCode) && $order->shipping_type === 'post';
+            // بارکد پستی: اول post_tracking_code بعد amadest_barcode
+            $postBarcodeValue = $postCode ?: $amadestCode;
+            $showAmadest = !empty($postBarcodeValue) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
             $showOrderBarcode = $order->shipping_type !== 'post' && !empty($order->barcode);
         @endphp
@@ -430,7 +432,7 @@
                 </div>
                 <div class="barcode-meta">
                     <span class="barcode-label">کد رهگیری پست</span>
-                    <span class="barcode-code">{{ $postCode ?: $amadestCode }}</span>
+                    <span class="barcode-code">{{ $postBarcodeValue }}</span>
                 </div>
             </div>
             @endif
@@ -463,7 +465,7 @@
         @endif
 
         @if($showAmadest)
-        JsBarcode("#amadest-barcode", "{{ $amadestCode }}", {
+        JsBarcode("#amadest-barcode", "{{ $postBarcodeValue }}", {
             format: "CODE128",
             width: 2,
             height: 45,

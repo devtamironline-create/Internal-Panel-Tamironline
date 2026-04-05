@@ -182,8 +182,9 @@ class DispatchController extends Controller
 
         $barcode = trim($request->barcode);
 
-        // Search by barcode, order_number, or amadest_barcode
-        $order = WarehouseOrder::where('barcode', $barcode)
+        // Search by post_tracking_code first (postal barcode), then other fields
+        $order = WarehouseOrder::where('post_tracking_code', $barcode)
+            ->orWhere('barcode', $barcode)
             ->orWhere('order_number', $barcode)
             ->orWhere('amadest_barcode', $barcode)
             ->orWhere('tracking_code', $barcode)
