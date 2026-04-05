@@ -359,7 +359,7 @@ class Cod24Service
             'requestOrderProducts' => $this->buildProducts($data),
             'totalWeight'          => (int) $weight,
             'contentParcell'       => $data['description'] ?? 'کالا',
-            'idCartonType'         => 0,
+            'idCartonType'         => $this->resolveCartonType($data['box_size_id'] ?? null),
             'isCalcSrvByWeight'    => true,
         ];
 
@@ -785,6 +785,24 @@ class Cod24Service
         }
 
         return null;
+    }
+
+    /**
+     * تبدیل سایز کارتن انتخابی به idCartonType برای COD24
+     * sort_order کارتن = شماره نوع کارتن در COD24
+     */
+    protected function resolveCartonType(?int $boxSizeId): int
+    {
+        if (empty($boxSizeId)) {
+            return 0;
+        }
+
+        $boxSize = \Modules\Warehouse\Models\WarehouseBoxSize::find($boxSizeId);
+        if (!$boxSize) {
+            return 0;
+        }
+
+        return (int) $boxSize->sort_order;
     }
 
     /**

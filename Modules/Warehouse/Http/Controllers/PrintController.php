@@ -765,6 +765,7 @@ class PrintController extends Controller
             'weight'               => $order->actual_weight_grams ?: ($order->total_weight_with_box_grams ?: 500),
             'value'                => (int)($wcData['total'] ?? 100000),
             'description'          => 'سفارش ' . $order->order_number,
+            'box_size_id'          => $order->box_size_id,
         ]);
 
         Log::info('Cod24 auto-register result', ['order' => $order->order_number, 'success' => $result['success'] ?? false]);
