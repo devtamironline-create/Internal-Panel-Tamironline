@@ -361,4 +361,45 @@ class Cod24Controller extends Controller
 
         return redirect()->back()->with('success', 'سرویس‌دهنده ارسال تغییر کرد.');
     }
+
+    /**
+     * صفحه نقشه شهر/استان — لیست کامل COD24 + کد ووکامرس
+     */
+    public function cityMap()
+    {
+        if (!auth()->user()->can('manage-warehouse') && !auth()->user()->can('manage-permissions')) {
+            abort(403);
+        }
+
+        $service = new Cod24Service();
+        $wcMap = \Modules\Warehouse\Services\TapinService::getWcStateMap();
+
+        // دریافت استان‌ها از COD24
+        $states = $service->getStates();
+        $states = array_map(fn($s) => [
+            'code' => (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? 0),
+            'name' => $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '',
+        ], $states);
+
+        // مرتب‌سازی بر اساس نام
+        usort($states, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+        // پیدا کردن کد ووکامرس برای هر استان
+        $wcMapFlipped = array_flip($wcMap); // "فارس" => "FRS"
+        foreach ($states as &$state) {
+            $state['wc_code'] = $wcMapFlipped[$state['name']] ?? null;
+
+            // دریافت شهرهای این استان
+            $cities = $service->getCities($state['code']);
+            $state['cities'] = array_map(fn($c) => [
+                'code' => (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0),
+                'name' => $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '',
+            ], $cities);
+
+            usort($state['cities'], fn($a, $b) => strcmp($a['name'], $b['name']));
+        }
+        unset($state);
+
+        return view('warehouse::cod24.city-map', compact('states', 'wcMap'));
+    }
 }

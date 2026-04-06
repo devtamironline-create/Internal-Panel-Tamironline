@@ -232,5 +232,6 @@ Route::middleware(['web', 'auth'])->prefix('warehouse')->group(function () {
         Route::post('/track', [Cod24Controller::class, 'track'])->name('warehouse.cod24.track');
         Route::post('/barcode-status', [Cod24Controller::class, 'getBarcodeStatus'])->name('warehouse.cod24.barcode-status');
         Route::post('/set-provider', [Cod24Controller::class, 'setProvider'])->name('warehouse.cod24.set-provider');
+        Route::get('/city-map', [Cod24Controller::class, 'cityMap'])->name('warehouse.cod24.city-map');
     });
 });

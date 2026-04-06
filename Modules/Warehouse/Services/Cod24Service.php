@@ -668,7 +668,7 @@ class Cod24Service
                 $line = trim($line);
                 if (empty($line) || !str_contains($line, ':')) continue;
                 [$mapCity, $mapCode] = explode(':', $line, 2);
-                if (trim($mapCity) === $cityName && is_numeric(trim($mapCode))) {
+                if ($this->normalizePersian(trim($mapCity)) === $this->normalizePersian($cityName) && is_numeric(trim($mapCode))) {
                     Log::info('Cod24 findCityCode: found in manual map', ['city' => $cityName, 'code' => (int) trim($mapCode)]);
                     return (int) trim($mapCode);
                 }
@@ -884,11 +884,16 @@ class Cod24Service
      */
     protected function normalizePersian(string $text): string
     {
-        return str_replace(
+        $text = str_replace(
             ['ي', 'ك', 'ە', "\xC2\xA0", '  '],
             ['ی', 'ک', 'ه', ' ', ' '],
             trim($text)
         );
+        // حذف نیم‌فاصله (zero-width non-joiner) و تبدیل به بدون فاصله
+        $text = str_replace("\xE2\x80\x8C", '', $text);
+        // حذف فاصله‌های اضافی
+        $text = preg_replace('/\s+/', ' ', trim($text));
+        return $text;
     }
 
     protected function normalizePostalCode(?string $postalCode): string
