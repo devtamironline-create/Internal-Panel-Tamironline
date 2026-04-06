@@ -16,8 +16,10 @@
         <div class="flex items-center gap-2">
             <input type="text" id="search-input" placeholder="جستجوی شهر یا استان..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64" oninput="filterCities()">
             <button onclick="copyAllAsText()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-                کپی همه
+                کپی همه (اکسل)
+            </button>
+            <button onclick="copyWcPhp()" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+                خروجی PHP ووکامرس
             </button>
         </div>
     </div>
@@ -152,6 +154,85 @@ function copyAllAsText() {
     var text = lines.join('\n');
     navigator.clipboard.writeText(text).then(function() {
         alert('کل لیست شهر/استان کپی شد! می‌توانید در اکسل Paste کنید.');
+    });
+}
+
+function copyWcPhp() {
+    var php = "<?php\n";
+    php += "/**\n * شهرهای ایران — مطابق COD24 API\n * این فایل را در functions.php یا پلاگین ووکامرس قرار دهید\n */\n\n";
+    php += "add_filter('woocommerce_states', function($states) {\n";
+    php += "    $states['IR'] = [\n";
+    @foreach($states as $state)
+    @if($state['wc_code'] ?? null)
+    php += "        '{{ $state['wc_code'] }}' => '{{ $state['name'] }}',\n";
+    @endif
+    @endforeach
+    php += "    ];\n    return $states;\n});\n\n";
+
+    php += "add_filter('woocommerce_get_country_locale', function($locale) {\n";
+    php += "    $locale['IR']['city'] = ['type' => 'select', 'label' => 'شهر', 'required' => true];\n";
+    php += "    return $locale;\n});\n\n";
+
+    php += "/**\n * لیست شهرها برای هر استان (فیلد city به صورت dropdown)\n * نام شهرها دقیقاً مطابق COD24 API است\n */\n";
+    php += "add_filter('woocommerce_shipping_fields', 'ir_city_dropdown', 99);\n";
+    php += "add_filter('woocommerce_billing_fields', 'ir_city_dropdown', 99);\n";
+    php += "function ir_city_dropdown($fields) {\n";
+    php += "    $fields['shipping_city'] = $fields['shipping_city'] ?? [];\n";
+    php += "    $fields['billing_city'] = $fields['billing_city'] ?? [];\n";
+    php += "    return $fields;\n}\n\n";
+
+    php += "add_filter('woocommerce_form_field_args', function($args, $key) {\n";
+    php += "    if ($key === 'billing_city' || $key === 'shipping_city') {\n";
+    php += "        $args['type'] = 'select';\n";
+    php += "        $args['options'] = [''=>'انتخاب شهر...'];\n";
+    php += "    }\n";
+    php += "    return $args;\n}, 10, 2);\n\n";
+
+    php += "/**\n * لیست شهرها بر اساس استان\n */\n";
+    php += "function ir_get_cities() {\n";
+    php += "    return [\n";
+    @foreach($states as $state)
+    @if($state['wc_code'] ?? null)
+    php += "        '{{ $state['wc_code'] }}' => [\n";
+    @foreach($state['cities'] as $city)
+    php += "            '{{ addslashes($city['name']) }}' => '{{ addslashes($city['name']) }}',\n";
+    @endforeach
+    php += "        ],\n";
+    @endif
+    @endforeach
+    php += "    ];\n}\n\n";
+
+    php += "add_action('wp_footer', function() {\n";
+    php += "    if (!is_checkout()) return;\n";
+    php += "    $cities = json_encode(ir_get_cities(), JSON_UNESCAPED_UNICODE);\n";
+    php += "    ?>\n";
+    php += "    <script>\n";
+    php += "    (function($){\n";
+    php += "        var cities = <?php echo $cities; ?>;\n";
+    php += "        function updateCities(type) {\n";
+    php += "            var state = $('#'+type+'_state').val();\n";
+    php += "            var $city = $('#'+type+'_city');\n";
+    php += "            var current = $city.val();\n";
+    php += "            $city.empty().append('<option value=\"\">انتخاب شهر...</option>');\n";
+    php += "            if (cities[state]) {\n";
+    php += "                $.each(cities[state], function(key, val) {\n";
+    php += "                    $city.append('<option value=\"'+key+'\"'+(key===current?' selected':'')+'>'+val+'</option>');\n";
+    php += "                });\n";
+    php += "            }\n";
+    php += "        }\n";
+    php += "        $(document).on('change', '#billing_state, #shipping_state', function(){\n";
+    php += "            var type = this.id.replace('_state','');\n";
+    php += "            updateCities(type);\n";
+    php += "        });\n";
+    php += "        $(document).ready(function(){ updateCities('billing'); updateCities('shipping'); });\n";
+    php += "        $(document.body).on('updated_checkout', function(){ updateCities('billing'); updateCities('shipping'); });\n";
+    php += "    })(jQuery);\n";
+    php += "    </script>\n";
+    php += "    <?php\n";
+    php += "});\n";
+
+    navigator.clipboard.writeText(php).then(function() {
+        alert('کد PHP ووکامرس کپی شد!\\n\\nاین کد را در functions.php سایت خود قرار دهید.\\nشهرها به صورت dropdown نمایش داده می‌شوند و دقیقاً مطابق COD24 هستند.');
     });
 }
 </script>

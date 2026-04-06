@@ -375,28 +375,83 @@ class Cod24Controller extends Controller
         $wcMap = \Modules\Warehouse\Services\TapinService::getWcStateMap();
 
         // دریافت استان‌ها از COD24
-        $states = $service->getStates();
-        $states = array_map(fn($s) => [
-            'code' => (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? 0),
-            'name' => $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '',
-        ], $states);
+        $rawStates = $service->getStates();
 
-        // مرتب‌سازی بر اساس نام
+        // لاگ ساختار اولین استان برای دیباگ
+        \Log::info('cityMap: raw states sample', ['first' => $rawStates[0] ?? [], 'count' => count($rawStates)]);
+
+        $states = [];
+        foreach ($rawStates as $s) {
+            // تلاش برای پیدا کردن کد استان از هر فیلد ممکن
+            $code = (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? $s['stateId'] ?? 0);
+            $name = $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '';
+            if (empty($name)) continue;
+            $states[$code] = [
+                'code' => $code,
+                'name' => $name,
+                'cities' => [],
+            ];
+        }
+
+        // دریافت همه شهرهای پستی یکجا (بهتر از صدا زدن getCities برای هر استان)
+        $allCities = $service->getPostCities();
+
+        \Log::info('cityMap: raw cities sample', ['first' => $allCities[0] ?? [], 'count' => count($allCities)]);
+
+        // اگه getPostCities خالی بود، getCities بدون stateCode بزن
+        if (empty($allCities)) {
+            $allCities = $service->getCities(null);
+            \Log::info('cityMap: getCities(null) fallback', ['first' => $allCities[0] ?? [], 'count' => count($allCities)]);
+        }
+
+        // دسته‌بندی شهرها بر اساس استان
+        foreach ($allCities as $c) {
+            $cityCode = (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0);
+            $cityName = $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
+            $stCode = (int) ($c['stateCode'] ?? $c['state_code'] ?? $c['stateId'] ?? 0);
+
+            if (empty($cityName)) continue;
+
+            // اگه استان این شهر هنوز نداریم، بسازش
+            if (!isset($states[$stCode]) && $stCode > 0) {
+                $states[$stCode] = [
+                    'code' => $stCode,
+                    'name' => 'استان ' . $stCode,
+                    'cities' => [],
+                ];
+            }
+
+            $targetKey = $stCode > 0 ? $stCode : 0;
+            if (!isset($states[$targetKey])) {
+                $states[$targetKey] = [
+                    'code' => $targetKey,
+                    'name' => 'بدون استان',
+                    'cities' => [],
+                ];
+            }
+
+            $states[$targetKey]['cities'][] = [
+                'code' => $cityCode,
+                'name' => $cityName,
+            ];
+        }
+
+        // مرتب‌سازی
+        foreach ($states as &$state) {
+            usort($state['cities'], fn($a, $b) => strcmp($a['name'], $b['name']));
+        }
+        unset($state);
+
+        $states = array_values($states);
         usort($states, fn($a, $b) => strcmp($a['name'], $b['name']));
 
-        // پیدا کردن کد ووکامرس برای هر استان
-        $wcMapFlipped = array_flip($wcMap); // "فارس" => "FRS"
+        // حذف استان‌هایی که شهر ندارن
+        $states = array_values(array_filter($states, fn($s) => count($s['cities']) > 0));
+
+        // پیدا کردن کد ووکامرس
+        $wcMapFlipped = array_flip($wcMap);
         foreach ($states as &$state) {
             $state['wc_code'] = $wcMapFlipped[$state['name']] ?? null;
-
-            // دریافت شهرهای این استان
-            $cities = $service->getCities($state['code']);
-            $state['cities'] = array_map(fn($c) => [
-                'code' => (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0),
-                'name' => $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '',
-            ], $cities);
-
-            usort($state['cities'], fn($a, $b) => strcmp($a['name'], $b['name']));
         }
         unset($state);
 
