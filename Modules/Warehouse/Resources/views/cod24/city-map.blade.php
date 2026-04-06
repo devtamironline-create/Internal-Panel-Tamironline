@@ -25,6 +25,12 @@
     </div>
 
     <!-- Summary -->
+    @if(session('error'))
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-sm text-red-700 font-medium">{{ session('error') }}</p>
+    </div>
+    @endif
+
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div class="flex items-center gap-6 text-sm">
             <span class="font-medium text-blue-900">
