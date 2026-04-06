@@ -30,6 +30,20 @@
     </div>
     @endif
 
+    @if(!empty($debugInfo))
+    <div class="bg-gray-100 border border-gray-300 rounded-lg p-4">
+        <h3 class="font-bold text-gray-700 text-sm mb-2">اطلاعات دیباگ API</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+            @foreach($debugInfo as $key => $val)
+            <div class="flex gap-2">
+                <span class="text-gray-500">{{ $key }}:</span>
+                <span class="text-gray-900 break-all">{{ is_string($val) ? $val : json_encode($val) }}</span>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div class="flex items-center gap-6 text-sm">
             <span class="font-medium text-blue-900">
