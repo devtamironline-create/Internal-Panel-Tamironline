@@ -382,55 +382,55 @@ class Cod24Controller extends Controller
                     ->with('error', 'COD24 تنظیم نشده. ابتدا نام کاربری و رمز عبور را وارد کنید.');
             }
 
-            // تست توکن
             $token = $service->getToken();
-            $debugInfo['token'] = !empty($token) ? 'دریافت شد (' . strlen($token) . ' کاراکتر)' : 'خطا در دریافت توکن!';
+            $debugInfo['token'] = !empty($token) ? 'OK' : 'FAIL';
 
-            // دریافت استان‌ها
+            // ساخت نقشه کد→نام استان از API
+            $stateNameMap = []; // stateCode => stateName
             $rawStates = $service->getStates();
             $debugInfo['states_count'] = count($rawStates);
-            $debugInfo['states_sample'] = !empty($rawStates) ? json_encode($rawStates[0], JSON_UNESCAPED_UNICODE) : 'خالی';
+            if (!empty($rawStates)) {
+                $debugInfo['state_fields'] = implode(', ', array_keys($rawStates[0]));
+            }
 
-            // ساخت map استان‌ها
-            $statesMap = [];
             foreach ($rawStates as $s) {
-                $code = (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? $s['stateId'] ?? 0);
-                $name = $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '';
-                if (empty($name) || $code === 0) continue;
-                $statesMap[$code] = ['code' => $code, 'name' => $name, 'cities' => []];
-            }
-
-            // دریافت شهرهای پستی
-            $allCities = $service->getPostCities();
-            $debugInfo['postCities_count'] = count($allCities);
-            $debugInfo['postCities_sample'] = !empty($allCities) ? json_encode($allCities[0], JSON_UNESCAPED_UNICODE) : 'خالی';
-
-            // فالبک: getCities بدون فیلتر
-            if (empty($allCities)) {
-                $allCities = $service->getCities(null);
-                $debugInfo['getCities_null_count'] = count($allCities);
-                $debugInfo['getCities_null_sample'] = !empty($allCities) ? json_encode($allCities[0], JSON_UNESCAPED_UNICODE) : 'خالی';
-            }
-
-            // فالبک ۲: getCities برای هر استان جداگانه
-            if (empty($allCities) && !empty($statesMap)) {
-                $debugInfo['fallback'] = 'per-state getCities';
-                foreach ($statesMap as $code => $st) {
-                    $stateCities = $service->getCities($code);
-                    $debugInfo['getCities_' . $code] = count($stateCities);
-                    foreach ($stateCities as $c) {
-                        $c['stateCode'] = $code;
-                        $allCities[] = $c;
+                // تلاش برای پیدا کردن کد و نام از هر فیلد ممکن
+                $name = '';
+                $code = 0;
+                foreach ($s as $key => $val) {
+                    $keyLower = strtolower($key);
+                    if ($name === '' && is_string($val) && mb_strlen($val) > 1 && !is_numeric($val)) {
+                        $name = $val;
                     }
-                    if (count($allCities) > 0 && !isset($debugInfo['getCities_perState_sample'])) {
-                        $debugInfo['getCities_perState_sample'] = json_encode($stateCities[0] ?? [], JSON_UNESCAPED_UNICODE);
+                    if ($code === 0 && is_numeric($val) && (int)$val > 0) {
+                        $code = (int) $val;
                     }
                 }
+                // اگه فیلدهای مشخص داره اون‌ها رو ترجیح بده
+                $name = $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? $name;
+                $code = (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? $s['stateId'] ?? $code);
+
+                if (!empty($name) && $code > 0) {
+                    $stateNameMap[$code] = $name;
+                }
+            }
+            $debugInfo['stateNameMap_count'] = count($stateNameMap);
+            $debugInfo['stateNameMap_sample'] = json_encode(array_slice($stateNameMap, 0, 3, true), JSON_UNESCAPED_UNICODE);
+
+            // دریافت شهرها
+            $allCities = $service->getPostCities();
+            $debugInfo['postCities_count'] = count($allCities);
+            if (!empty($allCities)) {
+                $debugInfo['city_fields'] = implode(', ', array_keys($allCities[0]));
             }
 
-            $debugInfo['total_cities'] = count($allCities);
+            if (empty($allCities)) {
+                $allCities = $service->getCities(null);
+                $debugInfo['getCities_null'] = count($allCities);
+            }
 
-            // دسته‌بندی شهرها
+            // دسته‌بندی شهرها بر اساس استان
+            $grouped = [];
             foreach ($allCities as $c) {
                 $cityCode = (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0);
                 $cityName = $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
@@ -438,27 +438,25 @@ class Cod24Controller extends Controller
 
                 if (empty($cityName)) continue;
 
-                if (!isset($statesMap[$stCode])) {
-                    if ($stCode > 0) {
-                        $statesMap[$stCode] = ['code' => $stCode, 'name' => 'استان ' . $stCode, 'cities' => []];
-                    } else {
-                        if (!isset($statesMap[0])) {
-                            $statesMap[0] = ['code' => 0, 'name' => 'بدون استان', 'cities' => []];
-                        }
-                        $stCode = 0;
-                    }
+                if (!isset($grouped[$stCode])) {
+                    $stateName = $stateNameMap[$stCode] ?? null;
+                    $grouped[$stCode] = [
+                        'code' => $stCode,
+                        'name' => $stateName ?: 'نامشخص (کد ' . $stCode . ')',
+                        'cities' => [],
+                    ];
                 }
 
-                $statesMap[$stCode]['cities'][] = ['code' => $cityCode, 'name' => $cityName];
+                $grouped[$stCode]['cities'][] = ['code' => $cityCode, 'name' => $cityName];
             }
 
-            // مرتب‌سازی و فیلتر
-            foreach ($statesMap as &$state) {
+            // مرتب‌سازی
+            foreach ($grouped as &$state) {
                 usort($state['cities'], fn($a, $b) => strcmp($a['name'], $b['name']));
             }
             unset($state);
 
-            $states = array_values(array_filter($statesMap, fn($s) => count($s['cities']) > 0));
+            $states = array_values($grouped);
             usort($states, fn($a, $b) => strcmp($a['name'], $b['name']));
 
             // مپ کد ووکامرس
@@ -468,9 +466,11 @@ class Cod24Controller extends Controller
             }
             unset($state);
 
+            $debugInfo['final_states'] = count($states);
+            $debugInfo['final_cities'] = array_sum(array_map(fn($s) => count($s['cities']), $states));
+
         } catch (\Exception $e) {
             $debugInfo['error'] = $e->getMessage();
-            \Illuminate\Support\Facades\Log::error('cityMap error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         }
 
         return view('warehouse::cod24.city-map', compact('states', 'wcMap', 'debugInfo'));
