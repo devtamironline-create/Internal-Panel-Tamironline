@@ -24,7 +24,6 @@
         </div>
     </div>
 
-    <!-- Summary -->
     @if(session('error'))
     <div class="bg-red-50 border border-red-200 rounded-lg p-4">
         <p class="text-sm text-red-700 font-medium">{{ session('error') }}</p>
@@ -37,7 +36,7 @@
                 تعداد استان‌ها: <span class="font-bold">{{ count($states) }}</span>
             </span>
             <span class="font-medium text-blue-900">
-                تعداد کل شهرها: <span class="font-bold">{{ collect($states)->sum(fn($s) => count($s['cities'])) }}</span>
+                تعداد کل شهرها: <span class="font-bold">{{ collect($states)->sum(function($s) { return count($s['cities']); }) }}</span>
             </span>
         </div>
         <p class="text-xs text-blue-700 mt-2">
@@ -48,7 +47,7 @@
     <!-- WC State Code Reference -->
     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <h3 class="font-bold text-amber-900 text-sm mb-2">راهنمای کد استان ووکامرس</h3>
-        <p class="text-xs text-amber-700 mb-3">در ووکامرس، استان‌ها با کد ۳ حرفی (مثل THR = تهران) شناسایی می‌شوند. ستون «کد WC» نشان می‌دهد کدام کد ووکامرس به کدام استان COD24 مپ شده.</p>
+        <p class="text-xs text-amber-700 mb-3">در ووکامرس، استان‌ها با کد ۳ حرفی (مثل THR = تهران) شناسایی می‌شوند.</p>
         <div class="flex flex-wrap gap-2">
             @foreach($wcMap as $code => $name)
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-white border border-amber-300 rounded text-xs">
@@ -60,6 +59,13 @@
         </div>
     </div>
 
+    @if(count($states) === 0)
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <p class="text-yellow-800 font-medium">هیچ شهری از API دریافت نشد.</p>
+        <p class="text-yellow-600 text-sm mt-2">مطمئن شوید تنظیمات COD24 صحیح است و اتصال برقرار است.</p>
+    </div>
+    @endif
+
     <!-- States & Cities -->
     @foreach($states as $state)
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm state-block" data-state="{{ $state['name'] }}">
@@ -68,7 +74,7 @@
                 <svg class="w-5 h-5 text-gray-400 transition-transform state-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 <h2 class="font-bold text-gray-900">{{ $state['name'] }}</h2>
                 <span class="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">کد COD24: {{ $state['code'] }}</span>
-                @if($state['wc_code'])
+                @if(!empty($state['wc_code']))
                 <span class="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-mono">WC: {{ $state['wc_code'] }}</span>
                 @else
                 <span class="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded-full">بدون کد WC!</span>
@@ -93,7 +99,7 @@
                             <td class="px-4 py-2 text-sm text-gray-400">{{ $i + 1 }}</td>
                             <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ $city['name'] }}</td>
                             <td class="px-4 py-2 text-sm text-gray-600 font-mono">{{ $city['code'] }}</td>
-                            <td class="px-4 py-2 text-sm text-green-700 font-medium" dir="ltr">{{ $city['name'] }}</td>
+                            <td class="px-4 py-2 text-sm text-green-700 font-medium">{{ $city['name'] }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -110,6 +116,9 @@
 </style>
 
 <script>
+var _statesData = @json($states);
+var _wcMap = @json($wcMap);
+
 function toggleState(header) {
     var cities = header.nextElementSibling;
     var chevron = header.querySelector('.state-chevron');
@@ -137,7 +146,6 @@ function filterCities() {
 
         block.style.display = (!search || stateMatch || anyCity) ? '' : 'none';
 
-        // Auto-open if searching
         if (search && (stateMatch || anyCity)) {
             block.querySelector('.state-cities').classList.remove('hidden');
             block.querySelector('.state-chevron').classList.add('open');
@@ -149,96 +157,71 @@ function filterCities() {
 }
 
 function copyAllAsText() {
-    var lines = [];
-    lines.push('استان\tکد WC\tکد COD24\tشهر\tکد شهر');
-    @foreach($states as $state)
-    @foreach($state['cities'] as $city)
-    lines.push('{{ $state['name'] }}\t{{ $state['wc_code'] ?? '-' }}\t{{ $state['code'] }}\t{{ $city['name'] }}\t{{ $city['code'] }}');
-    @endforeach
-    @endforeach
-
-    var text = lines.join('\n');
-    navigator.clipboard.writeText(text).then(function() {
+    var lines = ['استان\tکد WC\tکد COD24\tشهر\tکد شهر'];
+    _statesData.forEach(function(state) {
+        state.cities.forEach(function(city) {
+            lines.push(state.name + '\t' + (state.wc_code || '-') + '\t' + state.code + '\t' + city.name + '\t' + city.code);
+        });
+    });
+    navigator.clipboard.writeText(lines.join('\n')).then(function() {
         alert('کل لیست شهر/استان کپی شد! می‌توانید در اکسل Paste کنید.');
     });
 }
 
 function copyWcPhp() {
-    var php = "<?php\n";
-    php += "/**\n * شهرهای ایران — مطابق COD24 API\n * این فایل را در functions.php یا پلاگین ووکامرس قرار دهید\n */\n\n";
-    php += "add_filter('woocommerce_states', function($states) {\n";
-    php += "    $states['IR'] = [\n";
-    @foreach($states as $state)
-    @if($state['wc_code'] ?? null)
-    php += "        '{{ $state['wc_code'] }}' => '{{ $state['name'] }}',\n";
-    @endif
-    @endforeach
-    php += "    ];\n    return $states;\n});\n\n";
+    var L = '\n';
+    var php = '<' + '?php' + L;
+    php += '/**' + L + ' * شهرهای ایران — مطابق COD24 API' + L + ' * این فایل را در functions.php سایت قرار دهید' + L + ' */' + L + L;
 
-    php += "add_filter('woocommerce_get_country_locale', function($locale) {\n";
-    php += "    $locale['IR']['city'] = ['type' => 'select', 'label' => 'شهر', 'required' => true];\n";
-    php += "    return $locale;\n});\n\n";
+    // states filter
+    php += "add_filter('woocommerce_states', function($states) {" + L;
+    php += "    $states['IR'] = [" + L;
+    _statesData.forEach(function(state) {
+        if (state.wc_code) {
+            php += "        '" + state.wc_code + "' => '" + state.name + "'," + L;
+        }
+    });
+    php += "    ];" + L + "    return $states;" + L + "});" + L + L;
 
-    php += "/**\n * لیست شهرها برای هر استان (فیلد city به صورت dropdown)\n * نام شهرها دقیقاً مطابق COD24 API است\n */\n";
-    php += "add_filter('woocommerce_shipping_fields', 'ir_city_dropdown', 99);\n";
-    php += "add_filter('woocommerce_billing_fields', 'ir_city_dropdown', 99);\n";
-    php += "function ir_city_dropdown($fields) {\n";
-    php += "    $fields['shipping_city'] = $fields['shipping_city'] ?? [];\n";
-    php += "    $fields['billing_city'] = $fields['billing_city'] ?? [];\n";
-    php += "    return $fields;\n}\n\n";
+    // city list function
+    php += "function ir_cod24_cities() {" + L;
+    php += "    return [" + L;
+    _statesData.forEach(function(state) {
+        if (state.wc_code) {
+            php += "        '" + state.wc_code + "' => [" + L;
+            state.cities.forEach(function(city) {
+                var name = city.name.replace(/'/g, "\\'");
+                php += "            '" + name + "' => '" + name + "'," + L;
+            });
+            php += "        ]," + L;
+        }
+    });
+    php += "    ];" + L + "}" + L + L;
 
-    php += "add_filter('woocommerce_form_field_args', function($args, $key) {\n";
-    php += "    if ($key === 'billing_city' || $key === 'shipping_city') {\n";
-    php += "        $args['type'] = 'select';\n";
-    php += "        $args['options'] = [''=>'انتخاب شهر...'];\n";
-    php += "    }\n";
-    php += "    return $args;\n}, 10, 2);\n\n";
-
-    php += "/**\n * لیست شهرها بر اساس استان\n */\n";
-    php += "function ir_get_cities() {\n";
-    php += "    return [\n";
-    @foreach($states as $state)
-    @if($state['wc_code'] ?? null)
-    php += "        '{{ $state['wc_code'] }}' => [\n";
-    @foreach($state['cities'] as $city)
-    php += "            '{{ addslashes($city['name']) }}' => '{{ addslashes($city['name']) }}',\n";
-    @endforeach
-    php += "        ],\n";
-    @endif
-    @endforeach
-    php += "    ];\n}\n\n";
-
-    php += "add_action('wp_footer', function() {\n";
-    php += "    if (!is_checkout()) return;\n";
-    php += "    $cities = json_encode(ir_get_cities(), JSON_UNESCAPED_UNICODE);\n";
-    php += "    ?>\n";
-    php += "    <script>\n";
-    php += "    (function($){\n";
-    php += "        var cities = <?php echo $cities; ?>;\n";
-    php += "        function updateCities(type) {\n";
-    php += "            var state = $('#'+type+'_state').val();\n";
-    php += "            var $city = $('#'+type+'_city');\n";
-    php += "            var current = $city.val();\n";
-    php += "            $city.empty().append('<option value=\"\">انتخاب شهر...</option>');\n";
-    php += "            if (cities[state]) {\n";
-    php += "                $.each(cities[state], function(key, val) {\n";
-    php += "                    $city.append('<option value=\"'+key+'\"'+(key===current?' selected':'')+'>'+val+'</option>');\n";
-    php += "                });\n";
-    php += "            }\n";
-    php += "        }\n";
-    php += "        $(document).on('change', '#billing_state, #shipping_state', function(){\n";
-    php += "            var type = this.id.replace('_state','');\n";
-    php += "            updateCities(type);\n";
-    php += "        });\n";
-    php += "        $(document).ready(function(){ updateCities('billing'); updateCities('shipping'); });\n";
-    php += "        $(document.body).on('updated_checkout', function(){ updateCities('billing'); updateCities('shipping'); });\n";
-    php += "    })(jQuery);\n";
-    php += "    </script>\n";
-    php += "    <?php\n";
-    php += "});\n";
+    // JS for checkout dropdown
+    php += "add_action('wp_footer', function() {" + L;
+    php += "    if (!is_checkout()) return;" + L;
+    php += "    $cities_json = json_encode(ir_cod24_cities(), JSON_UNESCAPED_UNICODE);" + L;
+    php += '    echo \'<scr\' . \'ipt>' + L;
+    php += '    (function($){' + L;
+    php += '        var cities = \' . $cities_json . \';' + L;
+    php += '        function updateCities(type) {' + L;
+    php += '            var state = $("#"+type+"_state").val();' + L;
+    php += '            var $city = $("#"+type+"_city");' + L;
+    php += '            var current = $city.val();' + L;
+    php += '            if (!cities[state]) return;' + L;
+    php += '            $city.empty().append("<option value=\\\"\\\">انتخاب شهر...</option>");' + L;
+    php += '            $.each(cities[state], function(k,v){ $city.append("<option value=\\\"\"+k+\"\\\""+(k===current?" selected":"")+">"+v+"</option>"); });' + L;
+    php += '        }' + L;
+    php += '        $(document).on("change","#billing_state,#shipping_state",function(){ updateCities(this.id.replace("_state","")); });' + L;
+    php += '        $(function(){ updateCities("billing"); updateCities("shipping"); });' + L;
+    php += '        $(document.body).on("updated_checkout",function(){ updateCities("billing"); updateCities("shipping"); });' + L;
+    php += '    })(jQuery);' + L;
+    php += '    </scr\' . \'ipt>\';' + L;
+    php += "});" + L;
 
     navigator.clipboard.writeText(php).then(function() {
-        alert('کد PHP ووکامرس کپی شد!\\n\\nاین کد را در functions.php سایت خود قرار دهید.\\nشهرها به صورت dropdown نمایش داده می‌شوند و دقیقاً مطابق COD24 هستند.');
+        alert('کد PHP ووکامرس کپی شد!\n\nاین کد را در functions.php سایت خود قرار دهید.');
     });
 }
 </script>
