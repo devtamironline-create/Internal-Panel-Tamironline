@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ثبت‌نام تکنسین | {{ $brand_name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/vendor/js/tailwind.min.js"></script>
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/jquery.min.js"></script>
     <link rel="stylesheet" href="/vendor/css/persian-datepicker.min.css">

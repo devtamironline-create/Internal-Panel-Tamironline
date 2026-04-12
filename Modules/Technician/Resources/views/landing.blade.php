@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $page_title ?? 'همکاری با ما' }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/vendor/js/tailwind.min.js"></script>
     <link href="/css/fonts.css" rel="stylesheet">
     <style>
         * { font-family: 'Vazirmatn', Tahoma, sans-serif; }
