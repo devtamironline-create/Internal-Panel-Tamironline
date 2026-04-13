@@ -742,9 +742,25 @@ class Cod24Service
         $states = $this->getStates();
         foreach ($states as $st) {
             $sName = $st['stateNameFa'] ?? $st['name'] ?? $st['stateName'] ?? $st['title'] ?? '';
+
+            // فالبک هوشمند برای نام
+            if (empty($sName)) {
+                foreach ($st as $val) {
+                    if (is_string($val) && mb_strlen($val) > 1 && !is_numeric($val)) { $sName = $val; break; }
+                }
+            }
+
             $normalizedName = $this->normalizePersian($sName);
             if (!empty($normalizedName) && ($normalizedName === $normalizedSearch || str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName))) {
-                $code = (int) ($st['stateCode'] ?? $st['code'] ?? $st['id'] ?? 0);
+                $code = (int) ($st['stateCode'] ?? $st['code'] ?? $st['id'] ?? $st['stateId'] ?? 0);
+
+                // فالبک هوشمند برای کد
+                if ($code === 0) {
+                    foreach ($st as $val) {
+                        if (is_numeric($val) && (int)$val > 0) { $code = (int)$val; break; }
+                    }
+                }
+
                 if ($code > 0) return $code;
             }
         }
@@ -758,21 +774,39 @@ class Cod24Service
     {
         $normalizedSearch = $this->normalizePersian($cityName);
 
+        $extractCode = function (array $item): int {
+            $code = (int) ($item['cityCode'] ?? $item['code'] ?? $item['id'] ?? $item['Id'] ?? $item['Code'] ?? 0);
+            if ($code === 0) {
+                foreach ($item as $val) {
+                    if (is_numeric($val) && (int)$val > 0) { $code = (int)$val; break; }
+                }
+            }
+            return $code;
+        };
+
+        $extractName = function (array $item): string {
+            $name = $item['cityNameFa'] ?? $item['name'] ?? $item['cityName'] ?? $item['title'] ?? $item['Name'] ?? '';
+            if (empty($name)) {
+                foreach ($item as $val) {
+                    if (is_string($val) && mb_strlen($val) > 1 && !is_numeric($val)) { $name = $val; break; }
+                }
+            }
+            return $name;
+        };
+
         // مرحله ۱: exact match (بعد از normalize)
         foreach ($cities as $city) {
-            $cName = $city['cityNameFa'] ?? $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
-            $normalizedName = $this->normalizePersian($cName);
+            $normalizedName = $this->normalizePersian($extractName($city));
             if ($normalizedName === $normalizedSearch) {
-                $code = (int) ($city['cityCode'] ?? $city['code'] ?? $city['id'] ?? 0);
+                $code = $extractCode($city);
                 if ($code > 0) return $code;
             }
         }
         // مرحله ۲: substring match (فقط اگه exact نداشتیم)
         foreach ($cities as $city) {
-            $cName = $city['cityNameFa'] ?? $city['name'] ?? $city['cityName'] ?? $city['title'] ?? '';
-            $normalizedName = $this->normalizePersian($cName);
+            $normalizedName = $this->normalizePersian($extractName($city));
             if (!empty($normalizedName) && (str_contains($normalizedName, $normalizedSearch) || str_contains($normalizedSearch, $normalizedName))) {
-                $code = (int) ($city['cityCode'] ?? $city['code'] ?? $city['id'] ?? 0);
+                $code = $extractCode($city);
                 if ($code > 0) return $code;
             }
         }
