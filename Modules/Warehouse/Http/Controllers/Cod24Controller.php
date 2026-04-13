@@ -124,20 +124,49 @@ class Cod24Controller extends Controller
         }
 
         $service = new Cod24Service();
-        $states = $service->getStates();
+        $rawStates = $service->getStates();
 
-        // normalize output
+        \Illuminate\Support\Facades\Log::info('Cod24 getStates raw', [
+            'count' => count($rawStates),
+            'sample' => !empty($rawStates) ? $rawStates[0] : 'empty',
+            'keys' => !empty($rawStates) ? array_keys($rawStates[0]) : [],
+        ]);
+
+        // normalize — هوشمند: اول فیلدهای شناخته‌شده رو چک کن، بعد هر عدد/رشته
         $states = array_map(function ($s) {
-            return [
-                'code' => (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? 0),
-                'name' => $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '',
-            ];
-        }, $states);
+            $code = (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? $s['stateId'] ?? $s['Id'] ?? $s['Code'] ?? 0);
+            $name = $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? $s['Name'] ?? $s['Title'] ?? '';
+
+            // اگه هنوز code صفره، اولین عدد بزرگتر از صفر رو بگیر
+            if ($code === 0) {
+                foreach ($s as $val) {
+                    if (is_numeric($val) && (int) $val > 0) {
+                        $code = (int) $val;
+                        break;
+                    }
+                }
+            }
+            // اگه name خالیه، اولین رشته غیرعددی بلند رو بگیر
+            if (empty($name)) {
+                foreach ($s as $val) {
+                    if (is_string($val) && mb_strlen($val) > 1 && !is_numeric($val)) {
+                        $name = $val;
+                        break;
+                    }
+                }
+            }
+
+            return ['code' => $code, 'name' => $name];
+        }, $rawStates);
+
+        // فیلتر خالی‌ها
+        $states = array_values(array_filter($states, fn($s) => $s['code'] > 0 && !empty($s['name'])));
 
         return response()->json([
             'success' => !empty($states),
             'data'    => $states,
             'count'   => count($states),
+            'raw_keys' => !empty($rawStates) ? array_keys($rawStates[0]) : [],
         ]);
     }
 
@@ -168,10 +197,25 @@ class Cod24Controller extends Controller
 
         // normalize output: هر آیتم حتماً name و code داشته باشه
         $cities = array_map(function ($c) {
+            $code = (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? $c['Id'] ?? $c['Code'] ?? 0);
+            $name = $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? $c['Name'] ?? $c['Title'] ?? '';
+
+            // فالبک هوشمند
+            if ($code === 0) {
+                foreach ($c as $val) {
+                    if (is_numeric($val) && (int) $val > 0) { $code = (int) $val; break; }
+                }
+            }
+            if (empty($name)) {
+                foreach ($c as $val) {
+                    if (is_string($val) && mb_strlen($val) > 1 && !is_numeric($val)) { $name = $val; break; }
+                }
+            }
+
             return [
-                'code' => (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0),
-                'name' => $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '',
-                'stateCode' => $c['stateCode'] ?? null,
+                'code' => $code,
+                'name' => $name,
+                'stateCode' => (int) ($c['stateCode'] ?? $c['state_code'] ?? $c['stateId'] ?? $c['StateCode'] ?? 0),
             ];
         }, $cities);
 

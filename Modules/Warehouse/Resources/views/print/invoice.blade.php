@@ -796,7 +796,12 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 var sel = document.getElementById('cod24-province');
-                if (!sel || !data.success) return;
+                if (!sel) return;
+                var items = data.data || [];
+                if (items.length === 0) {
+                    sel.innerHTML = '<option value="">خطا: لیست استان خالی (raw_keys: ' + (data.raw_keys || []).join(',') + ')</option>';
+                    return;
+                }
                 sel.innerHTML = '<option value="">انتخاب استان...</option>';
                 var autoSelect = null;
 
@@ -841,6 +846,10 @@
                     sel.value = autoSelect;
                     loadCod24Cities();
                 }
+            })
+            .catch(function(err) {
+                var sel = document.getElementById('cod24-province');
+                if (sel) sel.innerHTML = '<option value="">خطا در بارگذاری استان‌ها: ' + err.message + '</option>';
             });
         })();
 
