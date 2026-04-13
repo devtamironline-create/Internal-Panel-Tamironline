@@ -245,8 +245,15 @@ class PrintController extends Controller
         }
 
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
+            // اگه قبلاً در COD24 ثبت شده، دیگه ثبت خودکار نکن
+            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+            $alreadyRegistered = ($wcData['cod24']['registered'] ?? false) && $shippingProvider === 'cod24';
+
+            if ($alreadyRegistered) {
+                Log::info('Skipping auto-register: already registered in COD24', ['order' => $order->order_number]);
+                $registrationError = null;
+            } else {
             try {
-                $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
                 $shipping = $wcData['shipping'] ?? [];
                 $billing = $wcData['billing'] ?? [];
                 $address = ($shipping['address_1'] ?? '') ?: ($billing['address_1'] ?? '');
@@ -289,6 +296,7 @@ class PrintController extends Controller
                 $registrationError = $shippingProvider . ': ' . $e->getMessage();
                 Log::error('Shipping auto-register error', ['provider' => $shippingProvider, 'order' => $order->order_number, 'error' => $e->getMessage()]);
             }
+            } // end of !$alreadyRegistered
         }
 
         // فقط نمایش صفحه — ثبت چاپ با دکمه انجام میشه

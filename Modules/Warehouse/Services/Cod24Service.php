@@ -698,9 +698,27 @@ class Cod24Service
         $allPostCities = $this->getPostCities();
         Log::info('Cod24 findCityCode: getPostCities count', ['count' => count($allPostCities)]);
         if (!empty($allPostCities)) {
+            // اول فقط شهرهای همون استان رو فیلتر کن (رفع مشکل شهرهای هم‌نام مثل اردکان)
+            $cod24StateCode = isset($cod24StateCode) ? $cod24StateCode : $this->findStateCode($provincePersian);
+            if ($cod24StateCode) {
+                $filteredByState = array_filter($allPostCities, function ($c) use ($cod24StateCode) {
+                    return (int) ($c['stateCode'] ?? $c['state_code'] ?? 0) === $cod24StateCode;
+                });
+                if (!empty($filteredByState)) {
+                    $found = $this->matchCityInList($cityName, $filteredByState);
+                    if ($found) {
+                        Log::info('Cod24 findCityCode: ✓ found via getPostCities+stateFilter', [
+                            'city' => $cityName, 'stateCode' => $cod24StateCode, 'cityCode' => $found,
+                        ]);
+                        return $found;
+                    }
+                }
+            }
+
+            // فالبک: جستجو در همه شهرها (بدون فیلتر استان)
             $found = $this->matchCityInList($cityName, $allPostCities);
             if ($found) {
-                Log::info('Cod24 findCityCode: ✓ found via getPostCities', [
+                Log::info('Cod24 findCityCode: ✓ found via getPostCities (no state filter)', [
                     'city' => $cityName, 'cityCode' => $found, 'source' => 'getPostCities',
                 ]);
                 return $found;

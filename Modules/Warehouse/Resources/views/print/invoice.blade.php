@@ -201,10 +201,25 @@
     </div>
     @endif
 
-    {{-- انتخاب دستی شهر COD24 - فقط وقتی سرویس cod24 و هنوز ثبت نشده --}}
-    @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
+    {{-- انتخاب دستی شهر COD24 - وقتی سرویس cod24 هست --}}
+    @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post')
     <div class="no-print" id="cod24-city-selector" style="background:#ecfdf5;border:1px solid #6ee7b7;padding:10px 12px;margin:8px 10px 0;border-radius:6px;font-size:11px;">
-        <div style="font-weight:bold;color:#065f46;margin-bottom:6px;">انتخاب استان و شهر مقصد COD24</div>
+        @php
+            $wcShipping = ($order->wc_order_data['shipping'] ?? []);
+            $wcBilling = ($order->wc_order_data['billing'] ?? []);
+            $orderCity = ($wcShipping['city'] ?? '') ?: ($wcBilling['city'] ?? '');
+            $orderStateCode = ($wcShipping['state'] ?? '') ?: ($wcBilling['state'] ?? '');
+            $wcMapLocal = \Modules\Warehouse\Services\TapinService::getWcStateMap();
+            $orderStateName = $wcMapLocal[strtoupper($orderStateCode)] ?? $orderStateCode;
+        @endphp
+        <div style="font-weight:bold;color:#065f46;margin-bottom:6px;">
+            انتخاب استان و شهر مقصد COD24
+            @if($orderCity)
+            <span style="font-weight:normal;color:#666;font-size:10px;margin-right:8px;">
+                (اطلاعات سفارش: {{ $orderStateName }} — {{ $orderCity }})
+            </span>
+            @endif
+        </div>
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
             <div style="flex:1;min-width:120px;">
                 <label style="font-size:10px;color:#666;display:block;margin-bottom:2px;">استان:</label>
