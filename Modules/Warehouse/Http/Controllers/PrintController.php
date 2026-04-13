@@ -319,7 +319,37 @@ class PrintController extends Controller
             'sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
         ];
 
-        return view('warehouse::print.invoice', compact('order', 'invoiceSettings', 'shippingProvider', 'registrationError', 'reprintRequest'));
+        // داده‌های شهر/استان COD24 برای dropdown (بدون نیاز به fetch جداگانه)
+        $cod24States = [];
+        $cod24AllCities = [];
+        if ($shippingProvider === 'cod24' && $order->shipping_type === 'post') {
+            try {
+                $cod24Svc = new \Modules\Warehouse\Services\Cod24Service();
+                if ($cod24Svc->isConfigured()) {
+                    $rawSt = $cod24Svc->getStates();
+                    foreach ($rawSt as $s) {
+                        $code = (int) ($s['stateCode'] ?? $s['code'] ?? $s['id'] ?? $s['stateId'] ?? 0);
+                        $name = $s['stateNameFa'] ?? $s['name'] ?? $s['stateName'] ?? $s['title'] ?? '';
+                        if ($code === 0) { foreach ($s as $v) { if (is_numeric($v) && (int)$v > 0) { $code = (int)$v; break; } } }
+                        if (empty($name)) { foreach ($s as $v) { if (is_string($v) && mb_strlen($v) > 1 && !is_numeric($v)) { $name = $v; break; } } }
+                        if ($code > 0 && !empty($name)) { $cod24States[] = ['code' => $code, 'name' => $name]; }
+                    }
+                    $rawCities = $cod24Svc->getPostCities();
+                    foreach ($rawCities as $c) {
+                        $cc = (int) ($c['cityCode'] ?? $c['code'] ?? $c['id'] ?? 0);
+                        $cn = $c['cityNameFa'] ?? $c['name'] ?? $c['cityName'] ?? $c['title'] ?? '';
+                        $sc = (int) ($c['stateCode'] ?? $c['state_code'] ?? $c['stateId'] ?? 0);
+                        if ($cc === 0) { foreach ($c as $v) { if (is_numeric($v) && (int)$v > 0) { $cc = (int)$v; break; } } }
+                        if (empty($cn)) { foreach ($c as $v) { if (is_string($v) && mb_strlen($v) > 1 && !is_numeric($v)) { $cn = $v; break; } } }
+                        if (!empty($cn)) { $cod24AllCities[] = ['code' => $cc, 'name' => $cn, 'sc' => $sc]; }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('COD24 states/cities load for invoice', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return view('warehouse::print.invoice', compact('order', 'invoiceSettings', 'shippingProvider', 'registrationError', 'reprintRequest', 'cod24States', 'cod24AllCities'));
     }
 
     /**

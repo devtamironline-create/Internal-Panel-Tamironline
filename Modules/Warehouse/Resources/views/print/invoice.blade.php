@@ -785,92 +785,57 @@
         @endif
 
         // ===== COD24 City Selector =====
-        @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post' && empty($order->amadest_barcode))
-        var cod24AllCities = [];
+        @if(($shippingProvider ?? 'amadest') === 'cod24' && $order->shipping_type === 'post')
+        var cod24StatesData = @json($cod24States ?? []);
+        var cod24CitiesData = @json($cod24AllCities ?? []);
+        var cod24FilteredCities = [];
         var cod24OrderCity = @json(($order->wc_order_data['shipping']['city'] ?? '') ?: ($order->wc_order_data['billing']['city'] ?? ''));
         var cod24OrderState = @json(($order->wc_order_data['shipping']['state'] ?? '') ?: ($order->wc_order_data['billing']['state'] ?? ''));
+        var wcMap = @json(\Modules\Warehouse\Services\TapinService::getWcStateMap());
 
-        // بارگذاری لیست استان‌ها
+        // لود استان‌ها از داده‌های سرور (بدون fetch)
         (function loadCod24States() {
-            fetch('{{ route("warehouse.cod24.states") }}')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var sel = document.getElementById('cod24-province');
-                if (!sel) return;
-                var items = data.data || [];
-                if (items.length === 0) {
-                    sel.innerHTML = '<option value="">خطا: لیست استان خالی (raw_keys: ' + (data.raw_keys || []).join(',') + ')</option>';
-                    return;
+            var sel = document.getElementById('cod24-province');
+            if (!sel) return;
+
+            if (cod24StatesData.length === 0) {
+                sel.innerHTML = '<option value="">خطا: لیست استان خالی</option>';
+                return;
+            }
+
+            sel.innerHTML = '<option value="">انتخاب استان...</option>';
+            var autoSelect = null;
+            var persianName = wcMap[(cod24OrderState || '').toUpperCase()] || '';
+
+            cod24StatesData.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.code;
+                opt.textContent = s.name;
+                sel.appendChild(opt);
+
+                // auto-select بر اساس نام فارسی استان
+                if (persianName && s.name && s.name.indexOf(persianName) !== -1) {
+                    autoSelect = s.code;
                 }
-                sel.innerHTML = '<option value="">انتخاب استان...</option>';
-                var autoSelect = null;
-
-                // نگاشت WC state code → stateCode
-                var wcStateMap = {
-                    'THR':8,'GIL':15,'MZN':20,'EAZ':1,'WAZ':2,'KRD':12,'KRH':5,'HDN':13,
-                    'LRS':16,'CHB':14,'KHZ':6,'FRS':7,'BHR':18,'HRZ':22,'SBN':11,'RKH':9,
-                    'NKH':29,'SKH':10,'ESF':4,'YZD':31,'KRN':8,'SMN':19,'QHM':25,'QZN':26,
-                    'ZJN':27,'MKZ':17,'ILM':3,'KBD':24,'ABZ':30,'ADL':28,'GLS':23
-                };
-
-                (data.data || []).forEach(function(s) {
-                    var opt = document.createElement('option');
-                    opt.value = s.code;
-                    opt.textContent = s.name;
-                    sel.appendChild(opt);
-
-                    // auto-select based on WC state
-                    if (cod24OrderState) {
-                        var normalizedName = (s.name || '').replace(/\s+/g, '');
-                        if (normalizedName && cod24OrderState.toUpperCase() === normalizedName.toUpperCase()) {
-                            autoSelect = s.code;
-                        }
-                    }
-                });
-
-                // اگه WC state code داریم (مثل FRS)، سعی کن match کنیم
-                if (!autoSelect && cod24OrderState && cod24OrderState.length <= 3) {
-                    // جستجو بر اساس نام فارسی
-                    var wcMap = @json(\Modules\Warehouse\Services\TapinService::getWcStateMap());
-                    var persianName = wcMap[cod24OrderState.toUpperCase()] || '';
-                    if (persianName) {
-                        (data.data || []).forEach(function(s) {
-                            if (!autoSelect && s.name && s.name.indexOf(persianName) !== -1) {
-                                autoSelect = s.code;
-                            }
-                        });
-                    }
-                }
-
-                if (autoSelect) {
-                    sel.value = autoSelect;
-                    loadCod24Cities();
-                }
-            })
-            .catch(function(err) {
-                var sel = document.getElementById('cod24-province');
-                if (sel) sel.innerHTML = '<option value="">خطا در بارگذاری استان‌ها: ' + err.message + '</option>';
             });
+
+            if (autoSelect) {
+                sel.value = autoSelect;
+                loadCod24Cities();
+            }
         })();
 
         function loadCod24Cities() {
-            var stateCode = document.getElementById('cod24-province').value;
-            var citySelect = document.getElementById('cod24-city');
-            var statusEl = document.getElementById('cod24-city-status');
-            var filterInput = document.getElementById('cod24-city-filter');
-            citySelect.innerHTML = '<option value="">در حال بارگذاری...</option>';
-            if (filterInput) filterInput.style.display = 'none';
+            var stateCode = parseInt(document.getElementById('cod24-province').value) || 0;
 
-            var url = '{{ route("warehouse.cod24.cities") }}?state_code=' + (stateCode || '');
-            fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                cod24AllCities = data.data || [];
-                populateCod24Dropdown(cod24AllCities);
-            })
-            .catch(function() {
-                citySelect.innerHTML = '<option value="">خطا در بارگذاری</option>';
-            });
+            // فیلتر شهرها بر اساس استان انتخابی
+            if (stateCode > 0) {
+                cod24FilteredCities = cod24CitiesData.filter(function(c) { return c.sc === stateCode; });
+            } else {
+                cod24FilteredCities = cod24CitiesData;
+            }
+
+            populateCod24Dropdown(cod24FilteredCities);
         }
 
         function populateCod24Dropdown(cities) {
@@ -911,12 +876,12 @@
         function filterCod24Cities() {
             var q = (document.getElementById('cod24-city-filter').value || '').trim();
             if (!q) {
-                populateCod24Dropdown(cod24AllCities);
+                populateCod24Dropdown(cod24FilteredCities);
                 return;
             }
             var normalizeFA = function(s) { return (s||'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/ة/g,'ه').trim(); };
             var nq = normalizeFA(q);
-            var filtered = cod24AllCities.filter(function(c) {
+            var filtered = cod24FilteredCities.filter(function(c) {
                 return normalizeFA(c.name).indexOf(nq) !== -1;
             });
             populateCod24Dropdown(filtered);
