@@ -118,6 +118,9 @@ class AuthController extends Controller
         $user->recordLogin($request->ip());
         Auth::login($user, true);
 
+        // وضعیت کاربر رو آنلاین کن بعد از لاگین
+        \App\Models\Chat\UserPresence::setOnline($user->id);
+
         $redirectUrl = $user->isStaff()
             ? route('admin.dashboard')
             : route('panel.dashboard');
@@ -192,6 +195,9 @@ class AuthController extends Controller
 
         $user->recordLogin($request->ip());
         Auth::login($user, true);
+
+        // وضعیت کاربر رو آنلاین کن بعد از لاگین
+        \App\Models\Chat\UserPresence::setOnline($user->id);
 
         $redirectUrl = $user->isStaff()
             ? route('admin.dashboard')
