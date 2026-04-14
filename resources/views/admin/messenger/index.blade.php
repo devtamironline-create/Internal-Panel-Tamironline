@@ -232,9 +232,9 @@
                             <div class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-4 py-1.5 rounded-full shadow-sm" x-text="msg.date_label"></div>
                         </div>
                     </template>
-                    <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
+                    <div :class="msg.is_mine ? 'flex justify-end' : 'flex justify-start'" class="group" :data-message-id="msg.id">
                         <div class="relative max-w-md">
-                            <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="rounded-2xl px-4 py-3">
+                            <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tr-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tl-none shadow'" class="rounded-2xl px-4 py-3">
                                 <!-- Reply Preview -->
                                 <template x-if="msg.reply_to">
                                     <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
@@ -342,7 +342,7 @@
 
                             <!-- Reactions Display -->
                             <template x-if="msg.reactions && msg.reactions.length > 0">
-                                <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-start' : 'justify-end'">
+                                <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-end' : 'justify-start'">
                                     <template x-for="reaction in msg.reactions" :key="reaction.emoji">
                                         <button @click.stop="toggleReaction(msg.id, reaction.emoji)" :class="reaction.has_reacted ? 'bg-brand-100 dark:bg-brand-900 border-brand-300' : 'bg-white dark:bg-gray-700'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:scale-105 transition-transform shadow-sm" :title="reaction.users.map(u => u.name).join(', ')">
                                             <span x-text="reaction.emoji"></span>
