@@ -212,8 +212,8 @@
                                 <div class="bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[10px] font-medium px-3 py-1 rounded-full" x-text="msg.date_label"></div>
                             </div>
                         </template>
-                        <div :class="msg.is_mine ? 'flex flex-row-reverse' : 'flex'" class="group items-end gap-1.5 transition-colors duration-500 rounded-lg px-2" :data-message-id="msg.id" dir="ltr">
-                            <!-- آواتار -->
+                        <div class="flex items-end gap-1.5 group transition-colors duration-500 rounded-lg px-2" :class="msg.is_mine ? 'flex-row-reverse' : ''" :data-message-id="msg.id">
+                            <!-- آواتار طرف مقابل -->
                             <template x-if="!msg.is_mine">
                                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300 overflow-hidden">
                                     <template x-if="msg.sender_avatar">
@@ -224,9 +224,9 @@
                                     </template>
                                 </div>
                             </template>
-                            <div class="relative max-w-[80%]" dir="rtl">
+                            <div class="relative max-w-[80%]">
                                 <!-- Message Bubble -->
-                                <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-bl-none' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-br-none'" class="rounded-2xl px-4 py-2">
+                                <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="rounded-2xl px-4 py-2">
                                     <!-- Reply Preview -->
                                     <template x-if="msg.reply_to">
                                         <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-200 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
