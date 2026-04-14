@@ -432,7 +432,7 @@
 
                 <div class="flex items-end gap-3">
                     <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" multiple>
-                    <button @click="$refs.fileInput.click()" class="p-2 mb-1 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل">
+                    <button @click="$refs.fileInput.click()" class="p-2 mb-1 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل (حداکثر ۵۰ مگابایت)">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
                     <textarea x-model="newMessage" @keydown.enter="if(!$event.shiftKey) { $event.preventDefault(); sendMessage(); }" @keydown.escape="replyingTo = null" x-ref="messageInput" rows="1" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto" placeholder="پیام خود را بنویسید..." @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 128) + 'px'"></textarea>
@@ -449,7 +449,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col shadow-2xl">
             <!-- Header -->
             <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h3 class="font-bold text-gray-900 dark:text-white">ارسال فایل</h3>
+                <h3 class="font-bold text-gray-900 dark:text-white">ارسال فایل <span class="text-xs font-normal text-gray-400">(حداکثر ۵۰ مگابایت)</span></h3>
                 <button @click="closeMediaPreview()" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -1800,7 +1800,17 @@ function messenger() {
         },
 
         addFilesToSelection(files) {
+            const maxSizeMB = 50;
+            const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
             files.forEach(file => {
+                // چک سایز فایل قبل از آپلود
+                if (file.size > maxSizeBytes) {
+                    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                    alert('فایل «' + file.name + '» با حجم ' + sizeMB + ' مگابایت بیش از حد مجاز (' + maxSizeMB + ' مگابایت) است.');
+                    return;
+                }
+
                 // Create preview URL for images and videos
                 let preview = null;
                 if (file.type.startsWith('image/')) {
@@ -1876,6 +1886,12 @@ function messenger() {
                         body: formData
                     });
 
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        const errMsg = errData.message || errData.errors?.file?.[0] || ('خطای سرور: ' + response.status);
+                        alert('خطا در ارسال «' + fileData.name + '»: ' + errMsg);
+                        continue;
+                    }
                     const data = await response.json();
                     if (data.message) {
                         this.messages.push(data.message);
