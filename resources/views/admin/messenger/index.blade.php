@@ -1375,6 +1375,11 @@ function messenger() {
                 const newMessages = data.messages || [];
                 const hadNewMessages = newMessages.length > this.lastMessageCount;
 
+                // Debug: log is_mine values
+                if (newMessages.length > 0 && hadNewMessages) {
+                    console.log('[Chat Debug] Messages is_mine:', newMessages.map(m => ({id: m.id, sender: m.sender_name, is_mine: m.is_mine, content: (m.content||'').substring(0,20)})));
+                }
+
                 this.messages = newMessages;
                 this.lastMessageCount = newMessages.length;
 
