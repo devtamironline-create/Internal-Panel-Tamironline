@@ -226,7 +226,7 @@
                             </template>
                             <div class="relative max-w-[80%]">
                                 <!-- Message Bubble -->
-                                <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="rounded-2xl px-4 py-2">
+                                <div :style="msg.is_mine ? 'background:#465fff;color:#fff' : ''" :class="msg.is_mine ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'" class="rounded-2xl px-4 py-2">
                                     <!-- Reply Preview -->
                                     <template x-if="msg.reply_to">
                                         <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-200 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">

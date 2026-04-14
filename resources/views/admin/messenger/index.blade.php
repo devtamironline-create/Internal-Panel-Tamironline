@@ -245,7 +245,7 @@
                             </div>
                         </template>
                         <div class="relative max-w-md">
-                            <div :class="msg.is_mine ? 'bg-brand-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'" class="rounded-2xl px-4 py-3">
+                            <div :style="msg.is_mine ? 'background:#465fff;color:#fff' : ''" :class="msg.is_mine ? '' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'" class="rounded-2xl px-4 py-3">
                                 <!-- Reply Preview -->
                                 <template x-if="msg.reply_to">
                                     <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
