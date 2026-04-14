@@ -212,7 +212,7 @@
                                 <div class="bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[10px] font-medium px-3 py-1 rounded-full" x-text="msg.date_label"></div>
                             </div>
                         </template>
-                        <div class="flex items-end gap-1.5 group transition-colors duration-500 rounded-lg px-2" :class="msg.is_mine ? 'flex-row-reverse' : ''" :data-message-id="msg.id">
+                        <div class="flex items-end gap-1.5 group transition-colors duration-500 rounded-lg px-2" :class="msg.is_mine ? '' : 'flex-row-reverse'" :data-message-id="msg.id">
                             <!-- آواتار طرف مقابل -->
                             <template x-if="!msg.is_mine">
                                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300 overflow-hidden">
@@ -262,7 +262,7 @@
 
                                 <!-- Reactions Display -->
                                 <template x-if="msg.reactions && msg.reactions.length > 0">
-                                    <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-end' : 'justify-start'">
+                                    <div class="flex flex-wrap gap-1 mt-1" :class="msg.is_mine ? 'justify-start' : 'justify-end'">
                                         <template x-for="reaction in msg.reactions" :key="reaction.emoji">
                                             <button @click.stop="toggleReaction(msg.id, reaction.emoji)" :class="reaction.has_reacted ? 'bg-brand-100 dark:bg-brand-900 border-brand-300' : 'bg-gray-100 dark:bg-gray-700'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:scale-105 transition-transform" :title="reaction.users.map(u => u.name).join(', ')">
                                                 <span x-text="reaction.emoji"></span>
