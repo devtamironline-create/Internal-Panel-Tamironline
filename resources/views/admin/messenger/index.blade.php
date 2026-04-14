@@ -1377,7 +1377,7 @@ function messenger() {
 
                 // Debug: log is_mine values
                 if (newMessages.length > 0 && hadNewMessages) {
-                    console.log('[Chat Debug] Messages is_mine:', newMessages.map(m => ({id: m.id, sender: m.sender_name, is_mine: m.is_mine, content: (m.content||'').substring(0,20)})));
+                    console.log('[Chat Debug] Messages:', JSON.stringify(newMessages.map(function(m) { return {id: m.id, sender: m.sender_name, is_mine: m.is_mine}; })));
                 }
 
                 this.messages = newMessages;
