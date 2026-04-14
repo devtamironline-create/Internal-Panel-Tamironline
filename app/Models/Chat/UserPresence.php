@@ -28,7 +28,28 @@ class UserPresence extends Model
     // Helpers
     public function isOnline(): bool
     {
-        return $this->status === 'online';
+        // فقط وقتی آنلاینه که: وضعیتش offline نباشه + آخرین فعالیتش کمتر از ۵ دقیقه پیش باشه
+        if ($this->status === 'offline') return false;
+        if (!$this->last_seen_at) return false;
+        return $this->last_seen_at->greaterThanOrEqualTo(now()->subMinutes(5));
+    }
+
+    /**
+     * آیا کاربر واقعاً فعاله (heartbeat داره)؟
+     */
+    public function isActive(): bool
+    {
+        if (!$this->last_seen_at) return false;
+        return $this->last_seen_at->greaterThanOrEqualTo(now()->subMinutes(5));
+    }
+
+    /**
+     * وضعیت واقعی — اگه فعال نیست، آفلاین برگردون
+     */
+    public function getRealStatus(): string
+    {
+        if (!$this->isActive()) return 'offline';
+        return $this->status;
     }
 
     public function isAway(): bool
@@ -145,7 +166,7 @@ class UserPresence extends Model
     public static function getOnlineUsers(): \Illuminate\Database\Eloquent\Collection
     {
         return self::with('user')
-            ->where('status', 'online')
+            ->where('status', '!=', 'offline')
             ->where('last_seen_at', '>=', now()->subMinutes(5))
             ->get();
     }

@@ -168,16 +168,19 @@ class User extends Authenticatable
 
     public function getPresenceStatus(): string
     {
-        return $this->presence?->status ?? 'offline';
+        if (!$this->presence) return 'offline';
+        return $this->presence->getRealStatus();
     }
 
     public function getPresenceStatusLabel(): string
     {
-        return $this->presence?->getStatusLabel() ?? 'آفلاین';
+        if (!$this->presence || !$this->presence->isActive()) return 'آفلاین';
+        return $this->presence->getStatusLabel();
     }
 
     public function getPresenceStatusColor(): string
     {
-        return $this->presence?->getStatusColor() ?? 'gray';
+        if (!$this->presence || !$this->presence->isActive()) return 'gray';
+        return $this->presence->getStatusColor();
     }
 }

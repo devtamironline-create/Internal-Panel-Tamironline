@@ -206,6 +206,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        // وضعیت کاربر رو آفلاین کن قبل از لاگ‌اوت
+        if (auth()->check()) {
+            \App\Models\Chat\UserPresence::setOffline(auth()->id());
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
