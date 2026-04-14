@@ -232,9 +232,20 @@
                             <div class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-4 py-1.5 rounded-full shadow-sm" x-text="msg.date_label"></div>
                         </div>
                     </template>
-                    <div :class="msg.is_mine ? 'flex justify-end' : 'flex justify-start'" class="group" :data-message-id="msg.id">
-                        <div class="relative max-w-md">
-                            <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tr-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tl-none shadow'" class="rounded-2xl px-4 py-3">
+                    <div :class="msg.is_mine ? 'flex flex-row-reverse' : 'flex'" class="group items-end gap-2" :data-message-id="msg.id" dir="ltr">
+                        <!-- آواتار -->
+                        <template x-if="!msg.is_mine">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 overflow-hidden">
+                                <template x-if="msg.sender_avatar">
+                                    <img :src="msg.sender_avatar" class="w-full h-full object-cover" :alt="msg.sender_name">
+                                </template>
+                                <template x-if="!msg.sender_avatar">
+                                    <span x-text="msg.sender_initials || msg.sender_name?.charAt(0) || '?'"></span>
+                                </template>
+                            </div>
+                        </template>
+                        <div class="relative max-w-md" dir="rtl">
+                            <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-bl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-br-none shadow'" class="rounded-2xl px-4 py-3">
                                 <!-- Reply Preview -->
                                 <template x-if="msg.reply_to">
                                     <div @click.stop="scrollToMessage(msg.reply_to.id)" :class="msg.is_mine ? 'bg-brand-600/50 border-brand-300' : 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500'" class="mb-2 p-2 rounded-lg border-r-2 cursor-pointer text-xs">
