@@ -224,7 +224,14 @@
         <!-- Messages Area -->
         <template x-if="currentConversation">
             <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null" @scroll="handleMessagesScroll()">
-                <template x-for="msg in messages" :key="msg.id">
+                <template x-for="(msg, msgIndex) in messages" :key="msg.id">
+                    <div>
+                    <!-- جداکننده روزانه -->
+                    <template x-if="msg.date_label && (msgIndex === 0 || messages[msgIndex - 1]?.date !== msg.date)">
+                        <div class="flex items-center justify-center my-4">
+                            <div class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-4 py-1.5 rounded-full shadow-sm" x-text="msg.date_label"></div>
+                        </div>
+                    </template>
                     <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group" :data-message-id="msg.id">
                         <div class="relative max-w-md">
                             <div :class="msg.is_mine ? 'bg-brand-500 text-white rounded-tl-none' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tr-none shadow'" class="rounded-2xl px-4 py-3">
@@ -315,9 +322,14 @@
                                         </div>
                                         <!-- Read status ticks (only for my messages) -->
                                         <template x-if="msg.is_mine">
-                                            <span class="text-xs" :class="msg.is_read ? 'text-blue-400' : 'opacity-60'">
+                                            <span class="text-xs inline-flex items-center gap-0.5" :class="msg.is_read ? 'text-blue-400' : 'opacity-60'">
                                                 <template x-if="msg.is_read">
-                                                    <span title="خوانده شده">✓✓</span>
+                                                    <span>
+                                                        <span :title="msg.read_at ? 'مشاهده شده ' + msg.read_at : 'خوانده شده'">✓✓</span>
+                                                        <template x-if="msg.read_at">
+                                                            <span class="text-[10px] opacity-70 mr-0.5" x-text="msg.read_at"></span>
+                                                        </template>
+                                                    </span>
                                                 </template>
                                                 <template x-if="!msg.is_read">
                                                     <span title="ارسال شده">✓</span>
@@ -366,6 +378,7 @@
                             </template>
 
                         </div>
+                    </div>
                     </div>
                 </template>
             </div>

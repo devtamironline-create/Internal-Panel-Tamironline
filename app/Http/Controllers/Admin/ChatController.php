@@ -363,6 +363,18 @@ class ChatController extends Controller
                     ];
                 }
 
+                // ساعت مشاهده — اولین نفر غیر از فرستنده که خونده
+                $readAtTime = null;
+                if ($message->user_id === $userId && $isRead) {
+                    $firstRead = $message->readBy
+                        ->where('id', '!=', $userId)
+                        ->sortBy('pivot.read_at')
+                        ->first();
+                    if ($firstRead && $firstRead->pivot->read_at) {
+                        $readAtTime = \Carbon\Carbon::parse($firstRead->pivot->read_at)->format('H:i');
+                    }
+                }
+
                 return [
                     'id' => $message->id,
                     'content' => $message->body,
@@ -376,7 +388,10 @@ class ChatController extends Controller
                     'sender_initials' => $message->user->initials,
                     'is_mine' => $message->user_id === $userId,
                     'is_read' => $isRead,
+                    'read_at' => $readAtTime,
                     'time' => $message->created_at->format('H:i'),
+                    'date' => $message->created_at->format('Y-m-d'),
+                    'date_label' => $this->getDateLabel($message->created_at),
                     'reply_to' => $replyTo,
                     'reactions' => $reactions,
                     'task' => $taskData,
@@ -507,8 +522,11 @@ class ChatController extends Controller
                 'file_size' => $message->file_size,
                 'sender_name' => $message->user->full_name,
                 'is_mine' => true,
-                'is_read' => false, // New message is not read yet
+                'is_read' => false,
+                'read_at' => null,
                 'time' => $message->created_at->format('H:i'),
+                'date' => $message->created_at->format('Y-m-d'),
+                'date_label' => $this->getDateLabel($message->created_at),
                 'reply_to' => $replyTo,
                 'reactions' => [],
             ],
@@ -1470,4 +1488,28 @@ class ChatController extends Controller
         return response()->json(['tasks' => $tasks]);
     }
 
+    /**
+     * لیبل تاریخ شمسی برای جداکننده روزانه
+     */
+    private function getDateLabel(\Carbon\Carbon $date): string
+    {
+        $jalali = \Morilog\Jalali\Jalalian::fromCarbon($date);
+        $today = \Morilog\Jalali\Jalalian::now();
+        $yesterday = \Morilog\Jalali\Jalalian::fromCarbon(now()->subDay());
+
+        if ($jalali->format('Y-m-d') === $today->format('Y-m-d')) {
+            return 'امروز';
+        }
+        if ($jalali->format('Y-m-d') === $yesterday->format('Y-m-d')) {
+            return 'دیروز';
+        }
+
+        $dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+        $monthNames = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+
+        $dayOfWeek = $jalali->getDayOfWeek();
+        $dayName = $dayNames[$dayOfWeek] ?? '';
+
+        return $dayName . ' ' . $jalali->getDay() . ' ' . ($monthNames[$jalali->getMonth()] ?? '') . ' ' . $jalali->getYear();
+    }
 }

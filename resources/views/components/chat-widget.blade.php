@@ -204,7 +204,14 @@
             <div x-show="currentView === 'chat'" class="h-full flex flex-col" @click="showEmojiPicker = null">
                 <!-- Messages -->
                 <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
-                    <template x-for="msg in messages" :key="msg.id">
+                    <template x-for="(msg, msgIndex) in messages" :key="msg.id">
+                        <div>
+                        <!-- جداکننده روزانه -->
+                        <template x-if="msg.date_label && (msgIndex === 0 || messages[msgIndex - 1]?.date !== msg.date)">
+                            <div class="flex items-center justify-center my-3">
+                                <div class="bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[10px] font-medium px-3 py-1 rounded-full" x-text="msg.date_label"></div>
+                            </div>
+                        </template>
                         <div :class="msg.is_mine ? 'flex justify-start' : 'flex justify-end'" class="group transition-colors duration-500 rounded-lg px-2" :data-message-id="msg.id">
                             <div class="relative max-w-[80%]">
                                 <!-- Message Bubble -->
@@ -222,9 +229,14 @@
                                     </template>
                                     <!-- Message content -->
                                     <p class="text-sm whitespace-pre-wrap" x-text="msg.content"></p>
-                                    <!-- Time and Actions Row -->
+                                    <!-- Time, Read Status and Actions Row -->
                                     <div class="flex items-center justify-between gap-2 mt-1">
-                                        <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                        <span class="text-xs opacity-60 inline-flex items-center gap-1">
+                                            <span x-text="msg.time"></span>
+                                            <template x-if="msg.is_mine">
+                                                <span :class="msg.is_read ? 'text-blue-400' : 'opacity-60'" :title="msg.is_read ? 'خوانده شده' : 'ارسال شده'" x-text="msg.is_read ? '✓✓' : '✓'"></span>
+                                            </template>
+                                        </span>
                                         <!-- Inline Actions -->
                                         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button @click.stop="setReplyTo(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="پاسخ">
@@ -250,6 +262,7 @@
                                 </template>
 
                             </div>
+                        </div>
                         </div>
                     </template>
                     <template x-if="isTyping">
