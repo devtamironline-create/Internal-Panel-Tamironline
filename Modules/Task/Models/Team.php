@@ -67,7 +67,8 @@ class Team extends Model
 
     public static function getActive()
     {
-        return self::where('is_active', true)
+        return self::with('members')
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();
     }

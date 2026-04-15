@@ -17,12 +17,27 @@ class TaskController extends Controller
      */
     public function index(Request $request)
     {
-        $teams = Team::getActive();
+        $user = auth()->user();
+        $canViewAll = $user->can('view-all-tasks') || $user->can('manage-permissions');
+
+        // فقط تیم‌هایی که کاربر عضوشونه — مگه اینکه دسترسی مشاهده همه تیم‌ها رو داشته باشه
+        if ($canViewAll) {
+            $teams = Team::getActive();
+        } else {
+            $teams = Team::getActive()->filter(function ($team) use ($user) {
+                return $team->members->contains('id', $user->id) || $team->leader_id === $user->id;
+            })->values();
+        }
+
         $currentTeam = null;
         $tasks = collect();
 
         if ($request->filled('team')) {
             $currentTeam = Team::where('slug', $request->team)->first();
+            // اگه دسترسی نداره و عضو تیم نیست، اجازه نده
+            if ($currentTeam && !$canViewAll && !$currentTeam->members->contains('id', $user->id) && $currentTeam->leader_id !== $user->id) {
+                abort(403, 'شما عضو این تیم نیستید.');
+            }
         }
 
         if (!$currentTeam && $teams->isNotEmpty()) {

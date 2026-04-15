@@ -30,6 +30,7 @@ class PermissionSeeder extends Seeder
 
             // تسک
             'view-tasks' => 'مشاهده تسک‌ها',
+            'view-all-tasks' => 'مشاهده تسک همه تیم‌ها',
             'create-tasks' => 'ایجاد تسک',
             'manage-tasks' => 'مدیریت تسک‌ها',
 
@@ -85,7 +86,7 @@ class PermissionSeeder extends Seeder
                     'view-staff', 'manage-staff',
                     'view-attendance', 'manage-attendance',
                     'view-leave', 'request-leave', 'manage-leave',
-                    'view-tasks', 'create-tasks', 'manage-tasks',
+                    'view-tasks', 'view-all-tasks', 'create-tasks', 'manage-tasks',
                     'view-teams', 'manage-teams',
                     'view-reports',
                     'use-messenger',
