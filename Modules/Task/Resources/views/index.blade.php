@@ -115,74 +115,74 @@
             <!-- Tasks -->
             <div class="space-y-3" id="column-{{ $status }}">
                 @foreach($column['tasks'] as $task)
-                <div class="task-card bg-white dark:bg-gray-700 rounded-lg shadow-sm p-4 cursor-grab hover:shadow-md transition"
+                <div class="task-card bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 p-4 cursor-grab hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-500 transition-all duration-200"
                     draggable="true"
                     data-task-id="{{ $task->id }}"
                     @dragstart="handleDragStart($event, {{ $task->id }})"
                     @dragend="handleDragEnd($event)"
                     @click="openTaskModal({{ $task->id }})">
 
-                    <!-- Priority Badge -->
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-{{ $task->priority_color }}-100 dark:bg-{{ $task->priority_color }}-900/30 text-{{ $task->priority_color }}-700 dark:text-{{ $task->priority_color }}-400">
-                            {{ $task->priority_label }}
-                        </span>
-                        @if($task->is_overdue)
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
-                            تاخیر
+                    <!-- Top Row: Priority + Overdue + Due Date -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-{{ $task->priority_color }}-100 dark:bg-{{ $task->priority_color }}-900/30 text-{{ $task->priority_color }}-700 dark:text-{{ $task->priority_color }}-400">
+                                <span class="w-1.5 h-1.5 rounded-full bg-{{ $task->priority_color }}-500"></span>
+                                {{ $task->priority_label }}
+                            </span>
+                            @if($task->is_overdue)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                تاخیر
+                            </span>
+                            @endif
+                        </div>
+                        @if($task->due_date)
+                        <span class="text-xs font-medium {{ $task->is_overdue ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500' }}">
+                            {{ $task->jalali_due_date }}
                         </span>
                         @endif
                     </div>
 
+                    <!-- Title -->
+                    <h4 class="font-bold text-sm text-gray-900 dark:text-white leading-6 mb-2">
+                        {{ $task->title }}
+                    </h4>
+
                     <!-- Categories -->
                     @if($task->categories->isNotEmpty())
-                    <div class="flex flex-wrap gap-1 mb-2">
+                    <div class="flex flex-wrap gap-1 mb-3">
                         @foreach($task->categories as $cat)
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-{{ $cat->color }}-100 dark:bg-{{ $cat->color }}-900/30 text-{{ $cat->color }}-700 dark:text-{{ $cat->color }}-400">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-{{ $cat->color }}-50 dark:bg-{{ $cat->color }}-900/20 text-{{ $cat->color }}-600 dark:text-{{ $cat->color }}-400 border border-{{ $cat->color }}-200 dark:border-{{ $cat->color }}-800/50">
                             {{ $cat->name }}
                         </span>
                         @endforeach
                     </div>
                     @endif
 
-                    <!-- Title -->
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">
-                        {{ $task->title }}
-                    </h4>
-
                     <!-- Checklist Progress -->
                     @if($task->checklists->count() > 0)
                     @php $progress = $task->checklist_progress; @endphp
-                    <div class="mb-2">
-                        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            <span>چک‌لیست</span>
-                            <span>{{ $progress['completed'] }}/{{ $progress['total'] }}</span>
-                        </div>
-                        <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                            <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ $progress['percentage'] }}%"></div>
+                    <div class="mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-gray-100 dark:bg-gray-600 rounded-full h-1.5">
+                                <div class="bg-green-500 h-1.5 rounded-full transition-all" style="width: {{ $progress['percentage'] }}%"></div>
+                            </div>
+                            <span class="text-[11px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">{{ $progress['completed'] }}/{{ $progress['total'] }}</span>
                         </div>
                     </div>
                     @endif
 
-                    <!-- Footer -->
-                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-600">
-                        <!-- Assignee -->
+                    <!-- Assignee -->
+                    <div class="flex items-center gap-2.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-600">
                         @if($task->assignee)
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs">
-                                {{ mb_substr($task->assignee->first_name ?? 'U', 0, 1) }}
-                            </div>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ $task->assignee->first_name }}</span>
+                        <div class="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {{ mb_substr($task->assignee->first_name ?? 'U', 0, 1) }}
                         </div>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $task->assignee->full_name }}</span>
                         @else
-                        <span class="text-xs text-gray-400 dark:text-gray-500">بدون مسئول</span>
-                        @endif
-
-                        <!-- Due Date -->
-                        @if($task->due_date)
-                        <span class="text-xs {{ $task->is_overdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400' }}">
-                            {{ $task->jalali_due_date }}
-                        </span>
+                        <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </div>
+                        <span class="text-sm text-gray-400 dark:text-gray-500">بدون مسئول</span>
                         @endif
                     </div>
                 </div>
