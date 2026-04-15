@@ -233,7 +233,8 @@ class PrintController extends Controller
             $order->refresh();
         }
 
-        // اگه سرویس COD24 هست ولی بارکد قدیمی داره، پاک کن تا دوباره ثبت بشه
+        // اگه سرویس COD24 هست ولی بارکد قدیمی از سرویس دیگه داره، پاک کن تا دوباره ثبت بشه
+        // ولی فقط وقتی که COD24 قبلاً ثبت نشده باشه
         $cod24Registered = ($wcData['cod24']['registered'] ?? false);
         if ($order->shipping_type === 'post' && $shippingProvider === 'cod24' && !empty($order->amadest_barcode) && !$cod24Registered) {
             Log::info('Clearing old barcode for COD24 re-registration', [
@@ -244,15 +245,14 @@ class PrintController extends Controller
             $order->refresh();
         }
 
-        if ($order->shipping_type === 'post' && empty($order->amadest_barcode)) {
-            // اگه قبلاً در COD24 ثبت شده، دیگه ثبت خودکار نکن
-            $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
-            $alreadyRegistered = ($wcData['cod24']['registered'] ?? false) && $shippingProvider === 'cod24';
+        // چک قوی: اگه در سرویس فعلی قبلاً ثبت شده، دیگه ثبت خودکار نکن
+        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
+        $alreadyRegisteredInProvider =
+            ($shippingProvider === 'cod24' && ($wcData['cod24']['registered'] ?? false)) ||
+            ($shippingProvider === 'tapin' && ($wcData['tapin']['registered'] ?? false)) ||
+            ($shippingProvider === 'postex' && ($wcData['postex']['registered'] ?? false));
 
-            if ($alreadyRegistered) {
-                Log::info('Skipping auto-register: already registered in COD24', ['order' => $order->order_number]);
-                $registrationError = null;
-            } else {
+        if ($order->shipping_type === 'post' && empty($order->amadest_barcode) && !$alreadyRegisteredInProvider) {
             try {
                 $shipping = $wcData['shipping'] ?? [];
                 $billing = $wcData['billing'] ?? [];
@@ -296,7 +296,8 @@ class PrintController extends Controller
                 $registrationError = $shippingProvider . ': ' . $e->getMessage();
                 Log::error('Shipping auto-register error', ['provider' => $shippingProvider, 'order' => $order->order_number, 'error' => $e->getMessage()]);
             }
-            } // end of !$alreadyRegistered
+        } elseif ($order->shipping_type === 'post' && $alreadyRegisteredInProvider) {
+            Log::info('Skipping auto-register: already registered in ' . $shippingProvider, ['order' => $order->order_number]);
         }
 
         // فقط نمایش صفحه — ثبت چاپ با دکمه انجام میشه

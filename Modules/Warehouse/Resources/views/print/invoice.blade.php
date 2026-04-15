@@ -862,15 +862,13 @@
             if (filterInput) filterInput.style.display = cities.length > 15 ? 'block' : 'none';
 
             if (statusEl) {
-                var msg = autoSelected ? '✓ شهر «' + cod24OrderCity + '» خودکار انتخاب شد — در حال ثبت...' : (cities.length > 0 ? 'لطفاً شهر را انتخاب کنید' : 'شهری یافت نشد');
+                var msg = autoSelected ? '✓ شهر «' + cod24OrderCity + '» خودکار انتخاب شد — برای ثبت دکمه را بزنید' : (cities.length > 0 ? 'لطفاً شهر را انتخاب کنید' : 'شهری یافت نشد');
                 statusEl.textContent = msg;
                 statusEl.style.color = autoSelected ? '#0369a1' : '#888';
             }
 
-            // اگه شهر خودکار پیدا شد، خودش ثبت کنه
-            if (autoSelected) {
-                retryWithCod24City();
-            }
+            // اگه شهر خودکار پیدا شد، فقط نمایش بده — ثبت فقط با دکمه دستی
+            // (حذف auto-retry برای جلوگیری از ثبت مکرر در COD24)
         }
 
         function filterCod24Cities() {
