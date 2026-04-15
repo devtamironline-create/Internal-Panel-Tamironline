@@ -68,12 +68,14 @@ class TaskActivity extends Model
 
     private function getAssignedLabel(): string
     {
-        if ($this->new_value) {
-            $user = \App\Models\User::find($this->new_value);
-            $name = $user ? $user->full_name : 'نامشخص';
-            return "تسک را به «{$name}» واگذار کرد";
-        }
-        return 'مسئول تسک را برداشت';
+        try {
+            if ($this->new_value) {
+                $user = \App\Models\User::find($this->new_value);
+                $name = $user ? $user->full_name : 'نامشخص';
+                return "تسک را به «{$name}» واگذار کرد";
+            }
+        } catch (\Exception $e) {}
+        return 'مسئول تسک را تغییر داد';
     }
 
     public static function translateStatus(?string $status): string

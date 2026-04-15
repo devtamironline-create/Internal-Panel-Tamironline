@@ -614,9 +614,12 @@ function kanbanBoard() {
                         'Accept': 'application/json',
                     }
                 });
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
                 this.currentTask = await response.json();
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error loading task:', error);
                 alert('خطا در بارگذاری تسک');
                 this.showTaskModal = false;
             } finally {
