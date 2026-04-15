@@ -83,7 +83,10 @@ class TaskController extends Controller
         // Get categories for filter (عمومی + مختص تیم فعلی)
         $categories = $currentTeam ? TaskCategory::getForTeam($currentTeam->id) : collect();
 
-        return view('task::index', compact('teams', 'currentTeam', 'columns', 'teamMembers', 'categories'));
+        // چت تیم
+        $teamConversationId = $currentTeam?->conversation?->id;
+
+        return view('task::index', compact('teams', 'currentTeam', 'columns', 'teamMembers', 'categories', 'teamConversationId'));
     }
 
     /**

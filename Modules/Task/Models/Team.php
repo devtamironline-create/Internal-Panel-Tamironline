@@ -60,6 +60,11 @@ class Team extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function conversation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Chat\Conversation::class);
+    }
+
     public function labels(): HasMany
     {
         return $this->hasMany(TaskLabel::class);

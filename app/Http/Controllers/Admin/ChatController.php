@@ -503,6 +503,9 @@ class ChatController extends Controller
 
         $message->load(['user', 'replyTo.user']);
 
+        // پارسر منشن: پیدا کردن @نام_کاربر در متن پیام
+        $this->processMentions($message, $conversation);
+
         // Prepare reply_to info
         $replyTo = null;
         if ($message->replyTo) {
@@ -1513,5 +1516,85 @@ class ChatController extends Controller
         $dayName = $dayNames[$dayOfWeek] ?? '';
 
         return $dayName . ' ' . $jalali->getDay() . ' ' . ($monthNames[$jalali->getMonth()] ?? '') . ' ' . $jalali->getYear();
+    }
+
+    /**
+     * لیست کاربران قابل منشن در یک گروه
+     */
+    public function mentionableUsers(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $users = $conversation->activeParticipants()
+            ->where('users.id', '!=', $userId)
+            ->select('users.id', 'users.first_name', 'users.last_name', 'users.avatar')
+            ->get()
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->full_name,
+                'first_name' => $u->first_name,
+                'avatar' => $u->avatar,
+            ]);
+
+        return response()->json(['users' => $users]);
+    }
+
+    /**
+     * پارسر منشن: پیدا کردن @نام در متن و ذخیره + نوتیفیکیشن
+     */
+    private function processMentions(Message $message, Conversation $conversation): void
+    {
+        $body = $message->body ?? '';
+        if (empty($body) || !str_contains($body, '@')) {
+            return;
+        }
+
+        // پیدا کردن همه اعضای گروه
+        $participants = $conversation->activeParticipants()
+            ->where('users.id', '!=', $message->user_id)
+            ->get();
+
+        $mentionedUserIds = [];
+
+        foreach ($participants as $user) {
+            $fullName = $user->full_name;
+            $firstName = $user->first_name;
+
+            // چک نام کامل و نام کوچک
+            if (str_contains($body, '@' . $fullName) || str_contains($body, '@' . $firstName)) {
+                $mentionedUserIds[] = $user->id;
+            }
+        }
+
+        // چک @همه / @all
+        if (str_contains($body, '@همه') || str_contains($body, '@all')) {
+            $mentionedUserIds = $participants->pluck('id')->toArray();
+        }
+
+        $mentionedUserIds = array_unique($mentionedUserIds);
+
+        // ذخیره منشن‌ها و ارسال نوتیفیکیشن
+        foreach ($mentionedUserIds as $userId) {
+            \App\Models\Chat\MessageMention::create([
+                'message_id' => $message->id,
+                'user_id' => $userId,
+                'conversation_id' => $conversation->id,
+            ]);
+
+            // نوتیفیکیشن
+            $user = User::find($userId);
+            if ($user) {
+                $senderName = $message->user->full_name ?? 'کاربر';
+                $convName = $conversation->name ?? 'چت';
+                $preview = mb_substr($body, 0, 60);
+                $user->notify(new \App\Notifications\MentionNotification(
+                    $message, $conversation, $senderName, $preview
+                ));
+            }
+        }
     }
 }

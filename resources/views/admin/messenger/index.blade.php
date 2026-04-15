@@ -446,7 +446,29 @@
                     <button @click="$refs.fileInput.click()" class="p-2 mb-1 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="ارسال فایل (حداکثر ۵۰ مگابایت)">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     </button>
-                    <textarea x-model="newMessage" @keydown.enter="if(!$event.shiftKey) { $event.preventDefault(); sendMessage(); }" @keydown.escape="replyingTo = null" x-ref="messageInput" rows="1" class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto" placeholder="پیام خود را بنویسید..." @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 128) + 'px'"></textarea>
+                    <div class="flex-1 relative">
+                        {{-- Mention Dropdown --}}
+                        <div x-show="showMentionDropdown" x-cloak class="absolute bottom-full mb-1 right-0 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                            <template x-for="(user, idx) in mentionFiltered" :key="user.id">
+                                <button @click="selectMention(user)" type="button"
+                                    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-right hover:bg-brand-50 dark:hover:bg-brand-900/20 transition"
+                                    :class="idx === selectedMentionIndex ? 'bg-brand-50 dark:bg-brand-900/20' : ''">
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                        :class="user.id === 'all' ? 'bg-yellow-500' : 'bg-brand-500'"
+                                        x-text="user.id === 'all' ? '@' : user.first_name.charAt(0)"></div>
+                                    <span class="font-medium text-gray-900 dark:text-white" x-text="user.name"></span>
+                                </button>
+                            </template>
+                        </div>
+                        <textarea x-model="newMessage"
+                            @keydown.enter="if(showMentionDropdown) { $event.preventDefault(); selectMention(mentionFiltered[selectedMentionIndex]); } else if(!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
+                            @keydown.escape="showMentionDropdown ? (showMentionDropdown = false) : (replyingTo = null)"
+                            @keydown="handleMentionKeydown($event)"
+                            @input="handleMentionInput($event); $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 128) + 'px'"
+                            x-ref="messageInput" rows="1"
+                            class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto"
+                            placeholder="پیام خود را بنویسید... (@ برای منشن)"></textarea>
+                    </div>
                     <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 mb-1 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition flex-shrink-0">
                         <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     </button>
@@ -1180,6 +1202,14 @@ function messenger() {
         expectedDeleteCode: '',
         isDeleting: false,
 
+        // Mention state
+        mentionUsers: [],
+        mentionFiltered: [],
+        showMentionDropdown: false,
+        mentionQuery: '',
+        mentionStartPos: -1,
+        selectedMentionIndex: 0,
+
         // Reply & Reaction state
         replyingTo: null,
         showEmojiPicker: null,
@@ -1360,6 +1390,9 @@ function messenger() {
                 this.isConversationAdmin = false;
                 this.conversationMembers = [];
             }
+
+            // لود لیست کاربران قابل منشن
+            this.loadMentionUsers();
 
             this.$nextTick(() => this.scrollToBottom());
         },
@@ -1719,8 +1752,81 @@ function messenger() {
             }
         },
 
+        // --- Mention methods ---
+        async loadMentionUsers() {
+            if (!this.currentConversation || this.currentConversation.type === 'private') return;
+            try {
+                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/mentionable-users`);
+                const data = await resp.json();
+                this.mentionUsers = data.users || [];
+            } catch (e) { this.mentionUsers = []; }
+        },
+
+        handleMentionInput(e) {
+            const textarea = e.target;
+            const val = textarea.value;
+            const pos = textarea.selectionStart;
+
+            // پیدا کردن @ قبل از کرسر
+            const before = val.substring(0, pos);
+            const atIndex = before.lastIndexOf('@');
+
+            if (atIndex >= 0 && (atIndex === 0 || before[atIndex - 1] === ' ' || before[atIndex - 1] === '\n')) {
+                const query = before.substring(atIndex + 1);
+                if (!query.includes(' ') || query.length < 20) {
+                    this.mentionQuery = query;
+                    this.mentionStartPos = atIndex;
+                    this.mentionFiltered = this.mentionUsers.filter(u =>
+                        u.name.includes(query) || u.first_name.includes(query)
+                    );
+                    // اضافه کردن "همه" به لیست
+                    if ('همه'.includes(query) || 'all'.includes(query.toLowerCase())) {
+                        this.mentionFiltered.unshift({ id: 'all', name: 'همه', first_name: 'همه', avatar: null });
+                    }
+                    this.showMentionDropdown = this.mentionFiltered.length > 0;
+                    this.selectedMentionIndex = 0;
+                    return;
+                }
+            }
+            this.showMentionDropdown = false;
+        },
+
+        handleMentionKeydown(e) {
+            if (!this.showMentionDropdown) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.selectedMentionIndex = Math.min(this.selectedMentionIndex + 1, this.mentionFiltered.length - 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.selectedMentionIndex = Math.max(this.selectedMentionIndex - 1, 0);
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.selectMention(this.mentionFiltered[this.selectedMentionIndex]);
+            } else if (e.key === 'Escape') {
+                this.showMentionDropdown = false;
+            }
+        },
+
+        selectMention(user) {
+            if (!user) return;
+            const before = this.newMessage.substring(0, this.mentionStartPos);
+            const after = this.newMessage.substring(this.mentionStartPos + 1 + this.mentionQuery.length);
+            const mentionText = user.id === 'all' ? '@همه' : '@' + user.name;
+            this.newMessage = before + mentionText + ' ' + after;
+            this.showMentionDropdown = false;
+            this.$nextTick(() => {
+                const textarea = this.$refs.messageInput;
+                if (textarea) {
+                    const newPos = before.length + mentionText.length + 1;
+                    textarea.selectionStart = textarea.selectionEnd = newPos;
+                    textarea.focus();
+                }
+            });
+        },
+
         async sendMessage() {
             if (!this.newMessage.trim() || !this.currentConversation) return;
+            this.showMentionDropdown = false;
             const message = this.newMessage;
             const replyToId = this.replyingTo?.id || null;
             this.newMessage = '';

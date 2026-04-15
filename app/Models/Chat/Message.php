@@ -67,6 +67,11 @@ class Message extends Model
         return $this->hasMany(MessageReaction::class);
     }
 
+    public function mentions(): HasMany
+    {
+        return $this->hasMany(MessageMention::class);
+    }
+
     public function task(): HasOne
     {
         return $this->hasOne(Task::class);

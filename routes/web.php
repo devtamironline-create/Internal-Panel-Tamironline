@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::post('/conversations/{conversation}/pin/global', [ChatController::class, 'toggleGlobalPin'])->name('conversations.pin.global');
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
+        Route::get('/conversations/{conversation}/mentionable-users', [ChatController::class, 'mentionableUsers'])->name('mentionable-users');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
         Route::post('/activity-status', [ChatController::class, 'setActivityStatus'])->name('activity-status');
         Route::post('/heartbeat', [ChatController::class, 'heartbeat'])->name('heartbeat');

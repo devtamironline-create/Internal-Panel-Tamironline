@@ -58,6 +58,9 @@ class TeamController extends Controller
             $team->members()->attach($validated['members']);
         }
 
+        // ساخت گروه چت اختصاصی تیم
+        $this->createTeamConversation($team);
+
         return redirect()->route('teams.index')
             ->with('success', 'تیم با موفقیت ایجاد شد.');
     }
@@ -100,6 +103,9 @@ class TeamController extends Controller
 
         // Sync team members
         $team->members()->sync($validated['members'] ?? []);
+
+        // سینک اعضای گروه چت تیم
+        $this->syncTeamConversationMembers($team);
 
         return redirect()->route('teams.index')
             ->with('success', 'تیم با موفقیت بروزرسانی شد.');
@@ -190,5 +196,74 @@ class TeamController extends Controller
             'orange' => 'نارنجی',
             'gray' => 'خاکستری',
         ];
+    }
+
+    /**
+     * ساخت گروه چت اختصاصی برای تیم
+     */
+    private function createTeamConversation(Team $team): void
+    {
+        if ($team->conversation) {
+            return;
+        }
+
+        $conversation = \App\Models\Chat\Conversation::create([
+            'type' => 'group',
+            'name' => 'چت تیم ' . $team->name,
+            'description' => 'گروه چت اختصاصی تیم ' . $team->name,
+            'created_by' => auth()->id(),
+            'team_id' => $team->id,
+            'settings' => [
+                'is_public' => false,
+                'members_can_add_others' => false,
+            ],
+        ]);
+
+        // اضافه کردن اعضای تیم به گروه چت
+        $memberIds = $team->members()->pluck('users.id')->toArray();
+        if (auth()->id() && !in_array(auth()->id(), $memberIds)) {
+            $memberIds[] = auth()->id();
+        }
+
+        foreach ($memberIds as $userId) {
+            $conversation->participants()->attach($userId, [
+                'joined_at' => now(),
+                'is_admin' => $userId === auth()->id(),
+            ]);
+        }
+    }
+
+    /**
+     * سینک اعضای گروه چت با اعضای تیم
+     */
+    private function syncTeamConversationMembers(Team $team): void
+    {
+        $conversation = $team->conversation;
+        if (!$conversation) {
+            $this->createTeamConversation($team);
+            return;
+        }
+
+        $teamMemberIds = $team->members()->pluck('users.id')->toArray();
+        $currentParticipantIds = $conversation->activeParticipants()->pluck('users.id')->toArray();
+
+        // اضافه کردن اعضای جدید
+        $toAdd = array_diff($teamMemberIds, $currentParticipantIds);
+        foreach ($toAdd as $userId) {
+            if ($conversation->participants()->where('user_id', $userId)->exists()) {
+                $conversation->participants()->updateExistingPivot($userId, ['left_at' => null, 'joined_at' => now()]);
+            } else {
+                $conversation->participants()->attach($userId, ['joined_at' => now()]);
+            }
+        }
+
+        // حذف اعضایی که از تیم خارج شدن (soft: فقط left_at ست میشه)
+        $toRemove = array_diff($currentParticipantIds, $teamMemberIds);
+        // سازنده گروه رو حذف نکن
+        $creatorId = $conversation->created_by;
+        foreach ($toRemove as $userId) {
+            if ($userId === $creatorId) continue;
+            $conversation->participants()->updateExistingPivot($userId, ['left_at' => now()]);
+        }
     }
 }

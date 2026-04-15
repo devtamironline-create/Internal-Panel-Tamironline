@@ -17,6 +17,7 @@ class Conversation extends Model
         'description',
         'avatar',
         'created_by',
+        'team_id',
         'settings',
     ];
 
@@ -40,6 +41,11 @@ class Conversation extends Model
     public function activeParticipants(): BelongsToMany
     {
         return $this->participants()->whereNull('conversation_participants.left_at');
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Task\Models\Team::class);
     }
 
     public function messages(): HasMany
