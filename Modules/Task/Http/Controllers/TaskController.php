@@ -211,7 +211,7 @@ class TaskController extends Controller
      */
     public function json(Task $task)
     {
-        $task->load(['team', 'creator', 'assignee', 'labels', 'checklists', 'comments.user']);
+        $task->load(['team', 'creator', 'assignee', 'labels', 'checklists', 'comments.user', 'activities.user']);
 
         $progress = $task->checklist_progress;
 
@@ -244,6 +244,13 @@ class TaskController extends Controller
                 'user_name' => $c->user?->full_name ?? 'نامشخص',
                 'user_initial' => mb_substr($c->user?->first_name ?? 'U', 0, 1),
                 'created_at' => \Morilog\Jalali\Jalalian::fromDateTime($c->created_at)->format('Y/m/d H:i'),
+            ]),
+            'activities' => $task->activities->map(fn($a) => [
+                'id' => $a->id,
+                'user_name' => $a->user?->first_name ?? 'سیستم',
+                'description' => $a->description ?? $a->action_label,
+                'action' => $a->action,
+                'created_at' => \Morilog\Jalali\Jalalian::fromDateTime($a->created_at)->format('Y/m/d H:i'),
             ]),
         ]);
     }

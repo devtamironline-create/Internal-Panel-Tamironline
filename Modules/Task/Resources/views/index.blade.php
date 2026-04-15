@@ -496,6 +496,25 @@
                         </div>
                     </div>
 
+                    <!-- Activity Log -->
+                    <div class="p-5" x-show="currentTask.activities && currentTask.activities.length > 0">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">تاریخچه فعالیت</h4>
+                        <div class="space-y-2.5 max-h-48 overflow-y-auto">
+                            <template x-for="activity in currentTask.activities" :key="activity.id">
+                                <div class="flex items-start gap-2 text-xs">
+                                    <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" :class="activity.action === 'status_changed' ? 'text-brand-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div>
+                                        <span class="font-medium text-gray-900 dark:text-white" x-text="activity.user_name"></span>
+                                        <span class="text-gray-600 dark:text-gray-400" x-text="activity.description"></span>
+                                        <span class="block text-gray-400 dark:text-gray-500 mt-0.5" x-text="activity.created_at"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     <!-- Modal Footer -->
                     <div class="p-5 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
                         <button @click="deleteTask()" class="text-red-600 hover:text-red-700 text-sm">
