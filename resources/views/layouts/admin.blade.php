@@ -183,6 +183,16 @@
     :class="{ 'dark': darkMode }"
     class="font-vazir bg-gray-50 dark:bg-gray-900"
 >
+    <!-- Full Page Loading -->
+    <div id="page-loader" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#f9fafb;transition:opacity .3s ease">
+        <div style="text-align:center">
+            <div style="width:40px;height:40px;margin:0 auto 12px;border:3px solid #e5e7eb;border-top-color:#465fff;border-radius:50%;animation:spin .7s linear infinite"></div>
+            <p style="color:#6b7280;font-size:13px;font-family:Vazirmatn,sans-serif">در حال بارگذاری...</p>
+        </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}} .dark #page-loader{background:#111827} .dark #page-loader p{color:#9ca3af} .dark #page-loader div>div{border-color:#374151;border-top-color:#465fff}</style>
+    <script>window.addEventListener('load',function(){var l=document.getElementById('page-loader');if(l){l.style.opacity='0';setTimeout(function(){l.remove()},300)}})</script>
+
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside
