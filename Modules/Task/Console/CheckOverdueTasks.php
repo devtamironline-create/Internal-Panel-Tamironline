@@ -36,7 +36,11 @@ class CheckOverdueTasks extends Command
 
             $task->update(['reminder_sent_at' => now()]);
 
-            $task->logActivity('reminder_sent', null, null, null, "یادآوری ددلاین ارسال شد به {$assignee->full_name}");
+            $task->activities()->create([
+                'user_id' => $assignee->id,
+                'action' => 'reminder_sent',
+                'description' => "یادآوری ددلاین ارسال شد به {$assignee->full_name}",
+            ]);
 
             $count++;
             $this->line("  یادآوری: {$task->title} → {$assignee->full_name}");
