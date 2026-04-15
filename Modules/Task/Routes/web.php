@@ -36,6 +36,7 @@ Route::middleware(['web', 'auth'])->prefix('task-categories')->group(function ()
 Route::middleware(['web', 'auth'])->prefix('tasks')->group(function () {
     // Main views
     Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
     Route::get('/my', [TaskController::class, 'myTasks'])->name('tasks.my');
 
     // CRUD

@@ -111,6 +111,85 @@ class TaskController extends Controller
     }
 
     /**
+     * Calendar view
+     */
+    public function calendar(Request $request)
+    {
+        $user = auth()->user();
+        $canViewAll = $user->can('view-all-tasks');
+
+        if ($canViewAll) {
+            $teams = Team::getActive();
+        } else {
+            $teams = Team::getActive()->filter(function ($team) use ($user) {
+                return $team->members->contains('id', $user->id) || $team->leader_id === $user->id;
+            })->values();
+        }
+
+        // تیم انتخاب شده
+        $currentTeam = null;
+        if ($request->filled('team')) {
+            $currentTeam = Team::where('slug', $request->team)->first();
+            if ($currentTeam && !$canViewAll && !$currentTeam->members->contains('id', $user->id) && $currentTeam->leader_id !== $user->id) {
+                abort(403);
+            }
+        }
+        if (!$currentTeam && $teams->isNotEmpty()) {
+            $currentTeam = $teams->first();
+        }
+
+        // ماه و سال شمسی
+        $now = \Morilog\Jalali\Jalalian::now();
+        $jYear = (int) ($request->input('year', $now->getYear()));
+        $jMonth = (int) ($request->input('month', $now->getMonth()));
+
+        // اول و آخر ماه شمسی → میلادی
+        $startOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/1")->toCarbon()->startOfDay();
+        $daysInMonth = $jMonth <= 6 ? 31 : ($jMonth <= 11 ? 30 : (\Morilog\Jalali\CalendarUtils::isLeapJalaliYear($jYear) ? 30 : 29));
+        $endOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/{$daysInMonth}")->toCarbon()->endOfDay();
+
+        // روز هفته اول ماه (شنبه=0)
+        $firstDayJalali = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/1");
+        $firstDayOfWeek = $firstDayJalali->getDayOfWeek(); // 0=شنبه ... 6=جمعه
+
+        // تسک‌های این ماه با ددلاین
+        $query = Task::with(['assignee', 'team', 'categories'])
+            ->whereNotNull('due_date')
+            ->whereBetween('due_date', [$startOfMonth, $endOfMonth])
+            ->mainTasks();
+
+        if ($currentTeam) {
+            $query->forTeam($currentTeam->id);
+        }
+
+        $tasks = $query->orderBy('due_date')->get();
+
+        // گروه‌بندی تسک‌ها بر اساس روز شمسی
+        $tasksByDay = [];
+        foreach ($tasks as $task) {
+            $jalaliDay = (int) \Morilog\Jalali\Jalalian::fromDateTime($task->due_date)->getDay();
+            $tasksByDay[$jalaliDay][] = $task;
+        }
+
+        // ماه‌ها
+        $monthNames = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+
+        // ماه قبل/بعد
+        $prevMonth = $jMonth - 1;
+        $prevYear = $jYear;
+        if ($prevMonth < 1) { $prevMonth = 12; $prevYear--; }
+        $nextMonth = $jMonth + 1;
+        $nextYear = $jYear;
+        if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
+
+        return view('task::calendar', compact(
+            'teams', 'currentTeam', 'jYear', 'jMonth', 'daysInMonth',
+            'firstDayOfWeek', 'tasksByDay', 'monthNames',
+            'prevMonth', 'prevYear', 'nextMonth', 'nextYear'
+        ));
+    }
+
+    /**
      * Create task form
      */
     public function create(Request $request)
