@@ -253,10 +253,12 @@ class TaskController extends Controller
      */
     public function edit(Task $task)
     {
+        $task->load('categories');
         $teams = Team::getActive();
         $teamMembers = $task->team->members;
+        $categories = TaskCategory::getForTeam($task->team_id);
 
-        return view('task::edit', compact('task', 'teams', 'teamMembers'));
+        return view('task::edit', compact('task', 'teams', 'teamMembers', 'categories'));
     }
 
     /**
@@ -299,6 +301,9 @@ class TaskController extends Controller
             'priority' => $request->priority,
             'due_date' => $dueDate,
         ]);
+
+        // Sync categories
+        $task->categories()->sync($request->input('categories', []));
 
         // Log changes
         foreach ($changes as $field => $change) {

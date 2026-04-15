@@ -93,6 +93,27 @@
             </div>
         </div>
 
+        <!-- Categories -->
+        @if($categories->isNotEmpty())
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">دسته‌بندی</h3>
+            <div class="flex flex-wrap gap-2">
+                @foreach($categories as $cat)
+                <label class="relative cursor-pointer">
+                    <input type="checkbox" name="categories[]" value="{{ $cat->id }}" class="peer sr-only"
+                        {{ $task->categories->contains('id', $cat->id) ? 'checked' : '' }}>
+                    <div class="inline-flex items-center gap-1.5 px-3 py-2 border-2 border-gray-200 rounded-lg transition text-sm
+                        peer-checked:border-{{ $cat->color }}-500 peer-checked:bg-{{ $cat->color }}-50
+                        hover:bg-gray-50">
+                        <span class="w-2.5 h-2.5 rounded-full bg-{{ $cat->color }}-500"></span>
+                        <span class="text-gray-700">{{ $cat->name }}</span>
+                    </div>
+                </label>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <!-- Submit -->
         <div class="flex justify-end gap-4">
             <a href="{{ route('tasks.show', $task) }}"
