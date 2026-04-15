@@ -186,16 +186,16 @@
             <!-- Activity Log -->
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h3 class="text-sm font-bold text-gray-900 mb-3">تاریخچه فعالیت</h3>
-                <div class="space-y-3 max-h-64 overflow-y-auto">
-                    @foreach($task->activities->take(10) as $activity)
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    @foreach($task->activities as $activity)
                     <div class="flex items-start gap-2 text-xs">
-                        <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0 {{ $activity->action === 'status_changed' ? 'text-brand-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $activity->action_icon }}"/>
                         </svg>
                         <div>
-                            <span class="text-gray-900">{{ $activity->user->first_name }}</span>
-                            <span class="text-gray-500">{{ $activity->description ?? $activity->action_label }}</span>
-                            <span class="block text-gray-400">{{ \Morilog\Jalali\Jalalian::fromDateTime($activity->created_at)->format('m/d H:i') }}</span>
+                            <span class="font-medium text-gray-900">{{ $activity->user?->first_name ?? 'سیستم' }}</span>
+                            <span class="text-gray-600">{{ $activity->description ?? $activity->action_label }}</span>
+                            <span class="block text-gray-400 mt-0.5">{{ \Morilog\Jalali\Jalalian::fromDateTime($activity->created_at)->format('Y/m/d H:i') }}</span>
                         </div>
                     </div>
                     @endforeach

@@ -31,16 +31,84 @@ class TaskActivity extends Model
     public function getActionLabelAttribute(): string
     {
         return match($this->action) {
-            'created' => 'ایجاد کرد',
-            'updated' => 'ویرایش کرد',
-            'status_changed' => 'وضعیت را تغییر داد',
-            'assigned' => 'واگذار کرد',
-            'commented' => 'نظر داد',
-            'checklist_completed' => 'چک‌لیست تکمیل کرد',
+            'created' => 'تسک را ایجاد کرد',
+            'updated' => $this->getUpdatedLabel(),
+            'status_changed' => $this->getStatusChangedLabel(),
+            'assigned' => $this->getAssignedLabel(),
+            'commented' => 'نظر ثبت کرد',
+            'checklist_added' => 'چک‌لیست اضافه کرد',
+            'checklist_completed' => 'چک‌لیست را تکمیل کرد',
             'checklist_uncompleted' => 'چک‌لیست را برداشت',
-            'attachment_added' => 'فایل اضافه کرد',
-            'deleted' => 'حذف کرد',
+            'attachment_added' => 'فایل پیوست کرد',
+            'deleted' => 'تسک را حذف کرد',
             default => $this->action,
+        };
+    }
+
+    private function getStatusChangedLabel(): string
+    {
+        $from = self::translateStatus($this->old_value);
+        $to = self::translateStatus($this->new_value);
+        return "وضعیت را از «{$from}» به «{$to}» تغییر داد";
+    }
+
+    private function getUpdatedLabel(): string
+    {
+        $fieldLabel = self::translateField($this->field);
+        if ($this->field === 'priority') {
+            $from = self::translatePriority($this->old_value);
+            $to = self::translatePriority($this->new_value);
+            return "اولویت را از «{$from}» به «{$to}» تغییر داد";
+        }
+        if ($this->field === 'title') {
+            return "عنوان را از «{$this->old_value}» به «{$this->new_value}» تغییر داد";
+        }
+        return "{$fieldLabel} را ویرایش کرد";
+    }
+
+    private function getAssignedLabel(): string
+    {
+        if ($this->new_value) {
+            $user = \App\Models\User::find($this->new_value);
+            $name = $user ? $user->full_name : 'نامشخص';
+            return "تسک را به «{$name}» واگذار کرد";
+        }
+        return 'مسئول تسک را برداشت';
+    }
+
+    public static function translateStatus(?string $status): string
+    {
+        return match($status) {
+            'backlog' => 'بک‌لاگ',
+            'todo' => 'در انتظار',
+            'in_progress' => 'در حال انجام',
+            'review' => 'بررسی',
+            'done' => 'تکمیل شده',
+            default => $status ?? 'نامشخص',
+        };
+    }
+
+    public static function translatePriority(?string $priority): string
+    {
+        return match($priority) {
+            'low' => 'کم',
+            'medium' => 'متوسط',
+            'high' => 'بالا',
+            'urgent' => 'فوری',
+            default => $priority ?? 'نامشخص',
+        };
+    }
+
+    public static function translateField(?string $field): string
+    {
+        return match($field) {
+            'title' => 'عنوان',
+            'description' => 'توضیحات',
+            'priority' => 'اولویت',
+            'status' => 'وضعیت',
+            'assigned_to' => 'مسئول',
+            'due_date' => 'ددلاین',
+            default => $field ?? '',
         };
     }
 
