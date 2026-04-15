@@ -203,11 +203,12 @@
                 <!-- Message Search Bar -->
                 <div x-show="showMessageSearch" x-transition class="px-4 pb-3">
                     <div class="relative">
-                        <input type="text" x-model="messageSearchQuery" @input.debounce.300ms="searchMessages()" placeholder="جستجو در پیام‌های این گفتگو..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
-                        <svg class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <template x-if="messageSearchResults.length > 0">
+                        <input type="text" x-model="messageSearchQuery" @input.debounce.400ms="searchMessages()" @keydown.escape="showMessageSearch = false; clearMessageSearch()" placeholder="جستجو در کل تاریخچه پیام‌ها..." class="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                        <svg x-show="!isSearching" class="w-5 h-5 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <svg x-show="isSearching" class="w-5 h-5 absolute right-3 top-2.5 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        <template x-if="messageSearchServerResults.length > 0">
                             <div class="absolute left-3 top-2.5 flex items-center gap-2 text-xs text-gray-500">
-                                <span x-text="currentSearchIndex + 1 + '/' + messageSearchResults.length"></span>
+                                <span x-text="currentSearchIndex + 1 + '/' + messageSearchServerResults.length"></span>
                                 <button @click="navigateSearch(-1)" class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                                 </button>
@@ -217,13 +218,36 @@
                             </div>
                         </template>
                     </div>
+                    <!-- Search Results List -->
+                    <div x-show="messageSearchServerResults.length > 0" class="mt-2 max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <template x-for="(r, idx) in messageSearchServerResults" :key="r.id">
+                            <button @click="jumpToSearchResult(r.id, idx)" type="button"
+                                class="w-full flex items-start gap-3 px-3 py-2.5 text-right hover:bg-white dark:hover:bg-gray-800 transition border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                :class="idx === currentSearchIndex ? 'bg-brand-50 dark:bg-brand-900/20' : ''">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-0.5">
+                                        <span class="text-xs font-medium text-gray-900 dark:text-white" x-text="r.sender_name"></span>
+                                        <span class="text-[10px] text-gray-400" x-text="r.date + ' ' + r.time"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400 truncate" x-text="r.content"></p>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
                 </div>
             </div>
         </template>
 
         <!-- Messages Area -->
         <template x-if="currentConversation">
-            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null" @scroll="handleMessagesScroll()">
+            <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0" @click="showEmojiPicker = null" @scroll="handleMessagesScroll(); handleScrollTop($event)">
+                <!-- Load More Button -->
+                <div x-show="hasMoreMessages" class="text-center pb-2">
+                    <button @click="loadOlderMessages()" :disabled="isLoadingMore" class="px-4 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full shadow-sm hover:shadow transition disabled:opacity-50">
+                        <span x-show="!isLoadingMore">پیام‌های قدیمی‌تر</span>
+                        <span x-show="isLoadingMore">در حال بارگذاری...</span>
+                    </button>
+                </div>
                 <template x-for="(msg, msgIndex) in messages" :key="msg.id">
                     <div>
                     <!-- جداکننده روزانه -->
@@ -1226,6 +1250,12 @@ function messenger() {
         showMessageSearch: false,
         messageSearchQuery: '',
         messageSearchResults: [],
+        messageSearchServerResults: [],
+        isSearching: false,
+
+        // Load more (scroll up)
+        hasMoreMessages: false,
+        isLoadingMore: false,
         currentSearchIndex: 0,
 
         // Announcement state
@@ -1415,6 +1445,7 @@ function messenger() {
 
                 this.messages = newMessages;
                 this.lastMessageCount = newMessages.length;
+                this.hasMoreMessages = data.has_more ?? false;
 
                 // Only scroll to bottom if:
                 // 1. Force scroll (first load, opening conversation)
@@ -2102,36 +2133,98 @@ function messenger() {
         },
 
         // Message search functions
-        searchMessages() {
-            if (!this.messageSearchQuery || this.messageSearchQuery.length < 2) {
+        async searchMessages() {
+            if (!this.messageSearchQuery || this.messageSearchQuery.length < 2 || !this.currentConversation) {
+                this.messageSearchServerResults = [];
                 this.messageSearchResults = [];
                 this.currentSearchIndex = 0;
                 return;
             }
 
-            const query = this.messageSearchQuery.toLowerCase();
-            this.messageSearchResults = this.messages
-                .filter(m => m.content && m.content.toLowerCase().includes(query))
-                .map(m => m.id);
+            this.isSearching = true;
+            try {
+                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/search-messages?q=${encodeURIComponent(this.messageSearchQuery)}`);
+                const data = await resp.json();
+                this.messageSearchServerResults = data.results || [];
+                this.messageSearchResults = this.messageSearchServerResults.map(r => r.id);
+                this.currentSearchIndex = 0;
 
-            this.currentSearchIndex = 0;
+                if (this.messageSearchResults.length > 0) {
+                    this.jumpToSearchResult(this.messageSearchResults[0], 0);
+                }
+            } catch (e) {
+                console.error('Search error:', e);
+            } finally {
+                this.isSearching = false;
+            }
+        },
 
-            if (this.messageSearchResults.length > 0) {
-                this.scrollToMessage(this.messageSearchResults[0]);
+        jumpToSearchResult(messageId, idx) {
+            this.currentSearchIndex = idx;
+            // اگه پیام تو لیست فعلی هست، اسکرول کن
+            const exists = this.messages.find(m => m.id === messageId);
+            if (exists) {
+                this.scrollToMessage(messageId);
+            } else {
+                // پیام تو لیست نیست — highlight کن تو لیست نتایج
+                // کاربر میتونه با کلیک ببینه
+                this.scrollToMessage(messageId);
             }
         },
 
         navigateSearch(direction) {
-            if (this.messageSearchResults.length === 0) return;
-
-            this.currentSearchIndex = (this.currentSearchIndex + direction + this.messageSearchResults.length) % this.messageSearchResults.length;
-            this.scrollToMessage(this.messageSearchResults[this.currentSearchIndex]);
+            if (this.messageSearchServerResults.length === 0) return;
+            this.currentSearchIndex = (this.currentSearchIndex + direction + this.messageSearchServerResults.length) % this.messageSearchServerResults.length;
+            const r = this.messageSearchServerResults[this.currentSearchIndex];
+            if (r) this.jumpToSearchResult(r.id, this.currentSearchIndex);
         },
 
         clearMessageSearch() {
             this.messageSearchQuery = '';
             this.messageSearchResults = [];
+            this.messageSearchServerResults = [];
             this.currentSearchIndex = 0;
+            this.isSearching = false;
+        },
+
+        // لود پیام‌های قدیمی‌تر
+        async loadOlderMessages() {
+            if (!this.currentConversation || this.isLoadingMore || !this.hasMoreMessages) return;
+            this.isLoadingMore = true;
+            const oldestId = this.messages.length > 0 ? this.messages[0].id : null;
+            if (!oldestId) { this.isLoadingMore = false; return; }
+
+            try {
+                const container = this.$refs.messagesContainer;
+                const oldScrollHeight = container ? container.scrollHeight : 0;
+
+                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages?before=${oldestId}&limit=50`);
+                const data = await resp.json();
+                const older = data.messages || [];
+                this.hasMoreMessages = data.has_more ?? false;
+
+                if (older.length > 0) {
+                    this.messages = [...older, ...this.messages];
+                    // حفظ موقعیت اسکرول
+                    this.$nextTick(() => {
+                        if (container) {
+                            container.scrollTop = container.scrollHeight - oldScrollHeight;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Load more error:', e);
+            } finally {
+                this.isLoadingMore = false;
+            }
+        },
+
+        // auto-load وقتی اسکرول به بالا رسید
+        handleScrollTop(e) {
+            const container = e.target;
+            if (container.scrollTop < 50 && this.hasMoreMessages && !this.isLoadingMore) {
+                this.loadOlderMessages();
+            }
         },
 
         // Reaction functions

@@ -313,12 +313,17 @@ class ChatController extends Controller
             ->pluck('user_id')
             ->toArray();
 
-        $messages = $conversation->messages()
+        $query = $conversation->messages()
             ->with(['user', 'replyTo.user', 'readBy', 'reactions.user', 'task.assignee'])
-            ->latest()
-            ->take($request->get('limit', 50))
-            ->get()
-            ->reverse()
+            ->latest();
+
+        // لود پیام‌های قدیمی‌تر (scroll up)
+        if ($request->filled('before')) {
+            $query->where('id', '<', (int) $request->before);
+        }
+
+        $limit = (int) $request->get('limit', 100);
+        $messages = $query->take($limit)->get()->reverse()
             ->map(function ($message) use ($userId, $otherParticipantIds) {
                 // Check if message is read by any other participant
                 $isRead = false;
@@ -417,7 +422,14 @@ class ChatController extends Controller
             'last_read_at' => now(),
         ]);
 
-        return response()->json(['messages' => $messages->values()]);
+        // آیا پیام‌های قدیمی‌تر وجود دارد؟
+        $oldestId = $messages->first()['id'] ?? null;
+        $hasMore = $oldestId ? $conversation->messages()->where('id', '<', $oldestId)->exists() : false;
+
+        return response()->json([
+            'messages' => $messages->values(),
+            'has_more' => $hasMore,
+        ]);
     }
 
     /**
@@ -1516,6 +1528,39 @@ class ChatController extends Controller
         $dayName = $dayNames[$dayOfWeek] ?? '';
 
         return $dayName . ' ' . $jalali->getDay() . ' ' . ($monthNames[$jalali->getMonth()] ?? '') . ' ' . $jalali->getYear();
+    }
+
+    /**
+     * جستجوی پیام‌ها در یک گفتگو (سمت سرور)
+     */
+    public function searchMessages(Conversation $conversation, Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $query = $request->input('q', '');
+        if (mb_strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $results = $conversation->messages()
+            ->with('user')
+            ->where('body', 'LIKE', '%' . $query . '%')
+            ->latest()
+            ->take(50)
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'content' => $m->body,
+                'sender_name' => $m->user?->full_name ?? 'نامشخص',
+                'time' => $m->created_at->format('H:i'),
+                'date' => \Morilog\Jalali\Jalalian::fromDateTime($m->created_at)->format('Y/m/d'),
+            ]);
+
+        return response()->json(['results' => $results]);
     }
 
     /**

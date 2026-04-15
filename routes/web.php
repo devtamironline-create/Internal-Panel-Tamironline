@@ -119,6 +119,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('messages.send');
         Route::get('/conversations/{conversation}/mentionable-users', [ChatController::class, 'mentionableUsers'])->name('mentionable-users');
+        Route::get('/conversations/{conversation}/search-messages', [ChatController::class, 'searchMessages'])->name('search-messages');
         Route::post('/presence', [ChatController::class, 'updatePresence'])->name('presence');
         Route::post('/activity-status', [ChatController::class, 'setActivityStatus'])->name('activity-status');
         Route::post('/heartbeat', [ChatController::class, 'heartbeat'])->name('heartbeat');
