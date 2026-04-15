@@ -143,13 +143,15 @@ class TaskController extends Controller
         $jYear = (int) ($request->input('year', $now->getYear()));
         $jMonth = (int) ($request->input('month', $now->getMonth()));
 
-        // اول و آخر ماه شمسی → میلادی
-        $startOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/1")->toCarbon()->startOfDay();
+        // اول و آخر ماه شمسی → میلادی (با zero-padding)
+        $jm = str_pad($jMonth, 2, '0', STR_PAD_LEFT);
         $daysInMonth = $jMonth <= 6 ? 31 : ($jMonth <= 11 ? 30 : (\Morilog\Jalali\CalendarUtils::isLeapJalaliYear($jYear) ? 30 : 29));
-        $endOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/{$daysInMonth}")->toCarbon()->endOfDay();
+        $startOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jm}/01")->toCarbon()->startOfDay();
+        $lastDay = str_pad($daysInMonth, 2, '0', STR_PAD_LEFT);
+        $endOfMonth = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jm}/{$lastDay}")->toCarbon()->endOfDay();
 
         // روز هفته اول ماه (شنبه=0)
-        $firstDayJalali = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jMonth}/1");
+        $firstDayJalali = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', "{$jYear}/{$jm}/01");
         $firstDayOfWeek = $firstDayJalali->getDayOfWeek(); // 0=شنبه ... 6=جمعه
 
         // تسک‌های این ماه با ددلاین
