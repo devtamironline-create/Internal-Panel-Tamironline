@@ -74,7 +74,19 @@
                 </select>
             </div>
 
-            @if(request('assignee') || request('priority'))
+            @if($categories->isNotEmpty())
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-gray-600 dark:text-gray-400">دسته‌بندی:</label>
+                <select name="category" onchange="this.form.submit()" class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-brand-500 focus:ring-brand-500">
+                    <option value="">همه</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+
+            @if(request('assignee') || request('priority') || request('category'))
             <a href="{{ route('tasks.index', ['team' => $currentTeam->slug]) }}" class="text-sm text-red-600 hover:text-red-700">
                 پاک کردن فیلترها
             </a>
@@ -121,6 +133,17 @@
                         </span>
                         @endif
                     </div>
+
+                    <!-- Categories -->
+                    @if($task->categories->isNotEmpty())
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        @foreach($task->categories as $cat)
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-{{ $cat->color }}-100 dark:bg-{{ $cat->color }}-900/30 text-{{ $cat->color }}-700 dark:text-{{ $cat->color }}-400">
+                            {{ $cat->name }}
+                        </span>
+                        @endforeach
+                    </div>
+                    @endif
 
                     <!-- Title -->
                     <h4 class="font-medium text-gray-900 dark:text-white mb-2">
@@ -275,6 +298,25 @@
                             </label>
                         </div>
                     </div>
+
+                    <!-- Categories -->
+                    @if($categories->isNotEmpty())
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دسته‌بندی</label>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($categories as $cat)
+                            <label class="relative cursor-pointer">
+                                <input type="checkbox" x-model="newTask.categories" value="{{ $cat->id }}" class="peer sr-only">
+                                <div class="inline-flex items-center gap-1 px-3 py-1.5 border-2 border-gray-200 dark:border-gray-600 rounded-lg transition text-sm
+                                    peer-checked:border-{{ $cat->color }}-500 peer-checked:bg-{{ $cat->color }}-50 dark:peer-checked:bg-{{ $cat->color }}-900/30 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-{{ $cat->color }}-500"></span>
+                                    <span class="text-gray-700 dark:text-gray-300">{{ $cat->name }}</span>
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
 
                     <!-- Modal Footer -->
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -491,6 +533,7 @@ function kanbanBoard() {
             assigned_to: '',
             due_date: '',
             priority: 'medium',
+            categories: [],
             team_id: '{{ $currentTeam?->id }}'
         },
 
@@ -501,6 +544,7 @@ function kanbanBoard() {
                 assigned_to: '',
                 due_date: '',
                 priority: 'medium',
+                categories: [],
                 team_id: '{{ $currentTeam?->id }}'
             };
             this.showCreateModal = true;

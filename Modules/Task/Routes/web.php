@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Task\Http\Controllers\TaskController;
+use Modules\Task\Http\Controllers\TaskCategoryController;
 use Modules\Task\Http\Controllers\TeamController;
 
 /*
@@ -20,6 +21,15 @@ Route::middleware(['web', 'auth'])->prefix('teams')->group(function () {
     Route::delete('/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
     Route::post('/order', [TeamController::class, 'updateOrder'])->name('teams.order');
     Route::patch('/{team}/toggle', [TeamController::class, 'toggleStatus'])->name('teams.toggle');
+});
+
+// Task Category Routes
+Route::middleware(['web', 'auth'])->prefix('task-categories')->group(function () {
+    Route::get('/', [TaskCategoryController::class, 'index'])->name('task-categories.index');
+    Route::post('/', [TaskCategoryController::class, 'store'])->name('task-categories.store');
+    Route::put('/{id}', [TaskCategoryController::class, 'update'])->name('task-categories.update');
+    Route::delete('/{id}', [TaskCategoryController::class, 'destroy'])->name('task-categories.destroy');
+    Route::patch('/{id}/toggle', [TaskCategoryController::class, 'toggleStatus'])->name('task-categories.toggle');
 });
 
 // Task Management Routes

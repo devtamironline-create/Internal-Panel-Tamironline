@@ -113,6 +113,11 @@ class Task extends Model
         return $this->belongsToMany(TaskLabel::class, 'task_label');
     }
 
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(TaskCategory::class, 'task_category');
+    }
+
     // Accessors
     public function getStatusLabelAttribute(): string
     {

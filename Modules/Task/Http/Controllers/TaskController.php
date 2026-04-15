@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Task\Models\Task;
+use Modules\Task\Models\TaskCategory;
 use Modules\Task\Models\TaskChecklist;
 use Modules\Task\Models\TaskComment;
 use Modules\Task\Models\Team;
@@ -45,7 +46,7 @@ class TaskController extends Controller
         }
 
         if ($currentTeam) {
-            $query = Task::with(['assignee', 'labels', 'checklists'])
+            $query = Task::with(['assignee', 'labels', 'checklists', 'categories'])
                 ->forTeam($currentTeam->id)
                 ->mainTasks();
 
@@ -57,6 +58,12 @@ class TaskController extends Controller
             // Filter by priority
             if ($request->filled('priority')) {
                 $query->where('priority', $request->priority);
+            }
+
+            // Filter by category
+            if ($request->filled('category')) {
+                $categoryId = $request->category;
+                $query->whereHas('categories', fn($q) => $q->where('task_categories.id', $categoryId));
             }
 
             $tasks = $query->orderBy('sort_order')->orderBy('created_at', 'desc')->get();
@@ -73,7 +80,10 @@ class TaskController extends Controller
         // Get team members for filter
         $teamMembers = $currentTeam ? $currentTeam->members : collect();
 
-        return view('task::index', compact('teams', 'currentTeam', 'columns', 'teamMembers'));
+        // Get categories for filter (عمومی + مختص تیم فعلی)
+        $categories = $currentTeam ? TaskCategory::getForTeam($currentTeam->id) : collect();
+
+        return view('task::index', compact('teams', 'currentTeam', 'columns', 'teamMembers', 'categories'));
     }
 
     /**
@@ -108,8 +118,9 @@ class TaskController extends Controller
             : $teams->first();
 
         $teamMembers = $currentTeam ? $currentTeam->members : collect();
+        $categories = $currentTeam ? TaskCategory::getForTeam($currentTeam->id) : collect();
 
-        return view('task::create', compact('teams', 'currentTeam', 'teamMembers'));
+        return view('task::create', compact('teams', 'currentTeam', 'teamMembers', 'categories'));
     }
 
     /**
@@ -154,6 +165,11 @@ class TaskController extends Controller
             'due_date' => $dueDate,
             'status' => 'todo',
         ], auth()->id());
+
+        // Sync categories
+        if ($request->filled('categories')) {
+            $task->categories()->sync($request->categories);
+        }
 
         // Add checklist items
         if ($request->filled('checklist')) {
