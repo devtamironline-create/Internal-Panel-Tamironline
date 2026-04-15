@@ -388,7 +388,7 @@ class ChatController extends Controller
                     'sender_name' => $message->user->full_name,
                     'sender_avatar' => $message->user->avatar_url,
                     'sender_initials' => $message->user->initials,
-                    'is_mine' => $message->user_id === $userId,
+                    'is_mine' => (int) $message->user_id === (int) $userId,
                     'is_read' => $isRead,
                     'read_at' => $readAtTime,
                     'time' => $message->created_at->format('H:i'),
