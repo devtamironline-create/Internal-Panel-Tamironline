@@ -39,6 +39,7 @@ class Task extends Model
         'due_date' => 'date',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     const STATUS_BACKLOG = 'backlog';
@@ -207,6 +208,15 @@ class Task extends Model
     {
         return $query->where('due_date', '<', now())
             ->where('status', '!=', self::STATUS_DONE);
+    }
+
+    public function scopeNeedsReminder($query)
+    {
+        return $query->whereNotNull('due_date')
+            ->where('due_date', '<', now())
+            ->where('status', '!=', self::STATUS_DONE)
+            ->whereNotNull('assigned_to')
+            ->whereNull('reminder_sent_at');
     }
 
     public function scopeMainTasks($query)
