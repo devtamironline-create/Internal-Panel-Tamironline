@@ -18,7 +18,7 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $canViewAll = $user->can('view-all-tasks') || $user->can('manage-permissions');
+        $canViewAll = $user->can('view-all-tasks');
 
         // فقط تیم‌هایی که کاربر عضوشونه — مگه اینکه دسترسی مشاهده همه تیم‌ها رو داشته باشه
         if ($canViewAll) {
