@@ -14,6 +14,13 @@ return [
         'sender' => env('KAVENEGAR_SENDER'),
     ],
 
+    // پروکسی برای ارسال پیامک (وقتی IP سرور بلاک شده)
+    'proxy' => [
+        'enabled' => env('SMS_PROXY_ENABLED', false),
+        'url' => env('SMS_PROXY_URL', ''),
+        'secret' => env('SMS_PROXY_SECRET', ''),
+    ],
+
     'templates' => [
         'otp' => env('SMS_TEMPLATE_OTP', 'verify'),
         'welcome' => env('SMS_TEMPLATE_WELCOME', 'welcome'),
