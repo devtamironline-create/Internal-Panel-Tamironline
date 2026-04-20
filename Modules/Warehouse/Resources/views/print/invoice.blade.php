@@ -309,23 +309,9 @@
         @endphp
 
         {{-- ═══ ردیف ۱: هدر ═══ --}}
-        <table style="width:100%;border-collapse:collapse;border-bottom:2px solid #333;">
-            <tr>
-                <td style="width:25%;padding:6px 10px;border-left:1px solid #ccc;font-size:8px;color:#666;vertical-align:top;">
-                    <div style="font-size:7px;color:#999;">نام شرکت پستی:</div>
-                    <div style="font-weight:bold;font-size:9px;">{{ $providerLabel ?? 'سرویس ارسال' }}</div>
-                </td>
-                <td style="width:50%;text-align:center;padding:8px;">
-                    @if(!empty($invoiceSettings['logo']))
-                    <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" style="height:35px;margin-bottom:3px;"><br>
-                    @endif
-                    <span style="font-size:16px;font-weight:bold;">{{ $invoiceSettings['store_name'] }}</span>
-                </td>
-                <td style="width:25%;padding:6px 10px;text-align:left;font-size:7px;color:#999;vertical-align:top;">
-                    برگه اطلاعات سفارش
-                </td>
-            </tr>
-        </table>
+        <div style="text-align:center;padding:8px 12px;border-bottom:2px solid #333;font-size:16px;font-weight:bold;">
+            فروشگاه {{ $invoiceSettings['store_name'] }}
+        </div>
 
         {{-- ═══ ردیف ۲: فرستنده + شناسه‌ها ═══ --}}
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
