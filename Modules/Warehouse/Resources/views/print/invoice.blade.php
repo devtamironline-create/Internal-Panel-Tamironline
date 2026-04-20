@@ -70,6 +70,17 @@
                 size: A5 portrait;
                 margin: 5mm;
             }
+
+            /* اگه چاپ از طریق دکمه نباشه، صفحه رو مخفی کن */
+            body.block-print > *:not(#print-block-message) { display: none !important; }
+            body.block-print::before {
+                content: "برای چاپ این فاکتور فقط از دکمه «چاپ فاکتور» در سایت استفاده کنید.";
+                display: block;
+                padding: 40px;
+                text-align: center;
+                font-size: 18px;
+                font-family: Tahoma, sans-serif;
+            }
         }
     </style>
 </head>
@@ -520,21 +531,31 @@
         });
         @endif
 
-        // جلوگیری از Ctrl+P و Cmd+P — فقط از طریق دکمه چاپ قابل انجامه
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        // جلوگیری از Ctrl+P و Cmd+P — در هر دو سطح capture و bubble
+        function blockPrintShortcut(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P' || e.keyCode === 80 || e.which === 80)) {
                 e.preventDefault();
                 e.stopPropagation();
-                alert('برای چاپ این فاکتور فقط از دکمه «چاپ فاکتور» بالای صفحه استفاده کنید.');
+                e.stopImmediatePropagation();
+                setTimeout(function() {
+                    alert('برای چاپ این فاکتور فقط از دکمه «چاپ فاکتور» بالای صفحه استفاده کنید.');
+                }, 10);
                 return false;
             }
-        }, true);
+        }
+        window.addEventListener('keydown', blockPrintShortcut, true);
+        document.addEventListener('keydown', blockPrintShortcut, true);
+        document.addEventListener('keypress', blockPrintShortcut, true);
+        document.onkeydown = blockPrintShortcut;
 
-        // جلوگیری از print در menu mouse right-click
+        // جلوگیری از print ناخواسته با CSS — اگه از طریق دکمه نباشه، صفحه خالی چاپ میشه
         window.addEventListener('beforeprint', function(e) {
             if (!window.__allowedPrint) {
-                e.preventDefault();
+                document.body.classList.add('block-print');
             }
+        });
+        window.addEventListener('afterprint', function(e) {
+            document.body.classList.remove('block-print');
         });
 
         function handlePrint() {
