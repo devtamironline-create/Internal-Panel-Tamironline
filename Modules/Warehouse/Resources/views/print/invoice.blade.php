@@ -479,7 +479,7 @@
 
         {{-- ═══ ردیف ۸: مقصد ═══ --}}
         @if(!empty($statePersian) || !empty($city))
-        <div style="text-align:center;padding:8px 12px;background:#111;color:#fff;font-size:14px;font-weight:bold;">
+        <div style="text-align:center;padding:8px 12px;background:#fff;color:#000;font-size:14px;font-weight:bold;border-top:2px solid #111;">
             مقصد: {{ $statePersian }}{{ !empty($city) ? '/' . $city : '' }}
         </div>
         @endif
