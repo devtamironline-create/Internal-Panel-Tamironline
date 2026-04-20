@@ -520,6 +520,23 @@
         });
         @endif
 
+        // جلوگیری از Ctrl+P و Cmd+P — فقط از طریق دکمه چاپ قابل انجامه
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('برای چاپ این فاکتور فقط از دکمه «چاپ فاکتور» بالای صفحه استفاده کنید.');
+                return false;
+            }
+        }, true);
+
+        // جلوگیری از print در menu mouse right-click
+        window.addEventListener('beforeprint', function(e) {
+            if (!window.__allowedPrint) {
+                e.preventDefault();
+            }
+        });
+
         function handlePrint() {
             @if($order->print_count > 0)
             // چاپ مجدد - نیاز به تاییدیه
@@ -563,7 +580,9 @@
                         location.reload();
                     } else if (data.can_print) {
                         // اجازه چاپ داره
+                        window.__allowedPrint = true;
                         window.print();
+                        window.__allowedPrint = false;
                         setTimeout(function() {
                             location.reload();
                         }, 500);
