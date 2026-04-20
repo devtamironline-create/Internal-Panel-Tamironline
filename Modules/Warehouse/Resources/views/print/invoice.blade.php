@@ -437,36 +437,29 @@
             </tr>
         </table>
 
-        {{-- ═══ ردیف ۶: QR + اطلاعات بسته + امضا ═══ --}}
+        {{-- ═══ ردیف ۶: QR + اطلاعات بسته ═══ --}}
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
-                <td style="width:20%;padding:6px 10px;border-left:1px solid #ccc;text-align:center;vertical-align:middle;">
+                <td style="width:25%;padding:6px 10px;border-left:1px solid #ccc;text-align:center;vertical-align:middle;">
                     @if($showQR || $showOrderBarcode)
                     <div id="qrcode" style="display:inline-block;"></div>
                     @endif
                 </td>
-                <td style="width:50%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;">
-                    <table style="font-size:8px;border-collapse:collapse;width:100%;">
+                <td style="width:75%;padding:6px 10px;vertical-align:top;">
+                    <table style="font-size:9px;border-collapse:collapse;width:100%;">
                         <tr>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;font-weight:bold;">کارتن</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;font-weight:bold;">وزن</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;font-weight:bold;">تاریخ</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;font-weight:bold;">نوع ارسال</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;font-weight:bold;">کارتن</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;font-weight:bold;">وزن</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;font-weight:bold;">تاریخ</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;font-weight:bold;">نوع ارسال</td>
                         </tr>
                         <tr>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;">{{ $invoiceBox->name ?? '-' }}</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;">{{ number_format($displayWeight) }}g</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d') }}</td>
-                            <td style="border:1px solid #ddd;padding:3px 5px;text-align:center;">{{ $order->shippingTypeRelation?->name ?? '-' }}</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{{ $invoiceBox->name ?? '-' }}</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{{ number_format($displayWeight) }}g</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d') }}</td>
+                            <td style="border:1px solid #ddd;padding:4px 6px;text-align:center;">{{ $order->shippingTypeRelation?->name ?? '-' }}</td>
                         </tr>
                     </table>
-                    @if(!empty($receiverPhone))
-                    <div style="font-size:8px;margin-top:4px;">تلفن مقاصد: <strong dir="ltr">{{ $receiverPhone }}</strong></div>
-                    @endif
-                </td>
-                <td style="width:30%;padding:6px 10px;text-align:center;vertical-align:top;font-size:8px;">
-                    <div style="font-weight:bold;margin-bottom:15px;">نام خانوادگی نامه‌رسان و امضاء:</div>
-                    <div style="border-bottom:1px dotted #999;height:30px;"></div>
                 </td>
             </tr>
         </table>
