@@ -372,11 +372,10 @@
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <thead>
                 <tr style="background:#f5f5f5;">
-                    <th style="border:1px solid #ddd;padding:4px 6px;font-size:8px;text-align:right;">#</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;font-size:8px;text-align:right;">نام کالا</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;font-size:8px;text-align:center;width:40px;">تعداد</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;font-size:8px;text-align:center;width:85px;">قیمت واحد (ریال)</th>
-                    <th style="border:1px solid #ddd;padding:4px 6px;font-size:8px;text-align:center;width:85px;">مجموع (ریال)</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:right;">نام کالا</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:55px;">تعداد</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">قیمت واحد (ریال)</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">مجموع (ریال)</th>
                 </tr>
             </thead>
             <tbody>
@@ -384,22 +383,25 @@
                 @foreach($order->items as $index => $item)
                 @php $lineTotal = $item->price; $unitPrice = $item->quantity > 0 ? $item->price / $item->quantity : $item->price; $totalPrice += $lineTotal; @endphp
                 <tr>
-                    <td style="border:1px solid #eee;padding:3px 6px;font-size:9px;text-align:center;">{{ $index + 1 }}</td>
-                    <td style="border:1px solid #eee;padding:3px 6px;font-size:9px;">{{ $item->product_name }}</td>
-                    <td style="border:1px solid #eee;padding:3px 6px;font-size:9px;text-align:center;">{{ $item->quantity }}</td>
-                    <td style="border:1px solid #eee;padding:3px 6px;font-size:9px;text-align:center;">{{ number_format($unitPrice) }}</td>
-                    <td style="border:1px solid #eee;padding:3px 6px;font-size:9px;text-align:center;">{{ number_format($lineTotal) }}</td>
+                    <td style="border:1px solid #eee;padding:6px 8px;font-size:11px;">{{ $item->product_name }}</td>
+                    <td style="border:1px solid #eee;padding:6px 8px;font-size:11px;text-align:center;">{{ $item->quantity }}</td>
+                    <td style="border:1px solid #eee;padding:6px 8px;font-size:11px;text-align:center;">{{ number_format($unitPrice) }}</td>
+                    <td style="border:1px solid #eee;padding:6px 8px;font-size:11px;text-align:center;">{{ number_format($lineTotal) }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
-        <div style="text-align:center;padding:5px 10px;font-size:10px;font-weight:bold;border-bottom:1px solid #ccc;background:#f9f9f9;">
+        <div style="text-align:center;padding:8px 10px;font-size:12px;font-weight:bold;border-bottom:1px solid #ccc;background:#f9f9f9;">
             مجموع مبلغ قابل پرداخت توسط گیرنده (خریدار): {{ number_format($totalPrice + $shippingTotal) }} ریال
         </div>
-        <div style="padding:3px 10px;font-size:9px;border-bottom:1px solid #ccc;">
+        <div style="padding:5px 10px;font-size:10px;border-bottom:1px solid #ccc;">
             نوع پرداخت: <strong>{{ $paymentMethod }}</strong>
-            @if($shippingTotal > 0) | خدمات پست: {{ number_format($shippingTotal) }} ریال @endif
         </div>
+        @if($shippingTotal > 0)
+        <div style="padding:5px 10px;font-size:10px;border-bottom:1px solid #ccc;">
+            خدمات پست (حق ثبت پست+بسته‌بندی+جمع‌آوری): <strong>{{ number_format($shippingTotal) }}</strong> ریال
+        </div>
+        @endif
         @endif
 
         {{-- ═══ ردیف ۴: گیرنده ═══ --}}
