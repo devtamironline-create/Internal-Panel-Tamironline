@@ -396,39 +396,43 @@
         </div>
         @endif
 
-        {{-- ═══ ردیف ۴: گیرنده ═══ --}}
-        <div style="border-bottom:1px solid #ccc;padding:6px 10px;">
-            <table style="width:100%;border-collapse:collapse;font-size:9px;">
-                <tr><td style="font-weight:bold;font-size:10px;padding-bottom:4px;" colspan="4">گیرنده (خریدار): <span style="font-size:11px;">{{ $order->customer_name }}</span></td></tr>
-                <tr>
-                    <td style="font-weight:bold;color:#666;width:40px;padding:2px 0;">استان:</td>
-                    <td style="width:35%;font-weight:bold;">{{ $statePersian }}</td>
-                    <td style="font-weight:bold;color:#666;width:30px;">شهر:</td>
-                    <td style="font-weight:bold;">{{ $city }}</td>
-                </tr>
-                <tr><td style="font-weight:bold;color:#666;padding:2px 0;">آدرس:</td><td colspan="3">{{ $receiverAddress }}</td></tr>
-                <tr>
-                    <td style="font-weight:bold;color:#666;padding:2px 0;">کدپستی:</td>
-                    <td dir="ltr" style="text-align:right;">{{ $receiverPostcode }}</td>
-                    <td style="font-weight:bold;color:#666;">شماره تماس:</td>
-                    <td dir="ltr" style="text-align:right;font-weight:bold;">{{ $receiverPhone }}</td>
-                </tr>
-            </table>
-        </div>
-
-        {{-- ═══ ردیف ۵: توضیحات + علت برگشتی ═══ --}}
+        {{-- ═══ ردیف ۴: گیرنده (۷۰٪) + توضیحات (۳۰٪) ═══ --}}
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
-                <td style="width:55%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:8px;">
-                    <div style="font-weight:bold;font-size:9px;margin-bottom:3px;">توضیحات فروشگاه:</div>
-                    <div style="color:#555;">سفارش {{ $order->order_number }}</div>
-                    @if(!empty($customerNote))<div style="color:#555;margin-top:2px;">{{ $customerNote }}</div>@endif
+                {{-- گیرنده --}}
+                <td style="width:70%;padding:8px 12px;border-left:1px solid #ccc;vertical-align:top;">
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;width:85px;text-align:right;">گیرنده (خریدار):</td>
+                            <td colspan="3" style="font-weight:bold;font-size:11px;padding:3px 0;">{{ $order->customer_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">استان:</td>
+                            <td style="padding:3px 0 3px 8px;">{{ $statePersian }}</td>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;width:35px;">شهر:</td>
+                            <td style="padding:3px 0;">{{ $city }}</td>
+                        </tr>
+                        @if(!empty($receiverAddress))
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;vertical-align:top;">آدرس:</td>
+                            <td colspan="3" style="padding:3px 0;line-height:1.6;">{{ $receiverAddress }}</td>
+                        </tr>
+                        @endif
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">کدپستی:</td>
+                            <td dir="ltr" style="text-align:right;padding:3px 0;">{{ $receiverPostcode }}</td>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">شماره تماس:</td>
+                            <td dir="ltr" style="text-align:right;padding:3px 0;font-weight:bold;">{{ $receiverPhone }}</td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width:45%;padding:6px 10px;vertical-align:top;font-size:8px;">
-                    <div style="font-weight:bold;font-size:9px;margin-bottom:3px;">علت برگشتی</div>
-                    <div style="color:#888;line-height:1.8;">
-                        ☐ عدم اطلاع از سفارش<br>☐ تلفن مقاصد<br>☐ عدم وجود وجه نقد/کارت بانکی<br>☐ مغایرت مبلغ فاکتور<br>☐ مغایرت بارکد/محصول<br>☐ مرجوعی خود مشتری<br>☐ سایر موارد
-                    </div>
+                {{-- توضیحات --}}
+                <td style="width:30%;padding:8px 12px;vertical-align:top;font-size:9px;">
+                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">توضیحات فروشگاه:</div>
+                    <div style="color:#555;">سفارش {{ $order->order_number }}</div>
+                    @if(!empty($customerNote))
+                    <div style="color:#555;margin-top:3px;">{{ $customerNote }}</div>
+                    @endif
                 </td>
             </tr>
         </table>
