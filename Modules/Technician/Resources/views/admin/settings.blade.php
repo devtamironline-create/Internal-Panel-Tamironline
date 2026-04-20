@@ -380,6 +380,7 @@
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{date}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{commission_percent}</code>
                         <code class="bg-amber-100 px-1.5 py-0.5 rounded">{promissory_note_amount}</code>
+                        <code class="bg-amber-100 px-1.5 py-0.5 rounded">{contract_number}</code>
                     </div>
                     <p class="text-xs text-amber-600 mt-2">
                         <strong>توضیح:</strong>

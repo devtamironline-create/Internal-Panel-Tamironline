@@ -559,6 +559,15 @@ class RegistrationController extends Controller
                 $jalaliDate = now()->format('Y/m/d');
             }
 
+            // شماره قرارداد
+            $contractNumber = $registration->contract_number ?? '';
+            if (empty($contractNumber)) {
+                $lastNumber = TechnicianRegistration::whereNotNull('contract_number')
+                    ->orderByRaw('CAST(contract_number AS UNSIGNED) DESC')
+                    ->value('contract_number');
+                $contractNumber = $lastNumber ? (string) ((int) $lastNumber + 1) : '405001';
+            }
+
             // جایگزینی متغیرها
             $contractText = str_replace(
                 [
@@ -571,6 +580,7 @@ class RegistrationController extends Controller
                     '{date}',
                     '{commission_percent}',
                     '{promissory_note_amount}',
+                    '{contract_number}',
                 ],
                 [
                     $genderTitle,
@@ -582,6 +592,7 @@ class RegistrationController extends Controller
                     $jalaliDate,
                     $commissionPercent,
                     $promissoryNoteAmount ? number_format((float) $promissoryNoteAmount) : '',
+                    $contractNumber,
                 ],
                 $contractText
             );
@@ -670,9 +681,16 @@ class RegistrationController extends Controller
             ], 422);
         }
 
+        // تولید شماره قرارداد (شروع از 405001)
+        $lastNumber = TechnicianRegistration::whereNotNull('contract_number')
+            ->orderByRaw('CAST(contract_number AS UNSIGNED) DESC')
+            ->value('contract_number');
+        $nextNumber = $lastNumber ? (int) $lastNumber + 1 : 405001;
+
         $registration->update([
             'contract_signed_at' => now(),
             'contract_signature' => $request->signature,
+            'contract_number'    => (string) $nextNumber,
             'current_step'       => 7,
         ]);
 

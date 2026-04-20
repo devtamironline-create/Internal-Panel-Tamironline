@@ -62,6 +62,7 @@ class TechnicianRegistration extends Model
         'admin_notes',
         'contract_signed_at',
         'contract_signature',
+        'contract_number',
         'commission_percent',
         'promissory_note_amount',
         'doc_national_card_front',
