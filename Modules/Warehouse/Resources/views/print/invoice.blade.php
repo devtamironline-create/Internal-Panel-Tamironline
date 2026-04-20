@@ -290,102 +290,67 @@
     @endif
 
     <div class="invoice">
-        {{-- Header --}}
-        <div class="header">
-            <div class="header-right">
-                @if(!empty($invoiceSettings['logo']))
-                    <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" class="header-logo">
-                @endif
-            </div>
-            <div class="header-left">
-                <table class="info-table">
-                    <tr><td class="info-label">شماره سفارش:</td><td class="info-val">{{ $order->order_number }}</td></tr>
-                    <tr><td class="info-label">تاریخ:</td><td class="info-val">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('Y/m/d H:i') }}</td></tr>
-                    <tr><td class="info-label">نوع ارسال:</td><td class="info-val">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</td></tr>
-                    @php
-                        $invoiceBox = $order->boxSize;
-                        $boxWeight = $invoiceBox ? $invoiceBox->weight : 0;
-                        // وزن واقعی (ترازو) اولویت داره، در غیر این صورت وزن سیستمی + کارتن
-                        $displayWeight = $order->actual_weight ? $order->actual_weight_grams : ($order->total_weight_grams + $boxWeight);
-                    @endphp
-                    <tr><td class="info-label">وزن کل:</td><td class="info-val">{{ number_format($displayWeight) }}g</td></tr>
-                    @if($invoiceBox)
-                    <tr><td class="info-label">کارتن:</td><td class="info-val">سایز {{ $invoiceBox->name }} ({{ $invoiceBox->weight_label }})</td></tr>
+        {{-- ═══ بخش ۱: هدر — لوگو + نام فروشگاه + اطلاعات سفارش ═══ --}}
+        <div style="border-bottom:2px solid #333;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    @if(!empty($invoiceSettings['logo']))
+                    <img src="{{ asset('storage/' . $invoiceSettings['logo']) }}" alt="Logo" style="width:70px;height:auto;max-height:50px;object-fit:contain;">
                     @endif
-                </table>
+                    <div>
+                        <div style="font-size:14px;font-weight:bold;color:#111;">{{ $invoiceSettings['store_name'] }}</div>
+                        <div style="font-size:8px;color:#888;">{{ $invoiceSettings['subtitle'] }}</div>
+                    </div>
+                </div>
+                <div style="text-align:left;font-size:9px;color:#555;">
+                    <div>شماره سفارش: <strong style="color:#111;">{{ $order->order_number }}</strong></div>
+                    <div>تاریخ: <strong>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</strong></div>
+                </div>
             </div>
         </div>
-        <div class="store-name">{{ $invoiceSettings['store_name'] }}</div>
 
-        {{-- Sender / Receiver --}}
-        <div class="parties">
-            <div class="party">
-                <div class="party-label">فرستنده</div>
-                <div class="party-row">
-                    <span class="party-key">نام:</span>
-                    <span class="party-val">{{ $invoiceSettings['store_name'] }}</span>
-                </div>
+        {{-- ═══ بخش ۲: فرستنده ═══ --}}
+        <div style="background:#f8f9fa;border-bottom:1px solid #ddd;padding:6px 12px;">
+            <div style="font-size:10px;font-weight:bold;color:#333;margin-bottom:3px;">فرستنده (فروشگاه): {{ $invoiceSettings['store_name'] }}</div>
+            <div style="display:flex;gap:20px;font-size:9px;color:#555;">
                 @if(!empty($invoiceSettings['sender_phone']))
-                <div class="party-row">
-                    <span class="party-key">تلفن:</span>
-                    <span class="party-val" dir="ltr">{{ $invoiceSettings['sender_phone'] }}</span>
-                </div>
+                <span>تلفن: <strong dir="ltr">{{ $invoiceSettings['sender_phone'] }}</strong></span>
                 @endif
                 @if(!empty($invoiceSettings['sender_address']))
-                <div class="party-row">
-                    <span class="party-key">آدرس:</span>
-                    <span class="party-val">{{ $invoiceSettings['sender_address'] }}</span>
-                </div>
+                <span>آدرس: {{ $invoiceSettings['sender_address'] }}</span>
                 @endif
             </div>
-            <div class="party">
-                <div class="party-label">گیرنده</div>
-                <div class="party-row">
-                    <span class="party-key">نام:</span>
-                    <span class="party-val">{{ $order->customer_name }}</span>
-                </div>
-                @if(!empty($receiverPhone))
-                <div class="party-row">
-                    <span class="party-key">تلفن:</span>
-                    <span class="party-val" dir="ltr">{{ $receiverPhone }}</span>
-                </div>
-                @endif
-                @if(!empty($receiverAddress))
-                <div class="party-row">
-                    <span class="party-key">آدرس:</span>
-                    <span class="party-val">{{ $receiverAddress }}</span>
-                </div>
-                @endif
-                @if(!empty($receiverPostcode))
-                <div class="party-row">
-                    <span class="party-key">کدپستی:</span>
-                    <span class="party-val" dir="ltr">{{ $receiverPostcode }}</span>
-                </div>
+            <div style="display:flex;gap:20px;font-size:9px;color:#555;margin-top:2px;">
+                <span>نوع ارسال: <strong style="color:#111;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</strong></span>
+                @php
+                    $invoiceBox = $order->boxSize;
+                    $boxWeight = $invoiceBox ? $invoiceBox->weight : 0;
+                    $displayWeight = $order->actual_weight ? $order->actual_weight_grams : ($order->total_weight_grams + $boxWeight);
+                @endphp
+                <span>وزن کل: <strong>{{ number_format($displayWeight) }}g</strong></span>
+                @if($invoiceBox)
+                <span>کارتن: <strong>{{ $invoiceBox->name }}</strong></span>
                 @endif
             </div>
         </div>
 
-        {{-- Items Table --}}
+        {{-- ═══ بخش ۳: لیست محصولات ═══ --}}
         @if($order->items && $order->items->count() > 0)
         <table class="items-table">
             <thead>
-                <tr>
-                    <th style="width:28px">#</th>
-                    <th>نام محصول</th>
-                    <th style="width:45px">تعداد</th>
-                    <th style="width:85px">قیمت واحد (تومان)</th>
-                    <th style="width:55px">وزن(g)</th>
-                    <th style="width:85px">قیمت کل (تومان)</th>
+                <tr style="background:#eee;">
+                    <th style="width:24px;">#</th>
+                    <th>نام کالا</th>
+                    <th style="width:40px;">تعداد</th>
+                    <th style="width:80px;">قیمت واحد (ریال)</th>
+                    <th style="width:80px;">مجموع (ریال)</th>
                 </tr>
             </thead>
             <tbody>
                 @php
                     $totalPrice = 0;
                     $shippingTotal = floatval($wcData['shipping_total'] ?? 0);
-                    $shippingMethod = '';
-                    if (!empty($wcData['shipping_lines'])) {
-                        $shippingMethod = $wcData['shipping_lines'][0]['method_title'] ?? '';
-                    }
+                    $paymentMethod = $wcData['payment_method_title'] ?? 'نامشخص';
                 @endphp
                 @foreach($order->items as $index => $item)
                 @php
@@ -393,34 +358,59 @@
                     $unitPrice = $item->quantity > 0 ? $item->price / $item->quantity : $item->price;
                 @endphp
                 <tr>
-                    <td>{{ $index + 1 }}</td>
+                    <td style="text-align:center;">{{ $index + 1 }}</td>
                     <td>{{ $item->product_name }}</td>
-                    <td>{{ $item->quantity }}</td>
-                    <td>{{ number_format($unitPrice) }}</td>
-                    <td>{{ number_format($item->weight_grams) }}</td>
-                    <td>{{ number_format($lineTotal) }}</td>
+                    <td style="text-align:center;">{{ $item->quantity }}</td>
+                    <td style="text-align:center;">{{ number_format($unitPrice) }}</td>
+                    <td style="text-align:center;">{{ number_format($lineTotal) }}</td>
                 </tr>
                 @php $totalPrice += $lineTotal; @endphp
                 @endforeach
                 @if($shippingTotal > 0)
-                <tr style="border-top: 1px solid #ddd;">
-                    <td colspan="5" style="text-align: left;">هزینه ارسال{{ $shippingMethod ? ' (' . $shippingMethod . ')' : '' }}:</td>
-                    <td>{{ number_format($shippingTotal) }}</td>
+                <tr style="border-top:1px solid #ddd;">
+                    <td colspan="4" style="text-align:left;font-size:8px;">هزینه ارسال:</td>
+                    <td style="text-align:center;">{{ number_format($shippingTotal) }}</td>
                 </tr>
                 @endif
-                <tr class="total-row">
-                    <td colspan="5" style="text-align: left;">جمع کل:</td>
-                    <td>{{ number_format($totalPrice + $shippingTotal) }}</td>
+                <tr class="total-row" style="background:#f0f0f0;">
+                    <td colspan="4" style="text-align:left;font-size:10px;">مجموع قابل پرداخت:</td>
+                    <td style="text-align:center;font-size:10px;">{{ number_format($totalPrice + $shippingTotal) }}</td>
                 </tr>
             </tbody>
         </table>
+        <div style="padding:4px 12px;font-size:9px;color:#555;border-bottom:1px solid #ddd;">
+            نوع پرداخت: <strong>{{ $paymentMethod }}</strong>
+            @php $wcTotal = floatval($wcData['total'] ?? 0); @endphp
+            @if($wcTotal > 0)
+            | مبلغ کل: <strong>{{ number_format($wcTotal) }} تومان</strong>
+            @endif
+        </div>
         @endif
 
-        {{-- Barcodes Section --}}
+        {{-- ═══ بخش ۴: گیرنده (خریدار) ═══ --}}
+        <div style="border-bottom:1px solid #ddd;padding:8px 12px;background:#fffbeb;">
+            <div style="font-size:11px;font-weight:bold;color:#333;margin-bottom:5px;">گیرنده (خریدار)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;font-size:9px;">
+                <div><span style="color:#888;">نام:</span> <strong style="color:#111;">{{ $order->customer_name }}</strong></div>
+                <div><span style="color:#888;">شماره تماس:</span> <strong dir="ltr" style="color:#111;">{{ $receiverPhone }}</strong></div>
+                @if(!empty($state) || !empty($city))
+                <div><span style="color:#888;">استان:</span> <strong>{{ $state }}</strong> — <span style="color:#888;">شهر:</span> <strong>{{ $city }}</strong></div>
+                @endif
+                @if(!empty($receiverPostcode))
+                <div><span style="color:#888;">کدپستی:</span> <strong dir="ltr">{{ $receiverPostcode }}</strong></div>
+                @endif
+            </div>
+            @if(!empty($receiverAddress))
+            <div style="font-size:9px;margin-top:4px;">
+                <span style="color:#888;">آدرس:</span> {{ $receiverAddress }}
+            </div>
+            @endif
+        </div>
+
+        {{-- ═══ بخش ۵: بارکد + QR Code ═══ --}}
         @php
             $amadestCode = $order->amadest_barcode ?: $order->tracking_code;
             $postCode = $order->post_tracking_code;
-            // بارکد پستی: اول post_tracking_code بعد amadest_barcode
             $postBarcodeValue = $postCode ?: $amadestCode;
             $showAmadest = !empty($postBarcodeValue) && $order->shipping_type === 'post';
             $showPostQR = !empty($postCode) && $order->shipping_type === 'post';
@@ -455,10 +445,17 @@
             @if($showPostQR)
             <div class="qr-side">
                 <div id="qrcode"></div>
-                <p class="barcode-label">کد رهگیری پست</p>
+                <p class="barcode-label">کد رهگیری</p>
                 <p class="barcode-code">{{ $postCode }}</p>
             </div>
             @endif
+        </div>
+        @endif
+
+        {{-- ═══ بخش ۶: مقصد (بزرگ) ═══ --}}
+        @if(!empty($state) || !empty($city))
+        <div style="text-align:center;padding:6px 12px;background:#111;color:#fff;font-size:12px;font-weight:bold;">
+            مقصد: {{ $state }}{{ !empty($city) ? '/' . $city : '' }}
         </div>
         @endif
     </div>
