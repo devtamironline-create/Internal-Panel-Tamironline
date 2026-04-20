@@ -394,14 +394,6 @@
         <div style="text-align:center;padding:8px 10px;font-size:12px;font-weight:bold;border-bottom:1px solid #ccc;background:#f9f9f9;">
             مجموع مبلغ قابل پرداخت توسط گیرنده (خریدار): {{ number_format($totalPrice + $shippingTotal) }} ریال
         </div>
-        <div style="padding:5px 10px;font-size:10px;border-bottom:1px solid #ccc;">
-            نوع پرداخت: <strong>{{ $paymentMethod }}</strong>
-        </div>
-        @if($shippingTotal > 0)
-        <div style="padding:5px 10px;font-size:10px;border-bottom:1px solid #ccc;">
-            خدمات پست (حق ثبت پست+بسته‌بندی+جمع‌آوری): <strong>{{ number_format($shippingTotal) }}</strong> ریال
-        </div>
-        @endif
         @endif
 
         {{-- ═══ ردیف ۴: گیرنده ═══ --}}
