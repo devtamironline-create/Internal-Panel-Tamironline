@@ -317,7 +317,7 @@
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
                 {{-- شناسه‌ها (راست) --}}
-                <td style="width:35%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
+                <td style="width:55%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
                     <table style="font-size:9px;border-collapse:collapse;width:100%;">
                         <tr><td style="font-weight:bold;color:#666;padding:2px 0;">شناسه سفارش:</td><td style="font-weight:bold;color:#111;text-align:left;">{{ $order->order_number }}</td></tr>
                         <tr><td style="font-weight:bold;color:#666;padding:2px 0;">تاریخ:</td><td dir="ltr" style="text-align:left;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td></tr>
@@ -325,7 +325,7 @@
                     </table>
                 </td>
                 {{-- فرستنده (چپ) --}}
-                <td style="width:65%;padding:6px 10px;vertical-align:top;font-size:9px;">
+                <td style="width:45%;padding:6px 10px;vertical-align:top;font-size:9px;">
                     <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">فرستنده (فروشگاه): {{ $invoiceSettings['store_name'] }}</div>
                     <table style="font-size:9px;border-collapse:collapse;width:100%;">
                         @if(!empty($invoiceSettings['sender_province']) || !empty($invoiceSettings['sender_city']))
