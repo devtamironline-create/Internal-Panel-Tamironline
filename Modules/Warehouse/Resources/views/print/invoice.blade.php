@@ -426,23 +426,23 @@
                         </tr>
                     </table>
                 </td>
-                {{-- توضیحات --}}
-                <td style="width:30%;padding:8px 12px;vertical-align:top;font-size:9px;">
-                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">توضیحات فروشگاه:</div>
-                    <div style="color:#555;">سفارش {{ $order->order_number }}</div>
-                    @if(!empty($customerNote))
-                    <div style="color:#555;margin-top:3px;">{{ $customerNote }}</div>
+                {{-- QR Code --}}
+                <td style="width:30%;padding:8px 12px;vertical-align:middle;text-align:center;">
+                    @if($showQR || $showOrderBarcode)
+                    <div id="qrcode" style="display:inline-block;"></div>
                     @endif
                 </td>
             </tr>
         </table>
 
-        {{-- ═══ ردیف ۶: QR + اطلاعات بسته ═══ --}}
+        {{-- ═══ ردیف ۶: توضیحات + اطلاعات بسته ═══ --}}
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
-                <td style="width:25%;padding:6px 10px;border-left:1px solid #ccc;text-align:center;vertical-align:middle;">
-                    @if($showQR || $showOrderBarcode)
-                    <div id="qrcode" style="display:inline-block;"></div>
+                <td style="width:25%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
+                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">توضیحات فروشگاه:</div>
+                    <div style="color:#555;">سفارش {{ $order->order_number }}</div>
+                    @if(!empty($customerNote))
+                    <div style="color:#555;margin-top:3px;">{{ $customerNote }}</div>
                     @endif
                 </td>
                 <td style="width:75%;padding:6px 10px;vertical-align:top;">
