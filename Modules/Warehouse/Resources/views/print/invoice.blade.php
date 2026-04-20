@@ -310,7 +310,7 @@
 
         {{-- ═══ ردیف ۱: هدر ═══ --}}
         <div style="text-align:center;padding:8px 12px;border-bottom:2px solid #333;font-size:16px;font-weight:bold;">
-            فروشگاه {{ $invoiceSettings['store_name'] }}
+            {{ $invoiceSettings['store_name'] }}
         </div>
 
         {{-- ═══ ردیف ۲: فرستنده + شناسه‌ها ═══ --}}
