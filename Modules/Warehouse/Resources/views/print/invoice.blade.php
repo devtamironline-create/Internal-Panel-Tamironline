@@ -482,7 +482,7 @@
     </div>
 
     <script src="{{ asset('js/vendor/JsBarcode.all.min.js') }}"></script>
-    @if($showPostQR)
+    @if($showQR)
     <script src="{{ asset('js/vendor/qrcode.min.js') }}"></script>
     @endif
     <script>
@@ -497,7 +497,7 @@
         });
         @endif
 
-        @if($showAmadest)
+        @if($showBarcode)
         JsBarcode("#amadest-barcode", "{{ $postBarcodeValue }}", {
             format: "CODE128",
             width: 2,
@@ -507,7 +507,7 @@
         });
         @endif
 
-        @if($showPostQR)
+        @if($showQR)
         new QRCode(document.getElementById("qrcode"), {
             text: "{{ $postCode }}",
             width: 90,
