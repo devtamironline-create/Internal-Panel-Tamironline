@@ -31,6 +31,9 @@ class SettingsController extends Controller
             'invoice_logo' => WarehouseSetting::get('invoice_logo', ''),
             'invoice_sender_phone' => WarehouseSetting::get('invoice_sender_phone', ''),
             'invoice_sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
+            'invoice_sender_province' => WarehouseSetting::get('invoice_sender_province', ''),
+            'invoice_sender_city' => WarehouseSetting::get('invoice_sender_city', ''),
+            'invoice_sender_postcode' => WarehouseSetting::get('invoice_sender_postcode', ''),
         ];
 
         $boxSizes = WarehouseBoxSize::orderBy('sort_order')->get();
@@ -57,6 +60,9 @@ class SettingsController extends Controller
             'invoice_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'invoice_sender_phone' => 'nullable|string|max:50',
             'invoice_sender_address' => 'nullable|string|max:500',
+            'invoice_sender_province' => 'nullable|string|max:100',
+            'invoice_sender_city' => 'nullable|string|max:100',
+            'invoice_sender_postcode' => 'nullable|string|max:20',
         ]);
 
         WarehouseSetting::set('weight_tolerance', $request->weight_tolerance);
@@ -66,7 +72,7 @@ class SettingsController extends Controller
         }
 
         // Invoice settings
-        foreach (['invoice_store_name', 'invoice_subtitle', 'invoice_sender_phone', 'invoice_sender_address'] as $key) {
+        foreach (['invoice_store_name', 'invoice_subtitle', 'invoice_sender_phone', 'invoice_sender_address', 'invoice_sender_province', 'invoice_sender_city', 'invoice_sender_postcode'] as $key) {
             if ($request->has($key)) {
                 WarehouseSetting::set($key, $request->input($key));
             }

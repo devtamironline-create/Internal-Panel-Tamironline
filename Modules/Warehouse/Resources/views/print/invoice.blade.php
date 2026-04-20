@@ -313,28 +313,48 @@
             {{ $invoiceSettings['store_name'] }}
         </div>
 
-        {{-- ═══ ردیف ۲: فرستنده + شناسه‌ها ═══ --}}
+        {{-- ═══ ردیف ۲: شناسه‌ها (راست) + فرستنده (چپ) ═══ --}}
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
-                <td style="width:60%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
-                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">فرستنده (فروشگاه): {{ $invoiceSettings['store_name'] }}</div>
+                {{-- شناسه‌ها (راست) --}}
+                <td style="width:35%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
                     <table style="font-size:9px;border-collapse:collapse;width:100%;">
-                        @if(!empty($invoiceSettings['sender_address']))
-                        <tr><td style="font-weight:bold;color:#666;width:40px;padding:1px 0;">آدرس:</td><td>{{ $invoiceSettings['sender_address'] }}</td></tr>
-                        @endif
-                        @if(!empty($invoiceSettings['sender_phone']))
-                        <tr><td style="font-weight:bold;color:#666;padding:1px 0;">تلفن:</td><td dir="ltr" style="text-align:right;">{{ $invoiceSettings['sender_phone'] }}</td></tr>
-                        @endif
+                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">شناسه سفارش:</td><td style="font-weight:bold;color:#111;text-align:left;">{{ $order->order_number }}</td></tr>
+                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">تاریخ:</td><td dir="ltr" style="text-align:left;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td></tr>
+                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">نوع ارسال:</td><td style="font-weight:bold;text-align:left;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</td></tr>
                     </table>
                 </td>
-                <td style="width:40%;padding:6px 10px;vertical-align:top;font-size:9px;">
+                {{-- فرستنده (چپ) --}}
+                <td style="width:65%;padding:6px 10px;vertical-align:top;font-size:9px;">
+                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">فرستنده (فروشگاه): {{ $invoiceSettings['store_name'] }}</div>
                     <table style="font-size:9px;border-collapse:collapse;width:100%;">
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">شناسه سفارش:</td><td style="font-weight:bold;color:#111;">{{ $order->order_number }}</td></tr>
-                        @if(!empty($amadestCode))
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">شناسه شیپ:</td><td dir="ltr" style="text-align:right;">{{ $amadestCode }}</td></tr>
+                        @if(!empty($invoiceSettings['sender_province']) || !empty($invoiceSettings['sender_city']))
+                        <tr>
+                            <td style="font-weight:bold;color:#666;width:40px;padding:1px 0;">استان:</td>
+                            <td style="width:35%;">{{ $invoiceSettings['sender_province'] ?? '' }}</td>
+                            <td style="font-weight:bold;color:#666;width:30px;">شهر:</td>
+                            <td>{{ $invoiceSettings['sender_city'] ?? '' }}</td>
+                        </tr>
                         @endif
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">تاریخ:</td><td>{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td></tr>
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">نوع ارسال:</td><td style="font-weight:bold;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</td></tr>
+                        @if(!empty($invoiceSettings['sender_address']))
+                        <tr><td style="font-weight:bold;color:#666;padding:1px 0;">آدرس:</td><td colspan="3">{{ $invoiceSettings['sender_address'] }}</td></tr>
+                        @endif
+                        @if(!empty($invoiceSettings['sender_postcode']) || !empty($invoiceSettings['sender_phone']))
+                        <tr>
+                            @if(!empty($invoiceSettings['sender_postcode']))
+                            <td style="font-weight:bold;color:#666;padding:1px 0;">کدپستی:</td>
+                            <td dir="ltr" style="text-align:right;">{{ $invoiceSettings['sender_postcode'] }}</td>
+                            @else
+                            <td colspan="2"></td>
+                            @endif
+                            @if(!empty($invoiceSettings['sender_phone']))
+                            <td style="font-weight:bold;color:#666;">تلفن:</td>
+                            <td dir="ltr" style="text-align:right;">{{ $invoiceSettings['sender_phone'] }}</td>
+                            @else
+                            <td colspan="2"></td>
+                            @endif
+                        </tr>
+                        @endif
                     </table>
                 </td>
             </tr>

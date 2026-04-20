@@ -318,6 +318,9 @@ class PrintController extends Controller
             'logo' => WarehouseSetting::get('invoice_logo', ''),
             'sender_phone' => WarehouseSetting::get('invoice_sender_phone', ''),
             'sender_address' => WarehouseSetting::get('invoice_sender_address', ''),
+            'sender_province' => WarehouseSetting::get('invoice_sender_province', ''),
+            'sender_city' => WarehouseSetting::get('invoice_sender_city', ''),
+            'sender_postcode' => WarehouseSetting::get('invoice_sender_postcode', ''),
         ];
 
         // داده‌های شهر/استان COD24 برای dropdown (بدون نیاز به fetch جداگانه)
