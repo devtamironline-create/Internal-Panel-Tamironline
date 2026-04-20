@@ -179,9 +179,9 @@ class DataRestoreController extends Controller
             abort(400, 'نام جدول نامعتبر');
         }
 
-        // باید در هر دو دیتابیس باشه
-        $exists = DB::select("SHOW TABLES LIKE ?", [$table]);
-        $backupExists = DB::connection('backup')->select("SHOW TABLES LIKE ?", [$table]);
+        // باید در هر دو دیتابیس باشه (بعد از regex امن برای inline)
+        $exists = DB::select("SHOW TABLES LIKE '{$table}'");
+        $backupExists = DB::connection('backup')->select("SHOW TABLES LIKE '{$table}'");
         if (empty($exists) || empty($backupExists)) {
             abort(404, 'جدول در یکی از دیتابیس‌ها وجود ندارد');
         }
