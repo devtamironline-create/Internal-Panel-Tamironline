@@ -338,10 +338,6 @@
                             <td style="color:#888;padding:3px 0;white-space:nowrap;">تاریخ:</td>
                             <td dir="ltr" style="text-align:left;padding:3px 0;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td>
                         </tr>
-                        <tr>
-                            <td style="color:#888;padding:3px 0;white-space:nowrap;">نوع ارسال:</td>
-                            <td style="font-weight:bold;text-align:left;padding:3px 0;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? '-' }}</td>
-                        </tr>
                     </table>
                 </td>
                 {{-- فرستنده (چپ) --}}
@@ -475,17 +471,27 @@
             </tr>
         </table>
 
-        {{-- ═══ ردیف ۷: بارکد بزرگ ═══ --}}
+        {{-- ═══ ردیف ۷: بارکد (چپ) + نوع ارسال بزرگ (راست) ═══ --}}
         @if($showBarcode || $showOrderBarcode)
-        <div style="text-align:center;padding:6px 10px;border-bottom:1px solid #ccc;">
-            @if($showBarcode)<svg id="amadest-barcode" style="max-width:100%;"></svg>@endif
-            @if($showOrderBarcode)<svg id="order-barcode" style="max-width:100%;"></svg>@endif
-            <div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:3px;padding:0 20px;">
-                <span>شناسه سفارش: <strong>{{ $order->order_number }}</strong></span>
-                @if(!empty($amadestCode))<span>سریال: <strong>{{ $amadestCode }}</strong></span>@endif
-                @if(!empty($postCode))<span>بارکد پستی: <strong>{{ $postCode }}</strong></span>@endif
-            </div>
-        </div>
+        <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
+            <tr>
+                {{-- نوع ارسال بزرگ (راست) --}}
+                <td style="width:35%;padding:10px;text-align:center;vertical-align:middle;border-left:1px solid #ccc;background:#fffbea;">
+                    <div style="font-size:10px;color:#666;margin-bottom:4px;">نوع ارسال</div>
+                    <div style="font-size:20px;font-weight:bold;color:#000;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? '-' }}</div>
+                </td>
+                {{-- بارکد (چپ) --}}
+                <td style="width:65%;padding:6px 10px;text-align:center;vertical-align:middle;">
+                    @if($showBarcode)<svg id="amadest-barcode" style="max-width:100%;"></svg>@endif
+                    @if($showOrderBarcode)<svg id="order-barcode" style="max-width:100%;"></svg>@endif
+                    <div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:3px;padding:0 10px;">
+                        <span>شناسه سفارش: <strong>{{ $order->order_number }}</strong></span>
+                        @if(!empty($amadestCode))<span>سریال: <strong>{{ $amadestCode }}</strong></span>@endif
+                        @if(!empty($postCode))<span>بارکد پستی: <strong>{{ $postCode }}</strong></span>@endif
+                    </div>
+                </td>
+            </tr>
+        </table>
         @endif
 
         {{-- ═══ ردیف ۸: مقصد ═══ --}}
