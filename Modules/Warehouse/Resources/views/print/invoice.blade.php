@@ -317,42 +317,49 @@
         <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
             <tr>
                 {{-- شناسه‌ها (راست) --}}
-                <td style="width:55%;padding:6px 10px;border-left:1px solid #ccc;vertical-align:top;font-size:9px;">
-                    <table style="font-size:9px;border-collapse:collapse;width:100%;">
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">شناسه سفارش:</td><td style="font-weight:bold;color:#111;text-align:left;">{{ $order->order_number }}</td></tr>
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">تاریخ:</td><td dir="ltr" style="text-align:left;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td></tr>
-                        <tr><td style="font-weight:bold;color:#666;padding:2px 0;">نوع ارسال:</td><td style="font-weight:bold;text-align:left;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? 'نامشخص' }}</td></tr>
+                <td style="width:30%;padding:8px 12px;border-left:1px solid #ccc;vertical-align:top;">
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;width:60px;">شناسه سفارش:</td>
+                            <td style="font-weight:bold;color:#111;text-align:left;padding:3px 0;">{{ $order->order_number }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;">تاریخ:</td>
+                            <td dir="ltr" style="text-align:left;padding:3px 0;">{{ \Morilog\Jalali\Jalalian::fromCarbon($order->created_at)->format('H:i Y/m/d') }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;">نوع ارسال:</td>
+                            <td style="font-weight:bold;text-align:left;padding:3px 0;">{{ $order->shippingTypeRelation?->name ?? $order->shipping_type ?? '-' }}</td>
+                        </tr>
                     </table>
                 </td>
                 {{-- فرستنده (چپ) --}}
-                <td style="width:45%;padding:6px 10px;vertical-align:top;font-size:9px;">
-                    <div style="font-weight:bold;font-size:10px;margin-bottom:4px;">فرستنده (فروشگاه): {{ $invoiceSettings['store_name'] }}</div>
-                    <table style="font-size:9px;border-collapse:collapse;width:100%;">
+                <td style="width:70%;padding:8px 12px;vertical-align:top;">
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;width:85px;text-align:right;">فرستنده (فروشگاه):</td>
+                            <td colspan="3" style="font-weight:bold;padding:3px 0;">{{ $invoiceSettings['store_name'] }}</td>
+                        </tr>
                         @if(!empty($invoiceSettings['sender_province']) || !empty($invoiceSettings['sender_city']))
                         <tr>
-                            <td style="font-weight:bold;color:#666;width:40px;padding:1px 0;">استان:</td>
-                            <td style="width:35%;">{{ $invoiceSettings['sender_province'] ?? '' }}</td>
-                            <td style="font-weight:bold;color:#666;width:30px;">شهر:</td>
-                            <td>{{ $invoiceSettings['sender_city'] ?? '' }}</td>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">استان:</td>
+                            <td style="padding:3px 0 3px 8px;">{{ $invoiceSettings['sender_province'] ?? '' }}</td>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;width:35px;">شهر:</td>
+                            <td style="padding:3px 0;">{{ $invoiceSettings['sender_city'] ?? '' }}</td>
                         </tr>
                         @endif
                         @if(!empty($invoiceSettings['sender_address']))
-                        <tr><td style="font-weight:bold;color:#666;padding:1px 0;">آدرس:</td><td colspan="3">{{ $invoiceSettings['sender_address'] }}</td></tr>
+                        <tr>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;vertical-align:top;">آدرس:</td>
+                            <td colspan="3" style="padding:3px 0;line-height:1.6;">{{ $invoiceSettings['sender_address'] }}</td>
+                        </tr>
                         @endif
                         @if(!empty($invoiceSettings['sender_postcode']) || !empty($invoiceSettings['sender_phone']))
                         <tr>
-                            @if(!empty($invoiceSettings['sender_postcode']))
-                            <td style="font-weight:bold;color:#666;padding:1px 0;">کدپستی:</td>
-                            <td dir="ltr" style="text-align:right;">{{ $invoiceSettings['sender_postcode'] }}</td>
-                            @else
-                            <td colspan="2"></td>
-                            @endif
-                            @if(!empty($invoiceSettings['sender_phone']))
-                            <td style="font-weight:bold;color:#666;">تلفن:</td>
-                            <td dir="ltr" style="text-align:right;">{{ $invoiceSettings['sender_phone'] }}</td>
-                            @else
-                            <td colspan="2"></td>
-                            @endif
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">کدپستی:</td>
+                            <td dir="ltr" style="text-align:right;padding:3px 0;">{{ $invoiceSettings['sender_postcode'] ?? '' }}</td>
+                            <td style="color:#888;padding:3px 0;white-space:nowrap;text-align:right;">تلفن:</td>
+                            <td dir="ltr" style="text-align:right;padding:3px 0;">{{ $invoiceSettings['sender_phone'] ?? '' }}</td>
                         </tr>
                         @endif
                     </table>
