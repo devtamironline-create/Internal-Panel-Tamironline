@@ -39,6 +39,20 @@ return [
             ]) : [],
         ],
 
+        // Backup database connection — for restoring corrupted data
+        'backup' => [
+            'driver' => 'mysql',
+            'host' => env('BACKUP_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('BACKUP_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('BACKUP_DB_DATABASE', 'panel_crm_backup'),
+            'username' => env('BACKUP_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('BACKUP_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+        ],
+
     ],
 
     'migrations' => [

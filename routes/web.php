@@ -7,6 +7,7 @@ use Modules\Staff\Http\Controllers\StaffController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\DataRestoreController;
 
 // Health Check for Coolify/Docker
 Route::get('/health', function () {
@@ -104,6 +105,11 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::get('/permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
+
+    // Data Restore from backup database
+    Route::get('/restore', [DataRestoreController::class, 'index'])->name('restore.index');
+    Route::get('/restore/{table}', [DataRestoreController::class, 'show'])->name('restore.show');
+    Route::post('/restore/{table}', [DataRestoreController::class, 'restore'])->name('restore.do');
 
     // Chat System
     Route::prefix('chat')->name('chat.')->group(function () {
