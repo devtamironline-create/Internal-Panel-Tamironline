@@ -585,6 +585,18 @@
                             شهرها
                         </a>
                         @endcan
+                        @can('view-crm-financial')
+                        <a href="{{ route('crm.wallet.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2zm7 5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            کیف‌پول تکنسین‌ها
+                        </a>
+                        @endcan
+                        @can('view-crm-invoices')
+                        <a href="{{ route('crm.invoices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.invoices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            فاکتورها
+                        </a>
+                        @endcan
                         @can('manage-crm-sms-templates')
                         <a href="{{ route('crm.sms.templates.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sms.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
