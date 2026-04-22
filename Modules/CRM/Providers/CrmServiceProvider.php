@@ -12,15 +12,12 @@ class CrmServiceProvider extends ServiceProvider
     {
         $this->app->register(RouteServiceProvider::class);
 
-        $this->mergeConfigFrom(
-            module_path($this->name, 'config/config.php'),
-            'crm'
-        );
+        $this->mergeConfigFrom(__DIR__ . '/../config/config.php', 'crm');
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(module_path($this->name, 'Database/Migrations'));
-        $this->loadViewsFrom(module_path($this->name, 'Resources/views'), 'crm');
+        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
     }
 }
