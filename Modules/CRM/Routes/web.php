@@ -7,6 +7,7 @@ use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\ProvinceController;
+use Modules\CRM\Http\Controllers\TechnicianController;
 
 Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function () {
     Route::get('/', [CrmController::class, 'dashboard'])
@@ -79,5 +80,22 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+    });
+
+    // ─── تکنسین‌های فعال ──────────────────────────────────────────
+    Route::middleware('can:view-crm-technicians')->group(function () {
+        Route::get('technicians', [TechnicianController::class, 'index'])->name('technicians.index');
+        Route::get('technicians/{technician}', [TechnicianController::class, 'show'])->name('technicians.show');
+    });
+    Route::middleware('can:create-crm-technician')->group(function () {
+        Route::get('technicians/create/new', [TechnicianController::class, 'create'])->name('technicians.create');
+        Route::post('technicians', [TechnicianController::class, 'store'])->name('technicians.store');
+    });
+    Route::middleware('can:edit-crm-technician')->group(function () {
+        Route::get('technicians/{technician}/edit', [TechnicianController::class, 'edit'])->name('technicians.edit');
+        Route::put('technicians/{technician}', [TechnicianController::class, 'update'])->name('technicians.update');
+    });
+    Route::middleware('can:delete-crm-technician')->group(function () {
+        Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');
     });
 });
