@@ -1,0 +1,11 @@
+{
+    "name": "CRM",
+    "alias": "crm",
+    "description": "مدیریت ارتباط با مشتری، سفارشات تعمیرات، تکنسین‌های فعال و مالی",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\CRM\\Providers\\CrmServiceProvider"
+    ],
+    "files": []
+}

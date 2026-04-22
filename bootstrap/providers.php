@@ -6,4 +6,5 @@ return [
     Modules\SMS\Providers\SMSServiceProvider::class,
     Modules\Attendance\Providers\AttendanceServiceProvider::class,
     Modules\Technician\Providers\TechnicianServiceProvider::class,
+    Modules\CRM\Providers\CrmServiceProvider::class,
 ];
