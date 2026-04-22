@@ -9,10 +9,17 @@ use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\InvoiceController;
 use Modules\CRM\Http\Controllers\OrderController;
 use Modules\CRM\Http\Controllers\OrderItemController;
+use Modules\CRM\Http\Controllers\PaymentController;
 use Modules\CRM\Http\Controllers\ProvinceController;
 use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\TechnicianController;
+
+// ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
+Route::middleware('web')->group(function () {
+    Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');
+    Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
+});
 
 Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function () {
     Route::get('/', [CrmController::class, 'dashboard'])
@@ -165,5 +172,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
         Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');
         Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
+    });
+
+    // ─── درگاه پرداخت (ادمین) ─────────────────────────────────────
+    Route::middleware('can:manage-crm-payment-gateway')->group(function () {
+        Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/settings', [PaymentController::class, 'settings'])->name('payments.settings');
+        Route::post('payments/settings', [PaymentController::class, 'updateSettings'])->name('payments.settings.update');
     });
 });
