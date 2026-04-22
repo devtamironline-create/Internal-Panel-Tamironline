@@ -15,12 +15,15 @@ use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 class OrderController extends Controller
 {
-    public function __construct(protected OrderSmsNotifier $smsNotifier)
-    {
+    public function __construct(
+        protected OrderSmsNotifier $smsNotifier,
+        protected InvoiceService $invoiceService,
+    ) {
     }
 
     public function index(Request $request)
@@ -266,6 +269,11 @@ class OrderController extends Controller
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
+
+        // تولید خودکار فاکتور در تکمیل سفارش (idempotent)
+        if ($newStatus === OrderStatus::Completed) {
+            $this->invoiceService->generateForOrder($order->refresh(), auth()->id());
+        }
 
         // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {

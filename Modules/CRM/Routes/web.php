@@ -6,9 +6,11 @@ use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
+use Modules\CRM\Http\Controllers\InvoiceController;
 use Modules\CRM\Http\Controllers\OrderController;
 use Modules\CRM\Http\Controllers\OrderItemController;
 use Modules\CRM\Http\Controllers\ProvinceController;
+use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 
@@ -143,5 +145,25 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('sms/templates/{template}/toggle', [SmsTemplateController::class, 'toggle'])->name('sms.templates.toggle');
 
         Route::get('sms/logs', [SmsTemplateController::class, 'logs'])->name('sms.logs');
+    });
+
+    // ─── کیف‌پول تکنسین ────────────────────────────────────────
+    Route::middleware('can:view-crm-financial')->group(function () {
+        Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
+        Route::get('wallet/technician/{technician}', [WalletController::class, 'show'])->name('wallet.show');
+    });
+    Route::middleware('can:manage-crm-wallet')->group(function () {
+        Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
+    });
+
+    // ─── فاکتورها ──────────────────────────────────────────────
+    Route::middleware('can:view-crm-invoices')->group(function () {
+        Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+    });
+    Route::middleware('can:manage-crm-financial')->group(function () {
+        Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
+        Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');
+        Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
     });
 });
