@@ -525,6 +525,29 @@
                 @endcan
                 @endif
 
+                <!-- خدمات تعمیرات (CRM) -->
+                @if(Route::has('crm.dashboard'))
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-permissions'])
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            خدمات تعمیرات
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-collapse class="sidebar-submenu">
+                        @can('view-crm-dashboard')
+                        <a href="{{ route('crm.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد CRM
+                        </a>
+                        @endcan
+                    </div>
+                </div>
+                @endcanany
+                @endif
+
                 <!-- مدیریت سیستم -->
                 @can('manage-permissions')
                 <div class="mt-6" x-data="{ open: {{ request()->routeIs('admin.roles.*') || request()->routeIs('admin.permissions.*') ? 'true' : 'false' }} }">
