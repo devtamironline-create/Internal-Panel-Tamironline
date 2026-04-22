@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Customer;
@@ -14,9 +15,14 @@ use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Services\OrderSmsNotifier;
 
 class OrderController extends Controller
 {
+    public function __construct(protected OrderSmsNotifier $smsNotifier)
+    {
+    }
+
     public function index(Request $request)
     {
         $search = $request->string('q')->toString();
@@ -99,6 +105,8 @@ class OrderController extends Controller
 
             return $order;
         });
+
+        $this->smsNotifier->notify($order, SmsTrigger::OrderCreated);
 
         return redirect()->route('crm.orders.show', $order)
             ->with('success', 'سفارش ثبت شد: ' . $order->order_code);
@@ -187,6 +195,11 @@ class OrderController extends Controller
             'created_at' => now(),
         ]);
 
+        // اطلاع به مشتری و تکنسین
+        $order->refresh()->load('technician');
+        $this->smsNotifier->notify($order, SmsTrigger::OrderAssigned);
+        $this->smsNotifier->notify($order, SmsTrigger::OrderAssignedTech);
+
         return back()->with('success', 'تکنسین تخصیص داده شد.');
     }
 
@@ -253,6 +266,11 @@ class OrderController extends Controller
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
+
+        // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن
+        if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
+            $this->smsNotifier->notify($order->refresh(), $trigger);
+        }
 
         return back()->with('success', 'وضعیت به "' . $newStatus->label() . '" تغییر کرد.');
     }
