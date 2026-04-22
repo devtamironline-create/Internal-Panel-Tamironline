@@ -62,6 +62,61 @@ class PermissionSeeder extends Seeder
             'approve-technician' => 'تایید/رد درخواست تکنسین',
             'delete-technician' => 'حذف درخواست تکنسین',
 
+            // CRM - داشبورد
+            'view-crm-dashboard' => 'مشاهده داشبورد CRM',
+
+            // CRM - سفارش‌ها
+            'view-crm-orders' => 'مشاهده سفارش‌های CRM',
+            'create-crm-order' => 'ثبت سفارش CRM',
+            'edit-crm-order' => 'ویرایش سفارش CRM',
+            'delete-crm-order' => 'حذف سفارش CRM',
+            'assign-crm-technician' => 'تخصیص تکنسین به سفارش CRM',
+            'change-crm-order-status' => 'تغییر وضعیت سفارش CRM',
+            'export-crm-orders' => 'خروجی Excel سفارش‌های CRM',
+
+            // CRM - سفارش داخلی + QC
+            'view-crm-internal-orders' => 'مشاهده سفارش‌های داخلی CRM',
+            'manage-crm-internal-orders' => 'مدیریت سفارش‌های داخلی CRM',
+            'qc-approve-internal-order' => 'تایید QC سفارش داخلی',
+
+            // CRM - مشتری‌ها
+            'view-crm-customers' => 'مشاهده مشتری‌های CRM',
+            'create-crm-customer' => 'افزودن مشتری CRM',
+            'edit-crm-customer' => 'ویرایش مشتری CRM',
+            'delete-crm-customer' => 'حذف مشتری CRM',
+
+            // CRM - تکنسین‌های فعال
+            'view-crm-technicians' => 'مشاهده تکنسین‌های فعال CRM',
+            'create-crm-technician' => 'افزودن تکنسین فعال CRM',
+            'edit-crm-technician' => 'ویرایش تکنسین فعال CRM',
+            'delete-crm-technician' => 'حذف تکنسین فعال CRM',
+
+            // CRM - مالی
+            'view-crm-financial' => 'مشاهده مالی CRM',
+            'manage-crm-financial' => 'مدیریت مالی CRM',
+            'manage-crm-wallet' => 'مدیریت کیف پول تکنسین',
+            'view-crm-invoices' => 'مشاهده فاکتورهای CRM',
+            'manage-crm-payment-gateway' => 'مدیریت درگاه پرداخت CRM',
+
+            // CRM - هزینه‌ها
+            'view-crm-costs' => 'مشاهده هزینه‌های CRM',
+            'manage-crm-costs' => 'مدیریت هزینه‌های CRM',
+
+            // CRM - HappyCall
+            'view-crm-happycall' => 'مشاهده پاسخ‌های HappyCall',
+            'manage-crm-happycall' => 'مدیریت HappyCall',
+
+            // CRM - پایه (تاکسونومی)
+            'view-crm-taxonomies' => 'مشاهده داده‌های پایه CRM',
+            'manage-crm-brands' => 'مدیریت برندها',
+            'manage-crm-devices' => 'مدیریت دستگاه‌ها',
+            'manage-crm-provinces' => 'مدیریت استان‌ها',
+            'manage-crm-cities' => 'مدیریت شهرها',
+
+            // CRM - تنظیمات
+            'manage-crm-settings' => 'مدیریت تنظیمات CRM',
+            'manage-crm-sms-templates' => 'مدیریت قالب‌های SMS سی‌آر‌ام',
+
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
