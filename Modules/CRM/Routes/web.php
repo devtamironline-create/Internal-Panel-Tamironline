@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\BrandController;
 use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
+use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\ProvinceController;
 
@@ -58,5 +59,25 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
         Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
         Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
+    });
+
+    // ─── مشتری‌ها ──────────────────────────────────────────────────
+    Route::middleware('can:view-crm-customers')->group(function () {
+        Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        // Endpoint Ajax برای لود شهرهای هر استان (فرم مشتری/سفارش در فازهای بعد)
+        Route::get('provinces/{province}/cities', [CustomerController::class, 'citiesOfProvince'])
+            ->name('provinces.cities');
+    });
+    Route::middleware('can:create-crm-customer')->group(function () {
+        Route::get('customers/create/new', [CustomerController::class, 'create'])->name('customers.create');
+        Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+    });
+    Route::middleware('can:edit-crm-customer')->group(function () {
+        Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
+        Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+    });
+    Route::middleware('can:delete-crm-customer')->group(function () {
+        Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     });
 });
