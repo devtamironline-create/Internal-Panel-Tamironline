@@ -9,6 +9,7 @@ use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\OrderController;
 use Modules\CRM\Http\Controllers\OrderItemController;
 use Modules\CRM\Http\Controllers\ProvinceController;
+use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 
 Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function () {
@@ -132,5 +133,15 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     Route::middleware('can:change-crm-order-status')->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
+    });
+
+    // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────
+    Route::middleware('can:manage-crm-sms-templates')->group(function () {
+        Route::get('sms/templates', [SmsTemplateController::class, 'index'])->name('sms.templates.index');
+        Route::get('sms/templates/{template}/edit', [SmsTemplateController::class, 'edit'])->name('sms.templates.edit');
+        Route::put('sms/templates/{template}', [SmsTemplateController::class, 'update'])->name('sms.templates.update');
+        Route::post('sms/templates/{template}/toggle', [SmsTemplateController::class, 'toggle'])->name('sms.templates.toggle');
+
+        Route::get('sms/logs', [SmsTemplateController::class, 'logs'])->name('sms.logs');
     });
 });
