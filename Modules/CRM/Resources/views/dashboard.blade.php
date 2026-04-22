@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
-@section('title', 'داشبورد CRM')
+@section('page-title', 'داشبورد CRM')
 
-@section('content')
+@section('main')
 <div class="p-6">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">داشبورد خدمات تعمیرات (CRM)</h1>
