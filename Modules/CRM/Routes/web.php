@@ -6,6 +6,8 @@ use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
+use Modules\CRM\Http\Controllers\OrderController;
+use Modules\CRM\Http\Controllers\OrderItemController;
 use Modules\CRM\Http\Controllers\ProvinceController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 
@@ -97,5 +99,38 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:delete-crm-technician')->group(function () {
         Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');
+    });
+
+    // ─── سفارش‌های تعمیر ─────────────────────────────────────────
+    // داشبورد تکنسین: سفارش‌های خودم
+    Route::get('my-orders', [OrderController::class, 'myOrders'])->name('orders.my');
+
+    Route::middleware('can:view-crm-orders')->group(function () {
+        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    });
+    Route::middleware('can:create-crm-order')->group(function () {
+        Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
+        Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
+    });
+    Route::middleware('can:edit-crm-order')->group(function () {
+        Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+        Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+
+        // آیتم‌های سفارش (قطعه/خدمت/حمل/تخفیف)
+        Route::post('orders/{order}/items', [OrderItemController::class, 'store'])->name('orders.items.store');
+        Route::delete('orders/{order}/items/{item}', [OrderItemController::class, 'destroy'])->name('orders.items.destroy');
+    });
+    Route::middleware('can:delete-crm-order')->group(function () {
+        Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    });
+
+    Route::middleware('can:assign-crm-technician')->group(function () {
+        Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
+        Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
+    });
+
+    Route::middleware('can:change-crm-order-status')->group(function () {
+        Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
     });
 });
