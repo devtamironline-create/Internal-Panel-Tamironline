@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\BrandController;
+use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\ProvinceController;
@@ -45,5 +46,17 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('provinces/{province}/edit', [ProvinceController::class, 'edit'])->name('provinces.edit');
         Route::put('provinces/{province}', [ProvinceController::class, 'update'])->name('provinces.update');
         Route::delete('provinces/{province}', [ProvinceController::class, 'destroy'])->name('provinces.destroy');
+    });
+
+    // ─── تاکسونومی ── شهرها ────────────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('cities', [CityController::class, 'index'])->name('cities.index');
+    });
+    Route::middleware('can:manage-crm-cities')->group(function () {
+        Route::get('cities/create', [CityController::class, 'create'])->name('cities.create');
+        Route::post('cities', [CityController::class, 'store'])->name('cities.store');
+        Route::get('cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
+        Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
+        Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
     });
 });
