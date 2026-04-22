@@ -381,8 +381,8 @@
                 <tr style="background:#f5f5f5;">
                     <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:right;">نام کالا</th>
                     <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:55px;">تعداد</th>
-                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">قیمت واحد (ریال)</th>
-                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">مجموع (ریال)</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">قیمت واحد (تومان)</th>
+                    <th style="border:1px solid #ddd;padding:6px 8px;font-size:10px;text-align:center;width:100px;">مجموع (تومان)</th>
                 </tr>
             </thead>
             <tbody>
@@ -399,7 +399,7 @@
             </tbody>
         </table>
         <div style="text-align:center;padding:8px 10px;font-size:12px;font-weight:bold;border-bottom:1px solid #ccc;background:#f9f9f9;">
-            مجموع مبلغ قابل پرداخت توسط گیرنده (خریدار): {{ number_format($totalPrice + $shippingTotal) }} ریال
+            مبلغ پرداخت شده: {{ number_format($totalPrice + $shippingTotal) }} تومان
         </div>
         @endif
 
