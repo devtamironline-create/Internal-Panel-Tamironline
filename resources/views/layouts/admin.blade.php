@@ -597,6 +597,12 @@
                             فاکتورها
                         </a>
                         @endcan
+                        @can('manage-crm-payment-gateway')
+                        <a href="{{ route('crm.payments.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.payments.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                            پرداخت‌ها (زیبال)
+                        </a>
+                        @endcan
                         @can('manage-crm-sms-templates')
                         <a href="{{ route('crm.sms.templates.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sms.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>

@@ -30,6 +30,23 @@
     <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
     @endif
 
+    @if($invoice->status === 'issued')
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h3 class="text-sm font-bold text-blue-900 dark:text-blue-200">لینک پرداخت آنلاین مشتری</h3>
+                <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">این لینک را برای مشتری بفرستید تا پرداخت کند (نیاز به ورود ندارد).</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="text" readonly value="{{ url('/crm/pay/' . $invoice->invoice_code) }}" dir="ltr"
+                       class="px-3 py-2 border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 rounded-lg text-xs w-80"
+                       onclick="this.select()">
+                <a href="{{ url('/crm/pay/' . $invoice->invoice_code) }}" target="_blank" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs">باز کردن</a>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
 
