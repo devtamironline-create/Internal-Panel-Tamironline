@@ -1,0 +1,131 @@
+{{-- دستگاه --}}
+<div class="mb-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">دستگاه و ایراد</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">برند</label>
+            <select name="brand_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— انتخاب —</option>
+                @foreach($brands as $b)
+                <option value="{{ $b->id }}" @selected(old('brand_id', $order->brand_id ?? null) == $b->id)>{{ $b->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع دستگاه</label>
+            <select name="device_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— انتخاب —</option>
+                @foreach($devices as $d)
+                <option value="{{ $d->id }}" @selected(old('device_id', $order->device_id ?? null) == $d->id)>{{ $d->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">عنوان مشکل</label>
+            <input type="text" name="problem_title" value="{{ old('problem_title', $order->problem_title ?? '') }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"
+                   placeholder="مثلاً آب‌بندی نمی‌کند">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">زمان مراجعه</label>
+            <input type="datetime-local" name="visit_scheduled_at"
+                   value="{{ old('visit_scheduled_at', isset($order) && $order->visit_scheduled_at ? $order->visit_scheduled_at->format('Y-m-d\TH:i') : '') }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شرح مشکل</label>
+            <textarea name="problem_description" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('problem_description', $order->problem_description ?? '') }}</textarea>
+        </div>
+    </div>
+</div>
+
+{{-- محل مراجعه --}}
+<div class="mb-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">محل مراجعه</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان</label>
+            <select name="province_id" id="order-province" data-cities-url="{{ url('/admin/crm/provinces') }}/__ID__/cities"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— انتخاب —</option>
+                @foreach($provinces as $p)
+                <option value="{{ $p->id }}" @selected(old('province_id', $order->province_id ?? null) == $p->id)>{{ $p->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر</label>
+            <select name="city_id" id="order-city" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— ابتدا استان را انتخاب کنید —</option>
+                @foreach($cities as $c)
+                <option value="{{ $c->id }}" @selected(old('city_id', $order->city_id ?? null) == $c->id)>{{ $c->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">کد پستی</label>
+            <input type="text" name="postal_code" value="{{ old('postal_code', $order->postal_code ?? '') }}" dir="ltr"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل</label>
+            <textarea name="address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('address', $order->address ?? '') }}</textarea>
+        </div>
+    </div>
+</div>
+
+{{-- مالی پایه --}}
+<div class="mb-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">مالی اولیه (تومان)</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">برآورد اولیه</label>
+            <input type="number" name="estimated_price" min="0" value="{{ old('estimated_price', $order->estimated_price ?? '') }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+        @if($showFinalPrice ?? false)
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">مبلغ نهایی</label>
+            <input type="number" name="final_price" min="0" value="{{ old('final_price', $order->final_price ?? '') }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+        @endif
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">بیعانه پرداخت‌شده</label>
+            <input type="number" name="deposit" min="0" value="{{ old('deposit', $order->deposit ?? 0) }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+    </div>
+</div>
+
+{{-- یادداشت داخلی --}}
+<div class="mb-6">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">یادداشت داخلی</label>
+    <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('notes', $order->notes ?? '') }}</textarea>
+</div>
+
+<script>
+(function () {
+    const provinceEl = document.getElementById('order-province');
+    const cityEl = document.getElementById('order-city');
+    if (!provinceEl || !cityEl) return;
+
+    provinceEl.addEventListener('change', async function () {
+        const id = this.value;
+        cityEl.innerHTML = '<option value="">در حال بارگذاری...</option>';
+        if (!id) {
+            cityEl.innerHTML = '<option value="">— ابتدا استان را انتخاب کنید —</option>';
+            return;
+        }
+        try {
+            const url = provinceEl.dataset.citiesUrl.replace('__ID__', id);
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            cityEl.innerHTML = '<option value="">— انتخاب شهر —</option>' +
+                data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        } catch (e) {
+            cityEl.innerHTML = '<option value="">خطا در بارگذاری شهرها</option>';
+        }
+    });
+})();
+</script>
