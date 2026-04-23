@@ -76,8 +76,8 @@
                             @php
                                 $stepLabel = match(true) {
                                     $reg->current_step >= 9 => 'ویدیو',
-                                    $reg->current_step >= 8 => 'مدارک',
-                                    $reg->current_step >= 7 => 'قرارداد',
+                                    $reg->current_step >= 8 => 'قرارداد',
+                                    $reg->current_step >= 7 => 'مدارک',
                                     $reg->current_step >= 6 => 'تکمیل',
                                     default => 'مرحله ' . $reg->current_step . ' از ۵',
                                 };
