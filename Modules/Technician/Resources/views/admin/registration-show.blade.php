@@ -26,7 +26,7 @@
             </a>
             <div>
                 <h1 class="text-xl font-bold text-gray-900">{{ $registration->first_name }} {{ $registration->last_name }}</h1>
-                <p class="text-sm text-gray-500 mt-0.5">شماره درخواست: {{ $registration->id }} | ثبت‌شده: {{ $registration->created_at->format('Y/m/d H:i') }}</p>
+                <p class="text-sm text-gray-500 mt-0.5">شماره درخواست: {{ $registration->id }} | ثبت‌شده: {{ \Morilog\Jalali\Jalalian::fromDateTime($registration->created_at)->format('Y/m/d H:i') }}</p>
             </div>
         </div>
         <span class="px-3 py-1 text-sm font-bold rounded-full bg-{{ $color }}-100 text-{{ $color }}-700">
@@ -620,7 +620,7 @@
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">تاریخ امضا</dt>
-                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->contract_signed_at->format('Y/m/d H:i') }}</dd>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ \Morilog\Jalali\Jalalian::fromDateTime($registration->contract_signed_at)->format('Y/m/d H:i') }}</dd>
                 </div>
                 @if($registration->contract_signature)
                 <div>
@@ -687,7 +687,7 @@
                 @if($registration->biometric_verified_at)
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">تاریخ تایید</dt>
-                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ $registration->biometric_verified_at->format('Y/m/d H:i') }}</dd>
+                    <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ \Morilog\Jalali\Jalalian::fromDateTime($registration->biometric_verified_at)->format('Y/m/d H:i') }}</dd>
                 </div>
                 @endif
                 @if($registration->biometric_status === 'rejected' && $registration->biometric_reject_reason)

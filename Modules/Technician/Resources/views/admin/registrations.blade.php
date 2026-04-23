@@ -113,7 +113,7 @@
                                 {{ $reg->admin_notes ? 'یادداشت' : 'افزودن' }}
                             </button>
                         </td>
-                        <td class="px-4 py-3 text-gray-500 text-xs">{{ $reg->created_at->format('Y/m/d H:i') }}</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">{{ \Morilog\Jalali\Jalalian::fromDateTime($reg->created_at)->format('Y/m/d H:i') }}</td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <a href="{{ route('technician.admin.registrations.show', $reg->id) }}"
