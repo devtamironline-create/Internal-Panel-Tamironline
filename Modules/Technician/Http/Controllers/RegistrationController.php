@@ -671,6 +671,7 @@ class RegistrationController extends Controller
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
             ->where('status', 'approved')
+            ->where('documents_uploaded', true)   // قرارداد فقط بعد از آپلود مدارک
             ->whereNull('contract_signed_at')
             ->first();
 
@@ -691,7 +692,7 @@ class RegistrationController extends Controller
             'contract_signed_at' => now(),
             'contract_signature' => $request->signature,
             'contract_number'    => (string) $nextNumber,
-            'current_step'       => 7,
+            'current_step'       => 8,
         ]);
 
         Log::info('Technician contract signed', [
@@ -768,7 +769,7 @@ class RegistrationController extends Controller
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
             ->where('status', 'approved')
-            ->whereNotNull('contract_signed_at')
+            ->where('documents_uploaded', false)   // فقط تا زمانی که مدارک قبلاً آپلود نشده
             ->first();
 
         if (!$registration) {
@@ -803,7 +804,7 @@ class RegistrationController extends Controller
 
             $registration->update(array_merge($paths, [
                 'documents_uploaded' => true,
-                'current_step'      => 8,
+                'current_step'      => 7,
             ]));
 
             Log::info('Technician documents uploaded', [

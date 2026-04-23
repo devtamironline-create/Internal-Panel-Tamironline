@@ -292,20 +292,20 @@ class TechnicianAdminController extends Controller
         $data = ['current_step' => $request->current_step];
 
         // ست کردن فلگ‌های پیش‌نیاز بر اساس مرحله جدید (جلو بردن)
-        // ترتیب جدید: 7=قرارداد، 8=مدارک، 9=ویدیو
+        // ترتیب جدید: 7=مدارک، 8=قرارداد، 9=ویدیو
         if ($request->current_step >= 6) {
             $data['status'] = $registration->status === 'rejected' ? 'approved' : $registration->status;
             if ($registration->status === 'pending') {
                 $data['status'] = 'approved';
             }
         }
-        if ($request->current_step >= 7 && !$registration->contract_signed_at) {
-            // مرحله ۷ (قرارداد) به بالا = قرارداد امضا شده
-            $data['contract_signed_at'] = now();
-        }
-        if ($request->current_step >= 8 && !$registration->documents_uploaded) {
-            // مرحله ۸ (مدارک) به بالا = مدارک آپلود شده
+        if ($request->current_step >= 7 && !$registration->documents_uploaded) {
+            // مرحله ۷ (مدارک) به بالا = مدارک آپلود شده
             $data['documents_uploaded'] = true;
+        }
+        if ($request->current_step >= 8 && !$registration->contract_signed_at) {
+            // مرحله ۸ (قرارداد) به بالا = قرارداد امضا شده
+            $data['contract_signed_at'] = now();
         }
         if ($request->current_step >= 9 && $registration->biometric_status !== 'verified') {
             // مرحله ۹ (ویدیو) = بایومتریک تایید شده
@@ -318,11 +318,11 @@ class TechnicianAdminController extends Controller
             $data['biometric_reject_reason'] = null;
         }
         if ($request->current_step < 8) {
-            $data['documents_uploaded'] = false;
-        }
-        if ($request->current_step < 7) {
             $data['contract_signed_at'] = null;
             $data['contract_signature'] = null;
+        }
+        if ($request->current_step < 7) {
+            $data['documents_uploaded'] = false;
         }
         if ($request->current_step < 6) {
             $data['status'] = 'pending';
@@ -338,8 +338,8 @@ class TechnicianAdminController extends Controller
             4 => 'حوزه فعالیت',
             5 => 'مناطق تحت پوشش',
             6 => 'تکمیل (منتظر بررسی)',
-            7 => 'امضای قرارداد',
-            8 => 'آپلود مدارک',
+            7 => 'آپلود مدارک',
+            8 => 'امضای قرارداد',
             9 => 'احراز هویت ویدیویی',
         ];
 
