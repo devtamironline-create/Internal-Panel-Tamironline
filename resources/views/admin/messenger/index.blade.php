@@ -192,6 +192,11 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <!-- دکمه منشن‌های نخوانده -->
+                        <button x-show="unreadMentions.length > 0" @click="openNextMention()" class="relative p-2 bg-brand-100 dark:bg-brand-900 text-brand-600 hover:bg-brand-200 dark:hover:bg-brand-800 rounded-lg transition" title="رفتن به منشن‌های نخوانده">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
+                            <span class="absolute -top-1 -left-1 bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-bold px-1" x-text="unreadMentions.length"></span>
+                        </button>
                         <button @click="showMessageSearch = !showMessageSearch; if(!showMessageSearch) { messageSearchQuery = ''; clearMessageSearch(); }" :class="showMessageSearch ? 'bg-brand-100 dark:bg-brand-900 text-brand-600' : 'text-gray-500'" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="جستجو در پیام‌ها">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         </button>
@@ -1229,6 +1234,7 @@ function messenger() {
         // Mention state
         mentionUsers: [],
         mentionFiltered: [],
+        unreadMentions: [], // منشن‌های نخوانده در این گفت‌وگو
         showMentionDropdown: false,
         mentionQuery: '',
         mentionStartPos: -1,
@@ -1423,6 +1429,9 @@ function messenger() {
 
             // لود لیست کاربران قابل منشن
             this.loadMentionUsers();
+
+            // لود منشن‌های نخوانده برای دکمه @
+            this.loadUnreadMentions();
 
             this.$nextTick(() => this.scrollToBottom());
         },
@@ -1791,6 +1800,40 @@ function messenger() {
                 const data = await resp.json();
                 this.mentionUsers = data.users || [];
             } catch (e) { this.mentionUsers = []; }
+        },
+
+        async loadUnreadMentions() {
+            this.unreadMentions = [];
+            if (!this.currentConversation) return;
+            try {
+                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/my-mentions`);
+                const data = await resp.json();
+                this.unreadMentions = data.mentions || [];
+            } catch (e) { this.unreadMentions = []; }
+        },
+
+        async openNextMention() {
+            if (!this.unreadMentions.length) return;
+            const next = this.unreadMentions[0]; // قدیمی‌ترین
+            const messageId = next.message_id;
+            const mentionId = next.mention_id;
+
+            // حذف از لیست (optimistic)
+            this.unreadMentions = this.unreadMentions.slice(1);
+
+            // ناوبری به پیام — از تابع موجود scrollToMessage استفاده می‌کنیم
+            this.scrollToMessage(messageId);
+
+            // علامت‌گذاری به‌عنوان خوانده در بک‌اند
+            try {
+                await fetch(`/admin/chat/mentions/${mentionId}/read`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                });
+            } catch (e) { /* silent */ }
         },
 
         handleMentionInput(e) {

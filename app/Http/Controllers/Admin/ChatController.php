@@ -1589,6 +1589,49 @@ class ChatController extends Controller
     }
 
     /**
+     * منشن‌های نخوانده کاربر در یک گفت‌وگو (برای دکمه @ در هدر چت).
+     */
+    public function myMentions(Conversation $conversation): JsonResponse
+    {
+        $userId = auth()->id();
+
+        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        $mentions = \App\Models\Chat\MessageMention::where('conversation_id', $conversation->id)
+            ->where('user_id', $userId)
+            ->where('is_read', false)
+            ->orderBy('id') // قدیمی‌ترین اول
+            ->get(['id', 'message_id', 'created_at']);
+
+        return response()->json([
+            'count' => $mentions->count(),
+            'mentions' => $mentions->map(fn ($m) => [
+                'mention_id' => $m->id,
+                'message_id' => $m->message_id,
+                'created_at' => $m->created_at?->toIso8601String(),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * یک منشن را برای کاربر فعلی «خوانده‌شده» علامت می‌زند.
+     */
+    public function markMentionRead(\App\Models\Chat\MessageMention $mention): JsonResponse
+    {
+        if ($mention->user_id !== auth()->id()) {
+            return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        if (! $mention->is_read) {
+            $mention->update(['is_read' => true]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * پارسر منشن: پیدا کردن @نام در متن و ذخیره + نوتیفیکیشن
      */
     private function processMentions(Message $message, Conversation $conversation): void
