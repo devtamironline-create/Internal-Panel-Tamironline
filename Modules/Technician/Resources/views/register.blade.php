@@ -1032,10 +1032,10 @@
                     </div>
                     <h2 class="text-lg font-bold text-green-700 mb-2">قرارداد با موفقیت امضا شد!</h2>
                     <p class="text-sm text-gray-500 mb-4">
-                        برای تکمیل فرآیند، آپلود مدارک و احراز هویت ویدیویی باقی‌مانده است.
+                        برای تکمیل فرآیند، احراز هویت ویدیویی باقی‌مانده است.
                     </p>
-                    <button onclick="highestCompletedStep = Math.max(highestCompletedStep, 6); goToPhase('N')" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
-                        ادامه: آپلود مدارک
+                    <button onclick="highestCompletedStep = Math.max(highestCompletedStep, 7); goToPhase('C2'); initBiometricCamera();" class="w-full max-w-xs mx-auto py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
+                        ادامه: احراز هویت ویدیویی
                     </button>
                 </div>
             </div>
@@ -1354,7 +1354,7 @@
 
         // نگاشت فاز به مرحله (۸ مرحله)
         // 1=هویت(A,B,C) | 2=شخصی(D) | 3=تکمیلی(E) | 4=مناطق(F) | 5=فعالیت(G,H) | 6=قرارداد(J,K,L) | 7=مدارک(N) | 8=ویدیو(C2)
-        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, J:6, K:6, L:6, N:7, C2:8, M:8 };
+        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, N:6, J:7, K:7, L:7, C2:8, M:8 };
 
         // نگاشت مرحله به اولین فاز آن (برای کلیک روی تب)
         const stepToPhase = { 1:'A', 2:'D', 3:'E', 4:'F', 5:'G', 6:'J', 7:'N', 8:'C2' };
@@ -1366,7 +1366,7 @@
             currentPhase = phase;
 
             // پراگرس بار
-            const progress = { A:5, B:8, C:12, D:20, E:32, F:44, G:56, H:62, I:62, J:68, K:75, L:82, N:88, C2:94, M:100, Rejected:62 };
+            const progress = { A:5, B:8, C:12, D:20, E:32, F:44, G:56, H:62, I:62, N:68, J:75, K:82, L:88, C2:94, M:100, Rejected:62 };
             $('#progressBar').css('width', (progress[phase] || 5) + '%');
 
             // به‌روزرسانی بالاترین مرحله تکمیل شده
@@ -1566,13 +1566,13 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // ترتیب جدید: قرارداد → مدارک → بایومتریک → تکمیل
+                            // ترتیب جدید: مدارک → قرارداد → بایومتریک → تکمیل
                             if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded && res.resume.biometric_status === 'verified') {
                                 isApproved = true;
                                 highestCompletedStep = 8;
                                 goToPhase('M');
                             } else if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded) {
-                                // مدارک آپلود شده، بایومتریک انجام نشده
+                                // مدارک + قرارداد انجام شده، بایومتریک انجام نشده
                                 isApproved = true;
                                 highestCompletedStep = 7;
                                 if (res.resume.biometric_status === 'pending') {
@@ -1590,17 +1590,17 @@
                                     goToPhase('C2');
                                     initBiometricCamera();
                                 }
-                            } else if (res.resume.status === 'approved' && res.resume.contract_signed) {
-                                // قرارداد امضا شده ولی مدارک آپلود نشده
+                            } else if (res.resume.status === 'approved' && res.resume.documents_uploaded) {
+                                // مدارک آپلود شده ولی قرارداد امضا نشده
                                 isApproved = true;
                                 highestCompletedStep = 6;
-                                goToPhase('N');
-                            } else if (res.resume.status === 'approved') {
-                                // تایید شده، قرارداد امضا نشده
-                                isApproved = true;
-                                highestCompletedStep = 5;
                                 $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 goToPhase('J');
+                            } else if (res.resume.status === 'approved') {
+                                // تایید شده، هنوز هیچ مرحله بعدی انجام نشده → شروع از آپلود مدارک
+                                isApproved = true;
+                                highestCompletedStep = 5;
+                                goToPhase('N');
                             } else if (res.resume.status === 'rejected') {
                                 $('#rejectedName').text(verifiedFirstName + ' ' + verifiedLastName);
                                 if (res.resume.rejection_reason) {
@@ -1829,9 +1829,9 @@
                 contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        highestCompletedStep = 7;
-                        goToPhase('C2');
-                        initBiometricCamera();
+                        // مدارک آپلود شد → برو به مرحله امضای قرارداد
+                        highestCompletedStep = 6;
+                        goToPhase('J');
                     } else {
                         showFieldError('docGeneralError', res.message || 'خطا در آپلود مدارک');
                     }
@@ -2839,7 +2839,8 @@
             .done(function(res) {
                 if (res.success) {
                     if (contractOtpInterval) clearInterval(contractOtpInterval);
-                    highestCompletedStep = 6;
+                    // قرارداد امضا شد (مرحله هفتم از دید کاربر = بعد از مدارک)
+                    highestCompletedStep = 7;
                     goToPhase('L');
                 } else {
                     showFieldError('signatureError', res.message);
