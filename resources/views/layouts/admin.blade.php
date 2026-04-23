@@ -527,7 +527,7 @@
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-permissions'])
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -537,6 +537,39 @@
                         <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div x-show="open" x-collapse class="sidebar-submenu">
+                        {{-- بخش تکنسین --}}
+                        @can('view-tech-dashboard')
+                        <a href="{{ route('crm.tech.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد من
+                        </a>
+                        @endcan
+                        @can('view-own-orders')
+                        <a href="{{ route('crm.orders.my') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.my') || request()->routeIs('crm.tech.orders.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            سفارش‌های من
+                        </a>
+                        @endcan
+                        @can('view-own-wallet')
+                        <a href="{{ route('crm.tech.wallet') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.wallet') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2z"/></svg>
+                            کیف‌پول من
+                        </a>
+                        @endcan
+                        @can('view-own-invoices')
+                        <a href="{{ route('crm.tech.invoices') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.invoices') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            فاکتورهای من
+                        </a>
+                        @endcan
+                        @can('view-tech-dashboard')
+                        <a href="{{ route('crm.tech.profile') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.profile') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            پروفایل من
+                        </a>
+                        @endcan
+
+                        {{-- بخش ادمین/اپراتور --}}
                         @can('view-crm-dashboard')
                         <a href="{{ route('crm.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.dashboard') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -544,17 +577,11 @@
                         </a>
                         @endcan
                         @can('view-crm-orders')
-                        <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.*') ? 'sidebar-menu-item-active' : '' }}">
+                        <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.index') || request()->routeIs('crm.orders.show') || request()->routeIs('crm.orders.create') || request()->routeIs('crm.orders.edit') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                             سفارش‌های تعمیر
                         </a>
                         @endcan
-                        @if(Route::has('crm.orders.my'))
-                        <a href="{{ route('crm.orders.my') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.my') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                            سفارش‌های من
-                        </a>
-                        @endif
                         @can('view-crm-customers')
                         <a href="{{ route('crm.customers.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customers.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
