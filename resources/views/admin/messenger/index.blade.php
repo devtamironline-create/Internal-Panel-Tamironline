@@ -1821,8 +1821,11 @@ function messenger() {
             // حذف از لیست (optimistic)
             this.unreadMentions = this.unreadMentions.slice(1);
 
-            // ناوبری به پیام — از تابع موجود scrollToMessage استفاده می‌کنیم
-            this.scrollToMessage(messageId);
+            // اگر پیام در لیست فعلی نیست، پیام‌های قدیمی‌تر را لود کن تا به آن برسی
+            await this.ensureMessageLoaded(messageId);
+
+            // بعد از اطمینان از لود شدن، در nextTick اسکرول کن (تا DOM کامل به‌روز شده باشد)
+            this.$nextTick(() => this.scrollToMessage(messageId));
 
             // علامت‌گذاری به‌عنوان خوانده در بک‌اند
             try {
@@ -1834,6 +1837,21 @@ function messenger() {
                     },
                 });
             } catch (e) { /* silent */ }
+        },
+
+        /**
+         * اطمینان از لود بودن پیام با شناسه داده‌شده در لیست فعلی.
+         * اگر پیام قدیمی‌تر از بازه لود شده باشد، صفحات قدیمی‌تر را یکی‌یکی
+         * لود می‌کند تا پیام پیدا شود یا پیام قدیمی‌تری نمانده باشد.
+         */
+        async ensureMessageLoaded(messageId) {
+            if (this.messages.find(m => m.id === messageId)) return;
+
+            let safety = 30; // حداکثر ۳۰ صفحه (۱۵۰۰ پیام) برای جلوگیری از حلقه بی‌نهایت
+            while (this.hasMoreMessages && safety-- > 0) {
+                await this.loadOlderMessages();
+                if (this.messages.find(m => m.id === messageId)) return;
+            }
         },
 
         handleMentionInput(e) {
