@@ -15,6 +15,7 @@ use Modules\CRM\Http\Controllers\PaymentController;
 use Modules\CRM\Http\Controllers\ProvinceController;
 use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
+use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
@@ -27,6 +28,21 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::get('/', [CrmController::class, 'dashboard'])
         ->middleware('can:view-crm-dashboard')
         ->name('dashboard');
+
+    // ─── پنل تکنسین ───────────────────────────────────────────────
+    Route::middleware('can:view-tech-dashboard')->prefix('tech')->name('tech.')->group(function () {
+        Route::get('/', [TechDashboardController::class, 'index'])->name('dashboard');
+        Route::get('wallet', [TechDashboardController::class, 'wallet'])->name('wallet');
+        Route::get('invoices', [TechDashboardController::class, 'invoices'])->name('invoices');
+        Route::get('profile', [TechDashboardController::class, 'profile'])->name('profile');
+
+        Route::middleware('can:view-own-orders')->group(function () {
+            Route::get('orders/{order}', [TechDashboardController::class, 'showOrder'])->name('orders.show');
+        });
+        Route::middleware('can:update-own-order-status')->group(function () {
+            Route::post('orders/{order}/status', [TechDashboardController::class, 'updateStatus'])->name('orders.status');
+        });
+    });
 
     // ─── تاکسونومی ── برندها ───────────────────────────────────────
     Route::middleware('can:view-crm-taxonomies')->group(function () {
