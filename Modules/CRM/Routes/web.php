@@ -113,6 +113,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');
     });
 
+    // لینک/جدا کردن حساب کاربری تکنسین (برای دسترسی به پنل)
+    Route::middleware('can:edit-crm-technician')->group(function () {
+        Route::post('technicians/{technician}/provision-user', [TechnicianController::class, 'provisionUser'])->name('technicians.provision-user');
+        Route::post('technicians/{technician}/unlink-user', [TechnicianController::class, 'unlinkUser'])->name('technicians.unlink-user');
+    });
+
     // ─── سفارش‌های تعمیر ─────────────────────────────────────────
     // داشبورد تکنسین: سفارش‌های خودم
     Route::get('my-orders', [OrderController::class, 'myOrders'])->name('orders.my');

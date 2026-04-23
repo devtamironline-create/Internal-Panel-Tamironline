@@ -117,6 +117,13 @@ class PermissionSeeder extends Seeder
             'manage-crm-settings' => 'مدیریت تنظیمات CRM',
             'manage-crm-sms-templates' => 'مدیریت قالب‌های SMS سی‌آر‌ام',
 
+            // CRM - پنل تکنسین (نقش جداگانه)
+            'view-tech-dashboard' => 'مشاهده داشبورد تکنسین',
+            'view-own-orders' => 'مشاهده سفارش‌های خود تکنسین',
+            'update-own-order-status' => 'تغییر وضعیت سفارش خود تکنسین',
+            'view-own-wallet' => 'مشاهده کیف‌پول خود تکنسین',
+            'view-own-invoices' => 'مشاهده فاکتورهای خود تکنسین',
+
             // تنظیمات
             'manage-settings' => 'مدیریت تنظیمات',
             'manage-permissions' => 'مدیریت دسترسی‌ها',
@@ -166,6 +173,17 @@ class PermissionSeeder extends Seeder
                     'view-leave', 'request-leave',
                     'view-tasks', 'create-tasks',
                     'view-teams',
+                    'use-messenger',
+                ],
+            ],
+            'crm-technician' => [
+                'label' => 'تکنسین CRM',
+                'permissions' => [
+                    'view-tech-dashboard',
+                    'view-own-orders',
+                    'update-own-order-status',
+                    'view-own-wallet',
+                    'view-own-invoices',
                     'use-messenger',
                 ],
             ],

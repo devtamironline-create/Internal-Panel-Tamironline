@@ -115,9 +115,33 @@
         </div>
     </div>
 
+    {{-- حساب کاربری تکنسین (ورود به پنل) --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">سفارش‌های تکنسین</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">در فازهای بعدی، لیست سفارش‌های تخصیص‌یافته به این تکنسین اینجا نمایش داده می‌شود.</p>
+        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">حساب کاربری (دسترسی به پنل)</h2>
+        @if($technician->user_id)
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+                <div class="text-sm text-gray-900 dark:text-gray-100">✓ حساب فعال است (User ID: {{ $technician->user_id }})</div>
+                <div class="text-xs text-gray-500 mt-1">تکنسین می‌تواند با موبایل/رمز خود وارد پنل شود و به «داشبورد تکنسین» دسترسی دارد.</div>
+            </div>
+            @can('edit-crm-technician')
+            <form action="{{ route('crm.technicians.unlink-user', $technician) }}" method="POST" onsubmit="return confirm('جدا شود؟');">
+                @csrf
+                <button class="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm">جدا کردن حساب</button>
+            </form>
+            @endcan
+        </div>
+        @else
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <p class="text-sm text-gray-500 dark:text-gray-400">برای این تکنسین حساب کاربری ساخته نشده — نمی‌تواند وارد پنل شود.</p>
+            @can('edit-crm-technician')
+            <form action="{{ route('crm.technicians.provision-user', $technician) }}" method="POST">
+                @csrf
+                <button class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm">ساخت حساب کاربری</button>
+            </form>
+            @endcan
+        </div>
+        @endif
     </div>
 </div>
 @endsection

@@ -2,8 +2,12 @@
 
 namespace Modules\CRM\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
@@ -90,6 +94,69 @@ class TechnicianController extends Controller
 
         return redirect()->route('crm.technicians.index')
             ->with('success', 'تکنسین حذف شد.');
+    }
+
+    /**
+     * ساخت/لینک حساب کاربری برای تکنسین تا بتواند وارد پنل شود.
+     * نقش crm-technician را اختصاص می‌دهد و نتیجه را (به‌همراه رمز عبور
+     * در صورت ساخت اکانت جدید) برای نمایش یک‌باره به ادمین برمی‌گرداند.
+     */
+    public function provisionUser(Request $request, Technician $technician)
+    {
+        if ($technician->user_id) {
+            return back()->with('error', 'این تکنسین قبلاً حساب کاربری دارد.');
+        }
+
+        if (empty($technician->mobile)) {
+            return back()->with('error', 'شماره موبایل تکنسین خالی است.');
+        }
+
+        $result = DB::transaction(function () use ($technician) {
+            // اگر کاربری با همین موبایل از قبل وجود دارد، فقط لینک کن
+            $user = User::where('mobile', $technician->mobile)->first();
+            $generatedPassword = null;
+
+            if (! $user) {
+                $generatedPassword = Str::random(10);
+
+                $user = User::create([
+                    'name' => trim($technician->first_name . ' ' . ($technician->last_name ?? '')) ?: $technician->mobile,
+                    'first_name' => $technician->first_name,
+                    'last_name' => $technician->last_name,
+                    'mobile' => $technician->mobile,
+                    'email' => $technician->email,
+                    'password' => Hash::make($generatedPassword),
+                    'is_staff' => true,
+                    'mobile_verified_at' => now(),
+                ]);
+            }
+
+            if (! $user->hasRole('crm-technician')) {
+                $user->assignRole('crm-technician');
+            }
+
+            $technician->update(['user_id' => $user->id]);
+
+            return ['user' => $user, 'password' => $generatedPassword];
+        });
+
+        $msg = 'حساب کاربری به تکنسین متصل شد (user ID: ' . $result['user']->id . ').';
+        if ($result['password']) {
+            $msg .= ' رمز عبور اولیه: ' . $result['password'] . ' — آن را یادداشت کنید؛ دیگر نمایش داده نخواهد شد.';
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    public function unlinkUser(Technician $technician)
+    {
+        if (! $technician->user_id) {
+            return back();
+        }
+
+        $technician->update(['user_id' => null]);
+
+        return back()->with('success', 'حساب کاربری از تکنسین جدا شد.');
     }
 
     protected function validateTechnician(Request $request, ?int $ignoreId = null): array
