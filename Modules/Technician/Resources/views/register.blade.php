@@ -926,6 +926,18 @@
 
             {{-- ===== فاز J: تبریک تایید + ادامه مراحل ===== --}}
             <div id="phaseJ" class="phase">
+                {{-- باکس نمایش دلیل رد قرارداد توسط ادمین --}}
+                <div id="contractRejectedBox" class="hidden bg-red-50 border border-red-300 rounded-xl p-4 mb-5">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <div class="flex-1">
+                            <p class="text-sm font-bold text-red-700 mb-1">قرارداد قبلی شما رد شده است</p>
+                            <p class="text-xs text-red-700 mb-2">دلیل رد:</p>
+                            <p id="contractRejectReasonText" class="text-sm text-red-800 whitespace-pre-wrap"></p>
+                            <p class="text-xs text-red-600 mt-3">لطفاً با توجه به دلیل بالا، قرارداد را مجدداً مطالعه و امضا کنید.</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="text-center py-6">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1043,14 +1055,21 @@
             {{-- ===== فاز N: آپلود مدارک ===== --}}
             <div id="phaseN" class="phase">
                 <div class="mb-5">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <span class="text-xs text-green-600 font-bold">قرارداد امضا شد</span>
-                    </div>
                     <h2 class="text-base font-bold text-gray-800">آپلود مدارک</h2>
-                    <p class="text-xs text-gray-400 mt-1">تصاویر مدارک زیر را آپلود کنید</p>
+                    <p class="text-xs text-gray-400 mt-1">تصاویر مدارک زیر را آپلود کنید (پس از تایید، به مرحله امضای قرارداد می‌روید)</p>
+                </div>
+
+                {{-- باکس نمایش دلیل رد مدارک توسط ادمین --}}
+                <div id="documentsRejectedBox" class="hidden bg-red-50 border border-red-300 rounded-xl p-4 mb-5">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <div class="flex-1">
+                            <p class="text-sm font-bold text-red-700 mb-1">مدارک شما قبلاً رد شده است</p>
+                            <p class="text-xs text-red-700 mb-2">دلیل رد:</p>
+                            <p id="documentsRejectReasonText" class="text-sm text-red-800 whitespace-pre-wrap"></p>
+                            <p class="text-xs text-red-600 mt-3">لطفاً با توجه به دلیل بالا، مدارک را اصلاح و مجدداً آپلود کنید.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="space-y-4">
@@ -1591,15 +1610,29 @@
                                     initBiometricCamera();
                                 }
                             } else if (res.resume.status === 'approved' && res.resume.documents_uploaded) {
-                                // مدارک آپلود شده ولی قرارداد امضا نشده
+                                // مدارک آپلود شده ولی قرارداد امضا نشده (یا رد شده)
                                 isApproved = true;
                                 highestCompletedStep = 6;
                                 $('#approvedName').text(verifiedFirstName + ' ' + verifiedLastName);
+                                // نمایش باکس رد قرارداد در صورت وجود
+                                if (res.resume.contract_reject_reason) {
+                                    $('#contractRejectReasonText').text(res.resume.contract_reject_reason);
+                                    $('#contractRejectedBox').removeClass('hidden');
+                                } else {
+                                    $('#contractRejectedBox').addClass('hidden');
+                                }
                                 goToPhase('J');
                             } else if (res.resume.status === 'approved') {
-                                // تایید شده، هنوز هیچ مرحله بعدی انجام نشده → شروع از آپلود مدارک
+                                // تایید شده، هنوز مدارک آپلود نشده (یا رد شده)
                                 isApproved = true;
                                 highestCompletedStep = 5;
+                                // نمایش باکس رد مدارک در صورت وجود
+                                if (res.resume.documents_reject_reason) {
+                                    $('#documentsRejectReasonText').text(res.resume.documents_reject_reason);
+                                    $('#documentsRejectedBox').removeClass('hidden');
+                                } else {
+                                    $('#documentsRejectedBox').addClass('hidden');
+                                }
                                 goToPhase('N');
                             } else if (res.resume.status === 'rejected') {
                                 $('#rejectedName').text(verifiedFirstName + ' ' + verifiedLastName);
@@ -1829,7 +1862,9 @@
                 contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        // مدارک آپلود شد → برو به مرحله امضای قرارداد
+                        // مدارک آپلود شد → باکس رد را (در صورت وجود) مخفی کن و برو به امضای قرارداد
+                        $('#documentsRejectedBox').addClass('hidden');
+                        $('#contractRejectedBox').addClass('hidden'); // اگر از قبل دیده می‌شد (بعید)
                         highestCompletedStep = 6;
                         goToPhase('J');
                     } else {
@@ -2839,7 +2874,8 @@
             .done(function(res) {
                 if (res.success) {
                     if (contractOtpInterval) clearInterval(contractOtpInterval);
-                    // قرارداد امضا شد (مرحله هفتم از دید کاربر = بعد از مدارک)
+                    // قرارداد امضا شد → باکس رد را مخفی کن (در صورت وجود)
+                    $('#contractRejectedBox').addClass('hidden');
                     highestCompletedStep = 7;
                     goToPhase('L');
                 } else {
