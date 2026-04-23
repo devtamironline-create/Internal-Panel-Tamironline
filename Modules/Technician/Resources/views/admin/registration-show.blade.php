@@ -508,6 +508,20 @@
 
     </div>
 
+    {{-- مدارک رد شده (در انتظار آپلود مجدد توسط تکنسین) --}}
+    @if(!$registration->documents_uploaded && $registration->documents_reject_reason)
+    <div class="bg-white rounded-xl border border-red-200 p-5">
+        <h2 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            مدارک رد شده — در انتظار آپلود مجدد
+        </h2>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+            <div class="text-xs text-red-700 font-bold mb-1">دلیل رد:</div>
+            <p class="text-red-700 whitespace-pre-wrap">{{ $registration->documents_reject_reason }}</p>
+        </div>
+    </div>
+    @endif
+
     {{-- مدارک آپلود شده --}}
     @if($registration->documents_uploaded)
     <div class="bg-white rounded-xl border border-gray-200 p-5">
@@ -515,6 +529,13 @@
             <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             مدارک آپلود شده
         </h2>
+
+        @if($registration->documents_reject_reason)
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm">
+            <div class="font-bold text-red-700 mb-1">رد شده توسط ادمین</div>
+            <p class="text-red-700 whitespace-pre-wrap">{{ $registration->documents_reject_reason }}</p>
+        </div>
+        @endif
         @php
             $documents = [
                 ['field' => 'doc_national_card_front', 'label' => 'روی کارت ملی'],
@@ -546,20 +567,52 @@
                 </div>
             @endforeach
         </div>
+
+        {{-- دکمه‌های تایید/رد مدارک --}}
+        <div class="mt-5 pt-4 border-t border-gray-200" x-data="{ showReject: false }">
+            <div class="flex items-center gap-2" x-show="!showReject">
+                <form action="{{ route('technician.admin.registrations.documents-review', $registration->id) }}" method="POST" class="inline">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">تایید مدارک</button>
+                </form>
+                <button type="button" @click="showReject = true" class="px-4 py-2 bg-red-50 text-red-700 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-100">رد مدارک</button>
+            </div>
+
+            <form x-show="showReject" x-cloak action="{{ route('technician.admin.registrations.documents-review', $registration->id) }}" method="POST" class="space-y-2">
+                @csrf @method('PUT')
+                <input type="hidden" name="action" value="reject">
+                <label class="block text-xs font-medium text-gray-700">دلیل رد مدارک (به تکنسین نمایش داده می‌شود):</label>
+                <textarea name="reject_reason" rows="3" required class="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"></textarea>
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700">ثبت رد مدارک</button>
+                    <button type="button" @click="showReject = false" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">انصراف</button>
+                </div>
+            </form>
+        </div>
     </div>
     @endif
 
     {{-- اطلاعات قرارداد و بایومتریک --}}
-    @if($registration->contract_signed_at || $registration->biometric_status)
+    @if($registration->contract_signed_at || $registration->contract_reject_reason || $registration->biometric_status)
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {{-- قرارداد --}}
-        @if($registration->contract_signed_at)
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
+        @if($registration->contract_signed_at || $registration->contract_reject_reason)
+        <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{ showReject: false }">
             <h2 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 اطلاعات قرارداد
             </h2>
+
+            @if($registration->contract_reject_reason)
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-sm">
+                <div class="font-bold text-red-700 mb-1">قرارداد رد شده — کاربر باید دوباره امضا کند</div>
+                <p class="text-red-700 whitespace-pre-wrap">{{ $registration->contract_reject_reason }}</p>
+            </div>
+            @endif
+
+            @if($registration->contract_signed_at)
             <dl class="space-y-3">
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">وضعیت</dt>
@@ -578,6 +631,30 @@
                 </div>
                 @endif
             </dl>
+
+            {{-- دکمه‌های تایید/رد قرارداد --}}
+            <div class="mt-4 pt-3 border-t border-gray-200">
+                <div class="flex items-center gap-2" x-show="!showReject">
+                    <form action="{{ route('technician.admin.registrations.contract-review', $registration->id) }}" method="POST" class="inline">
+                        @csrf @method('PUT')
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700">تایید قرارداد</button>
+                    </form>
+                    <button type="button" @click="showReject = true" class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-100">رد قرارداد</button>
+                </div>
+
+                <form x-show="showReject" x-cloak action="{{ route('technician.admin.registrations.contract-review', $registration->id) }}" method="POST" class="space-y-2">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="reject">
+                    <label class="block text-xs font-medium text-gray-700">دلیل رد قرارداد (به تکنسین نمایش داده می‌شود):</label>
+                    <textarea name="reject_reason" rows="3" required class="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"></textarea>
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700">ثبت رد قرارداد</button>
+                        <button type="button" @click="showReject = false" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200">انصراف</button>
+                    </div>
+                </form>
+            </div>
+            @endif
         </div>
         @endif
 
