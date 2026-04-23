@@ -485,6 +485,32 @@
                                placeholder="technician-biometric-submitted">
                         <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین پس از آپلود ویدیو احراز هویت</p>
                     </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                تمپلیت پیامک رد مدارک
+                            </span>
+                        </label>
+                        <input type="text" name="sms_documents_rejected_template" value="{{ $settings['sms_documents_rejected_template'] ?? '' }}" dir="ltr"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                               placeholder="technician-documents-rejected">
+                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین پس از رد مدارک توسط ادمین (token = نام، token2 = دلیل رد ۲۵ کاراکتری)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                تمپلیت پیامک رد قرارداد
+                            </span>
+                        </label>
+                        <input type="text" name="sms_contract_rejected_template" value="{{ $settings['sms_contract_rejected_template'] ?? '' }}" dir="ltr"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                               placeholder="technician-contract-rejected">
+                        <p class="text-xs text-gray-400 mt-1">ارسال به تکنسین پس از رد قرارداد توسط ادمین (token = نام، token2 = دلیل رد ۲۵ کاراکتری)</p>
+                    </div>
                 </div>
             </div>
         </div>

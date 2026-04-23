@@ -67,6 +67,8 @@ class TechnicianAdminController extends Controller
             'sms_approved_template' => TechnicianSetting::get('sms_approved_template', ''),
             'sms_rejected_template' => TechnicianSetting::get('sms_rejected_template', ''),
             'sms_biometric_submitted_template' => TechnicianSetting::get('sms_biometric_submitted_template', ''),
+            'sms_documents_rejected_template' => TechnicianSetting::get('sms_documents_rejected_template', ''),
+            'sms_contract_rejected_template' => TechnicianSetting::get('sms_contract_rejected_template', ''),
         ];
 
         return view('technician::admin.settings', compact('settings'));
@@ -90,6 +92,7 @@ class TechnicianAdminController extends Controller
             'contract_text', 'contract_sms_template',
             'default_commission_percent', 'default_promissory_note_amount',
             'sms_approved_template', 'sms_rejected_template', 'sms_biometric_submitted_template',
+            'sms_documents_rejected_template', 'sms_contract_rejected_template',
         ];
 
         foreach ($simpleFields as $field) {
