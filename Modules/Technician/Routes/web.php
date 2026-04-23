@@ -41,6 +41,8 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::put('/registrations/{id}/note', [TechnicianAdminController::class, 'registrationUpdateNote'])->name('registrations.update-note');
     Route::put('/registrations/{id}/contract-fields', [TechnicianAdminController::class, 'registrationUpdateContractFields'])->name('registrations.update-contract-fields');
     Route::put('/registrations/{id}/biometric-review', [TechnicianAdminController::class, 'registrationBiometricReview'])->name('registrations.biometric-review');
+    Route::put('/registrations/{id}/documents-review', [TechnicianAdminController::class, 'registrationDocumentsReview'])->name('registrations.documents-review');
+    Route::put('/registrations/{id}/contract-review', [TechnicianAdminController::class, 'registrationContractReview'])->name('registrations.contract-review');
     Route::delete('/registrations/{id}', [TechnicianAdminController::class, 'registrationDestroy'])->name('registrations.destroy');
 
     // مدیریت دسته‌بندی دستگاه‌ها

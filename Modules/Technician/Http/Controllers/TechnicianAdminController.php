@@ -390,6 +390,103 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * بررسی مدارک (تایید/رد با دلیل).
+     *
+     * رد: documents_uploaded=false می‌شود تا کاربر بتواند دوباره آپلود کند.
+     *      فایل‌ها در storage باقی می‌مانند و در re-upload بازنویسی می‌شوند.
+     */
+    public function registrationDocumentsReview(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'reject_reason' => ['nullable', 'required_if:action,reject', 'string', 'max:1000'],
+        ], [
+            'reject_reason.required_if' => 'لطفاً دلیل رد مدارک را وارد کنید.',
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if (!$registration->documents_uploaded && $request->action === 'approve') {
+            return back()->with('error', 'مدارکی برای تایید وجود ندارد.');
+        }
+
+        if ($request->action === 'approve') {
+            $registration->update([
+                'documents_reject_reason' => null,
+            ]);
+
+            return redirect()->route('technician.admin.registrations.show', $id)
+                ->with('success', 'مدارک تایید شد.');
+        }
+
+        // رد مدارک — کاربر باید دوباره آپلود کند
+        $registration->update([
+            'documents_uploaded'      => false,
+            'documents_reject_reason' => $request->reject_reason,
+            // بازگشت به مرحله قبل از مدارک تا resume logic به فاز N برگردد
+            'current_step'            => max(6, (int) $registration->current_step - 1),
+        ]);
+
+        $this->sendSmsTemplate($registration, 'sms_documents_rejected_template', [
+            'token2' => mb_substr(str_replace(["\n", "\r"], ' ', $request->reject_reason), 0, 25),
+        ]);
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'مدارک رد شد و پیامک به تکنسین ارسال شد.');
+    }
+
+    /**
+     * بررسی قرارداد (تایید/رد با دلیل).
+     *
+     * رد: امضا و تاریخ و شماره قرارداد پاک می‌شوند تا کاربر دوباره امضا کند.
+     */
+    public function registrationContractReview(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'reject_reason' => ['nullable', 'required_if:action,reject', 'string', 'max:1000'],
+        ], [
+            'reject_reason.required_if' => 'لطفاً دلیل رد قرارداد را وارد کنید.',
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if (!$registration->contract_signed_at && $request->action === 'approve') {
+            return back()->with('error', 'قراردادی برای تایید وجود ندارد.');
+        }
+
+        if ($request->action === 'approve') {
+            $registration->update([
+                'contract_reject_reason' => null,
+            ]);
+
+            return redirect()->route('technician.admin.registrations.show', $id)
+                ->with('success', 'قرارداد تایید شد.');
+        }
+
+        // رد قرارداد — کاربر باید دوباره امضا کند
+        $registration->update([
+            'contract_signed_at'     => null,
+            'contract_signature'     => null,
+            'contract_number'        => null,
+            'contract_reject_reason' => $request->reject_reason,
+            // برگرداندن به مرحله قبل از قرارداد (مدارک، چون در ترتیب جدید قبل از قرارداد است)
+            'current_step'           => max(7, (int) $registration->current_step - 1),
+        ]);
+
+        $this->sendSmsTemplate($registration, 'sms_contract_rejected_template', [
+            'token2' => mb_substr(str_replace(["\n", "\r"], ' ', $request->reject_reason), 0, 25),
+        ]);
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'قرارداد رد شد و پیامک به تکنسین ارسال شد.');
+    }
+
+    /**
      * ذخیره یادداشت ادمین
      */
     public function registrationUpdateNote(Request $request, $id)
@@ -548,23 +645,31 @@ class TechnicianAdminController extends Controller
             return;
         }
 
+        $this->sendSmsTemplate($registration, $templateKey);
+    }
+
+    /**
+     * ارسال SMS قالب‌دار به تکنسین؛ token پیش‌فرض نام کامل تکنسین است،
+     * توکن‌های بیشتر (token2/token3) را می‌توان override کرد.
+     */
+    private function sendSmsTemplate(TechnicianRegistration $registration, string $templateKey, array $extraTokens = []): void
+    {
         $template = TechnicianSetting::get($templateKey, '');
         if (empty($template)) {
             return;
         }
 
+        $tokens = array_merge([
+            'token' => trim(($registration->first_name ?? '') . ' ' . ($registration->last_name ?? '')),
+        ], $extraTokens);
+
         try {
-            $kavenegarService = app(KavenegarService::class);
-            $kavenegarService->sendTemplate(
-                $registration->mobile,
-                $template,
-                ['token' => $registration->first_name . ' ' . $registration->last_name]
-            );
+            app(KavenegarService::class)->sendTemplate($registration->mobile, $template, $tokens);
         } catch (\Exception $e) {
-            Log::warning('Failed to send technician status SMS', [
+            Log::warning('Failed to send technician SMS', [
                 'registration_id' => $registration->id,
-                'status' => $status,
-                'error' => $e->getMessage(),
+                'template'        => $templateKey,
+                'error'           => $e->getMessage(),
             ]);
         }
     }
