@@ -74,6 +74,8 @@ class TechnicianRegistration extends Model
         'doc_lease_agreement',
         'doc_utility_bill',
         'documents_uploaded',
+        'documents_reject_reason',
+        'contract_reject_reason',
     ];
 
     protected $casts = [
