@@ -80,12 +80,14 @@ class RegistrationController extends Controller
             $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
             if ($registration && $registration->identity_verified) {
                 $result['resume'] = [
-                    'current_step'      => $registration->current_step,
-                    'status'            => $registration->status,
-                    'contract_signed'    => (bool) $registration->contract_signed_at,
-                    'documents_uploaded' => (bool) $registration->documents_uploaded,
-                    'rejection_reason'   => $registration->rejection_reason,
-                    'biometric_status'   => $registration->biometric_status,
+                    'current_step'             => $registration->current_step,
+                    'status'                   => $registration->status,
+                    'contract_signed'           => (bool) $registration->contract_signed_at,
+                    'documents_uploaded'        => (bool) $registration->documents_uploaded,
+                    'rejection_reason'          => $registration->rejection_reason,
+                    'documents_reject_reason'   => $registration->documents_reject_reason,
+                    'contract_reject_reason'    => $registration->contract_reject_reason,
+                    'biometric_status'          => $registration->biometric_status,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
@@ -689,10 +691,11 @@ class RegistrationController extends Controller
         $nextNumber = $lastNumber ? (int) $lastNumber + 1 : 405001;
 
         $registration->update([
-            'contract_signed_at' => now(),
-            'contract_signature' => $request->signature,
-            'contract_number'    => (string) $nextNumber,
-            'current_step'       => 8,
+            'contract_signed_at'     => now(),
+            'contract_signature'     => $request->signature,
+            'contract_number'        => (string) $nextNumber,
+            'current_step'           => 8,
+            'contract_reject_reason' => null,   // پاک کردن دلیل رد قبلی (در صورت امضای مجدد)
         ]);
 
         Log::info('Technician contract signed', [
@@ -803,8 +806,9 @@ class RegistrationController extends Controller
             }
 
             $registration->update(array_merge($paths, [
-                'documents_uploaded' => true,
-                'current_step'      => 7,
+                'documents_uploaded'      => true,
+                'current_step'            => 7,
+                'documents_reject_reason' => null,   // پاک کردن دلیل رد قبلی (در صورت آپلود مجدد)
             ]));
 
             Log::info('Technician documents uploaded', [
