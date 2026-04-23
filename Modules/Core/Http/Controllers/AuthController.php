@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Modules\SMS\Services\OTPService;
 
 class AuthController extends Controller
@@ -125,6 +126,11 @@ class AuthController extends Controller
             ? route('admin.dashboard')
             : route('panel.dashboard');
 
+        // تکنسین CRM → داشبورد اختصاصی
+        if ($user->isStaff() && $user->hasRole('crm-technician') && Route::has('crm.tech.dashboard')) {
+            $redirectUrl = route('crm.tech.dashboard');
+        }
+
         // If customer and profile not complete, redirect to profile edit
         if (!$user->isStaff() && (!$user->first_name || !$user->last_name)) {
             $redirectUrl = route('panel.profile.edit');
@@ -202,6 +208,10 @@ class AuthController extends Controller
         $redirectUrl = $user->isStaff()
             ? route('admin.dashboard')
             : route('panel.dashboard');
+
+        if ($user->isStaff() && $user->hasRole('crm-technician') && Route::has('crm.tech.dashboard')) {
+            $redirectUrl = route('crm.tech.dashboard');
+        }
 
         return response()->json([
             'success' => true,
