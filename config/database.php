@@ -53,6 +53,20 @@ return [
             'strict' => false,
         ],
 
+        // Legacy WordPress CRM database — read-only source for php artisan crm:import
+        'legacy_wp' => [
+            'driver' => 'mysql',
+            'host' => env('LEGACY_WP_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('LEGACY_WP_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('LEGACY_WP_DB_DATABASE', ''),
+            'username' => env('LEGACY_WP_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('LEGACY_WP_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => env('LEGACY_WP_DB_PREFIX', 'wp_'),
+            'strict' => false,
+        ],
+
     ],
 
     'migrations' => [

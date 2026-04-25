@@ -19,5 +19,11 @@ class CrmServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Modules\CRM\Console\Commands\ImportFromWpCommand::class,
+            ]);
+        }
     }
 }
