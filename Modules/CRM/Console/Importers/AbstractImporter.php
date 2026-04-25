@@ -40,12 +40,4 @@ abstract class AbstractImporter
     {
         return DB::connection(config('database.default'));
     }
-
-    /** نام جدول WP با پیشوند پیکربندی‌شده (مثلاً wp_users). */
-    protected function wpTable(string $name): string
-    {
-        $prefix = config('database.connections.legacy_wp.prefix', 'wp_');
-
-        return $prefix . $name;
-    }
 }

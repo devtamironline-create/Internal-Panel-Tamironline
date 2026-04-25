@@ -49,13 +49,13 @@ class CustomerImporter extends AbstractImporter
 
         // نام کاربری (موبایل) از wp_users
         $usernames = $this->legacy()
-            ->table($this->wpTable('users'))
+            ->table('users')
             ->whereIn('ID', $ids)
             ->pluck('user_login', 'ID');
 
         // متاهای موردنیاز را یک‌جا بگیریم
         $metas = $this->legacy()
-            ->table($this->wpTable('usermeta'))
+            ->table('usermeta')
             ->whereIn('user_id', $ids)
             ->whereIn('meta_key', ['first_name', 'mobile', 'phone'])
             ->select('user_id', 'meta_key', 'meta_value')
@@ -106,7 +106,7 @@ class CustomerImporter extends AbstractImporter
     protected function customerIdsQuery()
     {
         return $this->legacy()
-            ->table($this->wpTable('usermeta'))
+            ->table('usermeta')
             ->where('meta_key', 'role')
             ->where('meta_value', 'customer')
             ->select('user_id');
