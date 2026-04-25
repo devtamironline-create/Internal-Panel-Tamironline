@@ -52,7 +52,7 @@
                         <a href="{{ route('crm.orders.show', $invoice->order) }}" class="text-gray-700 hover:underline" dir="ltr">{{ $invoice->order->order_code }}</a>
                         @endif
                     </td>
-                    <td class="px-6 py-3 text-sm">{{ $invoice->customer?->full_name ?? '—' }}</td>
+                    <td class="px-6 py-3 text-sm">{{ $invoice->customer?->display_name ?? '—' }}</td>
                     <td class="px-6 py-3 text-sm">{{ $invoice->technician ? trim($invoice->technician->first_name . ' ' . $invoice->technician->last_name) : '—' }}</td>
                     <td class="px-6 py-3 text-sm font-medium">{{ number_format($invoice->total_amount) }} ت</td>
                     <td class="px-6 py-3 text-sm text-green-600">{{ number_format($invoice->tech_share) }} ت</td>

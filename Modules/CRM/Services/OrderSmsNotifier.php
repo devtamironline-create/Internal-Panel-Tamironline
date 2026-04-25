@@ -80,7 +80,7 @@ class OrderSmsNotifier
     protected function buildVariables(Order $order): array
     {
         return [
-            'customer_name' => $order->customer_name ?: $order->customer?->full_name ?: '',
+            'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
             'customer_mobile' => $order->customer_mobile ?: '',
             'order_code' => $order->order_code ?: '',
             'technician_name' => $order->technician

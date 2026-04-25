@@ -31,7 +31,7 @@
                         <a href="{{ route('crm.tech.orders.show', $invoice->order) }}" class="text-brand-600 hover:underline" dir="ltr">{{ $invoice->order->order_code }}</a>
                         @endif
                     </td>
-                    <td class="px-6 py-3 text-sm">{{ $invoice->customer?->full_name ?? '—' }}</td>
+                    <td class="px-6 py-3 text-sm">{{ $invoice->customer?->display_name ?? '—' }}</td>
                     <td class="px-6 py-3 text-sm">{{ number_format($invoice->total_amount) }} ت</td>
                     <td class="px-6 py-3 text-sm text-green-600 font-bold">{{ number_format($invoice->tech_share) }} ت</td>
                     <td class="px-6 py-3"><span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span></td>

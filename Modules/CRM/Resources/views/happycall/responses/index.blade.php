@@ -60,7 +60,7 @@
                     <td class="px-6 py-3 text-sm">
                         <span class="px-2 py-0.5 text-xs rounded-full {{ $r->audience === 'technician' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800' }}">{{ $r->audienceLabel() }}</span>
                     </td>
-                    <td class="px-6 py-3 text-sm">{{ $r->order?->customer?->full_name ?? '—' }}</td>
+                    <td class="px-6 py-3 text-sm">{{ $r->order?->customer?->display_name ?? '—' }}</td>
                     <td class="px-6 py-3 text-sm text-yellow-500">{{ $r->ratingStars() }}</td>
                     <td class="px-6 py-3 text-xs text-gray-600 max-w-xs truncate">{{ $r->note ?: '—' }}</td>
                     <td class="px-6 py-3 text-xs text-gray-500">{{ $r->caller?->name ?? '—' }}</td>

@@ -4,7 +4,6 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\CRM\Models\City;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Province;
 
@@ -12,72 +11,58 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->string('q')->toString();
-        $provinceId = $request->integer('province_id');
-        $status = $request->string('status')->toString();
+        $search = trim($request->string('q')->toString());
 
-        $customers = Customer::with(['province', 'city'])
-            ->search($search)
-            ->when($provinceId, fn ($q) => $q->where('province_id', $provinceId))
-            ->when($status === 'active', fn ($q) => $q->where('is_active', true))
-            ->when($status === 'inactive', fn ($q) => $q->where('is_active', false))
+        $customers = Customer::query()
+            ->when($search !== '', function ($q) use ($search) {
+                // اگر یک عدد ≥ آفست شماره اشتراک بود، آن را شماره اشتراک تلقی کن
+                if (ctype_digit($search) && (int) $search >= Customer::SUBSCRIPTION_OFFSET) {
+                    $q->where('id', (int) $search - Customer::SUBSCRIPTION_OFFSET);
+                } else {
+                    // در غیر این صورت موبایل دقیق (مثل WP)
+                    $q->where('mobile', $search);
+                }
+            })
             ->latest()
             ->paginate(25)
             ->withQueryString();
 
-        $provinces = Province::ordered()->get(['id', 'name']);
-
-        return view('crm::customers.index', compact('customers', 'provinces', 'search', 'provinceId', 'status'));
+        return view('crm::customers.index', compact('customers', 'search'));
     }
 
     public function create()
     {
-        $provinces = Province::ordered()->get(['id', 'name']);
-        $cities = collect();
-
-        return view('crm::customers.create', compact('provinces', 'cities'));
+        return view('crm::customers.create');
     }
 
     public function store(Request $request)
     {
         $validated = $this->validateCustomer($request);
 
-        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
-        $validated['registered_via'] = $validated['registered_via'] ?? 'panel';
-
         Customer::create($validated);
 
         return redirect()->route('crm.customers.index')
-            ->with('success', 'مشتری اضافه شد.');
+            ->with('success', 'مشتری با موفقیت ثبت گردید');
     }
 
     public function show(Customer $customer)
     {
-        $customer->load(['province', 'city']);
-
         return view('crm::customers.show', compact('customer'));
     }
 
     public function edit(Customer $customer)
     {
-        $provinces = Province::ordered()->get(['id', 'name']);
-        $cities = $customer->province_id
-            ? City::where('province_id', $customer->province_id)->ordered()->get(['id', 'name'])
-            : collect();
-
-        return view('crm::customers.edit', compact('customer', 'provinces', 'cities'));
+        return view('crm::customers.edit', compact('customer'));
     }
 
     public function update(Request $request, Customer $customer)
     {
         $validated = $this->validateCustomer($request, $customer->id);
 
-        $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
-
         $customer->update($validated);
 
         return redirect()->route('crm.customers.index')
-            ->with('success', 'مشتری ویرایش شد.');
+            ->with('success', 'مشتری با موفقیت به روز رسانی شد.');
     }
 
     public function destroy(Customer $customer)
@@ -88,7 +73,12 @@ class CustomerController extends Controller
             ->with('success', 'مشتری حذف شد.');
     }
 
-    // Endpoint کمکی برای لود شهرهای یک استان (Ajax در فرم مشتری)
+    /**
+     * Endpoint کمکی Ajax برای بارگذاری شهرهای یک استان.
+     * این endpoint به مشتری مرتبط نیست (آدرس روی سفارش است نه مشتری) و
+     * در فرم سفارش/تکنسین استفاده می‌شود؛ به دلیل سازگاری با کد قدیمی نام
+     * route روی مشتری حفظ شده.
+     */
     public function citiesOfProvince(Province $province)
     {
         return response()->json(
@@ -106,17 +96,8 @@ class CustomerController extends Controller
         return $request->validate([
             'mobile' => $mobileRule,
             'first_name' => 'nullable|string|max:255',
-            'last_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'national_code' => 'nullable|string|max:20',
-            'province_id' => 'nullable|exists:crm_provinces,id',
-            'city_id' => 'nullable|exists:crm_cities,id',
-            'address' => 'nullable|string|max:2000',
-            'postal_code' => 'nullable|string|max:20',
             'notes' => 'nullable|string|max:5000',
-            'is_active' => 'nullable|boolean',
-            'registered_via' => 'nullable|in:app,panel,import',
         ]);
     }
 }

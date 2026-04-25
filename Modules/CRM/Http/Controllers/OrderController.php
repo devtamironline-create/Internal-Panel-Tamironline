@@ -61,9 +61,7 @@ class OrderController extends Controller
             'brands' => Brand::active()->ordered()->get(['id', 'name']),
             'devices' => Device::active()->ordered()->get(['id', 'name']),
             'provinces' => Province::ordered()->get(['id', 'name']),
-            'cities' => $customer?->province_id
-                ? City::where('province_id', $customer->province_id)->ordered()->get(['id', 'name'])
-                : collect(),
+            'cities' => collect(),
             'statuses' => OrderStatus::options(),
         ]);
     }
@@ -80,13 +78,15 @@ class OrderController extends Controller
                 'customer_id' => $customer->id,
                 'brand_id' => $validated['brand_id'] ?? null,
                 'device_id' => $validated['device_id'] ?? null,
-                'customer_name' => $customer->full_name,
+                // snapshot مشتری در زمان ثبت سفارش (مثل meta‌های سفارش در WP)
+                'customer_name' => $customer->display_name,
                 'customer_mobile' => $customer->mobile,
                 'customer_phone' => $customer->phone,
-                'province_id' => $validated['province_id'] ?? $customer->province_id,
-                'city_id' => $validated['city_id'] ?? $customer->city_id,
-                'address' => $validated['address'] ?? $customer->address,
-                'postal_code' => $validated['postal_code'] ?? $customer->postal_code,
+                // آدرس به ازای هر سفارش جداگانه ثبت می‌شود (مثل WP)
+                'province_id' => $validated['province_id'] ?? null,
+                'city_id' => $validated['city_id'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'postal_code' => $validated['postal_code'] ?? null,
                 'problem_title' => $validated['problem_title'] ?? null,
                 'problem_description' => $validated['problem_description'] ?? null,
                 'visit_scheduled_at' => $validated['visit_scheduled_at'] ?? null,

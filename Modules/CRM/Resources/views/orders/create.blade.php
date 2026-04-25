@@ -18,7 +18,7 @@
                 @if($customer)
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 flex items-center justify-between">
                     <div>
-                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ $customer->full_name }}</div>
+                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ $customer->display_name }}</div>
                         <div class="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{{ $customer->mobile }}</div>
                     </div>
                     <a href="{{ route('crm.orders.create') }}" class="text-xs text-red-600 hover:text-red-800">تغییر مشتری</a>

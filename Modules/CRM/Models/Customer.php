@@ -3,72 +3,53 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * مشتری CRM — هم‌سو با مدل WP که فقط mobile/first_name/phone را نگه می‌دارد.
+ *
+ * شماره اشتراک (subscription) در WP محاسبه‌شده است: user_id + 10000.
+ * در اینجا همان قاعده با accessor پیاده‌سازی شده تا نیاز به ستون اضافی نباشد.
+ */
 class Customer extends Model
 {
     protected $table = 'crm_customers';
 
+    /** آفست شماره اشتراک نمایشی نسبت به id (مثل WP). */
+    public const SUBSCRIPTION_OFFSET = 10000;
+
     protected $fillable = [
         'mobile',
         'first_name',
-        'last_name',
         'phone',
-        'email',
-        'national_code',
-        'province_id',
-        'city_id',
-        'address',
-        'postal_code',
         'notes',
-        'is_active',
-        'registered_via',
-        'app_user_id',
-        'last_app_login_at',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'last_app_login_at' => 'datetime',
-    ];
-
-    public function province(): BelongsTo
+    /** شماره اشتراک = id + 10000 (هم‌سو با WP). */
+    public function getSubscriptionAttribute(): int
     {
-        return $this->belongsTo(Province::class);
+        return (int) $this->id + self::SUBSCRIPTION_OFFSET;
     }
 
-    public function city(): BelongsTo
+    /** مشتری از روی شماره اشتراک */
+    public static function findBySubscription(int|string $subscription): ?self
     {
-        return $this->belongsTo(City::class);
-    }
-
-    public function getFullNameAttribute(): string
-    {
-        $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
-
-        return $name !== '' ? $name : $this->mobile;
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeSearch($query, ?string $term)
-    {
-        if (! $term) {
-            return $query;
+        $sub = (int) $subscription;
+        if ($sub <= self::SUBSCRIPTION_OFFSET) {
+            return null;
         }
 
-        $term = trim($term);
+        return static::find($sub - self::SUBSCRIPTION_OFFSET);
+    }
 
-        return $query->where(function ($q) use ($term) {
-            $q->where('mobile', 'like', "%{$term}%")
-                ->orWhere('phone', 'like', "%{$term}%")
-                ->orWhere('first_name', 'like', "%{$term}%")
-                ->orWhere('last_name', 'like', "%{$term}%")
-                ->orWhere('national_code', 'like', "%{$term}%")
-                ->orWhere('email', 'like', "%{$term}%");
-        });
+    /** مشتری از روی موبایل (دقیق، مثل WP). */
+    public static function findByMobile(string $mobile): ?self
+    {
+        return static::where('mobile', $mobile)->first();
+    }
+
+    /** نام نمایشی — فقط first_name (WP اصلاً last_name ندارد). */
+    public function getDisplayNameAttribute(): string
+    {
+        return trim($this->first_name ?? '') !== '' ? $this->first_name : $this->mobile;
     }
 }
