@@ -2,26 +2,32 @@
 
 namespace Modules\CRM\Console\Importers;
 
-use Illuminate\Console\OutputStyle;
 use Illuminate\Support\Facades\DB;
 
 /**
  * پایه importerهای CRM وردپرسی → Laravel.
  *
- * هر importer مسئول یک «section» (مثل customers) است و باید بتواند
- * به‌صورت chunk-based کار کند تا حافظه پر نشود.
+ * هر importer مسئول یک «section» (مثل customers) است و کار را به‌صورت
+ * batch-based انجام می‌دهد تا UI بتواند با چند درخواست AJAX متوالی
+ * پیشرفت را گزارش کند.
  */
 abstract class AbstractImporter
 {
-    public function __construct(protected OutputStyle $output)
-    {
-    }
-
-    /** نام بخش (برای آرگومان --section). */
+    /** نام بخش (مثل customers). */
     abstract public function name(): string;
 
-    /** اجرای ایمپورت با اندازه chunk داده‌شده. */
-    abstract public function run(int $chunk): array;
+    /** برچسب فارسی برای نمایش در UI. */
+    abstract public function label(): string;
+
+    /** تعداد کل رکوردهای WP که قرار است پردازش شود. */
+    abstract public function totalCount(): int;
+
+    /**
+     * پردازش یک دسته رکورد با offset و limit.
+     *
+     * @return array{processed:int, created:int, updated:int, skipped:int}
+     */
+    abstract public function processBatch(int $offset, int $limit): array;
 
     /** اتصال به دیتابیس قدیمی WP (read-only). */
     protected function legacy()
@@ -41,17 +47,5 @@ abstract class AbstractImporter
         $prefix = config('database.connections.legacy_wp.prefix', 'wp_');
 
         return $prefix . $name;
-    }
-
-    /** خواندن یک متا از usermeta (تک مقدار). */
-    protected function userMeta(int $userId, string $key): ?string
-    {
-        $row = $this->legacy()
-            ->table($this->wpTable('usermeta'))
-            ->where('user_id', $userId)
-            ->where('meta_key', $key)
-            ->value('meta_value');
-
-        return $row !== null ? (string) $row : null;
     }
 }

@@ -9,6 +9,7 @@ use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\HappyCallQuestionController;
 use Modules\CRM\Http\Controllers\HappyCallResponseController;
 use Modules\CRM\Http\Controllers\InvoiceController;
+use Modules\CRM\Http\Controllers\LegacyImportController;
 use Modules\CRM\Http\Controllers\OrderController;
 use Modules\CRM\Http\Controllers\OrderItemController;
 use Modules\CRM\Http\Controllers\PaymentController;
@@ -221,5 +222,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('orders/{order}/happycall/new', [HappyCallResponseController::class, 'create'])->name('happycall.responses.create');
         Route::post('orders/{order}/happycall', [HappyCallResponseController::class, 'store'])->name('happycall.responses.store');
         Route::delete('happycall/responses/{response}', [HappyCallResponseController::class, 'destroy'])->name('happycall.responses.destroy');
+    });
+
+    // ─── انتقال داده از CRM وردپرسی ──────────────────────────────
+    Route::middleware('can:manage-permissions')->prefix('legacy-import')->name('legacy-import.')->group(function () {
+        Route::get('/', [LegacyImportController::class, 'index'])->name('index');
+        Route::get('/status', [LegacyImportController::class, 'status'])->name('status');
+        Route::post('/batch', [LegacyImportController::class, 'batch'])->name('batch');
     });
 });

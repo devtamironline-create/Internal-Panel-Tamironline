@@ -642,6 +642,12 @@
                             HappyCall
                         </a>
                         @endcan
+                        @can('manage-permissions')
+                        <a href="{{ route('crm.legacy-import.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.legacy-import.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            انتقال داده وردپرس
+                        </a>
+                        @endcan
                     </div>
                 </div>
                 @endcanany
