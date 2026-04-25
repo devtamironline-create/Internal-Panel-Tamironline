@@ -65,7 +65,14 @@ class CustomerImporter extends AbstractImporter
         foreach ($ids as $userId) {
             $userId = (int) $userId;
             $meta = $metas->get($userId, collect())->keyBy('meta_key');
-            $mobile = trim((string) ($meta->get('mobile')->meta_value ?? $usernames[$userId] ?? ''));
+            $mobileRaw = trim((string) ($meta->get('mobile')->meta_value ?? $usernames[$userId] ?? ''));
+
+            // در WP بعضی مشتریان چند شماره را با خط‌تیره/فاصله/ویرگول چسبانده‌اند
+            // (مثلاً «09126711068-09129317908»). اولین مقدار را به‌عنوان mobile و
+            // در صورت خالی‌بودن phone، دومی را به phone منتقل می‌کنیم.
+            $parts = preg_split('/[\s\-,،\/]+/u', $mobileRaw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $mobile = trim((string) ($parts[0] ?? ''));
+            $secondary = isset($parts[1]) ? trim((string) $parts[1]) : null;
 
             if ($mobile === '') {
                 $skipped++;
@@ -73,10 +80,12 @@ class CustomerImporter extends AbstractImporter
                 continue;
             }
 
+            $phoneFromMeta = $meta->get('phone')->meta_value ?? null;
+
             $payload = [
                 'mobile' => $mobile,
                 'first_name' => $meta->get('first_name')->meta_value ?? null,
-                'phone' => $meta->get('phone')->meta_value ?? null,
+                'phone' => $phoneFromMeta ?: $secondary,
                 'updated_at' => now(),
             ];
 
