@@ -41,6 +41,9 @@ Stable tag: 0.1.0
 
 == changelog ==
 
+= 0.2.2 =
+* Backfill با AJAX دسته‌ای (۵۰‌تایی) + progress bar — جلوگیری از Request Timeout روی هاست‌های شِرد و دیتابیس‌های بزرگ
+
 = 0.2.1 =
 * رفع باگ تشخیص نقش مشتری: حالا روی متای سفارشی `role=customer` کار می‌کند نه wp_capabilities
 
