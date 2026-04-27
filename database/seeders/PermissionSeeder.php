@@ -116,6 +116,7 @@ class PermissionSeeder extends Seeder
             // CRM - تنظیمات
             'manage-crm-settings' => 'مدیریت تنظیمات CRM',
             'manage-crm-sms-templates' => 'مدیریت قالب‌های SMS سی‌آر‌ام',
+            'manage-crm-sync' => 'مدیریت سینک با CRM وردپرسی',
 
             // CRM - پنل تکنسین (نقش جداگانه)
             'view-tech-dashboard' => 'مشاهده داشبورد تکنسین',

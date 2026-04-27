@@ -527,7 +527,7 @@
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -646,6 +646,12 @@
                         <a href="{{ route('crm.legacy-import.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.legacy-import.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                             انتقال داده وردپرس
+                        </a>
+                        @endcan
+                        @can('manage-crm-sync')
+                        <a href="{{ route('crm.sync.settings') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sync.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            سینک وردپرس
                         </a>
                         @endcan
                     </div>

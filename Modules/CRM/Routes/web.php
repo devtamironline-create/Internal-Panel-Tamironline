@@ -16,6 +16,7 @@ use Modules\CRM\Http\Controllers\PaymentController;
 use Modules\CRM\Http\Controllers\ProvinceController;
 use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
+use Modules\CRM\Http\Controllers\SyncSettingsController;
 use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 
@@ -229,5 +230,11 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/', [LegacyImportController::class, 'index'])->name('index');
         Route::get('/status', [LegacyImportController::class, 'status'])->name('status');
         Route::post('/batch', [LegacyImportController::class, 'batch'])->name('batch');
+    });
+
+    // ─── سینک با CRM وردپرسی ─────────────────────────────────────
+    Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
+        Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
+        Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
     });
 });
