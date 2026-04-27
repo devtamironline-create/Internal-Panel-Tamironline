@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,3 +23,7 @@ Route::get('/ping', function () {
         'time' => now()->toIso8601String(),
     ]);
 })->name('crm.sync.ping');
+
+// ─── مشتری‌ها ─────────────────────────────────────────────────────
+Route::post('/customer', [SyncCustomerController::class, 'upsert'])->name('crm.sync.customer');
+Route::post('/customers/batch', [SyncCustomerController::class, 'batch'])->name('crm.sync.customers.batch');

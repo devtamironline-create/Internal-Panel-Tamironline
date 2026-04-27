@@ -113,6 +113,8 @@ class TCS_Settings_Page
             <p class="description">
                 اگر پنل لاراول موقتاً در دسترس نباشد، payloadهای ناموفق در این صف ذخیره می‌شوند و cron داخلی هر ۵ دقیقه دوباره تلاش می‌کند.
             </p>
+
+            <?php do_action('tcs_settings_after_form'); ?>
         </div>
         <?php
     }

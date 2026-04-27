@@ -18,19 +18,32 @@ class Customer extends Model
     public const SUBSCRIPTION_OFFSET = 10000;
 
     protected $fillable = [
+        'wp_id',
         'mobile',
         'first_name',
         'phone',
         'notes',
     ];
 
-    /** شماره اشتراک = id + 10000 (هم‌سو با WP). */
+    protected $casts = [
+        'wp_id' => 'integer',
+    ];
+
+    /**
+     * شماره اشتراک = (wp_id ?? id) + 10000.
+     *
+     * برای مشتریان سینک‌شده از WP، wp_id مرجع است تا شمارهٔ اشتراکشان
+     * با همان مقدار تاریخی WP ثابت بماند. برای مشتریان جدیدِ لاراولی
+     * که wp_id ندارند، از id لاراول استفاده می‌شود.
+     */
     public function getSubscriptionAttribute(): int
     {
-        return (int) $this->id + self::SUBSCRIPTION_OFFSET;
+        $base = $this->wp_id ?? $this->id;
+
+        return (int) $base + self::SUBSCRIPTION_OFFSET;
     }
 
-    /** مشتری از روی شماره اشتراک */
+    /** مشتری از روی شماره اشتراک — اول wp_id را امتحان می‌کند، سپس id لاراول. */
     public static function findBySubscription(int|string $subscription): ?self
     {
         $sub = (int) $subscription;
@@ -38,7 +51,10 @@ class Customer extends Model
             return null;
         }
 
-        return static::find($sub - self::SUBSCRIPTION_OFFSET);
+        $candidate = $sub - self::SUBSCRIPTION_OFFSET;
+
+        return static::where('wp_id', $candidate)->first()
+            ?? static::find($candidate);
     }
 
     /** مشتری از روی موبایل (دقیق، مثل WP). */
