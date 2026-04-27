@@ -41,6 +41,9 @@ Stable tag: 0.1.0
 
 == changelog ==
 
+= 0.2.1 =
+* رفع باگ تشخیص نقش مشتری: حالا روی متای سفارشی `role=customer` کار می‌کند نه wp_capabilities
+
 = 0.2.0 =
 * افزودن سینک مشتری‌ها (real-time روی user_register/profile_update + backfill دستی)
 

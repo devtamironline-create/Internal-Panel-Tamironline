@@ -1,6 +1,10 @@
 <?php
 /**
- * سینک مشتری‌ها (کاربران WP با role=customer) به پنل لاراول.
+ * سینک مشتری‌ها (کاربران WP با meta role=customer) به پنل لاراول.
+ *
+ * در این CRM وردپرسی، نقش مشتری در usermeta با کلید `role` و مقدار
+ * `customer` نگه‌داری می‌شود (نه در فیلد استاندارد wp_capabilities).
+ * بنابراین تمام تشخیص‌ها/بک‌فیل‌ها روی همان متا انجام می‌شود.
  *
  * @package TamironlineCrmSync
  */
@@ -11,7 +15,14 @@ if (! defined('ABSPATH')) {
 
 class TCS_Customer_Sync
 {
-    private const META_KEYS = ['first_name', 'mobile', 'phone'];
+    /** متاهایی که تغییرشان باید سینک را تریگر کند. */
+    private const META_KEYS = ['first_name', 'mobile', 'phone', 'role'];
+
+    /** نام متای نقش (در این CRM سفارشی است، نه wp_capabilities). */
+    private const ROLE_META_KEY = 'role';
+
+    /** مقدار مورد انتظار متای نقش برای مشتری. */
+    private const CUSTOMER_ROLE_VALUE = 'customer';
 
     public function __construct()
     {
@@ -24,7 +35,7 @@ class TCS_Customer_Sync
         // backfill (سینک کامل)
         add_action('admin_post_tcs_sync_all_customers', [$this, 'sync_all_customers']);
 
-        // افزودن باکس آپشن سینک به صفحهٔ تنظیمات
+        // افزودن باکس سینک به صفحهٔ تنظیمات
         add_action('tcs_settings_after_form', [$this, 'render_box']);
     }
 
@@ -50,16 +61,36 @@ class TCS_Customer_Sync
     }
 
     /**
-     * یک کاربر را سینک می‌کند (در صورتی که role=customer داشته باشد).
+     * بررسی این‌که آیا یک کاربر مشتری است یا نه.
+     * اولویت با متای سفارشی `role` است؛ اگر نبود، fallback به نقش
+     * استاندارد وردپرس (wp_capabilities).
+     */
+    protected function is_customer(int $user_id): bool
+    {
+        $role_meta = get_user_meta($user_id, self::ROLE_META_KEY, true);
+        if ($role_meta === self::CUSTOMER_ROLE_VALUE) {
+            return true;
+        }
+
+        $user = get_userdata($user_id);
+        if ($user && in_array(self::CUSTOMER_ROLE_VALUE, (array) $user->roles, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * یک کاربر را سینک می‌کند (در صورتی که مشتری باشد).
      */
     public function sync_user(int $user_id): ?array
     {
-        $user = get_userdata($user_id);
-        if (! $user) {
+        if (! $this->is_customer($user_id)) {
             return null;
         }
 
-        if (! in_array('customer', (array) $user->roles, true)) {
+        $user = get_userdata($user_id);
+        if (! $user) {
             return null;
         }
 
@@ -96,8 +127,43 @@ class TCS_Customer_Sync
     }
 
     /**
+     * شمارش کل مشتری‌ها (بر اساس متای سفارشی role=customer).
+     */
+    protected function count_customers(): int
+    {
+        global $wpdb;
+        $sql = $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_key = %s AND meta_value = %s",
+            self::ROLE_META_KEY,
+            self::CUSTOMER_ROLE_VALUE
+        );
+        return (int) $wpdb->get_var($sql);
+    }
+
+    /**
+     * گرفتن یک دسته از user_idهای مشتری از usermeta.
+     *
+     * @return int[]
+     */
+    protected function fetch_customer_ids(int $offset, int $limit): array
+    {
+        global $wpdb;
+        $sql = $wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->usermeta}
+             WHERE meta_key = %s AND meta_value = %s
+             ORDER BY user_id ASC
+             LIMIT %d OFFSET %d",
+            self::ROLE_META_KEY,
+            self::CUSTOMER_ROLE_VALUE,
+            $limit,
+            $offset
+        );
+        $rows = $wpdb->get_col($sql);
+        return array_map('intval', (array) $rows);
+    }
+
+    /**
      * Backfill همهٔ مشتری‌ها به‌صورت دسته‌ای (هر بار ۱۰۰‌تا).
-     * این تابع به‌صورت سینک اجرا می‌شود و پس از پایان به صفحهٔ تنظیمات برمی‌گردد.
      */
     public function sync_all_customers(): void
     {
@@ -106,26 +172,28 @@ class TCS_Customer_Sync
         }
         check_admin_referer('tcs_sync_all_customers');
 
+        // برای جلوگیری از تایم‌اوت روی تعداد بالا
+        @set_time_limit(0);
+        @ini_set('memory_limit', '512M');
+
         $batch_size = 100;
         $offset = 0;
         $totals = ['total' => 0, 'created' => 0, 'updated' => 0, 'errors' => 0, 'skipped' => 0];
 
         do {
-            $users = get_users([
-                'role'    => 'customer',
-                'orderby' => 'ID',
-                'order'   => 'ASC',
-                'number'  => $batch_size,
-                'offset'  => $offset,
-                'fields'  => 'all',
-            ]);
+            $user_ids = $this->fetch_customer_ids($offset, $batch_size);
 
-            if (empty($users)) {
+            if (empty($user_ids)) {
                 break;
             }
 
             $items = [];
-            foreach ($users as $user) {
+            foreach ($user_ids as $user_id) {
+                $user = get_userdata($user_id);
+                if (! $user) {
+                    $totals['skipped']++;
+                    continue;
+                }
                 $payload = $this->build_payload($user);
                 if (empty($payload['mobile'])) {
                     $totals['skipped']++;
@@ -150,7 +218,7 @@ class TCS_Customer_Sync
             }
 
             $offset += $batch_size;
-        } while (count($users) === $batch_size);
+        } while (count($user_ids) === $batch_size);
 
         $msg = sprintf(
             '✅ Backfill مشتری‌ها انجام شد. کل: %d، ایجادشده: %d، به‌روزشده: %d، رد: %d، خطا: %d.',
@@ -174,8 +242,7 @@ class TCS_Customer_Sync
      */
     public function render_box(): void
     {
-        $count = count_users();
-        $customer_count = isset($count['avail_roles']['customer']) ? (int) $count['avail_roles']['customer'] : 0;
+        $customer_count = $this->count_customers();
         ?>
         <hr>
         <h2>سینک مشتری‌ها</h2>
