@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
+use Modules\CRM\Http\Controllers\Api\SyncFinancialController;
 use Modules\CRM\Http\Controllers\Api\SyncOrderController;
 use Modules\CRM\Http\Controllers\Api\SyncSettingController;
 use Modules\CRM\Http\Controllers\Api\SyncTaxonomyController;
@@ -51,3 +52,7 @@ Route::post('/taxonomy/{type}/batch', [SyncTaxonomyController::class, 'batch'])
 // ─── سفارش‌ها ─────────────────────────────────────────────────────
 Route::post('/order', [SyncOrderController::class, 'upsert'])->name('crm.sync.order');
 Route::post('/orders/batch', [SyncOrderController::class, 'batch'])->name('crm.sync.orders.batch');
+
+// ─── مالی (financial) — روتر: invoice / wallet_credit / reward / penalty ──
+Route::post('/financial', [SyncFinancialController::class, 'upsert'])->name('crm.sync.financial');
+Route::post('/financials/batch', [SyncFinancialController::class, 'batch'])->name('crm.sync.financials.batch');
