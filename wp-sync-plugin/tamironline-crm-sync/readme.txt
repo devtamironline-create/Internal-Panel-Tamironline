@@ -4,7 +4,7 @@ Tags: crm, sync, laravel
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.6.0
 
 ارسال خودکار داده‌های CRM وردپرسی (مشتری، تکنسین، تنظیمات، سفارش، مالی) به پنل لاراول Tamironline.
 
@@ -20,8 +20,8 @@ Stable tag: 0.1.0
 * فاز ۲: سینک تکنسین‌ها ✓
 * فاز ۳: سینک تنظیمات ✓
 * فاز ۴: سینک داده‌های پایه (برند/دستگاه/استان/شهر) + تطبیق قالب SMS ✓
-* فاز ۵ (در حال آمدن): سینک سفارش‌ها
-* فاز ۶: سینک مالی
+* فاز ۵: سینک سفارش‌ها ✓
+* فاز ۶ (در حال آمدن): سینک مالی (فاکتور/پرداخت/کیف‌پول)
 
 == نصب ==
 
@@ -41,6 +41,12 @@ Stable tag: 0.1.0
 * در صورت نیاز با دکمهٔ «بازتولید توکن» می‌توانید توکن جدید بسازید (فراموش نکنید توکن جدید را در پلاگین وردپرس به‌روزرسانی کنید).
 
 == changelog ==
+
+= 0.6.0 =
+* افزودن سینک سفارش‌ها (post_type=orders) — real-time روی save_post / updated_post_meta / set_object_terms + backfill ۵۰‌تایی
+* نگاشت کامل متاهای libs/order.php به ستون‌های crm_orders در لاراول
+* status عددی WP با OrderStatus::fromWpCode() به enum لاراول تبدیل می‌شود
+* عکس‌ها فقط به‌صورت URL ارسال می‌شوند (مرجع attachment ID به URL)
 
 = 0.5.0 =
 * افزودن سینک تاکسونومی‌ها: brand, device, state→province, city — با hookهای created_/edited_ و backfill ۱۰۰‌تایی

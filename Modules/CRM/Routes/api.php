@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
+use Modules\CRM\Http\Controllers\Api\SyncOrderController;
 use Modules\CRM\Http\Controllers\Api\SyncSettingController;
 use Modules\CRM\Http\Controllers\Api\SyncTaxonomyController;
 use Modules\CRM\Http\Controllers\Api\SyncTechnicianController;
@@ -46,3 +47,7 @@ Route::post('/taxonomy/{type}', [SyncTaxonomyController::class, 'upsert'])
 Route::post('/taxonomy/{type}/batch', [SyncTaxonomyController::class, 'batch'])
     ->where('type', 'brand|device|province|city')
     ->name('crm.sync.taxonomy.batch');
+
+// ─── سفارش‌ها ─────────────────────────────────────────────────────
+Route::post('/order', [SyncOrderController::class, 'upsert'])->name('crm.sync.order');
+Route::post('/orders/batch', [SyncOrderController::class, 'batch'])->name('crm.sync.orders.batch');
