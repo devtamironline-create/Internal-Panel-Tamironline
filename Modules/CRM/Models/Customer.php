@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * مشتری CRM — هم‌سو با مدل WP که فقط mobile/first_name/phone را نگه می‌دارد.
@@ -67,5 +68,15 @@ class Customer extends Model
     public function getDisplayNameAttribute(): string
     {
         return trim($this->first_name ?? '') !== '' ? $this->first_name : $this->mobile;
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 }
