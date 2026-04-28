@@ -11,6 +11,7 @@ class Payment extends Model
     protected $table = 'crm_payments';
 
     protected $fillable = [
+        'wp_id',
         'invoice_id',
         'order_id',
         'customer_id',
@@ -30,6 +31,7 @@ class Payment extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'amount' => 'integer',
         'result_code' => 'integer',
         'gateway_response' => 'array',

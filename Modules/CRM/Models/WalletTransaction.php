@@ -12,6 +12,7 @@ class WalletTransaction extends Model
     protected $table = 'crm_tech_wallet_transactions';
 
     protected $fillable = [
+        'wp_id',
         'technician_id',
         'order_id',
         'invoice_id',
@@ -23,6 +24,7 @@ class WalletTransaction extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'type' => WalletTxType::class,
         'amount' => 'integer',
         'balance_after' => 'integer',
