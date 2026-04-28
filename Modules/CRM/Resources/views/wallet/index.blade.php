@@ -14,7 +14,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @foreach($technicians as $t)
         <a href="{{ route('crm.wallet.show', $t) }}" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition">
-            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ trim($t->first_name . ' ' . ($t->last_name ?? '')) }}</div>
+            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $t->full_name }}</div>
             <div class="mt-2 text-2xl font-bold {{ $t->wallet_balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
                 {{ number_format(abs($t->wallet_balance)) }} <span class="text-sm font-normal">تومان</span>
             </div>
@@ -32,7 +32,7 @@
             <select name="technician_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                 <option value="">— همه —</option>
                 @foreach($technicians as $t)
-                <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ trim($t->first_name . ' ' . ($t->last_name ?? '')) }}</option>
+                <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ $t->full_name }}</option>
                 @endforeach
             </select>
         </div>
@@ -65,7 +65,7 @@
                 @forelse($transactions as $tx)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="px-6 py-3 text-xs text-gray-600 whitespace-nowrap" dir="ltr">{{ $tx->created_at?->format('Y-m-d H:i') }}</td>
-                    <td class="px-6 py-3 text-sm">{{ trim($tx->technician->first_name . ' ' . ($tx->technician->last_name ?? '')) }}</td>
+                    <td class="px-6 py-3 text-sm">{{ $tx->technician->full_name }}</td>
                     <td class="px-6 py-3">
                         <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span>
                     </td>

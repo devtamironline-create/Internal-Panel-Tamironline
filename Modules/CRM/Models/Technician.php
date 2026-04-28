@@ -6,47 +6,65 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * تکنسین — هم‌سو با libs/technician.php در CRM وردپرسی.
+ *
+ * فیلدهای مرجع WP:
+ *   first_name, firstname_tech, technician_id, national_code, mobile,
+ *   phone, phone_force, address, description, percent, max_order,
+ *   max_price, status, type_tech, cart_img, province, specialty,
+ *   ready_for_delivery (در WP: ready_for_derliver), type_of_calc_tech,
+ *   tech_per_of_all, img_personal (در WP: img_Personal)
+ */
 class Technician extends Model
 {
     protected $table = 'crm_technicians';
 
     protected $fillable = [
+        'wp_id',
         'user_id',
-        'tech_code',
-        'national_code',
+
+        // مشخصات
         'first_name',
-        'last_name',
+        'firstname_tech',
+        'technician_id',
+        'national_code',
         'mobile',
         'phone',
         'phone_force',
-        'email',
-        'gender',
-        'province_id',
-        'city_id',
+
+        // آدرس
+        'province',
         'address',
+
+        // تخصص و توضیحات
         'specialty',
-        'tech_type',
+        'type_tech',
         'description',
-        'personal_image',
-        'card_image',
-        'commission_percent',
-        'max_concurrent_orders',
-        'max_order_price',
-        'calc_type',
-        'bank_sheba',
-        'bank_card',
-        'bank_account',
-        'is_active',
+
+        // تصاویر
+        'img_personal',
+        'cart_img',
+
+        // قوانین مالی/کاری
+        'percent',
+        'tech_per_of_all',
+        'max_order',
+        'max_price',
+        'type_of_calc_tech',
+
+        // وضعیت
+        'status',
         'ready_for_delivery',
-        'notes',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'wp_id' => 'integer',
+        'percent' => 'integer',
+        'tech_per_of_all' => 'integer',
+        'max_order' => 'integer',
+        'max_price' => 'integer',
         'ready_for_delivery' => 'boolean',
-        'commission_percent' => 'integer',
-        'max_concurrent_orders' => 'integer',
-        'max_order_price' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -54,31 +72,31 @@ class Technician extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function province(): BelongsTo
-    {
-        return $this->belongsTo(Province::class);
-    }
-
-    public function city(): BelongsTo
-    {
-        return $this->belongsTo(City::class);
-    }
-
+    /**
+     * نام نمایشی — اولویت با firstname_tech (نام تجاری/کامل WP)،
+     * fallback به first_name + last_name (داده‌ی legacy لاراولی)،
+     * در نهایت موبایل.
+     */
     public function getFullNameAttribute(): string
     {
+        $tech = trim((string) ($this->firstname_tech ?? ''));
+        if ($tech !== '') {
+            return $tech;
+        }
+
         $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
 
-        return $name !== '' ? $name : $this->mobile;
+        return $name !== '' ? $name : (string) $this->mobile;
     }
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'active');
     }
 
     public function scopeReady($query)
     {
-        return $query->where('is_active', true)->where('ready_for_delivery', true);
+        return $query->where('status', 'active')->where('ready_for_delivery', true);
     }
 
     public function scopeSearch($query, ?string $term)
@@ -92,8 +110,8 @@ class Technician extends Model
         return $query->where(function ($q) use ($term) {
             $q->where('mobile', 'like', "%{$term}%")
                 ->orWhere('first_name', 'like', "%{$term}%")
-                ->orWhere('last_name', 'like', "%{$term}%")
-                ->orWhere('tech_code', 'like', "%{$term}%")
+                ->orWhere('firstname_tech', 'like', "%{$term}%")
+                ->orWhere('technician_id', 'like', "%{$term}%")
                 ->orWhere('national_code', 'like', "%{$term}%")
                 ->orWhere('specialty', 'like', "%{$term}%");
         });

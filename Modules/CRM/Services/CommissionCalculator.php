@@ -18,8 +18,8 @@ class CommissionCalculator
      */
     public function calculate(Order $order, Technician $technician): array
     {
-        $percent = max(0, min(100, (int) $technician->commission_percent));
-        $calcType = $technician->calc_type ?? 'percent_of_customer';
+        $percent = max(0, min(100, (int) $technician->percent));
+        $calcType = $technician->type_of_calc_tech ?? 'percent_of_customer';
 
         $total = (int) ($order->final_price ?? $order->items_subtotal ?? 0);
 

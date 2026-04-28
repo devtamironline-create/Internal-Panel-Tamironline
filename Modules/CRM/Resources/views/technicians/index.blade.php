@@ -3,9 +3,6 @@
 @section('page-title', 'تکنسین‌های فعال')
 
 @section('main')
-@php
-    $typeLabels = ['regular' => 'عادی', 'senior' => 'ارشد', 'expert' => 'متخصص', 'freelance' => 'فریلنسر'];
-@endphp
 <div class="p-6 space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -32,21 +29,17 @@
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان</label>
-            <select name="province_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+            <select name="province" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">— همه —</option>
                 @foreach($provinces as $p)
-                <option value="{{ $p->id }}" @selected($provinceId === $p->id)>{{ $p->name }}</option>
+                <option value="{{ $p }}" @selected($province === $p)>{{ $p }}</option>
                 @endforeach
             </select>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">سطح</label>
-            <select name="tech_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                <option value="">— همه —</option>
-                @foreach($typeLabels as $key => $label)
-                <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">سطح/نوع</label>
+            <input type="text" name="type_tech" value="{{ $type }}" placeholder="مثلاً regular"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">وضعیت</label>
@@ -59,7 +52,7 @@
         </div>
         <div class="md:col-span-4 flex items-center gap-2">
             <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">اعمال فیلتر</button>
-            @if($search || $provinceId || $type || $status)
+            @if($search || $province || $type || $status)
             <a href="{{ route('crm.technicians.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">پاک کردن</a>
             @endif
         </div>
@@ -90,20 +83,22 @@
                         <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $tech->specialty }}</div>
                         @endif
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->tech_code ?: '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->technician_id ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->mobile }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $typeLabels[$tech->tech_type] ?? $tech->tech_type }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->province?->name ?: '—' }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->commission_percent }}%</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->type_tech ?: '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->province ?: '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->percent ?? 0 }}%</td>
                     <td class="px-6 py-4">
-                        @if($tech->is_active)
+                        @if($tech->status === 'active')
                             @if($tech->ready_for_delivery)
                             <span class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">آماده</span>
                             @else
                             <span class="px-2.5 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">فعال</span>
                             @endif
-                        @else
+                        @elseif($tech->status === 'inactive')
                         <span class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">غیرفعال</span>
+                        @else
+                        <span class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">{{ $tech->status ?: '—' }}</span>
                         @endif
                     </td>
                     <td class="px-6 py-4">

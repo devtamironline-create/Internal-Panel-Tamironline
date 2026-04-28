@@ -3,19 +3,16 @@
 @section('page-title', 'پروفایل من')
 
 @section('main')
-@php
-    $typeLabels = ['regular' => 'عادی', 'senior' => 'ارشد', 'expert' => 'متخصص', 'freelance' => 'فریلنسر'];
-@endphp
 <div class="p-6 space-y-6">
     <div class="flex items-center gap-4">
-        @if($technician->personal_image)
-        <img src="{{ $technician->personal_image }}" class="w-16 h-16 rounded-full object-cover bg-gray-100">
+        @if($technician->img_personal)
+        <img src="{{ $technician->img_personal }}" class="w-16 h-16 rounded-full object-cover bg-gray-100">
         @endif
         <div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ trim($technician->first_name . ' ' . ($technician->last_name ?? '')) }}</h1>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $technician->full_name }}</h1>
             <div class="text-sm text-gray-500" dir="ltr">{{ $technician->mobile }}</div>
-            @if($technician->tech_code)
-            <div class="text-xs text-gray-500 mt-0.5" dir="ltr">کد: {{ $technician->tech_code }}</div>
+            @if($technician->technician_id)
+            <div class="text-xs text-gray-500 mt-0.5" dir="ltr">کد: {{ $technician->technician_id }}</div>
             @endif
         </div>
     </div>
@@ -34,14 +31,14 @@
                 <dt class="text-gray-500">تلفن ثابت</dt>
                 <dd dir="ltr">{{ $technician->phone ?: '—' }}</dd>
 
-                <dt class="text-gray-500">ایمیل</dt>
-                <dd dir="ltr">{{ $technician->email ?: '—' }}</dd>
+                <dt class="text-gray-500">تلفن اضطراری</dt>
+                <dd dir="ltr">{{ $technician->phone_force ?: '—' }}</dd>
 
                 <dt class="text-gray-500">کد ملی</dt>
                 <dd dir="ltr">{{ $technician->national_code ?: '—' }}</dd>
 
-                <dt class="text-gray-500">استان / شهر</dt>
-                <dd>{{ $technician->province?->name ?: '—' }}{{ $technician->city ? ' / ' . $technician->city->name : '' }}</dd>
+                <dt class="text-gray-500">استان</dt>
+                <dd>{{ $technician->province ?: '—' }}</dd>
 
                 <dt class="text-gray-500 col-span-2">آدرس</dt>
                 <dd class="col-span-2 whitespace-pre-wrap">{{ $technician->address ?: '—' }}</dd>
@@ -54,17 +51,17 @@
                 <dt class="text-gray-500">تخصص</dt>
                 <dd>{{ $technician->specialty ?: '—' }}</dd>
 
-                <dt class="text-gray-500">سطح</dt>
-                <dd>{{ $typeLabels[$technician->tech_type] ?? $technician->tech_type }}</dd>
+                <dt class="text-gray-500">سطح/نوع</dt>
+                <dd>{{ $technician->type_tech ?: '—' }}</dd>
 
                 <dt class="text-gray-500">درصد کمیسیون</dt>
-                <dd>{{ $technician->commission_percent }}%</dd>
+                <dd>{{ $technician->percent ?? 0 }}%</dd>
 
                 <dt class="text-gray-500">سقف سفارش همزمان</dt>
-                <dd>{{ $technician->max_concurrent_orders ?? 'نامحدود' }}</dd>
+                <dd>{{ $technician->max_order ?? 'نامحدود' }}</dd>
 
                 <dt class="text-gray-500">سقف مبلغ سفارش</dt>
-                <dd>{{ $technician->max_order_price ? number_format($technician->max_order_price) . ' تومان' : 'نامحدود' }}</dd>
+                <dd>{{ $technician->max_price ? number_format($technician->max_price) . ' تومان' : 'نامحدود' }}</dd>
 
                 <dt class="text-gray-500">آماده دریافت سفارش</dt>
                 <dd>{{ $technician->ready_for_delivery ? 'بله' : 'خیر' }}</dd>
