@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
 use Modules\CRM\Http\Controllers\Api\SyncSettingController;
+use Modules\CRM\Http\Controllers\Api\SyncTaxonomyController;
 use Modules\CRM\Http\Controllers\Api\SyncTechnicianController;
 
 /*
@@ -37,3 +38,11 @@ Route::post('/technicians/batch', [SyncTechnicianController::class, 'batch'])->n
 // ─── تنظیمات ──────────────────────────────────────────────────────
 Route::post('/setting', [SyncSettingController::class, 'upsert'])->name('crm.sync.setting');
 Route::post('/settings/batch', [SyncSettingController::class, 'batch'])->name('crm.sync.settings.batch');
+
+// ─── تاکسونومی‌ها (برند، دستگاه، استان، شهر) ─────────────────────
+Route::post('/taxonomy/{type}', [SyncTaxonomyController::class, 'upsert'])
+    ->where('type', 'brand|device|province|city')
+    ->name('crm.sync.taxonomy');
+Route::post('/taxonomy/{type}/batch', [SyncTaxonomyController::class, 'batch'])
+    ->where('type', 'brand|device|province|city')
+    ->name('crm.sync.taxonomy.batch');

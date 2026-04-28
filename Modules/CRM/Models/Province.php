@@ -10,12 +10,14 @@ class Province extends Model
     protected $table = 'crm_provinces';
 
     protected $fillable = [
+        'wp_id',
         'name',
         'slug',
         'sort_order',
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'sort_order' => 'integer',
     ];
 

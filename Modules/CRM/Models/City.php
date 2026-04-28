@@ -10,6 +10,7 @@ class City extends Model
     protected $table = 'crm_cities';
 
     protected $fillable = [
+        'wp_id',
         'province_id',
         'name',
         'slug',
@@ -17,6 +18,7 @@ class City extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'province_id' => 'integer',
         'sort_order' => 'integer',
     ];

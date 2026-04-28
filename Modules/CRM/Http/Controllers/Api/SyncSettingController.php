@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Models\CrmSetting;
+use Modules\CRM\Models\SmsTemplate;
 use Throwable;
 
 /**
@@ -14,11 +15,25 @@ use Throwable;
  * هر گزینه‌ای که از WP می‌آید با پیشوند `wp.` در crm_settings ذخیره می‌شود
  * تا با تنظیمات بومی لاراول (مثل zibal_merchant) قاطی نشود. مقادیر آرایه/شیء
  * به‌صورت JSON ذخیره می‌شوند تا بعداً با CrmSetting::getJson خوانده شوند.
+ *
+ * استثناء: هنگام دریافت key=sms، علاوه بر ذخیرهٔ تنظیمات، بدنهٔ قالب‌های
+ * متناظر در crm_sms_templates نیز به‌روزرسانی می‌شود تا OrderSmsNotifier
+ * بدون نیاز به تغییر دستی، از متن وارد شده در WP استفاده کند.
  */
 class SyncSettingController extends Controller
 {
     /** پیشوندی که برای جلوگیری از تداخل با تنظیمات لاراول اضافه می‌شود. */
     public const PREFIX = 'wp.';
+
+    /**
+     * نگاشت کلید WP در آرایهٔ sms به trigger_key لاراول.
+     * فقط کلیدهایی که معادل واضح در crm_sms_templates دارند فهرست شده‌اند.
+     */
+    private const SMS_KEY_MAP = [
+        'customer_order'        => 'order_created',
+        'technician_order'      => 'order_assigned_tech',
+        'customer_cancel_order' => 'order_cancelled',
+    ];
 
     /** سینک تکی — POST /api/crm/sync/setting */
     public function upsert(Request $request): JsonResponse
@@ -83,6 +98,31 @@ class SyncSettingController extends Controller
             CrmSetting::set($finalKey, $value === null ? null : (string) $value);
         }
 
+        // اثر جانبی: اگر گزینهٔ sms آمد، body قالب‌های متناظر را در
+        // crm_sms_templates به‌روز کن (بدون تغییر فعال/غیرفعال بودنشان).
+        if ($key === 'sms' && is_array($value)) {
+            $this->applySmsTemplates($value);
+        }
+
         return $finalKey;
     }
+
+    /**
+     * بدنهٔ قالب‌های sms را روی crm_sms_templates سینک می‌کند.
+     * فقط ستون body به‌روز می‌شود تا is_active دست‌نخورده بماند.
+     */
+    protected function applySmsTemplates(array $sms): void
+    {
+        foreach (self::SMS_KEY_MAP as $wpKey => $triggerKey) {
+            if (! array_key_exists($wpKey, $sms)) {
+                continue;
+            }
+            $body = trim((string) $sms[$wpKey]);
+            if ($body === '') {
+                continue;
+            }
+            SmsTemplate::where('trigger_key', $triggerKey)->update(['body' => $body]);
+        }
+    }
 }
+

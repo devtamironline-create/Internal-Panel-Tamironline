@@ -9,6 +9,7 @@ class Device extends Model
     protected $table = 'crm_devices';
 
     protected $fillable = [
+        'wp_id',
         'name',
         'slug',
         'icon',
@@ -17,6 +18,7 @@ class Device extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];

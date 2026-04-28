@@ -9,6 +9,7 @@ class Brand extends Model
     protected $table = 'crm_brands';
 
     protected $fillable = [
+        'wp_id',
         'name',
         'slug',
         'logo',
@@ -17,6 +18,7 @@ class Brand extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
