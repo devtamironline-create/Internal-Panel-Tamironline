@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
+use Modules\CRM\Http\Controllers\Api\SyncSettingController;
 use Modules\CRM\Http\Controllers\Api\SyncTechnicianController;
 
 /*
@@ -32,3 +33,7 @@ Route::post('/customers/batch', [SyncCustomerController::class, 'batch'])->name(
 // ─── تکنسین‌ها ────────────────────────────────────────────────────
 Route::post('/technician', [SyncTechnicianController::class, 'upsert'])->name('crm.sync.technician');
 Route::post('/technicians/batch', [SyncTechnicianController::class, 'batch'])->name('crm.sync.technicians.batch');
+
+// ─── تنظیمات ──────────────────────────────────────────────────────
+Route::post('/setting', [SyncSettingController::class, 'upsert'])->name('crm.sync.setting');
+Route::post('/settings/batch', [SyncSettingController::class, 'batch'])->name('crm.sync.settings.batch');

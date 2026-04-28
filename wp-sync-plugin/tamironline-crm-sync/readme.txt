@@ -18,8 +18,8 @@ Stable tag: 0.1.0
 * فاز ۰: زیرساخت + endpoint تست اتصال ✓
 * فاز ۱: سینک مشتری‌ها ✓
 * فاز ۲: سینک تکنسین‌ها ✓
-* فاز ۳ (در حال آمدن): سینک تنظیمات
-* فاز ۴: سینک سفارش‌ها
+* فاز ۳: سینک تنظیمات ✓
+* فاز ۴ (در حال آمدن): سینک سفارش‌ها
 * فاز ۵: سینک مالی
 
 == نصب ==
@@ -40,6 +40,10 @@ Stable tag: 0.1.0
 * در صورت نیاز با دکمهٔ «بازتولید توکن» می‌توانید توکن جدید بسازید (فراموش نکنید توکن جدید را در پلاگین وردپرس به‌روزرسانی کنید).
 
 == changelog ==
+
+= 0.4.0 =
+* افزودن سینک تنظیمات (real-time روی updated_option/added_option + ارسال یک‌بارهٔ همه)
+* لیست گزینه‌های پشتیبانی‌شده: sms, payment, introductionList, cost_list, objectionsList, shipping_list, cancel, type_of_desc_acc, title_of_desc_acc, invoice_descritpion_show, print_invoice_descritpion_show, HappyCallTech, HappyCallCustomer, HappyCallTech_Count, HappyCallCustomer_Count
 
 = 0.3.0 =
 * افزودن سینک تکنسین‌ها (real-time + AJAX backfill با progress bar) — همان پترن مشتری‌ها
