@@ -28,9 +28,8 @@ enum SmsTrigger: string
     public static function fromOrderStatus(OrderStatus $status): ?self
     {
         return match ($status) {
-            OrderStatus::InProgress => self::OrderInProgress,
+            OrderStatus::Open => self::OrderInProgress,
             OrderStatus::Completed => self::OrderCompleted,
-            OrderStatus::Delivered => self::OrderDelivered,
             OrderStatus::Cancelled => self::OrderCancelled,
             default => null,
         };

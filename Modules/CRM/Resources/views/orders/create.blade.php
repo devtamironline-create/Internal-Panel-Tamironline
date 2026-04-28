@@ -53,7 +53,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">وضعیت اولیه</label>
                 <select name="status" class="w-full md:w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                     @foreach($statuses as $key => $label)
-                    <option value="{{ $key }}" @selected(old('status', 'pending') === $key)>{{ $label }}</option>
+                    <option value="{{ $key }}" @selected(old('status', 'new') === $key)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>

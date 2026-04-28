@@ -25,9 +25,9 @@ class CrmController extends Controller
 
         $ordersToday = Order::whereDate('created_at', $today)->count();
         $ordersOpen = Order::whereIn('status', [
-            OrderStatus::Pending->value,
-            OrderStatus::Assigned->value,
-            OrderStatus::InProgress->value,
+            OrderStatus::New->value,
+            OrderStatus::Coordinated->value,
+            OrderStatus::Open->value,
         ])->count();
 
         $invoicesMonthTotal = (int) Invoice::where('issued_at', '>=', $monthStart)->sum('total_amount');

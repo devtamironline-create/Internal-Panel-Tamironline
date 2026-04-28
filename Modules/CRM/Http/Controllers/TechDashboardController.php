@@ -47,8 +47,8 @@ class TechDashboardController extends Controller
 
         $stats = [
             'total' => (clone $orderQuery)->count(),
-            'pending' => (clone $orderQuery)->where('status', OrderStatus::Assigned->value)->count(),
-            'in_progress' => (clone $orderQuery)->where('status', OrderStatus::InProgress->value)->count(),
+            'coordinated' => (clone $orderQuery)->where('status', OrderStatus::Coordinated->value)->count(),
+            'open' => (clone $orderQuery)->where('status', OrderStatus::Open->value)->count(),
             'completed' => (clone $orderQuery)->where('status', OrderStatus::Completed->value)->count(),
         ];
 
@@ -184,9 +184,8 @@ class TechDashboardController extends Controller
     protected function allowedTransitionsFor(OrderStatus $current): array
     {
         return match ($current) {
-            OrderStatus::Assigned => [OrderStatus::InProgress],
-            OrderStatus::InProgress => [OrderStatus::Completed],
-            OrderStatus::Completed => [OrderStatus::Delivered],
+            OrderStatus::Coordinated => [OrderStatus::Open],
+            OrderStatus::Open => [OrderStatus::Completed, OrderStatus::Transit],
             default => [],
         };
     }

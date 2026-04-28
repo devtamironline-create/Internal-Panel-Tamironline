@@ -16,12 +16,12 @@
             <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{{ number_format($stats['total']) }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-            <div class="text-xs text-gray-500 dark:text-gray-400">در انتظار اقدام</div>
-            <div class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($stats['pending']) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">هماهنگ شده</div>
+            <div class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($stats['coordinated']) }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-            <div class="text-xs text-gray-500 dark:text-gray-400">در حال انجام</div>
-            <div class="text-2xl font-bold text-indigo-600 mt-1">{{ number_format($stats['in_progress']) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">باز شده</div>
+            <div class="text-2xl font-bold text-indigo-600 mt-1">{{ number_format($stats['open']) }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <div class="text-xs text-gray-500 dark:text-gray-400">تکمیل شده</div>

@@ -92,7 +92,7 @@ class OrderController extends Controller
                 'visit_scheduled_at' => $validated['visit_scheduled_at'] ?? null,
                 'estimated_price' => $validated['estimated_price'] ?? null,
                 'deposit' => $validated['deposit'] ?? 0,
-                'status' => $validated['status'] ?? OrderStatus::Pending->value,
+                'status' => $validated['status'] ?? OrderStatus::New->value,
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
@@ -185,14 +185,14 @@ class OrderController extends Controller
 
         $order->update([
             'technician_id' => $validated['technician_id'],
-            'status' => OrderStatus::Assigned->value,
+            'status' => OrderStatus::Coordinated->value,
             'assigned_at' => now(),
         ]);
 
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previousStatus,
-            'to_status' => OrderStatus::Assigned->value,
+            'to_status' => OrderStatus::Coordinated->value,
             'note' => 'تخصیص تکنسین',
             'changed_by' => auth()->id(),
             'created_at' => now(),
@@ -216,14 +216,14 @@ class OrderController extends Controller
 
         $order->update([
             'technician_id' => null,
-            'status' => OrderStatus::Pending->value,
+            'status' => OrderStatus::New->value,
             'assigned_at' => null,
         ]);
 
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previousStatus,
-            'to_status' => OrderStatus::Pending->value,
+            'to_status' => OrderStatus::New->value,
             'note' => 'لغو تخصیص تکنسین',
             'changed_by' => auth()->id(),
             'created_at' => now(),
