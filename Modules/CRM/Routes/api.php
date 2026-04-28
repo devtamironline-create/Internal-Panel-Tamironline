@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\SyncCustomerController;
+use Modules\CRM\Http\Controllers\Api\SyncTechnicianController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,3 +28,7 @@ Route::get('/ping', function () {
 // ─── مشتری‌ها ─────────────────────────────────────────────────────
 Route::post('/customer', [SyncCustomerController::class, 'upsert'])->name('crm.sync.customer');
 Route::post('/customers/batch', [SyncCustomerController::class, 'batch'])->name('crm.sync.customers.batch');
+
+// ─── تکنسین‌ها ────────────────────────────────────────────────────
+Route::post('/technician', [SyncTechnicianController::class, 'upsert'])->name('crm.sync.technician');
+Route::post('/technicians/batch', [SyncTechnicianController::class, 'batch'])->name('crm.sync.technicians.batch');
