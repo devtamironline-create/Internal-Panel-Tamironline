@@ -13,30 +13,42 @@ class Order extends Model
     protected $table = 'crm_orders';
 
     protected $fillable = [
-        'order_code',
-        'customer_id',
-        'brand_id',
-        'device_id',
-        'technician_id',
-        'customer_name',
-        'customer_mobile',
-        'customer_phone',
-        'province_id',
-        'city_id',
-        'address',
-        'postal_code',
-        'problem_title',
-        'problem_description',
+        // پایه
+        'order_code', 'wp_id',
+        'customer_id', 'subscription', 'introduction',
+        'brand_id', 'device_id', 'technician_id', 'order_type',
+        'customer_name', 'customer_mobile', 'customer_phone',
+        'province_id', 'city_id', 'address', 'postal_code',
+        'problem_title', 'problem_description',
         'visit_scheduled_at',
-        'estimated_price',
-        'final_price',
-        'deposit',
-        'status',
-        'cancel_reason',
-        'created_by',
-        'assigned_at',
-        'completed_at',
-        'notes',
+
+        // وضعیت
+        'status', 'cancel_reason',
+        'return_type', 'return_description', 'status_internal_order', 'qc_status',
+        'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
+
+        // مالی
+        'estimated_price', 'final_price', 'deposit',
+        'customer_price', 'buy_price', 'price_customer', 'cost_price',
+        'total_invoice', 'negative_invoice', 'price_return',
+        'have_invoice', 'type_of_send_invoice',
+        'invoice_email', 'invoice_paper', 'invoice_descripotion',
+
+        // متا
+        'created_by', 'assigned_at', 'completed_at', 'notes',
+
+        // تکنسین
+        'description_tech', 'description_tech1', 'description_tech2',
+        'piece_list', 'customer_price_list', 'buy_price_list',
+        'hire', 'transportation', 'discount',
+        'device_img1', 'device_image_input',
+
+        // happy call
+        'happy_call', 'hc_customer', 'hc_customer_data', 'hc_tech', 'hc_tech_data',
+
+        // logging
+        'order_description_content', 'order_note_content', 'log_return',
+        'finish_order', 'finish_order_sh',
     ];
 
     protected $casts = [
@@ -44,9 +56,43 @@ class Order extends Model
         'visit_scheduled_at' => 'datetime',
         'assigned_at' => 'datetime',
         'completed_at' => 'datetime',
+
+        // financial — همه integer
         'estimated_price' => 'integer',
         'final_price' => 'integer',
         'deposit' => 'integer',
+        'customer_price' => 'integer',
+        'buy_price' => 'integer',
+        'price_customer' => 'integer',
+        'cost_price' => 'integer',
+        'total_invoice' => 'integer',
+        'negative_invoice' => 'integer',
+        'price_return' => 'integer',
+        'hire' => 'integer',
+        'transportation' => 'integer',
+        'discount' => 'integer',
+
+        // boolean flags
+        'have_invoice' => 'boolean',
+        'send_technician' => 'boolean',
+        'send_sms_tec' => 'boolean',
+        'send_sms_customer' => 'boolean',
+        'save_as_draft' => 'boolean',
+        'happy_call' => 'boolean',
+        'hc_customer' => 'boolean',
+        'hc_tech' => 'boolean',
+        'finish_order' => 'boolean',
+        'finish_order_sh' => 'boolean',
+
+        // json
+        'piece_list' => 'array',
+        'customer_price_list' => 'array',
+        'buy_price_list' => 'array',
+        'hc_customer_data' => 'array',
+        'hc_tech_data' => 'array',
+
+        'wp_id' => 'integer',
+        'subscription' => 'integer',
     ];
 
     // ─────────────────── Relations ────────────────────────────────
