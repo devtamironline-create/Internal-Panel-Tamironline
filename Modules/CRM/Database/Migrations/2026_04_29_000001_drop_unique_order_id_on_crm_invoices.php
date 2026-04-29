@@ -14,6 +14,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // MySQL اجازه نمی‌دهد unique index ای که FK به آن متکی است drop شود.
+        // اول FK را موقتاً برمی‌داریم، unique را drop می‌کنیم، index ساده
+        // اضافه می‌کنیم، سپس FK را دوباره به همان ستون می‌بندیم.
+        Schema::table('crm_invoices', function (Blueprint $table) {
+            $table->dropForeign(['order_id']);
+        });
+
         Schema::table('crm_invoices', function (Blueprint $table) {
             $table->dropUnique('crm_invoices_order_id_unique');
         });
@@ -21,16 +28,32 @@ return new class extends Migration
         Schema::table('crm_invoices', function (Blueprint $table) {
             $table->index('order_id');
         });
+
+        Schema::table('crm_invoices', function (Blueprint $table) {
+            $table->foreign('order_id')
+                ->references('id')->on('crm_orders')
+                ->cascadeOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('crm_invoices', function (Blueprint $table) {
+            $table->dropForeign(['order_id']);
+        });
+
         Schema::table('crm_invoices', function (Blueprint $table) {
             $table->dropIndex(['order_id']);
         });
 
         Schema::table('crm_invoices', function (Blueprint $table) {
             $table->unique('order_id', 'crm_invoices_order_id_unique');
+        });
+
+        Schema::table('crm_invoices', function (Blueprint $table) {
+            $table->foreign('order_id')
+                ->references('id')->on('crm_orders')
+                ->cascadeOnDelete();
         });
     }
 };
