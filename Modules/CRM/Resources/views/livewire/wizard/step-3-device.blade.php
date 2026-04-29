@@ -53,9 +53,9 @@
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید)</label>
         @if(count($this->objectionsList))
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                @foreach($this->objectionsList as $opt)
+                @foreach($this->objectionsList as $i => $opt)
                     @php $checked = in_array($opt, $objections, true); @endphp
-                    <button type="button" wire:click="toggleObjection(@js($opt))"
+                    <button wire:key="obj-{{ $i }}" type="button" wire:click="toggleObjection(@js($opt))"
                             class="px-3 py-2 rounded-lg border text-sm text-right transition
                                    {{ $checked ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 text-gray-700 dark:text-gray-300' }}">
                         @if($checked) ✓ @endif

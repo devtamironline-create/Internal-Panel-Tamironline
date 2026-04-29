@@ -21,7 +21,7 @@
             </label>
 
             @foreach($this->technicianOptions as $t)
-                <label class="cursor-pointer block">
+                <label wire:key="tech-{{ $t->id }}" class="cursor-pointer block">
                     <input type="radio" wire:model.live="technicianId" value="{{ $t->id }}" class="peer sr-only">
                     <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition">
                         <div class="flex items-center justify-between gap-3">

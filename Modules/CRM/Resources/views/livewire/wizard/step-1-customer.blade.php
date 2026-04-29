@@ -40,9 +40,10 @@
                     <div class="mt-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm divide-y divide-gray-100 dark:divide-gray-600 max-h-72 overflow-y-auto">
                         @foreach($this->customerSuggestions as $c)
                             <button
+                                wire:key="suggest-{{ $c->id }}"
                                 type="button"
-                                wire:click="selectCustomer({{ $c->id }})"
-                                class="w-full text-right px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-between">
+                                wire:click.prevent="selectCustomer({{ $c->id }})"
+                                class="w-full text-right px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-between cursor-pointer">
                                 <div>
                                     <div class="font-medium text-gray-900 dark:text-gray-100">{{ $c->first_name ?: '—' }}</div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400" dir="ltr">{{ $c->mobile }}</div>
