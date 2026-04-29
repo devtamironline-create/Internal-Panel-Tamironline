@@ -226,6 +226,8 @@ class TCS_Technician_Sync
             $items[] = $payload;
         }
 
+        $detail = ['errors' => [], 'http_status' => null, 'http_error' => null];
+
         if (! empty($items)) {
             $result = TCS_API_Client::post('technicians/batch', ['items' => $items]);
 
@@ -234,9 +236,14 @@ class TCS_Technician_Sync
                 $stats['created'] = (int) ($result['body']['created'] ?? 0);
                 $stats['updated'] = (int) ($result['body']['updated'] ?? 0);
                 $stats['errors']  = isset($result['body']['errors']) ? count((array) $result['body']['errors']) : 0;
+
+                // detail تا ۵ خطای اول برای دیباگ سمت مرورگر
+                $detail['errors'] = array_slice((array) ($result['body']['errors'] ?? []), 0, 5);
             } else {
                 TCS_Sync_Queue::push('technicians/batch', ['items' => $items], $result['error'] ?? '');
                 $stats['errors'] = count($items);
+                $detail['http_status'] = $result['status'] ?? null;
+                $detail['http_error']  = $result['error']  ?? null;
             }
         }
 
@@ -245,6 +252,7 @@ class TCS_Technician_Sync
 
         wp_send_json_success([
             'batch'             => $stats,
+            'detail'            => $detail,
             'next_offset'       => $next_offset,
             'done'              => $done,
             'total_technicians' => $this->count_technicians(),
@@ -321,6 +329,7 @@ class TCS_Technician_Sync
                     }
                     var d = res.data;
                     var b = d.batch || {};
+                    var det = d.detail || {};
                     state.totals.total   += (b.total   || 0);
                     state.totals.created += (b.created || 0);
                     state.totals.updated += (b.updated || 0);
@@ -332,6 +341,17 @@ class TCS_Technician_Sync
                     $text.text(done + ' / ' + state.total + ' — ' + fmt(state.totals));
                     log('offset=' + state.offset + ' +created=' + (b.created || 0) +
                         ' +updated=' + (b.updated || 0) + ' +errors=' + (b.errors || 0));
+
+                    if (det.errors && det.errors.length) {
+                        det.errors.forEach(function (e) {
+                            log('  ✗ wp_id=' + e.wp_id + ' mobile=' + (e.mobile || '-') +
+                                ' → ' + e.error);
+                        });
+                    }
+                    if (det.http_error) {
+                        log('  ⚠ HTTP ' + (det.http_status || '?') + ': ' + det.http_error);
+                    }
+
                     if (d.done) {
                         finish('✅ پایان یافت. ' + fmt(state.totals));
                     } else {
