@@ -158,6 +158,13 @@ class TCS_Financial_Sync
             $items[] = $payload;
         }
 
+        $detail = [
+            'skipped_items' => [],
+            'errors'        => [],
+            'http_status'   => null,
+            'http_error'    => null,
+        ];
+
         if (! empty($items)) {
             $result = TCS_API_Client::post('financials/batch', ['items' => $items]);
 
@@ -167,9 +174,15 @@ class TCS_Financial_Sync
                 $stats['updated'] = (int) ($result['body']['updated'] ?? 0);
                 $stats['skipped'] += (int) ($result['body']['skipped'] ?? 0);
                 $stats['errors']  = isset($result['body']['errors']) ? count((array) $result['body']['errors']) : 0;
+
+                // detail تا ۵ تای اول برای دیباگ سمت مرورگر
+                $detail['skipped_items'] = array_slice((array) ($result['body']['skipped_items'] ?? []), 0, 5);
+                $detail['errors']        = array_slice((array) ($result['body']['errors']        ?? []), 0, 5);
             } else {
                 TCS_Sync_Queue::push('financials/batch', ['items' => $items], $result['error'] ?? '');
                 $stats['errors'] = count($items);
+                $detail['http_status'] = $result['status'] ?? null;
+                $detail['http_error']  = $result['error']  ?? null;
             }
         }
 
@@ -178,6 +191,7 @@ class TCS_Financial_Sync
 
         wp_send_json_success([
             'batch'         => $stats,
+            'detail'        => $detail,
             'next_offset'   => $next_offset,
             'done'          => $done,
             'total_records' => $total,
@@ -253,6 +267,7 @@ class TCS_Financial_Sync
                     }
                     var d = res.data;
                     var b = d.batch || {};
+                    var det = d.detail || {};
                     state.totals.created += (b.created || 0);
                     state.totals.updated += (b.updated || 0);
                     state.totals.skipped += (b.skipped || 0);
@@ -264,6 +279,23 @@ class TCS_Financial_Sync
                     log('offset=' + state.offset + ' +created=' + (b.created || 0) +
                         ' +updated=' + (b.updated || 0) + ' +skipped=' + (b.skipped || 0) +
                         ' +errors=' + (b.errors || 0));
+
+                    // فقط برای ۵ آیتم اول هر دسته detail را در لاگ نمایش بده
+                    if (det.skipped_items && det.skipped_items.length) {
+                        det.skipped_items.forEach(function (s) {
+                            log('  ⊘ skipped wp_id=' + s.wp_id + ' reason=' + s.reason +
+                                ' snapshot=' + JSON.stringify(s.snapshot || {}));
+                        });
+                    }
+                    if (det.errors && det.errors.length) {
+                        det.errors.forEach(function (e) {
+                            log('  ✗ error wp_id=' + e.wp_id + ' → ' + e.error);
+                        });
+                    }
+                    if (det.http_error) {
+                        log('  ⚠ HTTP ' + (det.http_status || '?') + ': ' + det.http_error);
+                    }
+
                     if (d.done) {
                         finish('✅ پایان یافت. ' + fmt(state.totals));
                     } else {

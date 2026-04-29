@@ -48,7 +48,7 @@ class SyncFinancialController extends Controller
 
         $created = 0;
         $updated = 0;
-        $skipped = 0;
+        $skipped = [];
         $errors = [];
 
         foreach ($data['items'] as $i => $item) {
@@ -57,7 +57,20 @@ class SyncFinancialController extends Controller
                 match ($r['action']) {
                     'created' => $created++,
                     'updated' => $updated++,
-                    default => $skipped++,
+                    'skipped' => $skipped[] = [
+                        'index' => $i,
+                        'wp_id' => $r['wp_id'],
+                        'reason' => $r['reason'] ?? 'unknown',
+                        // یک نگاه سریع به فیلدهای کلیدی برای دیباگ از سمت WP
+                        'snapshot' => [
+                            'order_wp_id' => $item['order_wp_id'] ?? null,
+                            'total_invoice' => $item['total_invoice'] ?? null,
+                            'price_customer' => $item['price_customer'] ?? null,
+                            'wallet' => $item['wallet'] ?? null,
+                            'reward_type' => $item['reward_type'] ?? null,
+                        ],
+                    ],
+                    default => null,
                 };
             } catch (Throwable $e) {
                 $errors[] = [
@@ -73,7 +86,8 @@ class SyncFinancialController extends Controller
             'total' => count($data['items']),
             'created' => $created,
             'updated' => $updated,
-            'skipped' => $skipped,
+            'skipped' => count($skipped),
+            'skipped_items' => $skipped,
             'errors' => $errors,
         ]);
     }
