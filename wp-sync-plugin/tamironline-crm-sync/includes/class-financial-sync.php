@@ -79,9 +79,15 @@ class TCS_Financial_Sync
         $orderWpId = $this->meta_int($get('order_id'));
         $customerWpId = $this->meta_int($get('customer_id'));
 
-        // technician در WP postmeta گاهی با کلیدهای متفاوت نگه‌داشته می‌شود.
-        // اولویت: technician، سپس tech_id، سپس از سفارش resolve می‌شود سمت لاراول.
-        $technicianWpId = $this->meta_int($get('technician')) ?: $this->meta_int($get('tech_id'));
+        // technician در فاکتور/شارژ wallet با چند کلید مختلف ست می‌شود.
+        // اولویت: technician_id postmeta (در order.php هنگام add_status_order
+        // ست می‌شود)، سپس technician، tech_id، نهایتاً post_author که در
+        // libs/order.php و libs/financial.php هنگام wp_insert_post به همان
+        // ID تکنسین ست می‌شود.
+        $technicianWpId = $this->meta_int($get('technician_id'))
+            ?: $this->meta_int($get('technician'))
+            ?: $this->meta_int($get('tech_id'))
+            ?: ((int) $post->post_author ?: null);
 
         $payload = [
             'wp_id' => (int) $post->ID,

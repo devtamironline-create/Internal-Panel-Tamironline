@@ -153,14 +153,14 @@ class SyncFinancialController extends Controller
      * تشخیص نوع از روی متادیتا — ترتیب اولویت:
      *   1) wallet=1 → wallet_credit
      *   2) reward_type ∈ {0,1} → reward/penalty
-     *   3) order_wp_id + total_invoice → invoice
+     *   3) order_wp_id > 0 → invoice (حتی اگر total=0؛ در WP فاکتور
+     *      با مبلغ صفر هم وجود دارد و باید سینک شود)
      */
     protected function detectType(array $data): ?string
     {
         $wallet = filter_var($data['wallet'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $rewardType = $data['reward_type'] ?? null;
         $orderWpId = (int) ($data['order_wp_id'] ?? 0);
-        $totalInvoice = (int) ($data['total_invoice'] ?? 0);
 
         if ($wallet) {
             return 'wallet_credit';
@@ -170,7 +170,7 @@ class SyncFinancialController extends Controller
             return ((int) $rewardType === 1) ? 'reward' : 'penalty';
         }
 
-        if ($orderWpId > 0 && $totalInvoice > 0) {
+        if ($orderWpId > 0) {
             return 'invoice';
         }
 
@@ -190,11 +190,16 @@ class SyncFinancialController extends Controller
         $isPaid = ((int) ($data['payment_status'] ?? 0)) === 1;
         $issuedAt = $this->safeDate($data['post_date'] ?? null);
 
+        $totalAmount = (int) ($data['total_invoice'] ?? 0);
+        if ($totalAmount === 0) {
+            $totalAmount = (int) ($data['price_customer'] ?? 0);
+        }
+
         $payload = [
             'order_id' => $order->id,
             'customer_id' => $order->customer_id,
             'technician_id' => $order->technician_id,
-            'total_amount' => (int) ($data['total_invoice'] ?? 0),
+            'total_amount' => $totalAmount,
             'status' => $isPaid ? 'paid' : 'issued',
             'issued_at' => $issuedAt,
             'paid_at' => $isPaid ? $issuedAt : null,
