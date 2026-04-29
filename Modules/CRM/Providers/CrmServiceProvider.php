@@ -3,6 +3,8 @@
 namespace Modules\CRM\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
+use Modules\CRM\Livewire\OrderWizard;
 
 class CrmServiceProvider extends ServiceProvider
 {
@@ -19,5 +21,7 @@ class CrmServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
+
+        Livewire::component('crm.order-wizard', OrderWizard::class);
     }
 }

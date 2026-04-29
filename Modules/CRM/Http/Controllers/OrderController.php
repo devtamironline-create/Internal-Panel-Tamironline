@@ -52,17 +52,14 @@ class OrderController extends Controller
 
     public function create(Request $request)
     {
-        // اگر customer_id از مسیر جزئیات مشتری اومد، مشتری رو پیش‌گزینه کن
+        // اگر customer_id از مسیر جزئیات مشتری اومد، Livewire آن را
+        // پیش‌گزینه می‌کند. بقیهٔ لیست‌ها (brands/devices/...) داخل خود
+        // OrderWizard component گرفته می‌شوند.
         $customerId = $request->integer('customer_id');
         $customer = $customerId ? Customer::find($customerId) : null;
 
         return view('crm::orders.create', [
             'customer' => $customer,
-            'brands' => Brand::active()->ordered()->get(['id', 'name']),
-            'devices' => Device::active()->ordered()->get(['id', 'name']),
-            'provinces' => Province::ordered()->get(['id', 'name']),
-            'cities' => collect(),
-            'statuses' => OrderStatus::options(),
         ]);
     }
 

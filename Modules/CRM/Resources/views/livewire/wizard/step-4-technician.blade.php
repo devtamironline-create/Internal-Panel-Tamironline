@@ -1,0 +1,82 @@
+<div class="space-y-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">تخصیص تکنسین و زمان</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">این مرحله اختیاری است. می‌توانید بعداً تخصیص بدهید.</p>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">تکنسین</label>
+
+        <div class="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+            {{-- بدون تکنسین --}}
+            <label class="cursor-pointer block">
+                <input type="radio" wire:model.live="technicianId" value="" class="peer sr-only">
+                <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                    <div>
+                        <div class="font-medium text-gray-900 dark:text-gray-100">بعداً تخصیص می‌دهم</div>
+                        <div class="text-xs text-gray-500">سفارش با وضعیت «جدید» ثبت می‌شود.</div>
+                    </div>
+                </div>
+            </label>
+
+            @foreach($this->technicianOptions as $t)
+                <label class="cursor-pointer block">
+                    <input type="radio" wire:model.live="technicianId" value="{{ $t->id }}" class="peer sr-only">
+                    <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="w-10 h-10 rounded-full {{ $t->over ? 'bg-red-100 text-red-700' : 'bg-brand-100 text-brand-700' }} flex items-center justify-center font-bold flex-shrink-0">
+                                    {{ mb_substr($t->name ?: '?', 0, 1) }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 dark:text-gray-100 truncate">{{ $t->name }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{{ $t->mobile }}</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-1 rounded-full {{ $t->over ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }}">
+                                {{ $t->percent }}%
+                            </div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                <span class="text-gray-500">سفارش‌های فعال</span>
+                                <span class="font-medium {{ $t->over_orders ? 'text-red-600' : 'text-gray-700 dark:text-gray-300' }}">
+                                    {{ number_format($t->now_orders) }} / {{ $t->max_orders ?: '∞' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                <span class="text-gray-500">بدهی</span>
+                                <span class="font-medium {{ $t->over_debt ? 'text-red-600' : 'text-gray-700 dark:text-gray-300' }}">
+                                    {{ number_format($t->now_debt) }}
+                                    @if($t->max_debt) / {{ number_format($t->max_debt) }} @endif
+                                </span>
+                            </div>
+                        </div>
+
+                        @if($t->over)
+                            <div class="mt-2 text-xs text-red-600 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                @if($t->over_orders && $t->over_debt)
+                                    ظرفیت سفارش و بدهی پر شده — تخصیص توصیه نمی‌شود
+                                @elseif($t->over_orders)
+                                    ظرفیت سفارش‌های فعال پر است
+                                @else
+                                    سقف بدهی رد شده
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">زمان مراجعه پیشنهادی</label>
+        <input type="datetime-local" wire:model="visitScheduledAt"
+               class="w-full md:w-1/2 px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+        <p class="text-xs text-gray-500 mt-1">می‌توانید خالی بگذارید و بعداً تنظیم کنید.</p>
+    </div>
+</div>
