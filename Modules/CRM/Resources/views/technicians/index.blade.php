@@ -106,6 +106,10 @@
                             <a href="{{ route('crm.technicians.show', $tech) }}" class="text-gray-600 hover:text-gray-900 text-sm">جزئیات</a>
                             @can('edit-crm-technician')
                             <a href="{{ route('crm.technicians.edit', $tech) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
+                            <form action="{{ route('crm.technicians.impersonate', $tech) }}" method="POST" class="inline" onsubmit="return confirm('وارد پنل «{{ $tech->full_name }}» می‌شوید. ادامه دهید؟');">
+                                @csrf
+                                <button type="submit" class="text-purple-600 hover:text-purple-800 text-sm">ورود به پنل</button>
+                            </form>
                             @endcan
                             @can('delete-crm-technician')
                             <form action="{{ route('crm.technicians.destroy', $tech) }}" method="POST" class="inline" onsubmit="return confirm('حذف این تکنسین انجام شود؟');">

@@ -744,6 +744,21 @@
 
         <!-- Main Content -->
         <div class="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+            @if(session('impersonator_id'))
+            <div class="bg-red-600 text-white px-4 py-2 flex items-center justify-between gap-4 text-sm">
+                <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    شما در حساب «{{ auth()->user()->name ?? auth()->user()->first_name ?? '—' }}» وارد شده‌اید (impersonate).
+                </span>
+                <form action="{{ route('crm.impersonate.leave') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-3 py-1 bg-white text-red-700 rounded font-medium hover:bg-gray-100">
+                        بازگشت به حساب ادمین
+                    </button>
+                </form>
+            </div>
+            @endif
+
             <!-- Header -->
             <header class="sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white lg:border-b dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex grow flex-col items-center justify-between lg:flex-row lg:px-6">

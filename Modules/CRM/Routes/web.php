@@ -8,6 +8,7 @@ use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\HappyCallQuestionController;
 use Modules\CRM\Http\Controllers\HappyCallResponseController;
+use Modules\CRM\Http\Controllers\ImpersonateController;
 use Modules\CRM\Http\Controllers\InvoiceController;
 use Modules\CRM\Http\Controllers\LegacyImportController;
 use Modules\CRM\Http\Controllers\OrderController;
@@ -135,7 +136,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-technician')->group(function () {
         Route::post('technicians/{technician}/provision-user', [TechnicianController::class, 'provisionUser'])->name('technicians.provision-user');
         Route::post('technicians/{technician}/unlink-user', [TechnicianController::class, 'unlinkUser'])->name('technicians.unlink-user');
+        Route::post('technicians/{technician}/impersonate', [ImpersonateController::class, 'start'])->name('technicians.impersonate');
     });
+
+    // خروج از حالت impersonate (نیازی به permission ندارد چون فقط
+    // session.impersonator_id را برمی‌گرداند به ادمین قبلی).
+    Route::post('impersonate/leave', [ImpersonateController::class, 'leave'])->name('impersonate.leave');
 
     // ─── سفارش‌های تعمیر ─────────────────────────────────────────
     // داشبورد تکنسین: سفارش‌های خودم
