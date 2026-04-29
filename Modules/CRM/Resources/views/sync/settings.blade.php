@@ -67,25 +67,36 @@
             هربار که پنل به‌روزرسانی می‌شود، نسخهٔ تازهٔ پلاگین را از این‌جا دانلود و در WP جایگزین کنید.
         </p>
 
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-4">
             @if($pluginAvailable)
                 <a href="{{ route('crm.sync.plugin.download') }}"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium">
+                   class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     دانلود پلاگین
                     @if($pluginVersion)
                         <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full" dir="ltr">v{{ $pluginVersion }}</span>
                     @endif
                 </a>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                    فایل: <code dir="ltr">tamironline-crm-sync@if($pluginVersion)-{{ $pluginVersion }}@endif.zip</code>
-                </span>
+
+                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1 font-mono" dir="ltr">
+                    <div>SHA1: <span class="text-gray-700 dark:text-gray-300">{{ substr($pluginSha1, 0, 16) }}…</span></div>
+                    <div>Size: {{ number_format($pluginSize) }} bytes</div>
+                    <div>Built: {{ date('Y-m-d H:i:s', $pluginMtime) }} UTC</div>
+                </div>
             @else
                 <div class="text-sm text-amber-600">
                     ⚠ فایل پلاگین روی سرور یافت نشد. مدیر سیستم باید کد را با پوشهٔ <code dir="ltr">wp-sync-plugin/</code> سنک کند.
                 </div>
             @endif
         </div>
+
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
+            اگر بعد از دانلود همچنان نسخهٔ قدیمی نصب شد:
+            (۱) cache مرورگر را پاک کن (Ctrl+Shift+Delete) و دوباره دانلود کن،
+            (۲) در WP افزونهٔ قبلی را کاملاً <strong>غیرفعال + حذف</strong> کن،
+            (۳) فایل تازه را آپلود و فعال کن.
+            مقدار <code dir="ltr">SHA1</code> بالا را با hash فایل دانلود‌شده مقایسه کن (در ویندوز: <code dir="ltr">certutil -hashfile FILE SHA1</code>).
+        </p>
     </div>
 
     {{-- راهنما --}}

@@ -27,12 +27,18 @@ class SyncSettingsController extends Controller
             CrmSetting::set('wp_sync_token', $token);
         }
 
+        $zipPath = base_path(self::PLUGIN_ZIP_RELATIVE);
+        $available = file_exists($zipPath);
+
         return view('crm::sync.settings', [
             'token' => $token,
             'baseUrl' => url('/api/crm/sync'),
             'pingUrl' => route('crm.sync.ping'),
             'pluginVersion' => $this->readPluginVersion(),
-            'pluginAvailable' => file_exists(base_path(self::PLUGIN_ZIP_RELATIVE)),
+            'pluginAvailable' => $available,
+            'pluginSize' => $available ? filesize($zipPath) : null,
+            'pluginMtime' => $available ? filemtime($zipPath) : null,
+            'pluginSha1' => $available ? sha1_file($zipPath) : null,
         ]);
     }
 
@@ -50,10 +56,14 @@ class SyncSettingsController extends Controller
         abort_unless(file_exists($path), 404, 'فایل پلاگین یافت نشد.');
 
         $version = $this->readPluginVersion();
-        $filename = 'tamironline-crm-sync' . ($version ? '-' . $version : '') . '.zip';
+        // sha1 کوتاه در نام فایل تا cache مرورگر/CDN فایل قدیمی را نگه ندارد
+        $shortHash = substr(sha1_file($path), 0, 7);
+        $filename = 'tamironline-crm-sync' . ($version ? '-' . $version : '') . '-' . $shortHash . '.zip';
 
         return response()->download($path, $filename, [
             'Content-Type' => 'application/zip',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 
