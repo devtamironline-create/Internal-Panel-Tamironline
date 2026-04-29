@@ -105,7 +105,7 @@ class TCS_Financial_Sync
             'payment_status'       => $this->meta_int($get('payment_status')),
 
             'post_title' => (string) $post->post_title,
-            'post_date'  => (string) $post->post_date_gmt,
+            'post_date'  => $this->safe_post_date($post),
         ];
 
         return array_filter($payload, function ($v) {
@@ -379,6 +379,19 @@ class TCS_Financial_Sync
             }
         }
         return (bool) $value;
+    }
+
+    /** post_date را تمیز می‌کند — '0000-00-00 00:00:00' به null. */
+    protected function safe_post_date(WP_Post $post): ?string
+    {
+        foreach ([$post->post_date_gmt, $post->post_date] as $candidate) {
+            $candidate = (string) $candidate;
+            if ($candidate === '' || strpos($candidate, '0000-') === 0) {
+                continue;
+            }
+            return $candidate;
+        }
+        return null;
     }
 
     protected function price_int($value): ?int

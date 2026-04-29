@@ -115,9 +115,10 @@ class SyncFinancialController extends Controller
             'invoice_descripotion' => 'nullable|string',
             'payment_status' => 'nullable|integer',
 
-            // پست
+            // پست — post_date گاهی '0000-00-00 00:00:00' است، پس
+            // به‌صورت string می‌گیریم و در upsertInvoice با rescue parse می‌کنیم.
             'post_title' => 'nullable|string|max:255',
-            'post_date' => 'nullable|date',
+            'post_date' => 'nullable|string|max:32',
         ];
     }
 
@@ -187,7 +188,7 @@ class SyncFinancialController extends Controller
         $invoice = Invoice::where('wp_id', $wpId)->lockForUpdate()->first();
 
         $isPaid = ((int) ($data['payment_status'] ?? 0)) === 1;
-        $issuedAt = $data['post_date'] ?? null;
+        $issuedAt = $this->safeDate($data['post_date'] ?? null);
 
         $payload = [
             'order_id' => $order->id,
@@ -305,6 +306,22 @@ class SyncFinancialController extends Controller
             'wp_id' => $wpId,
             'amount' => $signedAmount,
         ];
+    }
+
+    /** parse امن تاریخ — '0000-00-00...' و رشته‌های نامعتبر را به null می‌بَرد. */
+    protected function safeDate(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+        if (str_starts_with($value, '0000-')) {
+            return null;
+        }
+        try {
+            return \Carbon\Carbon::parse($value)->toDateTimeString();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     protected function buildNote(array $data, string $type): ?string
