@@ -11,6 +11,7 @@ use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Models\WalletTransaction;
+use Modules\CRM\Services\CommissionCalculator;
 use Throwable;
 
 /**
@@ -28,6 +29,10 @@ use Throwable;
  */
 class SyncFinancialController extends Controller
 {
+    public function __construct(protected CommissionCalculator $calc)
+    {
+    }
+
     /** سینک تکی — POST /api/crm/sync/financial */
     public function upsert(Request $request): JsonResponse
     {
@@ -195,11 +200,34 @@ class SyncFinancialController extends Controller
             $totalAmount = (int) ($data['price_customer'] ?? 0);
         }
 
+        // محاسبه سهم تکنسین/شرکت همان لحظه — اگر سفارش تکنسین داشته باشد
+        // و مبلغی هم ست شده باشد، طبق منطق CommissionCalculator با همان
+        // مبلغ صریح فاکتور (نه مبلغ سفارش) محاسبه می‌شود.
+        $techShare = 0;
+        $companyShare = $totalAmount;
+        $percent = 0;
+        $calcType = null;
+
+        if ($totalAmount > 0 && $order->technician_id) {
+            $technician = $order->technician;
+            if ($technician) {
+                $totals = $this->calc->calculate($order, $technician, $totalAmount);
+                $techShare = $totals['tech_share'];
+                $companyShare = $totals['company_share'];
+                $percent = $totals['percent'];
+                $calcType = $totals['calc_type'] !== '' ? $totals['calc_type'] : null;
+            }
+        }
+
         $payload = [
             'order_id' => $order->id,
             'customer_id' => $order->customer_id,
             'technician_id' => $order->technician_id,
             'total_amount' => $totalAmount,
+            'tech_share' => $techShare,
+            'company_share' => $companyShare,
+            'commission_percent' => $percent,
+            'calc_type' => $calcType,
             'status' => $isPaid ? 'paid' : 'issued',
             'issued_at' => $issuedAt,
             'paid_at' => $isPaid ? $issuedAt : null,
@@ -212,11 +240,6 @@ class SyncFinancialController extends Controller
         } else {
             $payload['wp_id'] = $wpId;
             $payload['invoice_code'] = Invoice::generateInvoiceCode();
-            // تخصیص کمیسیون و سهم‌ها در sync انجام نمی‌شود — از CommissionCalculator
-            // در زمان status=Completed استفاده می‌شود. در sync اولیه، صفر می‌مانند.
-            $payload['tech_share'] = 0;
-            $payload['company_share'] = $payload['total_amount'];
-            $payload['commission_percent'] = 0;
             $invoice = Invoice::create($payload);
             $action = 'created';
         }

@@ -31,11 +31,16 @@ use Modules\CRM\Models\Technician;
 class CommissionCalculator
 {
     /**
+     * @param  int|null  $explicitTotal  مبلغ صریح (اگر داده شد، به‌جای فیلدهای
+     *                                   order استفاده می‌شود — مفید برای sync
+     *                                   فاکتور که مبلغ خود را دارد).
      * @return array{total:int, tech_share:int, company_share:int, percent:int, calc_type:string}
      */
-    public function calculate(Order $order, Technician $technician): array
+    public function calculate(Order $order, Technician $technician, ?int $explicitTotal = null): array
     {
-        $total = (int) ($order->total_invoice ?? $order->final_price ?? $order->items_subtotal ?? 0);
+        $total = $explicitTotal !== null
+            ? (int) $explicitTotal
+            : (int) ($order->total_invoice ?? $order->final_price ?? $order->items_subtotal ?? 0);
         $costPrice = (int) ($order->cost_price ?? 0);
 
         $percent = max(0, min(100, (int) $technician->percent));
