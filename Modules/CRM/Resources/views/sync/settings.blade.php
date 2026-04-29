@@ -60,15 +60,45 @@
         </div>
     </div>
 
+    {{-- دانلود پلاگین --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">دانلود پلاگین وردپرس</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            هربار که پنل به‌روزرسانی می‌شود، نسخهٔ تازهٔ پلاگین را از این‌جا دانلود و در WP جایگزین کنید.
+        </p>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            @if($pluginAvailable)
+                <a href="{{ route('crm.sync.plugin.download') }}"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    دانلود پلاگین
+                    @if($pluginVersion)
+                        <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full" dir="ltr">v{{ $pluginVersion }}</span>
+                    @endif
+                </a>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    فایل: <code dir="ltr">tamironline-crm-sync@if($pluginVersion)-{{ $pluginVersion }}@endif.zip</code>
+                </span>
+            @else
+                <div class="text-sm text-amber-600">
+                    ⚠ فایل پلاگین روی سرور یافت نشد. مدیر سیستم باید کد را با پوشهٔ <code dir="ltr">wp-sync-plugin/</code> سنک کند.
+                </div>
+            @endif
+        </div>
+    </div>
+
     {{-- راهنما --}}
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
-        <h2 class="text-base font-bold text-blue-900 dark:text-blue-100 mb-2">راهنمای نصب</h2>
+        <h2 class="text-base font-bold text-blue-900 dark:text-blue-100 mb-2">راهنمای نصب / به‌روزرسانی</h2>
         <ol class="text-sm text-blue-900 dark:text-blue-100 space-y-1 list-decimal ps-5">
-            <li>پلاگین <code dir="ltr">tamironline-crm-sync</code> را روی سایت وردپرسی نصب و فعال کنید.</li>
+            <li>دکمهٔ «دانلود پلاگین» بالا را بزنید و فایل zip را ذخیره کنید.</li>
+            <li>اگر نسخهٔ قبلی نصب است، در WP به <strong>افزونه‌ها</strong> بروید، آن را <em>غیرفعال</em> و سپس <em>حذف</em> کنید (داده‌ها از بین نمی‌رود — تنظیمات در wp_options است).</li>
+            <li>از مسیر <strong>افزونه‌ها → افزودن جدید → بارگذاری افزونه</strong>، فایل zip دانلود‌شده را آپلود و فعال کنید.</li>
             <li>به <strong>پیشخوان وردپرس → تنظیمات → CRM Sync</strong> بروید.</li>
             <li>«Base URL» و «Bearer Token» را از همین صفحه کپی و در آن‌جا وارد کنید.</li>
             <li>دکمهٔ «تست اتصال» را بزنید — باید پیام موفقیت ببینید.</li>
-            <li>ماژول‌های موردنظر (مشتری/تکنسین/سفارش) را فعال کنید تا داده‌ها به‌صورت خودکار سینک شوند.</li>
+            <li>برای انتقال داده‌های موجود، باکس‌های backfill را به ترتیب بزنید: تنظیمات → داده‌های پایه → مشتری → تکنسین → سفارش → مالی.</li>
         </ol>
     </div>
 </div>

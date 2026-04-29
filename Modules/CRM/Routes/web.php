@@ -242,5 +242,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
+        Route::get('plugin/download', [SyncSettingsController::class, 'downloadPlugin'])->name('plugin.download');
     });
 });
