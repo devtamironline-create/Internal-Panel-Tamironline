@@ -527,7 +527,7 @@
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-happycall', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -580,7 +580,7 @@
                         @endcanany
 
                         {{-- ── عملیات ── --}}
-                        @canany(['view-crm-orders', 'view-crm-customers', 'view-crm-happycall'])
+                        @canany(['view-crm-orders', 'view-crm-customers'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">عملیات</div>
                         @can('view-crm-orders')
                         <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.index') || request()->routeIs('crm.orders.show') || request()->routeIs('crm.orders.create') || request()->routeIs('crm.orders.edit') ? 'sidebar-menu-item-active' : '' }}">
@@ -592,12 +592,6 @@
                         <a href="{{ route('crm.customers.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customers.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                             مشتری‌ها
-                        </a>
-                        @endcan
-                        @can('view-crm-happycall')
-                        <a href="{{ route('crm.happycall.responses.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.happycall.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                            HappyCall
                         </a>
                         @endcan
                         @endcanany

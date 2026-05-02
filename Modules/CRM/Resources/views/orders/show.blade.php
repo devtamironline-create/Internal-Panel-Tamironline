@@ -14,9 +14,6 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            @can('manage-crm-happycall')
-            <a href="{{ route('crm.happycall.responses.create', ['order' => $order, 'audience' => 'customer']) }}" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">ثبت HappyCall</a>
-            @endcan
             @can('edit-crm-order')
             <a href="{{ route('crm.orders.edit', $order) }}" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ویرایش</a>
             @endcan

@@ -117,9 +117,6 @@ class SyncOrderController extends Controller
             'send_sms_customer' => 'nullable|boolean',
             'save_as_draft' => 'nullable|boolean',
             'have_invoice' => 'nullable|boolean',
-            'happy_call' => 'nullable|boolean',
-            'hc_customer' => 'nullable|boolean',
-            'hc_tech' => 'nullable|boolean',
             'finish_order' => 'nullable|boolean',
             'finish_order_sh' => 'nullable|boolean',
 
@@ -148,10 +145,6 @@ class SyncOrderController extends Controller
             'buy_price_list' => 'nullable|array',
             'device_img1' => 'nullable|string|max:500',
             'device_image_input' => 'nullable|string|max:500',
-
-            // happy call
-            'hc_customer_data' => 'nullable|array',
-            'hc_tech_data' => 'nullable|array',
 
             // logging
             'order_description_content' => 'nullable|string',
@@ -250,9 +243,6 @@ class SyncOrderController extends Controller
             'send_sms_customer' => (bool) ($data['send_sms_customer'] ?? false),
             'save_as_draft' => (bool) ($data['save_as_draft'] ?? false),
             'have_invoice' => (bool) ($data['have_invoice'] ?? false),
-            'happy_call' => (bool) ($data['happy_call'] ?? false),
-            'hc_customer' => (bool) ($data['hc_customer'] ?? false),
-            'hc_tech' => (bool) ($data['hc_tech'] ?? false),
             'finish_order' => (bool) ($data['finish_order'] ?? false),
             'finish_order_sh' => (bool) ($data['finish_order_sh'] ?? false),
 
@@ -281,10 +271,6 @@ class SyncOrderController extends Controller
             'buy_price_list' => $data['buy_price_list'] ?? null,
             'device_img1' => $data['device_img1'] ?? null,
             'device_image_input' => $data['device_image_input'] ?? null,
-
-            // happy call
-            'hc_customer_data' => $data['hc_customer_data'] ?? null,
-            'hc_tech_data' => $data['hc_tech_data'] ?? null,
 
             // logging
             'order_description_content' => $data['order_description_content'] ?? null,

@@ -6,8 +6,6 @@ use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceController;
-use Modules\CRM\Http\Controllers\HappyCallQuestionController;
-use Modules\CRM\Http\Controllers\HappyCallResponseController;
 use Modules\CRM\Http\Controllers\ImpersonateController;
 use Modules\CRM\Http\Controllers\InvoiceController;
 use Modules\CRM\Http\Controllers\LegacyImportController;
@@ -219,24 +217,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('payments/settings', [PaymentController::class, 'settings'])->name('payments.settings');
         Route::post('payments/settings', [PaymentController::class, 'updateSettings'])->name('payments.settings.update');
-    });
-
-    // ─── HappyCall ────────────────────────────────────────────────
-    Route::middleware('can:view-crm-happycall')->group(function () {
-        Route::get('happycall/responses', [HappyCallResponseController::class, 'index'])->name('happycall.responses.index');
-        Route::get('happycall/responses/{response}', [HappyCallResponseController::class, 'show'])->name('happycall.responses.show');
-    });
-    Route::middleware('can:manage-crm-happycall')->group(function () {
-        // قالب سوالات
-        Route::get('happycall/questions', [HappyCallQuestionController::class, 'index'])->name('happycall.questions.index');
-        Route::post('happycall/questions', [HappyCallQuestionController::class, 'store'])->name('happycall.questions.store');
-        Route::put('happycall/questions/{question}', [HappyCallQuestionController::class, 'update'])->name('happycall.questions.update');
-        Route::delete('happycall/questions/{question}', [HappyCallQuestionController::class, 'destroy'])->name('happycall.questions.destroy');
-
-        // ثبت پاسخ از سفارش
-        Route::get('orders/{order}/happycall/new', [HappyCallResponseController::class, 'create'])->name('happycall.responses.create');
-        Route::post('orders/{order}/happycall', [HappyCallResponseController::class, 'store'])->name('happycall.responses.store');
-        Route::delete('happycall/responses/{response}', [HappyCallResponseController::class, 'destroy'])->name('happycall.responses.destroy');
     });
 
     // ─── انتقال داده از CRM وردپرسی ──────────────────────────────
