@@ -101,6 +101,7 @@ class RegistrationController extends Controller
                     'children_count'    => $registration->children_count,
                     'province'          => $registration->province,
                     'city'              => $registration->city,
+                    'address'           => $registration->address,
                 ];
             }
         }
@@ -235,6 +236,7 @@ class RegistrationController extends Controller
             'children_count'    => ['nullable', 'integer', 'min:0', 'max:5'],
             'province'          => ['required', 'string'],
             'city'              => ['required', 'string'],
+            'address'           => ['required', 'string', 'min:10', 'max:1000'],
         ], [
             'mobile.required'            => 'شماره موبایل الزامی است.',
             'shenasname_number.required' => 'شماره شناسنامه الزامی است.',
@@ -245,6 +247,8 @@ class RegistrationController extends Controller
             'marital_status.in'          => 'وضعیت تاهل انتخاب شده معتبر نیست.',
             'province.required'          => 'انتخاب استان الزامی است.',
             'city.required'              => 'انتخاب شهر الزامی است.',
+            'address.required'           => 'آدرس محل سکونت الزامی است.',
+            'address.min'                => 'آدرس باید حداقل ۱۰ کاراکتر باشد.',
         ]);
 
         // اعتبارسنجی استان
@@ -286,6 +290,7 @@ class RegistrationController extends Controller
             'children_count'    => $request->marital_status === 'married' ? $request->children_count : null,
             'province'          => $request->province,
             'city'              => $request->city,
+            'address'           => $request->address,
             'current_step'      => 3,
         ]);
 

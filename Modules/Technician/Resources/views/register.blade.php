@@ -371,6 +371,17 @@
                         <p id="cityError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
+                    {{-- آدرس محل سکونت (اجباری) --}}
+                    <div>
+                        <label for="address" class="block text-sm font-semibold text-gray-600 mb-1.5">
+                            آدرس محل سکونت <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="address" rows="3" maxlength="1000"
+                                  placeholder="خیابان، کوچه، پلاک، واحد..."
+                                  class="form-input w-full px-4 py-3 rounded-xl text-sm bg-white outline-none resize-none"></textarea>
+                        <p id="addressError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
+                    </div>
+
                     <button id="btnStep2" onclick="submitStep2()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-light text-white text-sm font-bold rounded-xl transition-colors">
                         ثبت و ادامه
                     </button>
@@ -1587,7 +1598,7 @@
 
         function showFieldError(id, msg) { $('#' + id).text(msg).removeClass('hidden'); }
         function hideFieldError(id) { $('#' + id).text('').addClass('hidden'); }
-        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideFieldError('tehranDistrictsError'); hideFieldError('step4GeneralError'); hideFieldError('activityTypeError'); hideFieldError('applianceCategoriesError'); hideFieldError('transportationError'); hideFieldError('step5GeneralError'); hideAlert(); }
+        function clearAllErrors() { hideFieldError('mobileError'); hideFieldError('otpError'); hideFieldError('nationalCodeError'); hideFieldError('birthDateError'); hideFieldError('shenasnameError'); hideFieldError('genderError'); hideFieldError('maritalError'); hideFieldError('provinceError'); hideFieldError('cityError'); hideFieldError('addressError'); hideFieldError('shopAddressError'); hideFieldError('shopPhoneError'); hideFieldError('step3GeneralError'); hideFieldError('tehranDistrictsError'); hideFieldError('step4GeneralError'); hideFieldError('activityTypeError'); hideFieldError('applianceCategoriesError'); hideFieldError('transportationError'); hideFieldError('step5GeneralError'); hideAlert(); }
 
         function setLoading(btnId, loading) {
             const btn = $('#' + btnId);
@@ -1801,6 +1812,9 @@
                                             $('#city').val(res.resume.city);
                                         }
                                     }, 100);
+                                }
+                                if (res.resume.address) {
+                                    $('#address').val(res.resume.address);
                                 }
                                 highestCompletedStep = 1;
                                 goToPhase('D');
@@ -2338,6 +2352,7 @@
             const childrenCount = maritalStatus === 'married' ? $('#children_count').val() : null;
             const province = $('#province').val();
             const city = $('#city').val();
+            const address = $('#address').val().trim();
 
             let hasError = false;
 
@@ -2366,6 +2381,14 @@
                 hasError = true;
             }
 
+            if (!address) {
+                showFieldError('addressError', 'آدرس محل سکونت الزامی است.');
+                hasError = true;
+            } else if (address.length < 10) {
+                showFieldError('addressError', 'آدرس باید حداقل ۱۰ کاراکتر باشد.');
+                hasError = true;
+            }
+
             if (hasError) return;
 
             setLoading('btnStep2', true);
@@ -2377,7 +2400,8 @@
                 marital_status: maritalStatus,
                 children_count: childrenCount,
                 province: province,
-                city: city
+                city: city,
+                address: address
             })
             .done(function(res) {
                 if (res.success) {
@@ -2385,7 +2409,7 @@
                     goToPhase('E');
                 } else {
                     if (res.field) {
-                        const errorMap = { shenasname_number: 'shenasnameError', gender: 'genderError', marital_status: 'maritalError', province: 'provinceError', city: 'cityError' };
+                        const errorMap = { shenasname_number: 'shenasnameError', gender: 'genderError', marital_status: 'maritalError', province: 'provinceError', city: 'cityError', address: 'addressError' };
                         showFieldError(errorMap[res.field] || 'shenasnameError', res.message);
                     } else {
                         showAlert(res.message, 'error');
@@ -2394,8 +2418,14 @@
             })
             .fail(function(xhr) {
                 const res = xhr.responseJSON;
-                if (res?.field) {
-                    const errorMap = { shenasname_number: 'shenasnameError', province: 'provinceError', city: 'cityError' };
+                if (res?.errors) {
+                    const errorMap = { shenasname_number: 'shenasnameError', province: 'provinceError', city: 'cityError', address: 'addressError', gender: 'genderError', marital_status: 'maritalError' };
+                    Object.entries(res.errors).forEach(function([field, msgs]) {
+                        const targetId = errorMap[field];
+                        if (targetId) showFieldError(targetId, Array.isArray(msgs) ? msgs[0] : msgs);
+                    });
+                } else if (res?.field) {
+                    const errorMap = { shenasname_number: 'shenasnameError', province: 'provinceError', city: 'cityError', address: 'addressError' };
                     showFieldError(errorMap[res.field] || 'shenasnameError', res.message);
                 } else if (res?.message) {
                     showAlert(res.message, 'error');
