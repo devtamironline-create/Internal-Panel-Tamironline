@@ -76,12 +76,17 @@ class TechnicianRegistration extends Model
         'documents_uploaded',
         'documents_reject_reason',
         'contract_reject_reason',
+        'promissory_note_path',
+        'promissory_note_uploaded_at',
+        'promissory_note_status',
+        'promissory_note_reject_reason',
     ];
 
     protected $casts = [
         'mobile_verified_at' => 'datetime',
         'contract_signed_at' => 'datetime',
         'biometric_verified_at' => 'datetime',
+        'promissory_note_uploaded_at' => 'datetime',
         'identity_verified' => 'boolean',
         'has_business_license' => 'boolean',
         'has_shop' => 'boolean',

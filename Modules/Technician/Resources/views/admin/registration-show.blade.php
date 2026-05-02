@@ -135,10 +135,12 @@
                 7 => '۷- آپلود مدارک',
                 8 => '۸- امضای قرارداد',
                 9 => '۹- احراز هویت ویدیویی',
+                10 => '۱۰- بارگذاری سفته الکترونیک',
             ];
             $visualSteps = [
                 1 => 'هویت', 2 => 'شخصی', 3 => 'تکمیلی', 4 => 'فعالیت',
-                5 => 'مناطق', 6 => 'بررسی', 7 => 'مدارک', 8 => 'قرارداد', 9 => 'ویدیو'
+                5 => 'مناطق', 6 => 'بررسی', 7 => 'مدارک', 8 => 'قرارداد', 9 => 'ویدیو',
+                10 => 'سفته'
             ];
             $currentStep = $registration->current_step;
         @endphp
@@ -742,6 +744,112 @@
         </div>
         @endif
 
+    </div>
+    @endif
+
+    {{-- سفته الکترونیک (مرحله ۱۰) --}}
+    @if($registration->promissory_note_path || $registration->promissory_note_status)
+    <div class="bg-white rounded-xl shadow-sm p-5 mt-4">
+        <h3 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2 pb-3 border-b border-gray-100">
+            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            سفته الکترونیک (مرحله ۱۰)
+        </h3>
+
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+            <div class="text-sm text-gray-700">
+                وضعیت:
+                @if($registration->promissory_note_status === 'approved')
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">✓ تایید شده</span>
+                @elseif($registration->promissory_note_status === 'rejected')
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">✗ رد شده</span>
+                @elseif($registration->promissory_note_status === 'pending')
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">در انتظار بررسی</span>
+                @else
+                    <span class="text-gray-500 text-xs">—</span>
+                @endif
+                @if($registration->promissory_note_uploaded_at)
+                    <span class="text-xs text-gray-500 ms-2">
+                        بارگذاری: {{ $registration->promissory_note_uploaded_at->format('Y-m-d H:i') }}
+                    </span>
+                @endif
+            </div>
+
+            @if($registration->promissory_note_path)
+                <a href="{{ \Illuminate\Support\Facades\Storage::url($registration->promissory_note_path) }}" target="_blank"
+                   class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    مشاهده فایل سفته
+                </a>
+            @endif
+        </div>
+
+        @if($registration->promissory_note_status === 'rejected' && $registration->promissory_note_reject_reason)
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mb-3">
+                <div class="font-bold mb-1">دلیل رد:</div>
+                {{ $registration->promissory_note_reject_reason }}
+            </div>
+        @endif
+
+        {{-- دکمه‌های تأیید/رد سفته --}}
+        @if($registration->promissory_note_status === 'pending')
+        <div class="space-y-3" x-data="{ showReject: false }">
+            <div class="flex gap-2">
+                <form method="POST" action="{{ route('technician.admin.registrations.promissory-note-review', $registration->id) }}" class="flex-1">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition-colors">
+                        تایید سفته
+                    </button>
+                </form>
+                <button type="button" @click="showReject = !showReject"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">
+                    رد سفته
+                </button>
+            </div>
+            <form x-show="showReject" x-cloak method="POST" action="{{ route('technician.admin.registrations.promissory-note-review', $registration->id) }}" class="space-y-2">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="action" value="reject">
+                <textarea name="reject_reason" rows="2" placeholder="دلیل رد سفته..."
+                          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"></textarea>
+                <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">
+                    ثبت رد سفته
+                </button>
+            </form>
+        </div>
+        @endif
+
+        {{-- دکمه «تبدیل به تکنسین فعال» — فقط بعد از تأیید سفته --}}
+        @if($registration->promissory_note_status === 'approved')
+            @php
+                $confirmOverwrite = session('confirm_overwrite');
+                $needsConfirm = $confirmOverwrite && ($confirmOverwrite['mobile'] ?? null) === $registration->mobile;
+            @endphp
+            <div class="mt-4 pt-4 border-t border-gray-100">
+                @if($needsConfirm)
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-3 text-sm text-amber-900">
+                        ⚠ {{ $confirmOverwrite['message'] }}
+                    </div>
+                    <form method="POST" action="{{ route('technician.admin.registrations.convert-to-active', $registration->id) }}">
+                        @csrf
+                        <input type="hidden" name="force" value="1">
+                        <button type="submit" class="w-full px-4 py-3 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 transition-colors">
+                            ✓ بله، اطلاعات تکنسین موجود را به‌روزرسانی کن
+                        </button>
+                    </form>
+                @else
+                    <form method="POST" action="{{ route('technician.admin.registrations.convert-to-active', $registration->id) }}"
+                          onsubmit="return confirm('این تکنسین را در لیست تکنسین‌های فعال CRM ثبت کنیم؟ (در صورت تکراری بودن، در مرحلهٔ بعد تأیید گرفته می‌شود.)');">
+                        @csrf
+                        <button type="submit" class="w-full px-4 py-3 bg-gradient-to-l from-emerald-600 to-green-600 text-white rounded-lg text-sm font-bold hover:from-emerald-700 hover:to-green-700 transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            تبدیل به تکنسین فعال (ثبت در مدیریت خدمات)
+                        </button>
+                    </form>
+                @endif
+            </div>
+        @endif
     </div>
     @endif
 

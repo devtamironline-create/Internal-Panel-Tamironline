@@ -88,6 +88,9 @@ class RegistrationController extends Controller
                     'documents_reject_reason'   => $registration->documents_reject_reason,
                     'contract_reject_reason'    => $registration->contract_reject_reason,
                     'biometric_status'          => $registration->biometric_status,
+                    'biometric_reject_reason'   => $registration->biometric_reject_reason,
+                    'promissory_note_status'    => $registration->promissory_note_status,
+                    'promissory_note_reject_reason' => $registration->promissory_note_reject_reason,
                     'first_name'        => $registration->first_name,
                     'last_name'         => $registration->last_name,
                     'father_name'       => $registration->father_name,
@@ -937,6 +940,74 @@ class RegistrationController extends Controller
             'status'  => $registration->biometric_status,
             'reason'  => $registration->biometric_reject_reason,
         ]);
+    }
+
+    /**
+     * آپلود رسید سفته الکترونیک — مرحله ۱۰ (پس از تایید بایومتریک).
+     *
+     * فقط فایل تصویری/PDF می‌گیرد و به‌صورت pending ذخیره می‌کند تا
+     * ادمین در پنل تأیید/رد کند.
+     */
+    public function uploadPromissoryNote(Request $request)
+    {
+        $request->validate([
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'promissory_note' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+        ], [
+            'mobile.required'              => 'شماره موبایل الزامی است.',
+            'promissory_note.required'     => 'فایل سفته الزامی است.',
+            'promissory_note.mimes'        => 'فایل باید تصویر (JPG، PNG، WEBP) یا PDF باشد.',
+            'promissory_note.max'          => 'حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.',
+        ]);
+
+        $registration = TechnicianRegistration::where('mobile', $request->mobile)
+            ->where('status', 'approved')
+            ->where('biometric_status', 'verified')
+            ->where(function ($q) {
+                $q->whereNull('promissory_note_status')
+                  ->orWhere('promissory_note_status', 'rejected');
+            })
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'درخواست معتبر نیست. (مرحلهٔ احراز ویدیویی باید قبلاً تایید شده باشد.)',
+            ], 422);
+        }
+
+        try {
+            $folder = 'technician-promissory-note/' . $registration->id;
+            $path = $request->file('promissory_note')->store($folder, 'public');
+
+            $registration->update([
+                'promissory_note_path'          => $path,
+                'promissory_note_uploaded_at'   => now(),
+                'promissory_note_status'        => 'pending',
+                'promissory_note_reject_reason' => null,
+                'current_step'                  => 10,
+            ]);
+
+            Log::info('Technician promissory note uploaded', [
+                'registration_id' => $registration->id,
+                'mobile'          => $request->mobile,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'رسید سفته با موفقیت بارگذاری شد و در انتظار تایید است.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Technician promissory note upload failed', [
+                'mobile' => $request->mobile,
+                'error'  => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ذخیره فایل: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

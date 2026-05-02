@@ -145,8 +145,8 @@
             <div class="overflow-x-auto pb-1 -mx-1" style="scrollbar-width: thin;">
                 <div class="flex items-center gap-0 min-w-max px-1">
                     @php
-                        $stepLabels = ['هویت', 'شخصی', 'تکمیلی', 'مناطق', 'فعالیت', 'قرارداد', 'مدارک', 'ویدیو'];
-                        $stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸'];
+                        $stepLabels = ['هویت', 'شخصی', 'تکمیلی', 'مناطق', 'فعالیت', 'قرارداد', 'مدارک', 'ویدیو', 'سفته'];
+                        $stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸','۹'];
                     @endphp
                     @foreach($stepLabels as $i => $label)
                         @php $num = $i + 1; @endphp
@@ -154,7 +154,7 @@
                             <div class="step-circle w-5 h-5 rounded-full {{ $num === 1 ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400' }} flex items-center justify-center text-[9px] font-bold transition-all">{{ $stepNumbers[$i] }}</div>
                             <span class="step-label text-[9px] {{ $num === 1 ? 'font-bold text-brand-blue' : 'font-medium text-gray-400' }} transition-all whitespace-nowrap">{{ $label }}</span>
                         </div>
-                        @if($num < 8)
+                        @if($num < 9)
                         <div class="flex-shrink-0 w-3 h-px bg-gray-200 mx-0.5 step-line" id="stepLine{{ $num }}"></div>
                         @endif
                     @endforeach
@@ -1326,20 +1326,83 @@
             </div>
 
             {{-- ===== فاز M: تکمیل نهایی ===== --}}
+            {{-- ===== فاز P: بارگذاری سفته الکترونیک (مرحله ۹) ===== --}}
+            <div id="phaseP" class="phase">
+                <div class="px-4 py-6">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <h2 class="text-base font-bold text-gray-800 mb-1">بارگذاری رسید سفته الکترونیک</h2>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            مرحلهٔ آخر — تصویر یا فایل رسید سفته الکترونیکی را بارگذاری کنید.
+                            پس از تأیید توسط واحد ادمین، فعالیت شما به‌عنوان تکنسین آغاز می‌شود.
+                        </p>
+                    </div>
+
+                    {{-- جعبه «در حال بررسی» (وقتی pending است) --}}
+                    <div id="promissoryPendingBox" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center">
+                        <svg class="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-sm text-blue-700 font-bold mb-1">سفته شما در حال بررسی است</p>
+                        <p class="text-xs text-gray-600 leading-relaxed">
+                            رسید سفتهٔ الکترونیکی توسط واحد ادمین در حال بازبینی است.
+                            نتیجه تا <span class="font-bold text-blue-700">۴۸ ساعت آینده</span> اعلام می‌شود.
+                        </p>
+                    </div>
+
+                    {{-- جعبه «رد شده» --}}
+                    <div id="promissoryRejectedBox" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                        <p class="text-sm text-red-700 font-bold mb-1 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            سفتهٔ قبلی رد شد
+                        </p>
+                        <p class="text-xs text-gray-700">دلیل: <span id="promissoryRejectReason"></span></p>
+                        <p class="text-xs text-gray-600 mt-1">لطفاً فایل صحیح را دوباره بارگذاری کنید.</p>
+                    </div>
+
+                    {{-- فرم آپلود --}}
+                    <div id="promissoryUploadActions">
+                        <label for="promissoryNoteFile" class="block">
+                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-brand-blue hover:bg-blue-50 transition">
+                                <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <p class="text-sm font-medium text-gray-700">برای انتخاب فایل کلیک کنید</p>
+                                <p class="text-xs text-gray-500 mt-1">JPG، PNG، WEBP یا PDF تا ۱۰ مگابایت</p>
+                            </div>
+                            <input type="file" id="promissoryNoteFile" accept="image/*,.pdf" class="hidden">
+                        </label>
+                        <p id="promissoryFileName" class="hidden text-xs text-green-700 mt-2 text-center"></p>
+
+                        <button type="button" onclick="submitPromissoryNote()"
+                                class="w-full mt-4 px-4 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition disabled:opacity-50"
+                                id="promissorySubmitBtn">
+                            بارگذاری سفته
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div id="phaseM" class="phase">
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800 mb-2">همه مراحل تکمیل شد!</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2" id="phaseMTitle">همه مراحل تکمیل شد!</h2>
                     <p class="text-sm text-gray-500 mb-3">
                         از همکاری شما سپاسگزاریم.
                     </p>
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mx-4 mt-4">
+                    <div id="phaseMReviewBox" class="bg-blue-50 border border-blue-100 rounded-xl p-4 mx-4 mt-4">
                         <svg class="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <p class="text-sm text-blue-700 font-bold mb-1">اطلاعات و ویدیو شما در حال بررسی است</p>
                         <p class="text-xs text-gray-600 leading-relaxed">
                             اطلاعات و ویدیوی احراز هویت شما تا <span class="font-bold text-blue-700">۴۸ ساعت آینده</span> بررسی و نتیجه از طریق پیامک به شما اعلام خواهد شد.
+                        </p>
+                    </div>
+                    <div id="phaseMCompleteBox" class="hidden bg-green-50 border border-green-100 rounded-xl p-4 mx-4 mt-4">
+                        <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <p class="text-sm text-green-700 font-bold mb-1">پروندهٔ شما کامل شد</p>
+                        <p class="text-xs text-gray-600 leading-relaxed">
+                            تمام مراحل ثبت‌نام شامل سفتهٔ الکترونیک با موفقیت انجام شد.
+                            به‌زودی واحد پشتیبانی برای آغاز همکاری با شما تماس می‌گیرد.
                         </p>
                     </div>
                 </div>
@@ -1382,14 +1445,14 @@
         let highestCompletedStep = 0; // بالاترین مرحله تکمیل شده
         let isApproved = false; // آیا توسط ادمین تایید شده
         let currentPhase = 'A'; // فاز فعلی
-        const stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸'];
+        const stepNumbers = ['۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 
-        // نگاشت فاز به مرحله (۸ مرحله)
-        // 1=هویت(A,B,C) | 2=شخصی(D) | 3=تکمیلی(E) | 4=مناطق(F) | 5=فعالیت(G,H) | 6=قرارداد(J,K,L) | 7=مدارک(N) | 8=ویدیو(C2)
-        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, N:6, J:7, K:7, L:7, C2:8, M:8 };
+        // نگاشت فاز به مرحله (۹ مرحله)
+        // 1=هویت(A,B,C) | 2=شخصی(D) | 3=تکمیلی(E) | 4=مناطق(F) | 5=فعالیت(G,H) | 6=قرارداد(J,K,L) | 7=مدارک(N) | 8=ویدیو(C2) | 9=سفته(P,M)
+        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, N:6, J:7, K:7, L:7, C2:8, P:9, M:9 };
 
         // نگاشت مرحله به اولین فاز آن (برای کلیک روی تب)
-        const stepToPhase = { 1:'A', 2:'D', 3:'E', 4:'F', 5:'G', 6:'J', 7:'N', 8:'C2' };
+        const stepToPhase = { 1:'A', 2:'D', 3:'E', 4:'F', 5:'G', 6:'J', 7:'N', 8:'C2', 9:'P' };
 
         function goToPhase(phase) {
             $('.phase').removeClass('active');
@@ -1398,7 +1461,7 @@
             currentPhase = phase;
 
             // پراگرس بار
-            const progress = { A:5, B:8, C:12, D:20, E:32, F:44, G:56, H:62, I:62, N:68, J:75, K:82, L:88, C2:94, M:100, Rejected:62 };
+            const progress = { A:4, B:7, C:11, D:18, E:28, F:38, G:48, H:54, I:54, N:62, J:68, K:74, L:80, C2:86, P:94, M:100, Rejected:54 };
             $('#progressBar').css('width', (progress[phase] || 5) + '%');
 
             // به‌روزرسانی بالاترین مرحله تکمیل شده
@@ -1439,7 +1502,7 @@
         function updateStepIndicators(phase) {
             const currentStep = phaseToStep[phase] || 1;
 
-            for (let i = 1; i <= 8; i++) {
+            for (let i = 1; i <= 9; i++) {
                 const indicator = $('#stepIndicator' + i);
                 const circle = indicator.find('.step-circle');
                 const label = indicator.find('.step-label');
@@ -1598,11 +1661,30 @@
                             $('#verifiedName').text(verifiedFirstName + ' ' + verifiedLastName);
 
                             // هدایت به مرحله مناسب
-                            // ترتیب جدید: مدارک → قرارداد → بایومتریک → تکمیل
+                            // ترتیب جدید: مدارک → قرارداد → بایومتریک → سفته → تکمیل
                             if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded && res.resume.biometric_status === 'verified') {
                                 isApproved = true;
-                                highestCompletedStep = 8;
-                                goToPhase('M');
+                                // وضعیت سفته را چک کن
+                                if (res.resume.promissory_note_status === 'approved') {
+                                    highestCompletedStep = 9;
+                                    goToPhase('M');
+                                    $('#phaseMReviewBox').addClass('hidden');
+                                    $('#phaseMCompleteBox').removeClass('hidden');
+                                } else if (res.resume.promissory_note_status === 'pending') {
+                                    highestCompletedStep = 9;
+                                    goToPhase('P');
+                                    $('#promissoryPendingBox').removeClass('hidden');
+                                    $('#promissoryUploadActions').addClass('hidden');
+                                } else if (res.resume.promissory_note_status === 'rejected') {
+                                    highestCompletedStep = 8;
+                                    goToPhase('P');
+                                    $('#promissoryRejectedBox').removeClass('hidden');
+                                    $('#promissoryRejectReason').text(res.resume.promissory_note_reject_reason || 'نامشخص');
+                                } else {
+                                    // هنوز سفته بارگذاری نشده
+                                    highestCompletedStep = 8;
+                                    goToPhase('P');
+                                }
                             } else if (res.resume.status === 'approved' && res.resume.contract_signed && res.resume.documents_uploaded) {
                                 // مدارک + قرارداد انجام شده، بایومتریک انجام نشده
                                 isApproved = true;
@@ -2062,6 +2144,60 @@
             $('#biometricActions').addClass('hidden');
             $('#biometricPendingBox').removeClass('hidden');
             $('#biometricRejectedBox').addClass('hidden');
+        }
+
+        // ===== مرحله ۹: بارگذاری سفته الکترونیک =====
+        $(document).on('change', '#promissoryNoteFile', function() {
+            const file = this.files[0];
+            if (file) {
+                $('#promissoryFileName').removeClass('hidden').text('انتخاب شد: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)');
+            } else {
+                $('#promissoryFileName').addClass('hidden');
+            }
+        });
+
+        function submitPromissoryNote() {
+            hideAlert();
+            const fileInput = document.getElementById('promissoryNoteFile');
+            const file = fileInput?.files?.[0];
+            if (!file) {
+                showAlert('لطفاً ابتدا فایل سفته را انتخاب کنید.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('mobile', currentMobile);
+            formData.append('promissory_note', file);
+
+            setLoading('promissorySubmitBtn', true);
+
+            $.ajax({
+                url: '{{ route("technician.register.upload-promissory-note") }}',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+            })
+            .done(function(res) {
+                if (res.success) {
+                    // پس از آپلود، نشان بده که در حال بررسی است
+                    $('#promissoryUploadActions').addClass('hidden');
+                    $('#promissoryRejectedBox').addClass('hidden');
+                    $('#promissoryPendingBox').removeClass('hidden');
+                    highestCompletedStep = 9;
+                    showAlert(res.message || 'سفته با موفقیت بارگذاری شد.', 'success');
+                } else {
+                    showAlert(res.message || 'خطا در بارگذاری سفته.', 'error');
+                }
+            })
+            .fail(function(xhr) {
+                const res = xhr.responseJSON;
+                showAlert(res?.message || 'خطا در ارتباط با سرور.', 'error');
+            })
+            .always(function() {
+                setLoading('promissorySubmitBtn', false);
+            });
         }
 
         var biometricPollAttempts = 0;

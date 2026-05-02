@@ -24,6 +24,7 @@ Route::post('/join-technician/register/get-contract', [RegistrationController::c
 Route::post('/join-technician/register/send-contract-otp', [RegistrationController::class, 'sendContractOtp'])->name('technician.register.send-contract-otp');
 Route::post('/join-technician/register/sign-contract', [RegistrationController::class, 'signContract'])->name('technician.register.sign-contract');
 Route::post('/join-technician/register/upload-documents', [RegistrationController::class, 'uploadDocuments'])->name('technician.register.upload-documents');
+Route::post('/join-technician/register/upload-promissory-note', [RegistrationController::class, 'uploadPromissoryNote'])->name('technician.register.upload-promissory-note');
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {
@@ -43,6 +44,8 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::put('/registrations/{id}/biometric-review', [TechnicianAdminController::class, 'registrationBiometricReview'])->name('registrations.biometric-review');
     Route::put('/registrations/{id}/documents-review', [TechnicianAdminController::class, 'registrationDocumentsReview'])->name('registrations.documents-review');
     Route::put('/registrations/{id}/contract-review', [TechnicianAdminController::class, 'registrationContractReview'])->name('registrations.contract-review');
+    Route::put('/registrations/{id}/promissory-note-review', [TechnicianAdminController::class, 'registrationPromissoryNoteReview'])->name('registrations.promissory-note-review');
+    Route::post('/registrations/{id}/convert-to-active', [TechnicianAdminController::class, 'registrationConvertToActive'])->name('registrations.convert-to-active');
     Route::delete('/registrations/{id}', [TechnicianAdminController::class, 'registrationDestroy'])->name('registrations.destroy');
 
     // مدیریت دسته‌بندی دستگاه‌ها

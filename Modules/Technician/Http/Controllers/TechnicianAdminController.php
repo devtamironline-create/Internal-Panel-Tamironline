@@ -3,9 +3,14 @@
 namespace Modules\Technician\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Modules\CRM\Models\Technician as CrmTechnician;
 use Modules\SMS\Services\KavenegarService;
 use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
@@ -283,11 +288,11 @@ class TechnicianAdminController extends Controller
         $this->checkAccess();
 
         $request->validate([
-            'current_step' => ['required', 'integer', 'min:1', 'max:9'],
+            'current_step' => ['required', 'integer', 'min:1', 'max:10'],
         ], [
             'current_step.required' => 'مرحله الزامی است.',
             'current_step.min'      => 'مرحله نمی‌تواند کمتر از ۱ باشد.',
-            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۹ باشد.',
+            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۱۰ باشد.',
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
@@ -295,7 +300,7 @@ class TechnicianAdminController extends Controller
         $data = ['current_step' => $request->current_step];
 
         // ست کردن فلگ‌های پیش‌نیاز بر اساس مرحله جدید (جلو بردن)
-        // ترتیب جدید: 7=مدارک، 8=قرارداد، 9=ویدیو
+        // ترتیب جدید: 7=مدارک، 8=قرارداد، 9=ویدیو، 10=سفته
         if ($request->current_step >= 6) {
             $data['status'] = $registration->status === 'rejected' ? 'approved' : $registration->status;
             if ($registration->status === 'pending') {
@@ -314,8 +319,18 @@ class TechnicianAdminController extends Controller
             // مرحله ۹ (ویدیو) = بایومتریک تایید شده
             $data['biometric_status'] = 'verified';
         }
+        if ($request->current_step >= 10 && empty($registration->promissory_note_status)) {
+            // مرحله ۱۰ (سفته) به بالا = سفته در حالت بررسی
+            $data['promissory_note_status'] = 'pending';
+        }
 
         // ریست کردن فلگ‌ها در صورت برگشت به مرحله قبلی
+        if ($request->current_step < 10) {
+            $data['promissory_note_path'] = null;
+            $data['promissory_note_uploaded_at'] = null;
+            $data['promissory_note_status'] = null;
+            $data['promissory_note_reject_reason'] = null;
+        }
         if ($request->current_step < 9) {
             $data['biometric_status'] = null;
             $data['biometric_reject_reason'] = null;
@@ -344,6 +359,7 @@ class TechnicianAdminController extends Controller
             7 => 'آپلود مدارک',
             8 => 'امضای قرارداد',
             9 => 'احراز هویت ویدیویی',
+            10 => 'بارگذاری سفته الکترونیک',
         ];
 
         return redirect()->route('technician.admin.registrations.show', $id)
@@ -649,6 +665,170 @@ class TechnicianAdminController extends Controller
         }
 
         $this->sendSmsTemplate($registration, $templateKey);
+    }
+
+    /**
+     * بررسی سفته الکترونیک (تایید/رد با دلیل).
+     *
+     * رد: promissory_note_path پاک می‌شود تا تکنسین دوباره آپلود کند.
+     * تایید: promissory_note_status='approved' می‌شود و سپس دکمهٔ
+     * «تبدیل به تکنسین فعال» در صفحهٔ ادمین فعال می‌شود.
+     */
+    public function registrationPromissoryNoteReview(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'reject_reason' => ['nullable', 'required_if:action,reject', 'string', 'max:1000'],
+        ], [
+            'reject_reason.required_if' => 'لطفاً دلیل رد سفته را وارد کنید.',
+        ]);
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if (empty($registration->promissory_note_path) && $request->action === 'approve') {
+            return back()->with('error', 'سفته‌ای برای تایید وجود ندارد.');
+        }
+
+        if ($request->action === 'approve') {
+            $registration->update([
+                'promissory_note_status'        => 'approved',
+                'promissory_note_reject_reason' => null,
+            ]);
+
+            return redirect()->route('technician.admin.registrations.show', $id)
+                ->with('success', 'سفته الکترونیک تایید شد.');
+        }
+
+        // رد سفته — تکنسین باید دوباره آپلود کند
+        $registration->update([
+            'promissory_note_path'          => null,
+            'promissory_note_uploaded_at'   => null,
+            'promissory_note_status'        => 'rejected',
+            'promissory_note_reject_reason' => $request->reject_reason,
+        ]);
+
+        return redirect()->route('technician.admin.registrations.show', $id)
+            ->with('success', 'سفته رد شد. تکنسین می‌تواند مجدداً بارگذاری کند.');
+    }
+
+    /**
+     * تبدیل تکنسین ثبت‌نام‌کرده به تکنسین فعال در ماژول CRM.
+     *
+     * - فقط زمانی فعال است که promissory_note_status === 'approved'.
+     * - اگر در crm_technicians رکوردی با همین موبایل بود، update می‌کند
+     *   (بعد از تأیید کاربر در فرم با force=1).
+     * - یک User با نقش crm-technician می‌سازد/متصل می‌کند تا تکنسین
+     *   بتواند به پنل خود وارد شود.
+     */
+    public function registrationConvertToActive(Request $request, $id)
+    {
+        $this->checkAccess();
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        if ($registration->promissory_note_status !== 'approved') {
+            return back()->with('error', 'برای تبدیل، ابتدا سفتهٔ الکترونیک باید تایید شود.');
+        }
+
+        if (empty($registration->mobile)) {
+            return back()->with('error', 'موبایل تکنسین خالی است.');
+        }
+
+        $existing = CrmTechnician::where('mobile', $registration->mobile)->first();
+
+        // اگر تکراری بود و کاربر force=1 نفرستاد، با پیغام برگرد
+        if ($existing && ! $request->boolean('force')) {
+            return back()->with('confirm_overwrite', [
+                'message' => 'تکنسینی با این موبایل از قبل در سیستم فعال است (' . $existing->full_name . '). آیا اطلاعات با داده‌های ثبت‌نام به‌روزرسانی شود؟',
+                'mobile'  => $registration->mobile,
+            ]);
+        }
+
+        $payload = $this->mapRegistrationToCrmTechnician($registration);
+
+        $result = DB::transaction(function () use ($registration, $existing, $payload) {
+            // ۱) User با نقش crm-technician (مثل provisionUser در CRM)
+            $user = User::where('mobile', $registration->mobile)->first();
+            $generatedPassword = null;
+
+            if (! $user) {
+                $generatedPassword = Str::random(10);
+                $user = User::create([
+                    'name'               => trim(($registration->first_name ?? '') . ' ' . ($registration->last_name ?? '')) ?: $registration->mobile,
+                    'first_name'         => $registration->first_name,
+                    'mobile'             => $registration->mobile,
+                    'password'           => Hash::make($generatedPassword),
+                    'is_staff'           => true,
+                    'mobile_verified_at' => now(),
+                ]);
+            }
+
+            if (! $user->hasRole('crm-technician')) {
+                $user->assignRole('crm-technician');
+            }
+
+            // ۲) تکنسین CRM
+            if ($existing) {
+                $existing->fill($payload + ['user_id' => $user->id])->save();
+                $tech = $existing;
+                $action = 'updated';
+            } else {
+                $tech = CrmTechnician::create($payload + ['user_id' => $user->id]);
+                $action = 'created';
+            }
+
+            return ['tech' => $tech, 'user' => $user, 'password' => $generatedPassword, 'action' => $action];
+        });
+
+        $msg = $result['action'] === 'created'
+            ? 'تکنسین با موفقیت در لیست تکنسین‌های فعال ساخته شد.'
+            : 'تکنسین موجود با اطلاعات ثبت‌نام به‌روزرسانی شد.';
+        $msg .= ' (شناسه CRM: ' . $result['tech']->id . ')';
+        if ($result['password']) {
+            $msg .= ' — رمز اولیه: ' . $result['password'] . ' (یادداشت کنید؛ دیگر نمایش داده نخواهد شد).';
+        }
+
+        return redirect()->route('technician.admin.registrations.show', $id)->with('success', $msg);
+    }
+
+    /** نگاشت فیلدهای TechnicianRegistration به ستون‌های crm_technicians. */
+    private function mapRegistrationToCrmTechnician(TechnicianRegistration $r): array
+    {
+        $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
+        $cities = (array) ($r->tehran_districts ?? $r->tehran_province_cities ?? $r->alborz_cities ?? $r->other_provinces_cities ?? []);
+        $address = trim($r->shop_address ?? '') ?: null;
+
+        $specialty = null;
+        if (is_array($r->appliance_categories) && count($r->appliance_categories)) {
+            // اگر appliance_categories آرایه‌ای از IDها باشد، نام‌ها را resolve می‌کنیم
+            $ids = array_filter(array_map('intval', $r->appliance_categories));
+            if ($ids) {
+                $names = ApplianceCategory::whereIn('id', $ids)->pluck('name')->all();
+                if ($names) {
+                    $specialty = implode('، ', $names);
+                }
+            }
+            if (! $specialty) {
+                $specialty = implode('، ', array_map('strval', $r->appliance_categories));
+            }
+        }
+
+        return [
+            'first_name'      => $r->first_name,
+            'firstname_tech'  => $fullName ?: ($r->first_name ?? null),
+            'mobile'          => $r->mobile,
+            'national_code'   => $r->national_code,
+            'phone'           => $r->shop_phone,
+            'province'        => $r->province,
+            'address'         => $address,
+            'specialty'       => $specialty,
+            'type_tech'       => $r->activity_type,
+            'img_personal'    => $r->doc_photo_3x4 ? Storage::url($r->doc_photo_3x4) : null,
+            'cart_img'        => $r->doc_national_card_front ? Storage::url($r->doc_national_card_front) : null,
+            'status'          => 'active',
+        ];
     }
 
     /**
