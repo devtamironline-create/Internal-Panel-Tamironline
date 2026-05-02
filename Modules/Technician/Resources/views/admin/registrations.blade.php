@@ -28,6 +28,7 @@
                     <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
                     <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>تایید شده</option>
                     <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>رد شده</option>
+                    <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>بایگانی شده</option>
                 </select>
             </div>
             <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
@@ -100,6 +101,9 @@
                                     @break
                                 @case('rejected')
                                     <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">رد شده</span>
+                                    @break
+                                @case('archived')
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">بایگانی شده</span>
                                     @break
                             @endswitch
                         </td>

@@ -924,6 +924,30 @@
                 </div>
             </div>
 
+            {{-- ===== فاز Archived: درخواست بایگانی شده ===== --}}
+            <div id="phaseArchived" class="phase">
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-orange-600 mb-2">درخواست شما بایگانی شده</h2>
+                    <p class="text-sm text-gray-600 mb-3 leading-relaxed px-4">
+                        درخواست شما در دستهٔ خدماتی است که در حال حاضر فعال نیست.
+                        <br>
+                        به‌محض فعال‌سازی این خدمات، با شما تماس گرفته می‌شود.
+                    </p>
+                    <div id="archiveReasonBox" class="bg-orange-50 border border-orange-200 rounded-xl p-4 mx-4 mt-4 text-right hidden">
+                        <p class="text-sm text-orange-700 font-semibold mb-1">توضیحات:</p>
+                        <p id="archiveReasonText" class="text-sm text-gray-700 leading-relaxed"></p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mx-4 mt-3">
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            از همراهی شما سپاسگزاریم. اطلاعات شما نزد ما محفوظ است.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {{-- ===== فاز J: تبریک تایید + ادامه مراحل ===== --}}
             <div id="phaseJ" class="phase">
                 {{-- باکس نمایش دلیل رد قرارداد توسط ادمین --}}
@@ -1449,7 +1473,7 @@
 
         // نگاشت فاز به مرحله (۹ مرحله)
         // 1=هویت(A,B,C) | 2=شخصی(D) | 3=تکمیلی(E) | 4=مناطق(F) | 5=فعالیت(G,H) | 6=قرارداد(J,K,L) | 7=مدارک(N) | 8=ویدیو(C2) | 9=سفته(P,M)
-        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, N:6, J:7, K:7, L:7, C2:8, P:9, M:9 };
+        const phaseToStep = { A:1, B:1, C:1, D:2, E:3, F:4, G:5, H:5, I:5, Rejected:5, Archived:5, N:6, J:7, K:7, L:7, C2:8, P:9, M:9 };
 
         // نگاشت مرحله به اولین فاز آن (برای کلیک روی تب)
         const stepToPhase = { 1:'A', 2:'D', 3:'E', 4:'F', 5:'G', 6:'J', 7:'N', 8:'C2', 9:'P' };
@@ -1461,7 +1485,7 @@
             currentPhase = phase;
 
             // پراگرس بار
-            const progress = { A:4, B:7, C:11, D:18, E:28, F:38, G:48, H:54, I:54, N:62, J:68, K:74, L:80, C2:86, P:94, M:100, Rejected:54 };
+            const progress = { A:4, B:7, C:11, D:18, E:28, F:38, G:48, H:54, I:54, N:62, J:68, K:74, L:80, C2:86, P:94, M:100, Rejected:54, Archived:54 };
             $('#progressBar').css('width', (progress[phase] || 5) + '%');
 
             // به‌روزرسانی بالاترین مرحله تکمیل شده
@@ -1736,6 +1760,12 @@
                                     $('#rejectionReasonBox').removeClass('hidden');
                                 }
                                 goToPhase('Rejected');
+                            } else if (res.resume.status === 'archived') {
+                                if (res.resume.archive_reason) {
+                                    $('#archiveReasonText').text(res.resume.archive_reason);
+                                    $('#archiveReasonBox').removeClass('hidden');
+                                }
+                                goToPhase('Archived');
                             } else if (res.resume.current_step >= 6) {
                                 highestCompletedStep = 5;
                                 goToPhase('I');

@@ -85,6 +85,7 @@ class RegistrationController extends Controller
                     'contract_signed'           => (bool) $registration->contract_signed_at,
                     'documents_uploaded'        => (bool) $registration->documents_uploaded,
                     'rejection_reason'          => $registration->rejection_reason,
+                    'archive_reason'            => $registration->archive_reason,
                     'documents_reject_reason'   => $registration->documents_reject_reason,
                     'contract_reject_reason'    => $registration->contract_reject_reason,
                     'biometric_status'          => $registration->biometric_status,

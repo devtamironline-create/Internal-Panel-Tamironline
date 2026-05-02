@@ -202,9 +202,13 @@ class TechnicianAdminController extends Controller
 
         $query = TechnicianRegistration::query()->orderByDesc('created_at');
 
-        // فیلتر وضعیت
+        // فیلتر وضعیت — به‌صورت پیش‌فرض، رکوردهای بایگانی‌شده در لیست
+        // اصلی نمایش داده نمی‌شوند مگر اینکه ادمین صریحاً status=archived
+        // را فیلتر کند.
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        } else {
+            $query->where('status', '!=', 'archived');
         }
 
         // جستجو
@@ -253,8 +257,9 @@ class TechnicianAdminController extends Controller
         }
 
         $request->validate([
-            'status'           => ['required', 'in:pending,approved,rejected'],
+            'status'           => ['required', 'in:pending,approved,rejected,archived'],
             'rejection_reason' => ['nullable', 'required_if:status,rejected', 'string', 'max:1000'],
+            'archive_reason'   => ['nullable', 'string', 'max:1000'],
         ], [
             'rejection_reason.required_if' => 'لطفاً دلیل رد درخواست را وارد کنید.',
         ]);
@@ -265,16 +270,30 @@ class TechnicianAdminController extends Controller
 
         if ($request->status === 'rejected') {
             $data['rejection_reason'] = $request->rejection_reason;
+        } elseif ($request->status === 'archived') {
+            $data['archive_reason'] = $request->archive_reason;
+            $data['archived_at']    = now();
         } else {
+            // برگرداندن از حالت‌های rejected/archived — متادیتا را پاک کن
             $data['rejection_reason'] = null;
+            $data['archive_reason']   = null;
+            $data['archived_at']      = null;
         }
 
         $registration->update($data);
 
-        // ارسال پیامک اطلاع‌رسانی
-        $this->sendStatusSms($registration, $request->status);
+        // ارسال پیامک اطلاع‌رسانی (برای archived پیامک نمی‌زنیم — ممکن است
+        // در آینده فعال شود و نمی‌خواهیم تکنسین را ناامید کنیم)
+        if ($request->status !== 'archived') {
+            $this->sendStatusSms($registration, $request->status);
+        }
 
-        $statusLabels = ['pending' => 'در انتظار بررسی', 'approved' => 'تایید شده', 'rejected' => 'رد شده'];
+        $statusLabels = [
+            'pending'  => 'در انتظار بررسی',
+            'approved' => 'تایید شده',
+            'rejected' => 'رد شده',
+            'archived' => 'بایگانی شده',
+        ];
 
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'وضعیت به «' . $statusLabels[$request->status] . '» تغییر یافت.');

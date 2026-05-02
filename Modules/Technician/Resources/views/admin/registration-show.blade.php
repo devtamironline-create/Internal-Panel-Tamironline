@@ -54,8 +54,28 @@
     </div>
     @endif
 
+    {{-- بنر بایگانی --}}
+    @if($registration->status === 'archived')
+    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
+        <div class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-orange-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            <div>
+                <h3 class="text-sm font-bold text-orange-700">درخواست بایگانی شده</h3>
+                @if($registration->archive_reason)
+                    <p class="text-sm text-orange-600 mt-1">{{ $registration->archive_reason }}</p>
+                @else
+                    <p class="text-sm text-orange-600 mt-1">دلیلی ثبت نشده.</p>
+                @endif
+                @if($registration->archived_at)
+                    <p class="text-xs text-orange-500 mt-1">بایگانی در: {{ $registration->archived_at->format('Y-m-d H:i') }}</p>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- تغییر وضعیت --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{ showRejectForm: false }">
+    <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{ showRejectForm: false, showArchiveForm: false }">
         <h2 class="text-sm font-bold text-gray-800 mb-3">تغییر وضعیت</h2>
 
         @if($errors->has('rejection_reason'))
@@ -88,15 +108,23 @@
             @endif
 
             @if($registration->status !== 'rejected')
-            <button @click="showRejectForm = !showRejectForm" type="button"
+            <button @click="showRejectForm = !showRejectForm; showArchiveForm = false" type="button"
                     class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200">
                 رد
+            </button>
+            @endif
+
+            @if($registration->status !== 'archived')
+            <button @click="showArchiveForm = !showArchiveForm; showRejectForm = false" type="button"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200 inline-flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                بایگانی
             </button>
             @endif
         </div>
 
         {{-- فرم دلیل رد --}}
-        <div x-show="showRejectForm" x-transition class="mt-4 pt-4 border-t border-gray-100">
+        <div x-show="showRejectForm" x-transition x-cloak class="mt-4 pt-4 border-t border-gray-100">
             <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
                 @csrf
                 @method('PUT')
@@ -109,6 +137,29 @@
                         تایید رد درخواست
                     </button>
                     <button @click="showRejectForm = false" type="button" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                        انصراف
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {{-- فرم بایگانی --}}
+        <div x-show="showArchiveForm" x-transition x-cloak class="mt-4 pt-4 border-t border-gray-100">
+            <form method="POST" action="{{ route('technician.admin.registrations.update-status', $registration->id) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="archived">
+                <label class="block text-xs font-semibold text-gray-600 mb-1.5">
+                    دلیل بایگانی <span class="text-gray-400">(اختیاری)</span>:
+                </label>
+                <textarea name="archive_reason" rows="3" placeholder="مثلاً: خدمات این رشته فعلاً فعال نیست."
+                          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none resize-none">{{ old('archive_reason') }}</textarea>
+                <p class="text-xs text-gray-500 mt-1.5">برای تکنسین پیامک ارسال نمی‌شود — درخواست برای فعال‌سازی در آینده نگه‌داری می‌شود.</p>
+                <div class="flex gap-2 mt-3">
+                    <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">
+                        ثبت بایگانی
+                    </button>
+                    <button @click="showArchiveForm = false" type="button" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
                         انصراف
                     </button>
                 </div>
