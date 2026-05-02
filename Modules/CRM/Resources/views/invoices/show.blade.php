@@ -79,11 +79,11 @@
                     <dd>{{ $invoice->calc_type === 'percent_of_total' ? 'درصد از کل فاکتور' : 'درصد از مبلغ دریافتی' }} ({{ $invoice->commission_percent }}%)</dd>
 
                     <dt class="text-gray-500">زمان صدور</dt>
-                    <dd dir="ltr">{{ $invoice->issued_at?->format('Y-m-d H:i') ?: '—' }}</dd>
+                    <dd dir="ltr">@jdatetime($invoice->issued_at)</dd>
 
                     @if($invoice->paid_at)
                     <dt class="text-gray-500">زمان پرداخت</dt>
-                    <dd dir="ltr">{{ $invoice->paid_at->format('Y-m-d H:i') }}</dd>
+                    <dd dir="ltr">@jdatetime($invoice->paid_at)</dd>
                     @endif
                 </dl>
             </div>
@@ -146,7 +146,7 @@
                     <li class="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div>
                             <span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span>
-                            <div class="text-xs text-gray-500 mt-1" dir="ltr">{{ $tx->created_at?->format('Y-m-d H:i') }}</div>
+                            <div class="text-xs text-gray-500 mt-1" dir="ltr">@jdatetime($tx->created_at)</div>
                         </div>
                         <span class="font-bold {{ $tx->amount >= 0 ? 'text-green-600' : 'text-red-600' }}">
                             {{ ($tx->amount >= 0 ? '+' : '') . number_format($tx->amount) }} ت

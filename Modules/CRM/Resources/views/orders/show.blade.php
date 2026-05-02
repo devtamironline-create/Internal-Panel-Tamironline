@@ -10,7 +10,7 @@
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش <span dir="ltr">{{ $order->order_code }}</span></h1>
             <div class="flex items-center gap-2 mt-2">
                 <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">ثبت شده در {{ $order->created_at?->format('Y-m-d H:i') }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">ثبت شده در <span dir="ltr">@jdatetime($order->created_at)</span></span>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -52,7 +52,7 @@
                     <dd class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</dd>
 
                     <dt class="text-gray-500 dark:text-gray-400">زمان مراجعه</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->visit_scheduled_at?->format('Y-m-d H:i') ?: '—' }}</dd>
+                    <dd class="text-gray-900 dark:text-gray-100" dir="ltr">@jdatetime($order->visit_scheduled_at)</dd>
 
                     <dt class="text-gray-500 dark:text-gray-400 col-span-2">شرح مشکل</dt>
                     <dd class="text-gray-900 dark:text-gray-100 col-span-2 whitespace-pre-wrap">{{ $order->problem_description ?: '—' }}</dd>
@@ -145,7 +145,7 @@
                 <ol class="space-y-3 text-sm">
                     @forelse($order->statusLogs as $log)
                     <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $log->created_at?->format('Y-m-d H:i') }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($log->created_at)</span>
                         <div class="flex-1">
                             <div class="text-gray-900 dark:text-gray-100">
                                 @if($log->fromLabel())
@@ -207,7 +207,7 @@
                     <div class="font-medium text-gray-900 dark:text-gray-100">{{ trim($order->technician->first_name . ' ' . $order->technician->last_name) }}</div>
                     <div class="text-xs text-gray-500" dir="ltr">{{ $order->technician->mobile }}</div>
                     @if($order->assigned_at)
-                    <div class="text-xs text-gray-500 mt-1">تخصیص داده شده در {{ $order->assigned_at?->format('Y-m-d H:i') }}</div>
+                    <div class="text-xs text-gray-500 mt-1">تخصیص داده شده در <span dir="ltr">@jdatetime($order->assigned_at)</span></div>
                     @endif
                 </div>
                 @can('assign-crm-technician')

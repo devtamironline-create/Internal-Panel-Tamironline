@@ -76,7 +76,7 @@
                             @endif
                         </div>
                         @if($order->visit_scheduled_at)
-                        <div class="text-xs text-gray-500 whitespace-nowrap" dir="ltr">{{ $order->visit_scheduled_at->format('Y-m-d H:i') }}</div>
+                        <div class="text-xs text-gray-500 whitespace-nowrap" dir="ltr">@jdatetime($order->visit_scheduled_at)</div>
                         @endif
                     </div>
                 </a>

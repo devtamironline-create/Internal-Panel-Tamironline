@@ -9,7 +9,7 @@
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش <span dir="ltr">{{ $order->order_code }}</span></h1>
             <div class="flex items-center gap-2 mt-2">
                 <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
-                <span class="text-xs text-gray-500">ثبت شده در {{ $order->created_at?->format('Y-m-d H:i') }}</span>
+                <span class="text-xs text-gray-500">ثبت شده در <span dir="ltr">@jdatetime($order->created_at)</span></span>
             </div>
         </div>
         <a href="{{ route('crm.orders.my') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">بازگشت به لیست</a>
@@ -45,7 +45,7 @@
                     <dd>{{ $order->problem_title ?: '—' }}</dd>
 
                     <dt class="text-gray-500">زمان مراجعه</dt>
-                    <dd>{{ $order->visit_scheduled_at?->format('Y-m-d H:i') ?: '—' }}</dd>
+                    <dd dir="ltr">@jdatetime($order->visit_scheduled_at)</dd>
 
                     <dt class="text-gray-500 col-span-2">شرح مشکل</dt>
                     <dd class="col-span-2 whitespace-pre-wrap">{{ $order->problem_description ?: '—' }}</dd>
@@ -94,7 +94,7 @@
                 <ol class="space-y-3 text-sm">
                     @forelse($order->statusLogs as $log)
                     <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <span class="text-xs text-gray-500 whitespace-nowrap" dir="ltr">{{ $log->created_at?->format('Y-m-d H:i') }}</span>
+                        <span class="text-xs text-gray-500 whitespace-nowrap" dir="ltr">@jdatetime($log->created_at)</span>
                         <div class="flex-1">
                             <div>
                                 @if($log->fromLabel())<span>{{ $log->fromLabel() }}</span><span class="text-gray-400 mx-1">→</span>@endif

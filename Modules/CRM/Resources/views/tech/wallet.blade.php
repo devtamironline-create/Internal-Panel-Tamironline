@@ -36,7 +36,7 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                 @forelse($transactions as $tx)
                 <tr>
-                    <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">{{ $tx->created_at?->format('Y-m-d H:i') }}</td>
+                    <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">@jdatetime($tx->created_at)</td>
                     <td class="px-4 py-2">
                         <span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span>
                     </td>

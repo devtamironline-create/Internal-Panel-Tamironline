@@ -53,7 +53,7 @@
                     <td class="px-6 py-4">
                         <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $order->visit_scheduled_at?->format('Y-m-d H:i') ?: '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">@jdatetime($order->visit_scheduled_at)</td>
                     <td class="px-6 py-4">
                         <a href="{{ route('crm.tech.orders.show', $order) }}" class="text-brand-600 hover:underline text-sm">مشاهده</a>
                     </td>

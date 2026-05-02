@@ -35,7 +35,7 @@
                     <td class="px-6 py-3 text-sm">{{ number_format($invoice->total_amount) }} ت</td>
                     <td class="px-6 py-3 text-sm text-green-600 font-bold">{{ number_format($invoice->tech_share) }} ت</td>
                     <td class="px-6 py-3"><span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span></td>
-                    <td class="px-6 py-3 text-xs text-gray-500" dir="ltr">{{ $invoice->issued_at?->format('Y-m-d H:i') }}</td>
+                    <td class="px-6 py-3 text-xs text-gray-500" dir="ltr">@jdatetime($invoice->issued_at)</td>
                 </tr>
                 @empty
                 <tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">فاکتوری یافت نشد.</td></tr>
