@@ -101,6 +101,9 @@ class ImpersonateController extends Controller
 
             if (! $user->hasRole('crm-technician')) {
                 $user->assignRole('crm-technician');
+                // pe cache permissions را پاک کن تا روی request جدید
+                // نقش تازه assign‌شده فوراً معتبر باشد.
+                app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
             }
 
             $technician->update(['user_id' => $user->id]);

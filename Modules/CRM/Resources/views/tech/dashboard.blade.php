@@ -5,7 +5,7 @@
 @section('main')
 <div class="p-6 space-y-6">
     <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سلام {{ $technician->first_name }} 👋</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سلام {{ $technician->firstname_tech ?: $technician->first_name ?: $technician->mobile }} 👋</h1>
         <p class="text-gray-600 dark:text-gray-400 mt-1">خلاصه وضعیت سفارش‌ها و کیف‌پول شما</p>
     </div>
 
@@ -34,12 +34,13 @@
         <div class="flex items-center justify-between">
             <div>
                 <div class="text-sm opacity-90">موجودی کیف‌پول شما</div>
+                @php $balance = (int) ($technician->wallet_balance ?? 0); @endphp
                 <div class="text-3xl font-bold mt-1">
-                    {{ number_format(abs($technician->wallet_balance)) }}
+                    {{ number_format(abs($balance)) }}
                     <span class="text-base font-normal">تومان</span>
                 </div>
                 <div class="text-xs opacity-90 mt-1">
-                    {{ $technician->wallet_balance >= 0 ? 'شرکت به شما بدهکار است' : 'شما به شرکت بدهکار هستید' }}
+                    {{ $balance >= 0 ? 'شرکت به شما بدهکار است' : 'شما به شرکت بدهکار هستید' }}
                 </div>
             </div>
             <a href="{{ route('crm.tech.wallet') }}" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm backdrop-blur">

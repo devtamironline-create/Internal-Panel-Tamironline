@@ -30,7 +30,22 @@ class TechDashboardController extends Controller
 
     protected function currentTechnician(): Technician
     {
-        $tech = Technician::where('user_id', auth()->id())->first();
+        $user = auth()->user();
+        if (! $user) {
+            abort(403, 'برای ورود به پنل تکنسین ابتدا وارد شوید.');
+        }
+
+        // ابتدا با user_id؛ در صورت نبود یا چندتایی بودن، جدیدترین رکورد.
+        $tech = Technician::where('user_id', $user->id)->latest('id')->first();
+
+        // fallback: اگر user_id ست نشده ولی موبایل اون User با تکنسین یکی است
+        if (! $tech && ! empty($user->mobile)) {
+            $tech = Technician::where('mobile', $user->mobile)->latest('id')->first();
+            if ($tech && $tech->user_id !== $user->id) {
+                // self-heal: لینک را اصلاح کن تا دفعهٔ بعد سریع‌تر پیدا شود
+                $tech->update(['user_id' => $user->id]);
+            }
+        }
 
         if (! $tech) {
             abort(403, 'شما به عنوان تکنسین فعال ثبت نشده‌اید.');
