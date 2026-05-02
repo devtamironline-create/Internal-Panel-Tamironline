@@ -200,49 +200,64 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
 
-        $query = TechnicianRegistration::query()->orderByDesc('created_at');
+        // ابتدا یک closure از فیلترهای غیر-status می‌سازیم تا هم برای
+        // واکشی اصلی استفاده کنیم و هم برای شمارش هر تب وضعیت.
+        $applyNonStatusFilters = function ($q) use ($request) {
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('first_name', 'like', "%{$search}%")
+                       ->orWhere('last_name', 'like', "%{$search}%")
+                       ->orWhere('mobile', 'like', "%{$search}%")
+                       ->orWhere('national_code', 'like', "%{$search}%");
+                });
+            }
+            if ($request->filled('location')) {
+                $loc = $request->location;
+                $q->where(function ($qq) use ($loc) {
+                    $qq->where('province', 'like', "%{$loc}%")
+                       ->orWhere('city', 'like', "%{$loc}%");
+                });
+            }
+            if ($request->filled('activity_type')) {
+                $q->where('activity_type', $request->activity_type);
+            }
+            if ($request->filled('appliance')) {
+                $q->whereJsonContains('appliance_categories', (int) $request->appliance);
+            }
+        };
 
-        // فیلتر وضعیت — به‌صورت پیش‌فرض، رکوردهای بایگانی‌شده در لیست
-        // اصلی نمایش داده نمی‌شوند مگر اینکه ادمین صریحاً status=archived
-        // را فیلتر کند.
+        $query = TechnicianRegistration::query()->orderByDesc('created_at');
+        $applyNonStatusFilters($query);
+
+        // فیلتر وضعیت — به‌صورت پیش‌فرض، رکوردهای بایگانی‌شده نمایش داده
+        // نمی‌شوند مگر اینکه ادمین صریحاً status=archived را فیلتر کند.
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         } else {
             $query->where('status', '!=', 'archived');
         }
 
-        // جستجو
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhere('national_code', 'like', "%{$search}%");
-            });
-        }
-
-        // فیلتر استان/شهر — هم در ستون province و هم city جستجو می‌کنیم
-        if ($request->filled('location')) {
-            $loc = $request->location;
-            $query->where(function ($q) use ($loc) {
-                $q->where('province', 'like', "%{$loc}%")
-                  ->orWhere('city', 'like', "%{$loc}%");
-            });
-        }
-
-        // فیلتر دسته‌بندی خدمت
-        if ($request->filled('activity_type')) {
-            $query->where('activity_type', $request->activity_type);
-        }
-
-        // فیلتر دستگاه — appliance_categories یک JSON آرایه از IDهاست
-        if ($request->filled('appliance')) {
-            $applianceId = (int) $request->appliance;
-            $query->whereJsonContains('appliance_categories', $applianceId);
-        }
-
         $registrations = $query->paginate(20)->withQueryString();
+
+        // ─── شمارش هر وضعیت برای تب‌ها (با اعمال بقیهٔ فیلترها) ───
+        $statusCountQuery = TechnicianRegistration::query();
+        $applyNonStatusFilters($statusCountQuery);
+
+        $rawCounts = (clone $statusCountQuery)
+            ->select('status', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->all();
+
+        $statusCounts = [
+            'all'        => array_sum(array_diff_key($rawCounts, ['archived' => true])),
+            'incomplete' => (int) ($rawCounts['incomplete'] ?? 0),
+            'pending'    => (int) ($rawCounts['pending']    ?? 0),
+            'approved'   => (int) ($rawCounts['approved']   ?? 0),
+            'rejected'   => (int) ($rawCounts['rejected']   ?? 0),
+            'archived'   => (int) ($rawCounts['archived']   ?? 0),
+        ];
 
         // داده‌های کمکی برای ستون‌ها و فیلترها
         $appliances = ApplianceCategory::orderBy('name')->get(['id', 'name']);
@@ -256,7 +271,7 @@ class TechnicianAdminController extends Controller
             ->all();
 
         return view('technician::admin.registrations', compact(
-            'registrations', 'appliances', 'applianceMap', 'activityTypes'
+            'registrations', 'appliances', 'applianceMap', 'activityTypes', 'statusCounts'
         ));
     }
 

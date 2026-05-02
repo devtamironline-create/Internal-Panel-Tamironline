@@ -43,18 +43,9 @@
                     @endforeach
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">وضعیت</label>
-                <select name="status" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
-                    <option value="">همه</option>
-                    <option value="incomplete" {{ request('status') === 'incomplete' ? 'selected' : '' }}>ناقص</option>
-                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
-                    <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>تایید شده</option>
-                    <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>رد شده</option>
-                    <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>بایگانی شده</option>
-                </select>
-            </div>
-            <div class="lg:col-span-6 flex items-center gap-2">
+            {{-- وضعیت روی تب‌ها رفته است؛ مقدار فعلی را با hidden input حفظ می‌کنیم --}}
+            <input type="hidden" name="status" value="{{ request('status') }}">
+            <div class="lg:col-span-5 flex items-center gap-2">
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                     اعمال فیلتر
                 </button>
@@ -65,6 +56,44 @@
                 @endif
             </div>
         </form>
+    </div>
+
+    {{-- تب‌های وضعیت با تعداد --}}
+    @php
+        $tabs = [
+            ''           => ['label' => 'همه',           'count_key' => 'all',        'color' => 'gray'],
+            'pending'    => ['label' => 'در انتظار',     'count_key' => 'pending',    'color' => 'amber'],
+            'approved'   => ['label' => 'تایید شده',     'count_key' => 'approved',   'color' => 'green'],
+            'rejected'   => ['label' => 'رد شده',        'count_key' => 'rejected',   'color' => 'red'],
+            'archived'   => ['label' => 'بایگانی',       'count_key' => 'archived',   'color' => 'orange'],
+            'incomplete' => ['label' => 'ناقص',          'count_key' => 'incomplete', 'color' => 'gray'],
+        ];
+        $currentStatus = request('status', '');
+        $baseQuery = request()->except('status', 'page');
+    @endphp
+    <div class="bg-white rounded-xl border border-gray-200 px-2 overflow-x-auto">
+        <div class="flex items-center gap-1 min-w-max">
+            @foreach($tabs as $value => $info)
+                @php
+                    $isActive = $currentStatus === $value;
+                    $count = (int) ($statusCounts[$info['count_key']] ?? 0);
+                    $url = route('technician.admin.registrations', array_merge($baseQuery, $value !== '' ? ['status' => $value] : []));
+                @endphp
+                <a href="{{ $url }}"
+                   class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                          {{ $isActive
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                    {{ $info['label'] }}
+                    <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                                {{ $isActive
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : ($count > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                        {{ number_format($count) }}
+                    </span>
+                </a>
+            @endforeach
+        </div>
     </div>
 
     {{-- جدول --}}
