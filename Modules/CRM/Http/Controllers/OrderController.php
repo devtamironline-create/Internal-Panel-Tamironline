@@ -63,10 +63,14 @@ class OrderController extends Controller
             if ($hasInvoice === '0')  $q->where(function ($qq) {
                 $qq->whereNull('have_invoice')->orWhere('have_invoice', false);
             });
-            if ($fromDate !== '')     $q->whereDate('created_at', '>=', $fromDate);
-            if ($toDate !== '')       $q->whereDate('created_at', '<=', $toDate);
-            if ($visitFrom !== '')    $q->whereDate('visit_scheduled_at', '>=', $visitFrom);
-            if ($visitTo !== '')      $q->whereDate('visit_scheduled_at', '<=', $visitTo);
+            $fromG    = $this->jalaliToGregorian($fromDate);
+            $toG      = $this->jalaliToGregorian($toDate);
+            $visitFG  = $this->jalaliToGregorian($visitFrom);
+            $visitTG  = $this->jalaliToGregorian($visitTo);
+            if ($fromG)    $q->whereDate('created_at', '>=', $fromG);
+            if ($toG)      $q->whereDate('created_at', '<=', $toG);
+            if ($visitFG)  $q->whereDate('visit_scheduled_at', '>=', $visitFG);
+            if ($visitTG)  $q->whereDate('visit_scheduled_at', '<=', $visitTG);
         };
 
         $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city']);
@@ -369,6 +373,34 @@ class OrderController extends Controller
     }
 
     // ───────────── Validation ───────────────────────────────────
+    /**
+     * تبدیل تاریخ شمسی Y/m/d (با ارقام فارسی یا لاتین) به Y-m-d میلادی.
+     * در صورت خالی یا نامعتبر بودن، null برمی‌گرداند.
+     */
+    protected function jalaliToGregorian(?string $jalaliDate): ?string
+    {
+        if (! $jalaliDate || trim($jalaliDate) === '') {
+            return null;
+        }
+
+        // ارقام فارسی/عربی → لاتین
+        $latin = strtr($jalaliDate, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+        $latin = str_replace('-', '/', trim($latin));
+
+        try {
+            return \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $latin)
+                ->toCarbon()
+                ->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function validateOrder(Request $request, bool $updating = false): array
     {
         $rules = [
