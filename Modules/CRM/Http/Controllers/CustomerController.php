@@ -15,9 +15,18 @@ class CustomerController extends Controller
 
         $customers = Customer::query()
             ->when($search !== '', function ($q) use ($search) {
-                // اگر یک عدد ≥ آفست شماره اشتراک بود، آن را شماره اشتراک تلقی کن
+                // اگر یک عدد ≥ آفست شماره اشتراک بود، آن را شماره اشتراک تلقی کن.
+                // برای مشتریان sync‌شده از WP، subscription = wp_id + 10000.
+                // برای مشتریان جدید لاراولی (بدون wp_id)، subscription = id + 10000.
+                // پس هر دو حالت را OR می‌کنیم.
                 if (ctype_digit($search) && (int) $search >= Customer::SUBSCRIPTION_OFFSET) {
-                    $q->where('id', (int) $search - Customer::SUBSCRIPTION_OFFSET);
+                    $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
+                    $q->where(function ($qq) use ($candidate) {
+                        $qq->where('wp_id', $candidate)
+                           ->orWhere(function ($qqq) use ($candidate) {
+                               $qqq->whereNull('wp_id')->where('id', $candidate);
+                           });
+                    });
                 } else {
                     // در غیر این صورت موبایل دقیق (مثل WP)
                     $q->where('mobile', $search);
