@@ -219,6 +219,7 @@
             </div>
         </div>
 
+        @can('edit-technician-registration')
         <form method="POST" action="{{ route('technician.admin.registrations.update-step', $registration->id) }}" class="flex items-end gap-3">
             @csrf
             @method('PUT')
@@ -233,6 +234,12 @@
                 تغییر مرحله
             </button>
         </form>
+        @else
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            تغییر مرحله نیاز به دسترسی «ویرایش درخواست تکنسین» دارد.
+        </div>
+        @endcan
         <p class="text-xs text-gray-400 mt-2">
             مرحله فعلی: <span class="font-bold text-gray-600">{{ $stepOptions[$registration->current_step] ?? $registration->current_step }}</span>
             @if($registration->contract_signed_at)
@@ -253,6 +260,7 @@
     </div>
 
     {{-- تنظیمات مالی قرارداد (اختصاصی هر تکنسین) --}}
+    @can('edit-technician-registration')
     <div class="bg-white rounded-xl border border-gray-200 p-5" x-data="{
         saving: false,
         saved: false,
@@ -310,6 +318,7 @@
             <span x-show="saved" x-transition class="text-xs text-green-600 font-medium">ذخیره شد</span>
         </div>
     </div>
+    @endcan
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -901,6 +910,60 @@
                 @endif
             </div>
         @endif
+    </div>
+    @endif
+
+    {{-- ===== تاریخچه تغییرات ===== --}}
+    @if($registration->logs && $registration->logs->count())
+    <div class="bg-white rounded-xl shadow-sm p-5 mt-4">
+        <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2 pb-3 border-b border-gray-100">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            تاریخچه تغییرات
+            <span class="text-xs text-gray-400 font-normal">({{ $registration->logs->count() }} رخداد)</span>
+        </h3>
+
+        <ol class="relative border-s-2 border-gray-100 ms-3">
+            @foreach($registration->logs as $log)
+                @php
+                    $color = $log->actionColor();
+                    $colorClasses = match($color) {
+                        'blue'    => 'bg-blue-100 text-blue-700 ring-blue-50',
+                        'orange'  => 'bg-orange-100 text-orange-700 ring-orange-50',
+                        'indigo'  => 'bg-indigo-100 text-indigo-700 ring-indigo-50',
+                        'emerald' => 'bg-emerald-100 text-emerald-700 ring-emerald-50',
+                        default   => 'bg-gray-100 text-gray-700 ring-gray-50',
+                    };
+                    $changerName = $log->changedBy?->first_name
+                        ?? $log->changedBy?->name
+                        ?? 'سیستم';
+                @endphp
+                <li class="ms-5 pb-5 last:pb-0">
+                    <span class="absolute -start-[9px] mt-1 w-4 h-4 rounded-full ring-4 {{ $colorClasses }}"></span>
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="text-sm font-bold text-gray-800">{{ $log->actionLabel() }}</span>
+                        @if($log->from_value !== null || $log->to_value !== null)
+                            <span class="text-xs text-gray-500" dir="ltr">
+                                <span class="bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">{{ $log->from_value ?? '—' }}</span>
+                                →
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800 font-medium">{{ $log->to_value ?? '—' }}</span>
+                            </span>
+                        @endif
+                    </div>
+                    @if($log->description)
+                        <p class="text-xs text-gray-600 leading-relaxed mb-1">{{ $log->description }}</p>
+                    @endif
+                    <div class="text-xs text-gray-400 flex items-center gap-2">
+                        <span>توسط: {{ $changerName }}</span>
+                        <span>·</span>
+                        <span dir="ltr">
+                            @if($log->created_at)
+                                {{ \Morilog\Jalali\Jalalian::fromDateTime($log->created_at)->format('Y/m/d H:i:s') }}
+                            @endif
+                        </span>
+                    </div>
+                </li>
+            @endforeach
+        </ol>
     </div>
     @endif
 

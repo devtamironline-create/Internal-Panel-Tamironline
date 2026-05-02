@@ -3,10 +3,16 @@
 namespace Modules\Technician\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TechnicianRegistration extends Model
 {
     protected $table = 'technician_registrations';
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(TechnicianRegistrationLog::class, 'registration_id')->latest('created_at');
+    }
 
     protected $fillable = [
         'mobile',

@@ -14,6 +14,7 @@ use Modules\CRM\Models\Technician as CrmTechnician;
 use Modules\SMS\Services\KavenegarService;
 use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
+use Modules\Technician\Models\TechnicianRegistrationLog;
 use Modules\Technician\Models\TechnicianSetting;
 
 class TechnicianAdminController extends Controller
@@ -22,6 +23,24 @@ class TechnicianAdminController extends Controller
     {
         if (!auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
             abort(403);
+        }
+    }
+
+    /**
+     * دسترسی ویرایش اطلاعات (نه تأیید/رد).
+     * - manage-permissions: super-admin (همیشه مجاز)
+     * - edit-technician-registration: permission اختصاصی ویرایش
+     * - manage-technicians: دسترسی کلی (همیشه مجاز)
+     */
+    private function checkEditAccess(): void
+    {
+        $u = auth()->user();
+        if (! $u || (
+            !$u->can('edit-technician-registration')
+            && !$u->can('manage-technicians')
+            && !$u->can('manage-permissions')
+        )) {
+            abort(403, 'برای ویرایش اطلاعات این درخواست دسترسی ندارید.');
         }
     }
 
@@ -282,7 +301,7 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
 
-        $registration = TechnicianRegistration::findOrFail($id);
+        $registration = TechnicianRegistration::with(['logs.changedBy:id,first_name,name'])->findOrFail($id);
 
         // واکشی نام دستگاه‌ها از دیتابیس
         $applianceNames = [];
@@ -314,6 +333,7 @@ class TechnicianAdminController extends Controller
 
         $registration = TechnicianRegistration::findOrFail($id);
 
+        $previousStatus = $registration->status;
         $data = ['status' => $request->status];
 
         if ($request->status === 'rejected') {
@@ -329,6 +349,21 @@ class TechnicianAdminController extends Controller
         }
 
         $registration->update($data);
+
+        // ─── لاگ: تغییر وضعیت ───────────────────────────────────────
+        if ($request->status === 'archived') {
+            $this->logActivity($registration, 'archive', $previousStatus, 'archived', $request->archive_reason);
+        } elseif ($previousStatus === 'archived' && $request->status !== 'archived') {
+            $this->logActivity($registration, 'unarchive', 'archived', $request->status);
+        } else {
+            $this->logActivity(
+                $registration,
+                'status_change',
+                $previousStatus,
+                $request->status,
+                $request->status === 'rejected' ? $request->rejection_reason : null
+            );
+        }
 
         // ارسال پیامک اطلاع‌رسانی (برای archived پیامک نمی‌زنیم — ممکن است
         // در آینده فعال شود و نمی‌خواهیم تکنسین را ناامید کنیم)
@@ -353,6 +388,7 @@ class TechnicianAdminController extends Controller
     public function registrationUpdateStep(Request $request, $id)
     {
         $this->checkAccess();
+        $this->checkEditAccess();
 
         $request->validate([
             'current_step' => ['required', 'integer', 'min:1', 'max:10'],
@@ -364,6 +400,7 @@ class TechnicianAdminController extends Controller
 
         $registration = TechnicianRegistration::findOrFail($id);
 
+        $previousStep = $registration->current_step;
         $data = ['current_step' => $request->current_step];
 
         // ست کردن فلگ‌های پیش‌نیاز بر اساس مرحله جدید (جلو بردن)
@@ -429,6 +466,14 @@ class TechnicianAdminController extends Controller
             10 => 'بارگذاری سفته الکترونیک',
         ];
 
+        $this->logActivity(
+            $registration,
+            'step_change',
+            $previousStep,
+            $request->current_step,
+            ($stepLabels[$request->current_step] ?? null)
+        );
+
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'مرحله به «' . ($stepLabels[$request->current_step] ?? $request->current_step) . '» تغییر یافت.');
     }
@@ -454,6 +499,8 @@ class TechnicianAdminController extends Controller
                 'biometric_reject_reason' => null,
             ]);
 
+            $this->logActivity($registration, 'biometric_review', 'pending', 'verified');
+
             // ارسال پیامک تایید
             $this->sendStatusSms($registration, 'approved');
 
@@ -462,11 +509,14 @@ class TechnicianAdminController extends Controller
         }
 
         // رد ویدیو
+        $rejectReason = $request->reject_reason ?: 'ویدیو مورد تایید نیست. لطفاً مجدداً ضبط کنید.';
         $registration->update([
             'biometric_status'        => 'rejected',
-            'biometric_reject_reason' => $request->reject_reason ?: 'ویدیو مورد تایید نیست. لطفاً مجدداً ضبط کنید.',
+            'biometric_reject_reason' => $rejectReason,
             'biometric_verified_at'   => null,
         ]);
+
+        $this->logActivity($registration, 'biometric_review', 'pending', 'rejected', $rejectReason);
 
         // ارسال پیامک رد
         $this->sendStatusSms($registration, 'rejected');
@@ -503,6 +553,8 @@ class TechnicianAdminController extends Controller
                 'documents_reject_reason' => null,
             ]);
 
+            $this->logActivity($registration, 'documents_review', null, 'approved');
+
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'مدارک تایید شد.');
         }
@@ -514,6 +566,8 @@ class TechnicianAdminController extends Controller
             // بازگشت به مرحله قبل از مدارک تا resume logic به فاز N برگردد
             'current_step'            => max(6, (int) $registration->current_step - 1),
         ]);
+
+        $this->logActivity($registration, 'documents_review', null, 'rejected', $request->reject_reason);
 
         $this->sendSmsTemplate($registration, 'sms_documents_rejected_template', [
             'token2' => mb_substr(str_replace(["\n", "\r"], ' ', $request->reject_reason), 0, 25),
@@ -550,6 +604,8 @@ class TechnicianAdminController extends Controller
                 'contract_reject_reason' => null,
             ]);
 
+            $this->logActivity($registration, 'contract_review', null, 'approved');
+
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'قرارداد تایید شد.');
         }
@@ -563,6 +619,8 @@ class TechnicianAdminController extends Controller
             // برگرداندن به مرحله قبل از قرارداد (مدارک، چون در ترتیب جدید قبل از قرارداد است)
             'current_step'           => max(7, (int) $registration->current_step - 1),
         ]);
+
+        $this->logActivity($registration, 'contract_review', null, 'rejected', $request->reject_reason);
 
         $this->sendSmsTemplate($registration, 'sms_contract_rejected_template', [
             'token2' => mb_substr(str_replace(["\n", "\r"], ' ', $request->reject_reason), 0, 25),
@@ -578,13 +636,17 @@ class TechnicianAdminController extends Controller
     public function registrationUpdateNote(Request $request, $id)
     {
         $this->checkAccess();
+        $this->checkEditAccess();
 
         $request->validate([
             'admin_notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
+        $previous = $registration->admin_notes;
         $registration->update(['admin_notes' => $request->admin_notes]);
+
+        $this->logActivity($registration, 'note_change', $previous, $request->admin_notes);
 
         return response()->json([
             'success' => true,
@@ -598,6 +660,7 @@ class TechnicianAdminController extends Controller
     public function registrationUpdateContractFields(Request $request, $id)
     {
         $this->checkAccess();
+        $this->checkEditAccess();
 
         $request->validate([
             'commission_percent'      => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -609,10 +672,19 @@ class TechnicianAdminController extends Controller
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
+        $previousCommission = $registration->commission_percent;
+        $previousNoteAmount = $registration->promissory_note_amount;
         $registration->update([
             'commission_percent'     => $request->commission_percent,
             'promissory_note_amount' => $request->promissory_note_amount,
         ]);
+
+        $this->logActivity(
+            $registration,
+            'contract_fields_change',
+            'commission=' . $previousCommission . ' / promissory=' . $previousNoteAmount,
+            'commission=' . $request->commission_percent . ' / promissory=' . $request->promissory_note_amount,
+        );
 
         return response()->json([
             'success' => true,
@@ -758,11 +830,15 @@ class TechnicianAdminController extends Controller
             return back()->with('error', 'سفته‌ای برای تایید وجود ندارد.');
         }
 
+        $previousStatus = $registration->promissory_note_status;
+
         if ($request->action === 'approve') {
             $registration->update([
                 'promissory_note_status'        => 'approved',
                 'promissory_note_reject_reason' => null,
             ]);
+
+            $this->logActivity($registration, 'promissory_review', $previousStatus, 'approved');
 
             return redirect()->route('technician.admin.registrations.show', $id)
                 ->with('success', 'سفته الکترونیک تایید شد.');
@@ -775,6 +851,8 @@ class TechnicianAdminController extends Controller
             'promissory_note_status'        => 'rejected',
             'promissory_note_reject_reason' => $request->reject_reason,
         ]);
+
+        $this->logActivity($registration, 'promissory_review', $previousStatus, 'rejected', $request->reject_reason);
 
         return redirect()->route('technician.admin.registrations.show', $id)
             ->with('success', 'سفته رد شد. تکنسین می‌تواند مجدداً بارگذاری کند.');
@@ -857,6 +935,14 @@ class TechnicianAdminController extends Controller
             $msg .= ' — رمز اولیه: ' . $result['password'] . ' (یادداشت کنید؛ دیگر نمایش داده نخواهد شد).';
         }
 
+        $this->logActivity(
+            $registration,
+            'convert_to_active',
+            null,
+            'crm_technician_id=' . $result['tech']->id,
+            $result['action'] === 'created' ? 'ایجاد تکنسین فعال جدید در CRM' : 'به‌روزرسانی تکنسین موجود در CRM'
+        );
+
         return redirect()->route('technician.admin.registrations.show', $id)->with('success', $msg);
     }
 
@@ -896,6 +982,43 @@ class TechnicianAdminController extends Controller
             'cart_img'        => $r->doc_national_card_front ? Storage::url($r->doc_national_card_front) : null,
             'status'          => 'active',
         ];
+    }
+
+    /**
+     * ثبت یک رخداد در تاریخچهٔ ثبت‌نام تکنسین. تمام تغییرات معنادار
+     * ادمین (تأیید/رد، تغییر مرحله، ویرایش، …) از این جا لاگ می‌شوند.
+     */
+    private function logActivity(
+        TechnicianRegistration $registration,
+        string $action,
+        $from = null,
+        $to = null,
+        ?string $description = null
+    ): void {
+        TechnicianRegistrationLog::create([
+            'registration_id'    => $registration->id,
+            'action'             => $action,
+            'from_value'         => $this->stringifyForLog($from),
+            'to_value'           => $this->stringifyForLog($to),
+            'description'        => $description,
+            'changed_by_user_id' => auth()->id(),
+            'created_at'         => now(),
+        ]);
+    }
+
+    /** تبدیل مقدار به string برای ذخیره در ستون text لاگ. */
+    private function stringifyForLog($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        return (string) $value;
     }
 
     /**
