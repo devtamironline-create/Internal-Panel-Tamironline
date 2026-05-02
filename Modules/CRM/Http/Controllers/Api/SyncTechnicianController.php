@@ -128,6 +128,12 @@ class SyncTechnicianController extends Controller
             $data['ready_for_delivery'] = filter_var($data['ready_for_delivery'], FILTER_VALIDATE_BOOLEAN);
         }
 
+        // نرمالایز status — WP می‌تواند '1'/'0'/'فعال'/'enable' بفرستد
+        // ولی پنل فقط 'active' و 'inactive' می‌فهمد.
+        if (array_key_exists('status', $data)) {
+            $data['status'] = $this->normalizeStatus($data['status']);
+        }
+
         return DB::transaction(function () use ($wpId, $data) {
             $tech = Technician::where('wp_id', $wpId)->lockForUpdate()->first();
 
@@ -155,5 +161,25 @@ class SyncTechnicianController extends Controller
                 'wp_id' => (int) $tech->wp_id,
             ];
         });
+    }
+
+    /** WP status را به 'active'/'inactive' نرمالایز می‌کند. */
+    protected function normalizeStatus($value): string
+    {
+        $v = strtolower(trim((string) $value));
+        if (in_array($v, ['1', 'active', 'enable', 'enabled', 'on', 'yes', 'true'], true)) {
+            return 'active';
+        }
+        if (in_array($v, ['0', 'inactive', 'disable', 'disabled', 'off', 'no', 'false'], true)) {
+            return 'inactive';
+        }
+        if ($value === 'فعال') {
+            return 'active';
+        }
+        if ($value === 'غیرفعال') {
+            return 'inactive';
+        }
+        // ناشناس یا خالی → فرض active (تکنسین موجود)
+        return 'active';
     }
 }
