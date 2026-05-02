@@ -64,7 +64,7 @@ class CustomerController extends Controller
 
         $headers = ['شماره اشتراک', 'نام', 'موبایل', 'تلفن', 'یادداشت', 'تاریخ ثبت'];
         $rows = function () use ($query) {
-            foreach ($query->cursor() as $c) {
+            foreach ($query->lazy(1000) as $c) {
                 yield [
                     $c->subscription,
                     $c->display_name,

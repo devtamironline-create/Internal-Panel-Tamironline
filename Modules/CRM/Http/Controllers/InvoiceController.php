@@ -57,7 +57,7 @@ class InvoiceController extends Controller
             'زمان صدور', 'زمان پرداخت',
         ];
         $rows = function () use ($query) {
-            foreach ($query->cursor() as $i) {
+            foreach ($query->lazy(500) as $i) {
                 yield [
                     $i->invoice_code,
                     $i->order?->order_code,

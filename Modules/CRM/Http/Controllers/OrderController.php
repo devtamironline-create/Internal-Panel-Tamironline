@@ -131,7 +131,7 @@ class OrderController extends Controller
             'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
-            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city'])->cursor() as $o) {
+            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city'])->lazy(500) as $o) {
                 yield [
                     $o->order_code,
                     $o->order_type === 'service' ? 'سرویس' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),

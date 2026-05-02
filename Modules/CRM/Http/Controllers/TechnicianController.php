@@ -66,7 +66,7 @@ class TechnicianController extends Controller
             'وضعیت', 'موجودی کیف‌پول', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
-            foreach ($query->cursor() as $t) {
+            foreach ($query->lazy(500) as $t) {
                 yield [
                     trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))),
                     $t->technician_id,
