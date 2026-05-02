@@ -29,7 +29,28 @@
             || $fromDate || $toDate || $visitFrom || $visitTo;
     @endphp
     <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4"
-          x-data="{ open: {{ $hasAnyFilter ? 'true' : 'false' }} }">
+          x-data="{
+              open: {{ $hasAnyFilter ? 'true' : 'false' }},
+              provinceId: '{{ $provinceId }}',
+              cityId: '{{ $cityId }}',
+              filterCities() {
+                  const sel = this.$refs.citySelect;
+                  if (!sel) return;
+                  Array.from(sel.options).forEach(opt => {
+                      if (!opt.value) return; // placeholder
+                      const pid = opt.dataset.provinceId;
+                      opt.hidden = !this.provinceId || String(pid) !== String(this.provinceId);
+                  });
+                  // اگر شهر انتخاب‌شده مال استان جدید نیست، خالی کن
+                  const cur = sel.querySelector('option:checked');
+                  if (cur && cur.value && cur.dataset.provinceId !== String(this.provinceId)) {
+                      sel.value = '';
+                      this.cityId = '';
+                  }
+                  sel.disabled = !this.provinceId;
+              }
+          }"
+          x-init="$nextTick(() => filterCities())">
 
         {{-- ردیف اصلی: جستجو + برند/استان همیشه نمایش، بقیه قابل نمایش/پنهان --}}
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
@@ -40,10 +61,11 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان</label>
-                <select name="province_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <select name="province_id" x-model="provinceId" @change="filterCities()"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                     <option value="">— همه —</option>
                     @foreach($provinces as $p)
-                        <option value="{{ $p->id }}" @selected($provinceId === $p->id)>{{ $p->name }}</option>
+                        <option value="{{ $p->id }}">{{ $p->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -63,10 +85,11 @@
         <div x-show="open" x-cloak x-transition class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر</label>
-                <select name="city_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg" @disabled(!$provinceId)>
-                    <option value="">— {{ $provinceId ? 'همه' : 'ابتدا استان' }} —</option>
+                <select name="city_id" x-ref="citySelect" x-model="cityId"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg disabled:opacity-50">
+                    <option value="">— ابتدا استان —</option>
                     @foreach($cities as $c)
-                        <option value="{{ $c->id }}" @selected($cityId === $c->id)>{{ $c->name }}</option>
+                        <option value="{{ $c->id }}" data-province-id="{{ $c->province_id }}">{{ $c->name }}</option>
                     @endforeach
                 </select>
             </div>

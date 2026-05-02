@@ -99,9 +99,10 @@ class OrderController extends Controller
         // داده‌های کمکی برای dropdown ها
         $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech']);
         $provinces = Province::ordered()->get(['id', 'name']);
-        $cities = $provinceId
-            ? \Modules\CRM\Models\City::where('province_id', $provinceId)->ordered()->get(['id', 'name'])
-            : collect();
+        // همهٔ شهرها را با province_id می‌فرستیم تا JS بتواند بدون reload
+        // فیلتر کند. اگر تعداد شهرها خیلی زیاد شد، می‌توان به AJAX
+        // تنزل داد، ولی فعلاً مجموع چند صد شهر ایران مشکلی ندارد.
+        $cities = \Modules\CRM\Models\City::ordered()->get(['id', 'name', 'province_id']);
         $brands = \Modules\CRM\Models\Brand::ordered()->get(['id', 'name']);
         $devices = \Modules\CRM\Models\Device::ordered()->get(['id', 'name']);
         $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []) ?: [];
