@@ -32,21 +32,84 @@ class OrderController extends Controller
         $status = $request->string('status')->toString();
         $technicianId = $request->integer('technician_id');
         $provinceId = $request->integer('province_id');
+        $cityId = $request->integer('city_id');
+        $brandId = $request->integer('brand_id');
+        $deviceId = $request->integer('device_id');
+        $orderType = $request->string('order_type')->toString();
+        $introduction = $request->string('introduction')->toString();
+        $hasInvoice = $request->string('has_invoice')->toString(); // '1' | '0' | ''
+        $fromDate = $request->string('from_date')->toString();
+        $toDate = $request->string('to_date')->toString();
+        $visitFrom = $request->string('visit_from')->toString();
+        $visitTo = $request->string('visit_to')->toString();
 
-        $orders = Order::with(['customer', 'technician', 'brand', 'device', 'province'])
-            ->search($search)
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->when($technicianId, fn ($q) => $q->where('technician_id', $technicianId))
-            ->when($provinceId, fn ($q) => $q->where('province_id', $provinceId))
-            ->latest()
-            ->paginate(25)
-            ->withQueryString();
+        // closure برای اعمال همهٔ فیلترهای غیر-status — هم در query اصلی
+        // و هم در شمارش تب‌های وضعیت استفاده می‌شود.
+        $applyNonStatusFilters = function ($q) use (
+            $search, $technicianId, $provinceId, $cityId, $brandId, $deviceId,
+            $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo
+        ) {
+            if ($search !== '') {
+                $q->search($search);
+            }
+            if ($technicianId)        $q->where('technician_id', $technicianId);
+            if ($provinceId)          $q->where('province_id', $provinceId);
+            if ($cityId)              $q->where('city_id', $cityId);
+            if ($brandId)             $q->where('brand_id', $brandId);
+            if ($deviceId)            $q->where('device_id', $deviceId);
+            if ($orderType !== '')    $q->where('order_type', $orderType);
+            if ($introduction !== '') $q->where('introduction', $introduction);
+            if ($hasInvoice === '1')  $q->where('have_invoice', true);
+            if ($hasInvoice === '0')  $q->where(function ($qq) {
+                $qq->whereNull('have_invoice')->orWhere('have_invoice', false);
+            });
+            if ($fromDate !== '')     $q->whereDate('created_at', '>=', $fromDate);
+            if ($toDate !== '')       $q->whereDate('created_at', '<=', $toDate);
+            if ($visitFrom !== '')    $q->whereDate('visit_scheduled_at', '>=', $visitFrom);
+            if ($visitTo !== '')      $q->whereDate('visit_scheduled_at', '<=', $visitTo);
+        };
 
-        $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
+        $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city']);
+        $applyNonStatusFilters($query);
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        $orders = $query->latest()->paginate(25)->withQueryString();
+
+        // ─── شمارش تب‌های وضعیت با اعمال بقیهٔ فیلترها ───────────────
+        $countQuery = Order::query();
+        $applyNonStatusFilters($countQuery);
+        $rawCounts = (clone $countQuery)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->all();
+
+        $statusCounts = ['all' => array_sum($rawCounts)];
+        foreach (\Modules\CRM\Enums\OrderStatus::cases() as $case) {
+            $statusCounts[$case->value] = (int) ($rawCounts[$case->value] ?? 0);
+        }
+
+        // داده‌های کمکی برای dropdown ها
+        $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech']);
         $provinces = Province::ordered()->get(['id', 'name']);
+        $cities = $provinceId
+            ? \Modules\CRM\Models\City::where('province_id', $provinceId)->ordered()->get(['id', 'name'])
+            : collect();
+        $brands = \Modules\CRM\Models\Brand::ordered()->get(['id', 'name']);
+        $devices = \Modules\CRM\Models\Device::ordered()->get(['id', 'name']);
+        $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []) ?: [];
+        if (! is_array($introductionList)) {
+            $introductionList = [];
+        }
 
         return view('crm::orders.index', compact(
-            'orders', 'technicians', 'provinces', 'search', 'status', 'technicianId', 'provinceId'
+            'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
+            'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
+            'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
+            'statusCounts'
         ));
     }
 
