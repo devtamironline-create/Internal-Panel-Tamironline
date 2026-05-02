@@ -18,15 +18,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('technician_registrations', function (Blueprint $table) {
-            $table->text('address')->nullable()->after('city');
-        });
+        // ستون address ممکن است در یک نسخهٔ قبلی schema (یا migration دستی)
+        // قبلاً ست شده باشد — فقط در صورت نبود ایجاد می‌کنیم.
+        if (! Schema::hasColumn('technician_registrations', 'address')) {
+            Schema::table('technician_registrations', function (Blueprint $table) {
+                $table->text('address')->nullable()->after('city');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('technician_registrations', function (Blueprint $table) {
-            $table->dropColumn('address');
-        });
+        if (Schema::hasColumn('technician_registrations', 'address')) {
+            Schema::table('technician_registrations', function (Blueprint $table) {
+                $table->dropColumn('address');
+            });
+        }
     }
 };
