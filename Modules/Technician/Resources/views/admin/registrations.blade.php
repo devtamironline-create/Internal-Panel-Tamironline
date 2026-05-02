@@ -14,13 +14,36 @@
 
     {{-- فیلتر و جستجو --}}
     <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <form method="GET" action="{{ route('technician.admin.registrations') }}" class="flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-[200px]">
+        <form method="GET" action="{{ route('technician.admin.registrations') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <div class="lg:col-span-2">
                 <label class="block text-xs font-medium text-gray-600 mb-1">جستجو</label>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="نام، موبایل یا کد ملی..."
                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
             </div>
-            <div class="w-40">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">استان / شهر</label>
+                <input type="text" name="location" value="{{ request('location') }}" placeholder="مثلاً تهران"
+                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">دسته‌بندی خدمت</label>
+                <select name="activity_type" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
+                    <option value="">همه</option>
+                    @foreach($activityTypes as $at)
+                        <option value="{{ $at }}" @selected(request('activity_type') === $at)>{{ $at }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">دستگاه تحت پوشش</label>
+                <select name="appliance" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
+                    <option value="">همه</option>
+                    @foreach($appliances as $ap)
+                        <option value="{{ $ap->id }}" @selected((int) request('appliance') === (int) $ap->id)>{{ $ap->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">وضعیت</label>
                 <select name="status" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
                     <option value="">همه</option>
@@ -31,14 +54,16 @@
                     <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>بایگانی شده</option>
                 </select>
             </div>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                فیلتر
-            </button>
-            @if(request('search') || request('status'))
-            <a href="{{ route('technician.admin.registrations') }}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                پاک کردن
-            </a>
-            @endif
+            <div class="lg:col-span-6 flex items-center gap-2">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    اعمال فیلتر
+                </button>
+                @if(request()->hasAny(['search', 'status', 'location', 'activity_type', 'appliance']))
+                <a href="{{ route('technician.admin.registrations') }}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                    پاک کردن
+                </a>
+                @endif
+            </div>
         </form>
     </div>
 
@@ -56,7 +81,9 @@
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">#</th>
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">نام و نام خانوادگی</th>
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">موبایل</th>
-                        <th class="text-right px-4 py-3 font-semibold text-gray-600">کد ملی</th>
+                        <th class="text-right px-4 py-3 font-semibold text-gray-600">شهر</th>
+                        <th class="text-right px-4 py-3 font-semibold text-gray-600">دسته‌بندی</th>
+                        <th class="text-right px-4 py-3 font-semibold text-gray-600">دستگاه‌ها</th>
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">مرحله</th>
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">وضعیت</th>
                         <th class="text-right px-4 py-3 font-semibold text-gray-600">یادداشت</th>
@@ -72,7 +99,33 @@
                             {{ $reg->first_name }} {{ $reg->last_name }}
                         </td>
                         <td class="px-4 py-3 text-gray-600 dir-ltr text-left" dir="ltr">{{ $reg->mobile }}</td>
-                        <td class="px-4 py-3 text-gray-600 dir-ltr text-left" dir="ltr">{{ $reg->national_code }}</td>
+                        <td class="px-4 py-3 text-gray-600 text-xs">
+                            @php
+                                $loc = trim(implode(' / ', array_filter([$reg->province, $reg->city])));
+                            @endphp
+                            {{ $loc !== '' ? $loc : '—' }}
+                        </td>
+                        <td class="px-4 py-3 text-gray-600 text-xs">{{ $reg->activity_type ?: '—' }}</td>
+                        <td class="px-4 py-3 text-xs">
+                            @php
+                                $catIds = is_array($reg->appliance_categories) ? $reg->appliance_categories : [];
+                                $catNames = array_values(array_filter(array_map(fn($id) => $applianceMap[(int) $id] ?? null, $catIds)));
+                            @endphp
+                            @if(count($catNames))
+                                <div class="flex flex-wrap gap-1 max-w-[260px]">
+                                    @foreach(array_slice($catNames, 0, 3) as $name)
+                                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[11px] whitespace-nowrap">{{ $name }}</span>
+                                    @endforeach
+                                    @if(count($catNames) > 3)
+                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[11px]" title="{{ implode('، ', array_slice($catNames, 3)) }}">
+                                            +{{ count($catNames) - 3 }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3">
                             @php
                                 $stepLabel = match(true) {

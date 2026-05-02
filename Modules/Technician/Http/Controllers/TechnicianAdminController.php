@@ -222,9 +222,42 @@ class TechnicianAdminController extends Controller
             });
         }
 
+        // فیلتر استان/شهر — هم در ستون province و هم city جستجو می‌کنیم
+        if ($request->filled('location')) {
+            $loc = $request->location;
+            $query->where(function ($q) use ($loc) {
+                $q->where('province', 'like', "%{$loc}%")
+                  ->orWhere('city', 'like', "%{$loc}%");
+            });
+        }
+
+        // فیلتر دسته‌بندی خدمت
+        if ($request->filled('activity_type')) {
+            $query->where('activity_type', $request->activity_type);
+        }
+
+        // فیلتر دستگاه — appliance_categories یک JSON آرایه از IDهاست
+        if ($request->filled('appliance')) {
+            $applianceId = (int) $request->appliance;
+            $query->whereJsonContains('appliance_categories', $applianceId);
+        }
+
         $registrations = $query->paginate(20)->withQueryString();
 
-        return view('technician::admin.registrations', compact('registrations'));
+        // داده‌های کمکی برای ستون‌ها و فیلترها
+        $appliances = ApplianceCategory::orderBy('name')->get(['id', 'name']);
+        $applianceMap = $appliances->pluck('name', 'id')->all();
+        $activityTypes = TechnicianRegistration::query()
+            ->whereNotNull('activity_type')
+            ->where('activity_type', '!=', '')
+            ->distinct()
+            ->orderBy('activity_type')
+            ->pluck('activity_type')
+            ->all();
+
+        return view('technician::admin.registrations', compact(
+            'registrations', 'appliances', 'applianceMap', 'activityTypes'
+        ));
     }
 
     /**
