@@ -46,7 +46,7 @@
                     <td class="px-6 py-4 text-sm font-medium" dir="ltr">{{ $order->order_code }}</td>
                     <td class="px-6 py-4 text-sm">
                         <div class="text-gray-900 dark:text-gray-100">{{ $order->customer_name }}</div>
-                        <div class="text-xs text-gray-500" dir="ltr">{{ $order->customer_mobile }}</div>
+                        <div class="text-xs">@tel($order->customer_mobile)</div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $order->brand?->name }}{{ $order->device ? ' / ' . $order->device->name : '' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $order->province?->name }}{{ $order->city ? ' / ' . $order->city->name : '' }}</td>

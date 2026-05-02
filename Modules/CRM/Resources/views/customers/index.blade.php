@@ -67,8 +67,8 @@
                             {{ $customer->display_name }}
                         </a>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $customer->mobile }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $customer->phone ?: '—' }}</td>
+                    <td class="px-6 py-4 text-sm">@tel($customer->mobile)</td>
+                    <td class="px-6 py-4 text-sm">@tel($customer->phone)</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <a href="{{ route('crm.customers.show', $customer) }}" class="text-gray-600 hover:text-gray-900 text-sm">جزئیات</a>

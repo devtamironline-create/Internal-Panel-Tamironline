@@ -55,5 +55,12 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('jdatefull', function ($expr) {
             return "<?php echo (\$__d = $expr) ? \\Morilog\\Jalali\\Jalalian::fromCarbon(\\Illuminate\\Support\\Carbon::parse(\$__d))->format('Y/m/d H:i:s') : '—'; ?>";
         });
+
+        // Click-to-Call: شماره را به <a href="tel:..."> با آیکون تلفن تبدیل می‌کند.
+        // ارقام فارسی → لاتین، چندشماره با خط‌تیره/کاما به صورت جداگانه لینک می‌شوند.
+        // Usage: @tel($customer->mobile)
+        Blade::directive('tel', function ($expr) {
+            return "<?php echo \\App\\Helpers\\TelHelper::render($expr); ?>";
+        });
     }
 }

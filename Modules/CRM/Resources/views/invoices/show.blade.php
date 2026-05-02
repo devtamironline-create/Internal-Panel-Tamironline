@@ -68,7 +68,7 @@
                     <dd>
                         @if($invoice->customer)
                         <a href="{{ route('crm.customers.show', $invoice->customer) }}" class="text-brand-600 hover:underline">{{ $invoice->customer->display_name }}</a>
-                        <span class="text-xs text-gray-500" dir="ltr">({{ $invoice->customer->mobile }})</span>
+                        <span class="text-xs">(@tel($invoice->customer->mobile))</span>
                         @endif
                     </dd>
 

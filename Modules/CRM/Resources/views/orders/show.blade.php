@@ -42,7 +42,7 @@
                     <dt class="text-gray-500 dark:text-gray-400">مشتری</dt>
                     <dd class="text-gray-900 dark:text-gray-100">
                         <a href="{{ route('crm.customers.show', $order->customer) }}" class="text-brand-600 hover:underline">{{ $order->customer_name }}</a>
-                        <span class="text-xs text-gray-500" dir="ltr">({{ $order->customer_mobile }})</span>
+                        <span class="text-xs">(@tel($order->customer_mobile))</span>
                     </dd>
 
                     <dt class="text-gray-500 dark:text-gray-400">دستگاه</dt>
@@ -205,7 +205,7 @@
                 @if($order->technician)
                 <div class="mb-3">
                     <div class="font-medium text-gray-900 dark:text-gray-100">{{ trim($order->technician->first_name . ' ' . $order->technician->last_name) }}</div>
-                    <div class="text-xs text-gray-500" dir="ltr">{{ $order->technician->mobile }}</div>
+                    <div class="text-xs">@tel($order->technician->mobile)</div>
                     @if($order->assigned_at)
                     <div class="text-xs text-gray-500 mt-1">تخصیص داده شده در <span dir="ltr">@jdatetime($order->assigned_at)</span></div>
                     @endif

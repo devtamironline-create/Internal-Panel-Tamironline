@@ -11,7 +11,7 @@
             @endif
             <div>
                 <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $technician->full_name }}</h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-1" dir="ltr">{{ $technician->mobile }}</p>
+                <p class="mt-1">@tel($technician->mobile)</p>
                 @if($technician->technician_id)
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" dir="ltr">کد: {{ $technician->technician_id }}</p>
                 @endif
@@ -33,10 +33,10 @@
                 <dd class="text-gray-900 dark:text-gray-100">{{ $technician->firstname_tech ?: '—' }}</dd>
 
                 <dt class="text-gray-500 dark:text-gray-400">تلفن ثابت</dt>
-                <dd class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $technician->phone ?: '—' }}</dd>
+                <dd class="text-gray-900 dark:text-gray-100">@tel($technician->phone)</dd>
 
                 <dt class="text-gray-500 dark:text-gray-400">تلفن اضطراری</dt>
-                <dd class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $technician->phone_force ?: '—' }}</dd>
+                <dd class="text-gray-900 dark:text-gray-100">@tel($technician->phone_force)</dd>
 
                 <dt class="text-gray-500 dark:text-gray-400">کد ملی</dt>
                 <dd class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $technician->national_code ?: '—' }}</dd>

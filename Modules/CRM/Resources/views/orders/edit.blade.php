@@ -16,7 +16,7 @@
             {{-- اطلاعات مشتری (فقط نمایش) --}}
             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-6">
                 <div class="font-medium text-gray-900 dark:text-gray-100">{{ $order->customer_name }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{{ $order->customer_mobile }}</div>
+                <div class="text-xs">@tel($order->customer_mobile)</div>
             </div>
 
             @include('crm::orders._order_fields', [

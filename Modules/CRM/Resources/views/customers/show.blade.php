@@ -7,7 +7,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $customer->display_name }}</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1" dir="ltr">{{ $customer->mobile }}</p>
+            <p class="mt-1">@tel($customer->mobile)</p>
             <p class="text-xs text-gray-500 mt-1">شماره اشتراک: <span dir="ltr" class="font-medium">{{ $customer->subscription }}</span></p>
         </div>
         <div class="flex items-center gap-2">
@@ -29,11 +29,11 @@
         </div>
         <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">موبایل</div>
-            <div class="text-sm text-gray-900 dark:text-gray-100" dir="ltr">{{ $customer->mobile }}</div>
+            <div class="text-sm">@tel($customer->mobile)</div>
         </div>
         <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">تلفن ثابت</div>
-            <div class="text-sm text-gray-900 dark:text-gray-100" dir="ltr">{{ $customer->phone ?: '—' }}</div>
+            <div class="text-sm">@tel($customer->phone)</div>
         </div>
         <div class="md:col-span-2">
             <div class="text-xs text-gray-500 dark:text-gray-400">یادداشت‌ها</div>

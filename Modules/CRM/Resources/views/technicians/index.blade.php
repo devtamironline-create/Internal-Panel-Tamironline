@@ -96,7 +96,7 @@
                         @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->technician_id ?: '—' }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->mobile }}</td>
+                    <td class="px-6 py-4 text-sm">@tel($tech->mobile)</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->type_tech ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->province ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->percent ?? 0 }}%</td>
