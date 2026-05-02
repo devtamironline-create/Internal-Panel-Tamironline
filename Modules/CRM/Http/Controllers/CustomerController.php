@@ -4,11 +4,14 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Province;
 
 class CustomerController extends Controller
 {
+    use ExportsListToFile;
+
     public function index(Request $request)
     {
         $search = trim($request->string('q')->toString());
@@ -37,6 +40,43 @@ class CustomerController extends Controller
             ->withQueryString();
 
         return view('crm::customers.index', compact('customers', 'search'));
+    }
+
+    public function export(Request $request, string $format)
+    {
+        $search = trim($request->string('q')->toString());
+
+        $query = Customer::query()
+            ->when($search !== '', function ($q) use ($search) {
+                if (ctype_digit($search) && (int) $search >= Customer::SUBSCRIPTION_OFFSET) {
+                    $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
+                    $q->where(function ($qq) use ($candidate) {
+                        $qq->where('wp_id', $candidate)
+                           ->orWhere(function ($qqq) use ($candidate) {
+                               $qqq->whereNull('wp_id')->where('id', $candidate);
+                           });
+                    });
+                } else {
+                    $q->where('mobile', $search);
+                }
+            })
+            ->latest();
+
+        $headers = ['شماره اشتراک', 'نام', 'موبایل', 'تلفن', 'یادداشت', 'تاریخ ثبت'];
+        $rows = function () use ($query) {
+            foreach ($query->cursor() as $c) {
+                yield [
+                    $c->subscription,
+                    $c->display_name,
+                    $c->mobile,
+                    $c->phone,
+                    $c->notes,
+                    $c->created_at,
+                ];
+            }
+        };
+
+        return $this->streamSpreadsheet('crm-customers-' . date('Ymd-His'), $format, $headers, $rows);
     }
 
     public function create()

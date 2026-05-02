@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
@@ -20,6 +21,8 @@ use Modules\CRM\Services\OrderSmsNotifier;
 
 class OrderController extends Controller
 {
+    use ExportsListToFile;
+
     public function __construct(
         protected OrderSmsNotifier $smsNotifier,
         protected InvoiceService $invoiceService,
@@ -116,6 +119,73 @@ class OrderController extends Controller
             'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
             'statusCounts'
         ));
+    }
+
+    /** خروجی Excel/CSV از لیست سفارش‌ها با همان فیلترهای صفحه. */
+    public function export(Request $request, string $format)
+    {
+        $query = $this->buildIndexQuery($request);
+
+        $headers = [
+            'کد سفارش', 'نوع', 'مشتری', 'موبایل', 'دستگاه', 'برند',
+            'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
+        ];
+        $rows = function () use ($query) {
+            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city'])->cursor() as $o) {
+                yield [
+                    $o->order_code,
+                    $o->order_type === 'service' ? 'سرویس' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
+                    $o->customer_name ?: $o->customer?->display_name,
+                    $o->customer_mobile,
+                    $o->device?->name,
+                    $o->brand?->name,
+                    $o->technician
+                        ? trim($o->technician->firstname_tech ?: ($o->technician->first_name . ' ' . $o->technician->last_name))
+                        : null,
+                    $o->province?->name,
+                    $o->city?->name,
+                    $o->status instanceof OrderStatus ? $o->status->label() : (string) $o->status,
+                    $o->total_invoice ?? $o->final_price,
+                    $o->created_at,
+                ];
+            }
+        };
+
+        return $this->streamSpreadsheet('crm-orders-' . date('Ymd-His'), $format, $headers, $rows);
+    }
+
+    /** هم در index هم در export استفاده می‌شود — همان فیلترهای صفحه. */
+    protected function buildIndexQuery(Request $request)
+    {
+        $query = Order::query()->latest();
+
+        if ($s = trim((string) $request->string('q'))) $query->search($s);
+        if ($v = $request->integer('technician_id')) $query->where('technician_id', $v);
+        if ($v = $request->integer('province_id'))   $query->where('province_id', $v);
+        if ($v = $request->integer('city_id'))       $query->where('city_id', $v);
+        if ($v = $request->integer('brand_id'))      $query->where('brand_id', $v);
+        if ($v = $request->integer('device_id'))     $query->where('device_id', $v);
+        if ($v = trim((string) $request->string('order_type')))   $query->where('order_type', $v);
+        if ($v = trim((string) $request->string('introduction'))) $query->where('introduction', $v);
+        if ($v = trim((string) $request->string('status')))       $query->where('status', $v);
+
+        $hasInvoice = (string) $request->string('has_invoice');
+        if ($hasInvoice === '1') $query->where('have_invoice', true);
+        if ($hasInvoice === '0') $query->where(function ($q) {
+            $q->whereNull('have_invoice')->orWhere('have_invoice', false);
+        });
+
+        foreach ([
+            'from_date'  => ['col' => 'created_at',           'op' => '>='],
+            'to_date'    => ['col' => 'created_at',           'op' => '<='],
+            'visit_from' => ['col' => 'visit_scheduled_at',   'op' => '>='],
+            'visit_to'   => ['col' => 'visit_scheduled_at',   'op' => '<='],
+        ] as $param => $info) {
+            $g = $this->jalaliToGregorian((string) $request->string($param));
+            if ($g) $query->whereDate($info['col'], $info['op'], $g);
+        }
+
+        return $query;
     }
 
     public function create(Request $request)

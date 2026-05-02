@@ -8,10 +8,13 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Models\Technician;
 
 class TechnicianController extends Controller
 {
+    use ExportsListToFile;
+
     public function index(Request $request)
     {
         $search = $request->string('q')->toString();
@@ -39,6 +42,50 @@ class TechnicianController extends Controller
             ->pluck('province');
 
         return view('crm::technicians.index', compact('technicians', 'provinces', 'search', 'province', 'type', 'status'));
+    }
+
+    public function export(Request $request, string $format)
+    {
+        $search = $request->string('q')->toString();
+        $province = $request->string('province')->toString();
+        $type = $request->string('type_tech')->toString();
+        $status = $request->string('status')->toString();
+
+        $query = Technician::query()
+            ->search($search)
+            ->when($province, fn ($q) => $q->where('province', $province))
+            ->when($type, fn ($q) => $q->where('type_tech', $type))
+            ->when($status === 'active', fn ($q) => $q->where('status', 'active'))
+            ->when($status === 'inactive', fn ($q) => $q->where('status', 'inactive'))
+            ->when($status === 'ready', fn ($q) => $q->where('status', 'active')->where('ready_for_delivery', true))
+            ->latest();
+
+        $headers = [
+            'نام', 'کد تکنسین', 'موبایل', 'تلفن', 'استان',
+            'تخصص', 'سطح', 'درصد کارمزد', 'سقف سفارش', 'سقف بدهی',
+            'وضعیت', 'موجودی کیف‌پول', 'تاریخ ثبت',
+        ];
+        $rows = function () use ($query) {
+            foreach ($query->cursor() as $t) {
+                yield [
+                    trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))),
+                    $t->technician_id,
+                    $t->mobile,
+                    $t->phone,
+                    $t->province,
+                    $t->specialty,
+                    $t->type_tech,
+                    $t->percent,
+                    $t->max_order,
+                    $t->max_price,
+                    $t->status,
+                    $t->wallet_balance,
+                    $t->created_at,
+                ];
+            }
+        };
+
+        return $this->streamSpreadsheet('crm-technicians-' . date('Ymd-His'), $format, $headers, $rows);
     }
 
     public function create()

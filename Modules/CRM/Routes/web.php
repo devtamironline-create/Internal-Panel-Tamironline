@@ -98,6 +98,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // ─── مشتری‌ها ──────────────────────────────────────────────────
     Route::middleware('can:view-crm-customers')->group(function () {
         Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/export/{format}', [CustomerController::class, 'export'])
+            ->where('format', 'csv|xlsx')->name('customers.export');
         Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         // Endpoint Ajax برای لود شهرهای هر استان (فرم مشتری/سفارش در فازهای بعد)
         Route::get('provinces/{province}/cities', [CustomerController::class, 'citiesOfProvince'])
@@ -118,6 +120,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // ─── تکنسین‌های فعال ──────────────────────────────────────────
     Route::middleware('can:view-crm-technicians')->group(function () {
         Route::get('technicians', [TechnicianController::class, 'index'])->name('technicians.index');
+        Route::get('technicians/export/{format}', [TechnicianController::class, 'export'])
+            ->where('format', 'csv|xlsx')->name('technicians.export');
         Route::get('technicians/{technician}', [TechnicianController::class, 'show'])->name('technicians.show');
     });
     Route::middleware('can:create-crm-technician')->group(function () {
@@ -149,6 +153,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     Route::middleware('can:view-crm-orders')->group(function () {
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/export/{format}', [OrderController::class, 'export'])
+            ->where('format', 'csv|xlsx')->name('orders.export');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     });
     Route::middleware('can:create-crm-order')->group(function () {
@@ -198,6 +204,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // ─── فاکتورها ──────────────────────────────────────────────
     Route::middleware('can:view-crm-invoices')->group(function () {
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('invoices/export/{format}', [InvoiceController::class, 'export'])
+            ->where('format', 'csv|xlsx')->name('invoices.export');
         Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
