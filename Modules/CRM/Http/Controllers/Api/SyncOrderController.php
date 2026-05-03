@@ -186,6 +186,17 @@ class SyncOrderController extends Controller
                 $action = 'created';
             }
 
+            // auto-maintain: تاکسونومی شهر در WP بدون اطلاع از استان والد
+            // سینک می‌شود (state و city دو taxonomy جدا هستند). هر سفارش
+            // اما هم province_id و هم city_id درست را می‌داند، پس اگر شهر
+            // هنوز province_id ندارد، آن را از سفارش می‌نویسیم. تنها در
+            // صورت خالی بودن — مقادیر دستی ادمین بازنویسی نمی‌شوند.
+            if ($order->province_id && $order->city_id) {
+                City::where('id', $order->city_id)
+                    ->whereNull('province_id')
+                    ->update(['province_id' => $order->province_id]);
+            }
+
             return [
                 'action' => $action,
                 'id' => (int) $order->id,
