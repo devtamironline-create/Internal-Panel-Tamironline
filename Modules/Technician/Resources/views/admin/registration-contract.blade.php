@@ -44,9 +44,9 @@
             </div>
         </div>
 
-        {{-- متن قرارداد --}}
-        <div class="prose prose-sm max-w-none border-t border-gray-100 pt-4 leading-7 text-gray-800 whitespace-pre-line">
-            {!! nl2br(e($contractText)) !!}
+        {{-- متن قرارداد (HTML از تنظیمات ادمین) --}}
+        <div class="prose prose-sm max-w-none border-t border-gray-100 pt-4 leading-7 text-gray-800">
+            {!! $contractText !!}
         </div>
 
         {{-- امضای دیجیتال --}}
