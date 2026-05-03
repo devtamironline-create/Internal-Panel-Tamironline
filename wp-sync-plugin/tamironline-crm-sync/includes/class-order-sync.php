@@ -119,7 +119,10 @@ class TCS_Order_Sync
             'mobile'       => $this->meta_str($get('mobile')),
             'phone'        => $this->meta_str($get('phone')),
             'address'      => $this->meta_str($get('address')),
-            'objection'             => $this->meta_str($get('objection')),
+            // objection در WP postmeta آرایه‌ای از عنوان‌های ایراد است
+            // (مشتری می‌تواند چند ایراد انتخاب کند). با meta_str() همیشه
+            // null می‌رسید چون ورودی آرایه بود.
+            'objection'             => $this->meta_array($get('objection')),
             'objection_description' => $this->meta_str($get('objection_description')),
 
             // وضعیت + پرچم‌های متن

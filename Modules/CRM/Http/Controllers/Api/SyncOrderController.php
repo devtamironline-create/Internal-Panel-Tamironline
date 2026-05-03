@@ -100,7 +100,10 @@ class SyncOrderController extends Controller
             'phone' => 'nullable|string|max:20',      // → customer_phone snapshot
             'address' => 'nullable|string|max:2000',
             'postal_code' => 'nullable|string|max:20',
-            'objection' => 'nullable|string|max:255',         // → problem_title
+            // objection در WP پست‌متا آرایه است (لیست ایرادها). پلاگین
+            // آن را به‌صورت آرایه می‌فرستد؛ اگر تک‌ایراد باشد ممکن است
+            // string هم بیاید — هر دو را قبول می‌کنیم.
+            'objection' => 'nullable',                        // → problem_title
             'objection_description' => 'nullable|string',     // → problem_description
 
             // وضعیت (عددی WP)
@@ -228,7 +231,8 @@ class SyncOrderController extends Controller
             // محل و شرح
             'address' => $data['address'] ?? null,
             'postal_code' => $data['postal_code'] ?? null,
-            'problem_title' => $data['objection'] ?? null,
+            // problem_title همان objection است؛ اگر آرایه باشد، با ، فارسی join.
+            'problem_title' => $this->joinObjections($data['objection'] ?? null),
             'problem_description' => $data['objection_description'] ?? null,
 
             // وضعیت — WP code → string enum
@@ -298,6 +302,29 @@ class SyncOrderController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * objection در WP می‌تواند آرایهٔ چند عنوانی، رشتهٔ تک‌عنوانی، یا null
+     * باشد. خروجی همیشه string قابل ذخیره در ستون string problem_title
+     * — آرایه با ، فارسی join می‌شود.
+     */
+    protected function joinObjections($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_array($value)) {
+            $items = array_filter(array_map(
+                fn ($v) => is_string($v) ? trim($v) : null,
+                $value
+            ), fn ($v) => $v !== null && $v !== '');
+            return empty($items) ? null : implode('، ', $items);
+        }
+        if (is_string($value)) {
+            return trim($value) === '' ? null : trim($value);
+        }
+        return null;
     }
 
     /**
