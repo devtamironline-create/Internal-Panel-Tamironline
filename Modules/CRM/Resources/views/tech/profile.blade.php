@@ -38,7 +38,10 @@
                 <dd dir="ltr">{{ $technician->national_code ?: '—' }}</dd>
 
                 <dt class="text-gray-500">استان</dt>
-                <dd>{{ $technician->province ?: '—' }}</dd>
+                <dd>{{ $technician->province?->name ?: '—' }}</dd>
+
+                <dt class="text-gray-500">شهر</dt>
+                <dd>{{ $technician->city?->name ?: '—' }}</dd>
 
                 <dt class="text-gray-500 col-span-2">آدرس</dt>
                 <dd class="col-span-2 whitespace-pre-wrap">{{ $technician->address ?: '—' }}</dd>
