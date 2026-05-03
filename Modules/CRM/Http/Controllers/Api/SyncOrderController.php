@@ -146,10 +146,12 @@ class SyncOrderController extends Controller
             'device_img1' => 'nullable|string|max:500',
             'device_image_input' => 'nullable|string|max:500',
 
-            // logging
-            'order_description_content' => 'nullable|string',
-            'order_note_content' => 'nullable|string',
-            'log_return' => 'nullable|string',
+            // logging — WP postmeta is PHP-serialized array when read via
+            // get_post_meta. Plugin may send them as either string (JSON
+            // or already-serialized) or as a nested array. Accept both.
+            'order_description_content' => 'nullable',
+            'order_note_content' => 'nullable',
+            'log_return' => 'nullable',
 
             // زمان‌بندی
             'visit_scheduled_at' => 'nullable|date',
@@ -272,10 +274,13 @@ class SyncOrderController extends Controller
             'device_img1' => $data['device_img1'] ?? null,
             'device_image_input' => $data['device_image_input'] ?? null,
 
-            // logging
-            'order_description_content' => $data['order_description_content'] ?? null,
-            'order_note_content' => $data['order_note_content'] ?? null,
-            'log_return' => $data['log_return'] ?? null,
+            // logging — اگر آرایه فرستاده شده، به json تبدیل کن. اگر
+            // string بود، همان را به عنوان متن خام نگه می‌داریم (می‌تواند
+            // JSON یا serialize PHP باشد — accessor مدل هر دو را parse
+            // می‌کند).
+            'order_description_content' => $this->encodeLogField($data['order_description_content'] ?? null),
+            'order_note_content' => $this->encodeLogField($data['order_note_content'] ?? null),
+            'log_return' => $this->encodeLogField($data['log_return'] ?? null),
 
             // زمان‌بندی
             'visit_scheduled_at' => $data['visit_scheduled_at'] ?? null,
@@ -293,6 +298,26 @@ class SyncOrderController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * فیلدهای لاگ WP می‌توانند به‌صورت آرایه (پاسخ get_post_meta unserialized)
+     * یا string (serialize خام/JSON) از پلاگین برسند. در دیتابیس همیشه
+     * به‌صورت JSON ذخیره می‌کنیم تا accessor مدل بتواند مستقل از منبع
+     * parse کند.
+     */
+    protected function encodeLogField($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (is_array($value)) {
+            return empty($value) ? null : json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        if (is_string($value)) {
+            return $value === '' ? null : $value;
+        }
+        return null;
     }
 
     /**
