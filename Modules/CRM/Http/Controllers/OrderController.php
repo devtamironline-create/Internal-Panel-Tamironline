@@ -418,6 +418,100 @@ class OrderController extends Controller
         return back()->with('success', 'وضعیت به "' . $newStatus->label() . '" تغییر کرد.');
     }
 
+    /**
+     * بازگشت سفارش — هم‌ارز return_order در libs/order.php (WP CRM).
+     *
+     * - return_type ∈ {1=برگشت انجام شده, 2=برگشت کنسل شده}
+     * - status به New (WP 0) برمی‌گردد
+     * - status_internal_order و qc_status پاک می‌شوند
+     * - یک snapshot از وضعیت مالی فعلی به آرایهٔ log_return پوش می‌شود
+     * - یک رویداد به آرایهٔ order_description_content (لاگ پنل قدیمی) اضافه
+     *   می‌شود تا با جریان WP سازگار بماند
+     * - یک ردیف هم در crm_order_status_logs ثبت می‌شود تا در «تاریخچهٔ
+     *   پنل جدید» دیده شود
+     */
+    public function returnOrder(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'return_type' => ['required', 'in:1,2'],
+            'return_description' => ['required', 'string', 'max:2000'],
+        ], [
+            'return_type.required' => 'لطفاً نوع بازگشت را انتخاب کنید.',
+            'return_type.in' => 'نوع بازگشت معتبر نیست.',
+            'return_description.required' => 'لطفاً دلیل/توضیح بازگشت را وارد کنید.',
+        ]);
+
+        $previousStatus = $order->status instanceof OrderStatus
+            ? $order->status->value
+            : (string) $order->status;
+
+        $returnType = (string) $validated['return_type'];
+        $returnDesc = $validated['return_description'];
+        $returnTypeLabel = $returnType === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده';
+        $jalaliNow = \Morilog\Jalali\Jalalian::now()->format('Y/m/d H:i');
+
+        $order->update([
+            'return_type' => $returnType,
+            'return_description' => $returnDesc,
+            'status' => OrderStatus::New->value,
+            'status_internal_order' => null,
+            'qc_status' => null,
+        ]);
+
+        // ── snapshot به log_return (هم‌ارز CreateLogReturnOrder در WP)
+        $existingLogReturn = $order->wp_return_logs;
+        $existingLogReturn[] = [
+            'return_type' => $returnType,
+            'return_type_message' => $returnTypeLabel,
+            'return_description' => $returnDesc,
+            'invoice_descripotion' => $order->invoice_descripotion,
+            'cancel_desc' => $order->getRawOriginal('cancel_reason'),
+            'cancel_desc_other' => null,
+            'customer_price' => $order->customer_price,
+            'buy_price' => $order->buy_price,
+            'piece_list' => $order->piece_list,
+            'customer_price_list' => $order->customer_price_list,
+            'buy_price_list' => $order->buy_price_list,
+            'hire' => $order->hire,
+            'transportation' => $order->transportation,
+            'discount' => $order->discount,
+            'price_customer' => $order->price_customer,
+            'cost_price' => $order->cost_price,
+            'total_invoice' => $order->total_invoice,
+            'negative_invoice' => $order->negative_invoice,
+            'device_image_input' => $order->device_img1 ?: $order->device_image_input,
+            'date' => $jalaliNow,
+            'author' => auth()->id(),
+        ];
+
+        // ── append به order_description_content (هم‌ارز addStatusDescription)
+        $existingEvents = $order->wp_events;
+        $existingEvents[] = [
+            'subject' => 'بازگشت سفارش',
+            'content' => $returnDesc,
+            'author' => auth()->id(),
+            'date' => $jalaliNow,
+            'status' => 'بازگشت سفارش',
+        ];
+
+        $order->update([
+            'log_return' => json_encode($existingLogReturn, JSON_UNESCAPED_UNICODE),
+            'order_description_content' => json_encode($existingEvents, JSON_UNESCAPED_UNICODE),
+        ]);
+
+        // ── crm_order_status_logs (تاریخچهٔ پنل جدید)
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $previousStatus,
+            'to_status' => OrderStatus::New->value,
+            'note' => 'بازگشت سفارش (' . $returnTypeLabel . ') — ' . $returnDesc,
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'سفارش بازگشت داده شد و وضعیت به «جدید» تغییر کرد.');
+    }
+
     // ───────────── داشبورد تکنسین ─────────────────────────────
     public function myOrders(Request $request)
     {

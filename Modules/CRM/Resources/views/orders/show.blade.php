@@ -521,6 +521,49 @@
             </div>
             @endcan
 
+            {{-- بازگشت سفارش — هم‌ارز returnOrderStatus در WP CRM --}}
+            @can('change-crm-order-status')
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    <h2 class="text-base font-bold text-amber-900 dark:text-amber-100">بازگشت سفارش</h2>
+                </div>
+                @if($order->return_type)
+                <div class="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg p-3 mb-3 text-sm">
+                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">
+                        وضعیت بازگشت:
+                        {{ (string) $order->return_type === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده' }}
+                    </div>
+                    @if($order->return_description)
+                    <p class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $order->return_description }}</p>
+                    @endif
+                </div>
+                @endif
+                <p class="text-xs text-amber-800 dark:text-amber-200 mb-3">
+                    برای بازگرداندن سفارش، نوع بازگشت را انتخاب و دلیل را بنویسید. وضعیت سفارش به «جدید» تغییر می‌کند.
+                </p>
+                <form action="{{ route('crm.orders.return', $order) }}" method="POST"
+                      class="space-y-2"
+                      onsubmit="return confirm('این کار وضعیت سفارش را به «جدید» برمی‌گرداند. ادامه دهم؟');">
+                    @csrf
+                    <select name="return_type" required
+                            class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">
+                        <option value="">— نوع بازگشت سفارش —</option>
+                        <option value="1" @selected(old('return_type') === '1')>برگشت انجام شده</option>
+                        <option value="2" @selected(old('return_type') === '2')>برگشت کنسل شده</option>
+                    </select>
+                    <textarea name="return_description" rows="3" required
+                              placeholder="دلیل/توضیح بازگشت..."
+                              class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">{{ old('return_description') }}</textarea>
+                    @error('return_type') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                    @error('return_description') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                    <button class="w-full px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-bold">
+                        بازگشت سفارش
+                    </button>
+                </form>
+            </div>
+            @endcan
+
             {{-- یادداشت داخلی --}}
             @if($order->notes)
             <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">

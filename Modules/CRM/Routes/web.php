@@ -178,6 +178,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     Route::middleware('can:change-crm-order-status')->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
+        Route::post('orders/{order}/return', [OrderController::class, 'returnOrder'])->name('orders.return');
     });
 
     // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────
