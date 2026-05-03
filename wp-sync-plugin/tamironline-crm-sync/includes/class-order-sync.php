@@ -172,10 +172,13 @@ class TCS_Order_Sync
             'hc_customer_data' => $this->collect_kv($post->ID, 'hc_customer_key', 'hc_customer_value'),
             'hc_tech_data'     => $this->collect_kv($post->ID, 'hc_tech_key',     'hc_tech_value'),
 
-            // logging
-            'order_description_content' => $this->meta_str($get('order_description_content')),
-            'order_note_content'        => $this->meta_str($get('order_note_content')),
-            'log_return'                => $this->meta_str($get('log_return')),
+            // logging — این سه postmeta در WP همیشه آرایهٔ چندرویدادی
+            // هستند (subject/content/author/date/status). meta_str وقتی
+            // ورودی آرایه باشد null برمی‌گرداند و باعث می‌شود لاگ هرگز
+            // به پنل نرسد. باید meta_array استفاده کنیم.
+            'order_description_content' => $this->meta_array($get('order_description_content')),
+            'order_note_content'        => $this->meta_array($get('order_note_content')),
+            'log_return'                => $this->meta_array($get('log_return')),
         ];
 
         // null/'' را از payload خارج می‌کنیم (false و 0 و [] حفظ می‌شوند)
