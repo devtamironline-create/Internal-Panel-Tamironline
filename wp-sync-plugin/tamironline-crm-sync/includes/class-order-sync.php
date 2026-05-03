@@ -107,6 +107,10 @@ class TCS_Order_Sync
             'customer_wp_id' => $customer_wp_id,
             'technician_wp_id' => $technician_wp_id ?: null,
 
+            // تاریخ ثبت سفارش در WP — برای حفظ تاریخچهٔ واقعی در پنل
+            // به‌جای زمان import. post_date با timezone سایت ست شده.
+            'post_date' => $post->post_date,
+
             // taxonomy term_ids
             'brand_wp_id'  => $this->first_term_id($post->ID, 'brand'),
             'device_wp_id' => $this->first_term_id($post->ID, 'device'),

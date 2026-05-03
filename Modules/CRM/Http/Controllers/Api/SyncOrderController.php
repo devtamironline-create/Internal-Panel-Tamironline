@@ -158,6 +158,10 @@ class SyncOrderController extends Controller
 
             // زمان‌بندی
             'visit_scheduled_at' => 'nullable|date',
+
+            // تاریخ ثبت سفارش در WP — به created_at نگاشت می‌شود تا
+            // تاریخچهٔ واقعی حفظ شود (به‌جای زمان import).
+            'post_date' => 'nullable|string|max:32',
         ];
     }
 
@@ -175,13 +179,25 @@ class SyncOrderController extends Controller
 
             $payload = $this->buildPayload($data);
 
+            // post_date در WP زمان واقعی ثبت سفارش است؛ به created_at نگاشت
+            // می‌شود تا تاریخچه دقیق باشد (به‌جای زمان import). در update هم
+            // ست می‌کنیم چون post_date در WP immutable است و این تنها راه
+            // اصلاح خودکار سفارش‌هایی است که قبلاً بدون تاریخ درست imported شده‌اند.
+            $wpCreatedAt = $this->parseWpDate($data['post_date'] ?? null);
+
             if ($order) {
                 $order->fill($payload);
+                if ($wpCreatedAt) {
+                    $order->created_at = $wpCreatedAt;
+                }
                 $order->save();
                 $action = 'updated';
             } else {
                 $payload['wp_id'] = $wpId;
                 $payload['order_code'] = Order::generateOrderCode();
+                if ($wpCreatedAt) {
+                    $payload['created_at'] = $wpCreatedAt;
+                }
                 $order = Order::create($payload);
                 $action = 'created';
             }
@@ -313,6 +329,27 @@ class SyncOrderController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * parse امن یک تاریخ WP (post_date فرمت "YYYY-MM-DD HH:MM:SS"). در
+     * صورت رشتهٔ خالی، '0000-00-00...' یا parse ناموفق null برمی‌گرداند
+     * تا فال‌بک به Eloquent timestamp انجام شود.
+     */
+    protected function parseWpDate(?string $value): ?\Carbon\Carbon
+    {
+        if (! $value) {
+            return null;
+        }
+        $value = trim($value);
+        if ($value === '' || str_starts_with($value, '0000-')) {
+            return null;
+        }
+        try {
+            return \Carbon\Carbon::parse($value);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
