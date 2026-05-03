@@ -79,7 +79,12 @@ class OrderController extends Controller
         $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city']);
         $applyNonStatusFilters($query);
 
-        if ($status !== '') {
+        // تب «بازگشت‌خورده» مجازی است: در WP سفارش‌های برگشت‌خورده
+        // status=0 (New) دارند و فقط return_type ست می‌شود. پس به‌جای
+        // فیلتر روی status، روی return_type فیلتر می‌کنیم.
+        if ($status === \Modules\CRM\Enums\OrderStatus::Returned->value) {
+            $query->whereNotNull('return_type');
+        } elseif ($status !== '') {
             $query->where('status', $status);
         }
 
@@ -98,6 +103,10 @@ class OrderController extends Controller
         foreach (\Modules\CRM\Enums\OrderStatus::cases() as $case) {
             $statusCounts[$case->value] = (int) ($rawCounts[$case->value] ?? 0);
         }
+
+        // شمارش تب «بازگشت‌خورده» جدا — return_type IS NOT NULL
+        $statusCounts[\Modules\CRM\Enums\OrderStatus::Returned->value] =
+            (clone $countQuery)->whereNotNull('return_type')->count();
 
         // داده‌های کمکی برای dropdown ها
         $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech']);

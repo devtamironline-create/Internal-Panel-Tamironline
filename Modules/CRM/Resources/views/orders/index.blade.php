@@ -288,7 +288,14 @@
                         {{ $loc !== '' ? $loc : '—' }}
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
+                        <div class="flex flex-col items-start gap-1">
+                            <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
+                            @if($order->return_type)
+                            <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 whitespace-nowrap" title="{{ $order->return_description }}">
+                                ↩ {{ (string) $order->return_type === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده' }}
+                            </span>
+                            @endif
+                        </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">@jdate($order->created_at)</td>
                     <td class="px-6 py-4">
