@@ -37,6 +37,7 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     // لیست درخواست‌ها
     Route::get('/registrations', [TechnicianAdminController::class, 'registrations'])->name('registrations');
     Route::get('/registrations/{id}', [TechnicianAdminController::class, 'registrationShow'])->name('registrations.show');
+    Route::get('/registrations/{id}/contract', [TechnicianAdminController::class, 'registrationContract'])->name('registrations.contract.view');
     Route::put('/registrations/{id}/status', [TechnicianAdminController::class, 'registrationUpdateStatus'])->name('registrations.update-status');
     Route::put('/registrations/{id}/step', [TechnicianAdminController::class, 'registrationUpdateStep'])->name('registrations.update-step');
     Route::put('/registrations/{id}/note', [TechnicianAdminController::class, 'registrationUpdateNote'])->name('registrations.update-note');

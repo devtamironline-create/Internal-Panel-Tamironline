@@ -315,6 +315,82 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * نمایش متن کامل قرارداد یک درخواست برای ادمین.
+     *
+     * متن قرارداد به‌صورت تمپلیت در TechnicianSetting::contract_text ذخیره
+     * می‌شود (متن نهایی در دیتابیس درخواست نگهداری نمی‌شود). همان منطق
+     * جایگزینی متغیرهایی که در RegistrationController::getContract استفاده
+     * شده، اینجا برای ادمین تکرار می‌شود.
+     */
+    public function registrationContract($id)
+    {
+        $this->checkAccess();
+
+        $registration = TechnicianRegistration::findOrFail($id);
+
+        $contractText = TechnicianSetting::get('contract_text', '');
+
+        // درصد کارمزد: مقدار اختصاصی → پیش‌فرض عمومی
+        $commissionPercent = $registration->commission_percent
+            ?? TechnicianSetting::get('default_commission_percent', '');
+
+        // مبلغ سفته: مقدار اختصاصی → پیش‌فرض عمومی
+        $promissoryNoteAmount = $registration->promissory_note_amount
+            ?? TechnicianSetting::get('default_promissory_note_amount', '');
+
+        $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
+
+        $province = $registration->province ?? '';
+        $city     = $registration->city ?? '';
+        $address  = $province && $city ? $province . '، ' . $city : ($province ?: $city);
+
+        // تاریخ شمسی: اگر امضا شده، تاریخ امضا؛ وگرنه امروز
+        try {
+            $jalaliDate = $registration->contract_signed_at
+                ? \Morilog\Jalali\Jalalian::fromDateTime($registration->contract_signed_at)->format('Y/m/d')
+                : \Morilog\Jalali\Jalalian::now()->format('Y/m/d');
+        } catch (\Exception $e) {
+            $jalaliDate = ($registration->contract_signed_at ?? now())->format('Y/m/d');
+        }
+
+        $contractNumber = $registration->contract_number ?? '—';
+
+        $contractText = str_replace(
+            [
+                '{gender_title}',
+                '{name}',
+                '{father_name}',
+                '{national_code}',
+                '{address}',
+                '{mobile}',
+                '{date}',
+                '{commission_percent}',
+                '{promissory_note_amount}',
+                '{contract_number}',
+            ],
+            [
+                $genderTitle,
+                $registration->first_name . ' ' . $registration->last_name,
+                $registration->father_name ?? '',
+                $registration->national_code,
+                $address,
+                $registration->mobile,
+                $jalaliDate,
+                $commissionPercent,
+                $promissoryNoteAmount ? number_format((float) $promissoryNoteAmount) : '',
+                $contractNumber,
+            ],
+            $contractText
+        );
+
+        return view('technician::admin.registration-contract', [
+            'registration'   => $registration,
+            'contractText'   => $contractText,
+            'contractNumber' => $contractNumber,
+        ]);
+    }
+
+    /**
      * تغییر وضعیت درخواست ثبت‌نام
      */
     public function registrationUpdateStatus(Request $request, $id)

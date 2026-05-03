@@ -680,6 +680,12 @@
                     <dt class="text-xs text-gray-500">وضعیت</dt>
                     <dd class="text-sm font-bold text-green-600">امضا شده</dd>
                 </div>
+                @if($registration->contract_number)
+                <div class="flex justify-between">
+                    <dt class="text-xs text-gray-500">شماره قرارداد</dt>
+                    <dd class="text-sm font-bold text-gray-800" dir="ltr">{{ $registration->contract_number }}</dd>
+                </div>
+                @endif
                 <div class="flex justify-between">
                     <dt class="text-xs text-gray-500">تاریخ امضا</dt>
                     <dd class="text-sm font-medium text-gray-800" dir="ltr">{{ \Morilog\Jalali\Jalalian::fromDateTime($registration->contract_signed_at)->format('Y/m/d H:i') }}</dd>
@@ -692,6 +698,14 @@
                     </dd>
                 </div>
                 @endif
+                <div class="pt-2">
+                    <a href="{{ route('technician.admin.registrations.contract.view', $registration->id) }}"
+                       target="_blank"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium rounded-lg hover:bg-blue-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        مشاهدهٔ متن قرارداد
+                    </a>
+                </div>
             </dl>
 
             {{-- دکمه‌های تایید/رد قرارداد --}}
