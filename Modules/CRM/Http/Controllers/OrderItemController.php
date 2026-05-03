@@ -11,6 +11,26 @@ class OrderItemController extends Controller
 {
     public function store(Request $request, Order $order)
     {
+        // فرم چندردیفی است: items[i][type|title|quantity|unit_price]
+        // برای سازگاری عقب‌رو، فرم تک‌فیلدی قدیمی هم پذیرفته می‌شود.
+        if ($request->has('items')) {
+            $validated = $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.type' => 'required|in:part,service,transport,discount',
+                'items.*.title' => 'required|string|max:255',
+                'items.*.description' => 'nullable|string|max:1000',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.unit_price' => 'required|integer|min:0',
+            ]);
+
+            foreach ($validated['items'] as $row) {
+                $order->items()->create($row);
+            }
+
+            $count = count($validated['items']);
+            return back()->with('success', $count . ' آیتم اضافه شد.');
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:part,service,transport,discount',
             'title' => 'required|string|max:255',

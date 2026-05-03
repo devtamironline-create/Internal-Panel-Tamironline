@@ -169,20 +169,43 @@
                 </table>
 
                 @can('edit-crm-order')
-                <form action="{{ route('crm.orders.items.store', $order) }}" method="POST" class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <form action="{{ route('crm.orders.items.store', $order) }}" method="POST"
+                      class="border-t border-gray-200 dark:border-gray-700 pt-4"
+                      x-data="{
+                          rows: [{ type: 'part', title: '', quantity: 1, unit_price: 0 }],
+                          add() { this.rows.push({ type: 'part', title: '', quantity: 1, unit_price: 0 }); },
+                          remove(i) { if (this.rows.length > 1) this.rows.splice(i, 1); }
+                      }">
                     @csrf
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">افزودن آیتم</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
-                        <select name="type" class="md:col-span-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                            <option value="part">قطعه</option>
-                            <option value="service">خدمت</option>
-                            <option value="transport">حمل‌ونقل</option>
-                            <option value="discount">تخفیف</option>
-                        </select>
-                        <input type="text" name="title" placeholder="عنوان" required class="md:col-span-2 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                        <input type="number" name="quantity" value="1" min="1" placeholder="تعداد" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                        <input type="number" name="unit_price" value="0" min="0" placeholder="فی (تومان)" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                        <button type="submit" class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm">افزودن</button>
+
+                    <template x-for="(row, i) in rows" :key="i">
+                        <div class="grid grid-cols-1 md:grid-cols-7 gap-2 mb-2">
+                            <select :name="`items[${i}][type]`" x-model="row.type"
+                                    class="md:col-span-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                                <option value="part">قطعه</option>
+                                <option value="service">خدمت</option>
+                                <option value="transport">حمل‌ونقل</option>
+                                <option value="discount">تخفیف</option>
+                            </select>
+                            <input type="text" :name="`items[${i}][title]`" x-model="row.title" placeholder="عنوان" required
+                                   class="md:col-span-2 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <input type="number" :name="`items[${i}][quantity]`" x-model.number="row.quantity" min="1" placeholder="تعداد"
+                                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <input type="number" :name="`items[${i}][unit_price]`" x-model.number="row.unit_price" min="0" placeholder="فی (تومان)"
+                                   class="md:col-span-2 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <button type="button" @click="remove(i)"
+                                    :disabled="rows.length === 1"
+                                    class="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed">حذف</button>
+                        </div>
+                    </template>
+
+                    <div class="flex items-center justify-between mt-3">
+                        <button type="button" @click="add()"
+                                class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                            + افزودن ردیف
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm">ثبت آیتم‌ها</button>
                     </div>
                 </form>
                 @endcan
