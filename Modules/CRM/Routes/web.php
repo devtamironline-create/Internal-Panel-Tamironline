@@ -198,6 +198,11 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
+
+        // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
+        Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');
+        Route::post('wallet/reward', [WalletController::class, 'storeReward'])->name('wallet.reward.store');
+        Route::post('wallet/charge', [WalletController::class, 'storeCharge'])->name('wallet.charge.store');
     });
 
     // ─── فاکتورها ──────────────────────────────────────────────

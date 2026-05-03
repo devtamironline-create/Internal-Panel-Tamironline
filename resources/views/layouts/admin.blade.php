@@ -597,7 +597,7 @@
                         @endcanany
 
                         {{-- ── افراد ── --}}
-                        @canany(['view-crm-technicians', 'view-crm-financial'])
+                        @canany(['view-crm-technicians', 'view-crm-financial', 'manage-crm-wallet'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">افراد</div>
                         @can('view-crm-technicians')
                         <a href="{{ route('crm.technicians.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.*') ? 'sidebar-menu-item-active' : '' }}">
@@ -606,9 +606,15 @@
                         </a>
                         @endcan
                         @can('view-crm-financial')
-                        <a href="{{ route('crm.wallet.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.*') ? 'sidebar-menu-item-active' : '' }}">
+                        <a href="{{ route('crm.wallet.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.index') || request()->routeIs('crm.wallet.show') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2zm7 5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                             کیف‌پول تکنسین‌ها
+                        </a>
+                        @endcan
+                        @can('manage-crm-wallet')
+                        <a href="{{ route('crm.wallet.add') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.add') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            افزودن شارژ/پاداش/جریمه
                         </a>
                         @endcan
                         @endcanany
