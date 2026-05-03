@@ -85,6 +85,16 @@
             </div>
 
             {{-- آیتم‌ها --}}
+            @php
+                $localItems = $order->items;
+                $wpPieces = is_array($order->piece_list) ? $order->piece_list : [];
+                $wpCust   = is_array($order->customer_price_list) ? $order->customer_price_list : [];
+                $wpBuy    = is_array($order->buy_price_list) ? $order->buy_price_list : [];
+                $hasWpPieces = ! $localItems->count() && count($wpPieces);
+                $itemsSubtotal = $localItems->count()
+                    ? $order->items_subtotal
+                    : ((int) array_sum(array_map('intval', $wpCust)) ?: (int) array_sum(array_map('intval', $wpBuy)));
+            @endphp
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">آیتم‌های سفارش (قطعات/خدمات/...)</h2>
 
@@ -100,7 +110,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse($order->items as $item)
+                        @forelse($localItems as $item)
                         <tr class="text-sm">
                             <td class="py-2">{{ $item->typeLabel() }}</td>
                             <td class="py-2 text-gray-900 dark:text-gray-100">
@@ -123,13 +133,36 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="py-4 text-center text-sm text-gray-500">آیتمی ثبت نشده.</td></tr>
+                        @if($hasWpPieces)
+                            @foreach($wpPieces as $i => $piece)
+                            @php
+                                $cust = isset($wpCust[$i]) && $wpCust[$i] !== '' ? (int) $wpCust[$i] : null;
+                                $buy  = isset($wpBuy[$i])  && $wpBuy[$i]  !== '' ? (int) $wpBuy[$i]  : null;
+                                $unit = $cust ?? $buy;
+                            @endphp
+                            <tr class="text-sm">
+                                <td class="py-2">قطعه</td>
+                                <td class="py-2 text-gray-900 dark:text-gray-100">
+                                    {{ $piece }}
+                                    @if($cust !== null && $buy !== null)
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">قیمت خرید: {{ number_format($buy) }}</div>
+                                    @endif
+                                </td>
+                                <td class="py-2">۱</td>
+                                <td class="py-2">{{ $unit !== null ? number_format($unit) : '—' }}</td>
+                                <td class="py-2 font-medium">{{ $unit !== null ? number_format($unit) : '—' }}</td>
+                                <td class="py-2 text-xs text-gray-400">از پنل قبلی</td>
+                            </tr>
+                            @endforeach
+                        @else
+                            <tr><td colspan="6" class="py-4 text-center text-sm text-gray-500">آیتمی ثبت نشده.</td></tr>
+                        @endif
                         @endforelse
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-gray-200 dark:border-gray-700 text-sm">
                             <td colspan="4" class="py-2 text-left font-medium">جمع کل آیتم‌ها:</td>
-                            <td class="py-2 font-bold">{{ number_format($order->items_subtotal) }} تومان</td>
+                            <td class="py-2 font-bold">{{ number_format($itemsSubtotal) }} تومان</td>
                             <td></td>
                         </tr>
                     </tfoot>
