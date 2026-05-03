@@ -301,7 +301,7 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
 
-        $registration = TechnicianRegistration::with(['logs.changedBy:id,first_name,name'])->findOrFail($id);
+        $registration = TechnicianRegistration::with(['logs.changedBy:id,first_name'])->findOrFail($id);
 
         // واکشی نام دستگاه‌ها از دیتابیس
         $applianceNames = [];
