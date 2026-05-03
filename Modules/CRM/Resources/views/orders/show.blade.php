@@ -504,20 +504,36 @@
                 @endif
             </div>
 
-            {{-- تغییر وضعیت --}}
+            {{-- تغییر وضعیت — قوانین گذار هم‌ارز WP show_order.php --}}
             @can('change-crm-order-status')
+            @php
+                $allowedTransitions = $order->status instanceof \Modules\CRM\Enums\OrderStatus
+                    ? $order->status->allowedTransitions()
+                    : [];
+                $isFinal = $order->status instanceof \Modules\CRM\Enums\OrderStatus
+                    ? $order->status->isFinal()
+                    : false;
+            @endphp
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تغییر وضعیت</h2>
+                @if($isFinal)
+                <div class="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                    <svg class="w-4 h-4 mt-0.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span>این سفارش در وضعیت نهایی است. برای تغییر، از «بازگشت سفارش» در پایین استفاده کنید.</span>
+                </div>
+                @else
                 <form action="{{ route('crm.orders.status.change', $order) }}" method="POST" class="space-y-2">
                     @csrf
                     <select name="status" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                        @foreach($statuses as $key => $label)
-                        <option value="{{ $key }}" @selected(($order->status->value ?? '') === $key)>{{ $label }}</option>
+                        <option value="">— انتخاب وضعیت جدید —</option>
+                        @foreach($allowedTransitions as $target)
+                        <option value="{{ $target->value }}">{{ $target->label() }}</option>
                         @endforeach
                     </select>
                     <textarea name="note" rows="2" placeholder="توضیح (اختیاری)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
                     <button class="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm">ثبت تغییر</button>
                 </form>
+                @endif
             </div>
             @endcan
 

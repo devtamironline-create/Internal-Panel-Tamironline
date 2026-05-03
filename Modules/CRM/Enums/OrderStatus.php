@@ -105,4 +105,46 @@ enum OrderStatus: string
 
         return $options;
     }
+
+    /**
+     * گذارهای وضعیت مجاز از وضعیت فعلی — هم‌ارز show_order.php در WP
+     * (خط 532): اگر status ∈ {4,5,10} و negative_invoice != 1، فرم
+     * dontEdit می‌شود؛ یعنی وضعیت‌های نهایی Cancelled/Completed/Transit
+     * قفل می‌شوند و فقط با «بازگشت سفارش» می‌توان از آن‌ها خارج شد.
+     *
+     * در فرم WP رادیوها فقط 1،2،3،4،5 را نشان می‌دهند (یعنی از هر
+     * وضعیت قابل ویرایش، می‌توان به Coordinated/Open/Suspended/
+     * Cancelled/Completed رفت).
+     *
+     * @return array<int, self>
+     */
+    public function allowedTransitions(): array
+    {
+        return match ($this) {
+            // وضعیت‌های قابل ویرایش (working states)
+            self::New,
+            self::Coordinated,
+            self::Open,
+            self::Suspended,
+            self::Returned => [
+                self::Coordinated,
+                self::Open,
+                self::Suspended,
+                self::Cancelled,
+                self::Completed,
+            ],
+
+            // وضعیت‌های نهایی — فقط با returnOrder قابل خروج
+            self::Cancelled,
+            self::Completed,
+            self::Transit,
+            self::Declined => [],
+        };
+    }
+
+    /** آیا این وضعیت نهایی است؟ (هیچ گذار مجاز ندارد) */
+    public function isFinal(): bool
+    {
+        return empty($this->allowedTransitions());
+    }
 }

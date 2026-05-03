@@ -385,6 +385,20 @@ class OrderController extends Controller
             return back()->with('error', 'وضعیت قبلاً همین بوده.');
         }
 
+        // اعمال قوانین گذار وضعیت — هم‌ارز show_order.php در WP. وضعیت‌های
+        // نهایی (Cancelled/Completed/Transit/Declined) قفل هستند و فقط با
+        // «بازگشت سفارش» می‌توان از آن‌ها خارج شد.
+        $currentEnum = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom($previousStatus);
+        $allowed = $currentEnum?->allowedTransitions() ?? [];
+        if (! in_array($newStatus, $allowed, true)) {
+            $msg = $currentEnum?->isFinal()
+                ? 'این سفارش در وضعیت نهایی است. برای تغییر از «بازگشت سفارش» استفاده کنید.'
+                : 'گذار از «' . ($currentEnum?->label() ?? $previousStatus) . '» به «' . $newStatus->label() . '» مجاز نیست.';
+            return back()->with('error', $msg);
+        }
+
         $updates = ['status' => $newStatus->value];
 
         if ($newStatus === OrderStatus::Completed) {
