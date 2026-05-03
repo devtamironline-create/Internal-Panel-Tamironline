@@ -15,11 +15,17 @@
         @foreach($technicians as $t)
         <a href="{{ route('crm.wallet.show', $t) }}" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition">
             <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $t->full_name }}</div>
-            <div class="mt-2 text-2xl font-bold {{ $t->wallet_balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                {{ number_format(abs($t->wallet_balance)) }} <span class="text-sm font-normal">تومان</span>
+            <div class="mt-2 text-2xl font-bold {{ $t->true_balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                {{ number_format(abs($t->true_balance)) }} <span class="text-sm font-normal">تومان</span>
             </div>
             <div class="text-xs text-gray-500 mt-1">
-                {{ $t->wallet_balance >= 0 ? 'بستانکار' : 'بدهکار' }}
+                {{ $t->true_balance >= 0 ? 'بستانکار' : 'بدهکار' }}
+            </div>
+            <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-500 grid grid-cols-2 gap-1">
+                <span>کیف‌پول:</span>
+                <span class="text-left {{ $t->wallet_balance >= 0 ? 'text-emerald-700' : 'text-red-700' }}" dir="ltr">{{ number_format($t->wallet_balance) }}</span>
+                <span>سهم شرکت:</span>
+                <span class="text-left text-amber-700" dir="ltr">−{{ number_format($t->invoice_debt) }}</span>
             </div>
         </a>
         @endforeach

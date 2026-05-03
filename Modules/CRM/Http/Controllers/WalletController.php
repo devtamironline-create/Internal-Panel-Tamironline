@@ -31,7 +31,10 @@ class WalletController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        $technicians = Technician::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance']);
+        $technicians = Technician::query()
+            ->withSum('invoices', 'company_share')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance']);
 
         return view('crm::wallet.index', [
             'transactions' => $transactions,

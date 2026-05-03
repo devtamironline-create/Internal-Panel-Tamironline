@@ -34,7 +34,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <div class="text-sm opacity-90">موجودی کیف‌پول شما</div>
-                @php $balance = (int) ($technician->wallet_balance ?? 0); @endphp
+                @php $balance = (int) ($technician->true_balance ?? 0); @endphp
                 <div class="text-3xl font-bold mt-1">
                     {{ number_format(abs($balance)) }}
                     <span class="text-base font-normal">تومان</span>

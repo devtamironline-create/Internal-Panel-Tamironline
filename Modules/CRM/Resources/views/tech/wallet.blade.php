@@ -8,14 +8,21 @@
         <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">کیف‌پول من</h1>
     </div>
 
+    @php $true = $technician->true_balance; @endphp
     <div class="bg-gradient-to-l from-brand-500 to-brand-700 rounded-xl shadow-sm p-6 text-white">
         <div class="text-sm opacity-90">موجودی فعلی</div>
         <div class="text-3xl font-bold mt-1">
-            {{ number_format(abs($technician->wallet_balance)) }}
+            {{ number_format(abs($true)) }}
             <span class="text-base font-normal">تومان</span>
         </div>
         <div class="text-xs opacity-90 mt-1">
-            {{ $technician->wallet_balance >= 0 ? 'شرکت به شما بدهکار است' : 'شما به شرکت بدهکار هستید' }}
+            {{ $true >= 0 ? 'شرکت به شما بدهکار است' : 'شما به شرکت بدهکار هستید' }}
+        </div>
+        <div class="mt-3 pt-3 border-t border-white/20 text-xs opacity-90 grid grid-cols-2 gap-y-1">
+            <span>تراکنش‌های کیف‌پول:</span>
+            <span class="text-left" dir="ltr">{{ number_format($technician->wallet_balance) }}</span>
+            <span>سهم شرکت از فاکتورها:</span>
+            <span class="text-left" dir="ltr">−{{ number_format($technician->invoice_debt) }}</span>
         </div>
     </div>
 

@@ -89,6 +89,37 @@ class Technician extends Model
     }
 
     /**
+     * مجموع سهم شرکت از فاکتورهای این تکنسین — بدهی تکنسین به شرکت.
+     * این عدد مستقل از تراکنش‌های wallet ذخیره می‌شود (در crm_invoices).
+     *
+     * اگر مدل با ->withSum('invoices', 'company_share') بارگذاری شده
+     * باشد (برای جلوگیری از N+1 در لیست‌ها)، از همان attribute استفاده
+     * می‌کنیم؛ وگرنه یک query جداگانه می‌زنیم.
+     */
+    public function getInvoiceDebtAttribute(): int
+    {
+        if (array_key_exists('invoices_sum_company_share', $this->attributes)) {
+            return (int) ($this->attributes['invoices_sum_company_share'] ?? 0);
+        }
+        return (int) $this->invoices()->sum('company_share');
+    }
+
+    /**
+     * مانده نهایی کیف‌پول = wallet_balance - invoice_debt.
+     *
+     * wallet_balance running sum تراکنش‌های wallet (شارژ/جایزه/جریمه/...)
+     * را نگه می‌دارد ولی سهم شرکت از فاکتورها به‌صورت رخداد wallet ثبت
+     * نمی‌شود (هم‌ارز جریان WP). برای دیدن مانده واقعی، سهم شرکت کل
+     * فاکتورها از wallet_balance کسر می‌شود.
+     *
+     * + = شرکت به تکنسین بدهکار / − = تکنسین به شرکت بدهکار.
+     */
+    public function getTrueBalanceAttribute(): int
+    {
+        return (int) $this->wallet_balance - $this->invoice_debt;
+    }
+
+    /**
      * نام نمایشی — اولویت با firstname_tech (نام تجاری/کامل WP)،
      * fallback به first_name + last_name (داده‌ی legacy لاراولی)،
      * در نهایت موبایل.

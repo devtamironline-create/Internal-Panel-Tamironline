@@ -7,11 +7,25 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">کیف‌پول {{ trim($technician->first_name . ' ' . ($technician->last_name ?? '')) }}</h1>
+            @php $true = $technician->true_balance; @endphp
             <div class="mt-2">
-                <span class="text-3xl font-bold {{ $technician->wallet_balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                    {{ number_format(abs($technician->wallet_balance)) }} <span class="text-base font-normal">تومان</span>
+                <span class="text-3xl font-bold {{ $true >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                    {{ number_format(abs($true)) }} <span class="text-base font-normal">تومان</span>
                 </span>
-                <span class="ms-2 text-sm text-gray-500">{{ $technician->wallet_balance >= 0 ? 'بستانکار (شرکت بدهکار است)' : 'بدهکار (تکنسین بدهکار است)' }}</span>
+                <span class="ms-2 text-sm text-gray-500">{{ $true >= 0 ? 'بستانکار (شرکت بدهکار است)' : 'بدهکار (تکنسین بدهکار است)' }}</span>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <span>تراکنش‌های کیف‌پول:
+                    <b class="{{ $technician->wallet_balance >= 0 ? 'text-emerald-700' : 'text-red-700' }}" dir="ltr">{{ number_format($technician->wallet_balance) }}</b>
+                </span>
+                <span class="text-gray-400">−</span>
+                <span>سهم شرکت از فاکتورها:
+                    <b class="text-amber-700" dir="ltr">{{ number_format($technician->invoice_debt) }}</b>
+                </span>
+                <span class="text-gray-400">=</span>
+                <span>مانده نهایی:
+                    <b class="{{ $true >= 0 ? 'text-emerald-700' : 'text-red-700' }}" dir="ltr">{{ number_format($true) }}</b>
+                </span>
             </div>
         </div>
         <a href="{{ route('crm.wallet.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">بازگشت</a>
