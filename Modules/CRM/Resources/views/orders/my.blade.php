@@ -14,18 +14,45 @@
     <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
     @endif
 
-    <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex items-end gap-3">
-        <div class="flex-1 max-w-xs">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">وضعیت</label>
-            <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                <option value="">— همه —</option>
-                @foreach($statuses as $key => $label)
-                <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
+    {{-- نوار فیلتر آمادهٔ وضعیت --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-2 overflow-x-auto">
+        <div class="flex items-center gap-1 min-w-max">
+            @php $isAll = $status === ''; @endphp
+            <a href="{{ route('crm.orders.my') }}"
+               class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                      {{ $isAll ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                همه فعال‌ها
+                <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                            {{ $isAll ? 'bg-brand-100 text-brand-700' : ($activeCount > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                    {{ number_format($activeCount) }}
+                </span>
+            </a>
+            @foreach($tabs as $key => $tab)
+            @php $isActive = $status === $key; @endphp
+            <a href="{{ route('crm.orders.my', ['status' => $key]) }}"
+               class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                      {{ $isActive ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                {{ $tab['label'] }}
+                <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                            {{ $isActive ? 'bg-brand-100 text-brand-700' : ($tab['count'] > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                    {{ number_format($tab['count']) }}
+                </span>
+            </a>
+            @endforeach
+
+            {{-- آرشیو: شامل کنسل/تکمیل/ایاب و ذهاب/رد --}}
+            @php $isArchive = $status === 'archive'; @endphp
+            <a href="{{ route('crm.orders.my', ['status' => 'archive']) }}"
+               class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                      {{ $isArchive ? 'border-amber-600 text-amber-600' : 'border-transparent text-gray-400 hover:text-gray-700 hover:border-gray-200' }}">
+                آرشیو
+                <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                            {{ $isArchive ? 'bg-amber-100 text-amber-700' : ($archiveCount > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                    {{ number_format($archiveCount) }}
+                </span>
+            </a>
         </div>
-        <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">اعمال</button>
-    </form>
+    </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table class="w-full">

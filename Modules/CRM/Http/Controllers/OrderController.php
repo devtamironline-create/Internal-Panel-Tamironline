@@ -545,18 +545,62 @@ class OrderController extends Controller
 
         $status = $request->string('status')->toString();
 
-        $orders = Order::with(['customer', 'brand', 'device', 'province', 'city'])
-            ->forTechnician($technician->id)
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->latest()
-            ->paginate(25)
-            ->withQueryString();
+        // وضعیت‌های فعال = همه‌ای که برای تکنسین اقدام لازم دارند. سفارش‌های
+        // نهایی‌شده (انجام کار/کنسل/رد/ایاب و ذهاب) به‌صورت پیش‌فرض از پنل
+        // تکنسین خارج می‌شوند تا فقط روی کار باز تمرکز کنند.
+        $activeStatuses = [
+            OrderStatus::New->value,
+            OrderStatus::Coordinated->value,
+            OrderStatus::Open->value,
+            OrderStatus::Suspended->value,
+        ];
+        $finalStatuses = [
+            OrderStatus::Completed->value,
+            OrderStatus::Cancelled->value,
+            OrderStatus::Transit->value,
+            OrderStatus::Declined->value,
+        ];
+
+        $baseQuery = Order::with(['customer', 'brand', 'device', 'province', 'city'])
+            ->forTechnician($technician->id);
+
+        $listQuery = (clone $baseQuery);
+        if ($status === '') {
+            // پیش‌فرض: فقط فعال‌ها
+            $listQuery->whereIn('status', $activeStatuses);
+        } elseif ($status === 'archive') {
+            // تب آرشیو: کنسل/تکمیل/...
+            $listQuery->whereIn('status', $finalStatuses);
+        } else {
+            $listQuery->where('status', $status);
+        }
+
+        $orders = $listQuery->latest()->paginate(25)->withQueryString();
+
+        // شمارش هر تب
+        $rawCounts = (clone $baseQuery)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->all();
+
+        $tabs = [];
+        foreach ($activeStatuses as $key) {
+            $tabs[$key] = [
+                'label' => OrderStatus::from($key)->label(),
+                'count' => (int) ($rawCounts[$key] ?? 0),
+            ];
+        }
+        $activeCount = array_sum(array_map(fn ($k) => (int) ($rawCounts[$k] ?? 0), $activeStatuses));
+        $archiveCount = array_sum(array_map(fn ($k) => (int) ($rawCounts[$k] ?? 0), $finalStatuses));
 
         return view('crm::orders.my', [
             'orders' => $orders,
             'technician' => $technician,
             'status' => $status,
-            'statuses' => OrderStatus::options(),
+            'tabs' => $tabs,
+            'activeCount' => $activeCount,
+            'archiveCount' => $archiveCount,
         ]);
     }
 
