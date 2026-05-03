@@ -4,6 +4,7 @@ namespace Modules\CRM\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Livewire\OrderWizard;
 
 class CrmServiceProvider extends ServiceProvider
@@ -23,5 +24,11 @@ class CrmServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
 
         Livewire::component('crm.order-wizard', OrderWizard::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                RecomputeWalletBalances::class,
+            ]);
+        }
     }
 }

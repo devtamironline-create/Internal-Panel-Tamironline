@@ -260,9 +260,31 @@ class SyncFinancialController extends Controller
     /**
      * upsert تراکنش کیف‌پول. type ∈ {wallet_credit, reward, penalty}.
      * علامت amount از روی WalletTxType::sign() محاسبه می‌شود.
+     *
+     * منطق هم‌ارز با DebtCalc() در libs/order.php سمت WP:
+     *  - فقط رویدادهای پرداخت‌شده (payment_status = 1) به کیف‌پول می‌روند
+     *  - شارژ کیف‌پول → امضا با مبلغ wallet_pay
+     *  - جایزه/جریمه → امضا با مبلغ total_invoice (نه wallet_pay)
+     *
+     * balance_after در ابتدا یک اعتبار محلی است؛ بعد از sync کامل،
+     * artisan crm:wallet:recompute-balances همهٔ ردیف‌ها را به ترتیب id
+     * بازخوانی و running balance را بازنویسی می‌کند تا اطمینان حاصل شود
+     * هیچ ناسازگاری در ترتیب باقی نمی‌ماند.
      */
     protected function upsertWalletTx(int $wpId, array $data, string $type): array
     {
+        // فیلتر اول: payment_status = 1 — وگرنه این رخداد به کیف‌پول
+        // وارد نمی‌شود (در WP فقط رخدادهای پرداخت‌شده محاسبه می‌شوند).
+        if ((int) ($data['payment_status'] ?? 0) !== 1) {
+            return [
+                'action' => 'skipped',
+                'type' => 'wallet_' . $type,
+                'id' => null,
+                'wp_id' => $wpId,
+                'reason' => 'payment_status != 1 (unpaid wallet event)',
+            ];
+        }
+
         // resolve technician — اول از technician_wp_id، در نبود از order
         $technician = null;
         $order = null;
@@ -288,7 +310,13 @@ class SyncFinancialController extends Controller
             'penalty' => WalletTxType::Penalty,
         };
 
-        $amountAbs = abs((int) ($data['wallet_pay'] ?? 0));
+        // مبلغ از منبع درست — مطابق WP DebtCalc:
+        //   wallet_credit → wallet_pay
+        //   reward/penalty → total_invoice
+        $amountSource = $type === 'wallet_credit'
+            ? (int) ($data['wallet_pay'] ?? 0)
+            : (int) ($data['total_invoice'] ?? 0);
+        $amountAbs = abs($amountSource);
         $signedAmount = $amountAbs * $txType->sign();
 
         $note = $this->buildNote($data, $type);
@@ -296,10 +324,16 @@ class SyncFinancialController extends Controller
         $existing = WalletTransaction::where('wp_id', $wpId)->lockForUpdate()->first();
 
         if ($existing) {
-            // فیلدهای مالی را دست نمی‌زنیم تا balance دست‌نخورده بماند؛
-            // فقط متادیتای متنی و ربط‌ها بروز می‌شوند.
+            // ردیف موجود را به‌روز می‌کنیم — شامل فیلدهای مالی، چون داده
+            // قبلی با منطق غلط ذخیره شده بود و باید تصحیح شود. balance_after
+            // همین‌جا فعلاً با previousBalance + amount نوشته می‌شود ولی
+            // پس از پایان sync، crm:wallet:recompute-balances نهایی‌اش
+            // می‌کند تا running total درست از ابتدا تا انتها یک‌جا به‌روز
+            // شود.
             $existing->update([
                 'order_id' => $order?->id,
+                'type' => $txType,
+                'amount' => $signedAmount,
                 'note' => $note,
             ]);
 
@@ -308,7 +342,7 @@ class SyncFinancialController extends Controller
                 'type' => 'wallet_' . $type,
                 'id' => (int) $existing->id,
                 'wp_id' => $wpId,
-                'amount' => (int) $existing->amount,
+                'amount' => $signedAmount,
             ];
         }
 
