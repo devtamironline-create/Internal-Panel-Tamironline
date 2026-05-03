@@ -19,7 +19,6 @@
     ])));
     if ($loc) $rows[] = ['استان / شهر', $loc];
     if ($address)    $rows[] = ['آدرس', $address];
-    if ($postalCode) $rows[] = ['کد پستی', $postalCode];
 
     // دستگاه
     $rows[] = ['نوع سفارش', $orderType === 'service' ? 'سرویس' : 'تعمیر'];

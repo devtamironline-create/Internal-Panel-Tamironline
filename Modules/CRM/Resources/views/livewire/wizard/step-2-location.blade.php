@@ -32,10 +32,4 @@
                   placeholder="خیابان، پلاک، واحد..."
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
     </div>
-
-    <div class="md:w-1/2">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">کد پستی</label>
-        <input type="text" wire:model="postalCode" maxlength="10" dir="ltr"
-               class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-    </div>
 </div>

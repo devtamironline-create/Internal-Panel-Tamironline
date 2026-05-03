@@ -46,7 +46,6 @@ class OrderWizard extends Component
     public ?int $provinceId = null;
     public ?int $cityId = null;
     public string $address = '';
-    public string $postalCode = '';
 
     // ─── Step 3: Device & Problem ────────────────────────────────
     public string $orderType = 'repair';
@@ -312,12 +311,10 @@ class OrderWizard extends Component
                 'provinceId' => 'required|integer|exists:crm_provinces,id',
                 'cityId' => 'required|integer|exists:crm_cities,id',
                 'address' => 'required|string|max:2000',
-                'postalCode' => 'nullable|string|max:20',
             ], attributes: [
                 'provinceId' => 'استان',
                 'cityId' => 'شهر',
                 'address' => 'آدرس',
-                'postalCode' => 'کد پستی',
             ]),
 
             3 => $this->validate([
@@ -380,7 +377,6 @@ class OrderWizard extends Component
                 'province_id' => $this->provinceId,
                 'city_id' => $this->cityId,
                 'address' => $this->address,
-                'postal_code' => $this->postalCode ?: null,
                 'problem_title' => $problemTitle,
                 'problem_description' => $this->objectionDescription ?: null,
                 'visit_scheduled_at' => $this->visitScheduledAt ?: null,
