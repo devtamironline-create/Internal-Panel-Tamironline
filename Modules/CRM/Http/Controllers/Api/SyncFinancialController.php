@@ -248,6 +248,17 @@ class SyncFinancialController extends Controller
             $action = 'created';
         }
 
+        // مارک کردن فاکتورهای قبلیِ همان سفارش به‌عنوان superseded.
+        // این هم‌ارز رفتار WP است که هر بار وضعیت 5/10 یک financial post
+        // جدید می‌سازد — ما آخرین را فعال نگه می‌داریم و قدیمی‌ها را
+        // از queryهای پیش‌فرض خارج می‌کنیم (حذف نمی‌شوند تا تاریخچه و
+        // wp_id حفظ شود).
+        Invoice::withSuperseded()
+            ->where('order_id', $order->id)
+            ->where('id', '<>', $invoice->id)
+            ->whereNull('superseded_at')
+            ->update(['superseded_at' => now()]);
+
         return [
             'action' => $action,
             'type' => 'invoice',

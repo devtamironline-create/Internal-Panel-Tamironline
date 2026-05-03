@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,6 +25,7 @@ class Invoice extends Model
         'status',
         'issued_at',
         'paid_at',
+        'superseded_at',
         'created_by',
     ];
 
@@ -34,7 +36,32 @@ class Invoice extends Model
         'commission_percent' => 'integer',
         'issued_at' => 'datetime',
         'paid_at' => 'datetime',
+        'superseded_at' => 'datetime',
     ];
+
+    /**
+     * فاکتورهای superseded به‌صورت پیش‌فرض از queryها خارج می‌شوند تا
+     * در لیست‌ها/گزارش‌ها/محاسبه‌های مالی (مثل invoice_debt) نیایند.
+     * برای دیدن همه از withSuperseded()/withoutGlobalScope استفاده کنید.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('active', function (Builder $q) {
+            $q->whereNull($q->getModel()->getTable() . '.superseded_at');
+        });
+    }
+
+    /** Scope: شامل فاکتورهای superseded هم بشود (برای صفحهٔ تاریخچهٔ سفارش). */
+    public function scopeWithSuperseded(Builder $q): Builder
+    {
+        return $q->withoutGlobalScope('active');
+    }
+
+    /** Scope: فقط فاکتورهای superseded. */
+    public function scopeOnlySuperseded(Builder $q): Builder
+    {
+        return $q->withoutGlobalScope('active')->whereNotNull('superseded_at');
+    }
 
     public function order(): BelongsTo
     {
