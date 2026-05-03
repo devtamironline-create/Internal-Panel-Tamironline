@@ -200,4 +200,84 @@ class Order extends Model
 
         return max(0, $total - ($this->deposit ?? 0));
     }
+
+    /**
+     * خلاصهٔ مالی فاکتور — هم‌ارز با Orders/show_order.php در WP CRM.
+     *
+     * در WP، سه عدد مستقل ذخیره می‌شود:
+     *   - price_customer : جمع کل صورت حساب (مبلغ کلی فاکتور)
+     *   - cost_price     : جمع هزینه‌ها (قیمت قطعات و ...)
+     *   - total_invoice  : مانده پس از کسر هزینه‌ها (همان عددی که سهم
+     *                       تکنسین/شرکت روی آن محاسبه می‌شود)
+     *
+     * منطق سهم‌ها (طبق WP):
+     *   if (type_of_calc_tech == 1):
+     *       tech_per       = 1 - (tech_per_of_all / 100)
+     *       all_price_calc = total_invoice + cost_price
+     *       tech_share     = all_price_calc * tech_per
+     *       company_share  = all_price_calc - tech_share
+     *   else:
+     *       tech_share     = total_invoice * percent / 100
+     *       company_share  = total_invoice - tech_share
+     *
+     * در حالت status = transit (10)، تکنسین ۱۰۰٪ می‌گیرد.
+     *
+     * @return array{
+     *     has_data: bool,
+     *     customer_total: int,
+     *     cost_total: int,
+     *     remaining: int,
+     *     tech_share: int,
+     *     company_share: int,
+     *     percent: int,
+     *     calc_type: ?string,
+     * }
+     */
+    public function financialSummary(): array
+    {
+        $customerTotal = (int) ($this->price_customer ?? 0);
+        $costTotal     = (int) ($this->cost_price ?? 0);
+        $remaining     = (int) ($this->total_invoice ?? 0);
+
+        $hasData = ($customerTotal > 0) || ($costTotal > 0) || ($remaining > 0)
+            || ! empty($this->piece_list);
+
+        $tech = $this->technician;
+        $percent      = $tech ? (int) ($tech->percent ?? 0) : 0;
+        $techPerOfAll = $tech ? (int) ($tech->tech_per_of_all ?? 0) : 0;
+        $calcType     = $tech ? (string) ($tech->type_of_calc_tech ?? '') : '';
+
+        $statusValue = $this->status instanceof OrderStatus
+            ? $this->status->value
+            : (string) $this->status;
+
+        $techShare = 0;
+        $companyShare = 0;
+
+        if ($remaining > 0) {
+            if ($statusValue === OrderStatus::Transit->value) {
+                $techShare = $remaining;
+                $companyShare = 0;
+            } elseif ($calcType === '1' || $calcType === 'internal') {
+                $techPer       = (100 - $techPerOfAll) / 100;
+                $allPriceCalc  = $remaining + $costTotal;
+                $techShare     = (int) round($allPriceCalc * $techPer);
+                $companyShare  = max(0, $allPriceCalc - $techShare);
+            } else {
+                $techShare    = (int) intdiv($remaining * max(0, min(100, $percent)), 100);
+                $companyShare = max(0, $remaining - $techShare);
+            }
+        }
+
+        return [
+            'has_data'       => $hasData,
+            'customer_total' => $customerTotal,
+            'cost_total'     => $costTotal,
+            'remaining'      => $remaining,
+            'tech_share'     => $techShare,
+            'company_share'  => $companyShare,
+            'percent'        => $percent,
+            'calc_type'      => $calcType !== '' ? $calcType : null,
+        ];
+    }
 }

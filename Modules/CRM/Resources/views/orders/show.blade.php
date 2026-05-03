@@ -169,7 +169,100 @@
         {{-- ستون راست (کناری) --}}
         <div class="space-y-6">
 
-            {{-- خلاصه مالی --}}
+            {{-- فاکتور سفارش — هم‌ارز با Orders/show_order.php در WP CRM --}}
+            @php $fin = $order->financialSummary(); @endphp
+            @if($fin['has_data'])
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">فاکتور سفارش</h2>
+
+                {{-- لیست قطعات / خدمات --}}
+                @php
+                    $pieces = is_array($order->piece_list) ? $order->piece_list : [];
+                    $custPriceList = is_array($order->customer_price_list) ? $order->customer_price_list : [];
+                    $buyPriceList = is_array($order->buy_price_list) ? $order->buy_price_list : [];
+                @endphp
+                @if(count($pieces))
+                <div class="overflow-x-auto -mx-2 mb-4">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                            <tr>
+                                <th class="px-2 py-2 text-right font-medium">قطعه / خدمت</th>
+                                <th class="px-2 py-2 text-right font-medium">قیمت به مشتری</th>
+                                <th class="px-2 py-2 text-right font-medium">قیمت خرید</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($pieces as $i => $piece)
+                            <tr>
+                                <td class="px-2 py-2">{{ $piece }}</td>
+                                <td class="px-2 py-2">{{ isset($custPriceList[$i]) && $custPriceList[$i] !== '' ? number_format((int) $custPriceList[$i]) : '—' }}</td>
+                                <td class="px-2 py-2">{{ isset($buyPriceList[$i]) && $buyPriceList[$i] !== '' ? number_format((int) $buyPriceList[$i]) : '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+
+                {{-- اجرت / ایاب و ذهاب / تخفیف --}}
+                @if($order->hire || $order->transportation || $order->discount)
+                <dl class="space-y-2 text-sm mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+                    @if($order->hire)
+                    <div class="flex justify-between"><dt class="text-gray-500">اجرت</dt><dd>{{ number_format($order->hire) }} تومان</dd></div>
+                    @endif
+                    @if($order->transportation)
+                    <div class="flex justify-between"><dt class="text-gray-500">ایاب و ذهاب</dt><dd>{{ number_format($order->transportation) }} تومان</dd></div>
+                    @endif
+                    @if($order->discount)
+                    <div class="flex justify-between"><dt class="text-gray-500">تخفیف</dt><dd>{{ number_format($order->discount) }} تومان</dd></div>
+                    @endif
+                </dl>
+                @endif
+
+                {{-- جمع‌بندی مالی --}}
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">جمع کل صورت حساب</dt>
+                        <dd class="font-medium">{{ number_format($fin['customer_total']) }} تومان</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">جمع هزینه‌ها</dt>
+                        <dd>{{ number_format($fin['cost_total']) }} تومان</dd>
+                    </div>
+                    <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <dt class="text-gray-500">مانده</dt>
+                        <dd class="font-medium">{{ number_format($fin['remaining']) }} تومان</dd>
+                    </div>
+                    <div class="flex justify-between text-amber-700 dark:text-amber-400">
+                        <dt>سهم تکنسین</dt>
+                        <dd class="font-medium">{{ number_format($fin['tech_share']) }} تومان</dd>
+                    </div>
+                    <div class="flex justify-between text-emerald-700 dark:text-emerald-400">
+                        <dt>سهم شرکت</dt>
+                        <dd class="font-bold">{{ number_format($fin['company_share']) }} تومان</dd>
+                    </div>
+                </dl>
+
+                {{-- بیعانه (در صورت ثبت محلی) --}}
+                @if($order->deposit)
+                <dl class="space-y-2 text-sm mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div class="flex justify-between text-gray-500">
+                        <dt>بیعانه پرداخت‌شده</dt>
+                        <dd>{{ number_format($order->deposit) }} تومان</dd>
+                    </div>
+                </dl>
+                @endif
+
+                {{-- متن فاکتور برای مشتری --}}
+                @if($order->invoice_descripotion)
+                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">متن فاکتور برای مشتری</h3>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ $order->invoice_descripotion }}</p>
+                </div>
+                @endif
+            </div>
+            @else
+            {{-- سفارش بدون داده فاکتور — fallback به فیلدهای پایه --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">خلاصه مالی</h2>
                 <dl class="space-y-2 text-sm">
@@ -195,6 +288,7 @@
                     </div>
                 </dl>
             </div>
+            @endif
 
             {{-- تخصیص تکنسین --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">

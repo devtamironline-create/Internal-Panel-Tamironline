@@ -195,9 +195,13 @@ class SyncFinancialController extends Controller
         $isPaid = ((int) ($data['payment_status'] ?? 0)) === 1;
         $issuedAt = $this->safeDate($data['post_date'] ?? null);
 
-        $totalAmount = (int) ($data['total_invoice'] ?? 0);
+        // در WP CRM، فاکتور برای مشتری price_customer است (جمع کل صورت
+        // حساب). total_invoice همان «مانده» پس از کسر هزینه‌هاست. بنابراین
+        // مبلغ فاکتور را از price_customer می‌گیریم و در نبود آن fallback
+        // به total_invoice می‌کنیم.
+        $totalAmount = (int) ($data['price_customer'] ?? 0);
         if ($totalAmount === 0) {
-            $totalAmount = (int) ($data['price_customer'] ?? 0);
+            $totalAmount = (int) ($data['total_invoice'] ?? 0);
         }
 
         // محاسبه سهم تکنسین/شرکت همان لحظه — اگر سفارش تکنسین داشته باشد

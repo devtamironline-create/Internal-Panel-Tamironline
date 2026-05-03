@@ -281,9 +281,14 @@ class SyncOrderController extends Controller
             'visit_scheduled_at' => $data['visit_scheduled_at'] ?? null,
         ];
 
-        // final_price سنتی لاراول از total_invoice (اگر داشته باشیم)
-        // پر می‌شود تا dashboard/گزارش‌های موجود کار کنند.
-        if (isset($data['total_invoice']) && $data['total_invoice'] !== null) {
+        // final_price سنتی لاراول از price_customer (جمع کل صورت حساب) پر
+        // می‌شود — این چیزی است که مشتری پرداخت کرده و در dashboardها/
+        // گزارش‌ها به‌عنوان «مبلغ نهایی» نمایش داده می‌شود. در WP،
+        // total_invoice همان «مانده» (پس از کسر هزینه‌ها) است و برای
+        // محاسبه سهم تکنسین/شرکت کاربرد دارد، نه به‌عنوان مبلغ نهایی.
+        if (isset($data['price_customer']) && $data['price_customer'] !== null) {
+            $payload['final_price'] = (int) $data['price_customer'];
+        } elseif (isset($data['total_invoice']) && $data['total_invoice'] !== null) {
             $payload['final_price'] = (int) $data['total_invoice'];
         }
 
