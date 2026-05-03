@@ -3,7 +3,7 @@
  * Plugin Name:       Tamironline CRM Sync
  * Plugin URI:        https://tamironline.com
  * Description:       ارسال خودکار داده‌های CRM وردپرسی (مشتری، تکنسین، تنظیمات، سفارش، مالی) به پنل لاراول Tamironline.
- * Version:           0.7.2
+ * Version:           0.7.3
  * Author:            Tamironline
  * Text Domain:       tcs
  * Domain Path:       /languages
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('TCS_VERSION', '0.7.2');
+define('TCS_VERSION', '0.7.3');
 define('TCS_FILE', __FILE__);
 define('TCS_DIR', plugin_dir_path(__FILE__));
 define('TCS_URL', plugin_dir_url(__FILE__));

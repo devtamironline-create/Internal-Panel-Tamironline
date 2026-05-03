@@ -16,6 +16,18 @@ class TCS_Technician_Sync
     private const ROLE_META_KEY = 'role';
     private const TECH_ROLE_VALUE = 'technician';
 
+    /**
+     * متاهای اختصاصی تکنسین — حضور یکی از این‌ها به این معناست که
+     * کاربر «تکنسین است یا بوده» حتی اگر فعلاً role یا role-meta نداشته
+     * باشد. این لیست باعث می‌شود تکنسین‌های قدیمی که role از آن‌ها
+     * حذف شده ولی همچنان در سفارش‌ها به‌عنوان technician رفرنس می‌شوند
+     * هم سینک شوند.
+     */
+    private const TECH_DISCRIMINATOR_META_KEYS = [
+        'firstname_tech',
+        'technician_id',
+    ];
+
     /** متاهایی که تغییرشان باید سینک را تریگر کند. */
     private const META_KEYS = [
         'role', 'first_name', 'firstname_tech', 'technician_id', 'national_code',
@@ -59,7 +71,12 @@ class TCS_Technician_Sync
     }
 
     /**
-     * بررسی این‌که آیا یک کاربر تکنسین است یا نه.
+     * بررسی این‌که آیا یک کاربر تکنسین است یا بوده. شامل سه مسیر:
+     *  1) usermeta.role == 'technician'
+     *  2) WP role list شامل 'technician'
+     *  3) داشتن یکی از متاهای اختصاصی تکنسین — برای کاربرانی که role
+     *     از آن‌ها حذف شده ولی هنوز رکورد تکنسینی دارند و در سفارش‌های
+     *     قدیمی استفاده شده‌اند.
      */
     protected function is_technician(int $user_id): bool
     {
@@ -71,6 +88,14 @@ class TCS_Technician_Sync
         $user = get_userdata($user_id);
         if ($user && in_array(self::TECH_ROLE_VALUE, (array) $user->roles, true)) {
             return true;
+        }
+
+        // legacy: کاربر سابقاً تکنسین بوده — متاهای اختصاصی هنوز هست
+        foreach (self::TECH_DISCRIMINATOR_META_KEYS as $key) {
+            $val = get_user_meta($user_id, $key, true);
+            if (is_string($val) && trim($val) !== '') {
+                return true;
+            }
         }
 
         return false;
@@ -157,14 +182,37 @@ class TCS_Technician_Sync
     /**
      * شمارش کل تکنسین‌ها بر اساس متای role=technician.
      */
+    /**
+     * SQL برای DISTINCT user_id از همهٔ شاخص‌های تکنسین:
+     *  - role meta = 'technician'
+     *  - یا داشتن هر یک از متاهای اختصاصی (firstname_tech, technician_id)
+     *
+     * این تضمین می‌کند تکنسین‌های قدیمی که فقط role‌شان حذف شده هم
+     * در batch backfill شناسایی شوند.
+     */
+    protected function technician_ids_subquery_sql(\wpdb $wpdb): string
+    {
+        $extra_keys = array_map(
+            fn ($k) => "'" . esc_sql($k) . "'",
+            self::TECH_DISCRIMINATOR_META_KEYS
+        );
+        $extra_keys_in = implode(',', $extra_keys);
+
+        $role_key = esc_sql(self::ROLE_META_KEY);
+        $role_val = esc_sql(self::TECH_ROLE_VALUE);
+
+        return "
+            SELECT DISTINCT user_id FROM {$wpdb->usermeta}
+            WHERE (meta_key = '{$role_key}' AND meta_value = '{$role_val}')
+               OR (meta_key IN ({$extra_keys_in}) AND meta_value <> '' AND meta_value IS NOT NULL)
+        ";
+    }
+
     protected function count_technicians(): int
     {
         global $wpdb;
-        return (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_key = %s AND meta_value = %s",
-            self::ROLE_META_KEY,
-            self::TECH_ROLE_VALUE
-        ));
+        $sub = $this->technician_ids_subquery_sql($wpdb);
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM ({$sub}) AS t");
     }
 
     /**
@@ -173,13 +221,11 @@ class TCS_Technician_Sync
     protected function fetch_technician_ids(int $offset, int $limit): array
     {
         global $wpdb;
+        $sub = $this->technician_ids_subquery_sql($wpdb);
         $rows = $wpdb->get_col($wpdb->prepare(
-            "SELECT user_id FROM {$wpdb->usermeta}
-             WHERE meta_key = %s AND meta_value = %s
+            "SELECT user_id FROM ({$sub}) AS t
              ORDER BY user_id ASC
              LIMIT %d OFFSET %d",
-            self::ROLE_META_KEY,
-            self::TECH_ROLE_VALUE,
             $limit,
             $offset
         ));
