@@ -57,8 +57,11 @@
                     <dt class="text-gray-500 dark:text-gray-400 col-span-2">شرح مشکل</dt>
                     <dd class="text-gray-900 dark:text-gray-100 col-span-2 whitespace-pre-wrap">{{ $order->problem_description ?: '—' }}</dd>
 
-                    <dt class="text-gray-500 dark:text-gray-400">استان / شهر</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->province?->name ?: '—' }}{{ $order->city ? ' / ' . $order->city->name : '' }}</dd>
+                    <dt class="text-gray-500 dark:text-gray-400">استان</dt>
+                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->province?->name ?: '—' }}</dd>
+
+                    <dt class="text-gray-500 dark:text-gray-400">شهر</dt>
+                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->city?->name ?: '—' }}</dd>
 
                     <dt class="text-gray-500 dark:text-gray-400">کد پستی</dt>
                     <dd class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $order->postal_code ?: '—' }}</dd>
