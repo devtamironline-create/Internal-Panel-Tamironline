@@ -153,7 +153,7 @@ class WalletController extends Controller
 
         $this->wallet->recordTransaction(
             technician: $technician,
-            type: WalletTxType::Credit,
+            type: WalletTxType::WalletCharge,
             amount: $amount,
             note: $validated['description'] ?? null,
             createdBy: auth()->id(),

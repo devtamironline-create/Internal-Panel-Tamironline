@@ -303,9 +303,11 @@ class SyncFinancialController extends Controller
             throw new \RuntimeException('technician not resolved for wallet transaction');
         }
 
-        // تشخیص enum + علامت
+        // تشخیص enum + علامت — مهم: wallet=1 در WP یعنی «شارژ کیف‌پول»
+        // (شرکت → تکنسین، علامت مثبت). به WalletCharge می‌رود نه Credit
+        // (که برای ثبت دستی «واریز تکنسین به شرکت» با علامت منفی است).
         $txType = match ($type) {
-            'wallet_credit' => WalletTxType::Credit,
+            'wallet_credit' => WalletTxType::WalletCharge,
             'reward' => WalletTxType::Reward,
             'penalty' => WalletTxType::Penalty,
         };
