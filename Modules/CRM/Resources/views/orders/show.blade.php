@@ -42,8 +42,11 @@
                         <span class="text-xs">(@tel($order->customer_mobile))</span>
                     </dd>
 
+                    <dt class="text-gray-500 dark:text-gray-400">برند</dt>
+                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->brand?->name ?: '—' }}</dd>
+
                     <dt class="text-gray-500 dark:text-gray-400">دستگاه</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->brand?->name ?: '—' }}{{ $order->device ? ' / ' . $order->device->name : '' }}</dd>
+                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->device?->name ?: '—' }}</dd>
 
                     <dt class="text-gray-500 dark:text-gray-400">عنوان مشکل</dt>
                     <dd class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</dd>
