@@ -139,33 +139,138 @@
                 @endcan
             </div>
 
-            {{-- تاریخچه وضعیت --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تاریخچه وضعیت</h2>
-                <ol class="space-y-3 text-sm">
-                    @forelse($order->statusLogs as $log)
-                    <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($log->created_at)</span>
-                        <div class="flex-1">
-                            <div class="text-gray-900 dark:text-gray-100">
-                                @if($log->fromLabel())
-                                <span>{{ $log->fromLabel() }}</span>
-                                <span class="text-gray-400 mx-1">→</span>
+            {{-- تاریخچه و رویدادها --}}
+            @php
+                $wpEvents = $order->wp_events;
+                $wpNotes = $order->wp_notes;
+                $wpReturns = $order->wp_return_logs;
+                // مرتب‌سازی نزولی بر اساس date (مثل krsort در WP)
+                $sortByDateDesc = function (array $items): array {
+                    usort($items, fn ($a, $b) => strcmp((string) ($b['date'] ?? ''), (string) ($a['date'] ?? '')));
+                    return $items;
+                };
+                $wpEvents = $sortByDateDesc($wpEvents);
+                $wpNotes = $sortByDateDesc($wpNotes);
+            @endphp
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تاریخچه وضعیت</h2>
+                    <ol class="space-y-3 text-sm">
+                        @forelse($order->statusLogs as $log)
+                        <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($log->created_at)</span>
+                            <div class="flex-1">
+                                <div class="text-gray-900 dark:text-gray-100">
+                                    @if($log->fromLabel())
+                                    <span>{{ $log->fromLabel() }}</span>
+                                    <span class="text-gray-400 mx-1">→</span>
+                                    @endif
+                                    <strong>{{ $log->toLabel() }}</strong>
+                                </div>
+                                @if($log->note)
+                                <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ $log->note }}</div>
                                 @endif
-                                <strong>{{ $log->toLabel() }}</strong>
+                                @if($log->changer)
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">توسط: {{ $log->changer->name ?? '—' }}</div>
+                                @endif
                             </div>
-                            @if($log->note)
-                            <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ $log->note }}</div>
-                            @endif
-                            @if($log->changer)
-                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">توسط: {{ $log->changer->name ?? '—' }}</div>
-                            @endif
-                        </div>
-                    </li>
-                    @empty
-                    <li class="text-gray-500 text-sm">تاریخچه‌ای ثبت نشده.</li>
-                    @endforelse
-                </ol>
+                        </li>
+                        @empty
+                        <li class="text-gray-500 text-sm">رویدادی در پنل جدید ثبت نشده.</li>
+                        @endforelse
+                    </ol>
+                </div>
+
+                {{-- رویدادهای پنل قبلی (WP) --}}
+                @if(count($wpEvents))
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">رویدادهای پنل قبلی</h3>
+                    <ul class="space-y-3 text-sm">
+                        @foreach($wpEvents as $ev)
+                        <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">{{ $ev['date'] ?? '—' }}</span>
+                            <div class="flex-1">
+                                @if(! empty($ev['subject']))
+                                <div class="text-gray-900 dark:text-gray-100 font-medium">{{ $ev['subject'] }}</div>
+                                @endif
+                                @if(! empty($ev['content']))
+                                <div class="text-xs text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{!! strip_tags((string) $ev['content'], '<br><b><strong><i><em>') !!}</div>
+                                @endif
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3">
+                                    @if(! empty($ev['author']))
+                                    <span>اپراتور/تکنسین: {{ is_numeric($ev['author']) ? '#' . $ev['author'] : $ev['author'] }}</span>
+                                    @endif
+                                    @if(! empty($ev['status']))
+                                    <span>وضعیت: {{ $ev['status'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
+
+                {{-- یادداشت‌های پنل قبلی --}}
+                @if(count($wpNotes))
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">یادداشت‌های پنل قبلی</h3>
+                    <ul class="space-y-3 text-sm">
+                        @foreach($wpNotes as $nt)
+                        <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">{{ $nt['date'] ?? '—' }}</span>
+                            <div class="flex-1">
+                                @if(! empty($nt['content']))
+                                <div class="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{!! strip_tags((string) $nt['content'], '<br><b><strong><i><em>') !!}</div>
+                                @endif
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3">
+                                    @if(! empty($nt['author']))
+                                    <span>اپراتور/تکنسین: {{ is_numeric($nt['author']) ? '#' . $nt['author'] : $nt['author'] }}</span>
+                                    @endif
+                                    @if(! empty($nt['status']))
+                                    <span>وضعیت: {{ $nt['status'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
+
+                {{-- لاگ بازگشت سفارش --}}
+                @if(count($wpReturns))
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">لاگ بازگشت سفارش</h3>
+                    <ul class="space-y-3 text-sm">
+                        @foreach($wpReturns as $rt)
+                        @php
+                            $returnType = $rt['return_type'] ?? null;
+                            if ((string) $returnType === '1') {
+                                $msg = $rt['invoice_descripotion'] ?? '';
+                            } else {
+                                $msg = trim(($rt['cancel_desc'] ?? '') . ' ' . ($rt['cancel_desc_other'] ?? ''));
+                            }
+                            $negativeMsg = ((int) ($rt['negative_invoice'] ?? 0)) === 1 ? 'بلی' : 'خیر';
+                        @endphp
+                        <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">{{ $rt['date'] ?? '—' }}</span>
+                            <div class="flex-1">
+                                @if($msg !== '')
+                                <div class="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{{ $msg }}</div>
+                                @endif
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3">
+                                    <span>منفی شدن فاکتور: {{ $negativeMsg }}</span>
+                                    @if(! empty($rt['author']))
+                                    <span>توسط: {{ is_numeric($rt['author']) ? '#' . $rt['author'] : $rt['author'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
             </div>
         </div>
 

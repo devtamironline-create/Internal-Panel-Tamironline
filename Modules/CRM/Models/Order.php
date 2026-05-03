@@ -202,6 +202,68 @@ class Order extends Model
     }
 
     /**
+     * رویدادهای WP (لیست پیام‌ها) — accessor.
+     * منبع: order_description_content — در WP به‌صورت آرایهٔ PHP-serialized
+     * یا JSON ذخیره/سینک می‌شود. خروجی همیشه آرایهٔ مرتب‌شدهٔ نزولی بر
+     * اساس date (مثل krsort در WP).
+     *
+     * هر آیتم: ['subject' => string, 'content' => string,
+     *           'author' => int|string, 'date' => string, 'status' => string]
+     */
+    public function getWpEventsAttribute(): array
+    {
+        return $this->parseWpLogField($this->order_description_content);
+    }
+
+    /** یادداشت‌های WP — منبع: order_note_content */
+    public function getWpNotesAttribute(): array
+    {
+        return $this->parseWpLogField($this->order_note_content);
+    }
+
+    /** لاگ بازگشت سفارش — منبع: log_return */
+    public function getWpReturnLogsAttribute(): array
+    {
+        return $this->parseWpLogField($this->log_return);
+    }
+
+    /**
+     * تجزیهٔ یکی از فیلدهای لاگ WP — اول json_decode، در صورت ناموفق
+     * unserialize. خروجی همیشه array (در صورت خرابی، []).
+     */
+    protected function parseWpLogField($raw): array
+    {
+        if (empty($raw)) {
+            return [];
+        }
+        if (is_array($raw)) {
+            return $raw;
+        }
+        if (! is_string($raw)) {
+            return [];
+        }
+
+        $trimmed = trim($raw);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        // 1) JSON
+        $decoded = json_decode($trimmed, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        // 2) PHP serialize (فرمت WP postmeta)
+        $unserialized = @unserialize($trimmed);
+        if (is_array($unserialized)) {
+            return $unserialized;
+        }
+
+        return [];
+    }
+
+    /**
      * خلاصهٔ مالی فاکتور — هم‌ارز با Orders/show_order.php در WP CRM.
      *
      * در WP، سه عدد مستقل ذخیره می‌شود:
