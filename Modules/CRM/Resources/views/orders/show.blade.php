@@ -65,6 +65,19 @@
 
                     <dt class="text-gray-500 dark:text-gray-400 col-span-2">آدرس</dt>
                     <dd class="text-gray-900 dark:text-gray-100 col-span-2 whitespace-pre-wrap">{{ $order->address ?: '—' }}</dd>
+
+                    @php $deviceImg = $order->device_img1 ?: $order->device_image_input; @endphp
+                    @if($deviceImg)
+                    <dt class="text-gray-500 dark:text-gray-400 col-span-2 pt-2 border-t border-gray-100 dark:border-gray-700">تصویر دستگاه</dt>
+                    <dd class="col-span-2">
+                        <a href="{{ $deviceImg }}" target="_blank" rel="noopener" class="inline-block">
+                            <img src="{{ $deviceImg }}" alt="تصویر دستگاه" loading="lazy"
+                                 class="max-h-40 rounded-lg border border-gray-200 dark:border-gray-700 object-cover hover:opacity-90 transition-opacity">
+                        </a>
+                        <a href="{{ $deviceImg }}" target="_blank" rel="noopener"
+                           class="block mt-2 text-xs text-brand-600 hover:underline" dir="ltr">{{ $deviceImg }}</a>
+                    </dd>
+                    @endif
                 </dl>
             </div>
 
