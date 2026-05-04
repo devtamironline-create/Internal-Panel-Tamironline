@@ -6,7 +6,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان *</label>
             <div wire:ignore>
-                <select wire:model.live="provinceId" data-tom-select id="wizard-province-select"
+                <select id="wizard-province-select" data-tom-select
                         data-cities-url="{{ url('/admin/crm/provinces') }}/__ID__/cities"
                         data-placeholder="— انتخاب کنید —">
                     <option value="">— انتخاب کنید —</option>
@@ -20,9 +20,9 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر / منطقه *</label>
             <div wire:ignore>
-                <select wire:model="cityId" data-tom-select id="wizard-city-select"
-                        data-placeholder="{{ $provinceId ? 'انتخاب کنید' : 'ابتدا استان را انتخاب کنید' }}">
-                    <option value="">— {{ $provinceId ? 'انتخاب کنید' : 'ابتدا استان را انتخاب کنید' }} —</option>
+                <select id="wizard-city-select" data-tom-select
+                        data-placeholder="— انتخاب کنید —">
+                    <option value="">— ابتدا استان را انتخاب کنید —</option>
                     @foreach($this->cities as $c)
                         <option value="{{ $c->id }}" @selected($cityId == $c->id)>{{ $c->name }}</option>
                     @endforeach
@@ -38,11 +38,15 @@
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
     </div>
 
-    {{-- Cascade hooked directly into Tom Select's own event system so it
-         fires regardless of native dispatch behavior. Retries until both
-         instances are mounted, then attaches once. --}}
     <script>
     (function () {
+        // Resolve a $wire instance for the current Livewire component.
+        function getWire() {
+            var root = document.querySelector('[wire\\:id]');
+            if (!root || !window.Livewire) return null;
+            try { return Livewire.find(root.getAttribute('wire:id')); } catch (e) { return null; }
+        }
+
         async function loadCities(province, city) {
             var id = province.value;
             if (!id) {
@@ -56,10 +60,10 @@
             try {
                 var url = province.dataset.citiesUrl.replace('__ID__', id);
                 var res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!res.ok) return;
+                if (!res.ok) { console.warn('[cascade] fetch not ok', res.status); return; }
                 var cities = await res.json();
+                console.log('[cascade] loaded', cities.length, 'cities for province', id);
                 if (city.tomselect) {
-                    var prev = city.value;
                     city.tomselect.clear(true);
                     city.tomselect.clearOptions();
                     cities.forEach(function (c) {
@@ -67,12 +71,9 @@
                     });
                     city.tomselect.refreshOptions(false);
                     city.tomselect.enable();
-                    if (prev && cities.some(function (c) { return String(c.id) === String(prev); })) {
-                        city.tomselect.setValue(prev, true);
-                    }
                 }
             } catch (e) {
-                console.warn('cities cascade failed', e);
+                console.warn('[cascade] load failed', e);
             }
         }
 
@@ -80,36 +81,39 @@
             var province = document.getElementById('wizard-province-select');
             var city = document.getElementById('wizard-city-select');
             if (!province || !city) return false;
-
-            // Wait until BOTH Tom Select instances are mounted
             if (!province.tomselect || !city.tomselect) return false;
-
             if (province.dataset.cascadeInited === '1') return true;
             province.dataset.cascadeInited = '1';
+            console.log('[cascade] attached');
 
-            // Initial state: disable city if no province
-            if (!province.value) city.tomselect.disable();
-            else city.tomselect.enable();
+            // Initial state
+            if (!province.value) city.tomselect.disable(); else city.tomselect.enable();
 
-            // Hook into Tom Select's own change event
-            province.tomselect.on('change', function () {
+            // Province change: sync Livewire + fetch cities
+            province.tomselect.on('change', function (val) {
+                console.log('[cascade] province →', val);
+                var w = getWire();
+                if (w) try { w.set('provinceId', val, false); } catch (e) {}
                 loadCities(province, city);
+            });
+
+            // City change: sync Livewire
+            city.tomselect.on('change', function (val) {
+                var w = getWire();
+                if (w) try { w.set('cityId', val, false); } catch (e) {}
             });
 
             return true;
         }
 
-        // Poll every 80ms until both Tom Selects are ready, then attach once.
         var tries = 0;
         var poll = setInterval(function () {
-            if (attachCascade() || ++tries > 60) { // ~5s max
-                clearInterval(poll);
-            }
+            if (attachCascade() || ++tries > 80) clearInterval(poll); // ~6.4s max
         }, 80);
         document.addEventListener('livewire:navigated', function () {
             tries = 0;
             poll = setInterval(function () {
-                if (attachCascade() || ++tries > 60) clearInterval(poll);
+                if (attachCascade() || ++tries > 80) clearInterval(poll);
             }, 80);
         });
     })();
