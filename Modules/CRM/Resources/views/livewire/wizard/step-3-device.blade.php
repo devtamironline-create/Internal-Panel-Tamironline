@@ -75,17 +75,20 @@
                 <input type="text" x-model="query" placeholder="برای دیدن ایرادها، نام آن را جستجو کنید..."
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent">
 
-                {{-- نتایج فقط زمانی نمایش داده شوند که کاربر چیزی تایپ کرده --}}
+                {{-- نتایج فقط زمانی نمایش داده شوند که کاربر چیزی تایپ کرده.
+                     آیتم‌های انتخاب‌شده از نتایج خارج می‌شوند (فقط به‌صورت
+                     chip بالا دیده می‌شوند) — برای deselect باید روی chip
+                     کلیک کرد. --}}
                 <div x-show="query.length > 0" x-cloak class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
                     @foreach($this->objectionsList as $i => $opt)
                         @php $checked = in_array($opt, $objections, true); @endphp
+                        @if(! $checked)
                         <button x-show="matches(@js($opt))" x-cloak
                                 wire:key="obj-{{ $i }}" type="button" wire:click="toggleObjection(@js($opt))"
-                                class="px-3 py-2 rounded-lg border text-sm text-right transition
-                                       {{ $checked ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 text-gray-700 dark:text-gray-300' }}">
-                            @if($checked) ✓ @endif
+                                class="px-3 py-2 rounded-lg border text-sm text-right transition border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-gray-700 dark:text-gray-300">
                             {{ $opt }}
                         </button>
+                        @endif
                     @endforeach
                 </div>
 
