@@ -102,12 +102,10 @@
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نحوه آشنایی (معرف)</label>
         @if(count($this->introductionList))
-            <select wire:model="introduction" data-searchable class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                <option value="">— انتخاب کنید —</option>
-                @foreach($this->introductionList as $opt)
-                    <option value="{{ $opt }}">{{ $opt }}</option>
-                @endforeach
-            </select>
+            <x-searchable-select
+                name="introduction"
+                :options="collect($this->introductionList)->mapWithKeys(fn($v) => [$v => $v])->toArray()"
+                placeholder="— انتخاب کنید —" />
         @else
             <input type="text" wire:model="introduction" placeholder="مثلاً اینستاگرام"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
