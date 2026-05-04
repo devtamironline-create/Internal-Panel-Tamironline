@@ -3,6 +3,7 @@
 namespace Modules\CRM\Livewire;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -391,12 +392,13 @@ class OrderWizard extends Component
 
     public function submit(OrderSmsNotifier $smsNotifier): void
     {
-        // اعتبارسنجی نهایی همهٔ مراحل
-        for ($s = 1; $s <= 4; $s++) {
-            $this->validateStep($s);
-        }
+        try {
+            // اعتبارسنجی نهایی همهٔ مراحل
+            for ($s = 1; $s <= 4; $s++) {
+                $this->validateStep($s);
+            }
 
-        $order = DB::transaction(function () {
+            $order = DB::transaction(function () {
             // ۱) مشتری
             $customer = $this->showNewCustomerForm
                 ? Customer::create([
@@ -448,16 +450,28 @@ class OrderWizard extends Component
             ]);
 
             return $order;
-        });
+            });
 
-        $smsNotifier->notify($order, SmsTrigger::OrderCreated);
-        if ($order->technician_id) {
-            $smsNotifier->notify($order->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+            $smsNotifier->notify($order, SmsTrigger::OrderCreated);
+            if ($order->technician_id) {
+                $smsNotifier->notify($order->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+            }
+
+            session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
+
+            $this->redirectRoute('crm.orders.show', ['order' => $order->id], navigate: false);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Livewire خودش پیام‌های validation را در $errors نشان می‌دهد
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('OrderWizard submit failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->addError('submit', 'خطا در ثبت سفارش: ' . $e->getMessage());
         }
-
-        session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
-
-        $this->redirectRoute('crm.orders.show', ['order' => $order->id], navigate: false);
     }
 
     public function render()
