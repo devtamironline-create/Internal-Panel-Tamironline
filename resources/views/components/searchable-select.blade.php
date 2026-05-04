@@ -18,12 +18,11 @@
     $isDisabled = filter_var($disabled, FILTER_VALIDATE_BOOLEAN);
 @endphp
 
-{{-- Livewire-friendly searchable select. No native <select> involved.
-     value <-> $wire.{name} via x-modelable + wire:model. --}}
-<div x-data='{
+<div
+    x-data='{
         open: false,
         query: "",
-        value: "",
+        value: $wire.entangle("{{ $name }}"){{ $isLive ? '.live' : '' }},
         options: @json($list),
         placeholder: @json($placeholder),
         searchPlaceholder: @json($searchPlaceholder),
@@ -45,8 +44,6 @@
             this.query = "";
         },
     }'
-    x-modelable="value"
-    wire:model{{ $isLive ? '.live' : '' }}="{{ $name }}"
     x-init='$watch("open", function(v){ if (!v) { query = ""; } })'
     @click.outside="open = false"
     @keydown.escape.window="open = false"
