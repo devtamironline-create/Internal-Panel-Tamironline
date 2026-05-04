@@ -29,18 +29,22 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع دستگاه *</label>
-            <x-searchable-select
-                name="deviceId"
-                :options="$this->devices->pluck('name', 'id')->toArray()"
-                placeholder="— انتخاب کنید —" />
+            <select wire:model="deviceId" class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                <option value="">— انتخاب کنید —</option>
+                @foreach($this->devices as $d)
+                    <option value="{{ $d->id }}">{{ $d->name }}</option>
+                @endforeach
+            </select>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">برند *</label>
-            <x-searchable-select
-                name="brandId"
-                :options="$this->brands->pluck('name', 'id')->toArray()"
-                placeholder="— انتخاب کنید —" />
+            <select wire:model="brandId" class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                <option value="">— انتخاب کنید —</option>
+                @foreach($this->brands as $b)
+                    <option value="{{ $b->id }}">{{ $b->name }}</option>
+                @endforeach
+            </select>
         </div>
     </div>
 
