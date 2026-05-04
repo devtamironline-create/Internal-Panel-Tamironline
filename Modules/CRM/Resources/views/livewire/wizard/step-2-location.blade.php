@@ -38,62 +38,80 @@
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
     </div>
 
-    {{-- Cascade for the Tom-Select-wrapped pair: when province changes,
-         fetch its cities via AJAX and rebuild city's options on the
-         Tom Select instance directly. wire:ignore on the parents stops
-         Livewire from morphing the selects (which would break Tom Select
-         wrappers); wire:model.live still fires on the underlying <select>
-         so server-side provinceId stays in sync for validation. --}}
+    {{-- Cascade hooked directly into Tom Select's own event system so it
+         fires regardless of native dispatch behavior. Retries until both
+         instances are mounted, then attaches once. --}}
     <script>
     (function () {
+        async function loadCities(province, city) {
+            var id = province.value;
+            if (!id) {
+                if (city.tomselect) {
+                    city.tomselect.clear(true);
+                    city.tomselect.clearOptions();
+                    city.tomselect.disable();
+                }
+                return;
+            }
+            try {
+                var url = province.dataset.citiesUrl.replace('__ID__', id);
+                var res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) return;
+                var cities = await res.json();
+                if (city.tomselect) {
+                    var prev = city.value;
+                    city.tomselect.clear(true);
+                    city.tomselect.clearOptions();
+                    cities.forEach(function (c) {
+                        city.tomselect.addOption({ value: String(c.id), text: c.name });
+                    });
+                    city.tomselect.refreshOptions(false);
+                    city.tomselect.enable();
+                    if (prev && cities.some(function (c) { return String(c.id) === String(prev); })) {
+                        city.tomselect.setValue(prev, true);
+                    }
+                }
+            } catch (e) {
+                console.warn('cities cascade failed', e);
+            }
+        }
+
         function attachCascade() {
             var province = document.getElementById('wizard-province-select');
             var city = document.getElementById('wizard-city-select');
-            if (!province || !city) return;
-            if (province.dataset.cascadeInited === '1') return;
+            if (!province || !city) return false;
+
+            // Wait until BOTH Tom Select instances are mounted
+            if (!province.tomselect || !city.tomselect) return false;
+
+            if (province.dataset.cascadeInited === '1') return true;
             province.dataset.cascadeInited = '1';
 
-            province.addEventListener('change', async function () {
-                var id = province.value;
-                if (!id) {
-                    if (city.tomselect) {
-                        city.tomselect.clear();
-                        city.tomselect.clearOptions();
-                        city.tomselect.disable();
-                        city.tomselect.settings.placeholder = 'ابتدا استان را انتخاب کنید';
-                    }
-                    return;
-                }
-                try {
-                    var url = province.dataset.citiesUrl.replace('__ID__', id);
-                    var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    var cities = await res.json();
-                    if (city.tomselect) {
-                        var prev = city.value;
-                        city.tomselect.clear(true);
-                        city.tomselect.clearOptions();
-                        cities.forEach(function (c) {
-                            city.tomselect.addOption({ value: String(c.id), text: c.name });
-                        });
-                        city.tomselect.refreshOptions(false);
-                        city.tomselect.enable();
-                        city.tomselect.settings.placeholder = 'انتخاب کنید';
-                        // اگر شهر قبلی هنوز در لیست جدید بود، حفظش کن
-                        if (prev && cities.some(function (c) { return String(c.id) === String(prev); })) {
-                            city.tomselect.setValue(prev, true);
-                        }
-                    } else {
-                        city.innerHTML = '<option value="">— انتخاب کنید —</option>' +
-                            cities.map(function (c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
-                        city.disabled = false;
-                    }
-                } catch (e) {}
+            // Initial state: disable city if no province
+            if (!province.value) city.tomselect.disable();
+            else city.tomselect.enable();
+
+            // Hook into Tom Select's own change event
+            province.tomselect.on('change', function () {
+                loadCities(province, city);
             });
+
+            return true;
         }
-        attachCascade();
-        setTimeout(attachCascade, 100);
-        setTimeout(attachCascade, 400);
-        document.addEventListener('livewire:navigated', attachCascade);
+
+        // Poll every 80ms until both Tom Selects are ready, then attach once.
+        var tries = 0;
+        var poll = setInterval(function () {
+            if (attachCascade() || ++tries > 60) { // ~5s max
+                clearInterval(poll);
+            }
+        }, 80);
+        document.addEventListener('livewire:navigated', function () {
+            tries = 0;
+            poll = setInterval(function () {
+                if (attachCascade() || ++tries > 60) clearInterval(poll);
+            }, 80);
+        });
     })();
     </script>
 </div>
