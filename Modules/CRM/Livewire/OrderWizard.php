@@ -56,9 +56,6 @@ class OrderWizard extends Component
     public array $objections = [];
     public string $objectionDescription = '';
 
-    // ─── Diagnostics (موقت — برای ردیابی کلیک ثبت سفارش) ─────────
-    public int $submitAttempts = 0;
-
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
     public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
@@ -395,8 +392,6 @@ class OrderWizard extends Component
 
     public function submit(): void
     {
-        $this->submitAttempts++;
-
         try {
             // resolve داخل بدنه تا DI روی Livewire action نشکند
             $smsNotifier = app(OrderSmsNotifier::class);
