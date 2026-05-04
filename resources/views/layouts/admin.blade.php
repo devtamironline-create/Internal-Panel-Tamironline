@@ -1295,6 +1295,154 @@
     </script>
 
     @stack('scripts')
+
+    {{-- Searchable select: any <select data-searchable> becomes a dropdown
+         with a Persian-normalized search box. Underlying <select> stays in
+         the DOM (display:none) so wire:model and form submit keep working. --}}
+    <script>
+    (function () {
+        const norm = s => String(s ?? '').replace(/[يﻱ]/g, 'ی').replace(/[كﻙ]/g, 'ک').toLowerCase().trim();
+
+        function init(selectEl) {
+            if (selectEl.__tcsInited) return;
+            selectEl.__tcsInited = true;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tcs-ss relative';
+            selectEl.parentNode.insertBefore(wrapper, selectEl);
+            wrapper.appendChild(selectEl);
+            selectEl.style.display = 'none';
+
+            const display = document.createElement('button');
+            display.type = 'button';
+            display.className = (selectEl.className || '') + ' tcs-ss-display flex items-center justify-between text-right';
+            display.style.width = '100%';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'truncate';
+            const arrow = document.createElement('span');
+            arrow.innerHTML = '▾';
+            arrow.className = 'text-xs text-gray-400 ms-2';
+            display.appendChild(labelSpan);
+            display.appendChild(arrow);
+            wrapper.appendChild(display);
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'tcs-ss-dropdown absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-72 overflow-hidden hidden';
+
+            const search = document.createElement('input');
+            search.type = 'text';
+            search.placeholder = 'جستجو...';
+            search.className = 'w-full px-3 py-2 border-b border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-100 text-sm focus:outline-none';
+
+            const list = document.createElement('ul');
+            list.className = 'overflow-y-auto max-h-56';
+
+            dropdown.appendChild(search);
+            dropdown.appendChild(list);
+            wrapper.appendChild(dropdown);
+
+            function readOptions() {
+                return Array.from(selectEl.options).map(o => ({
+                    value: o.value, label: o.text, disabled: o.disabled,
+                }));
+            }
+
+            function render(query = '') {
+                const q = norm(query);
+                const opts = readOptions();
+                const items = q ? opts.filter(o => norm(o.label).includes(q)) : opts;
+                list.innerHTML = '';
+                if (items.length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = 'یافت نشد';
+                    li.className = 'px-3 py-2 text-sm text-gray-400';
+                    list.appendChild(li);
+                    return;
+                }
+                items.forEach(opt => {
+                    const li = document.createElement('li');
+                    li.textContent = opt.label;
+                    const isSelected = String(opt.value) === String(selectEl.value);
+                    li.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' +
+                        (isSelected ? ' bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 font-medium' : '');
+                    if (opt.disabled) {
+                        li.className += ' opacity-50 pointer-events-none';
+                    } else {
+                        li.addEventListener('click', () => {
+                            selectEl.value = opt.value;
+                            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                            selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            updateDisplay();
+                            close();
+                        });
+                    }
+                    list.appendChild(li);
+                });
+            }
+
+            function updateDisplay() {
+                const opts = readOptions();
+                const cur = opts.find(o => String(o.value) === String(selectEl.value));
+                if (cur && cur.value !== '') {
+                    labelSpan.textContent = cur.label;
+                    labelSpan.classList.remove('text-gray-400');
+                } else {
+                    labelSpan.textContent = (opts[0] && opts[0].value === '') ? opts[0].label : (selectEl.dataset.placeholder || '— انتخاب کنید —');
+                    labelSpan.classList.add('text-gray-400');
+                }
+            }
+
+            function open() {
+                dropdown.classList.remove('hidden');
+                search.value = '';
+                render();
+                setTimeout(() => search.focus(), 0);
+            }
+            function close() { dropdown.classList.add('hidden'); }
+
+            display.addEventListener('click', () => {
+                dropdown.classList.contains('hidden') ? open() : close();
+            });
+            search.addEventListener('input', () => render(search.value));
+            document.addEventListener('click', (e) => {
+                if (!wrapper.contains(e.target)) close();
+            });
+
+            // Re-render on Livewire-driven option/value changes (e.g. cascading
+            // city select after province changes, or wire:model.live update).
+            const observer = new MutationObserver(() => updateDisplay());
+            observer.observe(selectEl, { childList: true, subtree: true, attributes: true });
+
+            updateDisplay();
+        }
+
+        function scan(root) {
+            (root || document).querySelectorAll('select[data-searchable]').forEach(init);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => scan());
+        document.addEventListener('livewire:navigated', () => scan());
+        document.addEventListener('livewire:initialized', () => {
+            if (window.Livewire && Livewire.hook) {
+                Livewire.hook('morph.added', ({ el }) => {
+                    if (el && el.tagName === 'SELECT' && el.hasAttribute('data-searchable')) init(el);
+                    else if (el) scan(el);
+                });
+            }
+        });
+        // Late safety: anything injected outside Livewire still gets caught.
+        new MutationObserver(records => {
+            for (const r of records) for (const n of r.addedNodes) {
+                if (n.nodeType === 1) {
+                    if (n.tagName === 'SELECT' && n.hasAttribute('data-searchable')) init(n);
+                    else scan(n);
+                }
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+
     @include('components.call-notification')
     @if(!request()->routeIs('admin.messenger'))
         @include('components.chat-widget')
