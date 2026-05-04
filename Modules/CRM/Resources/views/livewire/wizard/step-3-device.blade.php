@@ -48,24 +48,33 @@
         </div>
     </div>
 
-    {{-- ایرادات (multi-select) --}}
+    {{-- ایرادات (multi-select با سرچ) --}}
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید)</label>
         @if(count($this->objectionsList))
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                @foreach($this->objectionsList as $i => $opt)
-                    @php $checked = in_array($opt, $objections, true); @endphp
-                    <button wire:key="obj-{{ $i }}" type="button" wire:click="toggleObjection(@js($opt))"
-                            class="px-3 py-2 rounded-lg border text-sm text-right transition
-                                   {{ $checked ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 text-gray-700 dark:text-gray-300' }}">
-                        @if($checked) ✓ @endif
-                        {{ $opt }}
-                    </button>
-                @endforeach
+            <div x-data="{
+                query: '',
+                norm(s) { return String(s ?? '').replace(/[يﻱ]/g, 'ی').replace(/[كﻙ]/g, 'ک').toLowerCase().trim(); },
+                matches(label) { return !this.query || this.norm(label).includes(this.norm(this.query)); }
+            }">
+                <input type="text" x-model="query" placeholder="جستجو در ایرادها..."
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    @foreach($this->objectionsList as $i => $opt)
+                        @php $checked = in_array($opt, $objections, true); @endphp
+                        <button x-show="matches(@js($opt))" x-cloak
+                                wire:key="obj-{{ $i }}" type="button" wire:click="toggleObjection(@js($opt))"
+                                class="px-3 py-2 rounded-lg border text-sm text-right transition
+                                       {{ $checked ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 text-gray-700 dark:text-gray-300' }}">
+                            @if($checked) ✓ @endif
+                            {{ $opt }}
+                        </button>
+                    @endforeach
+                </div>
+                @if(count($objections))
+                    <div class="mt-2 text-xs text-gray-500">{{ count($objections) }} مورد انتخاب شده</div>
+                @endif
             </div>
-            @if(count($objections))
-                <div class="mt-2 text-xs text-gray-500">{{ count($objections) }} مورد انتخاب شده</div>
-            @endif
         @else
             <p class="text-sm text-amber-600">⚠ لیست ایرادها از تنظیمات WP بارگیری نشد. ابتدا «سینک تنظیمات» را در WP بزنید.</p>
         @endif
