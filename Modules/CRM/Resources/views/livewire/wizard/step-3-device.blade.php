@@ -55,11 +55,28 @@
             <div x-data="{
                 query: '',
                 norm(s) { return String(s ?? '').replace(/[يﻱ]/g, 'ی').replace(/[كﻙ]/g, 'ک').toLowerCase().trim(); },
-                matches(label) { return !this.query || this.norm(label).includes(this.norm(this.query)); }
+                matches(label) { return this.norm(label).includes(this.norm(this.query)); }
             }">
-                <input type="text" x-model="query" placeholder="جستجو در ایرادها..."
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {{-- ایرادهای انتخاب‌شده — همیشه قابل دیدن --}}
+                @if(count($objections))
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        @foreach($objections as $sel)
+                            <button type="button" wire:click="toggleObjection(@js($sel))"
+                                    wire:key="sel-{{ md5($sel) }}"
+                                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 text-sm hover:bg-brand-200 dark:hover:bg-brand-900/60 transition">
+                                <span>{{ $sel }}</span>
+                                <span class="text-xs">✕</span>
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+
+                {{-- input سرچ --}}
+                <input type="text" x-model="query" placeholder="برای دیدن ایرادها، نام آن را جستجو کنید..."
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+
+                {{-- نتایج فقط زمانی نمایش داده شوند که کاربر چیزی تایپ کرده --}}
+                <div x-show="query.length > 0" x-cloak class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
                     @foreach($this->objectionsList as $i => $opt)
                         @php $checked = in_array($opt, $objections, true); @endphp
                         <button x-show="matches(@js($opt))" x-cloak
@@ -71,6 +88,7 @@
                         </button>
                     @endforeach
                 </div>
+
                 @if(count($objections))
                     <div class="mt-2 text-xs text-gray-500">{{ count($objections) }} مورد انتخاب شده</div>
                 @endif
