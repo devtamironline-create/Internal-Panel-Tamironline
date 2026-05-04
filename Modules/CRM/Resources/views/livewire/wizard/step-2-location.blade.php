@@ -27,17 +27,28 @@
         </div>
     </div>
 
-    @push('scripts')
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل *</label>
+        <textarea wire:model="address" rows="3"
+                  placeholder="خیابان، پلاک، واحد..."
+                  class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
+    </div>
+
+    {{-- Cascade: province → fetch cities → repaint city <select> options.
+         Inline (not @push) so it runs every time this step view renders,
+         even when Livewire only morphs the step body. Idempotent via the
+         cascadeInited dataset flag. --}}
     <script>
     (function () {
         function attachWizardCascade() {
-            const province = document.getElementById('wizard-province-select');
-            const city = document.getElementById('wizard-city-select');
-            if (!province || !city || province.dataset.cascadeInited) return;
+            var province = document.getElementById('wizard-province-select');
+            var city = document.getElementById('wizard-city-select');
+            if (!province || !city) return;
+            if (province.dataset.cascadeInited === '1') return;
             province.dataset.cascadeInited = '1';
 
             province.addEventListener('change', async function () {
-                const id = province.value;
+                var id = province.value;
                 if (!id) {
                     city.innerHTML = '<option value="">— ابتدا استان را انتخاب کنید —</option>';
                     city.disabled = true;
@@ -46,11 +57,11 @@
                 }
                 city.disabled = false;
                 try {
-                    const url = province.dataset.citiesUrl.replace('__ID__', id);
-                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    const cities = await res.json();
+                    var url = province.dataset.citiesUrl.replace('__ID__', id);
+                    var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    var cities = await res.json();
                     city.innerHTML = '<option value="">— انتخاب کنید —</option>' +
-                        cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        cities.map(function (c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
                     city.value = '';
                     city.dispatchEvent(new Event('change', { bubbles: true }));
                 } catch (e) {
@@ -58,18 +69,12 @@
                 }
             });
         }
-        document.addEventListener('DOMContentLoaded', attachWizardCascade);
-        document.addEventListener('livewire:navigated', attachWizardCascade);
-        // also try once now in case the script runs after the elements exist
+        // Try a few times — the searchable-select enhancer in the layout
+        // wraps the <select> after init, but the element + ID survive.
         attachWizardCascade();
+        setTimeout(attachWizardCascade, 50);
+        setTimeout(attachWizardCascade, 250);
+        document.addEventListener('livewire:navigated', attachWizardCascade);
     })();
     </script>
-    @endpush
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل *</label>
-        <textarea wire:model="address" rows="3"
-                  placeholder="خیابان، پلاک، واحد..."
-                  class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
-    </div>
 </div>
