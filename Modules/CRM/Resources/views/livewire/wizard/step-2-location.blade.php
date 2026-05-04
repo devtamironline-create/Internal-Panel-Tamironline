@@ -5,7 +5,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان *</label>
-            <select wire:model.live="provinceId" data-searchable
+            <select wire:model.live="provinceId"
                     class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
                 <option value="">— انتخاب کنید —</option>
                 @foreach($this->provinces as $p)

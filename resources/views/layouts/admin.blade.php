@@ -1391,9 +1391,18 @@
                     labelSpan.textContent = (opts[0] && opts[0].value === '') ? opts[0].label : (selectEl.dataset.placeholder || '— انتخاب کنید —');
                     labelSpan.classList.add('text-gray-400');
                 }
+                // sync disabled state from underlying select to our button
+                display.disabled = selectEl.disabled;
+                if (selectEl.disabled) {
+                    display.classList.add('opacity-50', 'cursor-not-allowed');
+                    close();
+                } else {
+                    display.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
             }
 
             function open() {
+                if (selectEl.disabled) return;
                 dropdown.classList.remove('hidden');
                 search.value = '';
                 render();
@@ -1411,7 +1420,14 @@
 
             // Re-render on Livewire-driven option/value changes (e.g. cascading
             // city select after province changes, or wire:model.live update).
-            const observer = new MutationObserver(() => updateDisplay());
+            const observer = new MutationObserver(() => {
+                updateDisplay();
+                // اگر dropdown باز است، لیست را بعد از تغییر options/disabled
+                // به‌روز کن تا کاربر گزینه‌های جدید را ببیند.
+                if (!dropdown.classList.contains('hidden')) {
+                    render(search.value);
+                }
+            });
             observer.observe(selectEl, { childList: true, subtree: true, attributes: true });
 
             updateDisplay();
