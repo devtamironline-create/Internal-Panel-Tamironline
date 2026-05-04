@@ -56,6 +56,9 @@ class OrderWizard extends Component
     public array $objections = [];
     public string $objectionDescription = '';
 
+    // ─── Diagnostics (موقت — برای ردیابی کلیک ثبت سفارش) ─────────
+    public int $submitAttempts = 0;
+
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
     public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
@@ -390,9 +393,14 @@ class OrderWizard extends Component
         };
     }
 
-    public function submit(OrderSmsNotifier $smsNotifier): void
+    public function submit(): void
     {
+        $this->submitAttempts++;
+
         try {
+            // resolve داخل بدنه تا DI روی Livewire action نشکند
+            $smsNotifier = app(OrderSmsNotifier::class);
+
             // اعتبارسنجی نهایی همهٔ مراحل
             for ($s = 1; $s <= 4; $s++) {
                 $this->validateStep($s);
@@ -459,7 +467,15 @@ class OrderWizard extends Component
 
             session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
 
-            $this->redirectRoute('crm.orders.show', ['order' => $order->id], navigate: false);
+            try {
+                $this->redirect(route('crm.orders.show', $order), navigate: false);
+            } catch (\Throwable $e) {
+                Log::warning('OrderWizard show-redirect failed; falling back to index', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->redirect(route('crm.orders.index'), navigate: false);
+            }
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Livewire خودش پیام‌های validation را در $errors نشان می‌دهد
             throw $e;
