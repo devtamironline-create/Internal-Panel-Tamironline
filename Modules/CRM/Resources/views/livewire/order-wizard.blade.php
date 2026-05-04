@@ -84,6 +84,7 @@
 
         @if($currentStep < 5)
             <button
+                wire:key="wizard-nav-next"
                 type="button"
                 wire:click="next"
                 wire:loading.attr="disabled"
@@ -92,6 +93,7 @@
             </button>
         @else
             <button
+                wire:key="wizard-nav-submit"
                 type="button"
                 wire:click="submit"
                 wire:loading.attr="disabled"
