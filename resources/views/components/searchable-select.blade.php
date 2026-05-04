@@ -16,19 +16,39 @@
     })->values()->toArray();
     $isLive = filter_var($live, FILTER_VALIDATE_BOOLEAN);
     $isDisabled = filter_var($disabled, FILTER_VALIDATE_BOOLEAN);
+    // JSON for in-attribute use. JSON_HEX_APOS turns ' into ' so we
+    // can safely sit inside a single-quoted attribute. JSON_UNESCAPED_UNICODE
+    // keeps Persian characters readable.
+    $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_HEX_APOS;
+    $optionsJson = json_encode($list, $jsonFlags);
+    $placeholderJson = json_encode($placeholder, $jsonFlags);
+    $searchPlaceholderJson = json_encode($searchPlaceholder, $jsonFlags);
+    $nameJson = json_encode($name, $jsonFlags);
 @endphp
 
-<div
-    x-data='{
+<div x-data='{
         open: false,
         query: "",
-        value: $wire.entangle("{{ $name }}"){{ $isLive ? '.live' : '' }},
-        options: @json($list),
-        placeholder: @json($placeholder),
-        searchPlaceholder: @json($searchPlaceholder),
-        norm(s) { return String(s == null ? "" : s).replace(/[يﻱ]/g, "ی").replace(/[كﻙ]/g, "ک").toLowerCase().trim(); },
+        currentValue: "",
+        options: {!! $optionsJson !!},
+        placeholder: {!! $placeholderJson !!},
+        searchPlaceholder: {!! $searchPlaceholderJson !!},
+        init() {
+            try {
+                var v = this.$wire.get({!! $nameJson !!});
+                if (v != null && v !== "") this.currentValue = String(v);
+            } catch (e) {}
+            var self = this;
+            this.$watch("open", function(v){
+                if (v) { setTimeout(function(){ self.$refs.searchBox && self.$refs.searchBox.focus(); }, 30); }
+                else { self.query = ""; }
+            });
+        },
+        norm(s) {
+            return String(s == null ? "" : s).replace(/[يﻱ]/g, "ی").replace(/[كﻙ]/g, "ک").toLowerCase().trim();
+        },
         selectedLabel() {
-            var v = String(this.value == null ? "" : this.value);
+            var v = String(this.currentValue == null ? "" : this.currentValue);
             var m = this.options.find(function(o){ return o.value === v; });
             return m ? m.label : "";
         },
@@ -39,12 +59,12 @@
             return this.options.filter(function(o){ return self.norm(o.label).indexOf(q) !== -1; });
         },
         pick(opt) {
-            this.value = opt.value;
+            this.currentValue = opt.value;
             this.open = false;
             this.query = "";
+            this.$wire.set({!! $nameJson !!}, opt.value, {{ $isLive ? 'false' : 'true' }});
         },
     }'
-    x-init='$watch("open", function(v){ if (!v) { query = ""; } })'
     @click.outside="open = false"
     @keydown.escape.window="open = false"
     {{ $attributes->merge(['class' => 'relative']) }}>
@@ -55,22 +75,22 @@
             class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-right flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed">
         <span class="truncate"
               x-text="selectedLabel() || placeholder"
-              :class="!selectedLabel() && 'text-gray-400'"></span>
+              :class="{ 'text-gray-400': !selectedLabel() }"></span>
         <span class="text-xs text-gray-400 ms-2">▾</span>
     </button>
 
-    <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+    <div x-show="open" x-cloak
          class="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
         <input type="text"
                x-model="query"
-               x-init='$watch("open", function(v){ if (v) { setTimeout(function(){ $el.focus(); }, 30); } })'
+               x-ref="searchBox"
                :placeholder="searchPlaceholder"
                class="w-full px-3 py-2 border-b border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-100 text-sm focus:outline-none">
         <ul class="overflow-y-auto max-h-56">
             <template x-for="opt in filtered()" :key="opt.value">
                 <li @click="pick(opt)"
                     x-text="opt.label"
-                    :class="opt.value === String(value == null ? '' : value) && 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 font-medium'"
+                    :class="{ 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 font-medium': opt.value === currentValue }"
                     class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"></li>
             </template>
             <li x-show="filtered().length === 0" class="px-3 py-2 text-sm text-gray-400">یافت نشد</li>
