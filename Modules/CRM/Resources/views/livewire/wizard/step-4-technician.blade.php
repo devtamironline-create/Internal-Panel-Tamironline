@@ -74,9 +74,40 @@
     </div>
 
     <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">زمان مراجعه پیشنهادی</label>
-        <input type="datetime-local" wire:model="visitScheduledAt"
-               class="w-full md:w-1/2 px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-        <p class="text-xs text-gray-500 mt-1">می‌توانید خالی بگذارید و بعداً تنظیم کنید.</p>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">روز مراجعه پیشنهادی</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            @foreach($this->visitDays as $d)
+                <label wire:key="vd-{{ $d['value'] }}" class="cursor-pointer">
+                    <input type="radio" name="visitDate" wire:model.live="visitDate" value="{{ $d['value'] }}" class="peer sr-only">
+                    <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition text-center">
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $d['weekday'] }}</div>
+                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 my-1">{{ $d['day'] }}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $d['month'] }}</div>
+                    </div>
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">بازه ساعت</label>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            @foreach(\Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS as $key => $slot)
+                <label wire:key="vs-{{ $key }}" class="cursor-pointer">
+                    <input type="radio" name="visitSlot" wire:model.live="visitSlot" value="{{ $key }}" class="peer sr-only">
+                    <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition text-center font-medium text-gray-900 dark:text-gray-100">
+                        {{ $slot['label'] }}
+                    </div>
+                </label>
+            @endforeach
+        </div>
+
+        @if($visitDate || $visitSlot)
+            <button type="button" wire:click="clearVisitTime"
+                    class="mt-3 text-xs text-gray-500 hover:text-red-600 transition">
+                × پاک کردن انتخاب
+            </button>
+        @endif
+        <p class="text-xs text-gray-500 mt-2">می‌توانید خالی بگذارید و بعداً تنظیم کنید.</p>
     </div>
 </div>

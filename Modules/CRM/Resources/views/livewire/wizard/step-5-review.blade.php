@@ -32,7 +32,22 @@
         $tn = trim($this->selectedTechnician->firstname_tech ?: $this->selectedTechnician->first_name) ?: '—';
         $rows[] = ['تکنسین', $tn . ' — ' . ($this->selectedTechnician->percent ?? 0) . '%'];
     }
-    if ($visitScheduledAt) $rows[] = ['زمان مراجعه', $visitScheduledAt];
+    if ($visitDate && $visitSlot) {
+        $latin = ['0','1','2','3','4','5','6','7','8','9'];
+        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $weekdays = [
+            'Saturday' => 'شنبه', 'Sunday' => 'یکشنبه', 'Monday' => 'دوشنبه',
+            'Tuesday' => 'سه‌شنبه', 'Wednesday' => 'چهارشنبه',
+            'Thursday' => 'پنجشنبه', 'Friday' => 'جمعه',
+        ];
+        $dt = \Carbon\Carbon::createFromFormat('Y-m-d', $visitDate);
+        $j = \Morilog\Jalali\Jalalian::fromCarbon($dt);
+        $dayLabel = ($weekdays[$dt->format('l')] ?? '')
+            . ' ' . str_replace($latin, $persian, $j->format('d'))
+            . ' ' . $j->format('F');
+        $slotLabel = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$visitSlot]['label'] ?? '';
+        $rows[] = ['زمان مراجعه', trim($dayLabel . ' — ' . $slotLabel, ' —')];
+    }
 @endphp
 
 <div class="space-y-6">

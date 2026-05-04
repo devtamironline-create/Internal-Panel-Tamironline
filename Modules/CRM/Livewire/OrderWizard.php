@@ -57,7 +57,16 @@ class OrderWizard extends Component
 
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
-    public string $visitScheduledAt = '';
+    public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
+    public ?int $visitSlot = null;      // 1..4 — keys of self::VISIT_SLOTS
+
+    /** بازه‌های پیشنهادی مراجعه. start برای ترکیب با تاریخ هنگام ذخیره. */
+    public const VISIT_SLOTS = [
+        1 => ['label' => '۹ تا ۱۲ ظهر',  'start' => '09:00:00'],
+        2 => ['label' => '۱۲ تا ۱۵ ظهر', 'start' => '12:00:00'],
+        3 => ['label' => '۱۵ تا ۱۸ عصر', 'start' => '15:00:00'],
+        4 => ['label' => '۱۸ تا ۲۱ شب',  'start' => '18:00:00'],
+    ];
 
     public function mount(?int $customerId = null): void
     {
@@ -214,6 +223,36 @@ class OrderWizard extends Component
         });
     }
 
+    /** ۷ روز پیش‌رو از امروز با اطلاعات شمسی برای کارت‌های انتخاب روز. */
+    #[Computed]
+    public function visitDays(): array
+    {
+        $weekdays = [
+            'Saturday' => 'شنبه',
+            'Sunday' => 'یکشنبه',
+            'Monday' => 'دوشنبه',
+            'Tuesday' => 'سه‌شنبه',
+            'Wednesday' => 'چهارشنبه',
+            'Thursday' => 'پنجشنبه',
+            'Friday' => 'جمعه',
+        ];
+        $latin = ['0','1','2','3','4','5','6','7','8','9'];
+        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $dt = now()->addDays($i)->startOfDay();
+            $j = \Morilog\Jalali\Jalalian::fromCarbon($dt);
+            $days[] = [
+                'value' => $dt->format('Y-m-d'),
+                'weekday' => $weekdays[$dt->format('l')] ?? '',
+                'day' => str_replace($latin, $persian, $j->format('d')),
+                'month' => $j->format('F'),
+            ];
+        }
+        return $days;
+    }
+
     // ─── Actions ─────────────────────────────────────────────────
 
     public function selectCustomer(int $id): void
@@ -247,6 +286,12 @@ class OrderWizard extends Component
     public function updatedProvinceId(): void
     {
         $this->cityId = null;
+    }
+
+    public function clearVisitTime(): void
+    {
+        $this->visitDate = null;
+        $this->visitSlot = null;
     }
 
     public function toggleObjection(string $value): void
@@ -332,7 +377,11 @@ class OrderWizard extends Component
 
             4 => $this->validate([
                 'technicianId' => 'nullable|integer|exists:crm_technicians,id',
-                'visitScheduledAt' => 'nullable|date',
+                'visitDate' => 'nullable|date_format:Y-m-d',
+                'visitSlot' => 'nullable|integer|in:1,2,3,4',
+            ], attributes: [
+                'visitDate' => 'روز مراجعه',
+                'visitSlot' => 'بازه ساعت',
             ]),
 
             5 => null, // مرور — اعتبارسنجی در submit
@@ -379,7 +428,9 @@ class OrderWizard extends Component
                 'address' => $this->address,
                 'problem_title' => $problemTitle,
                 'problem_description' => $this->objectionDescription ?: null,
-                'visit_scheduled_at' => $this->visitScheduledAt ?: null,
+                'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
+                    ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
+                    : null,
                 'status' => $this->technicianId
                     ? OrderStatus::Coordinated->value
                     : OrderStatus::New->value,
