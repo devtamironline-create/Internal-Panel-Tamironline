@@ -128,7 +128,7 @@
                 <select name="order_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                     <option value="">— همه —</option>
                     <option value="repair" @selected($orderType === 'repair')>تعمیر</option>
-                    <option value="service" @selected($orderType === 'service')>سرویس</option>
+                    <option value="service" @selected($orderType === 'service')>نصب</option>
                 </select>
             </div>
 
@@ -268,7 +268,7 @@
                             {{ $order->order_code }}
                         </a>
                         @if($order->order_type)
-                            <div class="text-xs text-gray-400 mt-0.5">{{ $order->order_type === 'service' ? 'سرویس' : 'تعمیر' }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ $order->order_type === 'service' ? 'نصب' : 'تعمیر' }}</div>
                         @endif
                     </td>
                     <td class="px-6 py-4 text-sm">

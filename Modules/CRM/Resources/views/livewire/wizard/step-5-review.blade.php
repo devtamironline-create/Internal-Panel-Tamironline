@@ -21,7 +21,7 @@
     if ($address)    $rows[] = ['آدرس', $address];
 
     // دستگاه
-    $rows[] = ['نوع سفارش', $orderType === 'service' ? 'سرویس' : 'تعمیر'];
+    $rows[] = ['نوع سفارش', $orderType === 'service' ? 'نصب' : 'تعمیر'];
     if ($this->selectedDevice) $rows[] = ['دستگاه', $this->selectedDevice->name];
     if ($this->selectedBrand)  $rows[] = ['برند', $this->selectedBrand->name];
     if (count($objections))    $rows[] = ['ایرادها', implode('، ', $objections)];

@@ -143,7 +143,7 @@ class OrderController extends Controller
             foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city'])->lazy(500) as $o) {
                 yield [
                     $o->order_code,
-                    $o->order_type === 'service' ? 'سرویس' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
+                    $o->order_type === 'service' ? 'نصب' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
                     $o->customer_name ?: $o->customer?->display_name,
                     $o->customer_mobile,
                     $o->device?->name,
