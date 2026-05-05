@@ -12,12 +12,20 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'tech' => [
+            'driver' => 'session',
+            'provider' => 'technicians',
+        ],
     ],
 
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+        'technicians' => [
+            'driver' => 'eloquent',
+            'model' => Modules\CRM\Models\Technician::class,
         ],
     ],
 

@@ -3,9 +3,10 @@
 namespace Modules\CRM\Models;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 /**
  * تکنسین — هم‌سو با libs/technician.php در CRM وردپرسی.
@@ -17,8 +18,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *   ready_for_delivery (در WP: ready_for_derliver), type_of_calc_tech,
  *   tech_per_of_all, img_personal (در WP: img_Personal)
  */
-class Technician extends Model
+class Technician extends Authenticatable
 {
+    use Notifiable;
+
     protected $table = 'crm_technicians';
 
     protected $fillable = [
@@ -33,6 +36,7 @@ class Technician extends Model
         'mobile',
         'phone',
         'phone_force',
+        'password',
 
         // آدرس
         'province',
@@ -66,6 +70,13 @@ class Technician extends Model
         'max_order' => 'integer',
         'max_price' => 'integer',
         'ready_for_delivery' => 'boolean',
+        'password' => 'hashed',
+        'last_login_at' => 'datetime',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     public function user(): BelongsTo

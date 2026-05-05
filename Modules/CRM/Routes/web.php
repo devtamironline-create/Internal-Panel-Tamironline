@@ -18,6 +18,8 @@ use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
 use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
+use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
+use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardController;
 
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
 Route::middleware('web')->group(function () {
@@ -237,5 +239,23 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
         Route::get('plugin/download', [SyncSettingsController::class, 'downloadPlugin'])->name('plugin.download');
+    });
+});
+
+// ═══════════ پنل تکنسین (PWA) ═══════════════════════════════════════
+// Auth جدا (guard=tech) روی crm_technicians. مستقل از /admin.
+Route::prefix('tech')->name('tech.')->group(function () {
+    // Guest — صفحات لاگین/ارسال OTP
+    Route::middleware('guest:tech')->group(function () {
+        Route::get('/', [TechAuthController::class, 'showLoginForm'])->name('login');
+        Route::post('auth/send-otp', [TechAuthController::class, 'sendOtp'])->name('auth.send-otp');
+        Route::post('auth/verify-otp', [TechAuthController::class, 'verifyOtp'])->name('auth.verify-otp');
+        Route::post('auth/login-password', [TechAuthController::class, 'loginWithPassword'])->name('auth.login-password');
+    });
+
+    // Authenticated
+    Route::middleware('auth:tech')->group(function () {
+        Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
+        Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
     });
 });
