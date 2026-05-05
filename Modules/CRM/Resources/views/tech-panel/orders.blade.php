@@ -95,7 +95,8 @@
     {{-- ─────── Orders list ─────── --}}
     <div class="px-3 mt-4 space-y-3">
         @forelse($orders as $order)
-            <div class="bg-white rounded-2xl p-4 shadow-sm">
+            <a href="{{ route('tech.orders.show', $order) }}"
+               class="block bg-white rounded-2xl p-4 shadow-sm active:bg-gray-50 transition">
                 <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="font-bold text-gray-900 text-sm" dir="ltr">{{ $order->order_code }}</span>
@@ -131,7 +132,7 @@
                         {{ $order->problem_title }}
                     </div>
                 @endif
-            </div>
+            </a>
         @empty
             <div class="bg-white rounded-2xl p-8 shadow-sm text-center">
                 <div class="w-14 h-14 rounded-2xl bg-brand-50 mx-auto flex items-center justify-center mb-3">

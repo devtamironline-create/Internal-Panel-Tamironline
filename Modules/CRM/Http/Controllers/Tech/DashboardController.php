@@ -59,6 +59,27 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function showOrder(Order $order)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        // محدودسازی به سفارش‌های متعلق به همین تکنسین — هم‌ارز meta_query
+        // technician=current_user در پنل WP قدیم.
+        if ((int) $order->technician_id !== (int) $tech->id) {
+            abort(403, 'این سفارش به شما تخصیص داده نشده است.');
+        }
+
+        $order->load([
+            'customer', 'brand', 'device', 'province', 'city',
+            'items', 'statusLogs.changer',
+        ]);
+
+        return view('crm::tech-panel.order_show', [
+            'technician' => $tech,
+            'order' => $order,
+        ]);
+    }
+
     public function wallet()
     {
         return view('crm::tech-panel._partials.placeholder', [
