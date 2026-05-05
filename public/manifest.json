@@ -1,0 +1,21 @@
+{
+    "name": "تعمیرآنلاین — پنل تکنسین",
+    "short_name": "تکنسین",
+    "description": "پنل تکنسین تعمیرآنلاین — مدیریت سفارش‌ها، کیف‌پول و فاکتورها.",
+    "start_url": "/tech",
+    "scope": "/tech",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#1e40af",
+    "theme_color": "#1e40af",
+    "lang": "fa",
+    "dir": "rtl",
+    "icons": [
+        {
+            "src": "/tech/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

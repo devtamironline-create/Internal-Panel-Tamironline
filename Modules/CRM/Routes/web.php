@@ -257,5 +257,9 @@ Route::prefix('tech')->name('tech.')->group(function () {
     Route::middleware('auth:tech')->group(function () {
         Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
+        Route::get('orders', [TechPanelDashboardController::class, 'orders'])->name('orders');
+        Route::get('wallet', [TechPanelDashboardController::class, 'wallet'])->name('wallet');
+        Route::get('invoices', [TechPanelDashboardController::class, 'invoices'])->name('invoices');
+        Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
     });
 });
