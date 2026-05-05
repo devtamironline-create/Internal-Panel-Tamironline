@@ -8,7 +8,7 @@ const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
     '/manifest.json',
-    '/tech/icons/icon.svg',
+    '/tech-pwa/icons/icon.svg',
 ];
 
 self.addEventListener('install', event => {

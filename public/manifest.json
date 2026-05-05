@@ -12,7 +12,7 @@
     "dir": "rtl",
     "icons": [
         {
-            "src": "/tech/icons/icon.svg",
+            "src": "/tech-pwa/icons/icon.svg",
             "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any maskable"
