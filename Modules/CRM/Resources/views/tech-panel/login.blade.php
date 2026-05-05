@@ -25,28 +25,12 @@
                 <div class="text-white text-sm mt-1 opacity-90">پنل تکنسین — کارت کامل سفارش‌ها</div>
             </div>
         @endif
-        {{-- Pagination dots (decorative) --}}
-        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            <span class="w-1.5 h-1.5 rounded-full bg-white/40"></span>
-            <span class="w-6 h-1.5 rounded-full bg-white"></span>
-            <span class="w-1.5 h-1.5 rounded-full bg-white/40"></span>
-        </div>
     </div>
 
     {{-- ─────── Bottom sheet form ─────── --}}
     <div class="bg-white rounded-t-3xl -mt-6 px-6 pt-4 pb-8 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         {{-- Drag indicator --}}
         <div class="w-12 h-1.5 rounded-full bg-gray-200 mx-auto mb-5"></div>
-
-        {{-- Mode tabs --}}
-        <div class="flex gap-2 bg-gray-100 rounded-xl p-1 mb-5 text-sm">
-            <button type="button" @click="mode='otp'; error=''; info=''"
-                    :class="mode==='otp' ? 'bg-white shadow text-brand-700' : 'text-gray-500'"
-                    class="flex-1 py-2 rounded-lg font-medium transition">پیامک</button>
-            <button type="button" @click="mode='password'; error=''; info=''"
-                    :class="mode==='password' ? 'bg-white shadow text-brand-700' : 'text-gray-500'"
-                    class="flex-1 py-2 rounded-lg font-medium transition">رمز عبور</button>
-        </div>
 
         {{-- Title --}}
         <div class="flex items-center gap-2 mb-1">
@@ -63,8 +47,8 @@
         <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 mb-3" x-text="error"></div>
         <div x-show="info" class="bg-brand-50 border border-brand-200 text-brand-700 text-xs rounded-xl p-3 mb-3" x-text="info"></div>
 
-        {{-- ─── OTP mode ─── --}}
-        <div x-show="mode==='otp'">
+        {{-- ─── OTP-only login ─── --}}
+        <div>
             <div class="space-y-1 mb-4">
                 <label class="text-sm font-medium text-gray-700">شماره موبایل</label>
                 <input type="tel" x-model="mobile" maxlength="11" placeholder="09xxxxxxxxx" dir="ltr"
@@ -100,25 +84,6 @@
                     class="w-full mt-2 py-2 text-xs text-gray-500 hover:text-brand-700">تغییر شماره</button>
         </div>
 
-        {{-- ─── Password mode ─── --}}
-        <div x-show="mode==='password'">
-            <div class="space-y-1 mb-3">
-                <label class="text-sm font-medium text-gray-700">شماره موبایل</label>
-                <input type="tel" x-model="mobile" maxlength="11" placeholder="09xxxxxxxxx" dir="ltr"
-                       class="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base placeholder:text-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition">
-            </div>
-            <div class="space-y-1 mb-4">
-                <label class="text-sm font-medium text-gray-700">رمز عبور</label>
-                <input type="password" x-model="password"
-                       class="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition">
-            </div>
-            <button @click="loginPassword" :disabled="busy || !mobile || !password"
-                    class="w-full py-3.5 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition">
-                <span x-show="!busy">ورود</span>
-                <span x-show="busy">…</span>
-            </button>
-        </div>
-
         {{-- Footer --}}
         <div class="flex items-center justify-between text-xs mt-6 pt-4 border-t border-gray-100">
             <span class="text-gray-400">شرایط استفاده</span>
@@ -135,10 +100,8 @@
 <script>
     function techLogin() {
         return {
-            mode: 'otp',
             mobile: '',
             code: '',
-            password: '',
             otpSent: false,
             busy: false,
             error: '',
@@ -172,18 +135,6 @@
                 this.error = ''; this.busy = true;
                 try {
                     const { body, status } = await this.post('{{ route('tech.auth.verify-otp') }}', { mobile: this.mobile, code: this.code });
-                    if (status === 200 && body.success) {
-                        window.location.href = body.redirect;
-                    } else {
-                        this.error = body.message || 'خطای ناشناخته';
-                    }
-                } catch (e) { this.error = 'خطای شبکه'; }
-                this.busy = false;
-            },
-            async loginPassword() {
-                this.error = ''; this.busy = true;
-                try {
-                    const { body, status } = await this.post('{{ route('tech.auth.login-password') }}', { mobile: this.mobile, password: this.password });
                     if (status === 200 && body.success) {
                         window.location.href = body.redirect;
                     } else {

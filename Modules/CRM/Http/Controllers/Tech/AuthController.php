@@ -23,7 +23,6 @@ class AuthController extends Controller
     private const OTP_TTL_SECONDS = 300;       // ۵ دقیقه
     private const OTP_RESEND_DELAY = 60;       // ۱ دقیقه
     private const OTP_MAX_ATTEMPTS = 5;
-    private const OTP_TEMPLATE = 'tech_login_otp';
 
     public function __construct(protected KavenegarService $sms)
     {
@@ -81,7 +80,10 @@ class AuthController extends Controller
         }
 
         try {
-            $this->sms->sendTemplate($mobile, self::OTP_TEMPLATE, ['token' => $code]);
+            // همان تمپلیتی که OTPService برای ورود اپراتور استفاده می‌کند
+            // (config sms.templates.otp). تکنسین تمپلیت جداگانه نمی‌خواهد.
+            $template = config('sms.templates.otp', 'verify');
+            $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
         } catch (\Throwable $e) {
             Log::warning('tech OTP SMS failed', [
                 'mobile' => $mobile,
