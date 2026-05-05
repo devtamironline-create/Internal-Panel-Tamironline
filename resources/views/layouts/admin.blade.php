@@ -179,7 +179,7 @@
 
     {{-- Tom Select (searchable dropdown library) — used for selects with
          data-tom-select. Lightweight, RTL-friendly, Livewire-compatible. --}}
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.default.min.css" rel="stylesheet">
+    <link href="/vendor/css/tom-select.default.min.css" rel="stylesheet">
     <style>
         /* RTL + Tailwind-friendly tweaks for Tom Select */
         .ts-wrapper { font-family: inherit; }
@@ -1321,7 +1321,7 @@
     {{-- Tom Select (CDN) + initializer for <select data-tom-select>.
          Used for selects that live inside wire:ignore (cascading wizard
          province/city) — survives Livewire morphs cleanly. --}}
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js"></script>
+    <script src="/vendor/js/tom-select.complete.min.js"></script>
     <script>
     (function () {
         function persianNorm(s) {

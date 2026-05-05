@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نتیجه پرداخت</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/vendor/js/tailwind.min.js"></script>
     <style>
         body { font-family: Tahoma, sans-serif; }
     </style>
