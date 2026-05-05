@@ -1,11 +1,11 @@
 @php
     $current = $current ?? request()->route()?->getName();
     $items = [
-        ['name' => 'tech.profile',  'label' => 'پروفایل',  'icon' => 'user'],
-        ['name' => 'tech.invoices', 'label' => 'فاکتورها', 'icon' => 'doc'],
-        ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list',   'fab' => true],
-        ['name' => 'tech.wallet',   'label' => 'کیف‌پول',   'icon' => 'wallet'],
         ['name' => 'tech.dashboard','label' => 'خانه',     'icon' => 'home'],
+        ['name' => 'tech.wallet',   'label' => 'کیف‌پول',   'icon' => 'wallet'],
+        ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list',   'fab' => true],
+        ['name' => 'tech.invoices', 'label' => 'فاکتورها', 'icon' => 'doc'],
+        ['name' => 'tech.profile',  'label' => 'پروفایل',  'icon' => 'user'],
     ];
 @endphp
 
