@@ -11,7 +11,7 @@
 @section('body')
 <div class="min-h-screen pb-nav" style="background: #eef0f4;">
     {{-- ─────── Hero header ─────── --}}
-    <div class="relative overflow-hidden rounded-b-[40px] pb-20"
+    <div class="relative overflow-hidden rounded-b-[40px] pb-36"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);">
         {{-- Top icon row --}}
         <div class="flex items-center justify-between px-5 pt-5">
@@ -55,7 +55,7 @@
     </div>
 
     {{-- ─────── White sheet (overlapping) ─────── --}}
-    <div class="-mt-12 mx-3 bg-white rounded-[28px] shadow-sm pt-4 pb-5 px-4">
+    <div class="relative z-10 -mt-28 mx-3 bg-white rounded-[28px] shadow-lg pt-4 pb-5 px-4">
         <div class="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4"></div>
 
         <div class="grid grid-cols-3 gap-3">
