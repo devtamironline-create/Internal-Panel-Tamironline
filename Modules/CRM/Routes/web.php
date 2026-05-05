@@ -259,6 +259,8 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
         Route::get('orders', [TechPanelDashboardController::class, 'orders'])->name('orders');
         Route::get('orders/{order}', [TechPanelDashboardController::class, 'showOrder'])->name('orders.show');
+        Route::post('orders/{order}/status', [TechPanelDashboardController::class, 'updateOrderStatus'])->name('orders.update-status');
+        Route::post('orders/{order}/notes', [TechPanelDashboardController::class, 'addOrderNote'])->name('orders.add-note');
         Route::get('wallet', [TechPanelDashboardController::class, 'wallet'])->name('wallet');
         Route::get('invoices', [TechPanelDashboardController::class, 'invoices'])->name('invoices');
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');

@@ -23,10 +23,56 @@
         'description_tech1' => 'دلیل وضعیت نامشخص',
         'description_tech2' => 'لیست اقلام تحویل گرفته‌شده (رسید مشتری)',
     ];
+
+    // برچسب رادیو هر وضعیت برای پنل تکنسین — هم‌سو با tech_show_order.php پنل WP.
+    $statusActionLabels = [
+        OrderStatus::Coordinated->value => 'هماهنگ کردن سفارش',
+        OrderStatus::Open->value        => 'انتقال به تعمیرگاه',
+        OrderStatus::Suspended->value   => 'وضعیت نامشخص',
+        OrderStatus::Completed->value   => 'پایان سفارش',
+        OrderStatus::Declined->value    => 'رد سفارش',
+        OrderStatus::Transit->value     => 'فقط ایاب و ذهاب',
+        OrderStatus::Cancelled->value   => 'کنسل سفارش',
+    ];
+    $statusDescPrompts = [
+        OrderStatus::Coordinated->value => 'تاریخ و ساعت هماهنگی با مشتری را بنویسید',
+        OrderStatus::Suspended->value   => 'دلیل نامشخص بودن وضعیت را شرح دهید',
+        OrderStatus::Open->value        => 'لیست اقلامی که از مشتری تحویل گرفته‌اید (به‌عنوان رسید)',
+        OrderStatus::Declined->value    => 'دلیل رد سفارش را بنویسید',
+    ];
+
+    // یادداشت‌های متعلق به همین تکنسین — مشابه فیلتر $author در پنل WP.
+    $myNotes = collect($order->wp_notes ?? [])
+        ->filter(fn($n) => isset($n['author']) && (int) $n['author'] === (int) $technician->id)
+        ->values();
 @endphp
 
 @section('body')
 <div class="min-h-screen pb-nav" style="background: #eef0f4;">
+    @if(session('success'))
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            {{ session('error') }}
+        </div>
+    @endif
+    @if($errors->any())
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-7">
+            @foreach($errors->all() as $err)
+                <div>• {{ $err }}</div>
+            @endforeach
+        </div>
+    @endif
+
     {{-- ─────── Hero header ─────── --}}
     <div class="relative overflow-hidden rounded-b-[40px] pb-24"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);">
@@ -162,6 +208,90 @@
             </div>
         </div>
     @endif
+
+    {{-- ─────── Status change form ─────── --}}
+    @if(count($allowedStatuses))
+        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4"
+             x-data="{ selected: '{{ old('status', '') }}' }">
+            <div class="text-[11px] text-gray-400 mb-3">تغییر وضعیت سفارش</div>
+
+            <form method="POST" action="{{ route('tech.orders.update-status', $order) }}" class="space-y-2">
+                @csrf
+
+                <div class="space-y-2">
+                    @foreach($allowedStatuses as $option)
+                        <label class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition"
+                               :class="selected === '{{ $option->value }}' ? 'border-brand-600 bg-brand-50' : 'border-gray-200 bg-white'">
+                            <input type="radio" name="status" value="{{ $option->value }}"
+                                   x-model="selected"
+                                   class="w-4 h-4 accent-brand-700">
+                            <span class="text-sm text-gray-800 font-medium">
+                                {{ $statusActionLabels[$option->value] ?? $option->label() }}
+                            </span>
+                            <span class="ms-auto px-2 py-0.5 text-[10px] font-bold rounded-full {{ $option->badgeClass() }}">
+                                {{ $option->label() }}
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+
+                {{-- توضیحات وابسته به وضعیت انتخاب‌شده --}}
+                @foreach($statusDescPrompts as $value => $prompt)
+                    <div x-show="selected === '{{ $value }}'" x-cloak class="pt-2">
+                        <label class="text-[11px] text-gray-500 mb-1 block">{{ $prompt }}</label>
+                        <textarea name="description" rows="3"
+                                  class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
+                                  placeholder="...">{{ old('description') }}</textarea>
+                    </div>
+                @endforeach
+
+                <button type="submit"
+                        x-bind:disabled="!selected"
+                        class="w-full mt-3 py-3 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
+                    ثبت تغییر وضعیت
+                </button>
+            </form>
+        </div>
+    @elseif($order->status->isFinal())
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-gray-100 border border-gray-200 text-gray-600 text-xs flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            این سفارش در وضعیت نهایی «{{ $order->status->label() }}» قرار دارد و قابل ویرایش نیست.
+        </div>
+    @endif
+
+    {{-- ─────── Notes (own notes + add form) ─────── --}}
+    <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+        <div class="text-[11px] text-gray-400 mb-3">یادداشت‌های من برای این سفارش</div>
+
+        @if($myNotes->count())
+            <ul class="space-y-2.5 mb-3">
+                @foreach($myNotes as $note)
+                    <li class="bg-gray-50 rounded-xl p-3">
+                        <div class="text-sm text-gray-800 leading-7">{{ $note['content'] ?? '' }}</div>
+                        @if(!empty($note['date']))
+                            <div class="text-[10px] text-gray-400 mt-1.5" dir="ltr">{{ $note['date'] }}</div>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <div class="text-xs text-gray-400 mb-3">هنوز یادداشتی ثبت نکرده‌اید.</div>
+        @endif
+
+        <form method="POST" action="{{ route('tech.orders.add-note', $order) }}">
+            @csrf
+            <textarea name="note" rows="3" required maxlength="2000"
+                      placeholder="یادداشت جدید برای این سفارش..."
+                      class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('note') }}</textarea>
+            <button type="submit"
+                    class="w-full mt-2.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition">
+                ثبت یادداشت
+            </button>
+        </form>
+    </div>
 
     {{-- ─────── Pieces / invoice ─────── --}}
     @if($hasFinancial)
