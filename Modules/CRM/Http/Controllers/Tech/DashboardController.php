@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Enums\WalletTxType;
+use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\WalletTransaction;
@@ -326,12 +327,35 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function invoices()
+    public function invoices(Request $request)
     {
-        return view('crm::tech-panel._partials.placeholder', [
-            'pageTitle' => 'فاکتورها',
-            'pageDescription' => 'لیست فاکتورهای تکنسین در فاز ۶ اضافه می‌شود.',
-            'currentNav' => 'tech.invoices',
+        $tech = Auth::guard('tech')->user();
+
+        $statusFilter = $request->query('status');
+        $allowedStatus = ['draft', 'issued', 'paid', 'cancelled'];
+
+        $base = Invoice::query()->where('technician_id', $tech->id);
+
+        // آمار کلی روی همه فاکتورهای تکنسین (مستقل از فیلتر).
+        $stats = [
+            'count'         => (int) (clone $base)->count(),
+            'total_sum'     => (int) (clone $base)->sum('total_amount'),
+            'tech_share'    => (int) (clone $base)->sum('tech_share'),
+            'company_share' => (int) (clone $base)->sum('company_share'),
+        ];
+
+        $query = (clone $base)->with(['order', 'customer']);
+        if ($statusFilter && in_array($statusFilter, $allowedStatus, true)) {
+            $query->where('status', $statusFilter);
+        }
+
+        $invoices = $query->latest('issued_at')->latest('id')->paginate(15)->withQueryString();
+
+        return view('crm::tech-panel.invoices', [
+            'technician' => $tech,
+            'invoices' => $invoices,
+            'stats' => $stats,
+            'statusFilter' => $statusFilter,
         ]);
     }
 
