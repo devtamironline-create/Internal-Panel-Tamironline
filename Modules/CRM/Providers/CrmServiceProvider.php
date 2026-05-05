@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Livewire\OrderWizard;
 
@@ -42,6 +43,7 @@ class CrmServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                BackfillInvoices::class,
                 RecomputeWalletBalances::class,
             ]);
         }
