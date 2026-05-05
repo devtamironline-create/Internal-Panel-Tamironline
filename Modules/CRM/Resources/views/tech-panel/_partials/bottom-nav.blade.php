@@ -9,7 +9,7 @@
     ];
 @endphp
 
-<nav class="fixed bottom-0 inset-x-0 max-w-[420px] mx-auto bg-white border-t border-gray-100 nav-safe z-30">
+<nav class="fixed bottom-0 inset-x-0 max-w-[480px] mx-auto bg-white border-t border-gray-100 nav-safe z-30">
     <div class="grid grid-cols-5 h-[68px]">
         @foreach($items as $item)
             @php $isActive = $current === $item['name']; @endphp

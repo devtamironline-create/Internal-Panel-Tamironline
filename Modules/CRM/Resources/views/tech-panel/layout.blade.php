@@ -57,8 +57,8 @@
         input, select, textarea, button { font-family: inherit; }
         [x-cloak] { display: none !important; }
 
-        /* Phone-frame on desktop, full-bleed on mobile */
-        .phone-frame {
+        /* App-frame: full-bleed on mobile, centered card on larger screens */
+        .app-frame {
             min-height: 100vh;
             min-height: 100dvh;
             background: #ffffff;
@@ -67,20 +67,18 @@
         }
         @media (min-width: 640px) {
             body {
-                background: #e5e7eb;
-                background-image: radial-gradient(at top, #f3f4f6, #d1d5db);
+                background: #eef0f4;
                 background-attachment: fixed;
-                padding: 24px 0;
+                padding: 28px 16px;
             }
-            .phone-frame {
-                max-width: 420px;
+            .app-frame {
+                max-width: 480px;
                 margin: 0 auto;
-                min-height: calc(100vh - 48px);
-                min-height: calc(100dvh - 48px);
-                border-radius: 36px;
-                box-shadow:
-                    0 0 0 8px #1f2937,
-                    0 25px 50px -12px rgba(0, 0, 0, 0.4);
+                min-height: calc(100vh - 56px);
+                min-height: calc(100dvh - 56px);
+                border-radius: 24px;
+                box-shadow: 0 10px 40px -12px rgba(15, 23, 42, 0.12),
+                            0 4px 12px -4px rgba(15, 23, 42, 0.06);
                 overflow: hidden;
             }
         }
@@ -96,7 +94,7 @@
     @stack('head')
 </head>
 <body>
-    <div class="phone-frame">
+    <div class="app-frame">
         @yield('body')
     </div>
 
