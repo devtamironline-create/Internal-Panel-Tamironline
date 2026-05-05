@@ -19,7 +19,10 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', env('LOG_STACK', 'single')),
-            'ignore_exceptions' => false,
+            // اگر نوشتن لاگ شکست بخورد (مثلاً storage/logs قابل نوشتن نباشد)،
+            // درخواست اصلی نباید crash کند. true یعنی هر استثنا داخل لایه
+            // logging سایلنت جذب می‌شود.
+            'ignore_exceptions' => true,
         ],
 
         'single' => [
