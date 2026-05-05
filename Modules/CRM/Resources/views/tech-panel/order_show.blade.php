@@ -211,11 +211,34 @@
 
     {{-- ─────── Status change form ─────── --}}
     @if(count($allowedStatuses))
+        @php
+            $existingPieces = [];
+            $titles = is_array($order->piece_list) ? $order->piece_list : [];
+            $buys = is_array($order->buy_price_list) ? $order->buy_price_list : [];
+            $sells = is_array($order->customer_price_list) ? $order->customer_price_list : [];
+            foreach ($titles as $i => $t) {
+                if (filled($t)) {
+                    $existingPieces[] = [
+                        'title' => is_string($t) ? $t : (string) ($t['title'] ?? ''),
+                        'buy' => (int) ($buys[$i] ?? 0),
+                        'sell' => (int) ($sells[$i] ?? 0),
+                    ];
+                }
+            }
+            if (empty($existingPieces)) {
+                $existingPieces = [['title' => '', 'buy' => 0, 'sell' => 0]];
+            }
+        @endphp
+
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4"
-             x-data="{ selected: '{{ old('status', '') }}' }">
+             x-data="{
+                selected: '{{ old('status', '') }}',
+                pieces: {{ \Illuminate\Support\Js::from($existingPieces) }},
+             }">
             <div class="text-[11px] text-gray-400 mb-3">تغییر وضعیت سفارش</div>
 
-            <form method="POST" action="{{ route('tech.orders.update-status', $order) }}" class="space-y-2">
+            <form method="POST" action="{{ route('tech.orders.update-status', $order) }}"
+                  enctype="multipart/form-data" class="space-y-2">
                 @csrf
 
                 <div class="space-y-2">
@@ -245,6 +268,110 @@
                     </div>
                 @endforeach
 
+                {{-- ── بلاک فاکتور — فقط هنگام انتخاب «پایان سفارش» ─── --}}
+                <div x-show="selected === '{{ OrderStatus::Completed->value }}'" x-cloak class="pt-3 border-t border-gray-100 mt-3 space-y-3">
+                    <div class="text-[11px] text-brand-700 font-bold">جزئیات فاکتور</div>
+
+                    {{-- price_customer + total_invoice --}}
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-gray-500 mb-1 block">مبلغ کل صورت‌حساب (تومان)</label>
+                            <input type="number" name="price_customer" min="0" step="1000" inputmode="numeric"
+                                   value="{{ old('price_customer', $order->price_customer) }}"
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-500 mb-1 block">مانده پس از کسر هزینه‌ها</label>
+                            <input type="number" name="total_invoice" min="0" step="1000" inputmode="numeric"
+                                   value="{{ old('total_invoice', $order->total_invoice) }}"
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    {{-- Pieces repeater --}}
+                    <div>
+                        <label class="text-[11px] text-gray-500 mb-1 block">قطعات استفاده‌شده</label>
+                        <div class="space-y-2">
+                            <template x-for="(p, i) in pieces" :key="i">
+                                <div class="bg-gray-50 rounded-xl p-2.5 space-y-1.5">
+                                    <input type="text" :name="`pieces[${i}][title]`" x-model="p.title"
+                                           placeholder="نام قطعه"
+                                           class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="number" :name="`pieces[${i}][buy_price]`" x-model.number="p.buy" min="0" step="1000" inputmode="numeric"
+                                               placeholder="قیمت خرید"
+                                               class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
+                                        <input type="number" :name="`pieces[${i}][customer_price]`" x-model.number="p.sell" min="0" step="1000" inputmode="numeric"
+                                               placeholder="قیمت فروش"
+                                               class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
+                                    </div>
+                                    <button type="button" @click="pieces.splice(i, 1)"
+                                            x-show="pieces.length > 1"
+                                            class="text-rose-600 text-[11px]">حذف این قطعه</button>
+                                </div>
+                            </template>
+                        </div>
+                        <button type="button" @click="pieces.push({title:'', buy:0, sell:0})"
+                                class="mt-2 w-full py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold">
+                            + افزودن قطعه
+                        </button>
+                    </div>
+
+                    {{-- hire / transportation / discount --}}
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[11px] text-gray-500 mb-1 block">اجرت</label>
+                            <input type="number" name="hire" min="0" step="1000" inputmode="numeric"
+                                   value="{{ old('hire', $order->hire) }}"
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-500 mb-1 block">ایاب و ذهاب</label>
+                            <input type="number" name="transportation" min="0" step="1000" inputmode="numeric"
+                                   value="{{ old('transportation', $order->transportation) }}"
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-500 mb-1 block">تخفیف</label>
+                            <input type="number" name="discount" min="0" step="1000" inputmode="numeric"
+                                   value="{{ old('discount', $order->discount) }}"
+                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    {{-- device_img1 upload --}}
+                    <div>
+                        <label class="text-[11px] text-gray-500 mb-1 block">عکس دستگاه (پس از تعمیر)</label>
+                        @if($order->device_img1)
+                            <a href="{{ asset('storage/' . $order->device_img1) }}" target="_blank"
+                               class="inline-flex items-center gap-1.5 text-xs text-brand-700 mb-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                                </svg>
+                                مشاهده عکس فعلی
+                            </a>
+                        @endif
+                        <input type="file" name="device_img1" accept="image/*"
+                               class="block w-full text-xs text-gray-600 file:ms-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:font-bold file:text-xs">
+                    </div>
+
+                    {{-- invoice_descripotion --}}
+                    <div>
+                        <label class="text-[11px] text-gray-500 mb-1 block">توضیحات فاکتور</label>
+                        <textarea name="invoice_descripotion" rows="2"
+                                  class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('invoice_descripotion', $order->invoice_descripotion) }}</textarea>
+                    </div>
+
+                    {{-- save_as_draft --}}
+                    <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                        <input type="hidden" name="save_as_draft" value="0">
+                        <input type="checkbox" name="save_as_draft" value="1"
+                               {{ old('save_as_draft', $order->save_as_draft) ? 'checked' : '' }}
+                               class="w-4 h-4 accent-brand-700">
+                        ذخیره به‌عنوان پیش‌نویس (هنوز نهایی نشود)
+                    </label>
+                </div>
+
                 <button type="submit"
                         x-bind:disabled="!selected"
                         class="w-full mt-3 py-3 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -253,12 +380,30 @@
                 </button>
             </form>
         </div>
+
     @elseif($order->status->isFinal())
         <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-gray-100 border border-gray-200 text-gray-600 text-xs flex items-center gap-2">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
             این سفارش در وضعیت نهایی «{{ $order->status->label() }}» قرار دارد و قابل ویرایش نیست.
+        </div>
+    @endif
+
+    {{-- ─────── Send "ready for delivery" SMS — only for completed orders + capable techs ─────── --}}
+    @if($technician->ready_for_delivery && $order->status === OrderStatus::Completed)
+        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+            <div class="text-[11px] text-gray-400 mb-2">اطلاع‌رسانی به مشتری</div>
+            <p class="text-xs text-gray-600 leading-7 mb-3">
+                با کلیک روی دکمه زیر، پیامک «آماده تحویل» برای مشتری ارسال می‌شود.
+            </p>
+            <form method="POST" action="{{ route('tech.orders.deliver-sms', $order) }}">
+                @csrf
+                <button type="submit"
+                        class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition">
+                    ارسال پیامک آماده تحویل
+                </button>
+            </form>
         </div>
     @endif
 

@@ -5,9 +5,12 @@ namespace Modules\CRM\Http\Controllers\Tech;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
+use Modules\CRM\Services\OrderSmsNotifier;
 
 /**
  * کنترلر داشبورد + صفحات اصلی پنل تکنسین.
@@ -17,6 +20,10 @@ use Modules\CRM\Models\OrderStatusLog;
  */
 class DashboardController extends Controller
 {
+    public function __construct(protected OrderSmsNotifier $smsNotifier)
+    {
+    }
+
     public function index()
     {
         return view('crm::tech-panel.dashboard', [
@@ -85,6 +92,20 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'status' => 'required|string',
             'description' => 'nullable|string|max:2000',
+
+            // فیلدهای فاکتور — فقط زمانی استفاده می‌شوند که وضعیت = Completed.
+            'price_customer' => 'nullable|integer|min:0',
+            'total_invoice' => 'nullable|integer|min:0',
+            'hire' => 'nullable|integer|min:0',
+            'transportation' => 'nullable|integer|min:0',
+            'discount' => 'nullable|integer|min:0',
+            'pieces' => 'nullable|array',
+            'pieces.*.title' => 'nullable|string|max:255',
+            'pieces.*.buy_price' => 'nullable|integer|min:0',
+            'pieces.*.customer_price' => 'nullable|integer|min:0',
+            'invoice_descripotion' => 'nullable|string|max:2000',
+            'save_as_draft' => 'nullable|boolean',
+            'device_img1' => 'nullable|image|max:5120',
         ]);
 
         $newStatus = OrderStatus::tryFrom($validated['status']);
@@ -111,8 +132,41 @@ class DashboardController extends Controller
                 default                  => [],
             };
         }
+
+        // ─── بلاک فاکتور — هم‌ارز invoice block پنل WP وقتی status=5 ───
         if ($newStatus === OrderStatus::Completed) {
             $updates['completed_at'] = now();
+
+            // قطعات: ورودی به‌صورت آرایه‌ای از {title,buy_price,customer_price}
+            // به سه آرایهٔ موازی WP تبدیل می‌شود.
+            $pieces = collect($validated['pieces'] ?? [])
+                ->filter(fn($p) => filled($p['title'] ?? null))
+                ->values();
+
+            if ($pieces->isNotEmpty()) {
+                $updates['piece_list'] = $pieces->pluck('title')->all();
+                $updates['buy_price_list'] = $pieces->map(fn($p) => (int) ($p['buy_price'] ?? 0))->all();
+                $updates['customer_price_list'] = $pieces->map(fn($p) => (int) ($p['customer_price'] ?? 0))->all();
+                $updates['cost_price'] = (int) $pieces->sum(fn($p) => (int) ($p['buy_price'] ?? 0));
+            }
+
+            foreach (['price_customer', 'total_invoice', 'hire', 'transportation', 'discount'] as $field) {
+                if (array_key_exists($field, $validated) && $validated[$field] !== null) {
+                    $updates[$field] = (int) $validated[$field];
+                }
+            }
+
+            if (filled($validated['invoice_descripotion'] ?? null)) {
+                $updates['invoice_descripotion'] = $validated['invoice_descripotion'];
+            }
+
+            $updates['save_as_draft'] = (bool) ($validated['save_as_draft'] ?? false);
+
+            // آپلود تصویر دستگاه
+            if ($request->hasFile('device_img1')) {
+                $path = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');
+                $updates['device_img1'] = $path;
+            }
         }
 
         $previous = $order->status->value;
@@ -127,9 +181,39 @@ class DashboardController extends Controller
             'created_at' => now(),
         ]);
 
+        // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
+        if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
+            $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+        }
+
         return redirect()
             ->route('tech.orders.show', $order)
             ->with('success', 'وضعیت سفارش به «' . $newStatus->label() . '» تغییر کرد.');
+    }
+
+    /**
+     * ارسال دستی پیامک «آماده تحویل» به مشتری — هم‌ارز دکمهٔ
+     * SendSMSForDeliverCustomer در پنل WP. فقط برای تکنسین‌هایی که
+     * ready_for_delivery=true دارند، آن‌هم روی سفارش‌های تکمیل‌شده.
+     */
+    public function sendDeliverSms(Order $order)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwnership($order, $tech);
+
+        if (! $tech->ready_for_delivery) {
+            abort(403, 'شما مجاز به ارسال پیامک آماده تحویل نیستید.');
+        }
+
+        if ($order->status !== OrderStatus::Completed) {
+            return back()->with('error', 'این پیامک فقط برای سفارش‌های تکمیل‌شده ارسال می‌شود.');
+        }
+
+        $this->smsNotifier->notify($order, SmsTrigger::OrderDelivered, $tech->user_id);
+
+        return redirect()
+            ->route('tech.orders.show', $order)
+            ->with('success', 'پیامک آماده تحویل برای مشتری ارسال شد.');
     }
 
     public function addOrderNote(Request $request, Order $order)
