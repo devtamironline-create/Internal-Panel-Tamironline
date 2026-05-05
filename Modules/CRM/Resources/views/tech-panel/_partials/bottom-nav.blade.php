@@ -3,26 +3,40 @@
     $items = [
         ['name' => 'tech.profile',  'label' => 'پروفایل',  'icon' => 'user'],
         ['name' => 'tech.invoices', 'label' => 'فاکتورها', 'icon' => 'doc'],
+        ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list',   'fab' => true],
         ['name' => 'tech.wallet',   'label' => 'کیف‌پول',   'icon' => 'wallet'],
-        ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list'],
         ['name' => 'tech.dashboard','label' => 'خانه',     'icon' => 'home'],
     ];
 @endphp
 
-<nav class="fixed bottom-0 inset-x-0 max-w-[480px] mx-auto bg-white border-t border-gray-100 nav-safe z-30">
-    <div class="grid grid-cols-5 h-[68px]">
+<nav class="fixed bottom-0 inset-x-0 max-w-[480px] mx-auto bg-white border-t border-gray-100 nav-safe z-30 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.08)]">
+    <div class="grid grid-cols-5 h-[72px] relative">
         @foreach($items as $item)
             @php $isActive = $current === $item['name']; @endphp
-            <a href="{{ route($item['name']) }}"
-               class="flex flex-col items-center justify-center gap-1 transition {{ $isActive ? 'text-brand-700' : 'text-gray-400' }}">
-                <div class="relative">
+
+            @if(!empty($item['fab']))
+                {{-- Elevated center FAB --}}
+                <a href="{{ route($item['name']) }}"
+                   class="flex flex-col items-center justify-end pb-2 relative">
+                    <div class="absolute -top-5 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg ring-4 ring-white"
+                         style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            @switch($item['icon'])
+                                @case('list')
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                    @break
+                            @endswitch
+                        </svg>
+                    </div>
+                    <span class="text-[11px] font-bold {{ $isActive ? 'text-brand-700' : 'text-gray-500' }} mt-9">{{ $item['label'] }}</span>
+                </a>
+            @else
+                <a href="{{ route($item['name']) }}"
+                   class="flex flex-col items-center justify-center gap-1 transition {{ $isActive ? 'text-brand-700' : 'text-gray-400' }}">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="{{ $isActive ? '2.4' : '1.8' }}" viewBox="0 0 24 24">
                         @switch($item['icon'])
                             @case('home')
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                                @break
-                            @case('list')
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                 @break
                             @case('wallet')
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M5 6h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2zm12 8h.01"/>
@@ -35,9 +49,9 @@
                                 @break
                         @endswitch
                     </svg>
-                </div>
-                <span class="text-[11px] {{ $isActive ? 'font-bold' : 'font-medium' }}">{{ $item['label'] }}</span>
-            </a>
+                    <span class="text-[11px] {{ $isActive ? 'font-bold' : 'font-medium' }}">{{ $item['label'] }}</span>
+                </a>
+            @endif
         @endforeach
     </div>
 </nav>

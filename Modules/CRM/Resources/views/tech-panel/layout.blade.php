@@ -61,7 +61,7 @@
         .app-frame {
             min-height: 100vh;
             min-height: 100dvh;
-            background: #ffffff;
+            background: #eef0f4;
             position: relative;
             overflow-x: hidden;
         }
