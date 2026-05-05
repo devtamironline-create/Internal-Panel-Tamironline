@@ -262,4 +262,8 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('invoices', [TechPanelDashboardController::class, 'invoices'])->name('invoices');
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
     });
+
+    // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
+    // session.tech_impersonator_user_id کار می‌کند.
+    Route::post('impersonate/leave', [ImpersonateController::class, 'leave'])->name('impersonate.leave');
 });

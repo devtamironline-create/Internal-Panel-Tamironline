@@ -94,6 +94,24 @@
 </head>
 <body>
     <div class="app-frame">
+        @if(session('tech_impersonator_user_id') && \Illuminate\Support\Facades\Auth::guard('tech')->check())
+            @php $impersonatedTech = \Illuminate\Support\Facades\Auth::guard('tech')->user(); @endphp
+            <div class="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-2 text-amber-800 min-w-0">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.024 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.5M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+                    </svg>
+                    <span class="truncate">به‌جای <b>{{ trim($impersonatedTech->firstname_tech ?: $impersonatedTech->first_name) ?: $impersonatedTech->mobile }}</b> وارد شده‌اید</span>
+                </div>
+                <form action="{{ route('tech.impersonate.leave') }}" method="POST" class="flex-shrink-0">
+                    @csrf
+                    <button type="submit" class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-medium">
+                        خروج از حالت ادمین
+                    </button>
+                </form>
+            </div>
+        @endif
+
         @yield('body')
     </div>
 
