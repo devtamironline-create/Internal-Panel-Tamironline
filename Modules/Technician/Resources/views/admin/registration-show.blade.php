@@ -779,9 +779,10 @@
             @if($registration->biometric_video_path)
             <div class="mt-4">
                 <label class="text-xs text-gray-500 font-bold mb-2 block">ویدیو احراز هویت:</label>
+                @php $videoUrl = route('technician.admin.registrations.document', ['id' => $registration->id, 'field' => 'biometric_video_path']); @endphp
                 <video controls class="w-full rounded-xl bg-black" style="max-height: 300px;">
-                    <source src="{{ asset('storage/' . $registration->biometric_video_path) }}" type="video/webm">
-                    <source src="{{ asset('storage/' . $registration->biometric_video_path) }}" type="video/mp4">
+                    <source src="{{ $videoUrl }}" type="video/webm">
+                    <source src="{{ $videoUrl }}" type="video/mp4">
                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                 </video>
             </div>
@@ -850,7 +851,7 @@
             </div>
 
             @if($registration->promissory_note_path)
-                <a href="{{ \Illuminate\Support\Facades\Storage::url($registration->promissory_note_path) }}" target="_blank"
+                <a href="{{ route('technician.admin.registrations.document', ['id' => $registration->id, 'field' => 'promissory_note_path']) }}" target="_blank"
                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     مشاهده فایل سفته
