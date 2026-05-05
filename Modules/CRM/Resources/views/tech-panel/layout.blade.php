@@ -1,11 +1,7 @@
-@php
-    use App\Models\Setting;
-    $brandLogo    = Setting::get('tech_panel_logo');
-    $brandBanner  = Setting::get('tech_panel_banner');
-    $brandHero    = Setting::get('tech_panel_hero');
-    $appName      = Setting::get('tech_panel_name', 'تعمیرآنلاین');
-    $supportPhone = Setting::get('tech_panel_support_phone');
-@endphp
+{{-- متغیرهای brand* و appName/supportPhone از طریق View::composer
+     در CrmServiceProvider به این view و همهٔ child viewهای tech-panel.*
+     تزریق می‌شوند. در parent @php تعریف نمی‌شوند چون scope آن به
+     @section های child منتقل نمی‌شود. --}}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>

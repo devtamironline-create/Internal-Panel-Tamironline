@@ -2,6 +2,8 @@
 
 namespace Modules\CRM\Providers;
 
+use App\Models\Setting;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
@@ -24,6 +26,19 @@ class CrmServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
 
         Livewire::component('crm.order-wizard', OrderWizard::class);
+
+        // متغیرهای branding پنل تکنسین به همهٔ ویوهای tech-panel.* پاس
+        // داده می‌شوند. تعریف در parent layout @php کافی نیست چون scope
+        // آن به child sections (@section) منتقل نمی‌شود.
+        View::composer('crm::tech-panel.*', function ($view) {
+            $view->with([
+                'brandLogo'    => Setting::get('tech_panel_logo'),
+                'brandBanner'  => Setting::get('tech_panel_banner'),
+                'brandHero'    => Setting::get('tech_panel_hero'),
+                'appName'      => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
+                'supportPhone' => Setting::get('tech_panel_support_phone'),
+            ]);
+        });
 
         if ($this->app->runningInConsole()) {
             $this->commands([
