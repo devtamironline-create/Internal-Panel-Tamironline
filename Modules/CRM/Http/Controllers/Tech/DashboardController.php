@@ -2,16 +2,17 @@
 
 namespace Modules\CRM\Http\Controllers\Tech;
 
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Models\Order;
 
 /**
  * کنترلر داشبورد + صفحات اصلی پنل تکنسین.
  *
- * در فاز ۲ همهٔ زیرصفحه‌ها (سفارش‌ها/کیف‌پول/فاکتور/پروفایل) هنوز
- * placeholder هستند تا layout موبایلی + bottom nav قابل تست باشد.
- * منطق واقعی هر صفحه در فازهای ۳ تا ۷ از TechDashboardController قدیمی
- * مهاجرت می‌کند.
+ * فاز ۳: سفارش‌ها از placeholder خارج شد. کیف‌پول/فاکتور/پروفایل
+ * هنوز placeholder هستند و در فازهای بعدی فعال می‌شوند.
  */
 class DashboardController extends Controller
 {
@@ -22,12 +23,39 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function orders()
+    public function orders(Request $request)
     {
-        return view('crm::tech-panel._partials.placeholder', [
-            'pageTitle' => 'سفارش‌ها',
-            'pageDescription' => 'لیست سفارش‌های تخصیص داده شده در فاز ۳ اضافه می‌شود.',
-            'currentNav' => 'tech.orders',
+        $tech = Auth::guard('tech')->user();
+
+        $statusFilter = $request->query('status');
+        $search = $request->query('q');
+
+        $base = Order::query()->forTechnician($tech->id);
+
+        // آمار وضعیت‌های مهم برای تکنسین (همیشه روی کل سفارش‌های تکنسین).
+        $stats = [
+            'total' => (clone $base)->count(),
+            'coordinated' => (clone $base)->ofStatus(OrderStatus::Coordinated)->count(),
+            'open' => (clone $base)->ofStatus(OrderStatus::Open)->count(),
+            'completed' => (clone $base)->ofStatus(OrderStatus::Completed)->count(),
+        ];
+
+        $query = (clone $base)
+            ->with(['customer', 'brand', 'device'])
+            ->search($search);
+
+        if ($statusFilter && OrderStatus::tryFrom($statusFilter)) {
+            $query->ofStatus($statusFilter);
+        }
+
+        $orders = $query->latest()->paginate(15)->withQueryString();
+
+        return view('crm::tech-panel.orders', [
+            'technician' => $tech,
+            'orders' => $orders,
+            'stats' => $stats,
+            'statusFilter' => $statusFilter,
+            'search' => $search,
         ]);
     }
 
