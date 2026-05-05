@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\DashboardController;
@@ -34,6 +35,21 @@ Route::get('/health', function () {
     // Return 200 if database is ok, 503 only if database fails
     return response()->json($status, $status['database'] === 'ok' ? 200 : 503);
 })->name('health');
+
+// ─── ساب‌دامین اختصاصی پنل تکنسین ─────────────────────────────────
+// اگر TECH_SUBDOMAIN در .env ست شده باشد، root آن ساب‌دامین مستقیم به
+// صفحه لاگین/داشبورد تکنسین می‌رود تا تکنسین‌ها مجبور نباشند /tech را
+// تایپ کنند. این بلاک باید قبل از Route::get('/') عمومی باشد تا برای
+// آن host زودتر مچ شود.
+if ($techHost = config('app.tech_subdomain')) {
+    Route::domain($techHost)->group(function () {
+        Route::get('/', function () {
+            return Auth::guard('tech')->check()
+                ? redirect()->route('tech.dashboard')
+                : redirect()->route('tech.login');
+        })->name('tech.subdomain.home');
+    });
+}
 
 // Home - redirect to admin login
 Route::get('/', function () {
