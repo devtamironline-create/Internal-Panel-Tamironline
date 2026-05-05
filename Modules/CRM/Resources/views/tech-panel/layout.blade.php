@@ -1,7 +1,7 @@
 {{-- متغیرهای brand* و appName/supportPhone از طریق View::composer
      در CrmServiceProvider به این view و همهٔ child viewهای tech-panel.*
-     تزریق می‌شوند. در parent @php تعریف نمی‌شوند چون scope آن به
-     @section های child منتقل نمی‌شود. --}}
+     تزریق می‌شوند. در parent با php-block تعریف نمی‌شوند چون scope آن
+     به section های child منتقل نمی‌شود. --}}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
