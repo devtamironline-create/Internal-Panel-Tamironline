@@ -210,48 +210,22 @@ class PrintController extends Controller
         $shippingProvider = WarehouseSetting::get('shipping_provider', 'amadest');
         $registrationError = null;
 
-        // اگه سرویس تاپین هست ولی بارکد قدیمی آمادست داره، پاک کن تا دوباره ثبت بشه
+        // مهم: اگر سفارش از قبل بارکدی دارد، هرگز خودکار دوباره ثبت نمی‌کنیم.
+        // قبلاً سه بلاک «پاک کردن بارکد قدیمی برای ثبت مجدد» بود که اگر فلگ
+        // {provider}.registered به هر دلیلی false باشد (سینک، ریست wc_order_data،
+        // خطای ذخیره) باعث ثبت تکراری در سرویس ارسال می‌شد. حالا برای ثبت
+        // مجدد در سرویس متفاوت یا تلاش دوباره، کاربر باید دکمهٔ «ثبت مجدد»
+        // (retryRegister) را بزند که صریحاً بارکد قدیم را پاک می‌کند.
         $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
-        $tapinRegistered = ($wcData['tapin']['registered'] ?? false);
-        if ($order->shipping_type === 'post' && $shippingProvider === 'tapin' && !empty($order->amadest_barcode) && !$tapinRegistered) {
-            Log::info('Clearing old barcode for Tapin re-registration', [
-                'order' => $order->order_number,
-                'old_barcode' => $order->amadest_barcode,
-            ]);
-            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
-            $order->refresh();
-        }
-
-        // اگه سرویس پستکس هست ولی بارکد قدیمی آمادست داره، پاک کن تا دوباره ثبت بشه
-        $postexRegistered = ($wcData['postex']['registered'] ?? false);
-        if ($order->shipping_type === 'post' && $shippingProvider === 'postex' && !empty($order->amadest_barcode) && !$postexRegistered) {
-            Log::info('Clearing old barcode for Postex re-registration', [
-                'order' => $order->order_number,
-                'old_barcode' => $order->amadest_barcode,
-            ]);
-            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
-            $order->refresh();
-        }
-
-        // اگه سرویس COD24 هست ولی بارکد قدیمی از سرویس دیگه داره، پاک کن تا دوباره ثبت بشه
-        // ولی فقط وقتی که COD24 قبلاً ثبت نشده باشه
-        $cod24Registered = ($wcData['cod24']['registered'] ?? false);
-        if ($order->shipping_type === 'post' && $shippingProvider === 'cod24' && !empty($order->amadest_barcode) && !$cod24Registered) {
-            Log::info('Clearing old barcode for COD24 re-registration', [
-                'order' => $order->order_number,
-                'old_barcode' => $order->amadest_barcode,
-            ]);
-            $order->update(['amadest_barcode' => null, 'post_tracking_code' => null]);
-            $order->refresh();
-        }
 
         // چک قوی: اگه در سرویس فعلی قبلاً ثبت شده، دیگه ثبت خودکار نکن
-        $wcData = is_array($order->wc_order_data) ? $order->wc_order_data : [];
         $alreadyRegisteredInProvider =
             ($shippingProvider === 'cod24' && ($wcData['cod24']['registered'] ?? false)) ||
             ($shippingProvider === 'tapin' && ($wcData['tapin']['registered'] ?? false)) ||
             ($shippingProvider === 'postex' && ($wcData['postex']['registered'] ?? false));
 
+        // ثبت خودکار فقط وقتی: post، بارکد خالی، و هیچ فلگ registered ست نشده.
+        // وجود هر بارکد = «قبلاً ثبت شده، دست نزن» — جلوگیری قطعی از تکرار.
         if ($order->shipping_type === 'post' && empty($order->amadest_barcode) && !$alreadyRegisteredInProvider) {
             try {
                 $shipping = $wcData['shipping'] ?? [];
