@@ -31,22 +31,22 @@
         </div>
 
         {{-- Quick stats inside hero --}}
-        <div class="px-5 mt-6 grid grid-cols-4 gap-2 text-center">
-            <div class="bg-white/10 backdrop-blur rounded-xl py-2 border border-white/15">
-                <div class="text-white text-base font-bold">{{ number_format($stats['total']) }}</div>
-                <div class="text-white/70 text-[10px] mt-0.5">کل</div>
+        <div class="px-5 mt-7 grid grid-cols-4 gap-2.5 text-center">
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-1 border border-white/20 shadow-sm">
+                <div class="text-white text-xl font-bold leading-none">{{ number_format($stats['total']) }}</div>
+                <div class="text-white/75 text-[11px] mt-1.5 font-medium">کل</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl py-2 border border-white/15">
-                <div class="text-white text-base font-bold">{{ number_format($stats['coordinated']) }}</div>
-                <div class="text-white/70 text-[10px] mt-0.5">هماهنگ‌شده</div>
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-1 border border-white/20 shadow-sm">
+                <div class="text-white text-xl font-bold leading-none">{{ number_format($stats['coordinated']) }}</div>
+                <div class="text-white/75 text-[11px] mt-1.5 font-medium">هماهنگ‌شده</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl py-2 border border-white/15">
-                <div class="text-white text-base font-bold">{{ number_format($stats['open']) }}</div>
-                <div class="text-white/70 text-[10px] mt-0.5">باز شده</div>
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-1 border border-white/20 shadow-sm">
+                <div class="text-white text-xl font-bold leading-none">{{ number_format($stats['open']) }}</div>
+                <div class="text-white/75 text-[11px] mt-1.5 font-medium">باز شده</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl py-2 border border-white/15">
-                <div class="text-white text-base font-bold">{{ number_format($stats['completed']) }}</div>
-                <div class="text-white/70 text-[10px] mt-0.5">انجام کار</div>
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-1 border border-white/20 shadow-sm">
+                <div class="text-white text-xl font-bold leading-none">{{ number_format($stats['completed']) }}</div>
+                <div class="text-white/75 text-[11px] mt-1.5 font-medium">انجام کار</div>
             </div>
         </div>
     </div>
