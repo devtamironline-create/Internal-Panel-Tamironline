@@ -158,7 +158,7 @@
 
         @if($invoices->hasPages())
             <div class="pt-2 pb-1">
-                {{ $invoices->links() }}
+                @include('crm::tech-panel._partials.pagination', ['paginator' => $invoices])
             </div>
         @endif
     </div>

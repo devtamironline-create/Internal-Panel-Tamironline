@@ -153,7 +153,7 @@
 
         @if($orders->hasPages())
             <div class="pt-2 pb-1">
-                {{ $orders->links() }}
+                @include('crm::tech-panel._partials.pagination', ['paginator' => $orders])
             </div>
         @endif
     </div>
