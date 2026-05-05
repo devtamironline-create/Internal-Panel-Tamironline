@@ -5,7 +5,9 @@ namespace Modules\CRM\Http\Controllers\Tech;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\Password;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Enums\WalletTxType;
@@ -361,10 +363,48 @@ class DashboardController extends Controller
 
     public function profile()
     {
-        return view('crm::tech-panel._partials.placeholder', [
-            'pageTitle' => 'پروفایل',
-            'pageDescription' => 'مشاهده و ویرایش پروفایل + تنظیم رمز عبور در فاز ۷ اضافه می‌شود.',
-            'currentNav' => 'tech.profile',
+        return view('crm::tech-panel.profile', [
+            'technician' => Auth::guard('tech')->user(),
         ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        $validated = $request->validate([
+            'phone' => 'nullable|string|max:30',
+            'phone_force' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:1000',
+            'description' => 'nullable|string|max:2000',
+        ]);
+
+        $tech->update($validated);
+
+        return redirect()
+            ->route('tech.profile')
+            ->with('success', 'اطلاعات پروفایل به‌روزرسانی شد.');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password' => ['required', 'string', 'confirmed', Password::min(6)],
+        ]);
+
+        if (! Hash::check($validated['current_password'], $tech->password)) {
+            return back()
+                ->withErrors(['current_password' => 'رمز عبور فعلی صحیح نیست.'])
+                ->onlyInput();
+        }
+
+        $tech->update(['password' => $validated['password']]);
+
+        return redirect()
+            ->route('tech.profile')
+            ->with('success', 'رمز عبور با موفقیت تغییر کرد.');
     }
 }
