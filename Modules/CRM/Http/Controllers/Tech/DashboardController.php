@@ -15,6 +15,7 @@ use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\WalletTransaction;
+use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 /**
@@ -25,8 +26,10 @@ use Modules\CRM\Services\OrderSmsNotifier;
  */
 class DashboardController extends Controller
 {
-    public function __construct(protected OrderSmsNotifier $smsNotifier)
-    {
+    public function __construct(
+        protected OrderSmsNotifier $smsNotifier,
+        protected InvoiceService $invoiceService,
+    ) {
     }
 
     public function index()
@@ -185,6 +188,15 @@ class DashboardController extends Controller
             'changed_by' => $tech->user_id,
             'created_at' => now(),
         ]);
+
+        // تولید فاکتور + ثبت کمیسیون در کیف‌پول — هم‌ارز رفتار
+        // TechDashboardController قدیمی (admin). idempotent است؛ اگر سفارش
+        // قبلاً فاکتور داشته باشد، چیزی ساخته نمی‌شود.
+        // پیش‌نویس‌ها فاکتور صادر نمی‌کنند — تکنسین می‌تواند بعداً دوباره ثبت
+        // کند بدون save_as_draft تا فاکتور نهایی بخورد.
+        if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
+            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id);
+        }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
