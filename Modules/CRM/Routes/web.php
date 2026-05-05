@@ -16,6 +16,7 @@ use Modules\CRM\Http\Controllers\ProvinceController;
 use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
+use Modules\CRM\Http\Controllers\TechPanelSettingsController;
 use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
@@ -239,6 +240,13 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
         Route::get('plugin/download', [SyncSettingsController::class, 'downloadPlugin'])->name('plugin.download');
+    });
+
+    // ─── تنظیمات ظاهری پنل تکنسین (لوگو/بنر/هیرو/...) ──────────────
+    Route::middleware('can:manage-crm-settings')->prefix('tech-panel-settings')->name('tech-panel-settings.')->group(function () {
+        Route::get('/', [TechPanelSettingsController::class, 'index'])->name('index');
+        Route::post('/', [TechPanelSettingsController::class, 'update'])->name('update');
+        Route::delete('/image/{key}', [TechPanelSettingsController::class, 'deleteImage'])->name('delete-image');
     });
 });
 
