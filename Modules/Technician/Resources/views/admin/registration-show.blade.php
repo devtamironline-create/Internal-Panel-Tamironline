@@ -615,9 +615,10 @@
                 <div class="text-center">
                     <p class="text-xs font-semibold text-gray-600 mb-1.5">{{ $doc['label'] }}</p>
                     @if($registration->{$doc['field']})
-                        <a href="{{ asset('storage/' . $registration->{$doc['field']}) }}" target="_blank" class="block group">
+                        @php $docUrl = route('technician.admin.registrations.document', ['id' => $registration->id, 'field' => $doc['field']]); @endphp
+                        <a href="{{ $docUrl }}" target="_blank" class="block group">
                             <div class="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
-                                <img src="{{ asset('storage/' . $registration->{$doc['field']}) }}" alt="{{ $doc['label'] }}" class="w-full h-full object-cover">
+                                <img src="{{ $docUrl }}" alt="{{ $doc['label'] }}" class="w-full h-full object-cover">
                             </div>
                             <span class="text-xs text-blue-500 mt-1 inline-block group-hover:underline">مشاهده</span>
                         </a>

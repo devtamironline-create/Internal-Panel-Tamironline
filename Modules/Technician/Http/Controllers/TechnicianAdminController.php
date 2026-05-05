@@ -315,6 +315,52 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * صرو دادن مدارک آپلودی تکنسین از طریق روت اختصاصی به‌جای دسترسی
+     * مستقیم به storage/. این روش روی هاست‌های اشتراکی cPanel/LiteSpeed
+     * که FollowSymLinks یا دسترسی مستقیم به storage/app/public را
+     * مسدود کرده‌اند نیز کار می‌کند، و چون پشت middleware auth است،
+     * مدارک تکنسین‌ها هرگز به‌صورت عمومی افشا نمی‌شوند.
+     *
+     * فقط فیلدهایی که در whitelist زیر هستند قابل دسترسی‌اند تا کسی نتواند
+     * با تغییر $field به فایل‌های دلخواه روی دیسک برسد.
+     */
+    public function registrationDocument($id, $field)
+    {
+        $this->checkAccess();
+
+        $allowedFields = [
+            'doc_national_card_front',
+            'doc_national_card_back',
+            'doc_birth_certificate_p1',
+            'doc_birth_certificate_p2',
+            'doc_criminal_record',
+            'doc_photo_3x4',
+            'doc_lease_agreement',
+            'doc_utility_bill',
+            'biometric_video_path',
+            'promissory_note_path',
+            'signed_contract_path',
+        ];
+        if (! in_array($field, $allowedFields, true)) {
+            abort(404);
+        }
+
+        $registration = TechnicianRegistration::findOrFail($id);
+        $relativePath = $registration->{$field} ?? null;
+
+        if (empty($relativePath) || ! Storage::disk('public')->exists($relativePath)) {
+            abort(404);
+        }
+
+        // inline preview (تصویر/PDF/ویدیو در تب باز شود) — نه دانلود اجباری.
+        return Storage::disk('public')->response(
+            $relativePath,
+            basename($relativePath),
+            ['Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"']
+        );
+    }
+
+    /**
      * نمایش متن کامل قرارداد یک درخواست برای ادمین.
      *
      * متن قرارداد به‌صورت تمپلیت در TechnicianSetting::contract_text ذخیره
