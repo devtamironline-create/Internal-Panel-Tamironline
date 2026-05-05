@@ -69,16 +69,15 @@
             body {
                 background: #eef0f4;
                 background-attachment: fixed;
-                padding: 28px 16px;
+                padding: 0;
             }
             .app-frame {
                 max-width: 480px;
                 margin: 0 auto;
-                min-height: calc(100vh - 56px);
-                min-height: calc(100dvh - 56px);
-                border-radius: 24px;
-                box-shadow: 0 10px 40px -12px rgba(15, 23, 42, 0.12),
-                            0 4px 12px -4px rgba(15, 23, 42, 0.06);
+                min-height: 100vh;
+                min-height: 100dvh;
+                border-radius: 0;
+                box-shadow: 0 0 40px -8px rgba(15, 23, 42, 0.12);
                 overflow: hidden;
             }
         }
