@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
+use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
+use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 /**
@@ -290,12 +292,37 @@ class DashboardController extends Controller
         }
     }
 
-    public function wallet()
+    public function wallet(Request $request)
     {
-        return view('crm::tech-panel._partials.placeholder', [
-            'pageTitle' => 'کیف‌پول',
-            'pageDescription' => 'تراکنش‌ها، شارژ، و مانده در فاز ۵ اضافه می‌شود.',
-            'currentNav' => 'tech.wallet',
+        $tech = Auth::guard('tech')->user();
+
+        $typeFilter = $request->query('type');
+
+        $base = WalletTransaction::query()->where('technician_id', $tech->id);
+
+        // مجموع‌های دسته‌بندی‌شده روی کل تاریخچه — مستقل از فیلتر فعلی.
+        $stats = [
+            'commission_sum' => (int) (clone $base)->where('type', WalletTxType::Commission->value)->sum('amount'),
+            'reward_sum'     => (int) (clone $base)->where('type', WalletTxType::Reward->value)->sum('amount'),
+            'penalty_sum'    => (int) (clone $base)->where('type', WalletTxType::Penalty->value)->sum('amount'),
+            'charge_sum'     => (int) (clone $base)->where('type', WalletTxType::WalletCharge->value)->sum('amount'),
+        ];
+
+        $query = (clone $base)->with(['order', 'invoice']);
+        if ($typeFilter && WalletTxType::tryFrom($typeFilter)) {
+            $query->where('type', $typeFilter);
+        }
+
+        $transactions = $query->latest()->paginate(15)->withQueryString();
+
+        // refresh accessor با لود withSum فاکتورها — جلوگیری از N+1.
+        $tech->loadSum('invoices', 'company_share');
+
+        return view('crm::tech-panel.wallet', [
+            'technician' => $tech,
+            'transactions' => $transactions,
+            'stats' => $stats,
+            'typeFilter' => $typeFilter,
         ]);
     }
 
