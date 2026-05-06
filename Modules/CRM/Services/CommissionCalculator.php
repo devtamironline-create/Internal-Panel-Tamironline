@@ -15,9 +15,12 @@ use Modules\CRM\Models\Technician;
  *      tech_share = total، company_share = 0  (۱۰۰٪ تکنسین)
  *
  * 2) type_of_calc_tech == '1' (Internal):
- *      tech_per      = 1 - (tech_per_of_all / 100)
- *      company_share = round((total + cost_price) * tech_per)
- *      tech_share    = total - company_share
+ *      all_price_item = total + cost_price        (مبلغ ناخالص = خالص + هزینه قطعات)
+ *      tech_per       = (100 - tech_per_of_all) / 100
+ *      tech_share     = round(all_price_item * tech_per)   ← سهم تکنسین
+ *      company_share  = all_price_item - tech_share         ← سهم شرکت
+ *      مهم: مجموع tech_share + company_share = all_price_item (نه total).
+ *      tech_per_of_all در WP درصدی است که شرکت برمی‌دارد.
  *
  * 3) External (پیش‌فرض):
  *      tech_share    = total * percent / 100
@@ -62,12 +65,15 @@ class CommissionCalculator
             ];
         }
 
-        // ۲) Internal — مطابق with WP: type_of_calc_tech == 1
+        // ۲) Internal — مطابق دقیق با WP (tech_financial_list.php):
+        //   $all_price_item = $total_invoice + $cost_price;
+        //   $tech_per = 1 - ($tech_per_of_all / 100);
+        //   $total_invoice_customer = $all_price_item * $tech_per;   // tech share
+        //   $total_invoice_co       = $all_price_item - $total_invoice_customer;
         if ($calcType === '1' || $calcType === 'internal') {
-            $techRatio = (100 - $techPerOfAll) / 100;
-            $companyShare = (int) round(($total + $costPrice) * $techRatio);
-            $companyShare = max(0, min($total, $companyShare));
-            $techShare = $total - $companyShare;
+            $gross = $total + $costPrice;
+            $techShare = (int) round($gross * (100 - $techPerOfAll) / 100);
+            $companyShare = $gross - $techShare;
 
             return [
                 'total' => $total,
