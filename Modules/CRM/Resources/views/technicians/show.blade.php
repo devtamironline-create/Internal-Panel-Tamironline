@@ -178,12 +178,12 @@
                   class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 @csrf
                 <div>
-                    <label class="block text-xs text-gray-500 mb-1">مبلغ هدف (تومان)</label>
+                    <label class="block text-xs text-gray-500 mb-1">مبلغ هدف (تومان — منفی هم مجاز است)</label>
                     <input type="number" name="target_amount" required
                            value="{{ old('target_amount', 0) }}"
-                           step="1000" inputmode="numeric"
+                           step="1" inputmode="numeric"
                            class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500"
-                           placeholder="مثلاً 200000">
+                           placeholder="مثلاً 200000 یا -355429">
                     @error('target_amount')<p class="text-rose-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div class="md:col-span-2">
