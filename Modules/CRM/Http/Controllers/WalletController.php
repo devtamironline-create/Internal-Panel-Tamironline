@@ -36,9 +36,25 @@ class WalletController extends Controller
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance']);
 
+        // تفکیک: مانده‌های منفی → بدهکار، مانده‌های مثبت → بستانکار،
+        // مانده صفر اصلاً نمایش داده نمی‌شود. مرتب‌سازی در هر گروه بر
+        // اساس قدر مطلق مانده (نزولی) تا تکنسین‌های با بزرگ‌ترین رقم
+        // اول دیده شوند.
+        $debtors = $technicians
+            ->filter(fn (Technician $t) => (int) $t->true_balance < 0)
+            ->sortBy(fn (Technician $t) => (int) $t->true_balance)
+            ->values();
+
+        $creditors = $technicians
+            ->filter(fn (Technician $t) => (int) $t->true_balance > 0)
+            ->sortByDesc(fn (Technician $t) => (int) $t->true_balance)
+            ->values();
+
         return view('crm::wallet.index', [
             'transactions' => $transactions,
             'technicians' => $technicians,
+            'debtors' => $debtors,
+            'creditors' => $creditors,
             'technicianId' => $technicianId,
             'type' => $type,
             'types' => WalletTxType::options(),
