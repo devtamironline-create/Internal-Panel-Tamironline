@@ -16,8 +16,39 @@ class PaymentController extends Controller
     {
     }
 
-    // ─────────────── صفحه عمومی پرداخت (بدون لاگین) ───────────────
+    // ─────────────── صفحه پیش‌نمایش فاکتور (GET، بدون لاگین) ───────────────
+    /**
+     * نمایش فاکتور به مشتری بدون نیاز به لاگین. اطلاعات سفارش، اقلام،
+     * مبلغ نهایی و یک دکمه «پرداخت آنلاین» نشان داده می‌شود. کلیک روی
+     * دکمه فرم را POST می‌کند روی همین URL که initiate() را صدا می‌زند.
+     */
     public function pay(string $invoiceCode)
+    {
+        $invoice = Invoice::with(['customer', 'order.technician', 'order.items', 'order.brand', 'order.device'])
+            ->where('invoice_code', $invoiceCode)
+            ->first();
+
+        if (! $invoice) {
+            return view('crm::payment.result', [
+                'ok' => false,
+                'message' => 'فاکتور یافت نشد.',
+                'invoice' => null,
+                'payment' => null,
+            ]);
+        }
+
+        return view('crm::payment.preview', [
+            'invoice' => $invoice,
+            'gatewayConfigured' => $this->zibal->isConfigured(),
+        ]);
+    }
+
+    // ─────────────── شروع پرداخت (POST، بدون لاگین) ───────────────
+    /**
+     * بعد از کلیک روی دکمه «پرداخت آنلاین» در صفحه preview، این متد
+     * فراخوانی می‌شود. درخواست به zibal و redirect به درگاه.
+     */
+    public function initiate(string $invoiceCode)
     {
         $invoice = Invoice::with('customer')->where('invoice_code', $invoiceCode)->first();
 

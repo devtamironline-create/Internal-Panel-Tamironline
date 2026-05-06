@@ -25,6 +25,7 @@ use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardC
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
 Route::middleware('web')->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');
+    Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
 });
 
