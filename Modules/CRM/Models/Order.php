@@ -301,6 +301,23 @@ class Order extends Model
         $costTotal     = (int) ($this->cost_price ?? 0);
         $remaining     = (int) ($this->total_invoice ?? 0);
 
+        // ─── Fallbackها برای داده‌های ناقص (display-only) ───────────────
+        // اگر فیلدهای aggregate صفر/خالی باشند ولی آرایه‌های موازی WP
+        // پر باشد، مقدار را از خود آرایه‌ها استخراج می‌کنیم. این فقط
+        // برای نمایش است — مقدار ذخیره‌شده در DB دست‌نخورده می‌ماند.
+        if ($costTotal === 0 && is_array($this->buy_price_list) && ! empty($this->buy_price_list)) {
+            $costTotal = (int) array_sum(array_map(static fn ($v) => (int) $v, $this->buy_price_list));
+        }
+        if ($customerTotal === 0 && is_array($this->customer_price_list) && ! empty($this->customer_price_list)) {
+            $customerTotal = (int) array_sum(array_map(static fn ($v) => (int) $v, $this->customer_price_list));
+        }
+        // اگر مانده ذخیره نشده ولی customerTotal و costTotal از مسیر بالا
+        // پر شدند، مانده‌ی منطقی = customer − cost است (هم‌ارز
+        // total_invoice = price_customer − cost_price در WP CRM).
+        if ($remaining === 0 && $customerTotal > 0) {
+            $remaining = max(0, $customerTotal - $costTotal);
+        }
+
         $hasData = ($customerTotal > 0) || ($costTotal > 0) || ($remaining > 0)
             || ! empty($this->piece_list);
 
