@@ -123,10 +123,18 @@ class TechnicianController extends Controller
      * تنظیم دستی مانده‌ی کیف‌پول تکنسین به یک عدد دلخواه.
      *
      * منطق: مانده‌ی نمایشی (true_balance = wallet_balance − invoice_debt) باید
-     * بعد از این عملیات دقیقاً برابر target_amount شود. delta لازم را محاسبه
-     * می‌کنیم و یک تراکنش Adjustment با همان مبلغ ثبت می‌کنیم. چون این
-     * یک ردیف در crm_tech_wallet_transactions است، در تاریخچه دیده می‌شود
-     * و crm:wallet:recompute-balances هم آن را حفظ می‌کند.
+     * بعد از این عملیات دقیقاً برابر target_amount شود.
+     *
+     * ۱) اول wallet_balance denormalized روی technicians را با مجموع واقعی
+     *    crm_tech_wallet_transactions همگام می‌کنیم (در صورت stale بودن).
+     * ۲) سپس invoice_debt (= sum(company_share)) را بارگذاری می‌کنیم.
+     * ۳) currentTrueBalance = sumOfTxs − invoiceDebt.
+     * ۴) delta = target − currentTrueBalance.
+     * ۵) یک تراکنش Adjustment با مبلغ delta ثبت می‌کنیم.
+     *
+     * نتیجه: مجموع همه‌ی تراکنش‌ها (شامل تراکنش جدید) منهای سهم شرکت از
+     * فاکتورها دقیقاً برابر target می‌شود — بدون وابستگی به مقدار stale
+     * فیلد denormalized.
      */
     public function setWalletBalance(Request $request, Technician $technician, WalletService $wallet)
     {
@@ -138,9 +146,22 @@ class TechnicianController extends Controller
             'target_amount.integer' => 'مبلغ هدف باید عدد باشد.',
         ]);
 
-        $technician->loadSum('invoices', 'company_share');
-        $currentTrueBalance = (int) $technician->true_balance;
         $target = (int) $validated['target_amount'];
+
+        // ۱) همگام‌سازی wallet_balance با مجموع واقعی تراکنش‌ها قبل از محاسبه delta.
+        $actualSum = (int) DB::table('crm_tech_wallet_transactions')
+            ->where('technician_id', $technician->id)
+            ->sum('amount');
+        if ((int) $technician->wallet_balance !== $actualSum) {
+            $technician->forceFill(['wallet_balance' => $actualSum])->save();
+        }
+
+        // ۲) لود invoice_debt
+        $technician->loadSum('invoices', 'company_share');
+        $invoiceDebt = (int) $technician->invoice_debt;
+
+        // ۳) و ۴) محاسبه delta
+        $currentTrueBalance = $actualSum - $invoiceDebt;
         $delta = $target - $currentTrueBalance;
 
         if ($delta === 0) {
@@ -152,8 +173,10 @@ class TechnicianController extends Controller
             $note = 'تنظیم دستی مانده توسط ادمین به ' . number_format($target) . ' تومان';
         }
 
+        // ۵) ثبت Adjustment — WalletService قفل می‌کند، delta را جمع می‌زند،
+        // و wallet_balance + balance_after را به‌روزرسانی می‌کند.
         $wallet->recordTransaction(
-            technician: $technician,
+            technician: $technician->fresh(),
             type: WalletTxType::Adjustment,
             amount: $delta,
             note: $note,
@@ -162,7 +185,9 @@ class TechnicianController extends Controller
 
         return redirect()
             ->route('crm.technicians.show', $technician)
-            ->with('success', 'مانده‌ی کیف‌پول تنظیم شد. تراکنش Adjustment با مبلغ ' . number_format(abs($delta)) . ' تومان ثبت شد.');
+            ->with('success', 'مانده تنظیم شد. تراکنش Adjustment با مبلغ '
+                . ($delta >= 0 ? '+' : '−') . number_format(abs($delta))
+                . ' تومان ثبت شد. مانده فعلی: ' . number_format($target) . ' تومان.');
     }
 
     public function edit(Technician $technician)
