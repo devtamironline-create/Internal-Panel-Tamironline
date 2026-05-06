@@ -95,6 +95,53 @@ class Order extends Model
         'subscription' => 'integer',
     ];
 
+    /**
+     * Self-healing برای فیلدهای aggregate مالی هنگام ذخیره.
+     *
+     * هدف: هر سفارشی که از این پس ذخیره می‌شود، اگر آرایه‌های piece_list/
+     * buy_price_list/customer_price_list پر باشد ولی scalarهای متناظر
+     * (price_customer/cost_price/total_invoice) صفر یا خالی باشد،
+     * aggregateها از روی آرایه‌ها استخراج و ذخیره شود تا
+     * financialSummary و InvoiceService همیشه روی مقادیر سازگار اجرا
+     * شوند.
+     *
+     * فقط پر می‌کند و هرگز مقدار صریحاً ست‌شده را override نمی‌کند:
+     * اگر price_customer > 0 از قبل دارد، دست‌نخورده می‌ماند. روی
+     * رکوردهای موجود تا زمانی که save() جدیدی روی آن‌ها فراخوانی
+     * نشود، اثری ندارد — پس مانده‌های دستی تکنسین‌ها امن هستند.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $order) {
+            // cost_price ← sum(buy_price_list) (در صورت خالی بودن)
+            if ((int) ($order->cost_price ?? 0) === 0
+                && is_array($order->buy_price_list)
+                && ! empty($order->buy_price_list)) {
+                $sum = array_sum(array_map(static fn ($v) => (int) $v, $order->buy_price_list));
+                if ($sum > 0) {
+                    $order->cost_price = $sum;
+                }
+            }
+
+            // price_customer ← sum(customer_price_list) (در صورت خالی بودن)
+            if ((int) ($order->price_customer ?? 0) === 0
+                && is_array($order->customer_price_list)
+                && ! empty($order->customer_price_list)) {
+                $sum = array_sum(array_map(static fn ($v) => (int) $v, $order->customer_price_list));
+                if ($sum > 0) {
+                    $order->price_customer = $sum;
+                }
+            }
+
+            // total_invoice ← price_customer − cost_price (در صورت خالی بودن)
+            // معادل total_invoice WP CRM که مانده پس از کسر هزینه‌ها است.
+            if ((int) ($order->total_invoice ?? 0) === 0
+                && (int) ($order->price_customer ?? 0) > 0) {
+                $order->total_invoice = max(0, (int) $order->price_customer - (int) ($order->cost_price ?? 0));
+            }
+        });
+    }
+
     // ─────────────────── Relations ────────────────────────────────
     public function customer(): BelongsTo
     {
