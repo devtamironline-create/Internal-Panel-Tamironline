@@ -90,8 +90,44 @@
 
             {{-- آیتم‌های سفارش (snapshot) --}}
             @if($invoice->order)
+            @php
+                // اول از رابطهٔ Laravel-native (OrderItem). اگر خالی بود،
+                // به آرایه‌های موازی WP fallback می‌کنیم تا سفارش‌های
+                // ایمپورت‌شده از WP CRM هم اقلامشان دیده شود.
+                $rows = collect();
+                if ($invoice->order->items->isNotEmpty()) {
+                    foreach ($invoice->order->items as $item) {
+                        $rows->push([
+                            'type'  => $item->typeLabel(),
+                            'title' => $item->title,
+                            'qty'   => (int) $item->quantity,
+                            'unit'  => (int) $item->unit_price,
+                            'total' => (int) $item->total_price,
+                        ]);
+                    }
+                } else {
+                    $titles = is_array($invoice->order->piece_list) ? $invoice->order->piece_list : [];
+                    $sells  = is_array($invoice->order->customer_price_list) ? $invoice->order->customer_price_list : [];
+                    $buys   = is_array($invoice->order->buy_price_list) ? $invoice->order->buy_price_list : [];
+                    foreach ($titles as $i => $title) {
+                        if ($title === '' || $title === null) continue;
+                        $unit = (int) ($sells[$i] ?? 0);
+                        $rows->push([
+                            'type'  => 'قطعه',
+                            'title' => is_string($title) ? $title : (string) ($title['title'] ?? ''),
+                            'qty'   => 1,
+                            'unit'  => $unit,
+                            'total' => $unit,
+                            'buy'   => (int) ($buys[$i] ?? 0),
+                        ]);
+                    }
+                }
+            @endphp
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">اقلام سفارش</h2>
+                @if($rows->isEmpty())
+                    <p class="text-xs text-gray-400 italic py-4">برای این سفارش هیچ قلمی ثبت نشده است.</p>
+                @else
                 <table class="w-full">
                     <thead class="text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
                         <tr>
@@ -103,17 +139,23 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-                        @foreach($invoice->order->items as $item)
+                        @foreach($rows as $r)
                         <tr>
-                            <td class="py-2">{{ $item->typeLabel() }}</td>
-                            <td class="py-2">{{ $item->title }}</td>
-                            <td class="py-2">{{ $item->quantity }}</td>
-                            <td class="py-2">{{ number_format($item->unit_price) }}</td>
-                            <td class="py-2 font-medium">{{ number_format($item->total_price) }}</td>
+                            <td class="py-2">{{ $r['type'] }}</td>
+                            <td class="py-2">
+                                {{ $r['title'] }}
+                                @if(! empty($r['buy']))
+                                    <span class="text-[10px] text-gray-400">(خرید: {{ number_format($r['buy']) }})</span>
+                                @endif
+                            </td>
+                            <td class="py-2">{{ $r['qty'] }}</td>
+                            <td class="py-2">{{ number_format($r['unit']) }}</td>
+                            <td class="py-2 font-medium">{{ number_format($r['total']) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+                @endif
             </div>
             @endif
         </div>
