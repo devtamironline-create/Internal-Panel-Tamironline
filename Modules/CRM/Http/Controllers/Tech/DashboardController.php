@@ -34,8 +34,68 @@ class DashboardController extends Controller
 
     public function index()
     {
+        $tech = Auth::guard('tech')->user();
+
+        // برای کارت شورکات تقویم در داشبورد: فقط شمارش سفارش هر روز در ۷ روز
+        // آینده (سبک‌ترین کوئری ممکن — بدون with، بدون select کامل).
+        $calendarStart = now()->startOfDay();
+        $calendarEnd = $calendarStart->copy()->addDays(7)->endOfDay();
+        $calendarRaw = Order::query()
+            ->forTechnician($tech->id)
+            ->whereBetween('visit_scheduled_at', [$calendarStart, $calendarEnd])
+            ->selectRaw('DATE(visit_scheduled_at) as day, COUNT(*) as cnt')
+            ->groupBy('day')
+            ->pluck('cnt', 'day');
+
+        $calendarDays = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = $calendarStart->copy()->addDays($i);
+            $calendarDays[] = [
+                'date'  => $d,
+                'count' => (int) ($calendarRaw[$d->toDateString()] ?? 0),
+            ];
+        }
+
         return view('crm::tech-panel.dashboard', [
-            'technician' => Auth::guard('tech')->user(),
+            'technician' => $tech,
+            'calendarDays' => $calendarDays,
+        ]);
+    }
+
+    /**
+     * صفحه تقویم کاری — ۷ روز آینده هرکدام با لیست کامل سفارش‌ها.
+     * بر اساس visit_scheduled_at سفارش (تاریخ هماهنگی با مشتری).
+     */
+    public function calendar()
+    {
+        $tech = Auth::guard('tech')->user();
+
+        $start = now()->startOfDay();
+        $end = $start->copy()->addDays(7)->endOfDay();
+
+        $orders = Order::query()
+            ->forTechnician($tech->id)
+            ->whereBetween('visit_scheduled_at', [$start, $end])
+            ->with(['customer', 'brand', 'device'])
+            ->orderBy('visit_scheduled_at')
+            ->get();
+
+        // گروه‌بندی بر اساس تاریخ (Y-m-d میلادی) برای صفحه نمایش.
+        $byDay = $orders->groupBy(fn (Order $o) => $o->visit_scheduled_at?->toDateString());
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = $start->copy()->addDays($i);
+            $key = $d->toDateString();
+            $days[] = [
+                'date'   => $d,
+                'orders' => $byDay->get($key, collect()),
+            ];
+        }
+
+        return view('crm::tech-panel.calendar', [
+            'technician' => $tech,
+            'days' => $days,
         ]);
     }
 

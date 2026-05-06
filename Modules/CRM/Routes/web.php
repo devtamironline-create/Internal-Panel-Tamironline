@@ -270,6 +270,7 @@ Route::prefix('tech')->name('tech.')->group(function () {
     Route::middleware('auth:tech')->group(function () {
         Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
+        Route::get('calendar', [TechPanelDashboardController::class, 'calendar'])->name('calendar');
         Route::get('orders', [TechPanelDashboardController::class, 'orders'])->name('orders');
         Route::get('orders/{order}', [TechPanelDashboardController::class, 'showOrder'])->name('orders.show');
         Route::post('orders/{order}/status', [TechPanelDashboardController::class, 'updateOrderStatus'])->name('orders.update-status');
