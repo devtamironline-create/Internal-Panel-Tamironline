@@ -3,22 +3,27 @@
 namespace Modules\CRM\Services;
 
 use Illuminate\Support\Facades\DB;
-use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 
 /**
- * تولید فاکتور از سفارش + ثبت تراکنش کمیسیون در کیف‌پول تکنسین.
+ * تولید فاکتور از سفارش — هم‌سو با مدل مالی WP CRM.
  *
- * این سرویس idempotent است: اگر سفارشی قبلاً فاکتور صادر کرده،
- * همان فاکتور برگردانده می‌شود (یک سفارش = یک فاکتور).
+ * بر خلاف نسخه قبلی، این سرویس هیچ تراکنش کیف‌پول از نوع Commission
+ * ثبت نمی‌کند. در پنل WP، سهم تکنسین (tech_share) به‌عنوان «اعتبار»
+ * در کیف‌پول وارد نمی‌شود — تکنسین آن را به‌صورت نقدی از مشتری
+ * می‌گیرد. کیف‌پول فقط شامل: شارژ شرکت → تکنسین، پاداش، جریمه،
+ * پرداخت‌ها/برداشت‌ها است. مانده نهایی = wallet_balance − sum(company_share).
+ *
+ * اگر در نسخه قبلی Commission تراکنش‌هایی ساخته شده‌اند، باید با
+ * crm:invoices:recompute پاک‌سازی شوند تا مانده با WP همخوان شود.
+ *
+ * idempotent: اگر سفارش از قبل فاکتور دارد، همان برمی‌گردد.
  */
 class InvoiceService
 {
-    public function __construct(
-        protected CommissionCalculator $calc,
-        protected WalletService $wallet,
-    ) {
+    public function __construct(protected CommissionCalculator $calc)
+    {
     }
 
     public function generateForOrder(Order $order, ?int $createdBy = null): ?Invoice
@@ -36,7 +41,7 @@ class InvoiceService
                    'tech_share' => 0, 'company_share' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
                    'percent' => 0, 'calc_type' => null];
 
-            $invoice = Invoice::create([
+            return Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
@@ -50,21 +55,6 @@ class InvoiceService
                 'issued_at' => now(),
                 'created_by' => $createdBy,
             ]);
-
-            // ثبت کمیسیون در کیف‌پول تکنسین (اگر تکنسین و سهم غیرصفر)
-            if ($technician && $totals['tech_share'] > 0) {
-                $this->wallet->recordTransaction(
-                    technician: $technician,
-                    type: WalletTxType::Commission,
-                    amount: $totals['tech_share'],
-                    note: 'کمیسیون فاکتور ' . $invoice->invoice_code,
-                    order: $order,
-                    invoice: $invoice,
-                    createdBy: $createdBy,
-                );
-            }
-
-            return $invoice;
         });
     }
 }
