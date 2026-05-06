@@ -142,6 +142,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('technicians/{technician}/provision-user', [TechnicianController::class, 'provisionUser'])->name('technicians.provision-user');
         Route::post('technicians/{technician}/unlink-user', [TechnicianController::class, 'unlinkUser'])->name('technicians.unlink-user');
         Route::post('technicians/{technician}/impersonate', [ImpersonateController::class, 'start'])->name('technicians.impersonate');
+
+        // تنظیم دستی مانده کیف‌پول (مبنای محاسبات از این لحظه به بعد)
+        Route::post('technicians/{technician}/wallet/set-balance', [TechnicianController::class, 'setWalletBalance'])
+            ->name('technicians.wallet.set-balance');
     });
 
     // خروج از حالت impersonate (نیازی به permission ندارد چون فقط

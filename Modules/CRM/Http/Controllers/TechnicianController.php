@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Modules\CRM\Concerns\ExportsListToFile;
+use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Services\WalletService;
 
 class TechnicianController extends Controller
 {
@@ -110,8 +112,57 @@ class TechnicianController extends Controller
     public function show(Technician $technician)
     {
         $technician->load(['user']);
+        // برای نمایش مانده دقیق در کارت کیف‌پول، sum سهم شرکت را cache می‌کنیم
+        // تا accessor invoice_debt در view یک query اضافه نزند.
+        $technician->loadSum('invoices', 'company_share');
 
         return view('crm::technicians.show', compact('technician'));
+    }
+
+    /**
+     * تنظیم دستی مانده‌ی کیف‌پول تکنسین به یک عدد دلخواه.
+     *
+     * منطق: مانده‌ی نمایشی (true_balance = wallet_balance − invoice_debt) باید
+     * بعد از این عملیات دقیقاً برابر target_amount شود. delta لازم را محاسبه
+     * می‌کنیم و یک تراکنش Adjustment با همان مبلغ ثبت می‌کنیم. چون این
+     * یک ردیف در crm_tech_wallet_transactions است، در تاریخچه دیده می‌شود
+     * و crm:wallet:recompute-balances هم آن را حفظ می‌کند.
+     */
+    public function setWalletBalance(Request $request, Technician $technician, WalletService $wallet)
+    {
+        $validated = $request->validate([
+            'target_amount' => 'required|integer',
+            'note' => 'nullable|string|max:500',
+        ], [
+            'target_amount.required' => 'مبلغ هدف الزامی است.',
+            'target_amount.integer' => 'مبلغ هدف باید عدد باشد.',
+        ]);
+
+        $technician->loadSum('invoices', 'company_share');
+        $currentTrueBalance = (int) $technician->true_balance;
+        $target = (int) $validated['target_amount'];
+        $delta = $target - $currentTrueBalance;
+
+        if ($delta === 0) {
+            return back()->with('success', 'مانده‌ی فعلی برابر با عدد هدف است؛ تغییری اعمال نشد.');
+        }
+
+        $note = trim($validated['note'] ?? '');
+        if ($note === '') {
+            $note = 'تنظیم دستی مانده توسط ادمین به ' . number_format($target) . ' تومان';
+        }
+
+        $wallet->recordTransaction(
+            technician: $technician,
+            type: WalletTxType::Adjustment,
+            amount: $delta,
+            note: $note,
+            createdBy: auth()->id(),
+        );
+
+        return redirect()
+            ->route('crm.technicians.show', $technician)
+            ->with('success', 'مانده‌ی کیف‌پول تنظیم شد. تراکنش Adjustment با مبلغ ' . number_format(abs($delta)) . ' تومان ثبت شد.');
     }
 
     public function edit(Technician $technician)

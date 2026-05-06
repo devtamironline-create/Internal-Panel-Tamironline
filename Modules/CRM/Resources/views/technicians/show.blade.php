@@ -130,5 +130,84 @@
         </div>
         @endif
     </div>
+
+    {{-- ─── کیف‌پول و تنظیم دستی مانده ─── --}}
+    @can('edit-crm-technician')
+    @php
+        $trueBalance = (int) $technician->true_balance;
+        $isPositive = $trueBalance >= 0;
+    @endphp
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">کیف‌پول</h2>
+            <div class="text-right">
+                <div class="text-xs text-gray-500">مانده فعلی</div>
+                <div class="text-2xl font-bold {{ $isPositive ? 'text-emerald-600' : 'text-rose-600' }}">
+                    {{ $isPositive ? '' : '−' }}{{ number_format(abs($trueBalance)) }}
+                    <span class="text-sm font-normal text-gray-400">تومان</span>
+                </div>
+                <div class="text-[11px] text-gray-500 mt-0.5">
+                    {{ $isPositive ? 'شرکت به تکنسین بدهکار است' : 'تکنسین به شرکت بدهکار است' }}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-5 text-xs">
+            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                <div class="text-gray-500">شارژ کیف‌پول (خام)</div>
+                <div class="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {{ number_format((int) $technician->wallet_balance) }} <span class="text-[10px] text-gray-400">تومان</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                <div class="text-gray-500">سهم شرکت از فاکتورها</div>
+                <div class="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {{ number_format((int) $technician->invoice_debt) }} <span class="text-[10px] text-gray-400">تومان</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+            <div class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">تنظیم دستی مانده</div>
+            <p class="text-xs text-gray-500 mb-3 leading-6">
+                مانده‌ی نمایش داده‌شده‌ی بالا را به یک عدد دلخواه تنظیم کنید. یک تراکنش از نوع «تعدیل» با اختلاف لازم در تاریخچه ثبت می‌شود و از این لحظه به بعد، فاکتورها/تراکنش‌های بعدی روی همین عدد جدید اعمال می‌شوند.
+            </p>
+
+            <form action="{{ route('crm.technicians.wallet.set-balance', $technician) }}" method="POST"
+                  onsubmit="return confirm('مانده به این عدد تنظیم شود؟ این عمل تراکنش جدیدی در تاریخچه می‌سازد.');"
+                  class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                @csrf
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">مبلغ هدف (تومان)</label>
+                    <input type="number" name="target_amount" required
+                           value="{{ old('target_amount', 0) }}"
+                           step="1000" inputmode="numeric"
+                           class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500"
+                           placeholder="مثلاً 200000">
+                    @error('target_amount')<p class="text-rose-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs text-gray-500 mb-1">یادداشت (اختیاری)</label>
+                    <input type="text" name="note" maxlength="500"
+                           value="{{ old('note') }}"
+                           class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500"
+                           placeholder="مثلاً: اصلاح مانده طبق تطبیق با CRM قدیم">
+                    @error('note')<p class="text-rose-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div class="md:col-span-3 flex items-center justify-end gap-2">
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold text-sm">
+                        ثبت تنظیم مانده
+                    </button>
+                </div>
+            </form>
+
+            @if(session('success'))
+                <div class="mt-3 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg">
+                    {{ session('success') }}
+                </div>
+            @endif
+        </div>
+    </div>
+    @endcan
 </div>
 @endsection
