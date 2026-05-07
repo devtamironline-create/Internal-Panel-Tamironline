@@ -115,16 +115,11 @@
                     </div>
                 </div>
 
-                @if($invoice->commission_percent || $invoice->paid_at)
-                    <div class="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-                        @if($invoice->commission_percent)
-                            <span>کمیسیون: {{ $invoice->commission_percent }}%</span>
-                        @else
-                            <span></span>
-                        @endif
-                        @if($invoice->paid_at)
-                            <span class="text-emerald-700" dir="ltr">پرداخت: @jdate($invoice->paid_at)</span>
-                        @endif
+                {{-- درصد کمیسیون چون در توافقات همکاری از قبل ثابت است
+                     برای تکنسین نمایش داده نمی‌شود؛ فقط تاریخ پرداخت. --}}
+                @if($invoice->paid_at)
+                    <div class="mt-2 text-left text-[11px] text-emerald-700" dir="ltr">
+                        پرداخت: @jdate($invoice->paid_at)
                     </div>
                 @endif
             </div>
