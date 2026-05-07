@@ -29,6 +29,10 @@ class TCS_Order_Sync
         add_action('added_post_meta',   [$this, 'on_meta_change'], 20, 4);
         add_action('set_object_terms',  [$this, 'on_terms_set'],   20, 6);
 
+        // برای پوشش تغییر post_status (publish/draft/...) که از مسیر
+        // save_post رد نمی‌شود اما هنوز روی نمایش سفارش اثر دارد.
+        add_action('transition_post_status', [$this, 'on_status_transition'], 20, 3);
+
         // backfill
         add_action('wp_ajax_tcs_sync_orders_batch', [$this, 'ajax_sync_batch']);
         add_action('tcs_settings_after_form', [$this, 'render_box']);
@@ -54,6 +58,25 @@ class TCS_Order_Sync
             return;
         }
         $this->sync_post((int) $object_id);
+    }
+
+    /**
+     * هر تغییر post_status روی orders را سینک می‌کند — مثلاً انتشار یک
+     * draft، انتقال به trash و برگشت، یا تغییر private<->publish. این
+     * هوک معادل save_post نیست و بعضی تغییرات وضعیت را زودتر می‌گیرد.
+     */
+    public function on_status_transition($new_status, $old_status, $post): void
+    {
+        if (! $post instanceof WP_Post || $post->post_type !== 'orders') {
+            return;
+        }
+        if (in_array($new_status, ['auto-draft', 'trash', 'inherit'], true)) {
+            return;
+        }
+        if ($new_status === $old_status) {
+            return;
+        }
+        $this->sync_post((int) $post->ID);
     }
 
     public function on_terms_set($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids): void
