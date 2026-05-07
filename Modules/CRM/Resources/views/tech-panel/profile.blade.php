@@ -51,18 +51,68 @@
         </div>
 
         <div class="px-5 mt-6 text-center">
-            <div class="w-20 h-20 rounded-full bg-white/15 backdrop-blur border-2 border-white/30 mx-auto flex items-center justify-center overflow-hidden">
-                @if($technician->img_personal)
-                    <img src="{{ asset('storage/' . $technician->img_personal) }}" alt="avatar" class="w-full h-full object-cover">
-                @else
-                    <svg class="w-10 h-10 text-white/80" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
+            @php $hasAvatar = !empty($technician->img_personal); @endphp
+
+            <div class="relative w-24 h-24 mx-auto">
+                <div class="w-24 h-24 rounded-full bg-white/15 backdrop-blur border-2 border-white/30 flex items-center justify-center overflow-hidden">
+                    @if($hasAvatar)
+                        <img src="{{ asset('storage/' . $technician->img_personal) }}" alt="avatar" class="w-full h-full object-cover">
+                    @else
+                        {{-- آواتار پیش‌فرض: تعمیرکار عروسکی (SVG inline) --}}
+                        <svg viewBox="0 0 96 96" class="w-full h-full">
+                            <defs>
+                                <linearGradient id="hat" x1="0" x2="0" y1="0" y2="1">
+                                    <stop offset="0" stop-color="#fbbf24"/>
+                                    <stop offset="1" stop-color="#f59e0b"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="48" cy="48" r="48" fill="#1e40af"/>
+                            {{-- صورت --}}
+                            <circle cx="48" cy="50" r="22" fill="#fde0c8"/>
+                            {{-- چشم‌ها --}}
+                            <circle cx="40" cy="48" r="2.5" fill="#1e293b"/>
+                            <circle cx="56" cy="48" r="2.5" fill="#1e293b"/>
+                            {{-- لبخند --}}
+                            <path d="M40 58 Q48 64 56 58" stroke="#1e293b" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            {{-- کلاه --}}
+                            <path d="M24 42 Q48 14 72 42 L72 38 Q48 24 24 38 Z" fill="url(#hat)"/>
+                            <rect x="24" y="40" width="48" height="4" rx="2" fill="#92400e"/>
+                            {{-- آرم روی کلاه --}}
+                            <circle cx="48" cy="34" r="3" fill="#fff"/>
+                            {{-- بدن (لباس کار) --}}
+                            <path d="M22 96 Q22 80 48 76 Q74 80 74 96 Z" fill="#1e3a8a"/>
+                            <rect x="44" y="76" width="8" height="6" fill="#fde0c8"/>
+                        </svg>
+                    @endif
+                </div>
+
+                @if(! $hasAvatar)
+                    {{-- آیکون کوچک «دوربین» روی آواتار، گوشه پایین --}}
+                    <label for="avatarInput"
+                           class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white shadow-md flex items-center justify-center cursor-pointer border border-gray-200">
+                        <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </label>
                 @endif
             </div>
+
             <div class="text-white text-lg font-bold mt-3">{{ $displayName }}</div>
             @if($technician->mobile)
                 <div class="text-white/70 text-xs mt-1" dir="ltr">{{ $technician->mobile }}</div>
+            @endif
+
+            {{-- فرم آپلود (یک‌بار) — مخفی، با کلیک روی آیکون دوربین فعال می‌شود --}}
+            @if(! $hasAvatar)
+                <form id="avatarForm" method="POST" action="{{ route('tech.profile.avatar') }}" enctype="multipart/form-data" class="hidden">
+                    @csrf
+                    <input type="file" id="avatarInput" name="avatar" accept="image/jpeg,image/png,image/webp"
+                           onchange="document.getElementById('avatarForm').submit();">
+                </form>
+                <p class="text-[10px] text-white/65 mt-2 leading-6 px-4">
+                    برای تغییر عکس روی آیکون دوربین بزنید. توجه: عکس فقط یک بار قابل آپلود است.
+                </p>
             @endif
         </div>
     </div>
@@ -96,53 +146,12 @@
                 <span class="text-sm text-gray-800 font-medium">{{ $technician->specialty }}</span>
             </div>
         @endif
-        @if($technician->type_tech)
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400">نوع تکنسین</span>
-                <span class="text-sm text-gray-800 font-medium">{{ $technician->type_tech }}</span>
-            </div>
-        @endif
         @if($technician->province)
             <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-400">استان</span>
                 <span class="text-sm text-gray-800 font-medium">{{ $technician->province }}</span>
             </div>
         @endif
-    </div>
-
-    {{-- ─────── Editable contact + bio ─────── --}}
-    <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
-        <div class="text-[11px] text-gray-400 mb-3">اطلاعات تماس</div>
-        <form method="POST" action="{{ route('tech.profile.update') }}" class="space-y-3">
-            @csrf
-            <div>
-                <label class="text-[11px] text-gray-500 mb-1 block">تلفن ثابت</label>
-                <input type="tel" name="phone" value="{{ old('phone', $technician->phone) }}"
-                       dir="ltr" inputmode="tel"
-                       class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-            </div>
-            <div>
-                <label class="text-[11px] text-gray-500 mb-1 block">تلفن اضطراری</label>
-                <input type="tel" name="phone_force" value="{{ old('phone_force', $technician->phone_force) }}"
-                       dir="ltr" inputmode="tel"
-                       class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-            </div>
-            <div>
-                <label class="text-[11px] text-gray-500 mb-1 block">آدرس</label>
-                <textarea name="address" rows="2"
-                          class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('address', $technician->address) }}</textarea>
-            </div>
-            <div>
-                <label class="text-[11px] text-gray-500 mb-1 block">توضیحات/بیوگرافی</label>
-                <textarea name="description" rows="3"
-                          class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('description', $technician->description) }}</textarea>
-            </div>
-            <button type="submit"
-                    class="w-full py-3 rounded-xl text-white font-bold text-sm transition"
-                    style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
-                ذخیره تغییرات
-            </button>
-        </form>
     </div>
 
     {{-- ─────── Financial config (read-only) ─────── --}}

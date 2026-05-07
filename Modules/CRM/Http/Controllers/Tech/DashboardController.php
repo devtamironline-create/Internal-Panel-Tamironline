@@ -459,22 +459,43 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * این متد قبلاً اطلاعات تماس (phone/phone_force/address/description)
+     * تکنسین را به‌روزرسانی می‌کرد. طبق خواست عملیات، ویرایش این اطلاعات
+     * از پنل تکنسین به‌طور کامل برداشته شد. این endpoint عمداً حفظ شده تا
+     * route قبلی crash نکند، اما هر POST بدون اعمال تغییر برمی‌گردد.
+     */
     public function updateProfile(Request $request)
+    {
+        return redirect()
+            ->route('tech.profile')
+            ->with('error', 'ویرایش اطلاعات تماس از پنل تکنسین مجاز نیست. برای تغییر، با پشتیبانی تماس بگیرید.');
+    }
+
+    /**
+     * آپلود آواتار توسط تکنسین — فقط یک‌بار. بعد از اولین آپلود فیلد
+     * img_personal مقدار می‌گیرد و این مسیر دیگر فایل جدید نمی‌پذیرد.
+     * هدف: جلوگیری از تغییر مکرر عکس پروفایل (یا سواستفاده با
+     * گذاشتن تصاویر نامناسب پشت سر هم).
+     */
+    public function uploadAvatar(Request $request)
     {
         $tech = Auth::guard('tech')->user();
 
+        if (! empty($tech->img_personal)) {
+            return back()->with('error', 'عکس پروفایل قبلاً ثبت شده و قابل تغییر نیست. برای تغییر با پشتیبانی تماس بگیرید.');
+        }
+
         $validated = $request->validate([
-            'phone' => 'nullable|string|max:30',
-            'phone_force' => 'nullable|string|max:30',
-            'address' => 'nullable|string|max:1000',
-            'description' => 'nullable|string|max:2000',
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072',
         ]);
 
-        $tech->update($validated);
+        $path = $request->file('avatar')->store('tech-avatars', 'public');
+        $tech->forceFill(['img_personal' => $path])->save();
 
         return redirect()
             ->route('tech.profile')
-            ->with('success', 'اطلاعات پروفایل به‌روزرسانی شد.');
+            ->with('success', 'عکس پروفایل با موفقیت ثبت شد.');
     }
 
     public function updatePassword(Request $request)

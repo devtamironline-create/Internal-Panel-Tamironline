@@ -281,6 +281,7 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
         Route::post('profile', [TechPanelDashboardController::class, 'updateProfile'])->name('profile.update');
         Route::post('profile/password', [TechPanelDashboardController::class, 'updatePassword'])->name('profile.password');
+        Route::post('profile/avatar', [TechPanelDashboardController::class, 'uploadAvatar'])->name('profile.avatar');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
