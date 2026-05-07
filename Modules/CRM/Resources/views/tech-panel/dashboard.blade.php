@@ -69,7 +69,7 @@
         {{-- Greeting --}}
         <div class="px-6 pt-6 text-right">
             <div class="text-white/75 text-sm">سلام،</div>
-            <div class="flex items-center justify-end gap-2 mt-1">
+            <div class="flex items-center justify-start gap-2 mt-1">
                 <h1 class="text-white text-[26px] font-bold leading-tight">{{ $name }}</h1>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1
                              {{ $isActive ? 'bg-emerald-400/20 text-emerald-100 border border-emerald-300/40' : 'bg-rose-400/20 text-rose-100 border border-rose-300/40' }}">
