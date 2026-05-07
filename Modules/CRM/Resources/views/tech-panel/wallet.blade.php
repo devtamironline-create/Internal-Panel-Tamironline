@@ -44,23 +44,6 @@
             <span class="text-sm font-normal text-gray-400 mr-1">تومان</span>
         </div>
         <div class="text-xs text-gray-500 mt-2">{{ $balanceLabel }}</div>
-
-        <div class="mt-4 grid grid-cols-2 gap-3 text-right">
-            <div class="bg-gray-50 rounded-2xl p-3">
-                <div class="text-[10px] text-gray-400">شارژ کیف‌پول</div>
-                <div class="text-sm font-bold text-gray-800 mt-0.5">
-                    {{ number_format((int) $technician->wallet_balance) }}
-                    <span class="text-[10px] font-normal text-gray-400">تومان</span>
-                </div>
-            </div>
-            <div class="bg-gray-50 rounded-2xl p-3">
-                <div class="text-[10px] text-gray-400">سهم شرکت از فاکتورها</div>
-                <div class="text-sm font-bold text-gray-800 mt-0.5">
-                    {{ number_format((int) $technician->invoice_debt) }}
-                    <span class="text-[10px] font-normal text-gray-400">تومان</span>
-                </div>
-            </div>
-        </div>
     </div>
 
     {{-- ─────── Stats grid ─────── --}}
@@ -132,8 +115,14 @@
                     </span>
                 </div>
 
-                @if($tx->note)
-                    <div class="mt-2 text-xs text-gray-700 leading-7">{{ $tx->note }}</div>
+                @php
+                    // refid فقط برای ادمین/گزارش لازم است؛ برای تکنسین حذف می‌شود.
+                    // قالب note از syncFinancial: "<description> — refid: <id>"
+                    // فقط بخش refid را پاک می‌کنیم، descriptions را نگه می‌داریم.
+                    $cleanNote = $tx->note ? trim(preg_replace('/(?:\s*—\s*)?refid:\s*\S+/u', '', $tx->note)) : null;
+                @endphp
+                @if($cleanNote)
+                    <div class="mt-2 text-xs text-gray-700 leading-7">{{ $cleanNote }}</div>
                 @endif
 
                 <div class="mt-2 flex items-center justify-between text-[11px] text-gray-400">
