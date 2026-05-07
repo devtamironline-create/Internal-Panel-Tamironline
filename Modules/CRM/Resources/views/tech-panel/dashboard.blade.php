@@ -54,55 +54,85 @@
         </div>
     </div>
 
-    {{-- ─────── White sheet (overlapping) ─────── --}}
-    <div class="relative z-10 -mt-28 mx-3 bg-white rounded-[28px] shadow-lg pt-4 pb-5 px-4">
+    {{-- ─────── Calendar shortcut card (separate sheet) ─────── --}}
+    @php
+        use Morilog\Jalali\Jalalian as DashJalalian;
+        $weekDayMap = [
+            'Saturday'=>'شنبه','Sunday'=>'یکشنبه','Monday'=>'دوشنبه',
+            'Tuesday'=>'سه‌شنبه','Wednesday'=>'چهارشنبه','Thursday'=>'پنج‌شنبه','Friday'=>'جمعه',
+        ];
+    @endphp
+    @if(isset($calendarDays) && count($calendarDays))
+    <div class="relative z-10 -mt-28 mx-3 bg-white rounded-[28px] shadow-lg p-4">
         <div class="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4"></div>
 
-        {{-- Calendar shortcut: ۷ روز آینده --}}
-        @php
-            use Morilog\Jalali\Jalalian as DashJalalian;
-            $weekDayMap = [
-                'Saturday'=>'ش','Sunday'=>'ی','Monday'=>'د',
-                'Tuesday'=>'س','Wednesday'=>'چ','Thursday'=>'پ','Friday'=>'ج',
-            ];
-        @endphp
-        @if(isset($calendarDays) && count($calendarDays))
-        <a href="{{ route('tech.calendar') }}" class="block mb-4">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-1.5 text-gray-700">
-                    <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <a href="{{ route('tech.calendar') }}" class="block">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 text-gray-800">
+                    <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
-                    <span class="text-xs font-bold">تقویم کاری ۷ روز آینده</span>
+                    <span class="text-sm font-bold">تقویم کاری ۷ روز آینده</span>
                 </div>
-                <span class="text-[11px] text-brand-700 font-medium">مشاهده کامل ←</span>
+                <span class="text-xs text-brand-700 font-medium">مشاهده کامل ←</span>
             </div>
-            <div class="grid grid-cols-7 gap-1.5">
-                @foreach($calendarDays as $cd)
+
+            <div class="grid grid-cols-3 gap-2.5">
+                @foreach($calendarDays as $i => $cd)
                     @php
                         $j = DashJalalian::fromCarbon($cd['date']);
                         $dayName = $weekDayMap[$cd['date']->format('l')] ?? '';
                         $isToday = $cd['date']->isToday();
                         $hasOrders = $cd['count'] > 0;
+                        $isLast = $i === count($calendarDays) - 1;
                     @endphp
-                    <div class="rounded-xl text-center py-2 px-1 transition
-                                {{ $isToday ? 'bg-brand-700 text-white shadow' : ($hasOrders ? 'bg-brand-50 border border-brand-200' : 'bg-gray-50 border border-gray-100') }}">
-                        <div class="text-[10px] font-medium {{ $isToday ? 'text-white/80' : 'text-gray-500' }}">{{ $dayName }}</div>
-                        <div class="text-sm font-bold mt-0.5 {{ $isToday ? 'text-white' : 'text-gray-900' }}" dir="ltr">
-                            {{ $j->format('d') }}
+                    <div class="rounded-2xl py-3 px-3 transition flex flex-col
+                                {{ $isLast ? 'col-span-3' : '' }}
+                                {{ $isToday ? 'bg-brand-700 text-white shadow-md' : ($hasOrders ? 'bg-brand-50 border-2 border-brand-200' : 'bg-gray-50 border border-gray-100') }}">
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold {{ $isToday ? 'text-white/85' : 'text-gray-600' }}">
+                                {{ $dayName }}
+                                @if($isToday)
+                                    <span class="text-[10px] font-bold mr-1">(امروز)</span>
+                                @endif
+                            </span>
+                            <span class="text-base font-bold {{ $isToday ? 'text-white' : 'text-gray-900' }}" dir="ltr">
+                                {{ $j->format('Y/m/d') }}
+                            </span>
                         </div>
+
                         @if($hasOrders)
-                            <div class="mt-1 text-[10px] font-bold rounded-full px-1 py-0.5
-                                        {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
-                                {{ $cd['count'] }}
+                            <div class="mt-2 flex items-center justify-between">
+                                <span class="text-[11px] {{ $isToday ? 'text-white/85' : 'text-gray-600' }}">
+                                    @if($cd['preview'])
+                                        {{ $cd['preview'] }}
+                                        @if($cd['count'] > 1)
+                                            <span class="{{ $isToday ? 'text-white/65' : 'text-gray-400' }}">و {{ $cd['count'] - 1 }} مورد دیگر</span>
+                                        @endif
+                                    @endif
+                                </span>
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full
+                                             {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
+                                    {{ $cd['count'] }} سفارش
+                                </span>
                             </div>
                         @else
-                            <div class="mt-1 text-[10px] text-gray-300">—</div>
+                            <div class="mt-2 text-[11px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
+                                سفارشی هماهنگ نشده
+                            </div>
                         @endif
                     </div>
                 @endforeach
             </div>
         </a>
+    </div>
+    @endif
+
+    {{-- ─────── White sheet for service cards ─────── --}}
+    <div class="{{ isset($calendarDays) && count($calendarDays) ? 'mt-3' : 'relative z-10 -mt-28' }} mx-3 bg-white rounded-[28px] shadow-lg pt-4 pb-5 px-4">
+        @if(! (isset($calendarDays) && count($calendarDays)))
+            <div class="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4"></div>
         @endif
 
         <div class="grid grid-cols-3 gap-3">

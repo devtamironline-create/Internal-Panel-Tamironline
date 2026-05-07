@@ -36,23 +36,31 @@ class DashboardController extends Controller
     {
         $tech = Auth::guard('tech')->user();
 
-        // برای کارت شورکات تقویم در داشبورد: فقط شمارش سفارش هر روز در ۷ روز
-        // آینده (سبک‌ترین کوئری ممکن — بدون with، بدون select کامل).
+        // کارت شورکات تقویم در داشبورد — برای هر روز ۷ روز آینده تعداد و
+        // نام اولین مشتری را برای پیش‌نمایش استخراج می‌کنیم. یک کوئری با
+        // group در PHP، نه ۷ کوئری مجزا.
         $calendarStart = now()->startOfDay();
         $calendarEnd = $calendarStart->copy()->addDays(7)->endOfDay();
-        $calendarRaw = Order::query()
+        $calendarOrders = Order::query()
             ->forTechnician($tech->id)
             ->whereBetween('visit_scheduled_at', [$calendarStart, $calendarEnd])
-            ->selectRaw('DATE(visit_scheduled_at) as day, COUNT(*) as cnt')
-            ->groupBy('day')
-            ->pluck('cnt', 'day');
+            ->with('customer:id,first_name,mobile')
+            ->orderBy('visit_scheduled_at')
+            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'visit_scheduled_at']);
+
+        $calendarByDay = $calendarOrders->groupBy(fn (Order $o) => $o->visit_scheduled_at?->toDateString());
 
         $calendarDays = [];
         for ($i = 0; $i < 7; $i++) {
             $d = $calendarStart->copy()->addDays($i);
+            $orders = $calendarByDay->get($d->toDateString(), collect());
+            $first = $orders->first();
             $calendarDays[] = [
-                'date'  => $d,
-                'count' => (int) ($calendarRaw[$d->toDateString()] ?? 0),
+                'date'    => $d,
+                'count'   => $orders->count(),
+                'preview' => $first
+                    ? ($first->customer_name ?: ($first->customer?->display_name ?? '—'))
+                    : null,
             ];
         }
 
