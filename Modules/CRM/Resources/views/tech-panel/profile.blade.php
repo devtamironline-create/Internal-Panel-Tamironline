@@ -154,6 +154,23 @@
         @endif
     </div>
 
+    {{-- ─────── Training shortcut ─────── --}}
+    <a href="{{ route('tech.training') }}"
+       class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 flex items-center gap-3 active:bg-gray-50">
+        <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-sm font-bold text-gray-900">آموزش</div>
+            <div class="text-[11px] text-gray-500 mt-0.5">ویدیوهای آموزش، نکات تخصصی و راهنما</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+    </a>
+
     {{-- ─────── Financial config (read-only) ─────── --}}
     <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 space-y-2.5">
         <div class="text-[11px] text-gray-400">قوانین مالی و کاری</div>

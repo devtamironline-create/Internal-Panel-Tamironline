@@ -14,6 +14,8 @@ use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
+use Modules\CRM\Models\TrainingCategory;
+use Modules\CRM\Models\TrainingVideo;
 use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
@@ -456,6 +458,49 @@ class DashboardController extends Controller
     {
         return view('crm::tech-panel.profile', [
             'technician' => Auth::guard('tech')->user(),
+        ]);
+    }
+
+    /**
+     * صفحهٔ آموزش تکنسین — لیست دسته‌ها با ویدیوهای فعال هرکدام،
+     * بعلاوهٔ ویدیوهای بدون دسته در یک گروه مجزا.
+     */
+    public function training()
+    {
+        $tech = Auth::guard('tech')->user();
+
+        $categories = TrainingCategory::active()
+            ->ordered()
+            ->with(['activeVideos' => fn ($q) => $q->ordered()])
+            ->get()
+            ->filter(fn ($c) => $c->activeVideos->isNotEmpty())
+            ->values();
+
+        $uncategorized = TrainingVideo::active()
+            ->whereNull('category_id')
+            ->ordered()
+            ->get();
+
+        return view('crm::tech-panel.training', [
+            'technician'    => $tech,
+            'categories'    => $categories,
+            'uncategorized' => $uncategorized,
+        ]);
+    }
+
+    /**
+     * صفحهٔ مشاهده تک ویدیو با پلیر و توضیحات کامل.
+     */
+    public function trainingShow(TrainingVideo $video)
+    {
+        if (! $video->is_active) {
+            abort(404);
+        }
+        $video->load('category');
+
+        return view('crm::tech-panel.training-show', [
+            'technician' => Auth::guard('tech')->user(),
+            'video'      => $video,
         ]);
     }
 

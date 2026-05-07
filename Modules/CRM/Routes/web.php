@@ -300,6 +300,10 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('profile', [TechPanelDashboardController::class, 'updateProfile'])->name('profile.update');
         Route::post('profile/password', [TechPanelDashboardController::class, 'updatePassword'])->name('profile.password');
         Route::post('profile/avatar', [TechPanelDashboardController::class, 'uploadAvatar'])->name('profile.avatar');
+
+        // ── آموزش تکنسین ───────────────────────────────────────
+        Route::get('training', [TechPanelDashboardController::class, 'training'])->name('training');
+        Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])->name('training.show');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
