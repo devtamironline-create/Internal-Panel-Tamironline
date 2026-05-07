@@ -77,7 +77,7 @@
                 <span class="text-xs text-brand-700 font-medium">مشاهده کامل ←</span>
             </div>
 
-            <div class="grid grid-cols-3 gap-2.5">
+            <div class="grid grid-cols-3 gap-2">
                 @foreach($calendarDays as $i => $cd)
                     @php
                         $j = DashJalalian::fromCarbon($cd['date']);
@@ -86,40 +86,65 @@
                         $hasOrders = $cd['count'] > 0;
                         $isLast = $i === count($calendarDays) - 1;
                     @endphp
-                    <div class="rounded-2xl py-3 px-3 transition flex flex-col
+                    <div class="rounded-xl py-2.5 px-2 transition
                                 {{ $isLast ? 'col-span-3' : '' }}
-                                {{ $isToday ? 'bg-brand-700 text-white shadow-md' : ($hasOrders ? 'bg-brand-50 border-2 border-brand-200' : 'bg-gray-50 border border-gray-100') }}">
+                                {{ $isToday ? 'bg-brand-700 text-white shadow-md' : ($hasOrders ? 'bg-brand-50 border border-brand-200' : 'bg-gray-50 border border-gray-100') }}">
 
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold {{ $isToday ? 'text-white/85' : 'text-gray-600' }}">
-                                {{ $dayName }}
-                                @if($isToday)
-                                    <span class="text-[10px] font-bold mr-1">(امروز)</span>
-                                @endif
-                            </span>
-                            <span class="text-base font-bold {{ $isToday ? 'text-white' : 'text-gray-900' }}" dir="ltr">
-                                {{ $j->format('Y/m/d') }}
-                            </span>
-                        </div>
-
-                        @if($hasOrders)
-                            <div class="mt-2 flex items-center justify-between">
-                                <span class="text-[11px] {{ $isToday ? 'text-white/85' : 'text-gray-600' }}">
-                                    @if($cd['preview'])
-                                        {{ $cd['preview'] }}
-                                        @if($cd['count'] > 1)
-                                            <span class="{{ $isToday ? 'text-white/65' : 'text-gray-400' }}">و {{ $cd['count'] - 1 }} مورد دیگر</span>
+                        @if($isLast)
+                            {{-- آخرین تایل (full-width): چینش افقی --}}
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold {{ $isToday ? 'text-white' : 'text-gray-700' }}">
+                                        {{ $dayName }}
+                                        @if($isToday)<span class="text-[10px] mr-1">(امروز)</span>@endif
+                                    </div>
+                                    <div class="text-[10px] mt-0.5 {{ $isToday ? 'text-white/80' : 'text-gray-400' }}" dir="ltr">
+                                        {{ $j->format('Y/m/d') }}
+                                    </div>
+                                </div>
+                                <div class="text-left flex-shrink-0">
+                                    @if($hasOrders)
+                                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full
+                                                     {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
+                                            {{ $cd['count'] }} سفارش
+                                        </span>
+                                        @if($cd['preview'])
+                                            <div class="text-[10px] mt-1 {{ $isToday ? 'text-white/85' : 'text-gray-500' }}">
+                                                {{ $cd['preview'] }}
+                                            </div>
                                         @endif
+                                    @else
+                                        <span class="text-[10px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
+                                            سفارشی نیست
+                                        </span>
                                     @endif
-                                </span>
-                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full
-                                             {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
-                                    {{ $cd['count'] }} سفارش
-                                </span>
+                                </div>
                             </div>
                         @else
-                            <div class="mt-2 text-[11px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
-                                سفارشی هماهنگ نشده
+                            {{-- چیدمان ۳تایی: عمودی --}}
+                            <div class="text-center">
+                                <div class="text-xs font-bold {{ $isToday ? 'text-white' : 'text-gray-700' }} truncate">
+                                    {{ $dayName }}
+                                </div>
+                                <div class="text-[10px] mt-0.5 {{ $isToday ? 'text-white/80' : 'text-gray-400' }}" dir="ltr">
+                                    {{ $j->format('Y/m/d') }}
+                                </div>
+                                @if($isToday)
+                                    <div class="text-[9px] mt-0.5 text-white/85 font-bold">امروز</div>
+                                @endif
+
+                                <div class="mt-1.5">
+                                    @if($hasOrders)
+                                        <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full
+                                                     {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
+                                            {{ $cd['count'] }} سفارش
+                                        </span>
+                                    @else
+                                        <span class="text-[10px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
+                                            بدون سفارش
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         @endif
                     </div>
