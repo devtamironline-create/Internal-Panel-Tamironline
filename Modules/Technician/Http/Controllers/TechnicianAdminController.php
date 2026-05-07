@@ -838,28 +838,47 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
 
-        $categories = ApplianceCategory::ordered()->get();
+        // ریشه‌ها را با فرزندان eager-load می‌کنیم تا جدول درختی بدون N+1
+        // رندر شود. ریشه‌ها برای دراپ‌داون «والد» در فرم افزودن نیز استفاده
+        // می‌شوند.
+        $roots = ApplianceCategory::roots()
+            ->with(['children' => fn ($q) => $q->ordered()])
+            ->ordered()
+            ->get();
 
-        return view('technician::admin.appliance-categories', compact('categories'));
+        return view('technician::admin.appliance-categories', compact('roots'));
     }
 
     /**
-     * افزودن دسته‌بندی دستگاه
+     * افزودن دسته‌بندی دستگاه — می‌تواند ریشه یا زیرمجموعه باشد.
      */
     public function storeApplianceCategory(Request $request)
     {
         $this->checkAccess();
 
         $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:appliance_categories,name'],
+            'name'      => ['required', 'string', 'max:255', 'unique:appliance_categories,name'],
+            'parent_id' => ['nullable', 'integer', 'exists:appliance_categories,id'],
         ], [
-            'name.required' => 'نام دستگاه الزامی است.',
-            'name.unique'   => 'این دستگاه قبلاً اضافه شده است.',
+            'name.required'    => 'نام دستگاه الزامی است.',
+            'name.unique'      => 'این دستگاه قبلاً اضافه شده است.',
+            'parent_id.exists' => 'دسته والد انتخاب‌شده معتبر نیست.',
         ]);
+
+        // فقط ریشه‌ها می‌توانند parent باشند تا درخت سطح‌بندی شده بماند
+        // (سطح اول: ریشه‌ها، سطح دوم: زیرمجموعه‌ها). nesting بیشتر از این
+        // در رابط ادمین هم نمایش راحتی ندارد.
+        if (! empty($request->parent_id)) {
+            $parent = ApplianceCategory::find((int) $request->parent_id);
+            if ($parent && $parent->parent_id !== null) {
+                return back()->withErrors(['parent_id' => 'نمی‌توان زیر یک زیرمجموعه دسته جدید اضافه کرد.'])->withInput();
+            }
+        }
 
         $maxOrder = ApplianceCategory::max('sort_order') ?? 0;
 
         ApplianceCategory::create([
+            'parent_id'  => $request->parent_id ?: null,
             'name'       => $request->name,
             'sort_order' => $maxOrder + 1,
             'is_active'  => true,
@@ -881,14 +900,35 @@ class TechnicianAdminController extends Controller
         $request->validate([
             'name'      => ['required', 'string', 'max:255', 'unique:appliance_categories,name,' . $id],
             'is_active' => ['required', 'boolean'],
+            'parent_id' => ['nullable', 'integer', 'different:id', 'exists:appliance_categories,id'],
         ], [
-            'name.required' => 'نام دستگاه الزامی است.',
-            'name.unique'   => 'این دستگاه قبلاً اضافه شده است.',
+            'name.required'    => 'نام دستگاه الزامی است.',
+            'name.unique'      => 'این دستگاه قبلاً اضافه شده است.',
+            'parent_id.exists' => 'دسته والد انتخاب‌شده معتبر نیست.',
         ]);
+
+        // جلوگیری از حلقه: نمی‌توان parent یک رکورد را به خودش یا یکی از
+        // فرزندانش تنظیم کرد.
+        $newParentId = $request->parent_id ? (int) $request->parent_id : null;
+        if ($newParentId !== null) {
+            if ($newParentId === (int) $category->id) {
+                return back()->withErrors(['parent_id' => 'دسته نمی‌تواند والد خودش باشد.'])->withInput();
+            }
+            $parent = ApplianceCategory::find($newParentId);
+            if ($parent && $parent->parent_id !== null) {
+                return back()->withErrors(['parent_id' => 'نمی‌توان یک دسته را زیرمجموعهٔ زیرمجموعه قرار داد.'])->withInput();
+            }
+            // اگر این رکورد خودش زیرمجموعه دارد، نمی‌تواند تبدیل به زیرمجموعه شود
+            // (چون باعث nesting بیش از دو سطح می‌شود).
+            if ($category->children()->exists()) {
+                return back()->withErrors(['parent_id' => 'این دسته خود زیرمجموعه دارد و نمی‌تواند به زیرمجموعه تبدیل شود.'])->withInput();
+            }
+        }
 
         $category->update([
             'name'      => $request->name,
             'is_active' => $request->is_active,
+            'parent_id' => $newParentId,
         ]);
 
         return redirect()->route('technician.admin.appliance-categories')
