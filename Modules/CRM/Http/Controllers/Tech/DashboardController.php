@@ -36,6 +36,10 @@ class DashboardController extends Controller
     {
         $tech = Auth::guard('tech')->user();
 
+        // برای دکوریشن مالی هدر/باکس‌ها لازم است sum سهم شرکت روی technician
+        // cache شود تا accessor invoice_debt یک query اضافه نزند.
+        $tech->loadSum('invoices', 'company_share');
+
         // کارت شورکات تقویم در داشبورد — برای هر روز ۷ روز آینده تعداد و
         // نام اولین مشتری را برای پیش‌نمایش استخراج می‌کنیم. یک کوئری با
         // group در PHP، نه ۷ کوئری مجزا.

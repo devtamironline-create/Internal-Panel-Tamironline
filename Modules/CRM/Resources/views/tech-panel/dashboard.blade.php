@@ -6,6 +6,26 @@
     $name = trim($technician->firstname_tech ?: $technician->first_name) ?: 'تکنسین';
     $statusLabel = $technician->status === 'active' ? 'فعال' : ($technician->status ?? '—');
     $isActive = $technician->status === 'active';
+
+    // محاسبات مالی برای دو باکس آمار + هدر
+    $balance = (int) $technician->true_balance;
+    $balanceIsPositive = $balance > 0;
+    $balanceIsNegative = $balance < 0;
+    $balanceIsZero = $balance === 0;
+
+    if ($balanceIsZero) {
+        $financialLabel = 'تسویه';
+        $financialColor = 'text-gray-500';
+        $financialDot   = 'bg-gray-400';
+    } elseif ($balanceIsPositive) {
+        $financialLabel = 'بستانکار';
+        $financialColor = 'text-emerald-600';
+        $financialDot   = 'bg-emerald-500';
+    } else {
+        $financialLabel = 'بدهکار';
+        $financialColor = 'text-rose-600';
+        $financialDot   = 'bg-rose-500';
+    }
 @endphp
 
 @section('body')
@@ -49,7 +69,14 @@
         {{-- Greeting --}}
         <div class="px-6 pt-6 text-right">
             <div class="text-white/75 text-sm">سلام،</div>
-            <h1 class="text-white text-[26px] font-bold mt-1 leading-tight">{{ $name }}</h1>
+            <div class="flex items-center justify-end gap-2 mt-1">
+                <h1 class="text-white text-[26px] font-bold leading-tight">{{ $name }}</h1>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1
+                             {{ $isActive ? 'bg-emerald-400/20 text-emerald-100 border border-emerald-300/40' : 'bg-rose-400/20 text-rose-100 border border-rose-300/40' }}">
+                    <span class="w-1.5 h-1.5 rounded-full {{ $isActive ? 'bg-emerald-300' : 'bg-rose-300' }}"></span>
+                    {{ $statusLabel }}
+                </span>
+            </div>
             <p class="text-white/70 text-xs mt-2">امروز چه کارهایی برای انجام داری؟</p>
         </div>
     </div>
@@ -200,21 +227,40 @@
         </div>
     </div>
 
-    {{-- ─────── Quick stats ─────── --}}
+    {{-- ─────── Quick stats — اعتبار پنل + وضعیت مالی ─────── --}}
     <div class="px-4 mt-4 grid grid-cols-2 gap-3">
-        <div class="bg-white rounded-2xl p-4 shadow-sm">
-            <div class="text-xs text-gray-400">درصد کمیسیون</div>
-            <div class="text-2xl font-bold text-gray-900 mt-1">
-                {{ number_format($technician->percent ?? 0) }}<span class="text-sm font-normal text-gray-400 mr-1">%</span>
+        {{-- باکس ۱: اعتبار پنل (true_balance با علامت +/-) --}}
+        <a href="{{ route('tech.wallet') }}" class="bg-white rounded-2xl p-4 shadow-sm block active:bg-gray-50">
+            <div class="text-xs text-gray-400">اعتبار پنل</div>
+            <div class="text-xl font-bold mt-1 leading-tight {{ $balanceIsPositive ? 'text-emerald-600' : ($balanceIsNegative ? 'text-rose-600' : 'text-gray-700') }}">
+                @if($balanceIsZero)
+                    0
+                @elseif($balanceIsPositive)
+                    +{{ number_format($balance) }}
+                @else
+                    −{{ number_format(abs($balance)) }}
+                @endif
+                <span class="text-[10px] font-normal text-gray-400 mr-1">تومان</span>
             </div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 shadow-sm">
-            <div class="text-xs text-gray-400">وضعیت</div>
-            <div class="text-sm font-bold mt-2 flex items-center gap-1.5 {{ $isActive ? 'text-emerald-600' : 'text-gray-500' }}">
-                <span class="w-2 h-2 rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
-                {{ $statusLabel }}
+        </a>
+
+        {{-- باکس ۲: وضعیت مالی (بستانکار/بدهکار/تسویه) --}}
+        <a href="{{ route('tech.wallet') }}" class="bg-white rounded-2xl p-4 shadow-sm block active:bg-gray-50">
+            <div class="text-xs text-gray-400">وضعیت مالی</div>
+            <div class="text-sm font-bold mt-2 flex items-center gap-1.5 {{ $financialColor }}">
+                <span class="w-2 h-2 rounded-full {{ $financialDot }}"></span>
+                {{ $financialLabel }}
             </div>
-        </div>
+            @if(! $balanceIsZero)
+                <div class="text-[10px] text-gray-400 mt-1">
+                    {{ $balanceIsPositive ? 'شرکت به شما بدهکار است' : 'شما به شرکت بدهکار هستید' }}
+                </div>
+            @else
+                <div class="text-[10px] text-gray-400 mt-1">
+                    حساب با شرکت تسویه است
+                </div>
+            @endif
+        </a>
     </div>
 </div>
 
