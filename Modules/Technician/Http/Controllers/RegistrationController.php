@@ -30,7 +30,16 @@ class RegistrationController extends Controller
         }
 
         $provinces = require base_path('Modules/Technician/Data/iran_provinces.php');
-        $applianceCategories = ApplianceCategory::active()->ordered()->get();
+
+        // برای فرم ثبت‌نام، فقط ریشه‌های فعال را با زیرمجموعه‌های فعال
+        // eager-load می‌کنیم تا فرم به‌صورت گروه‌بندی‌شده نمایش داده شود.
+        // اگر دسته‌ای ریشه باشد ولی هیچ زیرمجموعه‌ای ندارد، خودش به‌عنوان
+        // یک گزینه منفرد نمایش داده می‌شود (سازگاری با ساختار صاف قبلی).
+        $applianceCategories = ApplianceCategory::active()
+            ->roots()
+            ->with(['activeChildren' => fn ($q) => $q->ordered()])
+            ->ordered()
+            ->get();
 
         return view('technician::register', [
             'brand_name'           => $brandName,

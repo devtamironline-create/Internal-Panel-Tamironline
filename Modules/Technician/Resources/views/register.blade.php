@@ -751,17 +751,43 @@
                         <p id="activityTypeError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
                     </div>
 
-                    {{-- دستگاه‌ها --}}
+                    {{-- دستگاه‌ها — ساختار درختی: ریشه‌ها به‌صورت سرگروه،
+                         هر زیرمجموعه چک‌باکس انتخاب‌پذیر زیرش. اگر یک
+                         ریشه زیرمجموعه‌ای ندارد، خودش به‌عنوان گزینهٔ
+                         منفرد قابل انتخاب نمایش داده می‌شود. --}}
                     <div>
                         <label class="block text-sm font-semibold text-gray-600 mb-2">دستگاه‌هایی که سرویس می‌دهید:</label>
-                        <div class="grid grid-cols-2 gap-2" id="applianceCategoriesGrid">
+                        <div class="space-y-3" id="applianceCategoriesGrid">
                             @foreach($appliance_categories as $cat)
-                            <label class="cursor-pointer">
-                                <input type="checkbox" name="appliance_category" value="{{ $cat->id }}" class="hidden peer appliance-cat-cb">
-                                <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
-                                    {{ $cat->name }}
-                                </div>
-                            </label>
+                                @if($cat->activeChildren->count())
+                                    {{-- ریشه دارای زیرمجموعه: عنوان گروه + گرید فرزندان --}}
+                                    <div class="border border-gray-200 rounded-2xl p-3 bg-gray-50/40">
+                                        <div class="flex items-center gap-1.5 mb-2 text-sm font-bold text-gray-700">
+                                            <svg class="w-3.5 h-3.5 text-brand-blue" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2"/>
+                                            </svg>
+                                            {{ $cat->name }}
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            @foreach($cat->activeChildren as $child)
+                                                <label class="cursor-pointer">
+                                                    <input type="checkbox" name="appliance_category" value="{{ $child->id }}" class="hidden peer appliance-cat-cb">
+                                                    <div class="form-input text-center py-2 rounded-xl text-xs peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                                        {{ $child->name }}
+                                                    </div>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @else
+                                    {{-- ریشهٔ بدون زیرمجموعه: گزینهٔ مستقل --}}
+                                    <label class="cursor-pointer block">
+                                        <input type="checkbox" name="appliance_category" value="{{ $cat->id }}" class="hidden peer appliance-cat-cb">
+                                        <div class="form-input text-center py-3 rounded-xl text-sm peer-checked:border-brand-blue peer-checked:bg-blue-50 peer-checked:text-brand-blue font-semibold transition-all">
+                                            {{ $cat->name }}
+                                        </div>
+                                    </label>
+                                @endif
                             @endforeach
                         </div>
                         <p id="applianceCategoriesError" class="text-red-500 text-xs mt-1 mr-1 hidden"></p>
