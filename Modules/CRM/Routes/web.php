@@ -17,6 +17,7 @@ use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
 use Modules\CRM\Http\Controllers\TechPanelSettingsController;
+use Modules\CRM\Http\Controllers\TrainingAdminController;
 use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
@@ -252,6 +253,23 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/', [TechPanelSettingsController::class, 'index'])->name('index');
         Route::post('/', [TechPanelSettingsController::class, 'update'])->name('update');
         Route::delete('/image/{key}', [TechPanelSettingsController::class, 'deleteImage'])->name('delete-image');
+    });
+
+    // ─── مدیریت آموزش‌های ویدیویی تکنسین ──────────────────────────
+    Route::middleware('can:manage-crm-settings')->prefix('training')->name('training.admin.')->group(function () {
+        // دسته‌بندی‌ها
+        Route::get('categories', [TrainingAdminController::class, 'categoriesIndex'])->name('categories');
+        Route::post('categories', [TrainingAdminController::class, 'categoriesStore'])->name('categories.store');
+        Route::put('categories/{category}', [TrainingAdminController::class, 'categoriesUpdate'])->name('categories.update');
+        Route::delete('categories/{category}', [TrainingAdminController::class, 'categoriesDestroy'])->name('categories.destroy');
+
+        // ویدیوها
+        Route::get('videos', [TrainingAdminController::class, 'videosIndex'])->name('videos');
+        Route::get('videos/create', [TrainingAdminController::class, 'videosCreate'])->name('videos.create');
+        Route::post('videos', [TrainingAdminController::class, 'videosStore'])->name('videos.store');
+        Route::get('videos/{video}/edit', [TrainingAdminController::class, 'videosEdit'])->name('videos.edit');
+        Route::put('videos/{video}', [TrainingAdminController::class, 'videosUpdate'])->name('videos.update');
+        Route::delete('videos/{video}', [TrainingAdminController::class, 'videosDestroy'])->name('videos.destroy');
     });
 });
 
