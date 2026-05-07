@@ -29,29 +29,23 @@
             <div class="w-10"></div>
         </div>
 
-        {{-- Quick stats --}}
-        <div class="px-5 mt-7 grid grid-cols-2 gap-2.5">
-            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-3 border border-white/20 text-center">
+        {{-- Quick stats — سهم شرکت برای تکنسین نمایش داده نمی‌شود. --}}
+        <div class="px-5 mt-7 grid grid-cols-3 gap-2">
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-2 border border-white/20 text-center">
                 <div class="text-white text-xl font-bold leading-none">{{ number_format($stats['count']) }}</div>
-                <div class="text-white/75 text-[11px] mt-1.5 font-medium">تعداد فاکتور</div>
+                <div class="text-white/75 text-[10px] mt-1.5 font-medium">تعداد فاکتور</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-3 border border-white/20 text-center">
-                <div class="text-white text-base font-bold leading-none">
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-2 border border-white/20 text-center">
+                <div class="text-white text-sm font-bold leading-none">
                     {{ number_format($stats['total_sum']) }}
                 </div>
-                <div class="text-white/75 text-[11px] mt-1.5 font-medium">مجموع مبلغ (تومان)</div>
+                <div class="text-white/75 text-[10px] mt-1.5 font-medium">مجموع مبلغ</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-3 border border-white/20 text-center">
-                <div class="text-white text-base font-bold leading-none text-emerald-200">
+            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-2 border border-white/20 text-center">
+                <div class="text-sm font-bold leading-none text-emerald-200">
                     {{ number_format($stats['tech_share']) }}
                 </div>
-                <div class="text-white/75 text-[11px] mt-1.5 font-medium">سهم تکنسین</div>
-            </div>
-            <div class="bg-white/10 backdrop-blur rounded-2xl py-3 px-3 border border-white/20 text-center">
-                <div class="text-white text-base font-bold leading-none text-amber-200">
-                    {{ number_format($stats['company_share']) }}
-                </div>
-                <div class="text-white/75 text-[11px] mt-1.5 font-medium">سهم شرکت</div>
+                <div class="text-white/75 text-[10px] mt-1.5 font-medium">سهم شما</div>
             </div>
         </div>
     </div>
@@ -110,18 +104,14 @@
                     </div>
                 @endif
 
-                <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-3 gap-2 text-center text-[11px]">
+                <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-center text-[11px]">
                     <div>
                         <div class="text-gray-400">مبلغ کل</div>
                         <div class="text-gray-900 font-bold mt-0.5">{{ number_format((int) $invoice->total_amount) }}</div>
                     </div>
                     <div>
-                        <div class="text-gray-400">سهم تکنسین</div>
+                        <div class="text-gray-400">سهم شما</div>
                         <div class="text-emerald-700 font-bold mt-0.5">{{ number_format((int) $invoice->tech_share) }}</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400">سهم شرکت</div>
-                        <div class="text-gray-700 font-bold mt-0.5">{{ number_format((int) $invoice->company_share) }}</div>
                     </div>
                 </div>
 
