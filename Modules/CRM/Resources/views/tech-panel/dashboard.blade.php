@@ -200,27 +200,6 @@
         </div>
     </div>
 
-    {{-- ─────── Banner image / brand block ─────── --}}
-    <div class="px-4 mt-4">
-        <div class="relative rounded-3xl overflow-hidden shadow-sm" style="aspect-ratio: 16/9;">
-            @if($brandBanner)
-                <img src="{{ asset('storage/' . $brandBanner) }}" alt="banner" class="w-full h-full object-cover">
-            @else
-                <div class="w-full h-full flex items-center justify-center text-center px-6"
-                     style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
-                    <div>
-                        <div class="text-gold-400 text-2xl font-bold leading-tight">کاربلدهای<br>تعمیر آنلاین</div>
-                        <div class="flex items-center justify-center gap-2 mt-3 text-[11px]">
-                            <span class="px-2.5 py-0.5 rounded-full bg-gold-400 text-brand-900 font-bold">مجرب</span>
-                            <span class="px-2.5 py-0.5 rounded-full bg-gold-400 text-brand-900 font-bold">متخصص</span>
-                            <span class="px-2.5 py-0.5 rounded-full bg-gold-400 text-brand-900 font-bold">متعهد</span>
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-    </div>
-
     {{-- ─────── Quick stats ─────── --}}
     <div class="px-4 mt-4 grid grid-cols-2 gap-3">
         <div class="bg-white rounded-2xl p-4 shadow-sm">
