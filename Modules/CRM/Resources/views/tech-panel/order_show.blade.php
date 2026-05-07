@@ -45,6 +45,17 @@
     $myNotes = collect($order->wp_notes ?? [])
         ->filter(fn($n) => isset($n['author']) && (int) $n['author'] === (int) $technician->id)
         ->values();
+
+    // قفل دسترسی به اطلاعات تماس و امکان ویرایش پس از نهایی شدن سفارش —
+    // جلوگیری از سواستفاده/تماس مستقیم تکنسین با مشتری بعد از تسویه.
+    $orderIsLocked = $order->status->isFinal();
+    $maskContact = function (?string $number): ?string {
+        if (! $number) return null;
+        $clean = preg_replace('/\s+/', '', $number);
+        $len = strlen($clean);
+        if ($len <= 7) return str_repeat('*', $len);
+        return substr($clean, 0, 4) . str_repeat('*', $len - 8) . substr($clean, -4);
+    };
 @endphp
 
 @section('body')
@@ -122,28 +133,48 @@
 
         <div class="mt-3 space-y-2">
             @if($order->customer_mobile)
-                <a href="tel:{{ $order->customer_mobile }}"
-                   class="flex items-center justify-between bg-emerald-50 rounded-xl px-3 py-2.5 active:bg-emerald-100">
-                    <span class="text-emerald-700 text-xs font-medium">تماس با موبایل</span>
-                    <span class="flex items-center gap-2">
-                        <span dir="ltr" class="text-emerald-900 font-bold text-sm">{{ $order->customer_mobile }}</span>
-                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                    </span>
-                </a>
+                @if($orderIsLocked)
+                    {{-- سفارش نهایی: شماره ماسک شده، بدون tel: link --}}
+                    <div class="flex items-center justify-between bg-gray-100 rounded-xl px-3 py-2.5">
+                        <span class="text-gray-500 text-xs font-medium">موبایل مشتری (محرمانه)</span>
+                        <span dir="ltr" class="text-gray-500 font-bold text-sm">{{ $maskContact($order->customer_mobile) }}</span>
+                    </div>
+                @else
+                    <a href="tel:{{ $order->customer_mobile }}"
+                       class="flex items-center justify-between bg-emerald-50 rounded-xl px-3 py-2.5 active:bg-emerald-100">
+                        <span class="text-emerald-700 text-xs font-medium">تماس با موبایل</span>
+                        <span class="flex items-center gap-2">
+                            <span dir="ltr" class="text-emerald-900 font-bold text-sm">{{ $order->customer_mobile }}</span>
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            </svg>
+                        </span>
+                    </a>
+                @endif
             @endif
             @if($order->customer_phone)
-                <a href="tel:{{ $order->customer_phone }}"
-                   class="flex items-center justify-between bg-blue-50 rounded-xl px-3 py-2.5 active:bg-blue-100">
-                    <span class="text-blue-700 text-xs font-medium">تماس با تلفن ثابت</span>
-                    <span class="flex items-center gap-2">
-                        <span dir="ltr" class="text-blue-900 font-bold text-sm">{{ $order->customer_phone }}</span>
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                    </span>
-                </a>
+                @if($orderIsLocked)
+                    <div class="flex items-center justify-between bg-gray-100 rounded-xl px-3 py-2.5">
+                        <span class="text-gray-500 text-xs font-medium">تلفن ثابت (محرمانه)</span>
+                        <span dir="ltr" class="text-gray-500 font-bold text-sm">{{ $maskContact($order->customer_phone) }}</span>
+                    </div>
+                @else
+                    <a href="tel:{{ $order->customer_phone }}"
+                       class="flex items-center justify-between bg-blue-50 rounded-xl px-3 py-2.5 active:bg-blue-100">
+                        <span class="text-blue-700 text-xs font-medium">تماس با تلفن ثابت</span>
+                        <span class="flex items-center gap-2">
+                            <span dir="ltr" class="text-blue-900 font-bold text-sm">{{ $order->customer_phone }}</span>
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            </svg>
+                        </span>
+                    </a>
+                @endif
+            @endif
+            @if($orderIsLocked)
+                <p class="text-[10px] text-gray-400 leading-6 mt-1">
+                    این سفارش به وضعیت نهایی رسیده است. برای حفظ حریم خصوصی، اطلاعات تماس مشتری برای تماس مستقیم در دسترس نیست.
+                </p>
             @endif
         </div>
 
@@ -426,16 +457,22 @@
             <div class="text-xs text-gray-400 mb-3">هنوز یادداشتی ثبت نکرده‌اید.</div>
         @endif
 
-        <form method="POST" action="{{ route('tech.orders.add-note', $order) }}">
-            @csrf
-            <textarea name="note" rows="3" required maxlength="2000"
-                      placeholder="یادداشت جدید برای این سفارش..."
-                      class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('note') }}</textarea>
-            <button type="submit"
-                    class="w-full mt-2.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition">
-                ثبت یادداشت
-            </button>
-        </form>
+        @if($orderIsLocked)
+            <p class="text-[11px] text-gray-400 italic">
+                ثبت یادداشت جدید روی سفارش‌های نهایی غیرفعال است.
+            </p>
+        @else
+            <form method="POST" action="{{ route('tech.orders.add-note', $order) }}">
+                @csrf
+                <textarea name="note" rows="3" required maxlength="2000"
+                          placeholder="یادداشت جدید برای این سفارش..."
+                          class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('note') }}</textarea>
+                <button type="submit"
+                        class="w-full mt-2.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition">
+                    ثبت یادداشت
+                </button>
+            </form>
+        @endif
     </div>
 
     {{-- ─────── Pieces / invoice ─────── --}}

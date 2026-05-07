@@ -7,10 +7,24 @@
 
     $filterChips = [
         ['value' => null,                                'label' => 'همه'],
+        ['value' => OrderStatus::New->value,             'label' => 'جدید'],
         ['value' => OrderStatus::Coordinated->value,     'label' => 'هماهنگ‌شده'],
         ['value' => OrderStatus::Open->value,            'label' => 'باز شده'],
-        ['value' => OrderStatus::Completed->value,       'label' => 'انجام کار'],
+        ['value' => OrderStatus::Completed->value,       'label' => 'انجام شده'],
+        ['value' => OrderStatus::Suspended->value,       'label' => 'معلق'],
+        ['value' => OrderStatus::Cancelled->value,       'label' => 'کنسل شده'],
+        ['value' => OrderStatus::Returned->value,        'label' => 'برگشتی'],
     ];
+
+    // helper برای ماسک کردن موبایل/تلفن — نمایش ۴ رقم اول + *** + ۴ رقم آخر.
+    // برای سفارش‌های نهایی استفاده می‌شود تا اطلاعات تماس قابل‌استفاده نباشد.
+    $maskContact = function (?string $number): ?string {
+        if (! $number) return null;
+        $clean = preg_replace('/\s+/', '', $number);
+        $len = strlen($clean);
+        if ($len <= 7) return str_repeat('*', $len);
+        return substr($clean, 0, 4) . str_repeat('*', $len - 8) . substr($clean, -4);
+    };
 @endphp
 
 @section('body')
@@ -115,7 +129,11 @@
                     {{ $order->customer_name ?: ($order->customer->display_name ?? '—') }}
                     @if($order->customer_mobile)
                         <span class="text-gray-400 mx-1">·</span>
-                        <span dir="ltr" class="text-gray-600">{{ $order->customer_mobile }}</span>
+                        @if($order->status->isFinal())
+                            <span dir="ltr" class="text-gray-400">{{ $maskContact($order->customer_mobile) }}</span>
+                        @else
+                            <span dir="ltr" class="text-gray-600">{{ $order->customer_mobile }}</span>
+                        @endif
                     @endif
                 </div>
 

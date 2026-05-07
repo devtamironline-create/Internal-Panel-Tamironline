@@ -310,6 +310,13 @@ class DashboardController extends Controller
         $tech = Auth::guard('tech')->user();
         $this->ensureOwnership($order, $tech);
 
+        // محافظت در برابر دور زدن قفل از طریق UI: ثبت یادداشت روی سفارش‌های
+        // نهایی (Completed/Cancelled/Transit/Returned/Declined) غیرفعال است
+        // تا از دسترسی پس از تسویه به اطلاعات تماس مشتری جلوگیری شود.
+        if ($order->status->isFinal()) {
+            return back()->with('error', 'ثبت یادداشت روی سفارش‌های نهایی مجاز نیست.');
+        }
+
         $validated = $request->validate([
             'note' => 'required|string|max:2000',
         ]);
