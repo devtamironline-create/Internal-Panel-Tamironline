@@ -109,3 +109,30 @@
         @endif
     </div>
 </div>
+
+{{-- هشدار قبل از خروج/رفرش — جلوگیری از از دست رفتن اطلاعات نیمه‌تکمیل
+     سفارش. هنگام submit موفق، رویداد wizard-leaving-allowed ارسال می‌شود
+     تا redirect نهایی بدون پرسش انجام شود. --}}
+@script
+<script>
+(function () {
+    if (window.__orderWizUnloadBound) return;
+    window.__orderWizUnloadBound = true;
+
+    let allowLeave = false;
+    function handler(e) {
+        if (allowLeave) return;
+        e.preventDefault();
+        // مرورگرهای مدرن متن سفارشی را نادیده می‌گیرند و پیام پیش‌فرض
+        // خود را نشان می‌دهند، اما returnValue برای فعال شدن لازم است.
+        e.returnValue = '';
+        return '';
+    }
+    window.addEventListener('beforeunload', handler);
+
+    Livewire.on('wizard-leaving-allowed', () => {
+        allowLeave = true;
+    });
+})();
+</script>
+@endscript

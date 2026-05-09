@@ -466,6 +466,10 @@ class OrderWizard extends Component
 
             session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
 
+            // اجازهٔ خروج از wizard را به JS بده تا beforeunload prompt
+            // هنگام redirect نهایی نشان داده نشود.
+            $this->dispatch('wizard-leaving-allowed');
+
             try {
                 $this->redirect(route('crm.orders.show', $order), navigate: false);
             } catch (\Throwable $e) {
