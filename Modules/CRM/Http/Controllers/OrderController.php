@@ -319,35 +319,40 @@ class OrderController extends Controller
     }
 
     // ───────────── تخصیص تکنسین ─────────────────────────────────
+    /**
+     * هم‌ارز add_order/assign پنل WP: تخصیص تکنسین وضعیت سفارش را
+     * تغییر نمی‌دهد. سفارش روی همان وضعیت قبلی (معمولاً «جدید») می‌ماند
+     * تا تکنسین با مشتری تماس بگیرد و خودش وضعیت را به «هماهنگ شده» یا
+     * «باز شده» تغییر دهد. در نتیجه پیامک «تخصیص تکنسین» به مشتری اینجا
+     * ارسال نمی‌شود — هنگام تغییر به Coordinated توسط تکنسین فایر می‌شود.
+     */
     public function assign(Request $request, Order $order)
     {
         $validated = $request->validate([
             'technician_id' => 'required|exists:crm_technicians,id',
         ]);
 
-        $previousStatus = $order->status instanceof OrderStatus ? $order->status->value : $order->status;
-
         $order->update([
             'technician_id' => $validated['technician_id'],
-            'status' => OrderStatus::Coordinated->value,
             'assigned_at' => now(),
         ]);
 
         OrderStatusLog::create([
             'order_id' => $order->id,
-            'from_status' => $previousStatus,
-            'to_status' => OrderStatus::Coordinated->value,
-            'note' => 'تخصیص تکنسین',
+            'from_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
+            'to_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
+            'note' => 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
 
-        // اطلاع به مشتری و تکنسین
+        // فقط به تکنسین اطلاع بده تا با مشتری تماس بگیرد.
+        // پیامک «هماهنگی» به مشتری بعد از تغییر دستی تکنسین به Coordinated
+        // ارسال خواهد شد.
         $order->refresh()->load('technician');
-        $this->smsNotifier->notify($order, SmsTrigger::OrderAssigned);
         $this->smsNotifier->notify($order, SmsTrigger::OrderAssignedTech);
 
-        return back()->with('success', 'تکنسین تخصیص داده شد.');
+        return back()->with('success', 'تکنسین تخصیص داده شد. منتظر تماس تکنسین با مشتری بمانید.');
     }
 
     public function unassign(Order $order)

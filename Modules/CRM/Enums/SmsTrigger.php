@@ -28,6 +28,10 @@ enum SmsTrigger: string
     public static function fromOrderStatus(OrderStatus $status): ?self
     {
         return match ($status) {
+            // هم‌ارز WP: وقتی تکنسین (یا اپراتور با دسترسی) سفارش را به
+            // «هماهنگ شده» تغییر می‌دهد، مشتری پیامک «تخصیص تکنسین/زمان
+            // مراجعه» را دریافت می‌کند — نه هنگام تخصیص اولیه.
+            OrderStatus::Coordinated => self::OrderAssigned,
             OrderStatus::Open => self::OrderInProgress,
             OrderStatus::Completed => self::OrderCompleted,
             OrderStatus::Cancelled => self::OrderCancelled,

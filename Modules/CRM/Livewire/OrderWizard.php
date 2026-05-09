@@ -469,9 +469,10 @@ class OrderWizard extends Component
                 'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
                     ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
                     : null,
-                'status' => $this->technicianId
-                    ? OrderStatus::Coordinated->value
-                    : OrderStatus::New->value,
+                // هم‌ارز WP CRM: حتی با تخصیص تکنسین، وضعیت روی «جدید»
+                // می‌ماند. تکنسین باید با مشتری تماس بگیرد و سپس خودش به
+                // «هماهنگ شده» تغییر دهد.
+                'status' => OrderStatus::New->value,
                 'assigned_at' => $this->technicianId ? now() : null,
                 'created_by' => auth()->id(),
             ]);
