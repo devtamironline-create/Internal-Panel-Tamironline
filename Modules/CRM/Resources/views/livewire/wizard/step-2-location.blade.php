@@ -39,9 +39,11 @@
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
     </div>
 
-    {{-- @script ... @endscript دایرکتیو Livewire 3 است. تگ <script> ساده
-         در ویوهای کامپوننت توسط Livewire حذف می‌شوند، اما این بلاک تضمین
-         اجرا دارد. --}}
+    {{-- بلاک script-endscript پایین یک دایرکتیو Livewire 3 است. تگ
+         script ساده در ویوهای کامپوننت توسط Livewire حذف می‌شوند،
+         اما این بلاک تضمین اجرا دارد. هیچ نشانهٔ @ در این کامنت
+         نگذارید — Blade دایرکتیوها را حتی داخل کامنت هم پارس می‌کند
+         که باعث «JSON.parse unexpected character» در update می‌شود. --}}
     @script
     <script>
     (function () {
@@ -51,7 +53,7 @@
         const CITIES_URL = "{{ url('/admin/crm/provinces') }}/__ID__/cities";
 
         const wireSet = function (key, value) {
-            // داخل @script، $wire به کامپوننت Livewire این view اشاره می‌کند.
+            // داخل script directive، $wire به کامپوننت Livewire این view اشاره می‌کند.
             try { $wire.set(key, value); } catch (e) {}
         };
 
