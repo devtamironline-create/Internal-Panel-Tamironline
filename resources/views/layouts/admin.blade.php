@@ -17,8 +17,11 @@
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/tailwind.min.js"></script>
     <script src="/vendor/js/apexcharts.min.js"></script>
+    {{-- Alpine standalone حذف شد چون Livewire 3 خودش Alpine را bundle می‌کند
+         و دو نسخه باعث «multiple instances of Alpine running» و خطای
+         JSON parse در /livewire/update می‌شد. plugin alpine-collapse از
+         طریق رویداد alpine:init خودش را روی همان Alpine ثبت می‌کند. --}}
     <script defer src="/vendor/js/alpine-collapse.min.js"></script>
-    <script defer src="/vendor/js/alpine.min.js"></script>
     <link rel="stylesheet" href="/vendor/css/apexcharts.css">
     <script>
         tailwind.config = {
