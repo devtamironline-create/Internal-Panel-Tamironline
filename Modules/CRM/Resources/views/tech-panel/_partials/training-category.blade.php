@@ -15,7 +15,7 @@
                 {{-- thumbnail --}}
                 <div class="flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden bg-gray-100 relative">
                     @if($video->thumbnail)
-                        <img src="{{ asset('storage/' . $video->thumbnail) }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ $video->thumbnailUrl() }}" alt="" class="w-full h-full object-cover">
                     @else
                         <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-700 to-brand-900">
                             <svg class="w-6 h-6 text-white/80" fill="currentColor" viewBox="0 0 24 24">

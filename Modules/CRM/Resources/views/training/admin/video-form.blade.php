@@ -80,9 +80,9 @@
 
             <div x-show="source === 'upload'" x-cloak>
                 <label class="block text-sm font-medium text-gray-700 mb-1">فایل ویدیو</label>
-                @if($video->is_local && $video->video_url)
+                @if($video->is_local && $video->video_url && $video->id)
                     <p class="text-[11px] text-emerald-700 mb-2">
-                        فایل فعلی: <a href="{{ asset('storage/' . $video->video_url) }}" target="_blank" class="underline">مشاهده</a>
+                        فایل فعلی: <a href="{{ route('crm.training.file.video', ['video' => $video->id]) }}" target="_blank" class="underline">مشاهده</a>
                     </p>
                 @endif
                 <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime"
@@ -92,8 +92,8 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">تصویر کاور (اختیاری)</label>
-                @if($video->thumbnail)
-                    <img src="{{ asset('storage/' . $video->thumbnail) }}" class="w-32 h-20 object-cover rounded mb-2 border border-gray-200">
+                @if($video->thumbnail && $video->id)
+                    <img src="{{ $video->thumbnailUrl() }}" class="w-32 h-20 object-cover rounded mb-2 border border-gray-200">
                 @endif
                 <input type="file" name="thumbnail_file" accept="image/jpeg,image/png,image/webp"
                        class="w-full text-sm">

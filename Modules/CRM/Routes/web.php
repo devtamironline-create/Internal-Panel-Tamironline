@@ -18,6 +18,7 @@ use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
 use Modules\CRM\Http\Controllers\TechPanelSettingsController;
 use Modules\CRM\Http\Controllers\TrainingAdminController;
+use Modules\CRM\Http\Controllers\TrainingFileController;
 use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
@@ -28,6 +29,12 @@ Route::middleware('web')->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');
     Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
+
+    // ─── فایل‌های آموزش (ویدیو + تامبنیل) — auth داخلی ─────────────
+    Route::get('/crm/training/{video}/video', [TrainingFileController::class, 'streamVideo'])
+        ->name('crm.training.file.video');
+    Route::get('/crm/training/{video}/thumbnail', [TrainingFileController::class, 'streamThumbnail'])
+        ->name('crm.training.file.thumbnail');
 });
 
 Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function () {

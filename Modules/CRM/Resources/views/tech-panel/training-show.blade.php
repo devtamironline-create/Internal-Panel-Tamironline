@@ -28,7 +28,7 @@
             @case('mp4')
                 <video controls preload="metadata" class="w-full block bg-black"
                        style="aspect-ratio: 16/9;"
-                       @if($video->thumbnail) poster="{{ asset('storage/' . $video->thumbnail) }}" @endif>
+                       @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
                     <source src="{{ $video->playbackUrl() }}" type="video/mp4">
                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                 </video>

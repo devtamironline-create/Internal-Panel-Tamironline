@@ -44,8 +44,10 @@ class TrainingVideo extends Model
     }
 
     /**
-     * URL مناسب برای embed/پخش در view. اگر فایل لوکال باشد، از asset
-     * می‌سازد؛ در غیر این صورت همان video_url را برمی‌گرداند.
+     * URL مناسب برای embed/پخش در view. برای فایل لوکال از روت
+     * crm.training.file.video استفاده می‌کنیم تا از مسیر symlink
+     * /storage عبور نکنیم (روی هاست‌های LiteSpeed بدون FollowSymLinks
+     * می‌شکست). برای URL خارجی همان مقدار را برمی‌گردانیم.
      */
     public function playbackUrl(): ?string
     {
@@ -53,10 +55,22 @@ class TrainingVideo extends Model
             return null;
         }
         if ($this->is_local) {
-            return asset('storage/' . ltrim($this->video_url, '/'));
+            return route('crm.training.file.video', ['video' => $this->id]);
         }
 
         return $this->video_url;
+    }
+
+    /**
+     * URL تامبنیل از طریق روت Laravel — مشابه playbackUrl برای ویدیو.
+     */
+    public function thumbnailUrl(): ?string
+    {
+        if (! $this->thumbnail) {
+            return null;
+        }
+
+        return route('crm.training.file.thumbnail', ['video' => $this->id]);
     }
 
     /**
