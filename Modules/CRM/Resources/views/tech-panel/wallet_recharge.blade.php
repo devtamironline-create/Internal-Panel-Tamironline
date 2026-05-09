@@ -6,10 +6,29 @@
     $balance = (int) $technician->true_balance;
     $isDebtor = $balance < 0;
     $absBalance = abs($balance);
+
+    // تبدیل عدد به برچسب فارسی خوانا (۵۰۰ هزار تومان / ۱.۵ میلیون تومان)
+    $persianAmountLabel = function (int $n): string {
+        $latin = ['0','1','2','3','4','5','6','7','8','9'];
+        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $toFa = fn($s) => str_replace($latin, $persian, (string) $s);
+        if ($n < 1_000_000) {
+            $k = intdiv($n, 1000);
+            return $toFa($k) . ' هزار تومان';
+        }
+        $millions = $n / 1_000_000;
+        $whole = (int) $millions;
+        $frac = $millions - $whole;
+        $label = $frac > 0
+            ? $toFa(rtrim(rtrim(number_format($millions, 1, '.', ''), '0'), '.'))
+            : $toFa($whole);
+        return $label . ' میلیون تومان';
+    };
+
     // پلهٔ ۵۰۰ هزار از ۵۰۰ هزار تا ۱۰ میلیون
     $presets = [];
     for ($i = 500_000; $i <= 10_000_000; $i += 500_000) {
-        $presets[] = $i;
+        $presets[] = ['value' => $i, 'label' => $persianAmountLabel($i)];
     }
 @endphp
 
@@ -97,19 +116,23 @@
 
         {{-- ─────── Quick-pick buttons (500K → 10M, step 500K) ─────── --}}
         <div class="mt-4">
-            <div class="text-[11px] text-gray-400 mb-2">انتخاب سریع</div>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="flex items-center justify-between mb-2.5">
+                <div class="text-[11px] text-gray-500 font-bold">انتخاب سریع مبلغ</div>
+                <div class="text-[10px] text-gray-400">پلهٔ ۵۰۰ هزار</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
                 @foreach($presets as $p)
-                    <button type="button" @click="setAmount({{ $p }})"
-                            :class="amount === {{ $p }} ? 'bg-brand-700 text-white border-brand-700' : 'bg-gray-50 text-gray-700 border-gray-200'"
-                            class="py-2 rounded-xl border text-xs font-bold transition">
-                        {{ number_format($p / 1_000_000, 1) }}M
+                    <button type="button" @click="setAmount({{ $p['value'] }})"
+                            :class="amount === {{ $p['value'] }}
+                                ? 'bg-gradient-to-l from-brand-700 to-brand-600 text-white border-brand-700 shadow-md scale-[1.02]'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-brand-300 hover:bg-brand-50/40'"
+                            class="py-2.5 rounded-xl border text-[12px] font-bold transition-all duration-150 active:scale-95">
+                        {{ $p['label'] }}
                     </button>
                 @endforeach
             </div>
-            <p class="text-[10px] text-gray-400 mt-2 leading-6">
-                از ۵۰۰ هزار تا ۱۰ میلیون با پلهٔ ۵۰۰ هزار. برای مبلغ سفارشی،
-                مستقیم در فیلد بالا تایپ کنید.
+            <p class="text-[10px] text-gray-400 mt-3 leading-6 text-center">
+                از ۵۰۰ هزار تا ۱۰ میلیون تومان. برای مبلغ سفارشی، مستقیم در فیلد بالا تایپ کنید.
             </p>
         </div>
 
