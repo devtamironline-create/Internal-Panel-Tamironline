@@ -24,6 +24,13 @@ use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
 use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardController;
 
+// ─── سرو تصاویر برند پنل تکنسین (لوگو/بنر/Hero) — عمومی، چون در صفحه
+//     ورود قبل از احراز هویت استفاده می‌شوند. جایگزین asset('storage/...')
+//     که روی هاست بدون symlink ۴۰۴ می‌شود. ─────────────────────────
+Route::get('/tech-panel/image/{key}', [\Modules\CRM\Http\Controllers\TechPanelSettingsController::class, 'serve'])
+    ->name('crm.tech-panel-settings.serve')
+    ->where('key', 'tech_panel_logo|tech_panel_banner|tech_panel_hero');
+
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
 Route::middleware('web')->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');

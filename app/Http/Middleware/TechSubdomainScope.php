@@ -22,6 +22,7 @@ class TechSubdomainScope
     /** مسیرهایی که حتی روی ساب‌دامین تکنسین آزاد هستند. */
     private const ALLOWED_PREFIXES = [
         'tech',          // همه مسیرهای پنل تکنسین
+        'tech-panel/',   // سرو تصاویر برند (لوگو/بنر/Hero) از طریق PHP
         'storage/',      // فایل‌های آپلود شده (لوگو/بنر/...)
         'css/',
         'js/',

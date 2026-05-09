@@ -107,4 +107,31 @@ class TechPanelSettingsController extends Controller
             ->route('crm.tech-panel-settings.index')
             ->with('success', 'تصویر حذف شد.');
     }
+
+    /**
+     * سرو فایل برند (لوگو/بنر/Hero) از طریق PHP — جایگزین asset('storage/...')
+     * که روی هاست‌های cPanel/LiteSpeed بدون symlink ۴۰۴ می‌شود. این روت
+     * عمومی است (بدون auth) چون این تصاویر در صفحهٔ ورود تکنسین استفاده
+     * می‌شوند که خودش نیاز به ورود ندارد.
+     */
+    public function serve(string $key)
+    {
+        if (! in_array($key, self::IMAGE_KEYS, true)) {
+            abort(404);
+        }
+
+        $path = Setting::get($key);
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response(
+            $path,
+            basename($path),
+            [
+                'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
+                'Cache-Control' => 'public, max-age=3600',
+            ]
+        );
+    }
 }

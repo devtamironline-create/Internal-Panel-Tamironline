@@ -100,11 +100,14 @@
                 <div class="flex items-start gap-4">
                     @if($settings[$field['key']])
                         @php
-                            $imgPath = public_path('storage/' . $settings[$field['key']]);
-                            $cacheBust = file_exists($imgPath) ? filemtime($imgPath) : time();
+                            // از روت Laravel استفاده می‌کنیم چون symlink
+                            // استوریج روی هاست‌های cPanel/LiteSpeed ۴۰۴ می‌دهد.
+                            // cache-bust با timestamp فعلی تا بعد از آپلود
+                            // فوراً نسخهٔ جدید را ببینیم.
+                            $imgUrl = route('crm.tech-panel-settings.serve', $field['key']) . '?v=' . time();
                         @endphp
                         <div class="relative flex-shrink-0">
-                            <img src="{{ asset('storage/' . $settings[$field['key']]) }}?v={{ $cacheBust }}"
+                            <img src="{{ $imgUrl }}"
                                  alt="{{ $field['label'] }}"
                                  class="{{ $field['aspect'] }} object-cover rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
                             <form action="{{ route('crm.tech-panel-settings.delete-image', $field['key']) }}"

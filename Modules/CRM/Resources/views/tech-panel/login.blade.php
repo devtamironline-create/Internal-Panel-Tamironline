@@ -8,7 +8,9 @@
     <div class="relative overflow-hidden flex-1 flex items-center justify-center"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%); min-height: 45vh;">
         @if($brandHero)
-            <img src="{{ asset('storage/' . $brandHero) }}" alt="hero"
+            {{-- از روت Laravel استفاده می‌کنیم چون symlink استوریج روی
+                 هاست cPanel/LiteSpeed قابل اعتماد نیست. --}}
+            <img src="{{ route('crm.tech-panel-settings.serve', 'tech_panel_hero') }}" alt="hero"
                  class="absolute inset-0 w-full h-full object-cover">
         @else
             {{-- Decorative SVG fallback تا وقتی تصویر آپلود نشده --}}
