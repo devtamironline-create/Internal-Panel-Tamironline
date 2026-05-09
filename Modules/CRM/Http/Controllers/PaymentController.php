@@ -5,14 +5,17 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Payment;
+use Modules\CRM\Models\Technician;
+use Modules\CRM\Services\WalletService;
 use Modules\CRM\Services\ZibalService;
 
 class PaymentController extends Controller
 {
-    public function __construct(protected ZibalService $zibal)
+    public function __construct(protected ZibalService $zibal, protected WalletService $wallet)
     {
     }
 
@@ -161,6 +164,10 @@ class PaymentController extends Controller
 
         if ($verify['success']) {
             DB::transaction(function () use ($payment, $verify) {
+                // اگر قبلاً verified شده، دوبار credit نکن (callback ممکن است
+                // با retry فایر شود؛ idempotency حیاتی است).
+                $alreadyVerified = $payment->status === 'verified';
+
                 $payment->update([
                     'status' => 'verified',
                     'ref_number' => $verify['refNumber'] ?? null,
@@ -169,9 +176,29 @@ class PaymentController extends Controller
                     'result_code' => $verify['result'] ?? null,
                     'result_message' => $verify['message'] ?? null,
                     'gateway_response' => $verify['raw'] ?? null,
-                    'verified_at' => now(),
+                    'verified_at' => $payment->verified_at ?? now(),
                 ]);
 
+                if ($alreadyVerified) {
+                    return;
+                }
+
+                // ─── purpose: wallet_charge ─── شارژ کیف‌پول تکنسین
+                if ($payment->purpose === 'wallet_charge' && $payment->technician_id) {
+                    $tech = Technician::find($payment->technician_id);
+                    if ($tech) {
+                        $this->wallet->recordTransaction(
+                            technician: $tech,
+                            type: WalletTxType::WalletCharge,
+                            amount: (int) $payment->amount, // مثبت — موجودی تکنسین افزایش می‌یابد
+                            note: 'شارژ کیف‌پول از درگاه — refid: ' . ($verify['refNumber'] ?? $payment->track_id),
+                            createdBy: null, // ربات/گیت‌وی
+                        );
+                    }
+                    return;
+                }
+
+                // ─── purpose: invoice (پیش‌فرض) ─── پرداخت فاکتور مشتری
                 if ($payment->invoice && $payment->invoice->status !== 'paid') {
                     $payment->invoice->update([
                         'status' => 'paid',
@@ -179,6 +206,16 @@ class PaymentController extends Controller
                     ]);
                 }
             });
+
+            // پیام مناسب با نوع تراکنش
+            if ($payment->purpose === 'wallet_charge') {
+                return view('crm::payment.result', [
+                    'ok' => true,
+                    'message' => 'شارژ کیف‌پول با موفقیت انجام شد. مبلغ به موجودی شما اضافه شد.',
+                    'invoice' => null,
+                    'payment' => $payment->refresh(),
+                ]);
+            }
 
             return view('crm::payment.result', [
                 'ok' => true,

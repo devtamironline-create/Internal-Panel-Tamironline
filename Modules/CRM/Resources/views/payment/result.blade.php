@@ -46,6 +46,25 @@
             </div>
             @endif
         </div>
+        @elseif($payment && $payment->purpose === 'wallet_charge')
+        <div class="bg-gray-50 rounded-lg p-4 text-sm mb-4">
+            <div class="flex justify-between mb-2">
+                <span class="text-gray-500">مبلغ شارژ:</span>
+                <span class="font-bold">{{ number_format((int) $payment->amount) }} تومان</span>
+            </div>
+            @if($payment->ref_number)
+            <div class="flex justify-between">
+                <span class="text-gray-500">شماره پیگیری:</span>
+                <span class="font-medium" dir="ltr">{{ $payment->ref_number }}</span>
+            </div>
+            @endif
+        </div>
+        @if($payment->technician_id)
+            <a href="{{ route('tech.wallet') }}"
+               class="inline-block w-full py-2.5 rounded-lg bg-blue-600 text-white font-bold text-sm">
+                بازگشت به کیف‌پول
+            </a>
+        @endif
         @endif
 
         <p class="text-xs text-gray-400 mt-4">در صورت بروز مشکل با پشتیبانی تماس بگیرید.</p>

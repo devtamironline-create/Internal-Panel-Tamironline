@@ -302,6 +302,9 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('orders/{order}/notes', [TechPanelDashboardController::class, 'addOrderNote'])->name('orders.add-note');
         Route::post('orders/{order}/deliver-sms', [TechPanelDashboardController::class, 'sendDeliverSms'])->name('orders.deliver-sms');
         Route::get('wallet', [TechPanelDashboardController::class, 'wallet'])->name('wallet');
+        // شارژ کیف‌پول از طریق درگاه — هم‌ارز Tech_Payment پنل WP
+        Route::get('wallet/recharge', [TechPanelDashboardController::class, 'walletRecharge'])->name('wallet.recharge');
+        Route::post('wallet/recharge', [TechPanelDashboardController::class, 'walletRechargeInitiate'])->name('wallet.recharge.initiate');
         Route::get('invoices', [TechPanelDashboardController::class, 'invoices'])->name('invoices');
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
         Route::post('profile', [TechPanelDashboardController::class, 'updateProfile'])->name('profile.update');

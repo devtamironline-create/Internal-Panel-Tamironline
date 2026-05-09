@@ -16,9 +16,11 @@ use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\TrainingCategory;
 use Modules\CRM\Models\TrainingVideo;
+use Modules\CRM\Models\Payment;
 use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
+use Modules\CRM\Services\ZibalService;
 
 /**
  * کنترلر داشبورد + صفحات اصلی پنل تکنسین.
@@ -463,6 +465,64 @@ class DashboardController extends Controller
             'stats' => $stats,
             'statusFilter' => $statusFilter,
         ]);
+    }
+
+    // ─── شارژ کیف‌پول از درگاه (هم‌ارز Tech_Payment پنل WP) ────────
+    public function walletRecharge(ZibalService $zibal)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        return view('crm::tech-panel.wallet_recharge', [
+            'technician' => $tech,
+            'gatewayConfigured' => $zibal->isConfigured(),
+        ]);
+    }
+
+    public function walletRechargeInitiate(Request $request, ZibalService $zibal)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        $validated = $request->validate([
+            'amount' => ['required', 'integer', 'min:1000', 'max:50000000'],
+        ], [
+            'amount.required' => 'مبلغ الزامی است.',
+            'amount.min' => 'حداقل مبلغ شارژ ۱٬۰۰۰ تومان است.',
+            'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
+        ]);
+
+        if (! $zibal->isConfigured()) {
+            return back()->with('error', 'درگاه پرداخت توسط ادمین تنظیم نشده است.');
+        }
+
+        $amount = (int) $validated['amount'];
+        $callbackUrl = route('crm.payment.callback');
+        $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+
+        $response = $zibal->request(
+            amount: $amount,
+            callbackUrl: $callbackUrl,
+            orderId: $orderId,
+            mobile: $tech->mobile,
+            description: 'شارژ کیف‌پول تکنسین #' . $tech->id,
+        );
+
+        $payment = Payment::create([
+            'technician_id' => $tech->id,
+            'gateway' => 'zibal',
+            'purpose' => 'wallet_charge',
+            'amount' => $amount,
+            'track_id' => $response['trackId'] ?? null,
+            'status' => $response['success'] ? 'pending' : 'failed',
+            'result_message' => $response['message'] ?? null,
+            'gateway_response' => $response['raw'] ?? null,
+            'requested_at' => now(),
+        ]);
+
+        if (! $response['success']) {
+            return back()->with('error', $response['message'] ?? 'خطا در شروع پرداخت.');
+        }
+
+        return redirect()->away($response['paymentUrl']);
     }
 
     public function profile()
