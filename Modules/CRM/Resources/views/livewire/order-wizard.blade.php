@@ -59,17 +59,22 @@
             </div>
         @endif
 
-        @if($currentStep === 1)
-            @include('crm::livewire.wizard.step-1-customer')
-        @elseif($currentStep === 2)
-            @include('crm::livewire.wizard.step-2-location')
-        @elseif($currentStep === 3)
-            @include('crm::livewire.wizard.step-3-device')
-        @elseif($currentStep === 4)
-            @include('crm::livewire.wizard.step-4-technician')
-        @elseif($currentStep === 5)
-            @include('crm::livewire.wizard.step-5-review')
-        @endif
+        {{-- wire:key روی هر مرحله حیاتی است — جلوگیری از نشتی DOM
+             بین مراحل (مثل Tom Select wrapper استان/شهر که هنگام مرفینگ
+             به مرحله بعد می‌ماند). --}}
+        <div wire:key="wiz-step-{{ $currentStep }}">
+            @if($currentStep === 1)
+                @include('crm::livewire.wizard.step-1-customer')
+            @elseif($currentStep === 2)
+                @include('crm::livewire.wizard.step-2-location')
+            @elseif($currentStep === 3)
+                @include('crm::livewire.wizard.step-3-device')
+            @elseif($currentStep === 4)
+                @include('crm::livewire.wizard.step-4-technician')
+            @elseif($currentStep === 5)
+                @include('crm::livewire.wizard.step-5-review')
+            @endif
+        </div>
     </div>
 
     {{-- Navigation --}}
