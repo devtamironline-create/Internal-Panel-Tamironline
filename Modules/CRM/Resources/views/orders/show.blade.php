@@ -539,8 +539,11 @@
             </div>
             @endcan
 
-            {{-- بازگشت سفارش — هم‌ارز returnOrderStatus در WP CRM --}}
+            {{-- بازگشت سفارش — هم‌ارز returnOrderStatus در WP CRM.
+                 فقط روی سفارش‌های نهایی (انجام کار/کنسل/رد/ایاب و ذهاب)
+                 نمایش داده می‌شود؛ روی سفارش جریانی این گزینه معنا ندارد. --}}
             @can('change-crm-order-status')
+            @if($order->status->isFinal())
             <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
@@ -580,6 +583,7 @@
                     </button>
                 </form>
             </div>
+            @endif
             @endcan
 
             {{-- یادداشت داخلی --}}

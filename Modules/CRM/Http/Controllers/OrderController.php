@@ -460,6 +460,18 @@ class OrderController extends Controller
      */
     public function returnOrder(Request $request, Order $order)
     {
+        // گارد: بازگشت سفارش فقط روی وضعیت‌های نهایی مجاز است (هم‌ارز
+        // returnOrderStatus در WP CRM که فقط بعد از تکمیل/کنسل قابل
+        // اجراست). برای سفارش جریانی، باید ابتدا با تغییر وضعیت اقدام
+        // شود نه «بازگشت».
+        $currentStatus = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+
+        if (! $currentStatus || ! $currentStatus->isFinal()) {
+            return back()->with('error', 'بازگشت سفارش فقط روی سفارش‌های نهایی (انجام کار/کنسل/رد/ایاب و ذهاب) مجاز است.');
+        }
+
         $validated = $request->validate([
             'return_type' => ['required', 'in:1,2'],
             'return_description' => ['required', 'string', 'max:2000'],
@@ -469,9 +481,7 @@ class OrderController extends Controller
             'return_description.required' => 'لطفاً دلیل/توضیح بازگشت را وارد کنید.',
         ]);
 
-        $previousStatus = $order->status instanceof OrderStatus
-            ? $order->status->value
-            : (string) $order->status;
+        $previousStatus = $currentStatus->value;
 
         $returnType = (string) $validated['return_type'];
         $returnDesc = $validated['return_description'];
