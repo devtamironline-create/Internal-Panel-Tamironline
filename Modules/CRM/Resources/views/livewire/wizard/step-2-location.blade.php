@@ -42,8 +42,8 @@
     <script>
     // فقط یک‌بار listener را روی Livewire ثبت می‌کنیم — guard جلوی
     // ثبت تکراری در morphهای بعدی wizard را می‌گیرد. این inline است
-    // (نه @push) چون Livewire components نمی‌توانند به stack layout بعد
-    // از render اولیه push کنند.
+    // (نه stack push) چون Livewire components نمی‌توانند به stack
+    // layout بعد از render اولیه چیزی اضافه کنند.
     (function () {
         if (window.__orderWizCityHookInstalled) return;
         window.__orderWizCityHookInstalled = true;
