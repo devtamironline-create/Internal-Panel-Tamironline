@@ -2,12 +2,11 @@
     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">محل مراجعه</h2>
     <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">آدرسی که تکنسین برای انجام تعمیر مراجعه می‌کند.</p>
 
-    <div class="grid grid-cols-2 gap-4">
-        {{-- هر دو select داخل wire:ignore هستند تا Tom Select بتواند DOM
-             اطراف <select> را آزادانه دستکاری کند. مقداردهی Livewire با
-             $wire.set('provinceId', ...) انجام می‌شود نه wire:model. --}}
-
-        <div wire:ignore>
+    {{-- flex با w-1/2 به‌جای grid برای جلوگیری از فشرده شدن .ts-wrapper
+         که display:inline-block است و گاهی grid item را به یک ردیف
+         پایین می‌اندازد. --}}
+    <div class="flex flex-row gap-4" style="display:flex;flex-direction:row;">
+        <div wire:ignore class="w-1/2" style="width:50%;flex:1 1 50%;min-width:0;">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان *</label>
             <select id="orderwiz-province"
                     data-tom-select data-placeholder="جستجو در استان‌ها..."
@@ -19,7 +18,7 @@
             </select>
         </div>
 
-        <div wire:ignore>
+        <div wire:ignore class="w-1/2" style="width:50%;flex:1 1 50%;min-width:0;">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر / منطقه *</label>
             <select id="orderwiz-city"
                     data-tom-select data-placeholder="جستجو در شهرها..."
