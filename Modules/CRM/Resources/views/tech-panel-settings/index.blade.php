@@ -58,10 +58,9 @@
             </div>
         @endif
 
-        <form action="{{ route('crm.tech-panel-settings.update') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-7">
+        {{-- ─── فرم متن‌ها ─── (بدون فایل، سبک) --}}
+        <form action="{{ route('crm.tech-panel-settings.update') }}" method="POST" class="p-6 space-y-5 border-b border-gray-100 dark:border-gray-700">
             @csrf
-
-            {{-- ─── متن‌ها ─── --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نام نمایشی پنل</label>
                 <input type="text" name="tech_panel_name"
@@ -80,55 +79,76 @@
                 <p class="text-xs text-gray-400 mt-1">دکمهٔ تماس بالای داشبورد تکنسین به این شماره می‌رود. خالی بگذارید تا دکمه نمایش داده نشود.</p>
             </div>
 
-            {{-- ─── تصاویر ─── --}}
-            @foreach($imageFields as $field)
-                <div class="border-t border-gray-100 dark:border-gray-700 pt-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {{ $field['label'] }}
-                    </label>
-                    <p class="text-xs text-gray-500 mb-3 leading-6">{{ $field['description'] }}</p>
+            <button type="submit"
+                    class="px-6 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition">
+                ذخیره متن‌ها
+            </button>
+        </form>
 
-                    <div class="flex items-start gap-4">
-                        @if($settings[$field['key']])
-                            <div class="relative flex-shrink-0">
-                                <img src="{{ asset('storage/' . $settings[$field['key']]) }}"
-                                     alt="{{ $field['label'] }}"
-                                     class="{{ $field['aspect'] }} object-cover rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                                <form action="{{ route('crm.tech-panel-settings.delete-image', $field['key']) }}"
-                                      method="POST" class="absolute -top-2 -right-2"
-                                      onsubmit="return confirm('این تصویر حذف شود؟');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </form>
-                            </div>
-                        @endif
+        {{-- ─── هر تصویر، یک فرم مستقل ───
+             قبلاً همهٔ فایل‌ها در یک فرم می‌رفتند که اگر مجموع حجم بیشتر
+             از post_max_size PHP می‌شد (پیش‌فرض ۸MB) درخواست ساکت رد
+             می‌شد و عکس Hero ذخیره نمی‌شد. حالا هر آپلود فرم خودش را
+             دارد و بسیار سبک‌تر است. --}}
+        @foreach($imageFields as $field)
+            <div class="px-6 py-6 {{ ! $loop->last ? 'border-b border-gray-100 dark:border-gray-700' : '' }}">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {{ $field['label'] }}
+                </label>
+                <p class="text-xs text-gray-500 mb-3 leading-6">{{ $field['description'] }}</p>
 
+                <div class="flex items-start gap-4">
+                    @if($settings[$field['key']])
+                        @php
+                            $imgPath = public_path('storage/' . $settings[$field['key']]);
+                            $cacheBust = file_exists($imgPath) ? filemtime($imgPath) : time();
+                        @endphp
+                        <div class="relative flex-shrink-0">
+                            <img src="{{ asset('storage/' . $settings[$field['key']]) }}?v={{ $cacheBust }}"
+                                 alt="{{ $field['label'] }}"
+                                 class="{{ $field['aspect'] }} object-cover rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                            <form action="{{ route('crm.tech-panel-settings.delete-image', $field['key']) }}"
+                                  method="POST" class="absolute -top-2 -right-2"
+                                  onsubmit="return confirm('این تصویر حذف شود؟');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+
+                    <form action="{{ route('crm.tech-panel-settings.update') }}" method="POST" enctype="multipart/form-data"
+                          class="flex-1 min-w-0 flex items-end gap-3">
+                        @csrf
                         <div class="flex-1 min-w-0">
-                            <input type="file" name="{{ $field['key'] }}" accept="{{ $field['accept'] }}"
+                            <input type="file" name="{{ $field['key'] }}" accept="{{ $field['accept'] }}" required
                                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300">
                             <p class="text-xs text-gray-400 mt-1">{{ $field['hint'] }}</p>
                         </div>
-                    </div>
+                        <button type="submit"
+                                class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition whitespace-nowrap">
+                            آپلود
+                        </button>
+                    </form>
                 </div>
-            @endforeach
-
-            <div class="border-t border-gray-100 dark:border-gray-700 pt-6 flex items-center gap-3">
-                <button type="submit"
-                        class="px-6 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition">
-                    ذخیره تنظیمات
-                </button>
-                <a href="{{ route('tech.dashboard') }}" target="_blank"
-                   class="px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm transition">
-                    پیش‌نمایش پنل تکنسین
-                </a>
             </div>
-        </form>
+        @endforeach
+
+        <div class="px-6 py-5 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3">
+            <a href="{{ route('tech.dashboard') }}" target="_blank"
+               class="px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm transition">
+                پیش‌نمایش پنل تکنسین
+            </a>
+            <a href="{{ route('tech.login') }}" target="_blank"
+               class="px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm transition">
+                پیش‌نمایش صفحه ورود
+            </a>
+        </div>
     </div>
 </div>
 @endsection

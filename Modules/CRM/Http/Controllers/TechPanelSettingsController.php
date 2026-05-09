@@ -38,6 +38,20 @@ class TechPanelSettingsController extends Controller
 
     public function update(Request $request)
     {
+        // تشخیص case ای که PHP به علت post_max_size درخواست را ساکت دور
+        // ریخته (هیچ POST و FILES نمی‌رسد ولی Content-Length بزرگ بود).
+        // در این حالت Laravel استثنا نمی‌دهد و user فکر می‌کند ذخیره شد.
+        if (
+            $request->server('CONTENT_LENGTH') > 0
+            && empty($_POST)
+            && empty($_FILES)
+        ) {
+            $limit = ini_get('post_max_size') ?: '8M';
+            return back()->withErrors([
+                'upload' => "فایل ارسالی بزرگتر از سقف PHP ({$limit}) بود و سرور آن را قبول نکرد. حجم تصویر را کاهش دهید یا با هاست برای افزایش post_max_size تماس بگیرید.",
+            ]);
+        }
+
         $validated = $request->validate([
             'tech_panel_name' => 'nullable|string|max:100',
             'tech_panel_support_phone' => 'nullable|string|max:30',
@@ -46,14 +60,16 @@ class TechPanelSettingsController extends Controller
             'tech_panel_hero' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
-        // متن‌ها — همیشه ست می‌شوند (حتی اگر خالی، تا تکنسین مقدار قدیمی نبیند).
+        // متن‌ها — فقط اگر در این فرم خاص ارسال شده‌اند (هر فرم
+        // مستقل است؛ فرم تصویر نباید متن قدیمی را خراب کند).
         foreach (self::TEXT_KEYS as $key) {
-            if (array_key_exists($key, $validated)) {
+            if ($request->has($key) && array_key_exists($key, $validated)) {
                 Setting::set($key, $validated[$key]);
             }
         }
 
         // تصاویر — فقط در صورت آپلود فایل جدید عوض می‌شوند؛ فایل قبلی پاک می‌شود.
+        $uploadedKey = null;
         foreach (self::IMAGE_KEYS as $key) {
             if ($request->hasFile($key)) {
                 $old = Setting::get($key);
@@ -62,12 +78,17 @@ class TechPanelSettingsController extends Controller
                 }
                 $path = $request->file($key)->store('tech-panel', 'public');
                 Setting::set($key, $path);
+                $uploadedKey = $key;
             }
         }
 
+        $message = $uploadedKey
+            ? 'تصویر با موفقیت آپلود شد.'
+            : 'تنظیمات پنل تکنسین ذخیره شد.';
+
         return redirect()
             ->route('crm.tech-panel-settings.index')
-            ->with('success', 'تنظیمات پنل تکنسین ذخیره شد.');
+            ->with('success', $message);
     }
 
     public function deleteImage(string $key)
