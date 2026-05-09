@@ -39,8 +39,10 @@
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
     </div>
 
-    {{-- یک‌بار JS اتچ می‌کنیم. wire:id فقط در runtime معلوم می‌شود، پس از
-         document.querySelector به wire:id هر مرحله از wizard می‌رسیم. --}}
+    {{-- @script ... @endscript دایرکتیو Livewire 3 است. تگ <script> ساده
+         در ویوهای کامپوننت توسط Livewire حذف می‌شوند، اما این بلاک تضمین
+         اجرا دارد. --}}
+    @script
     <script>
     (function () {
         if (window.__orderWizLocationInit) return;
@@ -49,12 +51,8 @@
         const CITIES_URL = "{{ url('/admin/crm/provinces') }}/__ID__/cities";
 
         const wireSet = function (key, value) {
-            // پیدا کردن کامپوننت Livewire والد بر اساس wire:id
-            const root = document.querySelector('[wire\\:id]');
-            if (!root || !window.Livewire) return;
-            const id = root.getAttribute('wire:id');
-            const cmp = window.Livewire.find(id);
-            if (cmp) cmp.set(key, value);
+            // داخل @script، $wire به کامپوننت Livewire این view اشاره می‌کند.
+            try { $wire.set(key, value); } catch (e) {}
         };
 
         const setupCity = function (cityEl, cities, placeholder, hasProvince) {
@@ -127,4 +125,5 @@
         setTimeout(function () { clearInterval(poll); }, 10000);
     })();
     </script>
+    @endscript
 </div>
