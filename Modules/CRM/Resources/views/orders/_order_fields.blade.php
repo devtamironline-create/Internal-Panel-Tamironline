@@ -45,7 +45,9 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">استان</label>
-            <select name="province_id" id="order-province" data-cities-url="{{ url('/admin/crm/provinces') }}/__ID__/cities"
+            <select name="province_id" id="order-province"
+                    data-tom-select data-placeholder="جستجو در استان‌ها..."
+                    data-cities-url="{{ url('/admin/crm/provinces') }}/__ID__/cities"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">— انتخاب —</option>
                 @foreach($provinces as $p)
@@ -55,7 +57,9 @@
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر</label>
-            <select name="city_id" id="order-city" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+            <select name="city_id" id="order-city"
+                    data-tom-select data-placeholder="جستجو در شهرها..."
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">— ابتدا استان را انتخاب کنید —</option>
                 @foreach($cities as $c)
                 <option value="{{ $c->id }}" @selected(old('city_id', $order->city_id ?? null) == $c->id)>{{ $c->name }}</option>
@@ -105,21 +109,48 @@
     const cityEl = document.getElementById('order-city');
     if (!provinceEl || !cityEl) return;
 
+    // اگر Tom Select روی select فعال است، باید به‌جای innerHTML از API
+    // tomselect استفاده کنیم تا dropdown قابل سرچ همگام بماند.
+    function setCityOptions(items, placeholder) {
+        const ts = cityEl.tomselect;
+        if (ts) {
+            ts.clear(true);
+            ts.clearOptions();
+            ts.addOption([{ value: '', text: placeholder }, ...items.map(c => ({ value: String(c.id), text: c.name }))]);
+            ts.refreshOptions(false);
+        } else {
+            cityEl.innerHTML = `<option value="">${placeholder}</option>` +
+                items.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+    }
+
+    // پاک‌کردن صرف بدون لیست — برای حالت‌های loading/error
+    function resetCity(placeholder) {
+        const ts = cityEl.tomselect;
+        if (ts) {
+            ts.clear(true);
+            ts.clearOptions();
+            ts.addOption([{ value: '', text: placeholder }]);
+            ts.refreshOptions(false);
+        } else {
+            cityEl.innerHTML = `<option value="">${placeholder}</option>`;
+        }
+    }
+
     provinceEl.addEventListener('change', async function () {
         const id = this.value;
-        cityEl.innerHTML = '<option value="">در حال بارگذاری...</option>';
+        resetCity('در حال بارگذاری...');
         if (!id) {
-            cityEl.innerHTML = '<option value="">— ابتدا استان را انتخاب کنید —</option>';
+            resetCity('— ابتدا استان را انتخاب کنید —');
             return;
         }
         try {
             const url = provinceEl.dataset.citiesUrl.replace('__ID__', id);
             const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const data = await res.json();
-            cityEl.innerHTML = '<option value="">— انتخاب شهر —</option>' +
-                data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            setCityOptions(data, '— انتخاب شهر —');
         } catch (e) {
-            cityEl.innerHTML = '<option value="">خطا در بارگذاری شهرها</option>';
+            resetCity('خطا در بارگذاری شهرها');
         }
     });
 })();
