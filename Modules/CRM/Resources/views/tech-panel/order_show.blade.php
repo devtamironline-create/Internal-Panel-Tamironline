@@ -265,6 +265,23 @@
              x-data="{
                 selected: '{{ old('status', '') }}',
                 pieces: {{ \Illuminate\Support\Js::from($existingPieces) }},
+                priceCustomer: {{ (int) old('price_customer', $order->price_customer ?? 0) }},
+                hire: {{ (int) old('hire', $order->hire ?? 0) }},
+                transportation: {{ (int) old('transportation', $order->transportation ?? 0) }},
+                discount: {{ (int) old('discount', $order->discount ?? 0) }},
+                techPercent: {{ (int) ($technician->percent ?? 0) }},
+                techPerOfAll: {{ (int) ($technician->tech_per_of_all ?? 0) }},
+                techCalcType: '{{ (string) ($technician->type_of_calc_tech ?? '') }}',
+                get partsCost() { return this.pieces.reduce((s, p) => s + (Number(p.buy)||0), 0); },
+                get totalInvoice() { return Math.max(0, (Number(this.priceCustomer)||0) - this.partsCost); },
+                get techShare() {
+                    if (this.techCalcType === '1' || this.techCalcType === 'internal') {
+                        return Math.round((this.totalInvoice + this.partsCost) * (100 - this.techPerOfAll) / 100);
+                    }
+                    return Math.round(this.totalInvoice * this.techPercent / 100);
+                },
+                fmt(n) { return Number(n||0).toLocaleString('fa-IR'); },
+                toWords(n) { return numberToPersianWords(Math.floor(Number(n)||0)); },
              }">
             <div class="text-[11px] text-gray-400 mb-3">تغییر وضعیت سفارش</div>
 
@@ -301,74 +318,91 @@
 
                 {{-- ── بلاک فاکتور — فقط هنگام انتخاب «پایان سفارش» ─── --}}
                 <div x-show="selected === '{{ OrderStatus::Completed->value }}'" x-cloak class="pt-3 border-t border-gray-100 mt-3 space-y-3">
-                    <div class="text-[11px] text-brand-700 font-bold">جزئیات فاکتور</div>
+                    <div class="text-[11px] text-brand-700 font-bold">فاکتور سفارش</div>
 
-                    {{-- price_customer + total_invoice --}}
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[11px] text-gray-500 mb-1 block">مبلغ کل صورت‌حساب (تومان)</label>
-                            <input type="number" name="price_customer" min="0" step="1000" inputmode="numeric"
-                                   value="{{ old('price_customer', $order->price_customer) }}"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="text-[11px] text-gray-500 mb-1 block">مانده پس از کسر هزینه‌ها</label>
-                            <input type="number" name="total_invoice" min="0" step="1000" inputmode="numeric"
-                                   value="{{ old('total_invoice', $order->total_invoice) }}"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                    {{-- کل مبلغ دریافتی از مشتری — تنها فیلد اصلی --}}
+                    <div>
+                        <label class="text-[11px] text-gray-500 mb-1 block">کل مبلغ دریافتی از مشتری (تومان)</label>
+                        <input type="number" name="price_customer" min="0" step="1000" inputmode="numeric"
+                               x-model.number="priceCustomer"
+                               placeholder="در اینجا مبلغ را به تومان وارد کنید"
+                               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-3 text-base font-bold focus:bg-white focus:border-brand-400 focus:outline-none">
+                        {{-- مبلغ به حروف --}}
+                        <div class="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-900">
+                            <span x-text="toWords(priceCustomer) + ' تومان'"></span>
                         </div>
                     </div>
 
-                    {{-- Pieces repeater --}}
+                    {{-- قطعات استفاده‌شده — فقط نام + قیمت خرید (هم‌ارز WP) --}}
                     <div>
                         <label class="text-[11px] text-gray-500 mb-1 block">قطعات استفاده‌شده</label>
                         <div class="space-y-2">
                             <template x-for="(p, i) in pieces" :key="i">
-                                <div class="bg-gray-50 rounded-xl p-2.5 space-y-1.5">
+                                <div class="bg-gray-50 rounded-xl p-2.5 grid grid-cols-2 gap-2">
                                     <input type="text" :name="`pieces[${i}][title]`" x-model="p.title"
                                            placeholder="نام قطعه"
-                                           class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="number" :name="`pieces[${i}][buy_price]`" x-model.number="p.buy" min="0" step="1000" inputmode="numeric"
-                                               placeholder="قیمت خرید"
-                                               class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
-                                        <input type="number" :name="`pieces[${i}][customer_price]`" x-model.number="p.sell" min="0" step="1000" inputmode="numeric"
-                                               placeholder="قیمت فروش"
-                                               class="w-full bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
-                                    </div>
+                                           class="bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
+                                    <input type="number" :name="`pieces[${i}][buy_price]`" x-model.number="p.buy" min="0" step="1000" inputmode="numeric"
+                                           placeholder="قیمت خرید قطعه"
+                                           class="bg-white border border-gray-200 rounded-lg py-2 px-2.5 text-sm focus:border-brand-400 focus:outline-none">
+                                    {{-- customer_price حذف شد ولی برای backend سازگاری مقدار 0 ارسال می‌شود --}}
+                                    <input type="hidden" :name="`pieces[${i}][customer_price]`" :value="0">
                                     <button type="button" @click="pieces.splice(i, 1)"
                                             x-show="pieces.length > 1"
-                                            class="text-rose-600 text-[11px]">حذف این قطعه</button>
+                                            class="col-span-2 text-rose-600 text-[11px] text-right">حذف این قطعه</button>
                                 </div>
                             </template>
                         </div>
                         <button type="button" @click="pieces.push({title:'', buy:0, sell:0})"
                                 class="mt-2 w-full py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold">
-                            + افزودن قطعه
+                            + افزودن قطعات بیشتر
                         </button>
                     </div>
 
-                    {{-- hire / transportation / discount --}}
+                    {{-- hire / transportation / discount — اختیاری --}}
                     <div class="grid grid-cols-3 gap-2">
                         <div>
                             <label class="text-[11px] text-gray-500 mb-1 block">اجرت</label>
                             <input type="number" name="hire" min="0" step="1000" inputmode="numeric"
-                                   value="{{ old('hire', $order->hire) }}"
+                                   x-model.number="hire"
                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
                         </div>
                         <div>
                             <label class="text-[11px] text-gray-500 mb-1 block">ایاب و ذهاب</label>
                             <input type="number" name="transportation" min="0" step="1000" inputmode="numeric"
-                                   value="{{ old('transportation', $order->transportation) }}"
+                                   x-model.number="transportation"
                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
                         </div>
                         <div>
                             <label class="text-[11px] text-gray-500 mb-1 block">تخفیف</label>
                             <input type="number" name="discount" min="0" step="1000" inputmode="numeric"
-                                   value="{{ old('discount', $order->discount) }}"
+                                   x-model.number="discount"
                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
                         </div>
                     </div>
+
+                    {{-- جمع‌بندی فاکتور — هم‌ارز WP tech_show_order.php --}}
+                    <div class="bg-amber-50/50 border border-amber-200 rounded-xl overflow-hidden">
+                        <div class="grid grid-cols-2 px-3 py-2.5 text-xs border-b border-amber-200/60">
+                            <span class="bg-amber-100 -mx-3 -my-2.5 px-3 py-2.5 font-bold text-amber-900">جمع کل مبلغ فاکتور</span>
+                            <span class="text-left font-bold text-gray-800" x-text="fmt(priceCustomer) + ' تومان'"></span>
+                        </div>
+                        <div class="grid grid-cols-2 px-3 py-2.5 text-xs border-b border-amber-200/60">
+                            <span class="bg-amber-100 -mx-3 -my-2.5 px-3 py-2.5 font-bold text-amber-900">جمع هزینه‌ها قطعات</span>
+                            <span class="text-left font-bold text-gray-800" x-text="fmt(partsCost) + ' تومان'"></span>
+                        </div>
+                        <div class="grid grid-cols-2 px-3 py-2.5 text-xs border-b border-amber-200/60">
+                            <span class="bg-gray-100 -mx-3 -my-2.5 px-3 py-2.5 font-bold text-gray-800">مانده (پس از کسر هزینه‌ها)</span>
+                            <span class="text-left font-bold text-gray-800" x-text="fmt(totalInvoice) + ' تومان'"></span>
+                        </div>
+                        <div class="grid grid-cols-2 px-3 py-2.5 text-xs">
+                            <span class="bg-emerald-500 -mx-3 -my-2.5 px-3 py-2.5 font-bold text-white">سهم شما از سفارش</span>
+                            <span class="text-left font-bold text-emerald-700" x-text="fmt(techShare) + ' تومان'"></span>
+                        </div>
+                    </div>
+
+                    {{-- total_invoice به‌صورت hidden — توسط JS برابر مانده ست می‌شود --}}
+                    <input type="hidden" name="total_invoice" :value="totalInvoice">
 
                     {{-- device_img1 upload --}}
                     <div>
@@ -638,4 +672,47 @@
 </div>
 
 @include('crm::tech-panel._partials.bottom-nav', ['current' => 'tech.orders'])
+
+{{-- تبدیل عدد به حروف فارسی — هم‌ارز اسکریپت WP که در زیر input مبلغ
+     نمایش می‌دهد. صفر = «صفر» و اعداد بزرگ تا میلیارد پشتیبانی می‌شوند. --}}
+<script>
+window.numberToPersianWords = (function () {
+    const ones = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
+    const tens = ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
+    const teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'];
+    const hundreds = ['', 'یکصد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'];
+    const scales = ['', ' هزار', ' میلیون', ' میلیارد', ' هزار میلیارد'];
+
+    function under1000(n) {
+        if (n === 0) return '';
+        const parts = [];
+        const h = Math.floor(n / 100);
+        const rest = n % 100;
+        if (h) parts.push(hundreds[h]);
+        if (rest >= 10 && rest <= 19) parts.push(teens[rest - 10]);
+        else {
+            const t = Math.floor(rest / 10);
+            const o = rest % 10;
+            if (t) parts.push(tens[t]);
+            if (o) parts.push(ones[o]);
+        }
+        return parts.join(' و ');
+    }
+
+    return function (n) {
+        n = Math.floor(Number(n) || 0);
+        if (n === 0) return 'صفر';
+        if (n < 0) return 'منفی ' + window.numberToPersianWords(-n);
+        const groups = [];
+        let i = 0;
+        while (n > 0 && i < scales.length) {
+            const part = n % 1000;
+            if (part) groups.unshift(under1000(part) + scales[i]);
+            n = Math.floor(n / 1000);
+            i++;
+        }
+        return groups.join(' و ');
+    };
+})();
+</script>
 @endsection

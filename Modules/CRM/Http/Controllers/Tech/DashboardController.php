@@ -230,13 +230,24 @@ class DashboardController extends Controller
                 $updates['buy_price_list'] = $pieces->map(fn($p) => (int) ($p['buy_price'] ?? 0))->all();
                 $updates['customer_price_list'] = $pieces->map(fn($p) => (int) ($p['customer_price'] ?? 0))->all();
                 $updates['cost_price'] = (int) $pieces->sum(fn($p) => (int) ($p['buy_price'] ?? 0));
+            } else {
+                $updates['cost_price'] = 0;
             }
 
-            foreach (['price_customer', 'total_invoice', 'hire', 'transportation', 'discount'] as $field) {
+            // فیلدهای ساده — total_invoice را اینجا قبول نمی‌کنیم؛ پایین
+            // به‌صورت خودکار = price_customer - cost_price محاسبه می‌شود
+            // (هم‌ارز tech_show_order.php پنل WP).
+            foreach (['price_customer', 'hire', 'transportation', 'discount'] as $field) {
                 if (array_key_exists($field, $validated) && $validated[$field] !== null) {
                     $updates[$field] = (int) $validated[$field];
                 }
             }
+
+            // total_invoice = max(0, price_customer - cost_price). نباید
+            // به ورودی کاربر اعتماد کنیم چون مبنای محاسبه سهم تکنسین است.
+            $effectivePriceCustomer = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
+            $effectiveCostPrice = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+            $updates['total_invoice'] = max(0, $effectivePriceCustomer - $effectiveCostPrice);
 
             if (filled($validated['invoice_descripotion'] ?? null)) {
                 $updates['invoice_descripotion'] = $validated['invoice_descripotion'];
