@@ -2,8 +2,35 @@
     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">تخصیص تکنسین و زمان</h2>
     <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">این مرحله اختیاری است. می‌توانید بعداً تخصیص بدهید.</p>
 
+    @if(! $this->canAssignTechnician)
+        {{-- اپراتور بدون دسترسی assign-crm-technician — فقط پیام و
+             تأکید بر اینکه سفارش با وضعیت «جدید» ثبت می‌شود. --}}
+        <div class="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+            <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-1">تخصیص تکنسین و زمان مجاز نیست</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                برای دسترسی به تخصیص تکنسین، روز و بازه ساعت نیاز به دسترسی
+                «تخصیص تکنسین به سفارش CRM» دارید. سفارش با وضعیت «جدید» ثبت می‌شود
+                و سرپرست پس از ثبت می‌تواند تخصیص دهد.
+            </p>
+        </div>
+    @else
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">تکنسین</label>
+
+        {{-- جستجو در نام/موبایل تکنسین --}}
+        <div class="relative mb-3">
+            <input type="text" wire:model.live.debounce.250ms="technicianSearch"
+                   placeholder="جستجو با نام یا موبایل تکنسین..."
+                   class="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+            <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+        </div>
 
         <div class="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
             {{-- بدون تکنسین --}}
@@ -20,7 +47,7 @@
                 </div>
             </label>
 
-            @foreach($this->technicianOptions as $t)
+            @forelse($this->technicianOptions as $t)
                 <label wire:key="tech-{{ $t->id }}" class="cursor-pointer block">
                     <input type="radio" wire:model.live="technicianId" value="{{ $t->id }}" class="peer sr-only">
                     <div class="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/30 transition">
@@ -69,7 +96,15 @@
                         @endif
                     </div>
                 </label>
-            @endforeach
+            @empty
+                <div class="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+                    @if(trim($technicianSearch) !== '')
+                        تکنسینی با این مشخصات پیدا نشد.
+                    @else
+                        تکنسین فعالی موجود نیست.
+                    @endif
+                </div>
+            @endforelse
         </div>
     </div>
 
@@ -110,4 +145,5 @@
         @endif
         <p class="text-xs text-gray-500 mt-2">می‌توانید خالی بگذارید و بعداً تنظیم کنید.</p>
     </div>
+    @endif
 </div>

@@ -60,6 +60,7 @@ class OrderWizard extends Component
     public ?int $technicianId = null;
     public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
     public ?int $visitSlot = null;      // 1..4 — keys of self::VISIT_SLOTS
+    public string $technicianSearch = ''; // فیلتر سرچ روی نام/موبایل تکنسین
 
     /** بازه‌های پیشنهادی مراجعه. start برای ترکیب با تاریخ هنگام ذخیره. */
     public const VISIT_SLOTS = [
@@ -183,13 +184,33 @@ class OrderWizard extends Component
      * تکنسین‌های فعال + ظرفیت زنده (سفارش‌های open/coordinated) و
      * بدهی فعلی (آخرین balance_after). برای نمایش سبز/قرمز در dropdown.
      */
+    /** آیا کاربر مجاز است تکنسین/روز/بازه را در ویزارد تخصیص دهد؟ */
+    #[Computed]
+    public function canAssignTechnician(): bool
+    {
+        $u = auth()->user();
+        return $u !== null && $u->can('assign-crm-technician');
+    }
+
     #[Computed]
     public function technicianOptions()
     {
-        $techs = Technician::query()
+        $term = trim($this->technicianSearch);
+
+        $q = Technician::query()
             ->where('status', 'active')
-            ->orderBy('first_name')
-            ->get(['id', 'first_name', 'firstname_tech', 'mobile', 'percent', 'max_order', 'max_price', 'wallet_balance']);
+            ->orderBy('first_name');
+
+        if ($term !== '') {
+            $like = '%' . $term . '%';
+            $q->where(function ($w) use ($like) {
+                $w->where('first_name', 'like', $like)
+                  ->orWhere('firstname_tech', 'like', $like)
+                  ->orWhere('mobile', 'like', $like);
+            });
+        }
+
+        $techs = $q->get(['id', 'first_name', 'firstname_tech', 'mobile', 'percent', 'max_order', 'max_price', 'wallet_balance']);
 
         $activeStatuses = [OrderStatus::Coordinated->value, OrderStatus::Open->value];
 
@@ -399,6 +420,14 @@ class OrderWizard extends Component
         try {
             // resolve داخل بدنه تا DI روی Livewire action نشکند
             $smsNotifier = app(OrderSmsNotifier::class);
+
+            // دفاع در عمق: اگر کاربر دسترسی تخصیص تکنسین ندارد،
+            // مقادیر تکنسین/روز/بازه از payload کاربر را نادیده بگیر.
+            if (! $this->canAssignTechnician) {
+                $this->technicianId = null;
+                $this->visitDate = null;
+                $this->visitSlot = null;
+            }
 
             // اعتبارسنجی نهایی همهٔ مراحل
             for ($s = 1; $s <= 4; $s++) {
