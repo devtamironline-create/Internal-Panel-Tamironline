@@ -268,7 +268,7 @@ class OrderController extends Controller
 
         return view('crm::orders.show', [
             'order' => $order,
-            'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name']),
+            'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
         ]);
     }

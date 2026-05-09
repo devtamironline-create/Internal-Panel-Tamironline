@@ -492,10 +492,12 @@
                 @can('assign-crm-technician')
                 <form action="{{ route('crm.orders.assign', $order) }}" method="POST" class="space-y-2">
                     @csrf
-                    <select name="technician_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <select name="technician_id" required
+                            data-searchable data-placeholder="جستجوی نام یا موبایل تکنسین..."
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                         <option value="">— انتخاب تکنسین آماده —</option>
                         @foreach($technicians as $t)
-                        <option value="{{ $t->id }}">{{ trim($t->first_name . ' ' . ($t->last_name ?? '')) }}</option>
+                        <option value="{{ $t->id }}">{{ trim($t->first_name . ' ' . ($t->last_name ?? '')) }} @if($t->mobile) — {{ $t->mobile }} @endif</option>
                         @endforeach
                     </select>
                     <button class="w-full px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm">تخصیص</button>
