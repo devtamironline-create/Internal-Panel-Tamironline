@@ -26,12 +26,66 @@
 
         @switch($type)
             @case('mp4')
-                <video controls preload="metadata" class="w-full block bg-black"
-                       style="aspect-ratio: 16/9;"
-                       @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
-                    <source src="{{ $video->playbackUrl() }}" type="video/mp4">
-                    مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                </video>
+                {{-- wrapper relative تا دکمهٔ تمام‌صفحهٔ سفارشی همپوشانی شود.
+                     در حالت PWA standalone بعضی مرورگرها دکمهٔ native را
+                     مخفی می‌کنند یا کار نمی‌کند، پس API Fullscreen را خودمان
+                     فراخوانی می‌کنیم. --}}
+                <div class="relative w-full" style="aspect-ratio: 16/9;" id="tcs-video-wrap">
+                    <video id="tcs-video" controls playsinline webkit-playsinline preload="metadata"
+                           class="absolute inset-0 w-full h-full bg-black"
+                           @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
+                        <source src="{{ $video->playbackUrl() }}" type="video/mp4">
+                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                    </video>
+                    <button type="button" id="tcs-fullscreen"
+                            aria-label="تمام صفحه"
+                            class="absolute top-2 left-2 z-10 w-9 h-9 rounded-lg bg-black/55 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/75 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <script>
+                (function () {
+                    var btn = document.getElementById('tcs-fullscreen');
+                    var wrap = document.getElementById('tcs-video-wrap');
+                    var video = document.getElementById('tcs-video');
+                    if (! btn || ! wrap || ! video) return;
+
+                    function enterFullscreen() {
+                        // iOS Safari فقط webkitEnterFullscreen روی خود video را
+                        // پشتیبانی می‌کند، نه روی wrapper.
+                        if (typeof video.webkitEnterFullscreen === 'function') {
+                            try { video.webkitEnterFullscreen(); return; } catch (e) {}
+                        }
+                        var target = wrap;
+                        var fn = target.requestFullscreen
+                            || target.webkitRequestFullscreen
+                            || target.mozRequestFullScreen
+                            || target.msRequestFullscreen;
+                        if (fn) {
+                            try { fn.call(target); } catch (e) {}
+                        }
+                    }
+                    function exitFullscreen() {
+                        var fn = document.exitFullscreen
+                            || document.webkitExitFullscreen
+                            || document.mozCancelFullScreen
+                            || document.msExitFullscreen;
+                        if (fn) {
+                            try { fn.call(document); } catch (e) {}
+                        }
+                    }
+                    btn.addEventListener('click', function () {
+                        var current = document.fullscreenElement
+                            || document.webkitFullscreenElement
+                            || document.mozFullScreenElement;
+                        if (current) exitFullscreen();
+                        else enterFullscreen();
+                    });
+                })();
+                </script>
                 @break
 
             @case('aparat')
