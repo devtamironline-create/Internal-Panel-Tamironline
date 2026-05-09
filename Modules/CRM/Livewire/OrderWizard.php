@@ -286,21 +286,11 @@ class OrderWizard extends Component
 
     public function updatedProvinceId(): void
     {
+        // در ویوی wizard، dropdown قابل‌سرچ شهر مستقیم از endpoint
+        // /admin/crm/provinces/{id}/cities (در JS) لیست را می‌آورد و
+        // cityId را با $wire.set ست می‌کند. اینجا فقط cityId قبلی را
+        // پاک می‌کنیم.
         $this->cityId = null;
-
-        // برای dropdown قابل‌سرچ شهر در ویوی wizard، لیست شهرها از طریق
-        // event به JS فرستاده می‌شود تا Tom Select به‌جای reload از Livewire
-        // مستقیم گزینه‌های جدید را بگیرد. این روش با wire:ignore سازگار
-        // است و باعث orphan شدن ts-wrapper نمی‌شود.
-        $cities = $this->provinceId
-            ? \Modules\CRM\Models\City::where('province_id', $this->provinceId)
-                ->ordered()
-                ->get(['id', 'name'])
-                ->map(fn ($c) => ['id' => (int) $c->id, 'name' => (string) $c->name])
-                ->all()
-            : [];
-
-        $this->dispatch('order-wizard:cities-loaded', cities: $cities);
     }
 
     public function clearVisitTime(): void
