@@ -51,8 +51,14 @@ if ($techHost = config('app.tech_subdomain')) {
     });
 }
 
-// Home - redirect to admin login
+// Home - تشخیص guard فعال و ارسال به مقصد درست
 Route::get('/', function () {
+    // اولویت با تکنسین — اگر تکنسین لاگین است، به داشبورد تکنسین برود
+    // (نه admin login). جلوگیری از سردرگمی در PWA که اگر start_url
+    // به / اشاره کند، به طور پیش‌فرض به admin می‌رفت.
+    if (Auth::guard('tech')->check()) {
+        return redirect()->route('tech.dashboard');
+    }
     if (auth()->check()) {
         return redirect()->route('admin.dashboard');
     }

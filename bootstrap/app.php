@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,6 +31,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\TechSubdomainScope::class,
         ]);
+
+        // وقتی guest:tech middleware روی روت /tech فایر می‌شود و کاربر از
+        // قبل با guard tech لاگین است، Laravel به‌طور پیش‌فرض به / می‌فرستد —
+        // و / هم چون فقط guard web را چک می‌کند، تکنسین را به admin login
+        // پرت می‌کند. با redirectUsersTo مقصد را بر اساس guard فعال انتخاب
+        // می‌کنیم تا تکنسینِ لاگین مستقیم به داشبورد تکنسین برود.
+        $middleware->redirectUsersTo(function (Request $request) {
+            if (Auth::guard('tech')->check()) {
+                return route('tech.dashboard');
+            }
+            if (Auth::check()) {
+                return route('admin.dashboard');
+            }
+            return '/';
+        });
 
         $middleware->alias([
             'verified.mobile' => \App\Http\Middleware\EnsureMobileIsVerified::class,
