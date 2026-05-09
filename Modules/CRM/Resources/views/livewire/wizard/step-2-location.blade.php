@@ -2,7 +2,7 @@
     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">محل مراجعه</h2>
     <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">آدرسی که تکنسین برای انجام تعمیر مراجعه می‌کند.</p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-4">
         {{-- هر دو select داخل wire:ignore هستند تا Tom Select بتواند DOM
              اطراف <select> را آزادانه دستکاری کند. مقداردهی Livewire با
              $wire.set('provinceId', ...) انجام می‌شود نه wire:model. --}}

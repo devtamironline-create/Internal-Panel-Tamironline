@@ -184,16 +184,37 @@
          data-tom-select. Lightweight, RTL-friendly, Livewire-compatible. --}}
     <link href="/vendor/css/tom-select.default.min.css" rel="stylesheet">
     <style>
-        /* RTL + Tailwind-friendly tweaks for Tom Select */
+        /* RTL + Tailwind-friendly tweaks for Tom Select — مطابق ظاهر سایر inputهای پنل */
         .ts-wrapper { font-family: inherit; }
-        .ts-wrapper .ts-control { background: transparent; padding: 0.5rem 0.75rem; min-height: 42px; border: 1px solid rgb(209 213 219); border-radius: 0.5rem; box-shadow: none; }
-        .dark .ts-wrapper .ts-control { background: rgb(55 65 81); border-color: rgb(75 85 99); color: rgb(243 244 246); }
-        .ts-wrapper.disabled .ts-control { opacity: 0.5; cursor: not-allowed; }
-        .ts-dropdown { font-family: inherit; border: 1px solid rgb(209 213 219); border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .ts-wrapper .ts-control,
+        .ts-wrapper.single .ts-control,
+        .ts-wrapper.multi .ts-control {
+            background: #fff !important;
+            background-image: none !important;
+            padding: 0.625rem 0.75rem !important;
+            min-height: 42px;
+            border: 1px solid rgb(209 213 219) !important;
+            border-radius: 0.5rem !important;
+            box-shadow: none !important;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+        .ts-wrapper.focus .ts-control,
+        .ts-wrapper .ts-control:focus-within {
+            border-color: rgb(70 95 255) !important;
+            box-shadow: 0 0 0 2px rgb(70 95 255 / 0.2) !important;
+        }
+        .dark .ts-wrapper .ts-control,
+        .dark .ts-wrapper.single .ts-control { background: rgb(55 65 81) !important; border-color: rgb(75 85 99) !important; color: rgb(243 244 246); }
+        .ts-wrapper.disabled .ts-control { opacity: 0.5; cursor: not-allowed; background: rgb(243 244 246) !important; }
+        .dark .ts-wrapper.disabled .ts-control { background: rgb(31 41 55) !important; }
+        .ts-dropdown { font-family: inherit; border: 1px solid rgb(209 213 219); border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 4px; }
         .dark .ts-dropdown { background: rgb(31 41 55); border-color: rgb(75 85 99); color: rgb(243 244 246); }
         .dark .ts-dropdown .active { background: rgb(30 64 175); color: white; }
         .dark .ts-dropdown .option:hover { background: rgb(55 65 81); }
         .ts-control input::placeholder { color: rgb(156 163 175); }
+        /* در RTL، فلش انتخاب باید سمت چپ باشد */
+        .ts-wrapper.single .ts-control:after { left: 12px; right: auto; border-color: rgb(107 114 128) transparent transparent transparent; }
     </style>
 </head>
 <body
