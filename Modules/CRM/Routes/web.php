@@ -265,22 +265,23 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
 
     // ─── سینک با CRM وردپرسی ─────────────────────────────────────
-    // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
-    Route::middleware('can:view-crm-tickets')->group(function () {
-        Route::get('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
-        Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
-    });
-    Route::middleware('can:reply-crm-tickets')->group(function () {
-        Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply');
-        Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status');
-    });
-
-    // ─── مدیریت دسته‌بندی تیکت‌ها ─────────────────────────────────
+    // ─── مدیریت دسته‌بندی تیکت‌ها (قبل از tickets/{ticket} باشد!) ──
     Route::middleware('can:manage-crm-settings')->prefix('tickets/categories')->name('tickets.categories.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'index'])->name('index');
         Route::post('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'store'])->name('store');
-        Route::put('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'update'])->name('update');
-        Route::delete('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'destroy'])->name('destroy');
+        Route::put('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'update'])->name('update')->whereNumber('category');
+        Route::delete('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'destroy'])->name('destroy')->whereNumber('category');
+    });
+
+    // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
+    // {ticket} با whereNumber محدود شده تا 'categories' را به اشتباه match نکند.
+    Route::middleware('can:view-crm-tickets')->group(function () {
+        Route::get('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+        Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\TicketController::class, 'show'])->name('tickets.show')->whereNumber('ticket');
+    });
+    Route::middleware('can:reply-crm-tickets')->group(function () {
+        Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply')->whereNumber('ticket');
+        Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status')->whereNumber('ticket');
     });
 
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
