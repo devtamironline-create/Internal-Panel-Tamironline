@@ -26,13 +26,12 @@
 
         @switch($type)
             @case('mp4')
-                {{-- بدون aspect-ratio اجباری: ویدیو با نسبت طبیعی خودش
-                     نمایش داده می‌شود (width=100%, height=auto). برای
-                     ویدیوی موبایل عمودی، آن کادر سیاه دو طرف دیگر دیده
-                     نمی‌شود. wrap فقط برای موقعیت‌دهی دکمهٔ تمام‌صفحه است. --}}
-                <div class="relative w-full" id="tcs-video-wrap">
+                {{-- نسبت ۱۶:۹ ثابت (مثل حالت اولیه) — بهتر از natural ratio
+                     برای کاربر چون قبل از لود metadata ارتفاع صفر نمی‌شود
+                     و کلیک play به‌جای ویدیو روی المنت زیرین نمی‌خورد. --}}
+                <div class="relative w-full bg-black" style="aspect-ratio: 16/9;" id="tcs-video-wrap">
                     <video id="tcs-video" controls playsinline webkit-playsinline preload="metadata"
-                           class="block w-full h-auto bg-black"
+                           class="absolute inset-0 w-full h-full"
                            @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
                         <source src="{{ $video->playbackUrl() }}" type="video/mp4">
                         مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
