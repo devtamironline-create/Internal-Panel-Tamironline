@@ -186,6 +186,27 @@ class SyncOrderController extends Controller
             $wpCreatedAt = $this->parseWpDate($data['post_date'] ?? null);
 
             if ($order) {
+                // فیلدهایی که توسط تکنسین/اپراتور در پنل Laravel مدیریت
+                // می‌شوند نباید با sync دوره‌ای WP overwrite شوند —
+                // وگرنه هر بار cron WP اجرا می‌شود تغییرات Laravel
+                // از بین می‌روند (مثلاً وضعیتی که تکنسین به Open برده
+                // به New برمی‌گردد چون WP هنوز New است).
+                $laravelManaged = [
+                    'status', 'technician_id', 'visit_scheduled_at',
+                    'description_tech', 'description_tech1', 'description_tech2',
+                    'piece_list', 'buy_price_list', 'customer_price_list',
+                    'price_customer', 'cost_price', 'total_invoice', 'final_price',
+                    'hire', 'transportation', 'discount',
+                    'device_img1', 'invoice_descripotion',
+                    'save_as_draft', 'completed_at', 'cancel_reason',
+                    'return_type', 'return_description',
+                    'status_internal_order', 'qc_status',
+                    'order_note_content', 'log_return',
+                ];
+                foreach ($laravelManaged as $key) {
+                    unset($payload[$key]);
+                }
+
                 $order->fill($payload);
                 if ($wpCreatedAt) {
                     $order->created_at = $wpCreatedAt;
