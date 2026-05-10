@@ -284,7 +284,9 @@ class DashboardController extends Controller
             }
         }
 
-        $previous = $order->status->value;
+        // وضعیت قبلی را مستقیم از DB می‌خوانیم — جلوی هر گونه caching
+        // مدل Eloquent یا instance قدیمی route-binding گرفته می‌شود.
+        $previous = (string) Order::whereKey($order->id)->value('status');
         $order->update($updates);
 
         OrderStatusLog::create([
@@ -418,11 +420,11 @@ class DashboardController extends Controller
         $slot = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
         $datetime = $validated['visit_date'] . ' ' . $slot['start'];
 
-        // اگر سفارش هنوز «جدید» است، ثبت زمان مراجعه = هماهنگی موفق با
-        // مشتری، پس وضعیت را خودکار به «هماهنگ شده» می‌بریم. روی سایر
-        // وضعیت‌ها (Open/Suspended/...) دست نمی‌زنیم چون تکنسین قبلاً
-        // فراتر از مرحلهٔ هماهنگی اولیه رفته.
-        $previousStatus = $order->status;
+        // وضعیت قبلی را از DB می‌خوانیم نه از instance route-bound تا
+        // اگر تغییر همزمانی رخ داد (مثل auto-coordinate قبلی) آخرین
+        // مقدار واقعی DB ملاک باشد.
+        $previousStatusValue = (string) Order::whereKey($order->id)->value('status');
+        $previousStatus = OrderStatus::tryFrom($previousStatusValue) ?? $order->status;
         $autoCoordinated = $previousStatus === OrderStatus::New;
 
         $updates = ['visit_scheduled_at' => $datetime];
