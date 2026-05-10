@@ -240,6 +240,120 @@
         </div>
     @endif
 
+    {{-- ─────── Schedule visit form ───────
+         وقتی تکنسین با مشتری هماهنگ می‌کند، روز و بازه ساعت را ثبت می‌کند.
+         این مقدار در visit_scheduled_at سفارش می‌نشیند و در صفحهٔ مشاهدهٔ
+         سفارش ادمین/اپراتور هم نمایش داده می‌شود. --}}
+    @if(! $order->status->isFinal())
+        @php
+            use Modules\CRM\Livewire\OrderWizard;
+            $latin = ['0','1','2','3','4','5','6','7','8','9'];
+            $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+            $weekdaysFa = [
+                'Saturday' => 'شنبه', 'Sunday' => 'یکشنبه', 'Monday' => 'دوشنبه',
+                'Tuesday' => 'سه‌شنبه', 'Wednesday' => 'چهارشنبه',
+                'Thursday' => 'پنجشنبه', 'Friday' => 'جمعه',
+            ];
+            // ۷ روز پیشِ‌رو
+            $visitDays = [];
+            for ($i = 0; $i < 7; $i++) {
+                $dt = now()->addDays($i)->startOfDay();
+                $j = \Morilog\Jalali\Jalalian::fromCarbon($dt);
+                $visitDays[] = [
+                    'value' => $dt->format('Y-m-d'),
+                    'weekday' => $weekdaysFa[$dt->format('l')] ?? '',
+                    'day' => str_replace($latin, $persian, $j->format('d')),
+                    'month' => $j->format('F'),
+                ];
+            }
+            $currentVisitDate = $order->visit_scheduled_at?->format('Y-m-d');
+            $currentVisitTime = $order->visit_scheduled_at?->format('H:i:s');
+            // پیدا کردن slot فعلی از روی ساعت ذخیره‌شده
+            $currentSlotKey = null;
+            foreach (OrderWizard::VISIT_SLOTS as $k => $s) {
+                if ($s['start'] === $currentVisitTime) { $currentSlotKey = $k; break; }
+            }
+        @endphp
+
+        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-gray-900">هماهنگی زمان مراجعه</div>
+                    <div class="text-[11px] text-gray-500">با مشتری هماهنگ کنید و روز/بازهٔ مراجعه را ثبت کنید.</div>
+                </div>
+            </div>
+
+            @if($order->visit_scheduled_at)
+                <div class="mb-3 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between gap-2">
+                    <span class="font-medium">فعلاً ثبت‌شده:</span>
+                    <span dir="ltr" class="font-bold">@jdatetime($order->visit_scheduled_at)</span>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('tech.orders.schedule-visit', $order) }}" class="space-y-3">
+                @csrf
+
+                {{-- روز --}}
+                <div>
+                    <div class="text-[11px] text-gray-500 mb-2">روز مراجعه</div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        @foreach($visitDays as $d)
+                            <label class="cursor-pointer">
+                                <input type="radio" name="visit_date" value="{{ $d['value'] }}"
+                                       @checked($currentVisitDate === $d['value'])
+                                       class="peer sr-only">
+                                <div class="p-2 border-2 border-gray-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition text-center">
+                                    <div class="text-[10px] text-gray-500">{{ $d['weekday'] }}</div>
+                                    <div class="text-base font-bold text-gray-900 my-0.5">{{ $d['day'] }}</div>
+                                    <div class="text-[10px] text-gray-500">{{ $d['month'] }}</div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('visit_date') <div class="text-[11px] text-rose-600 mt-1">{{ $message }}</div> @enderror
+                </div>
+
+                {{-- بازه ساعت --}}
+                <div>
+                    <div class="text-[11px] text-gray-500 mb-2">بازه ساعت</div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        @foreach(OrderWizard::VISIT_SLOTS as $key => $slot)
+                            <label class="cursor-pointer">
+                                <input type="radio" name="visit_slot" value="{{ $key }}"
+                                       @checked($currentSlotKey === $key)
+                                       class="peer sr-only">
+                                <div class="p-2.5 border-2 border-gray-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition text-center text-xs font-medium text-gray-800">
+                                    {{ $slot['label'] }}
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('visit_slot') <div class="text-[11px] text-rose-600 mt-1">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="submit"
+                            class="flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition"
+                            style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                        ثبت زمان مراجعه
+                    </button>
+                    @if($order->visit_scheduled_at)
+                        <button type="submit" name="clear" value="1"
+                                onclick="return confirm('زمان مراجعه پاک شود؟');"
+                                class="px-3 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-medium">
+                            پاک کردن
+                        </button>
+                    @endif
+                </div>
+            </form>
+        </div>
+    @endif
+
     {{-- ─────── Status change form ─────── --}}
     @if(count($allowedStatuses))
         @php

@@ -357,6 +357,62 @@ class DashboardController extends Controller
     }
 
     /**
+     * ثبت/به‌روزرسانی زمان مراجعه توسط تکنسین — وقتی با مشتری تماس
+     * می‌گیرد و روز/بازه را هماهنگ می‌کند. نتیجه در visit_scheduled_at
+     * ذخیره و در پنل اپراتور هم نمایش داده می‌شود.
+     */
+    public function scheduleVisit(Request $request, Order $order)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwnership($order, $tech);
+
+        if ($order->status->isFinal()) {
+            return back()->with('error', 'تنظیم زمان مراجعه روی سفارش‌های نهایی مجاز نیست.');
+        }
+
+        // پاک کردن
+        if ($request->filled('clear')) {
+            $previous = $order->visit_scheduled_at?->format('Y-m-d H:i');
+            $order->update(['visit_scheduled_at' => null]);
+            \Modules\CRM\Models\OrderStatusLog::create([
+                'order_id' => $order->id,
+                'from_status' => $order->status->value,
+                'to_status' => $order->status->value,
+                'note' => 'پاک کردن زمان مراجعه' . ($previous ? ' (قبلاً: ' . $previous . ')' : ''),
+                'changed_by' => $tech->user_id,
+                'created_at' => now(),
+            ]);
+            return back()->with('success', 'زمان مراجعه پاک شد.');
+        }
+
+        $validated = $request->validate([
+            'visit_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'visit_slot' => ['required', 'integer', 'in:1,2,3,4'],
+        ], [
+            'visit_date.required' => 'روز مراجعه را انتخاب کنید.',
+            'visit_date.after_or_equal' => 'روز مراجعه نمی‌تواند گذشته باشد.',
+            'visit_slot.required' => 'بازهٔ ساعت را انتخاب کنید.',
+            'visit_slot.in' => 'بازهٔ ساعت معتبر نیست.',
+        ]);
+
+        $slot = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
+        $datetime = $validated['visit_date'] . ' ' . $slot['start'];
+
+        $order->update(['visit_scheduled_at' => $datetime]);
+
+        \Modules\CRM\Models\OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status->value,
+            'to_status' => $order->status->value,
+            'note' => 'ثبت زمان مراجعه: ' . \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d') . ' — ' . $slot['label'],
+            'changed_by' => $tech->user_id,
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'زمان مراجعه ثبت شد.');
+    }
+
+    /**
      * گذارهای مجاز برای تکنسین — هم‌ارز tech_show_order.php پنل WP قدیم.
      *
      * - وضعیت‌های نهایی (Cancelled/Completed/Transit/Declined) قفل هستند:
