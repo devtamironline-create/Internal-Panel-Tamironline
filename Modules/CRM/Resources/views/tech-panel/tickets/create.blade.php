@@ -4,7 +4,7 @@
 
 @section('body')
 <div class="min-h-screen pb-nav" style="background: #eef0f4;">
-    <div class="relative overflow-hidden rounded-b-[40px] pb-12"
+    <div class="relative overflow-hidden rounded-b-[40px] pb-20"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);">
         <div class="flex items-center justify-between px-5 pt-5">
             <a href="{{ route('tech.tickets.index') }}"
@@ -19,13 +19,13 @@
     </div>
 
     @if($errors->any())
-        <div class="mx-3 mt-3 bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">
+        <div class="relative z-10 mx-3 -mt-12 bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 mb-3">
             @foreach($errors->all() as $e)<div>• {{ $e }}</div>@endforeach
         </div>
     @endif
 
     <form method="POST" action="{{ route('tech.tickets.store') }}" enctype="multipart/form-data"
-          class="mx-3 -mt-6 bg-white rounded-2xl shadow-sm p-4 space-y-4">
+          class="relative z-10 mx-3 {{ $errors->any() ? '' : '-mt-12' }} bg-white rounded-2xl shadow-sm p-4 space-y-4">
         @csrf
 
         {{-- سفارش (اختیاری) --}}

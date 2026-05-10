@@ -4,7 +4,7 @@
 
 @section('body')
 <div class="min-h-screen pb-nav" style="background: #eef0f4;">
-    <div class="relative overflow-hidden rounded-b-[40px] pb-12"
+    <div class="relative overflow-hidden rounded-b-[40px] pb-20"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);">
         <div class="flex items-center justify-between px-5 pt-5">
             <a href="{{ route('tech.tickets.index') }}"
@@ -19,13 +19,13 @@
     </div>
 
     @if(session('success'))
-        <div class="mx-3 mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">{{ session('success') }}</div>
+        <div class="relative z-10 mx-3 -mt-12 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 mb-3">{{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="mx-3 mt-3 bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">{{ session('error') }}</div>
+        <div class="relative z-10 mx-3 {{ session('success') ? 'mt-2' : '-mt-12 mb-3' }} bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">{{ session('error') }}</div>
     @endif
 
-    <div class="mx-3 -mt-6 bg-white rounded-2xl shadow-sm p-4 space-y-3">
+    <div class="relative z-10 mx-3 {{ session('success') || session('error') ? '' : '-mt-12' }} bg-white rounded-2xl shadow-sm p-4 space-y-3">
         <div class="flex items-center gap-2">
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $ticket->priorityBadgeClass() }}">{{ $ticket->priorityLabel() }}</span>
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $ticket->statusBadgeClass() }}">{{ $ticket->statusLabel() }}</span>

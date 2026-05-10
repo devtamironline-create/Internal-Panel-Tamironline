@@ -4,7 +4,7 @@
 
 @section('body')
 <div class="min-h-screen pb-nav" style="background: #eef0f4;">
-    <div class="relative overflow-hidden rounded-b-[40px] pb-12"
+    <div class="relative overflow-hidden rounded-b-[40px] pb-20"
          style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);">
         <div class="flex items-center justify-between px-5 pt-5">
             <a href="{{ route('tech.dashboard') }}"
@@ -25,11 +25,11 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="mx-3 mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">{{ session('success') }}</div>
-    @endif
+    <div class="relative z-10 mx-3 -mt-12 space-y-3">
+        @if(session('success'))
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">{{ session('success') }}</div>
+        @endif
 
-    <div class="mx-3 -mt-6 space-y-3">
         @forelse($tickets as $t)
             <a href="{{ route('tech.tickets.show', $t) }}"
                class="block bg-white rounded-2xl shadow-sm p-4">
