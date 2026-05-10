@@ -209,6 +209,32 @@ class TCS_Order_Sync
             'order_description_content' => $this->meta_array($get('order_description_content')),
             'order_note_content'        => $this->meta_array($get('order_note_content')),
             'log_return'                => $this->meta_array($get('log_return')),
+
+            // زمان مراجعه — کلیدهای رایج در نسخه‌های مختلف WP CRM. هر کدام
+            // پر بود ارسال می‌شود؛ سمت Laravel در SyncOrderController به
+            // visit_scheduled_at تبدیل می‌شود.
+            'visit_date'  => $this->meta_str($get('visit_date'))
+                          ?? $this->meta_str($get('date_meet'))
+                          ?? $this->meta_str($get('day_meet'))
+                          ?? $this->meta_str($get('day'))
+                          ?? $this->meta_str($get('morooja_date'))
+                          ?? $this->meta_str($get('appointment_date')),
+            'visit_time'  => $this->meta_str($get('visit_time'))
+                          ?? $this->meta_str($get('time_meet'))
+                          ?? $this->meta_str($get('hour_meet'))
+                          ?? $this->meta_str($get('hour'))
+                          ?? $this->meta_str($get('morooja_time'))
+                          ?? $this->meta_str($get('appointment_time'))
+                          ?? $this->meta_str($get('time')),
+
+            // ─── DEBUG: همهٔ متاهای پست را بفرست ───
+            // این کمک می‌کند کلید واقعی زمان مراجعه را در نصب کاربر پیدا
+            // کنیم. سمت Laravel در لاگ ذخیره می‌شود تا قابل بررسی باشد.
+            // وقتی کلید درست شناسایی شد این بلاک حذف خواهد شد.
+            '_debug_all_meta' => array_map(
+                fn($v) => is_array($v) && count($v) === 1 ? $v[0] : $v,
+                get_post_meta($post->ID)
+            ),
         ];
 
         // null/'' را از payload خارج می‌کنیم (false و 0 و [] حفظ می‌شوند)

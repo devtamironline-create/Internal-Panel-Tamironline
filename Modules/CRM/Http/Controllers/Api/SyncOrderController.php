@@ -156,8 +156,13 @@ class SyncOrderController extends Controller
             'order_note_content' => 'nullable',
             'log_return' => 'nullable',
 
-            // زمان‌بندی
-            'visit_scheduled_at' => 'nullable|date',
+            // زمان‌بندی — visit_scheduled_at مستقیم، یا visit_date+visit_time
+            // که می‌توانند جلالی/میلادی، با ارقام فارسی یا لاتین باشند.
+            'visit_scheduled_at' => 'nullable|string|max:64',
+            'visit_date' => 'nullable|string|max:32',
+            'visit_time' => 'nullable|string|max:32',
+            // DEBUG — موقتی برای کشف کلید زمان مراجعه در هاست کاربر.
+            '_debug_all_meta' => 'nullable|array',
 
             // تاریخ ثبت سفارش در WP — به created_at نگاشت می‌شود تا
             // تاریخچهٔ واقعی حفظ شود (به‌جای زمان import).
@@ -334,9 +339,21 @@ class SyncOrderController extends Controller
             'order_note_content' => $this->encodeLogField($data['order_note_content'] ?? null),
             'log_return' => $this->encodeLogField($data['log_return'] ?? null),
 
-            // زمان‌بندی
-            'visit_scheduled_at' => $data['visit_scheduled_at'] ?? null,
+            // زمان‌بندی — اولویت با visit_scheduled_at مستقیم، سپس
+            // ترکیب visit_date + visit_time که پلاگین از کلیدهای
+            // متنوع WP استخراج می‌کند.
+            'visit_scheduled_at' => $this->buildVisitScheduledAt($data),
         ];
+
+        // DEBUG: اگر پلاگین لیست کامل متاها را فرستاده، در لاگ ذخیره
+        // کنیم تا کلید واقعی زمان مراجعه قابل کشف باشد. فقط برای
+        // سفارش‌هایی که visit_scheduled_at هنوز null است (برای کاهش نویز).
+        if (! empty($data['_debug_all_meta']) && ! $payload['visit_scheduled_at']) {
+            \Illuminate\Support\Facades\Log::info('crm.sync.order.meta_dump', [
+                'wp_id' => $data['wp_id'] ?? null,
+                'meta'  => $data['_debug_all_meta'],
+            ]);
+        }
 
         // final_price سنتی لاراول از price_customer (جمع کل صورت حساب) پر
         // می‌شود — این چیزی است که مشتری پرداخت کرده و در dashboardها/
@@ -371,6 +388,78 @@ class SyncOrderController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    /**
+     * تبدیل visit_date + visit_time (یا visit_scheduled_at مستقیم) به یک
+     * datetime استاندارد قابل ذخیره. ورودی‌ها می‌توانند جلالی، میلادی،
+     * با timezone یا بدون آن باشند — هر کدام را parse می‌کنیم.
+     */
+    protected function buildVisitScheduledAt(array $data): ?string
+    {
+        // ۱) اگر visit_scheduled_at کامل ارسال شده، همان را استفاده کن.
+        if (! empty($data['visit_scheduled_at'])) {
+            $parsed = $this->parseWpDate((string) $data['visit_scheduled_at']);
+            if ($parsed) {
+                return $parsed->format('Y-m-d H:i:s');
+            }
+        }
+
+        // ۲) ترکیب visit_date + visit_time
+        $date = trim((string) ($data['visit_date'] ?? ''));
+        $time = trim((string) ($data['visit_time'] ?? ''));
+        if ($date === '') {
+            return null;
+        }
+
+        // تاریخ ممکن است شمسی (مثل 1404/02/20) یا میلادی (2025-05-10) باشد.
+        $gregorianDate = $this->normalizeDate($date);
+        if (! $gregorianDate) {
+            return null;
+        }
+
+        // ساعت ممکن است '09:00:00'، '9:00'، '9' یا حتی '۹' (Persian digits) باشد.
+        $normalizedTime = $this->normalizeTime($time);
+
+        return $gregorianDate . ' ' . $normalizedTime;
+    }
+
+    /** نرمال‌سازی رشتهٔ تاریخ به YYYY-MM-DD میلادی. */
+    protected function normalizeDate(string $date): ?string
+    {
+        // ارقام فارسی/عربی → لاتین
+        $date = strtr($date, ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+        $date = str_replace(['/', '\\', '.'], '-', $date);
+        if (! preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $date, $m)) {
+            return null;
+        }
+        $year = (int) $m[1]; $mo = (int) $m[2]; $day = (int) $m[3];
+
+        // اگر سال < 1700، شمسی است — به میلادی تبدیل کن.
+        if ($year < 1700 && class_exists(\Morilog\Jalali\CalendarUtils::class)) {
+            try {
+                [$gy, $gm, $gd] = \Morilog\Jalali\CalendarUtils::toGregorian($year, $mo, $day);
+                return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
+            } catch (\Throwable $e) { return null; }
+        }
+        return sprintf('%04d-%02d-%02d', $year, $mo, $day);
+    }
+
+    /** نرمال‌سازی رشتهٔ ساعت به HH:MM:SS. خالی → 09:00:00 (پیش‌فرض). */
+    protected function normalizeTime(string $time): string
+    {
+        $time = strtr($time, ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']);
+        if ($time === '') return '09:00:00';
+        // اگر بازهٔ متنی است (مثلاً '9 تا 12 ظهر')، ساعت اول را بگیر.
+        if (preg_match('/(\d{1,2})/', $time, $m)) {
+            $h = max(0, min(23, (int) $m[1]));
+            // اگر دقیقه/ثانیه داشت، نگه دار.
+            if (preg_match('/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/', $time, $hm)) {
+                return sprintf('%02d:%02d:%02d', (int) $hm[1], (int) $hm[2], (int) ($hm[3] ?? 0));
+            }
+            return sprintf('%02d:00:00', $h);
+        }
+        return '09:00:00';
     }
 
     /**
