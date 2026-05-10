@@ -246,7 +246,6 @@
          سفارش ادمین/اپراتور هم نمایش داده می‌شود. --}}
     @if(! $order->status->isFinal())
         @php
-            use Modules\CRM\Livewire\OrderWizard;
             $latin = ['0','1','2','3','4','5','6','7','8','9'];
             $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
             $weekdaysFa = [
@@ -266,11 +265,12 @@
                     'month' => $j->format('F'),
                 ];
             }
+            $visitSlots = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS;
             $currentVisitDate = $order->visit_scheduled_at?->format('Y-m-d');
             $currentVisitTime = $order->visit_scheduled_at?->format('H:i:s');
             // پیدا کردن slot فعلی از روی ساعت ذخیره‌شده
             $currentSlotKey = null;
-            foreach (OrderWizard::VISIT_SLOTS as $k => $s) {
+            foreach ($visitSlots as $k => $s) {
                 if ($s['start'] === $currentVisitTime) { $currentSlotKey = $k; break; }
             }
         @endphp
@@ -322,7 +322,7 @@
                 <div>
                     <div class="text-[11px] text-gray-500 mb-2">بازه ساعت</div>
                     <div class="grid grid-cols-2 gap-1.5">
-                        @foreach(OrderWizard::VISIT_SLOTS as $key => $slot)
+                        @foreach($visitSlots as $key => $slot)
                             <label class="cursor-pointer">
                                 <input type="radio" name="visit_slot" value="{{ $key }}"
                                        @checked($currentSlotKey === $key)
