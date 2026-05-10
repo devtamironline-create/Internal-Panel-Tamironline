@@ -44,9 +44,9 @@ class DashboardController extends Controller
         // cache شود تا accessor invoice_debt یک query اضافه نزند.
         $tech->loadSum('invoices', 'company_share');
 
-        // کارت شورکات تقویم در داشبورد — برای هر روز ۷ روز آینده تعداد و
-        // نام اولین مشتری را برای پیش‌نمایش استخراج می‌کنیم. یک کوئری با
-        // group در PHP، نه ۷ کوئری مجزا.
+        // تقویم داشبورد — ۷ روز آینده با تفکیک سفارش‌ها بر اساس بازهٔ
+        // ساعتی (۹–۱۲، ۱۲–۱۵، ۱۵–۱۸، ۱۸–۲۱). همان VISIT_SLOTS که در
+        // ویزارد و فرم هماهنگی تکنسین استفاده می‌شود.
         $calendarStart = now()->startOfDay();
         $calendarEnd = $calendarStart->copy()->addDays(7)->endOfDay();
         $calendarOrders = Order::query()
@@ -54,21 +54,41 @@ class DashboardController extends Controller
             ->whereBetween('visit_scheduled_at', [$calendarStart, $calendarEnd])
             ->with('customer:id,first_name,mobile')
             ->orderBy('visit_scheduled_at')
-            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'visit_scheduled_at']);
+            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'visit_scheduled_at', 'status']);
 
         $calendarByDay = $calendarOrders->groupBy(fn (Order $o) => $o->visit_scheduled_at?->toDateString());
 
         $calendarDays = [];
+        $slots = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS;
         for ($i = 0; $i < 7; $i++) {
             $d = $calendarStart->copy()->addDays($i);
-            $orders = $calendarByDay->get($d->toDateString(), collect());
-            $first = $orders->first();
+            $dayOrders = $calendarByDay->get($d->toDateString(), collect());
+
+            // تفکیک سفارش‌های هر روز در ۴ بازه + یک گروه «بدون بازهٔ مشخص»
+            // برای رکوردهایی که ساعتشان داخل هیچ بازه‌ای نمی‌افتد.
+            $slotBuckets = [1 => collect(), 2 => collect(), 3 => collect(), 4 => collect(), 'other' => collect()];
+            foreach ($dayOrders as $o) {
+                $h = (int) $o->visit_scheduled_at?->format('H');
+                $key = match (true) {
+                    $h >= 9 && $h < 12 => 1,
+                    $h >= 12 && $h < 15 => 2,
+                    $h >= 15 && $h < 18 => 3,
+                    $h >= 18 && $h < 21 => 4,
+                    default => 'other',
+                };
+                $slotBuckets[$key]->push($o);
+            }
+
             $calendarDays[] = [
                 'date'    => $d,
-                'count'   => $orders->count(),
-                'preview' => $first
-                    ? ($first->customer_name ?: ($first->customer?->display_name ?? '—'))
-                    : null,
+                'count'   => $dayOrders->count(),
+                'slots'   => [
+                    ['key' => 1, 'label' => $slots[1]['label'], 'orders' => $slotBuckets[1]],
+                    ['key' => 2, 'label' => $slots[2]['label'], 'orders' => $slotBuckets[2]],
+                    ['key' => 3, 'label' => $slots[3]['label'], 'orders' => $slotBuckets[3]],
+                    ['key' => 4, 'label' => $slots[4]['label'], 'orders' => $slotBuckets[4]],
+                ],
+                'unscheduled' => $slotBuckets['other'],
             ];
         }
 

@@ -83,101 +83,150 @@
 
     {{-- ─────── Calendar shortcut card (separate sheet) ─────── --}}
     @php
-        use Morilog\Jalali\Jalalian as DashJalalian;
         $weekDayMap = [
             'Saturday'=>'شنبه','Sunday'=>'یکشنبه','Monday'=>'دوشنبه',
             'Tuesday'=>'سه‌شنبه','Wednesday'=>'چهارشنبه','Thursday'=>'پنج‌شنبه','Friday'=>'جمعه',
         ];
+        $latin = ['0','1','2','3','4','5','6','7','8','9'];
+        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $faNum = fn($s) => str_replace($latin, $persian, (string) $s);
     @endphp
     @if(isset($calendarDays) && count($calendarDays))
-    <div class="relative z-10 -mt-28 mx-3 bg-white rounded-[28px] shadow-lg p-4">
+    <div class="relative z-10 -mt-28 mx-3 bg-white rounded-[28px] shadow-lg p-4"
+         x-data="{ selectedDay: '{{ $calendarDays[0]['date']->toDateString() }}' }">
         <div class="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4"></div>
 
-        <a href="{{ route('tech.calendar') }}" class="block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2 text-gray-800">
-                    <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    <span class="text-sm font-bold">تقویم کاری ۷ روز آینده</span>
-                </div>
-                <span class="text-xs text-brand-700 font-medium">مشاهده کامل ←</span>
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2 text-gray-800">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span class="text-sm font-bold">تقویم کاری شما</span>
             </div>
+            <a href="{{ route('tech.calendar') }}" class="text-xs text-brand-700 font-medium">مشاهده کامل ←</a>
+        </div>
 
-            <div class="grid grid-cols-3 gap-2">
-                @foreach($calendarDays as $i => $cd)
-                    @php
-                        $j = DashJalalian::fromCarbon($cd['date']);
-                        $dayName = $weekDayMap[$cd['date']->format('l')] ?? '';
-                        $isToday = $cd['date']->isToday();
-                        $hasOrders = $cd['count'] > 0;
-                        $isLast = $i === count($calendarDays) - 1;
-                    @endphp
-                    <div class="rounded-xl py-2.5 px-2 transition
-                                {{ $isLast ? 'col-span-3' : '' }}
-                                {{ $isToday ? 'bg-brand-700 text-white shadow-md' : ($hasOrders ? 'bg-brand-50 border border-brand-200' : 'bg-gray-50 border border-gray-100') }}">
+        {{-- ─── انتخاب روز (۷ روز پیشِ‌رو، اسکرول افقی) ─── --}}
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+            @foreach($calendarDays as $cd)
+                @php
+                    $j = \Morilog\Jalali\Jalalian::fromCarbon($cd['date']);
+                    $dayName = $weekDayMap[$cd['date']->format('l')] ?? '';
+                    $dayKey = $cd['date']->toDateString();
+                    $hasOrders = $cd['count'] > 0;
+                @endphp
+                <button type="button"
+                        @click="selectedDay = '{{ $dayKey }}'"
+                        :class="selectedDay === '{{ $dayKey }}'
+                                ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200'
+                                : '{{ $hasOrders ? 'border-brand-200 bg-brand-50/40' : 'border-gray-200 bg-gray-50' }}'"
+                        class="flex-shrink-0 w-[72px] py-2 px-1 rounded-xl border-2 text-center transition">
+                    <div class="text-[10px] text-gray-500">{{ $dayName }}</div>
+                    <div class="text-base font-bold text-gray-900 my-0.5">{{ $faNum($j->format('d')) }}</div>
+                    <div class="text-[10px] text-gray-500">{{ $j->format('F') }}</div>
+                    @if($hasOrders)
+                        <div class="mt-1 text-[10px] font-bold text-brand-700">
+                            {{ $faNum($cd['count']) }} سفارش
+                        </div>
+                    @else
+                        <div class="mt-1 text-[10px] text-gray-300">—</div>
+                    @endif
+                </button>
+            @endforeach
+        </div>
 
-                        @if($isLast)
-                            {{-- آخرین تایل (full-width): چینش افقی --}}
-                            <div class="flex items-center justify-between gap-2">
-                                <div class="min-w-0">
-                                    <div class="text-xs font-bold {{ $isToday ? 'text-white' : 'text-gray-700' }}">
-                                        {{ $dayName }}
-                                        @if($isToday)<span class="text-[10px] mr-1">(امروز)</span>@endif
-                                    </div>
-                                    <div class="text-[10px] mt-0.5 {{ $isToday ? 'text-white/80' : 'text-gray-400' }}" dir="ltr">
-                                        {{ $j->format('Y/m/d') }}
-                                    </div>
-                                </div>
-                                <div class="text-left flex-shrink-0">
-                                    @if($hasOrders)
-                                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full
-                                                     {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
-                                            {{ $cd['count'] }} سفارش
-                                        </span>
-                                        @if($cd['preview'])
-                                            <div class="text-[10px] mt-1 {{ $isToday ? 'text-white/85' : 'text-gray-500' }}">
-                                                {{ $cd['preview'] }}
-                                            </div>
-                                        @endif
-                                    @else
-                                        <span class="text-[10px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
-                                            سفارشی نیست
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        @else
-                            {{-- چیدمان ۳تایی: عمودی --}}
-                            <div class="text-center">
-                                <div class="text-xs font-bold {{ $isToday ? 'text-white' : 'text-gray-700' }} truncate">
-                                    {{ $dayName }}
-                                </div>
-                                <div class="text-[10px] mt-0.5 {{ $isToday ? 'text-white/80' : 'text-gray-400' }}" dir="ltr">
-                                    {{ $j->format('Y/m/d') }}
-                                </div>
-                                @if($isToday)
-                                    <div class="text-[9px] mt-0.5 text-white/85 font-bold">امروز</div>
-                                @endif
+        {{-- ─── سفارش‌های روز انتخاب‌شده، تفکیک‌شده در ۴ بازه ─── --}}
+        @foreach($calendarDays as $cd)
+            @php $dayKey = $cd['date']->toDateString(); @endphp
+            <div x-show="selectedDay === '{{ $dayKey }}'" x-cloak class="mt-4 space-y-3">
+                @php $totalForDay = $cd['count']; @endphp
 
-                                <div class="mt-1.5">
-                                    @if($hasOrders)
-                                        <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full
-                                                     {{ $isToday ? 'bg-white/25 text-white' : 'bg-brand-700 text-white' }}">
-                                            {{ $cd['count'] }} سفارش
-                                        </span>
-                                    @else
-                                        <span class="text-[10px] {{ $isToday ? 'text-white/70' : 'text-gray-400' }} italic">
-                                            بدون سفارش
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        @endif
+                @if($totalForDay === 0)
+                    <div class="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center">
+                        <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-3-3v6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <div class="text-xs text-gray-500">هیچ سفارشی برای این روز ثبت نشده است.</div>
                     </div>
-                @endforeach
+                @else
+                    @foreach($cd['slots'] as $slot)
+                        <div class="rounded-2xl overflow-hidden border {{ $slot['orders']->count() ? 'border-emerald-200' : 'border-gray-100' }}">
+                            {{-- هدر بازه --}}
+                            <div class="flex items-center justify-between px-3 py-2 {{ $slot['orders']->count() ? 'bg-emerald-50' : 'bg-gray-50' }}">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 {{ $slot['orders']->count() ? 'text-emerald-700' : 'text-gray-400' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="text-xs font-bold {{ $slot['orders']->count() ? 'text-emerald-800' : 'text-gray-600' }}">
+                                        {{ $slot['label'] }}
+                                    </span>
+                                </div>
+                                @if($slot['orders']->count())
+                                    <span class="text-[10px] font-bold text-emerald-700">
+                                        {{ $faNum($slot['orders']->count()) }} مورد
+                                    </span>
+                                @else
+                                    <span class="text-[10px] text-gray-400">—</span>
+                                @endif
+                            </div>
+
+                            {{-- لیست سفارش‌های آن بازه --}}
+                            @if($slot['orders']->count())
+                                <div class="divide-y divide-gray-100">
+                                    @foreach($slot['orders'] as $o)
+                                        <a href="{{ route('tech.orders.show', $o) }}"
+                                           class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 transition">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-medium text-gray-900 truncate">
+                                                    {{ $o->customer_name ?: ($o->customer?->display_name ?? '—') }}
+                                                </div>
+                                                <div class="text-[10px] text-gray-400 mt-0.5" dir="ltr">
+                                                    {{ $o->order_code }}
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 flex-shrink-0">
+                                                <span class="text-[10px] font-bold" dir="ltr">
+                                                    {{ $faNum($o->visit_scheduled_at->format('H:i')) }}
+                                                </span>
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                                                </svg>
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+
+                    @if($cd['unscheduled']->count())
+                        <div class="rounded-2xl overflow-hidden border border-amber-200">
+                            <div class="px-3 py-2 bg-amber-50 text-xs font-bold text-amber-800">
+                                خارج از بازه‌های استاندارد
+                            </div>
+                            <div class="divide-y divide-amber-100">
+                                @foreach($cd['unscheduled'] as $o)
+                                    <a href="{{ route('tech.orders.show', $o) }}"
+                                       class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-amber-50/40">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-medium text-gray-900 truncate">
+                                                {{ $o->customer_name ?: ($o->customer?->display_name ?? '—') }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 mt-0.5" dir="ltr">
+                                                {{ $o->order_code }}
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-amber-700" dir="ltr">
+                                            {{ $faNum($o->visit_scheduled_at->format('H:i')) }}
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endif
             </div>
-        </a>
+        @endforeach
     </div>
     @endif
 
