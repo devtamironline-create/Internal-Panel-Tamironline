@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Modules\CRM\Models\Ticket;
+use Modules\CRM\Models\TicketCategory;
 use Modules\CRM\Models\TicketReply;
 
 /**
@@ -17,28 +18,33 @@ class TicketController extends Controller
     public function index(Request $request)
     {
         $statusFilter = $request->query('status');
-        $priorityFilter = $request->query('priority');
+        $categoryFilter = $request->query('category');
 
-        $query = Ticket::with(['technician:id,first_name,firstname_tech,mobile', 'order:id,order_code,customer_name'])
+        $query = Ticket::with([
+                'technician:id,first_name,firstname_tech,mobile',
+                'order:id,order_code,customer_name',
+                'category:id,name',
+            ])
             ->latest();
 
         if ($statusFilter) {
             $query->where('status', $statusFilter);
         }
-        if ($priorityFilter) {
-            $query->where('priority', $priorityFilter);
+        if ($categoryFilter) {
+            $query->where('category_id', $categoryFilter);
         }
 
         $stats = [
             'open'    => Ticket::where('status', 'open')->count(),
             'replied' => Ticket::where('status', 'replied')->count(),
             'closed'  => Ticket::where('status', 'closed')->count(),
-            'urgent'  => Ticket::where('priority', 'urgent')->where('status', '!=', 'closed')->count(),
+            'total'   => Ticket::count(),
         ];
 
         $tickets = $query->paginate(20)->withQueryString();
+        $categories = TicketCategory::ordered()->get(['id', 'name', 'is_active']);
 
-        return view('crm::tickets.index', compact('tickets', 'stats', 'statusFilter', 'priorityFilter'));
+        return view('crm::tickets.index', compact('tickets', 'stats', 'statusFilter', 'categoryFilter', 'categories'));
     }
 
     public function show(Ticket $ticket)
@@ -46,6 +52,7 @@ class TicketController extends Controller
         $ticket->load([
             'technician:id,first_name,firstname_tech,mobile',
             'order:id,order_code,customer_name,customer_mobile',
+            'category:id,name',
             'replies',
             'assignee:id,first_name,last_name',
         ]);

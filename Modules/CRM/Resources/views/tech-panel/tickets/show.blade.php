@@ -26,8 +26,10 @@
     @endif
 
     <div class="relative z-10 mx-3 {{ session('success') || session('error') ? '' : '-mt-12' }} bg-white rounded-2xl shadow-sm p-4 space-y-3">
-        <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $ticket->priorityBadgeClass() }}">{{ $ticket->priorityLabel() }}</span>
+        <div class="flex items-center gap-2 flex-wrap">
+            @if($ticket->category)
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-800">{{ $ticket->category->name }}</span>
+            @endif
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $ticket->statusBadgeClass() }}">{{ $ticket->statusLabel() }}</span>
             <span class="ms-auto text-[10px] text-gray-400">@jdatetime($ticket->created_at)</span>
         </div>

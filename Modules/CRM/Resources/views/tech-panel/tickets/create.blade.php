@@ -41,21 +41,16 @@
             </select>
         </div>
 
-        {{-- اولویت --}}
+        {{-- دسته‌بندی --}}
         <div>
-            <label class="block text-[11px] text-gray-500 mb-2">اولویت</label>
-            <div class="grid grid-cols-4 gap-2">
-                @foreach(\Modules\CRM\Models\Ticket::PRIORITIES as $key => $label)
-                    <label class="cursor-pointer">
-                        <input type="radio" name="priority" value="{{ $key }}"
-                               @checked(old('priority', 'normal') === $key)
-                               class="peer sr-only">
-                        <div class="text-center text-xs py-2 rounded-xl border-2 border-gray-200 peer-checked:border-brand-500 peer-checked:bg-brand-50 transition">
-                            {{ $label }}
-                        </div>
-                    </label>
+            <label class="block text-[11px] text-gray-500 mb-1">دسته‌بندی *</label>
+            <select name="category_id" required
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                <option value="">— انتخاب کنید —</option>
+                @foreach($categories as $c)
+                    <option value="{{ $c->id }}" @selected(old('category_id') == $c->id)>{{ $c->name }}</option>
                 @endforeach
-            </div>
+            </select>
         </div>
 
         {{-- موضوع --}}

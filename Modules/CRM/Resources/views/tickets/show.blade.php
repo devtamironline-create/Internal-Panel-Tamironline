@@ -8,7 +8,9 @@
         <a href="{{ route('crm.tickets.index') }}"
            class="text-sm text-brand-700 hover:underline">← همه تیکت‌ها</a>
         <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 text-xs font-bold rounded-full {{ $ticket->priorityBadgeClass() }}">اولویت: {{ $ticket->priorityLabel() }}</span>
+            @if($ticket->category)
+                <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-800">دسته: {{ $ticket->category->name }}</span>
+            @endif
             <span class="px-2 py-0.5 text-xs font-bold rounded-full {{ $ticket->statusBadgeClass() }}">{{ $ticket->statusLabel() }}</span>
         </div>
     </div>

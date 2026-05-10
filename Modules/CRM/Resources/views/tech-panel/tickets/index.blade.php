@@ -34,9 +34,13 @@
             <a href="{{ route('tech.tickets.show', $t) }}"
                class="block bg-white rounded-2xl shadow-sm p-4">
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $t->priorityBadgeClass() }}">
-                        {{ $t->priorityLabel() }}
-                    </span>
+                    @if($t->category)
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-800">
+                            {{ $t->category->name }}
+                        </span>
+                    @else
+                        <span></span>
+                    @endif
                     <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $t->statusBadgeClass() }}">
                         {{ $t->statusLabel() }}
                     </span>

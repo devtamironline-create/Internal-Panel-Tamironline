@@ -275,6 +275,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status');
     });
 
+    // ─── مدیریت دسته‌بندی تیکت‌ها ─────────────────────────────────
+    Route::middleware('can:manage-crm-settings')->prefix('tickets/categories')->name('tickets.categories.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'index'])->name('index');
+        Route::post('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'store'])->name('store');
+        Route::put('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'update'])->name('update');
+        Route::delete('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'destroy'])->name('destroy');
+    });
+
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');

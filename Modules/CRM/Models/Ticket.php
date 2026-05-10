@@ -12,21 +12,14 @@ class Ticket extends Model
     protected $table = 'crm_tickets';
 
     protected $fillable = [
-        'technician_id', 'order_id', 'subject', 'body',
-        'priority', 'status', 'image_path',
+        'technician_id', 'order_id', 'category_id', 'subject', 'body',
+        'status', 'image_path',
         'assigned_to', 'last_reply_at', 'closed_at',
     ];
 
     protected $casts = [
         'last_reply_at' => 'datetime',
         'closed_at' => 'datetime',
-    ];
-
-    public const PRIORITIES = [
-        'low'    => 'کم',
-        'normal' => 'عادی',
-        'high'   => 'بالا',
-        'urgent' => 'فوری',
     ];
 
     public const STATUSES = [
@@ -45,6 +38,11 @@ class Ticket extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TicketCategory::class, 'category_id');
+    }
+
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
@@ -55,24 +53,9 @@ class Ticket extends Model
         return $this->hasMany(TicketReply::class)->orderBy('created_at');
     }
 
-    public function priorityLabel(): string
-    {
-        return self::PRIORITIES[$this->priority] ?? $this->priority;
-    }
-
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
-    }
-
-    public function priorityBadgeClass(): string
-    {
-        return match ($this->priority) {
-            'urgent' => 'bg-rose-100 text-rose-800',
-            'high'   => 'bg-amber-100 text-amber-800',
-            'low'    => 'bg-gray-100 text-gray-700',
-            default  => 'bg-blue-100 text-blue-800',
-        };
     }
 
     public function statusBadgeClass(): string

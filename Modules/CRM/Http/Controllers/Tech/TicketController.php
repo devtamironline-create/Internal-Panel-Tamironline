@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Ticket;
+use Modules\CRM\Models\TicketCategory;
 use Modules\CRM\Models\TicketReply;
 
 /**
@@ -19,7 +20,7 @@ class TicketController extends Controller
         $tech = Auth::guard('tech')->user();
 
         $tickets = Ticket::where('technician_id', $tech->id)
-            ->with('order:id,order_code,customer_name')
+            ->with(['order:id,order_code,customer_name', 'category:id,name'])
             ->latest()
             ->paginate(15);
 
@@ -40,9 +41,12 @@ class TicketController extends Controller
             ->limit(20)
             ->get(['id', 'order_code', 'customer_name']);
 
+        $categories = TicketCategory::active()->ordered()->get(['id', 'name']);
+
         return view('crm::tech-panel.tickets.create', [
             'technician' => $tech,
             'orders' => $orders,
+            'categories' => $categories,
         ]);
     }
 
@@ -52,13 +56,13 @@ class TicketController extends Controller
 
         $validated = $request->validate([
             'order_id' => 'nullable|exists:crm_orders,id',
+            'category_id' => 'required|exists:crm_ticket_categories,id',
             'subject' => 'nullable|string|max:200',
             'body' => 'required|string|max:5000',
-            'priority' => 'required|in:low,normal,high,urgent',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ], [
             'body.required' => 'متن تیکت الزامی است.',
-            'priority.required' => 'اولویت را انتخاب کنید.',
+            'category_id.required' => 'دسته‌بندی را انتخاب کنید.',
             'image.max' => 'حجم تصویر حداکثر ۵ مگابایت.',
         ]);
 
@@ -80,9 +84,9 @@ class TicketController extends Controller
         $ticket = Ticket::create([
             'technician_id' => $tech->id,
             'order_id' => $validated['order_id'] ?? null,
+            'category_id' => $validated['category_id'],
             'subject' => $validated['subject'] ?? null,
             'body' => $validated['body'],
-            'priority' => $validated['priority'],
             'status' => 'open',
             'image_path' => $imagePath,
         ]);
@@ -97,7 +101,7 @@ class TicketController extends Controller
             abort(403);
         }
 
-        $ticket->load('order:id,order_code,customer_name', 'replies');
+        $ticket->load('order:id,order_code,customer_name', 'category:id,name', 'replies');
 
         return view('crm::tech-panel.tickets.show', [
             'technician' => $tech,
