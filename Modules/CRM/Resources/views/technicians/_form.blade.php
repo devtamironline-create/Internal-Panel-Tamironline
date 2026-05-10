@@ -164,9 +164,23 @@
         </p>
     </div>
 
+    {{-- اسکریپت کوچک کمکی برای انتخاب/لغو همه روی یک container.
+         با data-toggle-all روی دکمه و data-group روی container کار می‌کند. --}}
     <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">شهرهای فعال</label>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">شهرهای فعال</label>
+            <div class="flex gap-2">
+                <button type="button" data-toggle-all="select" data-group="cities"
+                        class="text-xs px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    انتخاب همه
+                </button>
+                <button type="button" data-toggle-all="clear" data-group="cities"
+                        class="text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200">
+                    حذف همه
+                </button>
+            </div>
+        </div>
+        <div data-group="cities" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
             @foreach($allCities as $c)
                 <label class="flex items-center gap-1.5 cursor-pointer text-sm">
                     <input type="checkbox" name="city_ids[]" value="{{ $c->id }}"
@@ -180,8 +194,20 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">برندهای تخصصی</label>
-            <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">برندهای تخصصی</label>
+                <div class="flex gap-2">
+                    <button type="button" data-toggle-all="select" data-group="brands"
+                            class="text-xs px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        انتخاب همه
+                    </button>
+                    <button type="button" data-toggle-all="clear" data-group="brands"
+                            class="text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200">
+                        حذف همه
+                    </button>
+                </div>
+            </div>
+            <div data-group="brands" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                 @foreach($allBrands as $b)
                     <label class="flex items-center gap-1.5 cursor-pointer text-sm">
                         <input type="checkbox" name="brand_ids[]" value="{{ $b->id }}"
@@ -194,8 +220,20 @@
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دستگاه‌های قابل انجام</label>
-            <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">دستگاه‌های قابل انجام</label>
+                <div class="flex gap-2">
+                    <button type="button" data-toggle-all="select" data-group="devices"
+                            class="text-xs px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        انتخاب همه
+                    </button>
+                    <button type="button" data-toggle-all="clear" data-group="devices"
+                            class="text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200">
+                        حذف همه
+                    </button>
+                </div>
+            </div>
+            <div data-group="devices" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                 @foreach($allDevices as $d)
                     <label class="flex items-center gap-1.5 cursor-pointer text-sm">
                         <input type="checkbox" name="device_ids[]" value="{{ $d->id }}"
@@ -207,6 +245,22 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function () {
+        document.querySelectorAll('button[data-toggle-all]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var group = btn.getAttribute('data-group');
+                var mode = btn.getAttribute('data-toggle-all'); // select | clear
+                var box = document.querySelector('div[data-group="' + group + '"]');
+                if (! box) return;
+                box.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+                    cb.checked = (mode === 'select');
+                });
+            });
+        });
+    })();
+    </script>
 
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">امتیاز رضایت مشتری (۰ تا ۵)</label>
