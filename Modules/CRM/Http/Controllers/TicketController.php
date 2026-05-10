@@ -47,7 +47,7 @@ class TicketController extends Controller
             'technician:id,first_name,firstname_tech,mobile',
             'order:id,order_code,customer_name,customer_mobile',
             'replies',
-            'assignee:id,name',
+            'assignee:id,first_name,last_name',
         ]);
 
         return view('crm::tickets.show', compact('ticket'));
