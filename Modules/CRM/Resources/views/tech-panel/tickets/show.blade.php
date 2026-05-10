@@ -48,8 +48,8 @@
         <div class="text-sm text-gray-800 leading-7 whitespace-pre-wrap">{{ $ticket->body }}</div>
 
         @if($ticket->image_path)
-            <a href="{{ asset('storage/' . $ticket->image_path) }}" target="_blank">
-                <img src="{{ asset('storage/' . $ticket->image_path) }}" alt="ضمیمه"
+            <a href="{{ route('crm.tickets.image', ['kind' => 'ticket', 'id' => $ticket->id]) }}" target="_blank">
+                <img src="{{ route('crm.tickets.image', ['kind' => 'ticket', 'id' => $ticket->id]) }}" alt="ضمیمه"
                      class="w-full max-w-xs rounded-xl border border-gray-200">
             </a>
         @endif
@@ -68,8 +68,8 @@
                     </div>
                     <div class="text-sm text-gray-800 leading-7 whitespace-pre-wrap">{{ $r->body }}</div>
                     @if($r->image_path)
-                        <a href="{{ asset('storage/' . $r->image_path) }}" target="_blank" class="block mt-2">
-                            <img src="{{ asset('storage/' . $r->image_path) }}" alt="ضمیمه"
+                        <a href="{{ route('crm.tickets.image', ['kind' => 'reply', 'id' => $r->id]) }}" target="_blank" class="block mt-2">
+                            <img src="{{ route('crm.tickets.image', ['kind' => 'reply', 'id' => $r->id]) }}" alt="ضمیمه"
                                  class="w-full max-w-xs rounded-lg border border-gray-200">
                         </a>
                     @endif

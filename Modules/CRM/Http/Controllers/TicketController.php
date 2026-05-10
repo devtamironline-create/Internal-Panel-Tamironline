@@ -4,6 +4,8 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Modules\CRM\Models\Ticket;
 use Modules\CRM\Models\TicketReply;
 
@@ -87,6 +89,54 @@ class TicketController extends Controller
         ]);
 
         return back()->with('success', 'پاسخ شما به تکنسین ارسال شد.');
+    }
+
+    /**
+     * سرو تصویر تیکت یا یکی از پاسخ‌هایش با چک دسترسی.
+     * چون symlink استوریج روی هاست cPanel/LiteSpeed خراب است،
+     * مستقیم با PHP فایل را می‌فرستیم.
+     *
+     * دسترسی:
+     * - ادمین با view-crm-tickets: همهٔ تیکت‌ها
+     * - تکنسین لاگین در guard tech: فقط تیکت‌های خودش
+     */
+    public function serveImage(Request $request, string $kind, int $id)
+    {
+        if (! in_array($kind, ['ticket', 'reply'], true)) {
+            abort(404);
+        }
+
+        if ($kind === 'ticket') {
+            $ticket = Ticket::find($id);
+            if (! $ticket || ! $ticket->image_path) abort(404);
+            $this->ensureCanView($ticket);
+            $path = $ticket->image_path;
+        } else {
+            $reply = TicketReply::with('ticket')->find($id);
+            if (! $reply || ! $reply->image_path || ! $reply->ticket) abort(404);
+            $this->ensureCanView($reply->ticket);
+            $path = $reply->image_path;
+        }
+
+        if (! Storage::disk('public')->exists($path)) abort(404);
+
+        return Storage::disk('public')->response($path, basename($path), [
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
+    }
+
+    private function ensureCanView(Ticket $ticket): void
+    {
+        // ادمین با دسترسی → ok
+        if (auth()->check() && auth()->user()->can('view-crm-tickets')) {
+            return;
+        }
+        // تکنسینِ صاحب تیکت → ok
+        $tech = Auth::guard('tech')->user();
+        if ($tech && (int) $tech->id === (int) $ticket->technician_id) {
+            return;
+        }
+        abort(403);
     }
 
     public function updateStatus(Request $request, Ticket $ticket)

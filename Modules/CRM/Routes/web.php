@@ -31,6 +31,15 @@ Route::get('/tech-panel/image/{key}', [\Modules\CRM\Http\Controllers\TechPanelSe
     ->name('crm.tech-panel-settings.serve')
     ->where('key', 'tech_panel_logo|tech_panel_banner|tech_panel_hero|tech_panel_default_avatar');
 
+// ─── سرو تصاویر تیکت‌های پشتیبانی — درون کنترلر دسترسی چک می‌شود
+//     (ادمین با view-crm-tickets یا تکنسینِ مالک تیکت).
+Route::middleware('web')->group(function () {
+    Route::get('/crm/ticket-image/{kind}/{id}', [\Modules\CRM\Http\Controllers\TicketController::class, 'serveImage'])
+        ->name('crm.tickets.image')
+        ->where('kind', 'ticket|reply')
+        ->where('id', '[0-9]+');
+});
+
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
 Route::middleware('web')->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');

@@ -23,6 +23,7 @@ class TechSubdomainScope
     private const ALLOWED_PREFIXES = [
         'tech',          // همه مسیرهای پنل تکنسین
         'tech-panel/',   // سرو تصاویر برند (لوگو/بنر/Hero) از طریق PHP
+        'crm/ticket-image/', // سرو تصاویر تیکت پشتیبانی
         'storage/',      // فایل‌های آپلود شده (لوگو/بنر/...)
         'css/',
         'js/',
