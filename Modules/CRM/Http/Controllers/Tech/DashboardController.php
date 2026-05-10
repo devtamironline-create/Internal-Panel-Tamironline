@@ -483,10 +483,10 @@ class DashboardController extends Controller
         $tech = Auth::guard('tech')->user();
 
         $validated = $request->validate([
-            'amount' => ['required', 'integer', 'min:1000', 'max:50000000'],
+            'amount' => ['required', 'integer', 'min:500000', 'max:50000000'],
         ], [
             'amount.required' => 'مبلغ الزامی است.',
-            'amount.min' => 'حداقل مبلغ شارژ ۱٬۰۰۰ تومان است.',
+            'amount.min' => 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 

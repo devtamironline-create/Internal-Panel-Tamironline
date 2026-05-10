@@ -25,9 +25,9 @@
         return $label . ' میلیون تومان';
     };
 
-    // پلهٔ ۵۰۰ هزار از ۵۰۰ هزار تا ۱۰ میلیون
+    // پلهٔ ۵۰۰ هزار از ۵۰۰ هزار تا ۵ میلیون
     $presets = [];
-    for ($i = 500_000; $i <= 10_000_000; $i += 500_000) {
+    for ($i = 500_000; $i <= 5_000_000; $i += 500_000) {
         $presets[] = ['value' => $i, 'label' => $persianAmountLabel($i)];
     }
 @endphp
@@ -79,22 +79,24 @@
     <form method="POST" action="{{ route('tech.wallet.recharge.initiate') }}"
           class="mx-3 mt-4 bg-white rounded-[24px] shadow-sm p-5"
           x-data="{
-            amount: {{ (int) old('amount', $isDebtor ? $absBalance : 0) }},
-            min: 1000,
+            amount: {{ (int) old('amount', ($isDebtor && $absBalance >= 500000) ? $absBalance : 0) }},
+            min: 500000,
             max: 50000000,
-            setAmount(v) { this.amount = Math.max(this.min, Math.min(this.max, Number(v) || 0)); },
+            setAmount(v) { this.amount = Math.min(this.max, Math.max(0, Number(v) || 0)); },
             fmt(n) { return Number(n||0).toLocaleString('fa-IR'); },
+            get tooLow() { return this.amount > 0 && this.amount < this.min; },
           }">
         @csrf
 
         <div class="text-[11px] text-gray-400 mb-2">مبلغ شارژ (تومان)</div>
 
         {{-- مبلغ آزاد قابل تایپ --}}
-        <input type="number" name="amount" min="1000" max="50000000" step="1000" required
+        <input type="number" name="amount" min="500000" max="50000000" step="1000" required
                x-model.number="amount"
                inputmode="numeric"
-               placeholder="مثلاً 495000"
-               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-3 text-center text-2xl font-bold focus:bg-white focus:border-brand-400 focus:outline-none"
+               placeholder="حداقل ۵۰۰٬۰۰۰ تومان"
+               :class="tooLow ? 'border-rose-400 bg-rose-50' : 'border-gray-200 bg-gray-50 focus:bg-white focus:border-brand-400'"
+               class="w-full border rounded-xl py-3 px-3 text-center text-2xl font-bold focus:outline-none transition"
                dir="ltr">
 
         {{-- مبلغ به حروف --}}
@@ -102,16 +104,26 @@
             <span x-text="amount > 0 ? (numberToPersianWords(amount) + ' تومان') : 'مبلغ مورد نظر را وارد کنید'"></span>
         </div>
 
+        {{-- خطای client-side حداقل --}}
+        <div x-show="tooLow" x-cloak class="mt-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-xs text-rose-700">
+            ⚠ حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.
+        </div>
+
         @error('amount')
             <div class="mt-2 text-xs text-rose-600">{{ $message }}</div>
         @enderror
 
         {{-- ─────── دکمهٔ تسویه بدهی فعلی ─────── --}}
-        @if($isDebtor && $absBalance > 0)
+        @if($isDebtor && $absBalance >= 500000)
             <button type="button" @click="setAmount({{ $absBalance }})"
                     class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50 text-emerald-800 text-xs font-bold">
                 تسویه دقیق بدهی: {{ number_format($absBalance) }} تومان
             </button>
+        @elseif($isDebtor && $absBalance > 0 && $absBalance < 500000)
+            <div class="mt-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-6 text-center">
+                بدهی فعلی شما {{ number_format($absBalance) }} تومان است،
+                ولی حداقل مبلغ قابل پرداخت از درگاه ۵۰۰٬۰۰۰ تومان است.
+            </div>
         @endif
 
         {{-- ─────── Quick-pick buttons (500K → 10M, step 500K) ─────── --}}
@@ -132,7 +144,7 @@
                 @endforeach
             </div>
             <p class="text-[10px] text-gray-400 mt-3 leading-6 text-center">
-                از ۵۰۰ هزار تا ۱۰ میلیون تومان. برای مبلغ سفارشی، مستقیم در فیلد بالا تایپ کنید.
+                از ۵۰۰ هزار تا ۵ میلیون تومان. برای مبلغ سفارشی، مستقیم در فیلد بالا تایپ کنید (حداقل ۵۰۰٬۰۰۰).
             </p>
         </div>
 
@@ -143,7 +155,8 @@
                 class="mt-5 w-full py-3.5 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                 style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
             <span x-show="amount >= min" x-cloak>پرداخت <span x-text="fmt(amount)"></span> تومان</span>
-            <span x-show="amount < min">مبلغ را وارد کنید</span>
+            <span x-show="!amount">مبلغ را وارد کنید</span>
+            <span x-show="amount > 0 && amount < min" x-cloak>حداقل ۵۰۰٬۰۰۰ تومان</span>
         </button>
 
         <p class="text-[10px] text-gray-400 mt-3 leading-6 text-center">
