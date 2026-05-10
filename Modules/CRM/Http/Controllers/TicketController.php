@@ -55,8 +55,6 @@ class TicketController extends Controller
 
     public function reply(Request $request, Ticket $ticket)
     {
-        $this->authorize('reply-crm-tickets');
-
         if ($ticket->status === 'closed') {
             return back()->with('error', 'این تیکت بسته شده — برای پاسخ ابتدا آن را باز کنید.');
         }
@@ -141,8 +139,6 @@ class TicketController extends Controller
 
     public function updateStatus(Request $request, Ticket $ticket)
     {
-        $this->authorize('reply-crm-tickets');
-
         $validated = $request->validate([
             'status' => 'required|in:open,replied,closed',
         ]);
