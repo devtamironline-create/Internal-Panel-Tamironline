@@ -46,16 +46,65 @@
                 </button>
             </form>
 
-            <div class="flex items-center gap-2">
-                @if($supportPhone)
-                    <a href="tel:{{ $supportPhone }}"
-                       class="w-10 h-10 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white border border-white/20"
-                       aria-label="پشتیبانی">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                    </a>
-                @endif
+            <div class="flex items-center gap-2" x-data="{ supportOpen: false }">
+                {{-- دکمهٔ پشتیبانی با آیکون هدست — popup با ۲ گزینه:
+                     تماس فوری / ثبت تیکت --}}
+                <button type="button" @click="supportOpen = true"
+                        class="w-10 h-10 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white border border-white/20"
+                        aria-label="پشتیبانی">
+                    {{-- Headset icon --}}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 14v-4a9 9 0 1118 0v4M3 14a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3zm18 0a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h1a2 2 0 012 2v3zm-3 2v1a3 3 0 01-3 3h-2"/>
+                    </svg>
+                </button>
+
+                {{-- Modal --}}
+                <div x-show="supportOpen" x-cloak
+                     class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50"
+                     @click.self="supportOpen = false">
+                    <div class="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md p-5"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="translate-y-full opacity-0"
+                         x-transition:enter-end="translate-y-0 opacity-100">
+                        <div class="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4 sm:hidden"></div>
+                        <div class="text-center mb-4">
+                            <div class="text-base font-bold text-gray-900">پشتیبانی</div>
+                            <div class="text-xs text-gray-500 mt-1">چه کمکی نیاز دارید؟</div>
+                        </div>
+                        <div class="space-y-2">
+                            @if($supportPhone)
+                                <a href="tel:{{ $supportPhone }}"
+                                   class="flex items-center gap-3 p-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 transition">
+                                    <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="text-right flex-1">
+                                        <div class="text-sm font-bold text-emerald-900">تماس برای موارد فوری</div>
+                                        <div class="text-[11px] text-emerald-700" dir="ltr">{{ $supportPhone }}</div>
+                                    </div>
+                                </a>
+                            @endif
+                            <a href="{{ route('tech.tickets.create') }}"
+                               class="flex items-center gap-3 p-3 rounded-2xl border-2 border-brand-300 bg-brand-50 hover:bg-brand-100 transition">
+                                <div class="w-10 h-10 rounded-xl bg-brand-700 text-white flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-right flex-1">
+                                    <div class="text-sm font-bold text-brand-900">ثبت تیکت پشتیبانی</div>
+                                    <div class="text-[11px] text-brand-700">برای پیگیری مکتوب — مشاهدهٔ تیکت‌های قبلی</div>
+                                </div>
+                            </a>
+                            <a href="{{ route('tech.tickets.index') }}"
+                               class="block text-center text-xs text-gray-500 py-2">تاریخچهٔ تیکت‌های من ←</a>
+                        </div>
+                        <button type="button" @click="supportOpen = false"
+                                class="mt-3 w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium">بستن</button>
+                    </div>
+                </div>
                 <a href="{{ route('tech.profile') }}"
                    class="w-10 h-10 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white border border-white/20"
                    aria-label="پروفایل">

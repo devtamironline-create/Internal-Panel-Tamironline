@@ -256,6 +256,16 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
 
     // ─── سینک با CRM وردپرسی ─────────────────────────────────────
+    // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
+    Route::middleware('can:view-crm-tickets')->group(function () {
+        Route::get('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+        Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
+    });
+    Route::middleware('can:reply-crm-tickets')->group(function () {
+        Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply');
+        Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status');
+    });
+
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
@@ -324,6 +334,13 @@ Route::prefix('tech')->name('tech.')->group(function () {
         // ── آموزش تکنسین ───────────────────────────────────────
         Route::get('training', [TechPanelDashboardController::class, 'training'])->name('training');
         Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])->name('training.show');
+
+        // ── تیکت‌های پشتیبانی ───────────────────────────────────
+        Route::get('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'index'])->name('tickets.index');
+        Route::get('tickets/create', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'create'])->name('tickets.create');
+        Route::post('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'store'])->name('tickets.store');
+        Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'show'])->name('tickets.show');
+        Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'reply'])->name('tickets.reply');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
