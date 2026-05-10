@@ -26,13 +26,13 @@
 
         @switch($type)
             @case('mp4')
-                {{-- wrapper relative تا دکمهٔ تمام‌صفحهٔ سفارشی همپوشانی شود.
-                     در حالت PWA standalone بعضی مرورگرها دکمهٔ native را
-                     مخفی می‌کنند یا کار نمی‌کند، پس API Fullscreen را خودمان
-                     فراخوانی می‌کنیم. --}}
-                <div class="relative w-full" style="aspect-ratio: 16/9;" id="tcs-video-wrap">
+                {{-- بدون aspect-ratio اجباری: ویدیو با نسبت طبیعی خودش
+                     نمایش داده می‌شود (width=100%, height=auto). برای
+                     ویدیوی موبایل عمودی، آن کادر سیاه دو طرف دیگر دیده
+                     نمی‌شود. wrap فقط برای موقعیت‌دهی دکمهٔ تمام‌صفحه است. --}}
+                <div class="relative w-full" id="tcs-video-wrap">
                     <video id="tcs-video" controls playsinline webkit-playsinline preload="metadata"
-                           class="absolute inset-0 w-full h-full bg-black"
+                           class="block w-full h-auto bg-black"
                            @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
                         <source src="{{ $video->playbackUrl() }}" type="video/mp4">
                         مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
@@ -53,35 +53,58 @@
                     var video = document.getElementById('tcs-video');
                     if (! btn || ! wrap || ! video) return;
 
-                    function enterFullscreen() {
-                        // iOS Safari فقط webkitEnterFullscreen روی خود video را
-                        // پشتیبانی می‌کند، نه روی wrapper.
-                        if (typeof video.webkitEnterFullscreen === 'function') {
-                            try { video.webkitEnterFullscreen(); return; } catch (e) {}
-                        }
-                        var target = wrap;
-                        var fn = target.requestFullscreen
-                            || target.webkitRequestFullscreen
-                            || target.mozRequestFullScreen
-                            || target.msRequestFullscreen;
-                        if (fn) {
-                            try { fn.call(target); } catch (e) {}
-                        }
-                    }
-                    function exitFullscreen() {
-                        var fn = document.exitFullscreen
-                            || document.webkitExitFullscreen
-                            || document.mozCancelFullScreen
-                            || document.msExitFullscreen;
-                        if (fn) {
-                            try { fn.call(document); } catch (e) {}
-                        }
-                    }
-                    btn.addEventListener('click', function () {
-                        var current = document.fullscreenElement
+                    function isFullscreen() {
+                        return document.fullscreenElement
                             || document.webkitFullscreenElement
-                            || document.mozFullScreenElement;
-                        if (current) exitFullscreen();
+                            || document.mozFullScreenElement
+                            || document.msFullscreenElement
+                            || video.webkitDisplayingFullscreen;
+                    }
+
+                    function tryCall(fn, ctx) {
+                        try {
+                            var p = fn.call(ctx);
+                            // بعضی مرورگرها Promise برمی‌گردانند که reject می‌شود
+                            if (p && typeof p.catch === 'function') p.catch(function () {});
+                            return true;
+                        } catch (e) { return false; }
+                    }
+
+                    function enterFullscreen() {
+                        // ۱) Android Chrome: video.requestFullscreen() مستقیم — مطمئن‌ترین
+                        if (typeof video.requestFullscreen === 'function') {
+                            if (tryCall(video.requestFullscreen, video)) return;
+                        }
+                        if (typeof video.webkitRequestFullscreen === 'function') {
+                            if (tryCall(video.webkitRequestFullscreen, video)) return;
+                        }
+                        // ۲) iOS Safari: webkitEnterFullscreen روی خود video
+                        if (typeof video.webkitEnterFullscreen === 'function') {
+                            if (tryCall(video.webkitEnterFullscreen, video)) return;
+                        }
+                        // ۳) fallback روی wrapper
+                        var fns = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'];
+                        for (var i = 0; i < fns.length; i++) {
+                            if (typeof wrap[fns[i]] === 'function') {
+                                if (tryCall(wrap[fns[i]], wrap)) return;
+                            }
+                        }
+                        alert('مرورگر شما از حالت تمام‌صفحه پشتیبانی نمی‌کند. ویدیو را خارج از حالت PWA باز کنید.');
+                    }
+
+                    function exitFullscreen() {
+                        var fns = ['exitFullscreen', 'webkitExitFullscreen', 'mozCancelFullScreen', 'msExitFullscreen'];
+                        for (var i = 0; i < fns.length; i++) {
+                            if (typeof document[fns[i]] === 'function') {
+                                if (tryCall(document[fns[i]], document)) return;
+                            }
+                        }
+                    }
+
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isFullscreen()) exitFullscreen();
                         else enterFullscreen();
                     });
                 })();
