@@ -124,6 +124,89 @@
         });
     }
     </script>
+
+    {{-- تبدیل خودکار ارقام لاتین به فارسی در همهٔ متن‌های نمایشی پنل تکنسین.
+         input/textarea/script/style/code و عناصری با class .keep-latin
+         دست‌نخورده می‌مانند تا مقدار فرم‌ها و کد و موارد فنی بدون تغییر
+         به سرور بروند. روی DOM اولیه اجرا می‌شود و یک MutationObserver
+         روی دیگرگاه‌های Livewire/Alpine هم نگه‌بان است. --}}
+    <script>
+    (function () {
+        var LATIN = '0123456789';
+        var PERSIAN = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        var SKIP_TAGS = { INPUT:1, TEXTAREA:1, SELECT:1, OPTION:1, SCRIPT:1, STYLE:1, CODE:1, KBD:1, SAMP:1, PRE:1 };
+
+        function shouldSkip(node) {
+            for (var p = node.parentNode; p && p.nodeType === 1; p = p.parentNode) {
+                if (SKIP_TAGS[p.tagName]) return true;
+                if (p.classList && p.classList.contains('keep-latin')) return true;
+                if (p.hasAttribute && p.hasAttribute('contenteditable')) return true;
+            }
+            return false;
+        }
+
+        function convertText(s) {
+            var out = '';
+            for (var i = 0; i < s.length; i++) {
+                var ch = s.charAt(i);
+                var idx = LATIN.indexOf(ch);
+                out += (idx >= 0) ? PERSIAN[idx] : ch;
+            }
+            return out;
+        }
+
+        function walk(node) {
+            if (! node) return;
+            if (node.nodeType === 3) {
+                if (! /[0-9]/.test(node.nodeValue)) return;
+                if (shouldSkip(node)) return;
+                node.nodeValue = convertText(node.nodeValue);
+                return;
+            }
+            if (node.nodeType !== 1) return;
+            var tag = node.tagName;
+            if (SKIP_TAGS[tag]) return;
+            if (node.classList && node.classList.contains('keep-latin')) return;
+            if (node.hasAttribute && node.hasAttribute('contenteditable')) return;
+            // پیمایش فرزندان
+            for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+        }
+
+        function run() { walk(document.body); }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', run);
+        } else {
+            run();
+        }
+        // Livewire/Alpine ممکن است بخش‌هایی از DOM را عوض کنند
+        document.addEventListener('livewire:navigated', run);
+        document.addEventListener('livewire:initialized', run);
+
+        // پوشش تغییرات بعدی DOM (toast، Alpine x-show و …)
+        try {
+            new MutationObserver(function (records) {
+                records.forEach(function (r) {
+                    r.addedNodes.forEach(function (n) {
+                        if (n.nodeType === 3) {
+                            if (/[0-9]/.test(n.nodeValue) && ! shouldSkip(n)) {
+                                n.nodeValue = convertText(n.nodeValue);
+                            }
+                        } else if (n.nodeType === 1) {
+                            walk(n);
+                        }
+                    });
+                    if (r.type === 'characterData' && r.target && r.target.nodeType === 3) {
+                        if (/[0-9]/.test(r.target.nodeValue) && ! shouldSkip(r.target)) {
+                            r.target.nodeValue = convertText(r.target.nodeValue);
+                        }
+                    }
+                });
+            }).observe(document.body, { childList: true, subtree: true, characterData: true });
+        } catch (e) {}
+    })();
+    </script>
+
     @stack('scripts')
 </body>
 </html>
