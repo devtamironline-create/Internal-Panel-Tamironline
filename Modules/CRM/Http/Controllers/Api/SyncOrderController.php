@@ -212,6 +212,17 @@ class SyncOrderController extends Controller
                     unset($payload[$key]);
                 }
 
+                // اگر سفارش هنوز تکنسینی در Laravel ندارد ولی WP تکنسین
+                // داده، آن را ست کن. این هم اعتماد به انتساب اولیهٔ WP
+                // را حفظ می‌کند، هم نگذاشته تخصیص دستی Laravel overwrite
+                // شود (که laravelManaged قبلاً جلویش را گرفته).
+                if (! $order->technician_id && ! empty($payload['technician_wp_id'])) {
+                    $resolved = $this->resolveId(Technician::class, $payload['technician_wp_id']);
+                    if ($resolved) {
+                        $order->technician_id = $resolved;
+                    }
+                }
+
                 $order->fill($payload);
                 if ($wpCreatedAt) {
                     $order->created_at = $wpCreatedAt;
@@ -269,8 +280,14 @@ class SyncOrderController extends Controller
             'introduction' => $data['introduction'] ?? null,
             'order_type' => $data['order_type'] ?? null,
 
-            // FK resolves (با fallback به null اگر مرجع نبود)
+            // FK resolves (با fallback به null اگر مرجع نبود).
+            // technician_wp_id خام را هم ذخیره می‌کنیم تا اگر تکنسین
+            // هنوز sync نشده باشد، بعد از sync تکنسین‌ها بتوان با
+            // backfill این سفارش‌های یتیم را وصل کرد.
             'technician_id' => $this->resolveId(Technician::class, $data['technician_wp_id'] ?? null),
+            'technician_wp_id' => isset($data['technician_wp_id']) && (int) $data['technician_wp_id'] > 0
+                ? (int) $data['technician_wp_id']
+                : null,
             'brand_id' => $this->resolveId(Brand::class, $data['brand_wp_id'] ?? null),
             'device_id' => $this->resolveId(Device::class, $data['device_wp_id'] ?? null),
             'province_id' => $this->resolveId(Province::class, $data['state_wp_id'] ?? null),

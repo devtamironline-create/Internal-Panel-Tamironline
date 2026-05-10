@@ -16,7 +16,7 @@ class Order extends Model
         // پایه
         'order_code', 'wp_id',
         'customer_id', 'subscription', 'introduction',
-        'brand_id', 'device_id', 'technician_id', 'order_type',
+        'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'customer_name', 'customer_mobile', 'customer_phone',
         'province_id', 'city_id', 'address', 'postal_code',
         'problem_title', 'problem_description',

@@ -155,10 +155,18 @@ class SyncTechnicianController extends Controller
                 $action = 'created';
             }
 
+            // backfill خودکار سفارش‌های یتیم — هر سفارشی که technician_wp_id
+            // برابر همین wp_id داشته و technician_id ندارد، حالا متصل می‌شود.
+            $resolvedOrders = \Modules\CRM\Models\Order::query()
+                ->whereNull('technician_id')
+                ->where('technician_wp_id', $wpId)
+                ->update(['technician_id' => $tech->id]);
+
             return [
                 'action' => $action,
                 'id' => (int) $tech->id,
                 'wp_id' => (int) $tech->wp_id,
+                'orphan_orders_resolved' => (int) $resolvedOrders,
             ];
         });
     }
