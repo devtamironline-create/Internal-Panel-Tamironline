@@ -3,6 +3,7 @@
 namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -39,7 +40,34 @@ class SyncSettingsController extends Controller
             'pluginSize' => $available ? filesize($zipPath) : null,
             'pluginMtime' => $available ? filemtime($zipPath) : null,
             'pluginSha1' => $available ? sha1_file($zipPath) : null,
+
+            // سینک معکوس (Laravel → WP)
+            'wpPushEnabled' => CrmSetting::get('wp_push_enabled') === '1',
+            'wpPushUrl'     => CrmSetting::get('wp_push_url') ?? '',
+            'wpPushSecret'  => CrmSetting::get('wp_push_secret') ?? '',
         ]);
+    }
+
+    /**
+     * ذخیرهٔ تنظیمات سینک معکوس Laravel → WP.
+     * URL سایت WP + secret مشترک HMAC + on/off.
+     */
+    public function updateWpPush(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'wp_push_url' => 'nullable|url|max:255',
+            'wp_push_secret' => 'nullable|string|min:16|max:128',
+            'wp_push_enabled' => 'nullable|boolean',
+        ], [
+            'wp_push_url.url' => 'آدرس سایت وردپرس معتبر نیست.',
+            'wp_push_secret.min' => 'کلید مشترک باید حداقل ۱۶ کاراکتر باشد.',
+        ]);
+
+        CrmSetting::set('wp_push_url', $validated['wp_push_url'] ?? '');
+        CrmSetting::set('wp_push_secret', $validated['wp_push_secret'] ?? '');
+        CrmSetting::set('wp_push_enabled', ! empty($validated['wp_push_enabled']) ? '1' : '0');
+
+        return back()->with('success', 'تنظیمات سینک معکوس ذخیره شد.');
     }
 
     public function regenerate(): RedirectResponse

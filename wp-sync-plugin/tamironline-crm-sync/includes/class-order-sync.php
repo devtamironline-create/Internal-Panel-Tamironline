@@ -93,6 +93,13 @@ class TCS_Order_Sync
     /** سینک یک سفارش (post). در نبود مشتری، رد می‌شود. */
     public function sync_post(int $post_id): ?array
     {
+        // اگر این سفارش به‌تازگی توسط Laravel inbound به‌روزرسانی شده،
+        // برای ۱۰ ثانیه هوک‌ها skip شوند تا حلقهٔ بی‌نهایت WP↔Laravel
+        // ایجاد نشود.
+        if (get_transient('tcs_suppress_hooks_' . $post_id)) {
+            return null;
+        }
+
         $post = get_post($post_id);
         if (! $post || $post->post_type !== 'orders') {
             return null;

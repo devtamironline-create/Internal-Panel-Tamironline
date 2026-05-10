@@ -41,6 +41,15 @@ class TCS_Settings_Page
             'sanitize_callback' => 'sanitize_text_field',
             'default'           => '',
         ]);
+
+        // کلید مشترک برای دریافت آپدیت‌ها از Laravel (سینک معکوس).
+        // هر درخواست POST به /wp-json/tcs/v1/order-update با HMAC SHA256
+        // این کلید اعتبارسنجی می‌شود.
+        register_setting('tcs_settings_group', 'tcs_inbound_secret', [
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => '',
+        ]);
     }
 
     public function render_page(): void
@@ -88,6 +97,22 @@ class TCS_Settings_Page
                                    class="regular-text code" autocomplete="off">
                             <p class="description">
                                 توکن را از پنل لاراول کپی کنید. در صورت بازتولید، توکن جدید را اینجا وارد کنید.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="tcs_inbound_secret">کلید سینک معکوس (Inbound Secret)</label></th>
+                        <td>
+                            <input name="tcs_inbound_secret" id="tcs_inbound_secret" type="text" dir="ltr"
+                                   value="<?php echo esc_attr((string) get_option('tcs_inbound_secret', '')); ?>"
+                                   class="regular-text code" autocomplete="off"
+                                   placeholder="یک رشتهٔ تصادفی طولانی، مثلاً 64 کاراکتر">
+                            <p class="description">
+                                این کلید برای اعتبارسنجی درخواست‌هایی استفاده می‌شود که Laravel به WP می‌فرستد
+                                (تغییر وضعیت، زمان مراجعه، و…). دقیقاً همین مقدار را در پنل Laravel در
+                                «تنظیمات CRM → سینک با وردپرس» هم وارد کنید.
+                                Endpoint:
+                                <code dir="ltr"><?php echo esc_html(rest_url('tcs/v1/order-update')); ?></code>
                             </p>
                         </td>
                     </tr>

@@ -260,6 +260,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
         Route::get('plugin/download', [SyncSettingsController::class, 'downloadPlugin'])->name('plugin.download');
+        // تنظیمات سینک معکوس Laravel → WP
+        Route::post('wp-push', [SyncSettingsController::class, 'updateWpPush'])->name('wp-push.update');
     });
 
     // ─── تنظیمات ظاهری پنل تکنسین (لوگو/بنر/هیرو/...) ──────────────

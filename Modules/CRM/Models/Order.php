@@ -140,6 +140,44 @@ class Order extends Model
                 $order->total_invoice = max(0, (int) $order->price_customer - (int) ($order->cost_price ?? 0));
             }
         });
+
+        // Push تغییرات به WP — فقط روی update (نه create) و فقط برای
+        // سفارش‌هایی که wp_id دارند (یعنی منشأ WP دارند یا قبلاً
+        // sync شده‌اند). برای جلوگیری از حلقه، اگر تغییرات از خود WP
+        // inbound آمده‌اند، یک flag روی request set می‌شود که اینجا
+        // skip شود — به‌علاوه پلاگین خودش یک transient suppress دارد.
+        static::updated(function (self $order) {
+            if (! $order->wp_id) return;
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
+                // در artisan/queue پیش‌فرض push نمی‌کنیم تا backfillها
+                // و ResolveOrphanTechnicians باعث push انبوه نشوند.
+                return;
+            }
+            // فیلدهایی که اگر تغییر کنند پوش لازم است. بقیه فیلدها
+            // (مثل تنظیمات داخلی) ربطی به WP ندارند.
+            $relevant = [
+                'status', 'technician_id', 'visit_scheduled_at',
+                'description_tech', 'description_tech1', 'description_tech2',
+                'piece_list', 'buy_price_list', 'customer_price_list',
+                'price_customer', 'cost_price', 'total_invoice',
+                'hire', 'transportation', 'discount',
+                'invoice_descripotion', 'cancel_reason',
+                'return_type', 'return_description', 'save_as_draft',
+            ];
+            foreach ($relevant as $f) {
+                if ($order->wasChanged($f)) {
+                    try {
+                        app(\Modules\CRM\Services\WpPushService::class)->pushOrder($order);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error('crm.wp_push.observer_failed', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                    break;
+                }
+            }
+        });
     }
 
     // ─────────────────── Relations ────────────────────────────────

@@ -99,6 +99,46 @@
         </p>
     </div>
 
+    {{-- ─── سینک معکوس Laravel → WP ─── --}}
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">سینک معکوس (Laravel → WordPress)</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-7">
+            با فعال‌سازی، تغییرات سفارش که در پنل Laravel انجام می‌شوند (وضعیت،
+            زمان مراجعه، تخصیص تکنسین، فاکتور و…) به‌صورت بلادرنگ روی WP CRM هم اعمال می‌شوند.
+        </p>
+
+        <form method="POST" action="{{ route('crm.sync.wp-push.update') }}" class="space-y-4">
+            @csrf
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="wp_push_enabled" value="0">
+                <input type="checkbox" name="wp_push_enabled" value="1" @checked($wpPushEnabled ?? false) class="w-4 h-4">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">سینک معکوس فعال باشد</span>
+            </label>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس سایت وردپرس</label>
+                <input type="url" name="wp_push_url" value="{{ $wpPushUrl ?? '' }}" dir="ltr"
+                       placeholder="https://crm.tamironline.com"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                <p class="text-xs text-gray-400 mt-1">بدون اسلش انتهایی. درخواست‌ها به <code dir="ltr">/wp-json/tcs/v1/order-update</code> می‌روند.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">کلید مشترک (HMAC Secret)</label>
+                <input type="text" name="wp_push_secret" value="{{ $wpPushSecret ?? '' }}" dir="ltr"
+                       placeholder="یک رشتهٔ تصادفی طولانی، حداقل ۱۶ کاراکتر"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">
+                <p class="text-xs text-gray-400 mt-1">
+                    دقیقاً همین مقدار را در پلاگین وردپرس در فیلد «کلید سینک معکوس (Inbound Secret)» هم وارد کنید.
+                </p>
+            </div>
+
+            <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">
+                ذخیره
+            </button>
+        </form>
+    </div>
+
     {{-- راهنما --}}
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
         <h2 class="text-base font-bold text-blue-900 dark:text-blue-100 mb-2">راهنمای نصب / به‌روزرسانی</h2>
