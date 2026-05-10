@@ -29,7 +29,7 @@ use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardC
 //     که روی هاست بدون symlink ۴۰۴ می‌شود. ─────────────────────────
 Route::get('/tech-panel/image/{key}', [\Modules\CRM\Http\Controllers\TechPanelSettingsController::class, 'serve'])
     ->name('crm.tech-panel-settings.serve')
-    ->where('key', 'tech_panel_logo|tech_panel_banner|tech_panel_hero');
+    ->where('key', 'tech_panel_logo|tech_panel_banner|tech_panel_hero|tech_panel_default_avatar');
 
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
 Route::middleware('web')->group(function () {

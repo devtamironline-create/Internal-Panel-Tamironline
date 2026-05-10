@@ -35,11 +35,12 @@ class CrmServiceProvider extends ServiceProvider
         // آن به child sections (@section) منتقل نمی‌شود.
         View::composer('crm::tech-panel.*', function ($view) {
             $view->with([
-                'brandLogo'    => Setting::get('tech_panel_logo'),
-                'brandBanner'  => Setting::get('tech_panel_banner'),
-                'brandHero'    => Setting::get('tech_panel_hero'),
-                'appName'      => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
-                'supportPhone' => Setting::get('tech_panel_support_phone'),
+                'brandLogo'          => Setting::get('tech_panel_logo'),
+                'brandBanner'        => Setting::get('tech_panel_banner'),
+                'brandHero'          => Setting::get('tech_panel_hero'),
+                'brandDefaultAvatar' => Setting::get('tech_panel_default_avatar'),
+                'appName'            => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
+                'supportPhone'       => Setting::get('tech_panel_support_phone'),
             ]);
         });
 

@@ -31,6 +31,15 @@
             'accept'      => '.jpg,.jpeg,.png,.gif,.webp',
             'hint'        => 'فرمت‌ها: JPG, PNG, GIF, WebP — حداکثر ۵ مگابایت.',
         ],
+        [
+            'key'         => 'tech_panel_default_avatar',
+            'label'       => 'آواتار پیش‌فرض تکنسین',
+            'description' => 'برای تکنسین‌هایی که عکس پروفایل آپلود نکرده‌اند، این تصویر نمایش داده می‌شود (به‌جای آواتار پیش‌فرض SVG). تصویر مربعی توصیه می‌شود.',
+            'preview'     => 'square',
+            'aspect'      => 'aspect-square w-20',
+            'accept'      => '.jpg,.jpeg,.png,.webp',
+            'hint'        => 'فرمت‌ها: JPG, PNG, WebP — حداکثر ۲ مگابایت. مربعی، ترجیحاً ۲۵۶×۲۵۶.',
+        ],
     ];
 @endphp
 

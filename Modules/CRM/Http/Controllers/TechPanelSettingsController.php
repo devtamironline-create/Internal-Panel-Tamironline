@@ -22,6 +22,7 @@ class TechPanelSettingsController extends Controller
         'tech_panel_logo',
         'tech_panel_banner',
         'tech_panel_hero',
+        'tech_panel_default_avatar',
     ];
 
     private const TEXT_KEYS = [
@@ -58,6 +59,7 @@ class TechPanelSettingsController extends Controller
             'tech_panel_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'tech_panel_banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'tech_panel_hero' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'tech_panel_default_avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         // متن‌ها — فقط اگر در این فرم خاص ارسال شده‌اند (هر فرم

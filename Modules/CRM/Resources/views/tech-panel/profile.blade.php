@@ -57,6 +57,10 @@
                 <div class="w-24 h-24 rounded-full bg-white/15 backdrop-blur border-2 border-white/30 flex items-center justify-center overflow-hidden">
                     @if($hasAvatar)
                         <img src="{{ asset('storage/' . $technician->img_personal) }}" alt="avatar" class="w-full h-full object-cover">
+                    @elseif(!empty($brandDefaultAvatar))
+                        {{-- آواتار پیش‌فرض سراسری ست‌شده توسط ادمین در صفحه «تنظیمات ظاهری پنل تکنسین».
+                             از روت Laravel سرو می‌شود تا روی هاست‌های بدون symlink storage هم کار کند. --}}
+                        <img src="{{ route('crm.tech-panel-settings.serve', 'tech_panel_default_avatar') }}" alt="avatar" class="w-full h-full object-cover">
                     @else
                         {{-- آواتار پیش‌فرض: تعمیرکار عروسکی (SVG inline) --}}
                         <svg viewBox="0 0 96 96" class="w-full h-full">
