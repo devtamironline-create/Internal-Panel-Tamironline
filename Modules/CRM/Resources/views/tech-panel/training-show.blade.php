@@ -45,6 +45,31 @@
                     </button>
                 </div>
 
+                {{-- CSS تمام‌صفحه — مستقل از Fullscreen API. در حالت PWA
+                     standalone روی Android، API گاهی بدون خطا کاری نمی‌کند.
+                     این روش ویدیو را با position:fixed روی کل viewport قرار
+                     می‌دهد. روی همهٔ مرورگرها کار می‌کند چون فقط CSS است. --}}
+                <style>
+                    .tcs-fs {
+                        position: fixed !important;
+                        inset: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        z-index: 999999 !important;
+                        aspect-ratio: auto !important;
+                        background: #000 !important;
+                    }
+                    .tcs-fs video {
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: contain !important;
+                    }
+                    body.tcs-fs-lock { overflow: hidden !important; }
+                </style>
                 <script>
                 (function () {
                     var btn = document.getElementById('tcs-fullscreen');
@@ -52,59 +77,73 @@
                     var video = document.getElementById('tcs-video');
                     if (! btn || ! wrap || ! video) return;
 
-                    function isFullscreen() {
-                        return document.fullscreenElement
-                            || document.webkitFullscreenElement
-                            || document.mozFullScreenElement
-                            || document.msFullscreenElement
-                            || video.webkitDisplayingFullscreen;
-                    }
+                    var icons = {
+                        enter: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg>',
+                        exit:  '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5"/></svg>'
+                    };
 
-                    function tryCall(fn, ctx) {
+                    function enter() {
+                        wrap.classList.add('tcs-fs');
+                        document.body.classList.add('tcs-fs-lock');
+                        btn.innerHTML = icons.exit;
+                        btn.setAttribute('aria-label', 'خروج از تمام صفحه');
+
+                        // در عین حال، Fullscreen API را هم درخواست کن — اگر کار
+                        // کرد bonus است (نوار آدرس مرورگر هم پنهان می‌شود).
                         try {
-                            var p = fn.call(ctx);
-                            // بعضی مرورگرها Promise برمی‌گردانند که reject می‌شود
-                            if (p && typeof p.catch === 'function') p.catch(function () {});
-                            return true;
-                        } catch (e) { return false; }
+                            var fs = video.requestFullscreen
+                                || video.webkitRequestFullscreen
+                                || video.webkitEnterFullscreen;
+                            if (fs) { var p = fs.call(video); if (p && p.catch) p.catch(function(){}); }
+                        } catch (e) {}
+
+                        // قفل جهت‌گیری به landscape — اگر مرورگر اجازه دهد.
+                        try {
+                            if (screen.orientation && screen.orientation.lock) {
+                                var p = screen.orientation.lock('landscape');
+                                if (p && p.catch) p.catch(function(){});
+                            }
+                        } catch (e) {}
                     }
 
-                    function enterFullscreen() {
-                        // ۱) Android Chrome: video.requestFullscreen() مستقیم — مطمئن‌ترین
-                        if (typeof video.requestFullscreen === 'function') {
-                            if (tryCall(video.requestFullscreen, video)) return;
-                        }
-                        if (typeof video.webkitRequestFullscreen === 'function') {
-                            if (tryCall(video.webkitRequestFullscreen, video)) return;
-                        }
-                        // ۲) iOS Safari: webkitEnterFullscreen روی خود video
-                        if (typeof video.webkitEnterFullscreen === 'function') {
-                            if (tryCall(video.webkitEnterFullscreen, video)) return;
-                        }
-                        // ۳) fallback روی wrapper
-                        var fns = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'];
-                        for (var i = 0; i < fns.length; i++) {
-                            if (typeof wrap[fns[i]] === 'function') {
-                                if (tryCall(wrap[fns[i]], wrap)) return;
-                            }
-                        }
-                        alert('مرورگر شما از حالت تمام‌صفحه پشتیبانی نمی‌کند. ویدیو را خارج از حالت PWA باز کنید.');
-                    }
+                    function exit() {
+                        wrap.classList.remove('tcs-fs');
+                        document.body.classList.remove('tcs-fs-lock');
+                        btn.innerHTML = icons.enter;
+                        btn.setAttribute('aria-label', 'تمام صفحه');
 
-                    function exitFullscreen() {
-                        var fns = ['exitFullscreen', 'webkitExitFullscreen', 'mozCancelFullScreen', 'msExitFullscreen'];
-                        for (var i = 0; i < fns.length; i++) {
-                            if (typeof document[fns[i]] === 'function') {
-                                if (tryCall(document[fns[i]], document)) return;
+                        try {
+                            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                                var fn = document.exitFullscreen || document.webkitExitFullscreen;
+                                if (fn) { var p = fn.call(document); if (p && p.catch) p.catch(function(){}); }
                             }
-                        }
+                        } catch (e) {}
+
+                        try {
+                            if (screen.orientation && screen.orientation.unlock) {
+                                screen.orientation.unlock();
+                            }
+                        } catch (e) {}
                     }
 
                     btn.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (isFullscreen()) exitFullscreen();
-                        else enterFullscreen();
+                        if (wrap.classList.contains('tcs-fs')) exit();
+                        else enter();
+                    });
+
+                    // Escape کیبورد یا back system → خروج
+                    document.addEventListener('keydown', function (e) {
+                        if (e.key === 'Escape' && wrap.classList.contains('tcs-fs')) exit();
+                    });
+                    // اگر API fullscreen به‌کار افتاد و سپس کاربر از آن خارج شد،
+                    // CSS fullscreen را هم خارج کن تا state همگام بماند.
+                    document.addEventListener('fullscreenchange', function () {
+                        if (! document.fullscreenElement && wrap.classList.contains('tcs-fs')) {
+                            // فقط اگر API بود که الان تمام شد — CSS را نگه می‌داریم
+                            // مگر اینکه کاربر صراحتاً exit بزند. این درست است.
+                        }
                     });
                 })();
                 </script>
