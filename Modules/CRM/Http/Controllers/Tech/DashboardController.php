@@ -284,9 +284,10 @@ class DashboardController extends Controller
             }
         }
 
-        // وضعیت قبلی را مستقیم از DB می‌خوانیم — جلوی هر گونه caching
-        // مدل Eloquent یا instance قدیمی route-binding گرفته می‌شود.
-        $previous = (string) Order::whereKey($order->id)->value('status');
+        // وضعیت قبلی را از DB می‌خوانیم — refresh() مدل را از DB بارگذاری
+        // می‌کند تا instance route-bound از داده‌ی stale در امان بماند.
+        $order->refresh();
+        $previous = $order->status?->value ?? '';
         $order->update($updates);
 
         OrderStatusLog::create([
@@ -420,11 +421,9 @@ class DashboardController extends Controller
         $slot = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
         $datetime = $validated['visit_date'] . ' ' . $slot['start'];
 
-        // وضعیت قبلی را از DB می‌خوانیم نه از instance route-bound تا
-        // اگر تغییر همزمانی رخ داد (مثل auto-coordinate قبلی) آخرین
-        // مقدار واقعی DB ملاک باشد.
-        $previousStatusValue = (string) Order::whereKey($order->id)->value('status');
-        $previousStatus = OrderStatus::tryFrom($previousStatusValue) ?? $order->status;
+        // وضعیت قبلی را از DB تازه می‌خوانیم — جلوگیری از خواندن stale.
+        $order->refresh();
+        $previousStatus = $order->status;
         $autoCoordinated = $previousStatus === OrderStatus::New;
 
         $updates = ['visit_scheduled_at' => $datetime];
