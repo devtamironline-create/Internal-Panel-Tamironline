@@ -210,16 +210,18 @@ class TCS_Order_Sync
             'order_note_content'        => $this->meta_array($get('order_note_content')),
             'log_return'                => $this->meta_array($get('log_return')),
 
-            // زمان مراجعه — کلیدهای رایج در نسخه‌های مختلف WP CRM. هر کدام
-            // پر بود ارسال می‌شود؛ سمت Laravel در SyncOrderController به
-            // visit_scheduled_at تبدیل می‌شود.
-            'visit_date'  => $this->meta_str($get('visit_date'))
+            // زمان مراجعه — قالب tamironline-v3 از scheduled_date و
+            // scheduled_time استفاده می‌کند. بقیه fallback ها برای
+            // نسخه‌های قدیمی‌تر CRM-Hostlino نگه داشته شده.
+            'visit_date'  => $this->meta_str($get('scheduled_date'))
+                          ?? $this->meta_str($get('visit_date'))
                           ?? $this->meta_str($get('date_meet'))
                           ?? $this->meta_str($get('day_meet'))
                           ?? $this->meta_str($get('day'))
                           ?? $this->meta_str($get('morooja_date'))
                           ?? $this->meta_str($get('appointment_date')),
-            'visit_time'  => $this->meta_str($get('visit_time'))
+            'visit_time'  => $this->meta_str($get('scheduled_time'))
+                          ?? $this->meta_str($get('visit_time'))
                           ?? $this->meta_str($get('time_meet'))
                           ?? $this->meta_str($get('hour_meet'))
                           ?? $this->meta_str($get('hour'))
