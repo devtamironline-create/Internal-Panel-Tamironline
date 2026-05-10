@@ -92,9 +92,28 @@ class DashboardController extends Controller
             ];
         }
 
+        // سفارش‌های فعالِ بدون زمان مراجعه — معمولاً سفارش‌هایی که از
+        // WP sync شده‌اند یا اپراتور بدون تاریخ ثبت کرده. تکنسین باید
+        // با مشتری هماهنگ کند و زمان را ثبت کند، پس اینها را به‌صورت
+        // مجزا در داشبورد نشان می‌دهیم.
+        $unscheduledOrders = Order::query()
+            ->forTechnician($tech->id)
+            ->whereNull('visit_scheduled_at')
+            ->whereIn('status', [
+                OrderStatus::New->value,
+                OrderStatus::Coordinated->value,
+                OrderStatus::Open->value,
+                OrderStatus::Suspended->value,
+            ])
+            ->with('customer:id,first_name,mobile')
+            ->latest('created_at')
+            ->limit(20)
+            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'status', 'created_at']);
+
         return view('crm::tech-panel.dashboard', [
             'technician' => $tech,
             'calendarDays' => $calendarDays,
+            'unscheduledOrders' => $unscheduledOrders,
         ]);
     }
 
