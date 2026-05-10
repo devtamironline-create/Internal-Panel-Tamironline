@@ -47,25 +47,59 @@ class DashboardController extends Controller
         // تقویم داشبورد — ۷ روز آینده با تفکیک سفارش‌ها بر اساس بازهٔ
         // ساعتی (۹–۱۲، ۱۲–۱۵، ۱۵–۱۸، ۱۸–۲۱). همان VISIT_SLOTS که در
         // ویزارد و فرم هماهنگی تکنسین استفاده می‌شود.
+        // سفارش‌های بدون visit_scheduled_at (معمولاً sync‌شده از WP) را
+        // هم بر اساس created_at داخل همان روز در یک بخش «بدون زمان مشخص»
+        // نمایش می‌دهیم تا تکنسین آن‌ها را دور بنماند.
         $calendarStart = now()->startOfDay();
         $calendarEnd = $calendarStart->copy()->addDays(7)->endOfDay();
-        $calendarOrders = Order::query()
+        $activeStatuses = [
+            OrderStatus::New->value,
+            OrderStatus::Coordinated->value,
+            OrderStatus::Open->value,
+            OrderStatus::Suspended->value,
+        ];
+
+        // ۱) سفارش‌های دارای زمان مراجعه (در بازهٔ ۷ روز پیشِ‌رو)
+        $scheduledOrders = Order::query()
             ->forTechnician($tech->id)
             ->whereBetween('visit_scheduled_at', [$calendarStart, $calendarEnd])
             ->with('customer:id,first_name,mobile')
             ->orderBy('visit_scheduled_at')
-            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'visit_scheduled_at', 'status']);
+            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'visit_scheduled_at', 'status', 'created_at']);
 
-        $calendarByDay = $calendarOrders->groupBy(fn (Order $o) => $o->visit_scheduled_at?->toDateString());
+        // ۲) سفارش‌های فعالِ بدون زمان مراجعه — همه را داخل تقویم
+        // بر اساس created_at توزیع می‌کنیم. اگر created_at قبل از امروز
+        // باشد، در روز «امروز» قرار می‌گیرد تا دور نماند.
+        $unscheduledOrders = Order::query()
+            ->forTechnician($tech->id)
+            ->whereNull('visit_scheduled_at')
+            ->whereIn('status', $activeStatuses)
+            ->with('customer:id,first_name,mobile')
+            ->latest('created_at')
+            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'visit_scheduled_at', 'status', 'created_at']);
+
+        $scheduledByDay = $scheduledOrders->groupBy(fn (Order $o) => $o->visit_scheduled_at?->toDateString());
+
+        // unscheduled را بر اساس created_at به روزها نگاشت می‌کنیم؛ اگر
+        // created_at قدیمی‌تر از امروز است، آن را امروز در نظر می‌گیریم
+        // تا تکنسین فوراً ببیند و هماهنگی کند.
+        $todayKey = $calendarStart->toDateString();
+        $unscheduledByDay = $unscheduledOrders->groupBy(function (Order $o) use ($calendarStart, $calendarEnd, $todayKey) {
+            $created = $o->created_at?->copy() ?? now();
+            if ($created->lt($calendarStart) || $created->gt($calendarEnd)) {
+                return $todayKey; // قدیمی یا خیلی دور — به امروز bucket کن
+            }
+            return $created->toDateString();
+        });
 
         $calendarDays = [];
         $slots = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS;
         for ($i = 0; $i < 7; $i++) {
             $d = $calendarStart->copy()->addDays($i);
-            $dayOrders = $calendarByDay->get($d->toDateString(), collect());
+            $dayOrders = $scheduledByDay->get($d->toDateString(), collect());
+            $dayUnscheduled = $unscheduledByDay->get($d->toDateString(), collect());
 
-            // تفکیک سفارش‌های هر روز در ۴ بازه + یک گروه «بدون بازهٔ مشخص»
-            // برای رکوردهایی که ساعتشان داخل هیچ بازه‌ای نمی‌افتد.
+            // تفکیک سفارش‌های هر روز در ۴ بازه
             $slotBuckets = [1 => collect(), 2 => collect(), 3 => collect(), 4 => collect(), 'other' => collect()];
             foreach ($dayOrders as $o) {
                 $h = (int) $o->visit_scheduled_at?->format('H');
@@ -81,39 +115,23 @@ class DashboardController extends Controller
 
             $calendarDays[] = [
                 'date'    => $d,
-                'count'   => $dayOrders->count(),
+                'count'   => $dayOrders->count() + $dayUnscheduled->count(),
+                'scheduledCount' => $dayOrders->count(),
+                'unscheduledCount' => $dayUnscheduled->count(),
                 'slots'   => [
                     ['key' => 1, 'label' => $slots[1]['label'], 'orders' => $slotBuckets[1]],
                     ['key' => 2, 'label' => $slots[2]['label'], 'orders' => $slotBuckets[2]],
                     ['key' => 3, 'label' => $slots[3]['label'], 'orders' => $slotBuckets[3]],
                     ['key' => 4, 'label' => $slots[4]['label'], 'orders' => $slotBuckets[4]],
                 ],
-                'unscheduled' => $slotBuckets['other'],
+                'offSlot' => $slotBuckets['other'],
+                'unscheduled' => $dayUnscheduled,
             ];
         }
-
-        // سفارش‌های فعالِ بدون زمان مراجعه — معمولاً سفارش‌هایی که از
-        // WP sync شده‌اند یا اپراتور بدون تاریخ ثبت کرده. تکنسین باید
-        // با مشتری هماهنگ کند و زمان را ثبت کند، پس اینها را به‌صورت
-        // مجزا در داشبورد نشان می‌دهیم.
-        $unscheduledOrders = Order::query()
-            ->forTechnician($tech->id)
-            ->whereNull('visit_scheduled_at')
-            ->whereIn('status', [
-                OrderStatus::New->value,
-                OrderStatus::Coordinated->value,
-                OrderStatus::Open->value,
-                OrderStatus::Suspended->value,
-            ])
-            ->with('customer:id,first_name,mobile')
-            ->latest('created_at')
-            ->limit(20)
-            ->get(['id', 'order_code', 'customer_id', 'customer_name', 'customer_mobile', 'status', 'created_at']);
 
         return view('crm::tech-panel.dashboard', [
             'technician' => $tech,
             'calendarDays' => $calendarDays,
-            'unscheduledOrders' => $unscheduledOrders,
         ]);
     }
 

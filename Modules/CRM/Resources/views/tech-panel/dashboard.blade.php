@@ -149,6 +149,44 @@
                         <div class="text-xs text-gray-500">هیچ سفارشی برای این روز ثبت نشده است.</div>
                     </div>
                 @else
+                    {{-- بخش «بدون زمان مشخص» — قبل از بازه‌ها چون نیاز به اقدام دارد --}}
+                    @if($cd['unscheduled']->count())
+                        <div class="rounded-2xl overflow-hidden border border-amber-200">
+                            <div class="flex items-center justify-between px-3 py-2 bg-amber-50">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                    <span class="text-xs font-bold text-amber-800">بدون زمان مشخص — نیاز به هماهنگی</span>
+                                </div>
+                                <span class="text-[10px] font-bold text-amber-700">
+                                    {{ $faNum($cd['unscheduled']->count()) }} مورد
+                                </span>
+                            </div>
+                            <div class="divide-y divide-amber-100">
+                                @foreach($cd['unscheduled'] as $o)
+                                    <a href="{{ route('tech.orders.show', $o) }}"
+                                       class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-amber-50/50 transition">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-medium text-gray-900 truncate">
+                                                {{ $o->customer_name ?: ($o->customer?->display_name ?? '—') }}
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <span class="text-[10px] text-gray-400" dir="ltr">{{ $o->order_code }}</span>
+                                                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full {{ $o->status->badgeClass() }}">
+                                                    {{ $o->status->label() }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                                        </svg>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     @foreach($cd['slots'] as $slot)
                         <div class="rounded-2xl overflow-hidden border {{ $slot['orders']->count() ? 'border-emerald-200' : 'border-gray-100' }}">
                             {{-- هدر بازه --}}
@@ -199,13 +237,13 @@
                         </div>
                     @endforeach
 
-                    @if($cd['unscheduled']->count())
+                    @if($cd['offSlot']->count())
                         <div class="rounded-2xl overflow-hidden border border-amber-200">
                             <div class="px-3 py-2 bg-amber-50 text-xs font-bold text-amber-800">
                                 خارج از بازه‌های استاندارد
                             </div>
                             <div class="divide-y divide-amber-100">
-                                @foreach($cd['unscheduled'] as $o)
+                                @foreach($cd['offSlot'] as $o)
                                     <a href="{{ route('tech.orders.show', $o) }}"
                                        class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-amber-50/40">
                                         <div class="min-w-0 flex-1">
@@ -230,56 +268,7 @@
     </div>
     @endif
 
-    {{-- ─────── سفارش‌های بدون زمان مراجعه ───────
-         معمولاً سفارش‌هایی که از WP sync شده‌اند یا اپراتور بدون تاریخ
-         ثبت کرده. تکنسین باید با مشتری هماهنگ و زمان را ثبت کند. --}}
-    @if(isset($unscheduledOrders) && $unscheduledOrders->count())
-    <div class="mt-3 mx-3 bg-white rounded-[28px] shadow-lg p-4">
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                </div>
-                <div>
-                    <div class="text-sm font-bold text-gray-900">نیاز به هماهنگی</div>
-                    <div class="text-[11px] text-gray-500">سفارش‌های بدون زمان مراجعه</div>
-                </div>
-            </div>
-            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800">
-                {{ $faNum($unscheduledOrders->count()) }}
-            </span>
-        </div>
 
-        <div class="space-y-2">
-            @foreach($unscheduledOrders as $o)
-                @php
-                    $createdAt = $o->created_at ? \Morilog\Jalali\Jalalian::fromCarbon($o->created_at)->format('Y/m/d') : '—';
-                @endphp
-                <a href="{{ route('tech.orders.show', $o) }}"
-                   class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50/40 transition">
-                    <div class="min-w-0 flex-1">
-                        <div class="text-sm font-medium text-gray-900 truncate">
-                            {{ $o->customer_name ?: ($o->customer?->display_name ?? '—') }}
-                        </div>
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-[10px] text-gray-400" dir="ltr">{{ $o->order_code }}</span>
-                            <span class="text-gray-300 text-[10px]">·</span>
-                            <span class="text-[10px] text-gray-500">ثبت: {{ $faNum($createdAt) }}</span>
-                            <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full {{ $o->status->badgeClass() }}">
-                                {{ $o->status->label() }}
-                            </span>
-                        </div>
-                    </div>
-                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </a>
-            @endforeach
-        </div>
-    </div>
-    @endif
 
     {{-- ─────── White sheet for service cards ─────── --}}
     <div class="{{ isset($calendarDays) && count($calendarDays) ? 'mt-3' : 'relative z-10 -mt-28' }} mx-3 bg-white rounded-[28px] shadow-lg pt-4 pb-5 px-4">
