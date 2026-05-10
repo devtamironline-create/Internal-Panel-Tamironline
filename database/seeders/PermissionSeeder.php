@@ -71,6 +71,7 @@ class PermissionSeeder extends Seeder
             'edit-crm-order' => 'ویرایش سفارش CRM',
             'delete-crm-order' => 'حذف سفارش CRM',
             'assign-crm-technician' => 'تخصیص تکنسین به سفارش CRM',
+            'view-tech-suggestions' => 'مشاهده پیشنهاد هوشمند تکنسین برای سفارش',
             'change-crm-order-status' => 'تغییر وضعیت سفارش CRM',
             'export-crm-orders' => 'خروجی Excel سفارش‌های CRM',
 

@@ -153,7 +153,72 @@
     </div>
 </div>
 
-<div class="flex items-center gap-3">
+{{-- ─── تخصص برای سیستم پیشنهاد هوشمند ─── --}}
+@if(isset($allCities) && isset($allBrands) && isset($allDevices))
+<div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6 space-y-4">
+    <div>
+        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">تخصص برای پیشنهاد هوشمند</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            این مقادیر تعیین می‌کنند چه سفارش‌هایی به این تکنسین پیشنهاد شود.
+            بدون تگ‌گذاری، تکنسین در پیشنهادها ظاهر نمی‌شود.
+        </p>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">شهرهای فعال</label>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+            @foreach($allCities as $c)
+                <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input type="checkbox" name="city_ids[]" value="{{ $c->id }}"
+                           @checked(in_array($c->id, $selectedCityIds ?? []))
+                           class="w-4 h-4 accent-brand-600">
+                    <span>{{ $c->name }}</span>
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">برندهای تخصصی</label>
+            <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                @foreach($allBrands as $b)
+                    <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                        <input type="checkbox" name="brand_ids[]" value="{{ $b->id }}"
+                               @checked(in_array($b->id, $selectedBrandIds ?? []))
+                               class="w-4 h-4 accent-brand-600">
+                        <span>{{ $b->name }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دستگاه‌های قابل انجام</label>
+            <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                @foreach($allDevices as $d)
+                    <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                        <input type="checkbox" name="device_ids[]" value="{{ $d->id }}"
+                               @checked(in_array($d->id, $selectedDeviceIds ?? []))
+                               class="w-4 h-4 accent-brand-600">
+                        <span>{{ $d->name }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">امتیاز رضایت مشتری (۰ تا ۵)</label>
+        <input type="number" name="satisfaction_score" min="0" max="5" step="0.1"
+               value="{{ old('satisfaction_score', $technician->satisfaction_score) }}"
+               class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+        <p class="text-xs text-gray-400 mt-1">با یک رقم اعشار. خالی = استفاده از مقدار میانگین (۲.۵).</p>
+    </div>
+</div>
+@endif
+
+<div class="flex items-center gap-3 mt-6">
     <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ذخیره</button>
     <a href="{{ route('crm.technicians.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">انصراف</a>
 </div>

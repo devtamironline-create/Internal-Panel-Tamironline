@@ -19,8 +19,50 @@
             </p>
         </div>
     @else
+    {{-- ─── پیشنهاد هوشمند تکنسین (فاز ۱) ─── --}}
+    @if($this->smartSuggestions->count())
+        @php
+            $tierClasses = [
+                'excellent' => ['bg-emerald-50','border-emerald-300','bg-emerald-500'],
+                'good'      => ['bg-blue-50','border-blue-200','bg-blue-500'],
+                'normal'    => ['bg-gray-50','border-gray-200','bg-gray-500'],
+                'caution'   => ['bg-amber-50','border-amber-300','bg-amber-500'],
+                'blocked'   => ['bg-rose-50','border-rose-300','bg-rose-500'],
+            ];
+        @endphp
+        <div class="mb-5">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span class="text-sm font-bold text-brand-700">پیشنهاد هوشمند بر اساس انتخاب‌های شما</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                @foreach($this->smartSuggestions as $s)
+                    @php [$bg, $border, $dotBg] = $tierClasses[$s->tier] ?? $tierClasses['normal']; @endphp
+                    <button type="button" wire:click="$set('technicianId', {{ $s->technician->id }})"
+                            wire:key="suggest-{{ $s->technician->id }}"
+                            class="text-right p-3 rounded-xl border-2 {{ $bg }} {{ $border }} hover:shadow-md transition">
+                        <div class="flex items-center gap-2">
+                            <div class="w-9 h-9 rounded-full {{ $dotBg }} text-white flex items-center justify-center font-bold text-sm flex-shrink-0">{{ $s->score }}</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-sm truncate">{{ trim($s->technician->firstname_tech ?: $s->technician->first_name) ?: '—' }}</div>
+                                <div class="text-[10px] text-gray-600">{{ $s->label }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[10px] text-gray-500">
+                            سفارش باز: {{ $s->now_orders }}@if($s->max_orders)/{{ $s->max_orders }}@endif
+                            · بدهی: {{ number_format($s->debt) }}
+                            · کنسلی: {{ $s->cancel_rate_pct }}%
+                        </div>
+                    </button>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">تکنسین</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">انتخاب دستی تکنسین</label>
 
         {{-- جستجو در نام/موبایل تکنسین --}}
         <div class="relative mb-3">

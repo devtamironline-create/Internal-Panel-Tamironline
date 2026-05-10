@@ -192,6 +192,26 @@ class OrderWizard extends Component
         return $u !== null && $u->can('assign-crm-technician');
     }
 
+    /** پیشنهاد هوشمند بر اساس انتخاب‌های فعلی wizard. */
+    #[Computed]
+    public function smartSuggestions()
+    {
+        if (! auth()->user()?->can('view-tech-suggestions')) {
+            return collect();
+        }
+        if (! $this->cityId || ! $this->brandId || ! $this->deviceId) {
+            return collect();
+        }
+        // Order ساختگی فقط برای کوئری service — هنوز در DB ذخیره نشده.
+        $fakeOrder = new Order([
+            'city_id' => $this->cityId,
+            'brand_id' => $this->brandId,
+            'device_id' => $this->deviceId,
+        ]);
+        return app(\Modules\CRM\Services\TechnicianSuggestionService::class)
+            ->suggestForOrder($fakeOrder, 5);
+    }
+
     #[Computed]
     public function technicianOptions()
     {

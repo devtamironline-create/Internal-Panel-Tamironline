@@ -489,13 +489,91 @@
                 @endcan
                 @else
                 <p class="text-sm text-gray-500 mb-3">تکنسینی تخصیص داده نشده.</p>
+
+                {{-- ─── پنل پیشنهاد هوشمند تکنسین (فاز ۱) ─── --}}
+                @can('view-tech-suggestions')
+                    @if(isset($suggestions) && $suggestions->count())
+                        @php
+                            $tierClasses = [
+                                'excellent' => ['bg-emerald-50','border-emerald-300','text-emerald-700','bg-emerald-500'],
+                                'good'      => ['bg-blue-50','border-blue-200','text-blue-700','bg-blue-500'],
+                                'normal'    => ['bg-gray-50','border-gray-200','text-gray-700','bg-gray-500'],
+                                'caution'   => ['bg-amber-50','border-amber-300','text-amber-800','bg-amber-500'],
+                                'blocked'   => ['bg-rose-50','border-rose-300','text-rose-700','bg-rose-500'],
+                            ];
+                        @endphp
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span class="text-xs font-bold text-brand-700">پیشنهاد هوشمند ({{ $suggestions->count() }} نفر)</span>
+                            </div>
+                            <div class="space-y-2">
+                                @foreach($suggestions as $s)
+                                    @php [$bg, $border, $textColor, $dotBg] = $tierClasses[$s->tier] ?? $tierClasses['normal']; @endphp
+                                    <div class="p-3 rounded-lg border-2 {{ $bg }} {{ $border }}">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                                <div class="w-9 h-9 rounded-full {{ $dotBg }} text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                                    {{ $s->score }}
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="text-sm font-bold truncate">
+                                                        {{ trim($s->technician->firstname_tech ?: $s->technician->first_name) ?: '—' }}
+                                                    </div>
+                                                    <div class="text-[10px] {{ $textColor }} font-medium">{{ $s->label }}</div>
+                                                </div>
+                                            </div>
+                                            <form action="{{ route('crm.orders.assign', $order) }}" method="POST" class="flex-shrink-0">
+                                                @csrf
+                                                <input type="hidden" name="technician_id" value="{{ $s->technician->id }}">
+                                                <button class="px-3 py-1.5 bg-brand-700 text-white rounded-lg hover:bg-brand-800 text-xs font-bold">تخصیص</button>
+                                            </form>
+                                        </div>
+
+                                        <div class="mt-2 grid grid-cols-3 gap-1 text-[10px]">
+                                            <div class="bg-white/60 rounded px-1.5 py-1 text-center">
+                                                <span class="text-gray-500">سفارش باز:</span>
+                                                <span class="font-bold">{{ $s->now_orders }}@if($s->max_orders)/{{ $s->max_orders }}@endif</span>
+                                            </div>
+                                            <div class="bg-white/60 rounded px-1.5 py-1 text-center">
+                                                <span class="text-gray-500">بدهی:</span>
+                                                <span class="font-bold">{{ number_format($s->debt) }}</span>
+                                            </div>
+                                            <div class="bg-white/60 rounded px-1.5 py-1 text-center">
+                                                <span class="text-gray-500">کنسلی:</span>
+                                                <span class="font-bold">{{ $s->cancel_rate_pct }}%</span>
+                                            </div>
+                                        </div>
+
+                                        @if(! empty($s->reasons))
+                                            <div class="mt-1.5 text-[10px] text-gray-600 leading-5">
+                                                {{ implode(' · ', $s->reasons) }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-2 leading-5">
+                                پیشنهادها بر اساس وزن‌های: سفارش‌باز ۳۰٪، بدهی ۲۵٪، رضایت ۲۰٪، کنسلی ۱۰٪، فعالیت ۱۰٪، پاسخ ۵٪.
+                            </p>
+                        </div>
+                    @elseif($order->city_id || $order->brand_id || $order->device_id)
+                        <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-6">
+                            هیچ تکنسینی با تگ‌های منطبق این سفارش (شهر/برند/دستگاه) پیدا نشد.
+                            تکنسین‌های مرتبط را در صفحهٔ پروفایلشان تگ کنید تا در پیشنهاد ظاهر شوند.
+                        </div>
+                    @endif
+                @endcan
+
                 @can('assign-crm-technician')
                 <form action="{{ route('crm.orders.assign', $order) }}" method="POST" class="space-y-2">
                     @csrf
                     <select name="technician_id" required
                             data-searchable data-placeholder="جستجوی نام یا موبایل تکنسین..."
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                        <option value="">— انتخاب تکنسین آماده —</option>
+                        <option value="">— یا انتخاب دستی از کل تکنسین‌ها —</option>
                         @foreach($technicians as $t)
                         <option value="{{ $t->id }}">{{ trim($t->first_name . ' ' . ($t->last_name ?? '')) }} @if($t->mobile) — {{ $t->mobile }} @endif</option>
                         @endforeach

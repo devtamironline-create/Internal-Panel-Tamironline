@@ -4,6 +4,7 @@ namespace Modules\CRM\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -53,6 +54,7 @@ class Technician extends Authenticatable
 
         // قوانین مالی/کاری
         'percent',
+        'satisfaction_score',
         'tech_per_of_all',
         'max_order',
         'max_price',
@@ -66,6 +68,7 @@ class Technician extends Authenticatable
     protected $casts = [
         'wp_id' => 'integer',
         'percent' => 'integer',
+        'satisfaction_score' => 'decimal:1',
         'tech_per_of_all' => 'integer',
         'max_order' => 'integer',
         'max_price' => 'integer',
@@ -87,6 +90,27 @@ class Technician extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** شهرهای فعال — برای فیلتر منطقه‌ای در سیستم پیشنهاد تخصیص. */
+    public function cities(): BelongsToMany
+    {
+        return $this->belongsToMany(City::class, 'crm_technician_cities')
+            ->withTimestamps('created_at', null);
+    }
+
+    /** برندهای تخصصی. */
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Brand::class, 'crm_technician_brands')
+            ->withTimestamps('created_at', null);
+    }
+
+    /** دستگاه‌های قابل انجام. */
+    public function devices(): BelongsToMany
+    {
+        return $this->belongsToMany(Device::class, 'crm_technician_devices')
+            ->withTimestamps('created_at', null);
     }
 
     public function invoices(): HasMany

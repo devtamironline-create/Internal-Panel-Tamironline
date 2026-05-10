@@ -266,10 +266,17 @@ class OrderController extends Controller
             'creator', 'items', 'statusLogs.changer',
         ]);
 
+        $suggestions = collect();
+        if (auth()->user()?->can('view-tech-suggestions') && ! $order->technician_id) {
+            $suggestions = app(\Modules\CRM\Services\TechnicianSuggestionService::class)
+                ->suggestForOrder($order, 5);
+        }
+
         return view('crm::orders.show', [
             'order' => $order,
             'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
+            'suggestions' => $suggestions,
         ]);
     }
 
