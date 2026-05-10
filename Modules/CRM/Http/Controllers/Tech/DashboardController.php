@@ -418,18 +418,50 @@ class DashboardController extends Controller
         $slot = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
         $datetime = $validated['visit_date'] . ' ' . $slot['start'];
 
-        $order->update(['visit_scheduled_at' => $datetime]);
+        // اگر سفارش هنوز «جدید» است، ثبت زمان مراجعه = هماهنگی موفق با
+        // مشتری، پس وضعیت را خودکار به «هماهنگ شده» می‌بریم. روی سایر
+        // وضعیت‌ها (Open/Suspended/...) دست نمی‌زنیم چون تکنسین قبلاً
+        // فراتر از مرحلهٔ هماهنگی اولیه رفته.
+        $previousStatus = $order->status;
+        $autoCoordinated = $previousStatus === OrderStatus::New;
 
+        $updates = ['visit_scheduled_at' => $datetime];
+        if ($autoCoordinated) {
+            $updates['status'] = OrderStatus::Coordinated->value;
+        }
+
+        $order->update($updates);
+
+        $jalaliDate = \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d');
         \Modules\CRM\Models\OrderStatusLog::create([
             'order_id' => $order->id,
-            'from_status' => $order->status->value,
-            'to_status' => $order->status->value,
-            'note' => 'ثبت زمان مراجعه: ' . \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d') . ' — ' . $slot['label'],
+            'from_status' => $previousStatus->value,
+            'to_status' => ($autoCoordinated ? OrderStatus::Coordinated : $previousStatus)->value,
+            'note' => $autoCoordinated
+                ? 'هماهنگی با مشتری: ' . $jalaliDate . ' — ' . $slot['label']
+                : 'به‌روزرسانی زمان مراجعه: ' . $jalaliDate . ' — ' . $slot['label'],
             'changed_by' => $tech->user_id,
             'created_at' => now(),
         ]);
 
-        return back()->with('success', 'زمان مراجعه ثبت شد.');
+        // اگر گذار به Coordinated رخ داد، پیامک «هماهنگی» را به مشتری
+        // بفرست — هم‌ارز مسیر updateOrderStatus وقتی تکنسین دستی به
+        // هماهنگ‌شده تغییر می‌دهد.
+        if ($autoCoordinated) {
+            if ($trigger = SmsTrigger::fromOrderStatus(OrderStatus::Coordinated)) {
+                try {
+                    $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+                } catch (\Throwable $e) {
+                    // خرابی SMS نباید ثبت زمان را شکست‌بدهد.
+                }
+            }
+        }
+
+        $message = $autoCoordinated
+            ? 'زمان مراجعه ثبت شد و سفارش به وضعیت «هماهنگ شده» تغییر کرد.'
+            : 'زمان مراجعه به‌روزرسانی شد.';
+
+        return back()->with('success', $message);
     }
 
     /**
