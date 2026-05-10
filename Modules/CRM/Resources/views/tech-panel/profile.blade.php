@@ -10,11 +10,6 @@
         'suspended' => ['معلق', 'bg-amber-100 text-amber-800'],
     ];
     [$statusLabel, $statusBadge] = $statusLabels[$technician->status] ?? [$technician->status ?? '—', 'bg-gray-100 text-gray-700'];
-
-    $calcLabels = [
-        1 => 'بر اساس درصد کل (tech_per_of_all)',
-        2 => 'بر اساس درصد ساده (percent)',
-    ];
 @endphp
 
 @section('body')
@@ -176,43 +171,9 @@
         </svg>
     </a>
 
-    {{-- ─────── Financial config (read-only) ─────── --}}
-    <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 space-y-2.5">
-        <div class="text-[11px] text-gray-400">قوانین مالی و کاری</div>
-        <p class="text-[11px] text-gray-400 leading-6">
-            این مقادیر توسط مدیر تنظیم می‌شوند و از پنل تکنسین قابل ویرایش نیستند.
-        </p>
-        @if($technician->percent !== null)
-            <div class="flex items-center justify-between pt-1">
-                <span class="text-xs text-gray-500">درصد کمیسیون</span>
-                <span class="text-sm text-gray-800 font-bold">{{ number_format((int) $technician->percent) }}%</span>
-            </div>
-        @endif
-        @if($technician->tech_per_of_all !== null)
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-500">درصد روی کل</span>
-                <span class="text-sm text-gray-800">{{ number_format((int) $technician->tech_per_of_all) }}%</span>
-            </div>
-        @endif
-        @if($technician->type_of_calc_tech)
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-500">روش محاسبه</span>
-                <span class="text-xs text-gray-700">{{ $calcLabels[(int) $technician->type_of_calc_tech] ?? $technician->type_of_calc_tech }}</span>
-            </div>
-        @endif
-        @if($technician->max_order)
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-500">حداکثر سفارش هم‌زمان</span>
-                <span class="text-sm text-gray-800">{{ number_format((int) $technician->max_order) }}</span>
-            </div>
-        @endif
-        @if($technician->max_price)
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-500">حداکثر مبلغ مجاز</span>
-                <span class="text-sm text-gray-800">{{ number_format((int) $technician->max_price) }} <span class="text-[10px] text-gray-400">تومان</span></span>
-            </div>
-        @endif
-    </div>
+    {{-- بخش «قوانین مالی و کاری» حذف شد به درخواست ادمین — اطلاعاتش
+         در پنل ادمین قابل مدیریت است و نیازی به نمایش به تکنسین نیست. --}}
+
 
     {{-- ─────── Password change ─────── --}}
     <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
