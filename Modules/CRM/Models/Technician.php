@@ -95,22 +95,19 @@ class Technician extends Authenticatable
     /** شهرهای فعال — برای فیلتر منطقه‌ای در سیستم پیشنهاد تخصیص. */
     public function cities(): BelongsToMany
     {
-        return $this->belongsToMany(City::class, 'crm_technician_cities')
-            ->withTimestamps('created_at', null);
+        return $this->belongsToMany(City::class, 'crm_technician_cities');
     }
 
     /** برندهای تخصصی. */
     public function brands(): BelongsToMany
     {
-        return $this->belongsToMany(Brand::class, 'crm_technician_brands')
-            ->withTimestamps('created_at', null);
+        return $this->belongsToMany(Brand::class, 'crm_technician_brands');
     }
 
     /** دستگاه‌های قابل انجام. */
     public function devices(): BelongsToMany
     {
-        return $this->belongsToMany(Device::class, 'crm_technician_devices')
-            ->withTimestamps('created_at', null);
+        return $this->belongsToMany(Device::class, 'crm_technician_devices');
     }
 
     public function invoices(): HasMany
