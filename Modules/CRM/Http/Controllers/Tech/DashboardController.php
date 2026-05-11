@@ -286,6 +286,16 @@ class DashboardController extends Controller
 
         // ─── بلاک فاکتور — هم‌ارز invoice block پنل WP وقتی status=5 ───
         if ($newStatus === OrderStatus::Completed) {
+            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد).
+            $hasNewImage = $request->hasFile('device_img1');
+            $hasExistingImage = ! empty($order->device_img1);
+            $isDraft = (bool) ($validated['save_as_draft'] ?? false);
+            if (! $isDraft && ! $hasNewImage && ! $hasExistingImage) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['device_img1' => 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.']);
+            }
+
             $updates['completed_at'] = now();
 
             // قطعات: ورودی به‌صورت آرایه‌ای از {title,buy_price,customer_price}

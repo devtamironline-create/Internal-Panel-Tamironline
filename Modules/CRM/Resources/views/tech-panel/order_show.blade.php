@@ -380,9 +380,7 @@
                 selected: '{{ old('status', '') }}',
                 pieces: {{ \Illuminate\Support\Js::from($existingPieces) }},
                 priceCustomer: {{ (int) old('price_customer', $order->price_customer ?? 0) }},
-                hire: {{ (int) old('hire', $order->hire ?? 0) }},
-                transportation: {{ (int) old('transportation', $order->transportation ?? 0) }},
-                discount: {{ (int) old('discount', $order->discount ?? 0) }},
+                hire: 0, transportation: 0, discount: 0,
                 techPercent: {{ (int) ($technician->percent ?? 0) }},
                 techPerOfAll: {{ (int) ($technician->tech_per_of_all ?? 0) }},
                 techCalcType: '{{ (string) ($technician->type_of_calc_tech ?? '') }}',
@@ -473,27 +471,10 @@
                         </button>
                     </div>
 
-                    {{-- hire / transportation / discount — اختیاری --}}
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="text-[11px] text-gray-500 mb-1 block">اجرت</label>
-                            <input type="number" name="hire" min="0" step="1000" inputmode="numeric"
-                                   x-model.number="hire"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="text-[11px] text-gray-500 mb-1 block">ایاب و ذهاب</label>
-                            <input type="number" name="transportation" min="0" step="1000" inputmode="numeric"
-                                   x-model.number="transportation"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="text-[11px] text-gray-500 mb-1 block">تخفیف</label>
-                            <input type="number" name="discount" min="0" step="1000" inputmode="numeric"
-                                   x-model.number="discount"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
-                        </div>
-                    </div>
+                    {{-- اجرت / ایاب و ذهاب / تخفیف به درخواست ادمین حذف شد —
+                         در محاسبهٔ سهم تکنسین موثر نبودند و فقط فضا اشغال
+                         می‌کردند. اگر روزی نیاز شد، در پنل ادمین می‌توانید
+                         اضافه کنید. --}}
 
                     {{-- جمع‌بندی فاکتور — هم‌ارز WP tech_show_order.php --}}
                     <div class="bg-amber-50/50 border border-amber-200 rounded-xl overflow-hidden">
@@ -520,18 +501,24 @@
 
                     {{-- device_img1 upload --}}
                     <div>
-                        <label class="text-[11px] text-gray-500 mb-1 block">عکس دستگاه (پس از تعمیر)</label>
+                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">
+                            عکس دستگاه (پس از تعمیر) — اجباری *
+                        </label>
                         @if($order->device_img1)
                             <a href="{{ asset('storage/' . $order->device_img1) }}" target="_blank"
                                class="inline-flex items-center gap-1.5 text-xs text-brand-700 mb-2">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                                 </svg>
-                                مشاهده عکس فعلی
+                                مشاهده عکس فعلی (در صورت آپلود جدید جایگزین می‌شود)
                             </a>
                         @endif
                         <input type="file" name="device_img1" accept="image/*"
-                               class="block w-full text-xs text-gray-600 file:ms-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:font-bold file:text-xs">
+                               @if(! $order->device_img1) required @endif
+                               class="block w-full text-xs text-gray-600 file:ms-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-rose-50 file:text-rose-700 file:font-bold file:text-xs">
+                        <p class="text-[10px] text-rose-600 mt-1">
+                            بدون عکس امکان بستن سفارش وجود ندارد. JPG/PNG حداکثر ۵ مگابایت.
+                        </p>
                     </div>
 
                     {{-- invoice_descripotion --}}
