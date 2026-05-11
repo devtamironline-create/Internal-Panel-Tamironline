@@ -525,11 +525,18 @@
                         </p>
                     </div>
 
-                    {{-- invoice_descripotion --}}
+                    {{-- invoice_descripotion — اجباری برای بستن سفارش (مگر پیش‌نویس) --}}
                     <div>
-                        <label class="text-[11px] text-gray-500 mb-1 block">توضیحات فاکتور</label>
-                        <textarea name="invoice_descripotion" rows="2"
+                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">توضیحات فاکتور — اجباری *</label>
+                        <textarea name="invoice_descripotion" rows="3"
+                                  :required="selected === '{{ OrderStatus::Completed->value }}'"
                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('invoice_descripotion', $order->invoice_descripotion) }}</textarea>
+                        <div class="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-6">
+                            <strong>توجه:</strong> توضیحات وارد شده در کادر بالا به صورت فاکتور آنلاین برای مشتری ارسال می‌گردد و اعتبار قانونی دارد. خواهشمندیم در ثبت قطعات و توضیحات، دقت لازم را به عمل آورید. از همکاری شما سپاسگزاریم.
+                        </div>
+                        @error('invoice_descripotion')
+                            <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     {{-- save_as_draft --}}

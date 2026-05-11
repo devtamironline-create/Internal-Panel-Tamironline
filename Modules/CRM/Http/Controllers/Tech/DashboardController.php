@@ -289,14 +289,24 @@ class DashboardController extends Controller
 
         // ─── بلاک فاکتور — هم‌ارز invoice block پنل WP وقتی status=5 ───
         if ($newStatus === OrderStatus::Completed) {
-            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد).
             $hasNewImage = $request->hasFile('device_img1');
             $hasExistingImage = ! empty($order->device_img1);
             $isDraft = (bool) ($validated['save_as_draft'] ?? false);
+            $errors = [];
+
+            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد یا پیش‌نویس).
             if (! $isDraft && ! $hasNewImage && ! $hasExistingImage) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['device_img1' => 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.']);
+                $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
+            }
+
+            // توضیحات فاکتور اجباری — به مشتری به‌عنوان فاکتور قانونی فرستاده می‌شود.
+            $invDesc = trim((string) ($validated['invoice_descripotion'] ?? ''));
+            if (! $isDraft && $invDesc === '') {
+                $errors['invoice_descripotion'] = 'توضیحات فاکتور اجباری است — این متن به‌صورت فاکتور به مشتری ارسال می‌شود.';
+            }
+
+            if (! empty($errors)) {
+                return back()->withInput()->withErrors($errors);
             }
 
             $updates['completed_at'] = now();
