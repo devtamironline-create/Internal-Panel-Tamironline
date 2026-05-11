@@ -64,6 +64,19 @@
                     /* در حالت fullscreen واقعی هم همین رفتار. */
                     .plyr:fullscreen { background: #000 !important; }
                     .plyr:fullscreen video { object-fit: contain !important; }
+
+                    /* وقتی body کلاس video-fullscreen می‌گیرد، همهٔ UI
+                       سراسری پنل تکنسین (bottom-nav، header sticky و …)
+                       پنهان می‌شوند تا روی ویدیو نیفتند. این روش
+                       مستقل از stacking context است چون به‌جای z-index
+                       بازی، المان مشکل‌ساز را display:none می‌کنیم. */
+                    body.video-fullscreen nav.nav-safe,
+                    body.video-fullscreen .pb-nav,
+                    body.video-fullscreen [data-bottom-nav],
+                    body.video-fullscreen .fixed.bottom-0 {
+                        display: none !important;
+                    }
+                    body.video-fullscreen { overflow: hidden !important; }
                 </style>
                 <video id="tcs-plyr" playsinline controls preload="metadata"
                        class="block w-full bg-black"
@@ -78,7 +91,7 @@
                     if (typeof Plyr === 'undefined') return;
                     var el = document.getElementById('tcs-plyr');
                     if (! el) return;
-                    new Plyr(el, {
+                    var player = new Plyr(el, {
                         // SVG sprite لوکال — جلوگیری از fetch CDN
                         iconUrl: '{{ asset('vendor/js/plyr.svg') }}',
                         // fullscreen — اجبار به CSS fallback خود Plyr (نه
@@ -109,6 +122,17 @@
                             quality: 'کیفیت',
                             speed: 'سرعت',
                         },
+                    });
+
+                    // وقتی Plyr وارد fullscreen می‌شود، bottom-nav و سایر
+                    // UI سراسری باید پنهان شوند تا روی ویدیو نیفتند.
+                    // (z-index کافی نبود چون bottom-nav stacking context
+                    // خودش را دارد.)
+                    player.on('enterfullscreen', function () {
+                        document.body.classList.add('video-fullscreen');
+                    });
+                    player.on('exitfullscreen', function () {
+                        document.body.classList.remove('video-fullscreen');
                     });
                 })();
                 </script>
