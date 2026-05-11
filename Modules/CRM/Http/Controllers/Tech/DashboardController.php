@@ -242,7 +242,7 @@ class DashboardController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|string',
-            'description' => 'nullable|string|max:2000',
+            'description' => 'required|string|max:2000',
 
             // فیلدهای فاکتور — فقط زمانی استفاده می‌شوند که وضعیت = Completed.
             'price_customer' => 'nullable|integer|min:0',
@@ -257,6 +257,9 @@ class DashboardController extends Controller
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
             'device_img1' => 'nullable|image|max:5120',
+        ], [
+            'description.required' => 'برای ثبت تغییر وضعیت، توضیحات الزامی است.',
+            'description.max' => 'توضیحات حداکثر ۲۰۰۰ کاراکتر.',
         ]);
 
         $newStatus = OrderStatus::tryFrom($validated['status']);

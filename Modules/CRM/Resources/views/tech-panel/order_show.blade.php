@@ -418,13 +418,17 @@
                     @endforeach
                 </div>
 
-                {{-- توضیحات وابسته به وضعیت انتخاب‌شده --}}
+                {{-- توضیحات وابسته به وضعیت انتخاب‌شده — اجباری برای ثبت تغییر --}}
                 @foreach($statusDescPrompts as $value => $prompt)
                     <div x-show="selected === '{{ $value }}'" x-cloak class="pt-2">
-                        <label class="text-[11px] text-gray-500 mb-1 block">{{ $prompt }}</label>
+                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">{{ $prompt }} *</label>
                         <textarea name="description" rows="3"
+                                  :required="selected === '{{ $value }}'"
                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
-                                  placeholder="...">{{ old('description') }}</textarea>
+                                  placeholder="برای ثبت تغییر وضعیت، این فیلد را پر کنید...">{{ old('description') }}</textarea>
+                        @error('description')
+                            <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 @endforeach
 
