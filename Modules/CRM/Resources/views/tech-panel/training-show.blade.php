@@ -26,16 +26,52 @@
 
         @switch($type)
             @case('mp4')
-                {{-- ویدیو با controls پیش‌فرض مرورگر — شامل دکمهٔ
-                     تمام‌صفحه. نسبت ثابت ۱۶:۹ تا قبل از لود metadata
-                     ارتفاع صفر نشود و کلیک play از زیر آن رد نکند. --}}
-                <video controls playsinline webkit-playsinline preload="metadata"
+                {{-- ویدیو با پلیر Plyr — fullscreen در PWA با fallback های
+                     ساخت‌مند خود کتابخانه (شامل CSS pseudo-fullscreen
+                     وقتی API مرورگر بلاک است). assetها لوکال هستند. --}}
+                <link rel="stylesheet" href="{{ asset('vendor/css/plyr.css') }}">
+                <video id="tcs-plyr" playsinline controls preload="metadata"
                        class="block w-full bg-black"
                        style="aspect-ratio: 16/9;"
                        @if($video->thumbnail) poster="{{ $video->thumbnailUrl() }}" @endif>
                     <source src="{{ $video->playbackUrl() }}" type="video/mp4">
                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                 </video>
+                <script src="{{ asset('vendor/js/plyr.min.js') }}"></script>
+                <script>
+                (function () {
+                    if (typeof Plyr === 'undefined') return;
+                    var el = document.getElementById('tcs-plyr');
+                    if (! el) return;
+                    new Plyr(el, {
+                        // SVG sprite لوکال — جلوگیری از fetch CDN
+                        iconUrl: '{{ asset('vendor/js/plyr.svg') }}',
+                        // fullscreen با fallback پلیر — اگر Fullscreen API
+                        // در PWA بلاک شد، Plyr به‌صورت خودکار از CSS
+                        // pseudo-fullscreen استفاده می‌کند.
+                        fullscreen: { enabled: true, fallback: true, iosNative: true },
+                        controls: ['play-large','play','progress','current-time','duration','mute','volume','fullscreen'],
+                        // ست landscape هنگام fullscreen — اگر اجازه باشد
+                        ratio: '16:9',
+                        i18n: {
+                            play: 'پخش',
+                            pause: 'مکث',
+                            mute: 'بی‌صدا',
+                            unmute: 'صدادار',
+                            enterFullscreen: 'تمام صفحه',
+                            exitFullscreen: 'خروج از تمام صفحه',
+                            seek: 'جستجو',
+                            played: 'پخش‌شده',
+                            buffered: 'بافر',
+                            currentTime: 'زمان فعلی',
+                            duration: 'مدت زمان',
+                            volume: 'صدا',
+                            quality: 'کیفیت',
+                            speed: 'سرعت',
+                        },
+                    });
+                })();
+                </script>
                 @break
 
             @case('aparat')
