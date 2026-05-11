@@ -99,7 +99,10 @@
 
                                 <div class="mt-1.5 text-xs text-gray-700">
                                     {{ $order->customer_name ?: ($order->customer->display_name ?? '—') }}
-                                    @if($order->customer_mobile)
+                                    @if($order->customer_mobile && ! $order->status->isFinal())
+                                        {{-- شماره فقط روی سفارش‌های فعال نمایش داده می‌شود.
+                                             سفارش‌های نهایی به‌خاطر فیلتر کنترلر نمی‌رسند ولی
+                                             این یک لایه دفاع اضافی است. --}}
                                         <span class="text-gray-400 mx-1">·</span>
                                         <span dir="ltr" class="text-gray-500">{{ $order->customer_mobile }}</span>
                                     @endif

@@ -59,9 +59,12 @@ class DashboardController extends Controller
             OrderStatus::Suspended->value,
         ];
 
-        // ۱) سفارش‌های دارای زمان مراجعه (در بازهٔ ۷ روز پیشِ‌رو)
+        // ۱) سفارش‌های دارای زمان مراجعه (در بازهٔ ۷ روز پیشِ‌رو) —
+        //    فقط سفارش‌هایی که هنوز نهایی نشده‌اند. سفارش رد/کنسل/
+        //    تکمیل/ایاب‌و‌ذهاب دیگر در تقویم هماهنگی نباید بمانند.
         $scheduledOrders = Order::query()
             ->forTechnician($tech->id)
+            ->whereIn('status', $activeStatuses)
             ->whereBetween('visit_scheduled_at', [$calendarStart, $calendarEnd])
             ->with('customer:id,first_name,mobile')
             ->orderBy('visit_scheduled_at')
@@ -146,8 +149,15 @@ class DashboardController extends Controller
         $start = now()->startOfDay();
         $end = $start->copy()->addDays(7)->endOfDay();
 
+        // فقط سفارش‌های فعال — نهایی‌شده‌ها از تقویم خارج می‌شوند.
         $orders = Order::query()
             ->forTechnician($tech->id)
+            ->whereIn('status', [
+                OrderStatus::New->value,
+                OrderStatus::Coordinated->value,
+                OrderStatus::Open->value,
+                OrderStatus::Suspended->value,
+            ])
             ->whereBetween('visit_scheduled_at', [$start, $end])
             ->with(['customer', 'brand', 'device'])
             ->orderBy('visit_scheduled_at')
