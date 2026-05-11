@@ -696,22 +696,54 @@ class DashboardController extends Controller
     {
         $tech = Auth::guard('tech')->user();
 
+        // فقط دسته‌بندی‌ها — تکنسین اول دسته انتخاب می‌کند، سپس به
+        // صفحهٔ ویدیوهای آن دسته می‌رود (UX دو‌مرحله‌ای).
         $categories = TrainingCategory::active()
             ->ordered()
-            ->with(['activeVideos' => fn ($q) => $q->ordered()])
+            ->withCount(['videos as videos_count' => fn ($q) => $q->where('is_active', true)])
             ->get()
-            ->filter(fn ($c) => $c->activeVideos->isNotEmpty())
+            ->filter(fn ($c) => $c->videos_count > 0)
             ->values();
 
-        $uncategorized = TrainingVideo::active()
-            ->whereNull('category_id')
-            ->ordered()
-            ->get();
+        // ویدیوهای بدون دسته به‌عنوان دستهٔ مجازی «سایر» نمایش داده می‌شود
+        $uncategorizedCount = TrainingVideo::active()->whereNull('category_id')->count();
 
         return view('crm::tech-panel.training', [
-            'technician'    => $tech,
-            'categories'    => $categories,
-            'uncategorized' => $uncategorized,
+            'technician'        => $tech,
+            'categories'        => $categories,
+            'uncategorizedCount' => $uncategorizedCount,
+        ]);
+    }
+
+    /** صفحهٔ نمایش ویدیوهای یک دسته. */
+    public function trainingCategory(TrainingCategory $category)
+    {
+        $tech = Auth::guard('tech')->user();
+
+        if (! $category->is_active) {
+            abort(404);
+        }
+
+        $videos = $category->videos()->active()->ordered()->get();
+
+        return view('crm::tech-panel.training-category', [
+            'technician' => $tech,
+            'category'   => $category,
+            'videos'     => $videos,
+        ]);
+    }
+
+    /** ویدیوهای بدون دسته (دستهٔ مجازی «سایر»). */
+    public function trainingUncategorized()
+    {
+        $tech = Auth::guard('tech')->user();
+        $videos = TrainingVideo::active()->whereNull('category_id')->ordered()->get();
+
+        return view('crm::tech-panel.training-category', [
+            'technician'  => $tech,
+            'category'    => (object) ['name' => 'سایر', 'description' => null],
+            'videos'      => $videos,
+            'isVirtual'   => true,
         ]);
     }
 

@@ -21,14 +21,14 @@
 
         <div class="px-6 mt-4 text-center">
             <p class="text-white/80 text-xs leading-7 max-w-md mx-auto">
-                ویدیوهای آموزش، نکات تخصصی و راهنمای انجام سفارش‌ها را در این بخش مشاهده کنید.
+                دسته‌بندی مورد نظرتان را انتخاب کنید تا ویدیوهای آن را ببینید.
             </p>
         </div>
     </div>
 
-    {{-- Content --}}
-    <div class="-mt-12 mx-3 space-y-3">
-        @php $totalVideos = $categories->sum(fn($c) => $c->activeVideos->count()) + $uncategorized->count(); @endphp
+    {{-- لیست دسته‌بندی‌ها --}}
+    <div class="-mt-12 mx-3 space-y-2.5">
+        @php $totalVideos = $categories->sum('videos_count') + ($uncategorizedCount ?? 0); @endphp
 
         @if($totalVideos === 0)
             <div class="bg-white rounded-2xl p-8 shadow-sm text-center">
@@ -38,25 +38,50 @@
                     </svg>
                 </div>
                 <div class="font-bold text-gray-900 mb-1">هنوز ویدیوی آموزشی منتشر نشده</div>
-                <p class="text-xs text-gray-500 leading-7">
-                    به‌زودی محتوای آموزشی توسط مدیر اضافه خواهد شد.
-                </p>
+                <p class="text-xs text-gray-500 leading-7">به‌زودی محتوای آموزشی توسط مدیر اضافه خواهد شد.</p>
             </div>
         @else
             @foreach($categories as $cat)
-                @include('crm::tech-panel._partials.training-category', [
-                    'title' => $cat->name,
-                    'description' => $cat->description,
-                    'videos' => $cat->activeVideos,
-                ])
+                <a href="{{ route('tech.training.category', $cat) }}"
+                   class="block bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14-4H5m14 8H5m14 4H5"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm text-gray-900 truncate">{{ $cat->name }}</div>
+                            @if($cat->description)
+                                <div class="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{{ $cat->description }}</div>
+                            @endif
+                            <div class="text-[10px] text-brand-700 font-medium mt-1">{{ $cat->videos_count }} ویدیو</div>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </div>
+                </a>
             @endforeach
 
-            @if($uncategorized->isNotEmpty())
-                @include('crm::tech-panel._partials.training-category', [
-                    'title' => 'سایر',
-                    'description' => null,
-                    'videos' => $uncategorized,
-                ])
+            @if(($uncategorizedCount ?? 0) > 0)
+                <a href="{{ route('tech.training.uncategorized') }}"
+                   class="block bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm text-gray-900">سایر</div>
+                            <div class="text-[10px] text-gray-600 font-medium mt-1">{{ $uncategorizedCount }} ویدیو</div>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </div>
+                </a>
             @endif
         @endif
     </div>

@@ -349,9 +349,15 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('profile/password', [TechPanelDashboardController::class, 'updatePassword'])->name('profile.password');
         Route::post('profile/avatar', [TechPanelDashboardController::class, 'uploadAvatar'])->name('profile.avatar');
 
-        // ── آموزش تکنسین ───────────────────────────────────────
+        // ── آموزش تکنسین (UX دو‌مرحله‌ای: دسته → ویدیوها) ────────
         Route::get('training', [TechPanelDashboardController::class, 'training'])->name('training');
-        Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])->name('training.show');
+        Route::get('training/uncategorized', [TechPanelDashboardController::class, 'trainingUncategorized'])->name('training.uncategorized');
+        Route::get('training/category/{category}', [TechPanelDashboardController::class, 'trainingCategory'])
+            ->name('training.category')
+            ->whereNumber('category');
+        Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])
+            ->name('training.show')
+            ->whereNumber('video');
 
         // ── تیکت‌های پشتیبانی ───────────────────────────────────
         Route::get('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'index'])->name('tickets.index');
