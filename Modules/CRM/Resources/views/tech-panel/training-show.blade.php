@@ -45,21 +45,26 @@
                     </button>
                 </div>
 
-                {{-- CSS تمام‌صفحه — مستقل از Fullscreen API. در حالت PWA
-                     standalone روی Android، API گاهی بدون خطا کاری نمی‌کند.
-                     این روش ویدیو را با position:fixed روی کل viewport قرار
-                     می‌دهد. روی همهٔ مرورگرها کار می‌کند چون فقط CSS است. --}}
+                {{-- استراتژی تمام‌صفحه:
+                     ۱) ابتدا Fullscreen API روی خود video — این روش
+                        کنترل‌های native (پلی/پاز/seek) را حفظ می‌کند و
+                        نوار آدرس مرورگر هم پنهان می‌شود. روی Android Chrome،
+                        Safari iOS، و اکثر مرورگرها کار می‌کند.
+                     ۲) اگر همهٔ APIها fail کردند، CSS pseudo-fullscreen
+                        (position:fixed) به‌عنوان fallback. در این حالت
+                        wrapper روی نوار آدرس نمی‌رود (محدودیت browser)
+                        ولی حداقل ویدیو بزرگ می‌شود. --}}
                 <style>
                     .tcs-fs {
                         position: fixed !important;
                         inset: 0 !important;
                         width: 100vw !important;
-                        height: 100vh !important;
+                        height: 100dvh !important;  /* dvh مساوی viewport بدون نوار آدرس */
                         max-width: 100vw !important;
-                        max-height: 100vh !important;
+                        max-height: 100dvh !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        z-index: 999999 !important;
+                        z-index: 2147483647 !important;
                         aspect-ratio: auto !important;
                         background: #000 !important;
                     }
@@ -68,6 +73,11 @@
                         height: 100% !important;
                         object-fit: contain !important;
                     }
+                    /* دکمهٔ تمام‌صفحهٔ سفارشی در حالت fullscreen API نباید
+                       روی کنترل‌های native دیده شود — Webkit آن را زیر
+                       کنترل‌های native می‌برد. در CSS-fullscreen هم
+                       z-index بالا می‌دهیم تا قابل کلیک باشد. */
+                    .tcs-fs #tcs-fullscreen { z-index: 2147483646 !important; }
                     body.tcs-fs-lock { overflow: hidden !important; }
                 </style>
                 <script>
@@ -82,22 +92,46 @@
                         exit:  '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5"/></svg>'
                     };
 
-                    function enter() {
+                    var usingNative = false;
+
+                    function tryNativeOnVideo() {
+                        // اولویت با Fullscreen API روی خود <video>:
+                        //   - Android Chrome: video.requestFullscreen() → fullscreen واقعی + کنترل‌های native
+                        //   - iOS Safari:     video.webkitEnterFullscreen() → fullscreen واقعی
+                        //   - Firefox:        video.mozRequestFullScreen()
+                        var attempts = [
+                            ['requestFullscreen', true],
+                            ['webkitRequestFullscreen', true],
+                            ['mozRequestFullScreen', true],
+                            ['msRequestFullscreen', true],
+                            ['webkitEnterFullscreen', false], // iOS — promise نمی‌دهد
+                        ];
+                        for (var i = 0; i < attempts.length; i++) {
+                            var name = attempts[i][0];
+                            if (typeof video[name] === 'function') {
+                                try {
+                                    var ret = video[name]();
+                                    if (ret && typeof ret.then === 'function') {
+                                        return ret.then(function () {
+                                            usingNative = true;
+                                            return true;
+                                        }).catch(function () { return false; });
+                                    }
+                                    // sync API (iOS): فرض می‌کنیم موفق بود
+                                    usingNative = true;
+                                    return Promise.resolve(true);
+                                } catch (e) {}
+                            }
+                        }
+                        return Promise.resolve(false);
+                    }
+
+                    function enterCssFullscreen() {
                         wrap.classList.add('tcs-fs');
                         document.body.classList.add('tcs-fs-lock');
                         btn.innerHTML = icons.exit;
                         btn.setAttribute('aria-label', 'خروج از تمام صفحه');
-
-                        // در عین حال، Fullscreen API را هم درخواست کن — اگر کار
-                        // کرد bonus است (نوار آدرس مرورگر هم پنهان می‌شود).
-                        try {
-                            var fs = video.requestFullscreen
-                                || video.webkitRequestFullscreen
-                                || video.webkitEnterFullscreen;
-                            if (fs) { var p = fs.call(video); if (p && p.catch) p.catch(function(){}); }
-                        } catch (e) {}
-
-                        // قفل جهت‌گیری به landscape — اگر مرورگر اجازه دهد.
+                        // قفل جهت‌گیری به landscape — اگر اجازه دهد.
                         try {
                             if (screen.orientation && screen.orientation.lock) {
                                 var p = screen.orientation.lock('landscape');
@@ -106,11 +140,23 @@
                         } catch (e) {}
                     }
 
+                    function enter() {
+                        tryNativeOnVideo().then(function (ok) {
+                            if (! ok) {
+                                // همهٔ APIها fail کردند → CSS fallback
+                                enterCssFullscreen();
+                            }
+                            // اگر native کار کرد، نیازی به CSS نیست —
+                            // مرورگر ویدیو را در fullscreen واقعی پلی می‌کند.
+                        });
+                    }
+
                     function exit() {
                         wrap.classList.remove('tcs-fs');
                         document.body.classList.remove('tcs-fs-lock');
                         btn.innerHTML = icons.enter;
                         btn.setAttribute('aria-label', 'تمام صفحه');
+                        usingNative = false;
 
                         try {
                             if (document.fullscreenElement || document.webkitFullscreenElement) {
@@ -129,21 +175,41 @@
                     btn.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
+                        // اگر در حالت native fullscreen هستیم، خروج با
+                        // کنترل‌های native صورت می‌گیرد. در CSS fullscreen
+                        // کلیک روی دکمه exit می‌کند.
                         if (wrap.classList.contains('tcs-fs')) exit();
                         else enter();
                     });
 
-                    // Escape کیبورد یا back system → خروج
+                    // Escape کیبورد → خروج
                     document.addEventListener('keydown', function (e) {
                         if (e.key === 'Escape' && wrap.classList.contains('tcs-fs')) exit();
                     });
-                    // اگر API fullscreen به‌کار افتاد و سپس کاربر از آن خارج شد،
-                    // CSS fullscreen را هم خارج کن تا state همگام بماند.
-                    document.addEventListener('fullscreenchange', function () {
-                        if (! document.fullscreenElement && wrap.classList.contains('tcs-fs')) {
-                            // فقط اگر API بود که الان تمام شد — CSS را نگه می‌داریم
-                            // مگر اینکه کاربر صراحتاً exit بزند. این درست است.
+
+                    // وقتی fullscreen واقعی پایان یافت (Esc کاربر یا back system)،
+                    // اگر دکمهٔ ما در حالت exit است، آن را reset کنیم.
+                    function syncNativeExit() {
+                        var inNative = document.fullscreenElement
+                            || document.webkitFullscreenElement
+                            || document.mozFullScreenElement;
+                        if (! inNative && usingNative) {
+                            usingNative = false;
+                            btn.innerHTML = icons.enter;
+                            btn.setAttribute('aria-label', 'تمام صفحه');
+                            try { screen.orientation && screen.orientation.unlock(); } catch (e) {}
                         }
+                    }
+                    document.addEventListener('fullscreenchange', syncNativeExit);
+                    document.addEventListener('webkitfullscreenchange', syncNativeExit);
+                    // iOS: webkitend/beginfullscreen روی خود video
+                    video.addEventListener('webkitendfullscreen', function () {
+                        usingNative = false;
+                        btn.innerHTML = icons.enter;
+                    });
+                    video.addEventListener('webkitbeginfullscreen', function () {
+                        usingNative = true;
+                        btn.innerHTML = icons.exit;
                     });
                 })();
                 </script>
