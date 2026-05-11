@@ -26,7 +26,7 @@
     </div>
 
     {{-- لیست ویدیوها --}}
-    <div class="-mt-12 mx-3">
+    <div class="relative z-10 -mt-12 mx-3">
         @if($videos->isEmpty())
             <div class="bg-white rounded-2xl p-8 shadow-sm text-center">
                 <div class="text-sm text-gray-500">ویدیویی در این دسته نیست.</div>

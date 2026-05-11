@@ -27,7 +27,7 @@
     </div>
 
     {{-- لیست دسته‌بندی‌ها --}}
-    <div class="-mt-12 mx-3 space-y-2.5">
+    <div class="relative z-10 -mt-12 mx-3 space-y-2.5">
         @php $totalVideos = $categories->sum('videos_count') + ($uncategorizedCount ?? 0); @endphp
 
         @if($totalVideos === 0)
