@@ -51,6 +51,15 @@
                        به‌صورت پیش‌فرض autohide دارند، با تچ روی ویدیو ظاهر می‌شوند. */
                     .plyr--fullscreen-fallback .plyr__controls {
                         z-index: 2147483647 !important;
+                        opacity: 1 !important;
+                        pointer-events: auto !important;
+                        transform: none !important;
+                        visibility: visible !important;
+                    }
+                    /* در fullscreen کنترل‌ها همیشه روی پایین ویدیو باشند */
+                    .plyr--fullscreen-fallback .plyr__control--overlaid {
+                        opacity: 1 !important;
+                        visibility: visible !important;
                     }
                     /* در حالت fullscreen واقعی هم همین رفتار. */
                     .plyr:fullscreen { background: #000 !important; }
@@ -72,11 +81,16 @@
                     new Plyr(el, {
                         // SVG sprite لوکال — جلوگیری از fetch CDN
                         iconUrl: '{{ asset('vendor/js/plyr.svg') }}',
-                        // fullscreen با fallback پلیر — اگر Fullscreen API
-                        // در PWA بلاک شد، Plyr به‌صورت خودکار از CSS
-                        // pseudo-fullscreen استفاده می‌کند.
-                        fullscreen: { enabled: true, fallback: true, iosNative: true },
+                        // fullscreen — اجبار به CSS fallback خود Plyr (نه
+                        // Fullscreen API مرورگر). در Android PWA و iOS
+                        // standalone، API بومی کنترل‌ها را قطع می‌کند یا
+                        // اصلاً کار نمی‌کند. با 'force' همیشه از pseudo-
+                        // fullscreen خود Plyr استفاده می‌کنیم که کنترل‌های
+                        // داخل پلیر دست‌نخورده باقی می‌مانند.
+                        fullscreen: { enabled: true, fallback: 'force', iosNative: false },
                         controls: ['play-large','play','progress','current-time','duration','mute','volume','fullscreen'],
+                        // کنترل‌ها روی موبایل اتوهاید نشوند — دائم در دسترس.
+                        hideControls: false,
                         // ست landscape هنگام fullscreen — اگر اجازه باشد
                         ratio: '16:9',
                         i18n: {
