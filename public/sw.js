@@ -2,7 +2,7 @@
 // استراتژی: network-first برای صفحات داینامیک، با fallback به cache در حالت آفلاین.
 // Static assets (CSS/JS/تصاویر) → cache-first با revalidation.
 
-const CACHE_VERSION = 'tech-v1';
+const CACHE_VERSION = 'tech-v2';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 
