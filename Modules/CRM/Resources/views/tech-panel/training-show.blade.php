@@ -30,6 +30,32 @@
                      ساخت‌مند خود کتابخانه (شامل CSS pseudo-fullscreen
                      وقتی API مرورگر بلاک است). assetها لوکال هستند. --}}
                 <link rel="stylesheet" href="{{ asset('vendor/css/plyr.css') }}">
+                <style>
+                    /* وقتی Plyr به fallback CSS fullscreen می‌رود، باید
+                       بالای همه چیز قرار بگیرد — bottom-nav و header
+                       سایت با z-index کمتر زیر آن می‌مانند. */
+                    .plyr--fullscreen-fallback {
+                        z-index: 2147483647 !important;
+                        position: fixed !important;
+                        inset: 0 !important;
+                        width: 100vw !important;
+                        height: 100dvh !important;
+                        background: #000 !important;
+                    }
+                    .plyr--fullscreen-fallback video {
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: contain !important;
+                    }
+                    /* کنترل‌های Plyr روی همان لایه باید قابل دیدن باشند —
+                       به‌صورت پیش‌فرض autohide دارند، با تچ روی ویدیو ظاهر می‌شوند. */
+                    .plyr--fullscreen-fallback .plyr__controls {
+                        z-index: 2147483647 !important;
+                    }
+                    /* در حالت fullscreen واقعی هم همین رفتار. */
+                    .plyr:fullscreen { background: #000 !important; }
+                    .plyr:fullscreen video { object-fit: contain !important; }
+                </style>
                 <video id="tcs-plyr" playsinline controls preload="metadata"
                        class="block w-full bg-black"
                        style="aspect-ratio: 16/9;"
