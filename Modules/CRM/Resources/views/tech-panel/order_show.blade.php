@@ -518,7 +518,7 @@
                             </a>
                         @endif
                         <input type="file" name="device_img1" accept="image/*"
-                               @if(! $order->device_img1) required @endif
+                               @if(! $order->device_img1) :required="selected === '{{ OrderStatus::Completed->value }}'" @endif
                                class="block w-full text-xs text-gray-600 file:ms-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-rose-50 file:text-rose-700 file:font-bold file:text-xs">
                         <p class="text-[10px] text-rose-600 mt-1">
                             بدون عکس امکان بستن سفارش وجود ندارد. JPG/PNG حداکثر ۵ مگابایت.
