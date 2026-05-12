@@ -509,7 +509,7 @@
                             عکس دستگاه (پس از تعمیر) — اجباری *
                         </label>
                         @if($order->device_img1)
-                            <a href="{{ asset('storage/' . $order->device_img1) }}" target="_blank"
+                            <a href="{{ storage_url($order->device_img1) }}" target="_blank"
                                class="inline-flex items-center gap-1.5 text-xs text-brand-700 mb-2">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>

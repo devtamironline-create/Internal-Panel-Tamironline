@@ -24,6 +24,7 @@ class TechSubdomainScope
         'tech',          // همه مسیرهای پنل تکنسین
         'tech-panel/',   // سرو تصاویر برند (لوگو/بنر/Hero) از طریق PHP
         'crm/ticket-image/', // سرو تصاویر تیکت پشتیبانی
+        'file/',         // Storage proxy عمومی برای فایل‌های public disk
         'storage/',      // فایل‌های آپلود شده (لوگو/بنر/...)
         'css/',
         'js/',

@@ -12,7 +12,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('page-title', 'داشبورد') | {{ $siteSubtitle }}</title>
     @if($siteFavicon)
-        <link rel="icon" href="{{ asset('storage/' . $siteFavicon) }}" type="image/png">
+        <link rel="icon" href="{{ storage_url($siteFavicon) }}" type="image/png">
     @endif
     <link href="/css/fonts.css" rel="stylesheet">
     <script src="/vendor/js/tailwind.min.js"></script>
@@ -244,7 +244,7 @@
             <div class="flex items-center justify-between pt-8 pb-7 border-b border-white/10">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
                     @if($siteLogo)
-                        <img src="{{ asset('storage/' . $siteLogo) }}" alt="Logo" class="h-12 max-w-[160px] object-contain">
+                        <img src="{{ storage_url($siteLogo) }}" alt="Logo" class="h-12 max-w-[160px] object-contain">
                     @else
                         <div class="flex items-center justify-center w-10 h-10">
                             <svg class="w-8 h-8 text-white/80" viewBox="0 0 24 24" fill="currentColor">

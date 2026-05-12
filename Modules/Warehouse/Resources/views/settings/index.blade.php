@@ -38,7 +38,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">لوگوی فاکتور</label>
                         @if(!empty($invoiceSettings['invoice_logo']))
                             <div class="flex items-center gap-3 mb-2">
-                                <img src="{{ asset('storage/' . $invoiceSettings['invoice_logo']) }}" alt="Logo" class="w-16 h-16 object-contain border rounded-lg">
+                                <img src="{{ storage_url($invoiceSettings['invoice_logo']) }}" alt="Logo" class="w-16 h-16 object-contain border rounded-lg">
                                 <a href="{{ route('warehouse.settings.delete-invoice-logo') }}" class="text-sm text-red-600 hover:text-red-800">حذف لوگو</a>
                             </div>
                         @endif

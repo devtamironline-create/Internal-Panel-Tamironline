@@ -130,7 +130,7 @@
                     <div class="flex items-start gap-4">
                         @if($settings['hero_bg_image'])
                         <div class="relative flex-shrink-0">
-                            <img src="{{ asset('storage/' . $settings['hero_bg_image']) }}" alt="Hero BG"
+                            <img src="{{ storage_url($settings['hero_bg_image']) }}" alt="Hero BG"
                                  class="h-24 w-40 object-cover rounded-lg border border-gray-200">
                             <a href="{{ route('technician.admin.settings.delete-hero-bg') }}"
                                onclick="return confirm('تصویر پس‌زمینه حذف شود؟')"
@@ -336,7 +336,7 @@
                     <div class="flex items-start gap-4">
                         @if($settings['brand_logo'])
                             <div class="relative">
-                                <img src="{{ asset('storage/' . $settings['brand_logo']) }}" alt="Logo" class="h-16 max-w-[160px] object-contain rounded-lg border border-gray-200 bg-gray-50 p-1">
+                                <img src="{{ storage_url($settings['brand_logo']) }}" alt="Logo" class="h-16 max-w-[160px] object-contain rounded-lg border border-gray-200 bg-gray-50 p-1">
                                 <a href="{{ route('technician.admin.settings.delete-logo') }}"
                                    onclick="return confirm('آیا مطمئن هستید؟')"
                                    class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">

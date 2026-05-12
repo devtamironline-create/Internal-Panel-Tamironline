@@ -133,7 +133,7 @@
         {{-- هدر --}}
         <div class="px-6 pt-8 pb-4 text-center">
             @if($brand_logo)
-                <img src="{{ asset('storage/' . $brand_logo) }}" alt="{{ $brand_name }}" class="h-12 mx-auto mb-3">
+                <img src="{{ storage_url($brand_logo) }}" alt="{{ $brand_name }}" class="h-12 mx-auto mb-3">
             @else
                 <h1 class="text-lg font-black text-gray-800">{{ $brand_name }}</h1>
             @endif

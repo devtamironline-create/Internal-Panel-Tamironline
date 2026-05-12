@@ -24,7 +24,7 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 @if($brand_logo)
-                    <img src="{{ asset('storage/' . $brand_logo) }}" alt="{{ $brand_name }}" class="h-14 max-w-[220px] w-auto object-contain">
+                    <img src="{{ storage_url($brand_logo) }}" alt="{{ $brand_name }}" class="h-14 max-w-[220px] w-auto object-contain">
                 @else
                     <span class="text-xl font-black text-blue-900">{{ $brand_name }}</span>
                 @endif
@@ -40,7 +40,7 @@
     {{-- ===== HERO ===== --}}
     <section class="{{ $hero_bg_image ? '' : 'gradient-hero' }} text-white py-20 md:py-28 relative"
              @if($hero_bg_image)
-             style="background-image: url('{{ asset('storage/' . $hero_bg_image) }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+             style="background-image: url('{{ storage_url($hero_bg_image) }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
              @endif>
         @if($hero_bg_image)
         <div class="absolute inset-0" style="background-color: {{ $hero_overlay_color }}; opacity: {{ intval($hero_overlay_opacity) / 100 }};"></div>

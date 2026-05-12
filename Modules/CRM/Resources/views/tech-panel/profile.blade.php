@@ -56,7 +56,7 @@
                              ادمین است: همه تصویر یکسان داشته باشند. --}}
                         <img src="{{ route('crm.tech-panel-settings.serve', 'tech_panel_default_avatar') }}" alt="avatar" class="w-full h-full object-cover">
                     @elseif($hasAvatar)
-                        <img src="{{ asset('storage/' . $technician->img_personal) }}" alt="avatar" class="w-full h-full object-cover">
+                        <img src="{{ storage_url($technician->img_personal) }}" alt="avatar" class="w-full h-full object-cover">
                     @else
                         {{-- آواتار پیش‌فرض: تعمیرکار عروسکی (SVG inline) --}}
                         <svg viewBox="0 0 96 96" class="w-full h-full">

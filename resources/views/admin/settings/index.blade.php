@@ -44,7 +44,7 @@
                 <div class="flex items-start gap-4">
                     @if($settings['logo'])
                         <div class="relative">
-                            <img src="{{ asset('storage/' . $settings['logo']) }}" alt="Logo" class="w-20 h-20 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                            <img src="{{ storage_url($settings['logo']) }}" alt="Logo" class="w-20 h-20 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
                             <a href="{{ route('admin.settings.delete-logo') }}" onclick="return confirm('آیا مطمئن هستید؟')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </a>
@@ -66,7 +66,7 @@
                 <div class="flex items-start gap-4">
                     @if($settings['favicon'])
                         <div class="relative">
-                            <img src="{{ asset('storage/' . $settings['favicon']) }}" alt="Favicon" class="w-12 h-12 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                            <img src="{{ storage_url($settings['favicon']) }}" alt="Favicon" class="w-12 h-12 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
                             <a href="{{ route('admin.settings.delete-favicon') }}" onclick="return confirm('آیا مطمئن هستید؟')" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 text-xs">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </a>
@@ -88,7 +88,7 @@
                 <div class="flex items-start gap-4">
                     @if($settings['notification_sound'])
                         <div class="flex items-center gap-2">
-                            <audio id="preview-sound" src="{{ asset('storage/' . $settings['notification_sound']) }}"></audio>
+                            <audio id="preview-sound" src="{{ storage_url($settings['notification_sound']) }}"></audio>
                             <button type="button" onclick="document.getElementById('preview-sound').play()" class="px-3 py-2 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300 rounded-lg text-sm flex items-center gap-2 hover:bg-brand-200 dark:hover:bg-brand-900/50 transition">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 پخش
@@ -113,7 +113,7 @@
                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">پیش‌نمایش سایدبار:</p>
                 <div class="bg-[#1a2d48] rounded-lg p-4 inline-flex items-center gap-2">
                     @if($settings['logo'])
-                        <img src="{{ asset('storage/' . $settings['logo']) }}" alt="Logo" class="h-12 max-w-[160px] object-contain">
+                        <img src="{{ storage_url($settings['logo']) }}" alt="Logo" class="h-12 max-w-[160px] object-contain">
                     @else
                         <div class="flex items-center gap-2">
                             <div class="flex items-center justify-center w-10 h-10">

@@ -36,6 +36,13 @@ Route::get('/health', function () {
     return response()->json($status, $status['database'] === 'ok' ? 200 : 503);
 })->name('health');
 
+// ─── Storage Proxy — جایگزین asset('storage/...') روی هاست‌های بدون symlink.
+//     فایل‌های public disk را با PHP سرو می‌کند. wildcard {path} تا
+//     ساب‌فولدر و فایل با پسوند هم match کند. ─────────────────────
+Route::get('/file/{path}', [\App\Http\Controllers\StorageProxyController::class, 'serve'])
+    ->where('path', '.+')
+    ->name('storage.proxy');
+
 // ─── ساب‌دامین اختصاصی پنل تکنسین ─────────────────────────────────
 // اگر TECH_SUBDOMAIN در .env ست شده باشد، root آن ساب‌دامین مستقیم به
 // صفحه لاگین/داشبورد تکنسین می‌رود تا تکنسین‌ها مجبور نباشند /tech را
