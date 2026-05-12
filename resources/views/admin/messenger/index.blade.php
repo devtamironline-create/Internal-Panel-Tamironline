@@ -290,7 +290,7 @@
                                     <div class="mb-2">
                                         <template x-if="msg.type === 'image'">
                                             <div class="relative group/img">
-                                                <img :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition" @click.stop="openLightbox(msg)">
+                                                <img :src="'/file/' + msg.file_path" class="max-w-full max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition" @click.stop="openLightbox(msg)">
                                                 <!-- Overlay with actions on hover -->
                                                 <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
                                                     <button @click.stop="openLightbox(msg)" class="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition" title="مشاهده">
@@ -307,7 +307,7 @@
                                         </template>
                                         <template x-if="msg.type === 'video'">
                                             <div class="relative group/vid">
-                                                <video :src="'/storage/' + msg.file_path" class="max-w-full max-h-64 rounded-lg" controls></video>
+                                                <video :src="'/file/' + msg.file_path" class="max-w-full max-h-64 rounded-lg" controls></video>
                                             </div>
                                         </template>
                                         <template x-if="msg.type === 'audio'">
@@ -315,7 +315,7 @@
                                                 <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
                                                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                                                 </div>
-                                                <audio :src="'/storage/' + msg.file_path" controls class="flex-1 h-8"></audio>
+                                                <audio :src="'/file/' + msg.file_path" controls class="flex-1 h-8"></audio>
                                             </div>
                                         </template>
                                         <template x-if="msg.type === 'file'">
@@ -893,12 +893,12 @@
 
             <!-- Image -->
             <template x-if="lightbox?.type === 'image'">
-                <img :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl">
+                <img :src="'/file/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl">
             </template>
 
             <!-- Video -->
             <template x-if="lightbox?.type === 'video'">
-                <video :src="'/storage/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl" controls autoplay></video>
+                <video :src="'/file/' + lightbox.file_path" class="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl" controls autoplay></video>
             </template>
 
             <!-- Audio -->
@@ -908,7 +908,7 @@
                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                     </div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" x-text="lightbox.file_name"></h3>
-                    <audio :src="'/storage/' + lightbox.file_path" controls class="w-full"></audio>
+                    <audio :src="'/file/' + lightbox.file_path" controls class="w-full"></audio>
                 </div>
             </template>
 
@@ -923,7 +923,7 @@
 
             <!-- Actions -->
             <div class="flex justify-center gap-4 mt-4">
-                <a :href="'/storage/' + lightbox?.file_path" download class="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition">
+                <a :href="'/file/' + lightbox?.file_path" download class="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     دانلود
                 </a>
