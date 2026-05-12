@@ -497,37 +497,9 @@
                             x-ref="messageInput" rows="1"
                             class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 resize-none max-h-32 overflow-y-auto"
                             placeholder="پیام خود را بنویسید... (@ برای منشن)"></textarea>
-
-                        {{-- پیش‌نمایش فایل انتخاب‌شده پیش از ارسال --}}
-                        <div x-show="selectedFile" x-cloak
-                             class="mt-2 flex items-center gap-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2">
-                            <svg class="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                            </svg>
-                            <span class="text-xs text-gray-700 dark:text-gray-200 truncate flex-1" x-text="selectedFile?.name"></span>
-                            <span class="text-[10px] text-gray-400" x-text="selectedFile ? Math.round(selectedFile.size / 1024) + ' KB' : ''"></span>
-                            <button type="button" @click="selectedFile = null; $refs.fileInput.value = ''"
-                                    class="w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center hover:bg-rose-200">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
                     </div>
 
-                    {{-- دکمهٔ گیره برای انتخاب فایل --}}
-                    <input type="file" x-ref="fileInput" class="hidden"
-                           @change="selectedFile = $event.target.files[0] || null"
-                           accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip">
-                    <button @click="$refs.fileInput.click()" type="button"
-                            class="p-3 mb-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl transition flex-shrink-0"
-                            title="پیوست فایل">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                        </svg>
-                    </button>
-
-                    <button @click="sendMessage()" :disabled="!newMessage.trim() && !selectedFile" class="p-3 mb-1 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition flex-shrink-0">
+                    <button @click="sendMessage()" :disabled="!newMessage.trim()" class="p-3 mb-1 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 text-white rounded-xl transition flex-shrink-0">
                         <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     </button>
                 </div>
@@ -1212,7 +1184,6 @@ function messenger() {
         messages: [],
         currentConversation: null,
         newMessage: '',
-        selectedFile: null,
         searchQuery: '',
         conversationFilter: 'all',
         mobileShowChat: false,
@@ -1947,62 +1918,29 @@ function messenger() {
         },
 
         async sendMessage() {
-            const hasText = !!this.newMessage.trim();
-            const hasFile = !!this.selectedFile;
-            if (!hasText && !hasFile) return;
-            if (!this.currentConversation) return;
+            if (!this.newMessage.trim() || !this.currentConversation) return;
             this.showMentionDropdown = false;
-
             const message = this.newMessage;
             const replyToId = this.replyingTo?.id || null;
-            const file = this.selectedFile;
-
-            // Reset UI state بلافاصله
             this.newMessage = '';
             this.replyingTo = null;
-            this.selectedFile = null;
-            if (this.$refs.fileInput) this.$refs.fileInput.value = '';
-
             try {
-                let response;
-                const csrf = document.querySelector('meta[name="csrf-token"]').content;
-                const url = `/admin/chat/conversations/${this.currentConversation.id}/messages`;
-
-                if (file) {
-                    // ارسال با FormData — multipart برای آپلود فایل
-                    const fd = new FormData();
-                    fd.append('file', file);
-                    if (hasText) fd.append('caption', message);
-                    if (replyToId) fd.append('reply_to_id', replyToId);
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                        body: fd,
-                    });
-                } else {
-                    // پیام متنی ساده — JSON
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrf,
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ content: message, type: 'text', reply_to_id: replyToId })
-                    });
-                }
+                const response = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ content: message, type: 'text', reply_to_id: replyToId })
+                });
                 const data = await response.json();
                 if (data.message) {
                     this.messages.push(data.message);
                     this.updateConversationLastMessage(this.currentConversation.id, data.message);
                     this.$nextTick(() => this.scrollToBottom());
-                } else if (data.error || (data.errors)) {
-                    console.error('Send message error:', data);
-                    alert(data.error || Object.values(data.errors)[0]?.[0] || 'خطا در ارسال');
                 }
             } catch (e) {
                 console.error('Error sending message:', e);
-                alert('خطا در ارسال پیام: ' + e.message);
             }
         },
 
