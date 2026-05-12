@@ -143,7 +143,14 @@ class WpPushService
     /** ارسال HTTP با امضای HMAC. خرابی نباید درخواست اصلی را شکست‌بدهد. */
     protected function send(array $payload): void
     {
-        $url = rtrim((string) CrmSetting::get('wp_push_url'), '/') . '/wp-json/tcs/v1/order-update';
+        $this->sendTo('order-update', $payload);
+    }
+
+    /** ارسال HTTP عمومی به یک endpoint inbound پلاگین. */
+    protected function sendTo(string $endpoint, array $payload): ?array
+    {
+        if (! $this->isEnabled()) return null;
+        $url = rtrim((string) CrmSetting::get('wp_push_url'), '/') . '/wp-json/tcs/v1/' . $endpoint;
         $secret = (string) CrmSetting::get('wp_push_secret');
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE);
         $signature = hash_hmac('sha256', $body, $secret);
@@ -157,16 +164,144 @@ class WpPushService
 
             if (! $response->ok()) {
                 Log::warning('crm.wp_push.failed', [
+                    'endpoint' => $endpoint,
                     'wp_id' => $payload['wp_id'] ?? null,
                     'status' => $response->status(),
                     'body' => substr((string) $response->body(), 0, 500),
                 ]);
+                return null;
             }
+            return $response->json();
         } catch (\Throwable $e) {
             Log::error('crm.wp_push.exception', [
+                'endpoint' => $endpoint,
                 'wp_id' => $payload['wp_id'] ?? null,
                 'error' => $e->getMessage(),
             ]);
+            return null;
         }
+    }
+
+    // ─────────── Push تکنسین ───────────
+    public function pushTechnician(\Modules\CRM\Models\Technician $tech): void
+    {
+        if (! $this->isEnabled()) return;
+        if (! $tech->mobile && ! $tech->wp_id) return;
+
+        $fields = array_filter([
+            'first_name'      => $tech->first_name,
+            'firstname_tech'  => $tech->firstname_tech,
+            'technician_id'   => $tech->technician_id,
+            'national_code'   => $tech->national_code,
+            'mobile'          => $tech->mobile,
+            'phone'           => $tech->phone,
+            'phone_force'     => $tech->phone_force,
+            'address'         => $tech->address,
+            'description'     => $tech->description,
+            'percent'         => $tech->percent,
+            'max_order'       => $tech->max_order,
+            'max_price'       => $tech->max_price,
+            'status'          => $tech->status,
+            'type_tech'       => $tech->type_tech,
+            'province'        => $tech->province,
+            'specialty'       => $tech->specialty,
+            'type_of_calc_tech' => $tech->type_of_calc_tech,
+            'tech_per_of_all' => $tech->tech_per_of_all,
+            'role'            => 'technician',
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $resp = $this->sendTo('technician-upsert', [
+            'wp_id'  => $tech->wp_id ?: 0,
+            'fields' => $fields,
+        ]);
+
+        // اگر تکنسین جدید WP id برگشت داد، روی مدل ذخیره کن
+        if ($resp && ! $tech->wp_id && ! empty($resp['wp_id'])) {
+            $tech->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
+        }
+    }
+
+    // ─────────── Push مشتری ───────────
+    public function pushCustomer(\Modules\CRM\Models\Customer $customer): void
+    {
+        if (! $this->isEnabled()) return;
+        if (! $customer->mobile && ! $customer->wp_id) return;
+
+        $fields = array_filter([
+            'first_name'   => $customer->first_name,
+            'mobile'       => $customer->mobile,
+            'phone'        => $customer->phone,
+            'address'      => $customer->address,
+            'subscription' => $customer->subscription,
+            'introduction' => $customer->introduction,
+            'postal_code'  => $customer->postal_code,
+            'role'         => 'customer',
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $resp = $this->sendTo('customer-upsert', [
+            'wp_id'  => $customer->wp_id ?: 0,
+            'fields' => $fields,
+        ]);
+
+        if ($resp && ! $customer->wp_id && ! empty($resp['wp_id'])) {
+            $customer->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
+        }
+    }
+
+    // ─────────── Push تراکنش کیف‌پول ───────────
+    public function pushWalletTransaction(\Modules\CRM\Models\WalletTransaction $tx): void
+    {
+        if (! $this->isEnabled()) return;
+        $tech = $tx->technician_id ? Technician::find($tx->technician_id) : null;
+        if (! $tech || ! $tech->wp_id) return; // بدون wp_id تکنسین، WP نمی‌تواند تخصیص دهد
+
+        // مَپ نوع تراکنش به فیلدهای CRM وردپرسی
+        $type = $tx->type instanceof \Modules\CRM\Enums\WalletTxType ? $tx->type->value : $tx->type;
+        $amount = (int) $tx->amount;
+        $isPositive = $amount > 0;
+        $absAmount = abs($amount);
+
+        $fields = array_filter([
+            'technician_wp_id' => $tech->wp_id,
+            'order_id'         => $tx->order_id,
+            'description'      => $tx->note,
+            'post_title'       => $this->walletTxTitle($type, $amount),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        // پر کردن متاهای رایج CRM وردپرسی بسته به نوع
+        if ($type === 'wallet_charge' || $type === 'adjustment') {
+            $fields['wallet'] = '1';
+            $fields['wallet_pay'] = $absAmount;
+        }
+        if ($type === 'reward') {
+            $fields['reward_type'] = '1';
+            $fields['rewardDesc'] = (string) ($tx->note ?? '');
+        }
+        if ($type === 'penalty') {
+            $fields['reward_type'] = '2';
+            $fields['rewardDesc'] = (string) ($tx->note ?? '');
+        }
+
+        $resp = $this->sendTo('financial-upsert', [
+            'wp_id'  => $tx->wp_id ?: 0,
+            'fields' => $fields,
+        ]);
+
+        if ($resp && ! $tx->wp_id && ! empty($resp['wp_id'])) {
+            $tx->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
+        }
+    }
+
+    protected function walletTxTitle(string $type, int $amount): string
+    {
+        $abs = number_format(abs($amount));
+        return match ($type) {
+            'wallet_charge' => "شارژ کیف‌پول — {$abs}",
+            'commission'    => "کمیسیون — {$abs}",
+            'reward'        => "پاداش — {$abs}",
+            'penalty'       => "جریمه — {$abs}",
+            'adjustment'    => "تعدیل — {$abs}",
+            default         => "تراکنش مالی — {$abs}",
+        };
     }
 }

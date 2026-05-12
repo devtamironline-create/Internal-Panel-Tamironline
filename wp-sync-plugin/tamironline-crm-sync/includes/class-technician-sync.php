@@ -103,6 +103,11 @@ class TCS_Technician_Sync
 
     public function sync_user(int $user_id): ?array
     {
+        // اگر این کاربر به‌تازگی توسط Laravel inbound آپدیت شده،
+        // برای ۱۰ ثانیه echo نکنیم تا حلقه ایجاد نشود.
+        if (get_transient('tcs_suppress_user_' . $user_id)) {
+            return null;
+        }
         if (! $this->is_technician($user_id)) {
             return null;
         }

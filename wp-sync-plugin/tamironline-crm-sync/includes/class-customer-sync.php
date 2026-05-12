@@ -85,6 +85,9 @@ class TCS_Customer_Sync
      */
     public function sync_user(int $user_id): ?array
     {
+        if (get_transient('tcs_suppress_user_' . $user_id)) {
+            return null;
+        }
         if (! $this->is_customer($user_id)) {
             return null;
         }

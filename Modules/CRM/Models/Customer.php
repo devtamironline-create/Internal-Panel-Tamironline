@@ -79,4 +79,21 @@ class Customer extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    /** Push تغییرات به WP. */
+    protected static function booted(): void
+    {
+        $push = function (self $c) {
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            try {
+                app(\Modules\CRM\Services\WpPushService::class)->pushCustomer($c);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.wp_push.customer_failed', [
+                    'id' => $c->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        };
+        static::created($push);
+        static::updated($push);
+    }
 }

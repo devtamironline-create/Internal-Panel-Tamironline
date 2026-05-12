@@ -195,4 +195,21 @@ class Technician extends Authenticatable
                 ->orWhere('specialty', 'like', "%{$term}%");
         });
     }
+
+    /** Push تغییرات به WP — همانند Order. */
+    protected static function booted(): void
+    {
+        $push = function (self $t) {
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            try {
+                app(\Modules\CRM\Services\WpPushService::class)->pushTechnician($t);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.wp_push.technician_failed', [
+                    'id' => $t->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        };
+        static::created($push);
+        static::updated($push);
+    }
 }

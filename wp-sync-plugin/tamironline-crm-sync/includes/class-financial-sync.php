@@ -54,6 +54,9 @@ class TCS_Financial_Sync
 
     public function sync_post(int $post_id): ?array
     {
+        if (get_transient('tcs_suppress_financial_' . $post_id)) {
+            return null;
+        }
         $post = get_post($post_id);
         if (! $post || $post->post_type !== 'financial') {
             return null;

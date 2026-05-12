@@ -49,4 +49,19 @@ class WalletTransaction extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /** Push تراکنش جدید به WP — تراکنش‌ها immutable هستند، فقط on create. */
+    protected static function booted(): void
+    {
+        static::created(function (self $tx) {
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            try {
+                app(\Modules\CRM\Services\WpPushService::class)->pushWalletTransaction($tx);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.wp_push.wallet_tx_failed', [
+                    'id' => $tx->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
 }
