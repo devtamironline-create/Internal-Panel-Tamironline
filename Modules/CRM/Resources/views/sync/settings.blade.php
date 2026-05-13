@@ -139,6 +139,39 @@
         </form>
     </div>
 
+    {{-- Resync تکنسین‌ها --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Push مجدد تکنسین‌ها به WP</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-6">
+            اگر تکنسین‌هایی قبلاً با نسخهٔ قبلی پلاگین به WP رفته‌اند و
+            داده‌شان ناقص است (مثل نام نمایش، درصد، یا فیلد ready_for_delivery)،
+            این عمل push را برای آن‌ها تکرار می‌کند. ایمن و idempotent است.
+            برای هر تکنسین یک ردیف outbound در «لاگ سینک» ثبت می‌شود.
+        </p>
+
+        @if (session('error'))
+            <div class="bg-rose-50 border border-rose-200 text-rose-700 rounded-lg p-3 text-sm mb-3">{{ session('error') }}</div>
+        @endif
+
+        <form method="POST" action="{{ route('crm.sync.resync-technicians') }}" class="flex flex-wrap gap-3 items-center"
+              onsubmit="return confirm('Push مجدد را شروع کنم؟ این عمل ممکن است چند ثانیه طول بکشد.');">
+            @csrf
+            <label class="text-sm">
+                <input type="radio" name="scope" value="all" checked class="me-1"> همه تکنسین‌ها
+            </label>
+            <label class="text-sm">
+                <input type="radio" name="scope" value="laravel_only" class="me-1"> فقط ساخته‌شده در لاراول (بدون wp_id)
+            </label>
+            <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-bold">
+                شروع Push مجدد
+            </button>
+        </form>
+
+        <p class="text-xs text-gray-400 mt-3">
+            معادل دستوری: <code dir="ltr">php artisan crm:resync-technicians [--laravel-only]</code>
+        </p>
+    </div>
+
     {{-- راهنما --}}
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
         <h2 class="text-base font-bold text-blue-900 dark:text-blue-100 mb-2">راهنمای نصب / به‌روزرسانی</h2>

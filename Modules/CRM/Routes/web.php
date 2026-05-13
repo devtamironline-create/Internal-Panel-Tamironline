@@ -290,6 +290,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('plugin/download', [SyncSettingsController::class, 'downloadPlugin'])->name('plugin.download');
         // تنظیمات سینک معکوس Laravel → WP
         Route::post('wp-push', [SyncSettingsController::class, 'updateWpPush'])->name('wp-push.update');
+        Route::post('resync-technicians', [SyncSettingsController::class, 'resyncTechnicians'])->name('resync-technicians');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────

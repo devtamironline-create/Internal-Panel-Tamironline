@@ -78,6 +78,50 @@ class SyncSettingsController extends Controller
         return back()->with('success', 'توکن جدید ساخته شد. لطفاً آن را در پلاگین وردپرس به‌روزرسانی کنید.');
     }
 
+    /**
+     * Push مجدد همه (یا بخشی از) تکنسین‌ها به WP — UI معادل کامند
+     * artisan crm:resync-technicians. برای جا انداختن داده‌های قبلی که
+     * با نسخهٔ قبلی پلاگین/سرویس ناقص رفته‌اند.
+     */
+    public function resyncTechnicians(Request $request, \Modules\CRM\Services\WpPushService $push): RedirectResponse
+    {
+        $request->validate([
+            'scope' => 'required|in:all,laravel_only',
+        ]);
+
+        if (! $push->isEnabled()) {
+            return back()->with('error', 'سینک Laravel→WP در تنظیمات غیرفعال است.');
+        }
+
+        app()->instance('crm.wp_push.force', true);
+
+        $query = \Modules\CRM\Models\Technician::query()->orderBy('id');
+        if ($request->input('scope') === 'laravel_only') {
+            $query->whereNull('wp_id');
+        }
+
+        $ok = 0; $fail = 0;
+        $query->chunk(50, function ($techs) use ($push, &$ok, &$fail) {
+            foreach ($techs as $tech) {
+                try {
+                    $push->pushTechnician($tech);
+                    $ok++;
+                } catch (\Throwable $e) {
+                    $fail++;
+                    \Illuminate\Support\Facades\Log::error('crm.resync_technicians.failed', [
+                        'tech_id' => $tech->id, 'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        });
+
+        $msg = "Push مجدد انجام شد — موفق: {$ok}";
+        if ($fail > 0) $msg .= "، ناموفق: {$fail}";
+        $msg .= '. برای جزئیات «لاگ سینک» را ببین.';
+
+        return back()->with($fail === 0 ? 'success' : 'error', $msg);
+    }
+
     public function downloadPlugin(): BinaryFileResponse
     {
         $path = base_path(self::PLUGIN_ZIP_RELATIVE);

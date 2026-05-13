@@ -10,6 +10,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
+use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Livewire\OrderWizard;
 
 class CrmServiceProvider extends ServiceProvider
@@ -50,6 +51,7 @@ class CrmServiceProvider extends ServiceProvider
                 RecomputeInvoices::class,
                 RecomputeWalletBalances::class,
                 ResolveOrphanTechnicians::class,
+                ResyncTechnicians::class,
             ]);
         }
     }
