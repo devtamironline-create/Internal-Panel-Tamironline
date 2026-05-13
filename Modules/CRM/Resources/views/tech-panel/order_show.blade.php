@@ -418,19 +418,24 @@
                     @endforeach
                 </div>
 
-                {{-- توضیحات وابسته به وضعیت انتخاب‌شده — اجباری برای ثبت تغییر --}}
-                @foreach($statusDescPrompts as $value => $prompt)
-                    <div x-show="selected === '{{ $value }}'" x-cloak class="pt-2">
-                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">{{ $prompt }} *</label>
-                        <textarea name="description" rows="3"
-                                  :required="selected === '{{ $value }}'"
-                                  class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
-                                  placeholder="برای ثبت تغییر وضعیت، این فیلد را پر کنید...">{{ old('description') }}</textarea>
-                        @error('description')
-                            <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-                @endforeach
+                {{-- توضیحات وابسته به وضعیت انتخاب‌شده — اجباری برای ثبت تغییر.
+                     یک textarea مشترک با label/placeholder داینامیک: قبلاً برای
+                     هر وضعیت یک textarea جدا بود که با x-show پنهان می‌شدند،
+                     ولی همه با name="description" در DOM وجود داشتند و موقع
+                     submit آخری (که خالی بود) overwrite می‌کرد و خطای
+                     «توضیحات الزامی است» می‌داد. --}}
+                <div x-show="@js(array_keys($statusDescPrompts)).includes(selected)" x-cloak class="pt-2">
+                    <label class="text-[11px] text-rose-700 font-bold mb-1 block">
+                        <span x-text="@js($statusDescPrompts)[selected] || ''"></span> *
+                    </label>
+                    <textarea name="description" rows="3"
+                              :required="@js(array_keys($statusDescPrompts)).includes(selected)"
+                              class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
+                              placeholder="برای ثبت تغییر وضعیت، این فیلد را پر کنید...">{{ old('description') }}</textarea>
+                    @error('description')
+                        <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 {{-- ── بلاک فاکتور — فقط هنگام انتخاب «پایان سفارش» ─── --}}
                 <div x-show="selected === '{{ OrderStatus::Completed->value }}'" x-cloak class="pt-3 border-t border-gray-100 mt-3 space-y-3">
