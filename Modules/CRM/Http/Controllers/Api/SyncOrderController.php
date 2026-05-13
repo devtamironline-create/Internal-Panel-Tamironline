@@ -189,11 +189,21 @@ class SyncOrderController extends Controller
             // است؛ بلاک کردن ساخت اولیه کار اشتباهی بود (سفارش جدید هرگز
             // وارد Laravel نمی‌شد).
             //
-            // برای سفارش موجود: اگر technician_id ست شده باشد، جهت همان
-            // تکنسین Laravel چک می‌شود. اگر هنوز تخصیص نخورده، چک skip
-            // می‌کنیم (فیلد جدید می‌خواهد ست شود؛ technician_wp_id اولین
-            // بار است).
-            if ($order && $order->technician_id) {
+            // استثنا: اگر سفارش هنوز ناقص ست شده (FKهای اصلی null هستند)
+            // و WP حالا با مقدار کامل آمده، بگذار payload کامل ذخیره شود.
+            // این مهم است چون پلاگین WP در چند مرحلهٔ هوک پشت‌سر هم
+            // payload می‌فرستد: اولی با terms خالی (پست تازه ساخته شده،
+            // taxonomyها هنوز ست نشده‌اند)، دومی با terms کامل. ما باید
+            // اولی + هر تکمیل بعدی را قبول کنیم، فقط override تغییرات
+            // اپراتور را بلاک کنیم.
+            $isIncompleteOrder = $order && (
+                $order->brand_id === null
+                || $order->device_id === null
+                || $order->province_id === null
+                || $order->city_id === null
+            );
+
+            if ($order && $order->technician_id && ! $isIncompleteOrder) {
                 $tech = Technician::find($order->technician_id);
                 if ($tech && ! $tech->canReceiveOrderFromWp()) {
                     return [
