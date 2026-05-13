@@ -189,7 +189,12 @@ class DashboardController extends Controller
         $statusFilter = $request->query('status');
         $search = $request->query('q');
 
-        $base = Order::query()->forTechnician($tech->id);
+        // پایه: همه سفارش‌های تکنسین به جز Declined.
+        // وقتی تکنسین وضعیتی را روی Declined بگذارد، آن سفارش از دیدش
+        // برای همیشه حذف می‌شود (ادمین می‌تواند تکنسین دیگری تخصیص دهد).
+        $base = Order::query()
+            ->forTechnician($tech->id)
+            ->where('status', '!=', OrderStatus::Declined->value);
 
         // آمار وضعیت‌های مهم برای تکنسین (همیشه روی کل سفارش‌های تکنسین).
         $stats = [
@@ -240,9 +245,16 @@ class DashboardController extends Controller
         $tech = Auth::guard('tech')->user();
         $this->ensureOwnership($order, $tech);
 
+        // trim جلویی روی description تا اسپیس‌های padding در شمارش min/max
+        // نقش نداشته باشند. این از سواستفاده با اسپیس برای رد کردن
+        // اعتبارسنجی min:15 جلوگیری می‌کند.
+        $request->merge([
+            'description' => trim((string) $request->input('description', '')),
+        ]);
+
         $validated = $request->validate([
             'status' => 'required|string',
-            'description' => 'required|string|max:2000',
+            'description' => 'required|string|min:15|max:2000',
 
             // فیلدهای فاکتور — فقط زمانی استفاده می‌شوند که وضعیت = Completed.
             'price_customer' => 'nullable|integer|min:0',
@@ -259,6 +271,7 @@ class DashboardController extends Controller
             'device_img1' => 'nullable|image|max:5120',
         ], [
             'description.required' => 'برای ثبت تغییر وضعیت، توضیحات الزامی است.',
+            'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',
             'description.max' => 'توضیحات حداکثر ۲۰۰۰ کاراکتر.',
         ]);
 
@@ -283,6 +296,7 @@ class DashboardController extends Controller
                 OrderStatus::Suspended   => ['description_tech1' => $description],
                 OrderStatus::Open        => ['description_tech2' => $description],
                 OrderStatus::Declined    => ['cancel_reason' => $description],
+                OrderStatus::Transit     => ['return_description' => $description],
                 default                  => [],
             };
         }
