@@ -71,10 +71,15 @@ class Technician extends Authenticatable
 
     /**
      * مقادیر مجاز برای جهت سینک. شامل توضیح فارسی برای استفاده در UI.
+     *
+     * پیش‌فرض‌ها:
+     *   - سفارش: both (WP می‌سازد، Laravel ویرایش می‌کند، WP cron با
+     *     فیلتر laravelManaged از overwrite جلوگیری می‌کند)
+     *   - کیف‌پول: wp_to_laravel (برای جلوگیری از overwrite شارژ WP)
      */
     public const SYNC_DIRECTIONS = [
-        'wp_to_laravel' => 'فقط از WP به پنل (پیش‌فرض)',
         'both'          => 'دو طرفه',
+        'wp_to_laravel' => 'فقط از WP به پنل',
         'laravel_to_wp' => 'فقط از پنل به WP',
         'none'          => 'قطع سینک',
     ];
@@ -82,7 +87,7 @@ class Technician extends Authenticatable
     /** آیا تغییری از سمت Laravel به WP push شود؟ */
     public function canPushOrder(): bool
     {
-        return in_array($this->order_sync_direction ?? 'wp_to_laravel', ['both', 'laravel_to_wp'], true);
+        return in_array($this->order_sync_direction ?? 'both', ['both', 'laravel_to_wp'], true);
     }
 
     public function canPushWallet(): bool
@@ -93,7 +98,7 @@ class Technician extends Authenticatable
     /** آیا inbound از WP پذیرفته شود؟ */
     public function canReceiveOrderFromWp(): bool
     {
-        return in_array($this->order_sync_direction ?? 'wp_to_laravel', ['both', 'wp_to_laravel'], true);
+        return in_array($this->order_sync_direction ?? 'both', ['both', 'wp_to_laravel'], true);
     }
 
     public function canReceiveWalletFromWp(): bool
