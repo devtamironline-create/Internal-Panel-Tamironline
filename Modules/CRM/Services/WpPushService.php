@@ -261,7 +261,7 @@ class WpPushService
             'max_order'         => $tech->max_order,
             'max_price'         => $tech->max_price,
             'status'            => $tech->status,
-            'type_tech'         => $tech->type_tech,
+            'type_tech'         => $this->mapTypeTechForWp($tech->type_tech),
             'province'          => $tech->province,
             'specialty'         => $tech->specialty,
             'type_of_calc_tech' => $tech->type_of_calc_tech,
@@ -365,6 +365,29 @@ class WpPushService
         if ($resp && ! $tx->wp_id && ! empty($resp['wp_id'])) {
             $tx->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
         }
+    }
+
+    /**
+     * نگاشت type_tech لاراولی به enum پذیرفته‌شدهٔ WP CRM.
+     *
+     * WP CRM فقط مقادیر external / internal / repair را در dropdown
+     * تکنسین می‌فهمد. مقادیر لاراولی مثل install_repair باعث می‌شوند
+     * تکنسین در WP به‌عنوان «خارجی» نمایش داده شود ولی نتواند سفارش
+     * بگیرد. این تابع همه مقادیر ناشناخته را به 'external' تبدیل
+     * می‌کند تا تکنسین فعال و قابل تخصیص در WP باشد.
+     */
+    protected function mapTypeTechForWp(?string $value): ?string
+    {
+        if ($value === null || $value === '') return null;
+
+        $value = trim((string) $value);
+        $allowed = ['external', 'internal', 'repair'];
+        if (in_array($value, $allowed, true)) {
+            return $value;
+        }
+
+        // پیش‌فرض: تکنسین خارجی (قابل تخصیص و سفارش‌پذیر)
+        return 'external';
     }
 
     protected function walletTxTitle(string $type, int $amount): string

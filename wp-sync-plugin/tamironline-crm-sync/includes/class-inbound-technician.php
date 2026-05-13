@@ -41,7 +41,12 @@ class TCS_Inbound_Technician
         // (ready_for_derliver / img_Personal) ترجمه شود.
         $fields = $this->normalize_field_keys($fields);
 
-        $mobile = (string) ($fields['mobile'] ?? '');
+        // نرمالایز موبایل — هم برای match (find_user_by_mobile) هم برای
+        // ذخیره. اگر whitespace/digits فارسی داشت، تمیز نگه‌می‌داریم.
+        $mobile = $this->normalize_mobile((string) ($fields['mobile'] ?? ''));
+        if ($mobile !== '') {
+            $fields['mobile'] = $mobile;
+        }
         if ($mobile === '' && $wpId <= 0) {
             return new \WP_REST_Response(['ok' => false, 'message' => 'mobile required for new user'], 400);
         }
@@ -135,15 +140,57 @@ class TCS_Inbound_Technician
         return $fields;
     }
 
+    /**
+     * یافتن کاربر بر اساس موبایل — robust به whitespace و ارقام فارسی.
+     *
+     * WP CRM موبایل را با فضاهای padding ذخیره می‌کند (مثل ' 09017304923 ')
+     * و گاهی ارقام فارسی (۰۹...). تطابق exact شکست می‌خورد. اینجا با
+     * TRIM و LIKE انجام می‌شود. nickname هم (که از مبدا login تکنسین
+     * = tech_<digits> ساخته می‌شود) به‌عنوان fallback چک می‌شود تا
+     * duplicateهایی که از race condition قبلی به وجود آمده‌اند نیز
+     * detect شوند.
+     */
     protected function find_user_by_mobile(string $mobile): int
     {
-        // متاهای mobile / phone_force می‌توانند شماره را داشته باشند
         global $wpdb;
+        $clean = $this->normalize_mobile($mobile);
+        if ($clean === '') return 0;
+
+        // ۱) tightest: meta exact یا با whitespace padding
         $row = $wpdb->get_var($wpdb->prepare(
-            "SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key IN ('mobile','phone_force','phone') AND meta_value = %s LIMIT 1",
-            $mobile
+            "SELECT user_id FROM {$wpdb->usermeta}
+             WHERE meta_key IN ('mobile','phone_force','phone')
+               AND TRIM(meta_value) = %s
+             ORDER BY user_id ASC LIMIT 1",
+            $clean
+        ));
+        if ($row) return (int) $row;
+
+        // ۲) fallback: nickname یا user_login حاوی digits موبایل
+        //    (نسخهٔ قدیمی این پلاگین nickname=tech_<digits> ساخته)
+        $row = $wpdb->get_var($wpdb->prepare(
+            "SELECT u.ID FROM {$wpdb->users} u
+             LEFT JOIN {$wpdb->usermeta} m ON m.user_id = u.ID AND m.meta_key='nickname'
+             WHERE u.user_login LIKE %s OR m.meta_value LIKE %s
+             ORDER BY u.ID ASC LIMIT 1",
+            '%' . $wpdb->esc_like($clean) . '%',
+            '%' . $wpdb->esc_like($clean) . '%'
         ));
         return (int) $row;
+    }
+
+    /** نرمالایز موبایل: ارقام فارسی→انگلیسی، حذف فاصله/خط/پیشوند بین‌المللی. */
+    protected function normalize_mobile(string $mobile): string
+    {
+        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $arabic  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+        $latin   = ['0','1','2','3','4','5','6','7','8','9'];
+        $mobile = str_replace($persian, $latin, $mobile);
+        $mobile = str_replace($arabic, $latin, $mobile);
+        $mobile = trim($mobile);
+        // فقط ارقام را نگه دار
+        $mobile = preg_replace('/\D/', '', $mobile);
+        return (string) $mobile;
     }
 
     protected function unique_login(string $base): string
