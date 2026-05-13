@@ -184,24 +184,26 @@ class SyncOrderController extends Controller
 
             $payload = $this->buildPayload($data);
 
-            // جهت سینک تکنسین — اگر روی laravel_to_wp یا none باشد، inbound
-            // برای این سفارش مسدود می‌شود (محافظت از فیلدهای دستی Laravel).
-            // تکنسین فعلی Laravel اولویت دارد؛ اگر هنوز تخصیص نخورده، روی
-            // technician_wp_id ارسالی WP چک می‌کنیم.
-            $tech = null;
+            // جهت سینک تکنسین — فقط روی UPDATE سفارش‌های موجود اعمال می‌شود.
+            // هدف، جلوگیری از override فیلدهای دستی Laravel توسط WP cron
+            // است؛ بلاک کردن ساخت اولیه کار اشتباهی بود (سفارش جدید هرگز
+            // وارد Laravel نمی‌شد).
+            //
+            // برای سفارش موجود: اگر technician_id ست شده باشد، جهت همان
+            // تکنسین Laravel چک می‌شود. اگر هنوز تخصیص نخورده، چک skip
+            // می‌کنیم (فیلد جدید می‌خواهد ست شود؛ technician_wp_id اولین
+            // بار است).
             if ($order && $order->technician_id) {
                 $tech = Technician::find($order->technician_id);
-            } elseif (! empty($payload['technician_wp_id'])) {
-                $tech = Technician::where('wp_id', (int) $payload['technician_wp_id'])->first();
-            }
-            if ($tech && ! $tech->canReceiveOrderFromWp()) {
-                return [
-                    'action' => 'skipped',
-                    'id' => $order?->id,
-                    'wp_id' => $wpId,
-                    'order_code' => $order?->order_code,
-                    'reason' => 'blocked_by_technician_sync_direction:' . $tech->order_sync_direction,
-                ];
+                if ($tech && ! $tech->canReceiveOrderFromWp()) {
+                    return [
+                        'action' => 'skipped',
+                        'id' => $order->id,
+                        'wp_id' => $wpId,
+                        'order_code' => $order->order_code,
+                        'reason' => 'blocked_by_technician_sync_direction:' . $tech->order_sync_direction,
+                    ];
+                }
             }
 
             // post_date در WP زمان واقعی ثبت سفارش است؛ به created_at نگاشت
