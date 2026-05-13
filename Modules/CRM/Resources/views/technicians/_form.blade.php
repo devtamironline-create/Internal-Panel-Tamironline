@@ -218,6 +218,8 @@
                 </button>
             </div>
         </div>
+        <input type="search" data-filter-group="cities" placeholder="جستجو در شهرها…"
+               class="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus:border-brand-400">
         <div data-group="cities" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
             @foreach($allCities as $c)
                 <label class="flex items-center gap-1.5 cursor-pointer text-sm">
@@ -245,6 +247,8 @@
                     </button>
                 </div>
             </div>
+            <input type="search" data-filter-group="brands" placeholder="جستجو در برندها…"
+                   class="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus:border-brand-400">
             <div data-group="brands" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                 @foreach($allBrands as $b)
                     <label class="flex items-center gap-1.5 cursor-pointer text-sm">
@@ -271,6 +275,8 @@
                     </button>
                 </div>
             </div>
+            <input type="search" data-filter-group="devices" placeholder="جستجو در دستگاه‌ها…"
+                   class="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus:border-brand-400">
             <div data-group="devices" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                 @foreach($allDevices as $d)
                     <label class="flex items-center gap-1.5 cursor-pointer text-sm">
@@ -292,8 +298,27 @@
                 var mode = btn.getAttribute('data-toggle-all'); // select | clear
                 var box = document.querySelector('div[data-group="' + group + '"]');
                 if (! box) return;
-                box.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-                    cb.checked = (mode === 'select');
+                // فقط روی آیتم‌های visible عمل کن — اگر کاربر سرچ کرده،
+                // فقط نتیجه فعلی را select/clear می‌کنیم.
+                box.querySelectorAll('label').forEach(function (lbl) {
+                    if (lbl.style.display === 'none') return;
+                    var cb = lbl.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = (mode === 'select');
+                });
+            });
+        });
+
+        // فیلتر سرچ — روی متن نمایشی label مقایسه می‌کند، حساس به
+        // حروف نیست و فضاهای اضافی نادیده گرفته می‌شوند.
+        document.querySelectorAll('input[data-filter-group]').forEach(function (inp) {
+            inp.addEventListener('input', function () {
+                var group = inp.getAttribute('data-filter-group');
+                var box = document.querySelector('div[data-group="' + group + '"]');
+                if (! box) return;
+                var q = inp.value.trim().toLowerCase();
+                box.querySelectorAll('label').forEach(function (lbl) {
+                    var text = (lbl.textContent || '').trim().toLowerCase();
+                    lbl.style.display = (q === '' || text.indexOf(q) !== -1) ? '' : 'none';
                 });
             });
         });
