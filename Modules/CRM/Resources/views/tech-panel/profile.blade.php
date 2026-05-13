@@ -123,9 +123,6 @@
             <span class="text-xs text-gray-400">وضعیت</span>
             <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $statusBadge }}">{{ $statusLabel }}</span>
-                @if($technician->ready_for_delivery)
-                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-100 text-blue-800">آماده تحویل</span>
-                @endif
             </div>
         </div>
         @if($technician->technician_id)
