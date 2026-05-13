@@ -4,6 +4,7 @@ namespace Modules\CRM\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Modules\CRM\Http\Middleware\LogWpSyncInbound;
 use Modules\CRM\Http\Middleware\VerifyWpSyncToken;
 
 class RouteServiceProvider extends ServiceProvider
@@ -19,7 +20,7 @@ class RouteServiceProvider extends ServiceProvider
     {
         Route::middleware('web')->group(module_path($this->name, 'Routes/web.php'));
 
-        Route::middleware(['api', VerifyWpSyncToken::class])
+        Route::middleware(['api', VerifyWpSyncToken::class, LogWpSyncInbound::class])
             ->prefix('api/crm/sync')
             ->group(module_path($this->name, 'Routes/api.php'));
     }

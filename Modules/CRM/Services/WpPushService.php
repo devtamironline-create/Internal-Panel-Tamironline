@@ -62,7 +62,7 @@ class WpPushService
         $this->send([
             'wp_id' => (int) $order->wp_id,
             'fields' => $fields,
-        ]);
+        ], ['entity_type' => 'order', 'entity_id' => $order->id]);
     }
 
     /**
@@ -141,15 +141,23 @@ class WpPushService
     }
 
     /** ارسال HTTP با امضای HMAC. خرابی نباید درخواست اصلی را شکست‌بدهد. */
-    protected function send(array $payload): void
+    protected function send(array $payload, array $context = []): void
     {
-        $this->sendTo('order-update', $payload);
+        $this->sendTo('order-update', $payload, $context + ['entity_type' => 'order']);
     }
 
-    /** ارسال HTTP عمومی به یک endpoint inbound پلاگین. */
-    protected function sendTo(string $endpoint, array $payload): ?array
+    /**
+     * ارسال HTTP عمومی به یک endpoint inbound پلاگین.
+     *
+     * $context = ['entity_type' => 'order|technician|customer|wallet_tx|...',
+     *             'entity_id' => int|null]  → برای ثبت در crm_sync_logs.
+     */
+    protected function sendTo(string $endpoint, array $payload, array $context = []): ?array
     {
-        if (! $this->isEnabled()) return null;
+        if (! $this->isEnabled()) {
+            $this->logSync('outbound', $endpoint, $payload, null, 'skipped', null, 'wp_push_disabled_or_unconfigured', $context);
+            return null;
+        }
         $url = rtrim((string) CrmSetting::get('wp_push_url'), '/') . '/wp-json/tcs/v1/' . $endpoint;
         $secret = (string) CrmSetting::get('wp_push_secret');
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE);
@@ -162,6 +170,9 @@ class WpPushService
                 'X-TCS-Signature' => $signature,
             ])->timeout(8)->withBody($body, 'application/json')->post($url);
 
+            $respJson = null;
+            try { $respJson = $response->json(); } catch (\Throwable $e) { /* not JSON */ }
+
             if (! $response->ok()) {
                 Log::warning('crm.wp_push.failed', [
                     'endpoint' => $endpoint,
@@ -169,17 +180,46 @@ class WpPushService
                     'status' => $response->status(),
                     'body' => substr((string) $response->body(), 0, 500),
                 ]);
+                $this->logSync('outbound', $endpoint, $payload, $respJson ?? ['raw' => substr((string) $response->body(), 0, 500)],
+                    'failed', $response->status(), 'http_'.$response->status(), $context);
                 return null;
             }
-            return $response->json();
+            $this->logSync('outbound', $endpoint, $payload, $respJson, 'success', $response->status(), null, $context);
+            return $respJson;
         } catch (\Throwable $e) {
             Log::error('crm.wp_push.exception', [
                 'endpoint' => $endpoint,
                 'wp_id' => $payload['wp_id'] ?? null,
                 'error' => $e->getMessage(),
             ]);
+            $this->logSync('outbound', $endpoint, $payload, null, 'failed', null, mb_substr($e->getMessage(), 0, 500), $context);
             return null;
         }
+    }
+
+    /** نوشتن یک ردیف لاگ سینک — هرگز exception پرتاب نمی‌کند. */
+    protected function logSync(
+        string $direction,
+        string $endpoint,
+        ?array $payload,
+        ?array $response,
+        string $status,
+        ?int $httpStatus,
+        ?string $error,
+        array $context
+    ): void {
+        \Modules\CRM\Models\SyncLog::record([
+            'direction' => $direction,
+            'entity_type' => $context['entity_type'] ?? 'other',
+            'entity_id' => $context['entity_id'] ?? null,
+            'wp_id' => $payload['wp_id'] ?? ($context['wp_id'] ?? null),
+            'endpoint' => $endpoint,
+            'status' => $status,
+            'http_status' => $httpStatus,
+            'error_message' => $error,
+            'payload' => $payload,
+            'response' => $response,
+        ]);
     }
 
     // ─────────── Push تکنسین ───────────
@@ -213,7 +253,7 @@ class WpPushService
         $resp = $this->sendTo('technician-upsert', [
             'wp_id'  => $tech->wp_id ?: 0,
             'fields' => $fields,
-        ]);
+        ], ['entity_type' => 'technician', 'entity_id' => $tech->id]);
 
         // اگر تکنسین جدید WP id برگشت داد، روی مدل ذخیره کن
         if ($resp && ! $tech->wp_id && ! empty($resp['wp_id'])) {
@@ -241,7 +281,7 @@ class WpPushService
         $resp = $this->sendTo('customer-upsert', [
             'wp_id'  => $customer->wp_id ?: 0,
             'fields' => $fields,
-        ]);
+        ], ['entity_type' => 'customer', 'entity_id' => $customer->id]);
 
         if ($resp && ! $customer->wp_id && ! empty($resp['wp_id'])) {
             $customer->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
@@ -285,7 +325,7 @@ class WpPushService
         $resp = $this->sendTo('financial-upsert', [
             'wp_id'  => $tx->wp_id ?: 0,
             'fields' => $fields,
-        ]);
+        ], ['entity_type' => 'wallet_tx', 'entity_id' => $tx->id]);
 
         if ($resp && ! $tx->wp_id && ! empty($resp['wp_id'])) {
             $tx->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();

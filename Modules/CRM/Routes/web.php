@@ -292,6 +292,13 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('wp-push', [SyncSettingsController::class, 'updateWpPush'])->name('wp-push.update');
     });
 
+    // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────
+    Route::middleware('can:manage-crm-sync')->prefix('sync-logs')->name('sync-logs.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\SyncLogController::class, 'index'])->name('index');
+        Route::get('{id}', [\Modules\CRM\Http\Controllers\SyncLogController::class, 'show'])->name('show')->whereNumber('id');
+        Route::delete('/', [\Modules\CRM\Http\Controllers\SyncLogController::class, 'destroy'])->name('destroy');
+    });
+
     // ─── تنظیمات ظاهری پنل تکنسین (لوگو/بنر/هیرو/...) ──────────────
     Route::middleware('can:manage-crm-settings')->prefix('tech-panel-settings')->name('tech-panel-settings.')->group(function () {
         Route::get('/', [TechPanelSettingsController::class, 'index'])->name('index');
