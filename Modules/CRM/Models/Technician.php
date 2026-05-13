@@ -63,7 +63,43 @@ class Technician extends Authenticatable
         // وضعیت
         'status',
         'ready_for_delivery',
+
+        // جهت سینک (per-technician) — برای جلوگیری از overwrite ناخواسته بین WP↔Laravel
+        'order_sync_direction',
+        'wallet_sync_direction',
     ];
+
+    /**
+     * مقادیر مجاز برای جهت سینک. شامل توضیح فارسی برای استفاده در UI.
+     */
+    public const SYNC_DIRECTIONS = [
+        'both'          => 'دو طرفه (پیش‌فرض)',
+        'wp_to_laravel' => 'فقط از WP به پنل',
+        'laravel_to_wp' => 'فقط از پنل به WP',
+        'none'          => 'قطع سینک',
+    ];
+
+    /** آیا تغییری از سمت Laravel به WP push شود؟ */
+    public function canPushOrder(): bool
+    {
+        return in_array($this->order_sync_direction ?? 'both', ['both', 'laravel_to_wp'], true);
+    }
+
+    public function canPushWallet(): bool
+    {
+        return in_array($this->wallet_sync_direction ?? 'both', ['both', 'laravel_to_wp'], true);
+    }
+
+    /** آیا inbound از WP پذیرفته شود؟ */
+    public function canReceiveOrderFromWp(): bool
+    {
+        return in_array($this->order_sync_direction ?? 'both', ['both', 'wp_to_laravel'], true);
+    }
+
+    public function canReceiveWalletFromWp(): bool
+    {
+        return in_array($this->wallet_sync_direction ?? 'both', ['both', 'wp_to_laravel'], true);
+    }
 
     protected $casts = [
         'wp_id' => 'integer',

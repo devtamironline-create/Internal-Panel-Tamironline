@@ -153,6 +153,44 @@
     </div>
 </div>
 
+{{-- جهت سینک با WP CRM (per-technician) --}}
+<div class="mb-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+        جهت سینک با WordPress CRM
+    </h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-6">
+        اگر داده‌های یک تکنسین بین دو سیستم متضاد می‌شود (مثلاً WP شارژ کیف‌پول را
+        صفر می‌کند یا پنل وضعیت سفارش را عقب می‌برد)، می‌توانید یک‌طرفه‌اش کنید.
+        مقدار پیش‌فرض «دوطرفه» است.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">جهت سینک سفارش</label>
+            <select name="order_sync_direction"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                @foreach (\Modules\CRM\Models\Technician::SYNC_DIRECTIONS as $value => $label)
+                    <option value="{{ $value }}"
+                            @selected(old('order_sync_direction', $technician->order_sync_direction ?? 'both') === $value)>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">جهت سینک کیف‌پول</label>
+            <select name="wallet_sync_direction"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                @foreach (\Modules\CRM\Models\Technician::SYNC_DIRECTIONS as $value => $label)
+                    <option value="{{ $value }}"
+                            @selected(old('wallet_sync_direction', $technician->wallet_sync_direction ?? 'both') === $value)>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+</div>
+
 {{-- ─── تخصص برای سیستم پیشنهاد هوشمند ─── --}}
 @if(isset($allCities) && isset($allBrands) && isset($allDevices))
 <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6 space-y-4">

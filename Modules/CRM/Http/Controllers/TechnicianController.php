@@ -341,6 +341,10 @@ class TechnicianController extends Controller
             // وضعیت
             'status' => 'nullable|in:active,inactive',
             'ready_for_delivery' => 'nullable|boolean',
+
+            // جهت سینک per-technician
+            'order_sync_direction' => 'nullable|in:both,wp_to_laravel,laravel_to_wp,none',
+            'wallet_sync_direction' => 'nullable|in:both,wp_to_laravel,laravel_to_wp,none',
         ]);
     }
 }

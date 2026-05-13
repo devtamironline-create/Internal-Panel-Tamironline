@@ -54,6 +54,20 @@ class WpPushService
             return;
         }
 
+        // جهت سینک تکنسین — اگر روی wp_to_laravel یا none باشد، outbound مسدود
+        if ($order->technician_id) {
+            $tech = Technician::find($order->technician_id);
+            if ($tech && ! $tech->canPushOrder()) {
+                $this->logSync('outbound', 'order-update',
+                    ['wp_id' => (int) $order->wp_id],
+                    null, 'skipped', null,
+                    'blocked_by_technician_sync_direction:' . $tech->order_sync_direction,
+                    ['entity_type' => 'order', 'entity_id' => $order->id]
+                );
+                return;
+            }
+        }
+
         $fields = $this->extractFields($order);
         if (empty($fields)) {
             return;
@@ -294,6 +308,17 @@ class WpPushService
         if (! $this->isEnabled()) return;
         $tech = $tx->technician_id ? Technician::find($tx->technician_id) : null;
         if (! $tech || ! $tech->wp_id) return; // بدون wp_id تکنسین، WP نمی‌تواند تخصیص دهد
+
+        // جهت سینک کیف‌پول تکنسین — اگر روی wp_to_laravel یا none باشد، outbound مسدود
+        if (! $tech->canPushWallet()) {
+            $this->logSync('outbound', 'financial-upsert',
+                ['wp_id' => $tx->wp_id ?: 0, 'technician_wp_id' => $tech->wp_id],
+                null, 'skipped', null,
+                'blocked_by_technician_sync_direction:' . $tech->wallet_sync_direction,
+                ['entity_type' => 'wallet_tx', 'entity_id' => $tx->id]
+            );
+            return;
+        }
 
         // مَپ نوع تراکنش به فیلدهای CRM وردپرسی
         $type = $tx->type instanceof \Modules\CRM\Enums\WalletTxType ? $tx->type->value : $tx->type;

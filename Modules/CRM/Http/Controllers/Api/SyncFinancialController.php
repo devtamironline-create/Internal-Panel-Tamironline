@@ -314,6 +314,18 @@ class SyncFinancialController extends Controller
             throw new \RuntimeException('technician not resolved for wallet transaction');
         }
 
+        // جهت سینک کیف‌پول تکنسین — اگر روی laravel_to_wp یا none باشد،
+        // داده‌های WP پذیرفته نمی‌شوند (برای جلوگیری از overwrite شارژ).
+        if (! $technician->canReceiveWalletFromWp()) {
+            return [
+                'action' => 'skipped',
+                'type' => 'wallet_' . $type,
+                'id' => null,
+                'wp_id' => $wpId,
+                'reason' => 'blocked_by_technician_sync_direction:' . $technician->wallet_sync_direction,
+            ];
+        }
+
         // تشخیص enum + علامت — مهم: wallet=1 در WP یعنی «شارژ کیف‌پول»
         // (شرکت → تکنسین، علامت مثبت). به WalletCharge می‌رود نه Credit
         // (که برای ثبت دستی «واریز تکنسین به شرکت» با علامت منفی است).
