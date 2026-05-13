@@ -426,26 +426,17 @@
                      submit آخری (که خالی بود) overwrite می‌کرد و خطای
                      «توضیحات الزامی است» می‌داد. --}}
                 <div x-show="@js(array_keys($statusDescPrompts)).includes(selected)"
-                     x-cloak class="pt-2"
-                     x-data="{ desc: @js(old('description', '')) }">
+                     x-cloak class="pt-2">
                     <label class="text-[11px] text-rose-700 font-bold mb-1 block">
                         <span x-text="@js($statusDescPrompts)[selected] || ''"></span> *
                     </label>
                     <textarea name="description" rows="3" minlength="15" maxlength="2000"
-                              x-model="desc"
                               :required="@js(array_keys($statusDescPrompts)).includes(selected)"
                               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
-                              placeholder="حداقل ۱۵ کاراکتر — دلیل و توضیح را شرح دهید..."></textarea>
-                    <div class="flex items-center justify-between mt-1">
-                        <p class="text-[10px] text-gray-500">
-                            <span x-text="desc.trim().length"></span>/15
-                            <span x-show="desc.trim().length < 15" class="text-rose-600">(کوتاه است)</span>
-                            <span x-show="desc.trim().length >= 15" class="text-emerald-600">✓</span>
-                        </p>
-                        @error('description')
-                            <p class="text-[10px] text-rose-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                              placeholder="دلیل و توضیح را شرح دهید...">{{ old('description') }}</textarea>
+                    @error('description')
+                        <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 {{-- ── بلاک فاکتور — فقط هنگام انتخاب «پایان سفارش» ─── --}}
