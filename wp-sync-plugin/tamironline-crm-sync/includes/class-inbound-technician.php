@@ -36,6 +36,11 @@ class TCS_Inbound_Technician
         $wpId   = (int) ($params['wp_id'] ?? 0);
         $fields = (array) ($params['fields'] ?? []);
 
+        // نرمالایز نام فیلدها — لاراول ممکن است املای صحیح را بفرستد
+        // (ready_for_delivery / img_personal) و باید به املای WP CRM
+        // (ready_for_derliver / img_Personal) ترجمه شود.
+        $fields = $this->normalize_field_keys($fields);
+
         $mobile = (string) ($fields['mobile'] ?? '');
         if ($mobile === '' && $wpId <= 0) {
             return new \WP_REST_Response(['ok' => false, 'message' => 'mobile required for new user'], 400);
@@ -48,23 +53,39 @@ class TCS_Inbound_Technician
             if ($existing) $wpId = $existing;
         }
 
+        // نام نمایشی: ترجیحاً firstname_tech (فارسی)، در نبود از first_name،
+        // در نهایت از login. این برای ساخت اول و آپدیت بعدی استفاده می‌شود.
+        $displayName = trim((string) ($fields['firstname_tech'] ?? '')) !== ''
+            ? (string) $fields['firstname_tech']
+            : (trim((string) ($fields['first_name'] ?? '')) !== '' ? (string) $fields['first_name'] : '');
+
         if ($wpId <= 0) {
             // ساخت کاربر جدید با login بر اساس موبایل
             $login = $this->unique_login('tech_' . preg_replace('/\D/', '', $mobile));
             $userId = wp_insert_user([
-                'user_login' => $login,
-                'user_pass'  => wp_generate_password(16),
-                'user_email' => $login . '@local',
-                'first_name' => $fields['first_name'] ?? '',
-                'last_name'  => '',
-                'display_name' => $fields['first_name'] ?? $login,
-                'role'       => 'subscriber',
+                'user_login'   => $login,
+                'user_pass'    => wp_generate_password(16),
+                'user_email'   => $login . '@local',
+                'first_name'   => $fields['first_name'] ?? '',
+                'last_name'    => '',
+                'display_name' => $displayName !== '' ? $displayName : $login,
+                'role'         => 'subscriber',
             ]);
             if (is_wp_error($userId)) {
                 return new \WP_REST_Response(['ok' => false, 'message' => $userId->get_error_message()], 500);
             }
             $wpId = (int) $userId;
             update_user_meta($wpId, 'role', 'technician');
+        } else {
+            // برای کاربر موجود: اگر firstname_tech/first_name تغییر کرده،
+            // display_name هم به‌روز شود تا در لیست WP CRM دیده شود.
+            if ($displayName !== '') {
+                $update = ['ID' => $wpId, 'display_name' => $displayName];
+                if (isset($fields['first_name'])) {
+                    $update['first_name'] = (string) $fields['first_name'];
+                }
+                wp_update_user($update);
+            }
         }
 
         set_transient('tcs_suppress_user_' . $wpId, 1, 10);
@@ -76,16 +97,42 @@ class TCS_Inbound_Technician
             'cart_img', 'province', 'specialty', 'ready_for_derliver',
             'type_of_calc_tech', 'tech_per_of_all', 'img_Personal', 'role',
         ];
+        $written = 0;
         foreach ($fields as $key => $value) {
             if (! in_array($key, $allowed, true)) continue;
             if ($value === null || $value === '') {
                 delete_user_meta($wpId, $key);
             } else {
                 update_user_meta($wpId, $key, $value);
+                $written++;
             }
         }
 
-        return new \WP_REST_Response(['ok' => true, 'wp_id' => $wpId], 200);
+        return new \WP_REST_Response([
+            'ok' => true,
+            'wp_id' => $wpId,
+            'meta_written' => $written,
+            'display_name' => $displayName,
+        ], 200);
+    }
+
+    /**
+     * نگاشت نام فیلدها بین Laravel و WP. Laravel نام صحیح می‌فرستد، WP
+     * CRM با نام‌های تاریخی (تایپو/Capital) ذخیره می‌کند.
+     */
+    protected function normalize_field_keys(array $fields): array
+    {
+        $map = [
+            'ready_for_delivery' => 'ready_for_derliver',
+            'img_personal'       => 'img_Personal',
+        ];
+        foreach ($map as $from => $to) {
+            if (array_key_exists($from, $fields) && ! array_key_exists($to, $fields)) {
+                $fields[$to] = $fields[$from];
+                unset($fields[$from]);
+            }
+        }
+        return $fields;
     }
 
     protected function find_user_by_mobile(string $mobile): int

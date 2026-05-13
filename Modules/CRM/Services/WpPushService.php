@@ -242,26 +242,36 @@ class WpPushService
         if (! $this->isEnabled()) return;
         if (! $tech->mobile && ! $tech->wp_id) return;
 
+        // نگاشت Laravel → WP. کلیدها همان فیلدهای user_meta هستند که WP CRM
+        // می‌خواند. دو فیلد با تایپو/تفاوت حروف بزرگ-کوچک در WP وجود دارند
+        // که اینجا به شکل صحیح WP فرستاده می‌شوند:
+        //   ready_for_delivery (Laravel bool) → ready_for_derliver ('1'/'0')
+        //   img_personal (Laravel)            → img_Personal (WP)
         $fields = array_filter([
-            'first_name'      => $tech->first_name,
-            'firstname_tech'  => $tech->firstname_tech,
-            'technician_id'   => $tech->technician_id,
-            'national_code'   => $tech->national_code,
-            'mobile'          => $tech->mobile,
-            'phone'           => $tech->phone,
-            'phone_force'     => $tech->phone_force,
-            'address'         => $tech->address,
-            'description'     => $tech->description,
-            'percent'         => $tech->percent,
-            'max_order'       => $tech->max_order,
-            'max_price'       => $tech->max_price,
-            'status'          => $tech->status,
-            'type_tech'       => $tech->type_tech,
-            'province'        => $tech->province,
-            'specialty'       => $tech->specialty,
+            'first_name'        => $tech->first_name,
+            'firstname_tech'    => $tech->firstname_tech,
+            'technician_id'     => $tech->technician_id,
+            'national_code'     => $tech->national_code,
+            'mobile'            => $tech->mobile,
+            'phone'             => $tech->phone,
+            'phone_force'       => $tech->phone_force,
+            'address'           => $tech->address,
+            'description'       => $tech->description,
+            'percent'           => $tech->percent,
+            'max_order'         => $tech->max_order,
+            'max_price'         => $tech->max_price,
+            'status'            => $tech->status,
+            'type_tech'         => $tech->type_tech,
+            'province'          => $tech->province,
+            'specialty'         => $tech->specialty,
             'type_of_calc_tech' => $tech->type_of_calc_tech,
-            'tech_per_of_all' => $tech->tech_per_of_all,
-            'role'            => 'technician',
+            'tech_per_of_all'   => $tech->tech_per_of_all,
+            'cart_img'          => $tech->cart_img,
+            'img_Personal'      => $tech->img_personal,     // تفاوت حروف P/p
+            'ready_for_derliver' => $tech->ready_for_delivery !== null
+                ? ((bool) $tech->ready_for_delivery ? '1' : '0')
+                : null,
+            'role'              => 'technician',
         ], fn ($v) => $v !== null && $v !== '');
 
         $resp = $this->sendTo('technician-upsert', [
