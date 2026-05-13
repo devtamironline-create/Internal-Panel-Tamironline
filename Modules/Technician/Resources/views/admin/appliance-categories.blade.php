@@ -2,7 +2,7 @@
 @section('page-title', 'مدیریت دستگاه‌ها')
 
 @section('main')
-<div class="space-y-6">
+<div class="space-y-6" x-data="applianceCategoryEditor()">
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
@@ -129,5 +129,87 @@
         @endif
     </div>
 
+    {{-- ─── Modal ویرایش (نام و والد) ─────────────────────────────────── --}}
+    <div x-show="open" x-cloak @keydown.escape.window="close()"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+         @click.self="close()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"
+             x-transition.scale.duration.150ms>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-gray-900">ویرایش دسته</h3>
+                <button type="button" @click="close()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <form :action="`/admin/technician/appliance-categories/${id}`" method="POST" class="space-y-3">
+                @csrf
+                @method('PUT')
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">نام</label>
+                    <input type="text" name="name" x-model="name" required maxlength="255"
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">والد</label>
+                    <select name="parent_id" x-model="parent_id" :disabled="hasChildren"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-400">
+                        <option value="">— ریشه (دسته اصلی) —</option>
+                        @foreach($roots as $root)
+                            <option value="{{ $root->id }}" x-bind:disabled="{{ $root->id }} === id">
+                                {{ $root->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[10px] text-gray-400 mt-1" x-show="!hasChildren">
+                        برای تبدیل این دسته به زیرمجموعهٔ یک ریشه، والد را انتخاب کن. برای تبدیلش به ریشه، خالی بگذار.
+                    </p>
+                    <p class="text-[10px] text-amber-600 mt-1" x-show="hasChildren">
+                        این دسته خودش زیرمجموعه دارد، پس فقط می‌توان نامش را ویرایش کرد (نمی‌توان زیرمجموعهٔ کس دیگری شود).
+                    </p>
+                </div>
+
+                <input type="hidden" name="is_active" :value="is_active">
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" @click="close()"
+                            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+                        انصراف
+                    </button>
+                    <button type="submit"
+                            class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        ذخیره
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
+
+<script>
+function applianceCategoryEditor() {
+    return {
+        open: false,
+        id: null,
+        name: '',
+        parent_id: '',
+        hasChildren: false,
+        is_active: 1,
+        openEdit(id, name, parentId, childrenCount, isActive) {
+            this.id = id;
+            this.name = name;
+            this.parent_id = parentId === null ? '' : String(parentId);
+            this.hasChildren = childrenCount > 0;
+            this.is_active = isActive;
+            this.open = true;
+        },
+        close() {
+            this.open = false;
+        },
+    };
+}
+</script>
 @endsection
