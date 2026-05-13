@@ -141,6 +141,31 @@ class Order extends Model
             }
         });
 
+        // Push ساخت سفارش جدید به WP — وقتی اپراتور در پنل لاراول
+        // سفارش ثبت می‌کند، باید در WP CRM هم بسازد. CREATE همیشه push
+        // می‌شود (بدون توجه به order_sync_direction تکنسین) چون قانون:
+        // ایجاد اولیه همیشه باید برود تا سفارش در دو سیستم وجود داشته
+        // باشد. UPDATEها هستند که طبق تنظیم direction کنترل می‌شوند.
+        //
+        // اگر سفارش از WP inbound آمده، قبل از Order::create، wp_id ست
+        // می‌شود (در SyncOrderController::upsertOne). پس روی این آلودگی
+        // event create، wp_id pre-set است و pushOrderCreate بلافاصله
+        // return می‌کند (early return).
+        static::created(function (self $order) {
+            if ($order->wp_id) return; // از WP inbound آمده، push لازم نیست
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
+                return; // در artisan/seedها push اتوماتیک نمی‌خواهیم
+            }
+            try {
+                app(\Modules\CRM\Services\WpPushService::class)->pushOrderCreate($order);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.wp_push.create_failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
         // Push تغییرات به WP — فقط روی update (نه create) و فقط برای
         // سفارش‌هایی که wp_id دارند (یعنی منشأ WP دارند یا قبلاً
         // sync شده‌اند). برای جلوگیری از حلقه، اگر تغییرات از خود WP

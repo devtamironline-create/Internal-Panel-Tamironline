@@ -45,6 +45,99 @@ class WpPushService
     }
 
     /**
+     * Push ساخت سفارش جدید به WP. وقتی اپراتور در پنل لاراول سفارش
+     * می‌سازد، این متد آن را در WP CRM ایجاد می‌کند و wp_id برگشتی را
+     * روی Order ذخیره می‌نماید. CREATE همیشه اجرا می‌شود (مستقل از
+     * تنظیم order_sync_direction تکنسین) — تنظیم فقط برای UPDATEها است.
+     *
+     * اگر مشتری wp_id ندارد، ابتدا مشتری push می‌شود تا wp_id بگیرد.
+     */
+    public function pushOrderCreate(Order $order): void
+    {
+        if (! $this->isEnabled()) return;
+        if ($order->wp_id) return; // قبلاً ساخته شده
+
+        // اطمینان از وجود wp_id مشتری — اگر نیست، push مشتری ابتدا
+        $customer = $order->customer_id ? \Modules\CRM\Models\Customer::find($order->customer_id) : null;
+        if (! $customer) {
+            \Illuminate\Support\Facades\Log::warning('crm.wp_push.order_create.no_customer', [
+                'order_id' => $order->id,
+            ]);
+            return;
+        }
+        if (! $customer->wp_id) {
+            $this->pushCustomer($customer);
+            $customer->refresh();
+            if (! $customer->wp_id) {
+                $this->logSync('outbound', 'order-create',
+                    ['order_id' => $order->id, 'customer_id' => $customer->id],
+                    null, 'failed', null,
+                    'customer_push_failed_no_wp_id',
+                    ['entity_type' => 'order', 'entity_id' => $order->id]
+                );
+                return;
+            }
+        }
+
+        // تکنسین (اگر تخصیص خورده) — اطمینان از wp_id
+        $techWpId = null;
+        if ($order->technician_id) {
+            $tech = Technician::find($order->technician_id);
+            if ($tech && $tech->wp_id) {
+                $techWpId = (int) $tech->wp_id;
+            }
+        }
+
+        // wp_idهای taxonomies
+        $brandWpId    = $order->brand_id    ? (int) optional(\Modules\CRM\Models\Brand::find($order->brand_id))->wp_id : null;
+        $deviceWpId   = $order->device_id   ? (int) optional(\Modules\CRM\Models\Device::find($order->device_id))->wp_id : null;
+        $stateWpId    = $order->province_id ? (int) optional(\Modules\CRM\Models\Province::find($order->province_id))->wp_id : null;
+        $cityWpId     = $order->city_id     ? (int) optional(\Modules\CRM\Models\City::find($order->city_id))->wp_id : null;
+
+        // وضعیت اولیه — کد WP. New=0 پیش‌فرض، در غیر این صورت کد فعلی Laravel
+        $statusCode = '0';
+        if ($order->status instanceof OrderStatus) {
+            $statusCode = (string) $order->status->wpCode();
+        }
+
+        $fields = array_filter([
+            'customer_wp_id'        => (int) $customer->wp_id,
+            'technician_wp_id'      => $techWpId,
+            'brand_wp_id'           => $brandWpId ?: null,
+            'device_wp_id'          => $deviceWpId ?: null,
+            'state_wp_id'           => $stateWpId ?: null,
+            'city_wp_id'            => $cityWpId ?: null,
+            'mobile'                => $order->customer_mobile ?? $customer->mobile,
+            'phone'                 => $order->customer_phone ?? $customer->phone,
+            'address'               => $order->address,
+            'postal_code'           => $order->postal_code,
+            'objection'             => $order->problem_title ? [$order->problem_title] : null,
+            'objection_description' => $order->problem_description,
+            'status'                => $statusCode,
+            'order_type'            => $order->order_type ?: 'repair',
+            'subscription'          => $customer->subscription ?? null,
+        ], fn ($v) => $v !== null && $v !== '' && $v !== []);
+
+        // visit_scheduled_at → date + time جداگانه به جلالی
+        if ($order->visit_scheduled_at) {
+            try {
+                $jalali = \Morilog\Jalali\Jalalian::fromCarbon($order->visit_scheduled_at);
+                $fields['scheduled_date'] = $jalali->format('Y/m/d');
+                $fields['scheduled_time'] = $order->visit_scheduled_at->format('H:i');
+            } catch (\Throwable $e) { /* ignore date parse */ }
+        }
+
+        $resp = $this->sendTo('order-create',
+            ['fields' => $fields],
+            ['entity_type' => 'order', 'entity_id' => $order->id]
+        );
+
+        if ($resp && ! empty($resp['wp_id'])) {
+            $order->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
+        }
+    }
+
+    /**
      * Push کل وضعیت یک سفارش به WP. فقط فیلدهایی که مقدار دارند ارسال
      * می‌شوند تا metaهای WP غیرضروری null نشوند.
      */
