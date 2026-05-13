@@ -231,8 +231,10 @@ class TechnicianSuggestionService
         if (! $tech || ! $tech->user_id) return null;
 
         // فقط سفارش‌هایی که تکنسین وضعیت‌شان را عوض کرده
+        // o.assigned_at را MIN می‌گیریم تا با ONLY_FULL_GROUP_BY MySQL
+        // سازگار بماند (per-order یکتاست پس MIN/MAX/ANY_VALUE یکسان است).
         $rows = \DB::select("
-            SELECT TIMESTAMPDIFF(MINUTE, o.assigned_at, MIN(l.created_at)) AS mins
+            SELECT TIMESTAMPDIFF(MINUTE, MIN(o.assigned_at), MIN(l.created_at)) AS mins
             FROM crm_orders o
             INNER JOIN crm_order_status_logs l ON l.order_id = o.id AND l.changed_by = ?
             WHERE o.technician_id = ?
