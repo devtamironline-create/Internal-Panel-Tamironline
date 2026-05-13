@@ -144,6 +144,22 @@ class SyncTechnicianController extends Controller
             }
 
             if ($tech) {
+                // فیلدهای مدیریت‌شده توسط ادمین Laravel نباید با sync دوره‌ای
+                // WP بازنویسی شوند — وگرنه چرخهٔ بسته به وجود می‌آید (مثل
+                // درصد=۳۰ که در Laravel ست شده و WP دوباره به ۰ برمی‌گرداند).
+                // برای ایجاد رکورد جدید این محدودیت اعمال نمی‌شود.
+                $laravelManagedTech = [
+                    'percent',
+                    'tech_per_of_all',
+                    'max_order',
+                    'max_price',
+                    'type_of_calc_tech',
+                    'satisfaction_score',
+                ];
+                foreach ($laravelManagedTech as $key) {
+                    unset($data[$key]);
+                }
+
                 $tech->fill($data);
                 if ($tech->wp_id === null) {
                     $tech->wp_id = $wpId;

@@ -242,13 +242,22 @@ class WpPushService
         if (! $this->isEnabled()) return;
         if (! $tech->mobile && ! $tech->wp_id) return;
 
+        // WP CRM لیست تکنسین نام را از فیلد first_name می‌خواند، نه از
+        // firstname_tech. اگر firstname_tech (نام کامل تجاری) موجود است،
+        // همان را به‌عنوان first_name هم بفرست تا لیست WP کامل نمایش دهد.
+        $fullName = trim((string) ($tech->firstname_tech ?? ''));
+        if ($fullName === '') {
+            $fullName = trim(($tech->first_name ?? '') . ' ' . ($tech->last_name ?? ''));
+        }
+        $firstNameForWp = $fullName !== '' ? $fullName : $tech->first_name;
+
         // نگاشت Laravel → WP. کلیدها همان فیلدهای user_meta هستند که WP CRM
         // می‌خواند. دو فیلد با تایپو/تفاوت حروف بزرگ-کوچک در WP وجود دارند
         // که اینجا به شکل صحیح WP فرستاده می‌شوند:
         //   ready_for_delivery (Laravel bool) → ready_for_derliver ('1'/'0')
         //   img_personal (Laravel)            → img_Personal (WP)
         $fields = array_filter([
-            'first_name'        => $tech->first_name,
+            'first_name'        => $firstNameForWp,
             'firstname_tech'    => $tech->firstname_tech,
             'technician_id'     => $tech->technician_id,
             'national_code'     => $tech->national_code,
