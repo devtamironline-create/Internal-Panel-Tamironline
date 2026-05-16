@@ -17,6 +17,7 @@ class Order extends Model
         'order_code', 'wp_id',
         'customer_id', 'subscription', 'introduction',
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
+        'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
         'province_id', 'city_id', 'address', 'postal_code',
         'problem_title', 'problem_description',
@@ -110,6 +111,51 @@ class Order extends Model
      * رکوردهای موجود تا زمانی که save() جدیدی روی آن‌ها فراخوانی
      * نشود، اثری ندارد — پس مانده‌های دستی تکنسین‌ها امن هستند.
      */
+    /**
+     * مقادیر مجاز برای source_of_truth + برچسب فارسی برای UI.
+     */
+    public const SOURCE_OF_TRUTH_OPTIONS = [
+        'auto'  => 'بر اساس تنظیم تکنسین (پیش‌فرض)',
+        'panel' => 'پنل لاراول اصل است',
+        'crm'   => 'WP CRM اصل است',
+    ];
+
+    /**
+     * آیا inbound از WP برای این سفارش پذیرفته شود؟
+     *
+     * منطق:
+     *   - panel  → نه (پنل لاراول اصل است)
+     *   - crm    → بله (WP اصل است)
+     *   - auto   → fallback به تنظیم تکنسین (canReceiveOrderFromWp)
+     */
+    public function shouldAcceptInboundFromWp(): bool
+    {
+        $sot = $this->source_of_truth ?: 'auto';
+        if ($sot === 'panel') return false;
+        if ($sot === 'crm')   return true;
+
+        $tech = $this->technician_id ? Technician::find($this->technician_id) : null;
+        return $tech ? $tech->canReceiveOrderFromWp() : true;
+    }
+
+    /**
+     * آیا outbound (Laravel → WP) برای این سفارش مجاز است؟
+     *
+     * منطق:
+     *   - panel  → بله (پنل اصل است، push می‌شود)
+     *   - crm    → نه (WP اصل است، نباید overwrite کنیم)
+     *   - auto   → fallback به تنظیم تکنسین (canPushOrder)
+     */
+    public function shouldPushToWp(): bool
+    {
+        $sot = $this->source_of_truth ?: 'auto';
+        if ($sot === 'panel') return true;
+        if ($sot === 'crm')   return false;
+
+        $tech = $this->technician_id ? Technician::find($this->technician_id) : null;
+        return $tech ? $tech->canPushOrder() : true;
+    }
+
     protected static function booted(): void
     {
         static::saving(function (self $order) {

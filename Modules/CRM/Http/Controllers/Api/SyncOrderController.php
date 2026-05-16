@@ -184,18 +184,16 @@ class SyncOrderController extends Controller
 
             $payload = $this->buildPayload($data);
 
-            // جهت سینک تکنسین — فقط روی UPDATE سفارش‌های موجود اعمال می‌شود.
-            // هدف، جلوگیری از override فیلدهای دستی Laravel توسط WP cron
-            // است؛ بلاک کردن ساخت اولیه کار اشتباهی بود (سفارش جدید هرگز
-            // وارد Laravel نمی‌شد).
+            // منبع داده سفارش — source_of_truth در سطح خود سفارش، فقط
+            // روی UPDATE سفارش‌های موجود اعمال می‌شود. ساخت اولیه همیشه
+            // اجازه دارد.
             //
             // استثنا: اگر سفارش هنوز ناقص ست شده (FKهای اصلی null هستند)
             // و WP حالا با مقدار کامل آمده، بگذار payload کامل ذخیره شود.
-            // این مهم است چون پلاگین WP در چند مرحلهٔ هوک پشت‌سر هم
-            // payload می‌فرستد: اولی با terms خالی (پست تازه ساخته شده،
-            // taxonomyها هنوز ست نشده‌اند)، دومی با terms کامل. ما باید
-            // اولی + هر تکمیل بعدی را قبول کنیم، فقط override تغییرات
-            // اپراتور را بلاک کنیم.
+            // پلاگین WP در چند مرحلهٔ هوک پشت‌سر هم payload می‌فرستد:
+            // اولی با terms خالی، دومی با terms کامل. ما باید اولی + هر
+            // تکمیل بعدی را قبول کنیم؛ فقط override تغییرات اپراتور را
+            // بلاک کنیم.
             $isIncompleteOrder = $order && (
                 $order->brand_id === null
                 || $order->device_id === null
@@ -203,17 +201,18 @@ class SyncOrderController extends Controller
                 || $order->city_id === null
             );
 
-            if ($order && $order->technician_id && ! $isIncompleteOrder) {
-                $tech = Technician::find($order->technician_id);
-                if ($tech && ! $tech->canReceiveOrderFromWp()) {
-                    return [
-                        'action' => 'skipped',
-                        'id' => $order->id,
-                        'wp_id' => $wpId,
-                        'order_code' => $order->order_code,
-                        'reason' => 'blocked_by_technician_sync_direction:' . $tech->order_sync_direction,
-                    ];
-                }
+            if ($order && ! $isIncompleteOrder && ! $order->shouldAcceptInboundFromWp()) {
+                $sot = $order->source_of_truth ?: 'auto';
+                $reason = $sot === 'auto'
+                    ? 'blocked_by_technician_sync_direction'
+                    : 'blocked_by_order_source_of_truth:' . $sot;
+                return [
+                    'action' => 'skipped',
+                    'id' => $order->id,
+                    'wp_id' => $wpId,
+                    'order_code' => $order->order_code,
+                    'reason' => $reason,
+                ];
             }
 
             // post_date در WP زمان واقعی ثبت سفارش است؛ به created_at نگاشت

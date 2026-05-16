@@ -206,6 +206,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:assign-crm-technician')->group(function () {
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
+        Route::post('orders/{order}/source-of-truth', [OrderController::class, 'updateSourceOfTruth'])->name('orders.source-of-truth');
     });
 
     Route::middleware('can:change-crm-order-status')->group(function () {

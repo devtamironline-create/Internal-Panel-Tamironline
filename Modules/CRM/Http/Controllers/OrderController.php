@@ -388,6 +388,19 @@ class OrderController extends Controller
         return back()->with('success', 'تکنسین از این سفارش برداشته شد.');
     }
 
+    // ───────────── منبع داده سفارش (per-order source of truth) ──
+    public function updateSourceOfTruth(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'source_of_truth' => ['required', 'in:auto,panel,crm'],
+        ]);
+
+        $order->update(['source_of_truth' => $validated['source_of_truth']]);
+
+        $label = Order::SOURCE_OF_TRUTH_OPTIONS[$validated['source_of_truth']] ?? $validated['source_of_truth'];
+        return back()->with('success', 'منبع داده سفارش تغییر کرد: ' . $label);
+    }
+
     // ───────────── تغییر وضعیت ─────────────────────────────────
     public function changeStatus(Request $request, Order $order)
     {

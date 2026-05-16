@@ -147,18 +147,20 @@ class WpPushService
             return;
         }
 
-        // جهت سینک تکنسین — اگر روی wp_to_laravel یا none باشد، outbound مسدود
-        if ($order->technician_id) {
-            $tech = Technician::find($order->technician_id);
-            if ($tech && ! $tech->canPushOrder()) {
-                $this->logSync('outbound', 'order-update',
-                    ['wp_id' => (int) $order->wp_id],
-                    null, 'skipped', null,
-                    'blocked_by_technician_sync_direction:' . $tech->order_sync_direction,
-                    ['entity_type' => 'order', 'entity_id' => $order->id]
-                );
-                return;
-            }
+        // منبع داده سفارش — اگر source_of_truth=crm یا تنظیم تکنسین push
+        // را اجازه نمی‌دهد، outbound مسدود می‌شود.
+        if (! $order->shouldPushToWp()) {
+            $sot = $order->source_of_truth ?: 'auto';
+            $reason = $sot === 'auto'
+                ? 'blocked_by_technician_sync_direction'
+                : 'blocked_by_order_source_of_truth:' . $sot;
+            $this->logSync('outbound', 'order-update',
+                ['wp_id' => (int) $order->wp_id],
+                null, 'skipped', null,
+                $reason,
+                ['entity_type' => 'order', 'entity_id' => $order->id]
+            );
+            return;
         }
 
         $fields = $this->extractFields($order);

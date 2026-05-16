@@ -470,6 +470,39 @@
             </div>
             @endif
 
+            {{-- منبع داده سفارش (per-order source of truth) --}}
+            @can('manage-crm-orders')
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">منبع داده این سفارش</h2>
+                    @php($sot = $order->source_of_truth ?: 'auto')
+                    @if($sot === 'panel')
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">پنل لاراول اصل</span>
+                    @elseif($sot === 'crm')
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">WP CRM اصل</span>
+                    @else
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-bold">خودکار</span>
+                    @endif
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-6">
+                    مشخص می‌کند کدام سمت برای این سفارش اصل است.
+                    «خودکار» تابع تنظیم سینک تکنسین می‌شود؛ بقیه روی همین سفارش override می‌کنند.
+                </p>
+                <form method="POST" action="{{ route('crm.orders.source-of-truth', $order) }}" class="flex gap-2">
+                    @csrf
+                    <select name="source_of_truth"
+                            class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                        @foreach(\Modules\CRM\Models\Order::SOURCE_OF_TRUTH_OPTIONS as $value => $label)
+                            <option value="{{ $value }}" @selected($sot === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium">
+                        ذخیره
+                    </button>
+                </form>
+            </div>
+            @endcan
+
             {{-- تخصیص تکنسین --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تکنسین</h2>
