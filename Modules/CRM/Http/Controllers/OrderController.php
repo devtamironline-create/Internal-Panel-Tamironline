@@ -339,16 +339,37 @@ class OrderController extends Controller
             'technician_id' => 'required|exists:crm_technicians,id',
         ]);
 
+        $previousStatusEnum = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+        $previousStatus = $previousStatusEnum?->value ?? (string) $order->status;
+
+        // اگر سفارش در وضعیت نهایی است (مثل Declined که تکنسین قبلی رد
+        // کرده، یا Cancelled/Completed/Returned/Transit)، تخصیص مجدد یعنی
+        // ادمین می‌خواهد سفارش را با تکنسین جدید از سر بگیرد. وضعیت را
+        // به New برمی‌گردانیم تا در پنل تکنسین جدید قابل دیدن باشد.
+        $shouldResetStatus = $previousStatusEnum?->isFinal() ?? false;
+        $newStatus = $shouldResetStatus ? OrderStatus::New->value : $previousStatus;
+
+        // technician_wp_id را هم همگام‌سازی می‌کنیم تا inbound resolution
+        // بعدی روی wp_id تکنسین جدید عمل کند.
+        $newTech = \Modules\CRM\Models\Technician::find($validated['technician_id']);
+        $newTechWpId = $newTech?->wp_id;
+
         $order->update([
             'technician_id' => $validated['technician_id'],
+            'technician_wp_id' => $newTechWpId,
             'assigned_at' => now(),
+            'status' => $newStatus,
         ]);
 
         OrderStatusLog::create([
             'order_id' => $order->id,
-            'from_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
-            'to_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
-            'note' => 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
+            'from_status' => $previousStatus,
+            'to_status' => $newStatus,
+            'note' => $shouldResetStatus
+                ? 'تخصیص مجدد — وضعیت از ' . ($previousStatusEnum?->label() ?? $previousStatus) . ' به جدید بازگردانده شد'
+                : 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
