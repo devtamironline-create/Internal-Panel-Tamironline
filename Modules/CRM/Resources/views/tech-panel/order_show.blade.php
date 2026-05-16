@@ -387,11 +387,16 @@
                 techCalcType: '{{ (string) ($technician->type_of_calc_tech ?? '') }}',
                 get partsCost() { return this.pieces.reduce((s, p) => s + (Number(p.buy)||0), 0); },
                 get totalInvoice() { return Math.max(0, (Number(this.priceCustomer)||0) - this.partsCost); },
+                // سهم تکنسین = price_customer × (۱۰۰ − درصد شرکت) / ۱۰۰
+                // درصد روی تکنسین («percent» یا «tech_per_of_all» در حالت internal)
+                // معنی «سهم شرکت از کل» را دارد، نه «سهم تکنسین». پایهٔ
+                // محاسبه هم price_customer است (هزینهٔ قطعات کسر نمی‌شود).
                 get techShare() {
-                    if (this.techCalcType === '1' || this.techCalcType === 'internal') {
-                        return Math.round((this.totalInvoice + this.partsCost) * (100 - this.techPerOfAll) / 100);
-                    }
-                    return Math.round(this.totalInvoice * this.techPercent / 100);
+                    const base = Number(this.priceCustomer) || 0;
+                    const companyPct = (this.techCalcType === '1' || this.techCalcType === 'internal')
+                        ? Math.max(0, Math.min(100, this.techPerOfAll))
+                        : Math.max(0, Math.min(100, this.techPercent));
+                    return Math.max(0, Math.round(base * (100 - companyPct) / 100));
                 },
                 fmt(n) { return Number(n||0).toLocaleString('fa-IR'); },
                 toWords(n) { return numberToPersianWords(Math.floor(Number(n)||0)); },

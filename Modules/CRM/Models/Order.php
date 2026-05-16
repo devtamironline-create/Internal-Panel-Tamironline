@@ -374,25 +374,22 @@ class Order extends Model
     }
 
     /**
-     * خلاصهٔ مالی فاکتور — هم‌ارز با Orders/show_order.php در WP CRM.
+     * خلاصهٔ مالی فاکتور.
      *
-     * در WP، سه عدد مستقل ذخیره می‌شود:
-     *   - price_customer : جمع کل صورت حساب (مبلغ کلی فاکتور)
-     *   - cost_price     : جمع هزینه‌ها (قیمت قطعات و ...)
-     *   - total_invoice  : مانده پس از کسر هزینه‌ها (همان عددی که سهم
-     *                       تکنسین/شرکت روی آن محاسبه می‌شود)
+     * منطق سهم‌ها (سپس از تصمیم ادمین، ۲۰۲۶/۰۵):
+     *   - percent = «سهم شرکت از کل مبلغ فاکتور» (مثلاً ۳۰ = ۳۰٪ شرکت)
+     *   - پایهٔ محاسبه = price_customer (جمع کل) — هزینهٔ قطعات کسر نمی‌شود
+     *   - tech_share    = price_customer × (100 - percent) / 100
+     *   - company_share = price_customer × percent / 100
      *
-     * منطق سهم‌ها (طبق WP):
-     *   if (type_of_calc_tech == 1):
-     *       tech_per       = 1 - (tech_per_of_all / 100)
-     *       all_price_calc = total_invoice + cost_price
-     *       tech_share     = all_price_calc * tech_per
-     *       company_share  = all_price_calc - tech_share
-     *   else:
-     *       tech_share     = total_invoice * percent / 100
-     *       company_share  = total_invoice - tech_share
+     * در حالت status = transit (10)، تکنسین ۱۰۰٪ price_customer می‌گیرد.
      *
-     * در حالت status = transit (10)، تکنسین ۱۰۰٪ می‌گیرد.
+     * type_of_calc_tech == 1 (internal): همان منطق ولی با tech_per_of_all
+     * به عنوان درصد شرکت (که از قبل همین معنا را داشت).
+     *
+     * فیلد total_invoice (= price_customer − cost_price) فقط برای نمایش
+     * «مانده پس از کسر هزینه‌ها» در UI استفاده می‌شود و در محاسبهٔ سهم
+     * دیگر نقشی ندارد.
      *
      * @return array{
      *     has_data: bool,
@@ -412,18 +409,12 @@ class Order extends Model
         $remaining     = (int) ($this->total_invoice ?? 0);
 
         // ─── Fallbackها برای داده‌های ناقص (display-only) ───────────────
-        // اگر فیلدهای aggregate صفر/خالی باشند ولی آرایه‌های موازی WP
-        // پر باشد، مقدار را از خود آرایه‌ها استخراج می‌کنیم. این فقط
-        // برای نمایش است — مقدار ذخیره‌شده در DB دست‌نخورده می‌ماند.
         if ($costTotal === 0 && is_array($this->buy_price_list) && ! empty($this->buy_price_list)) {
             $costTotal = (int) array_sum(array_map(static fn ($v) => (int) $v, $this->buy_price_list));
         }
         if ($customerTotal === 0 && is_array($this->customer_price_list) && ! empty($this->customer_price_list)) {
             $customerTotal = (int) array_sum(array_map(static fn ($v) => (int) $v, $this->customer_price_list));
         }
-        // اگر مانده ذخیره نشده ولی customerTotal و costTotal از مسیر بالا
-        // پر شدند، مانده‌ی منطقی = customer − cost است (هم‌ارز
-        // total_invoice = price_customer − cost_price در WP CRM).
         if ($remaining === 0 && $customerTotal > 0) {
             $remaining = max(0, $customerTotal - $costTotal);
         }
@@ -443,18 +434,18 @@ class Order extends Model
         $techShare = 0;
         $companyShare = 0;
 
-        if ($remaining > 0) {
+        if ($customerTotal > 0) {
             if ($statusValue === OrderStatus::Transit->value) {
-                $techShare = $remaining;
+                $techShare = $customerTotal;
                 $companyShare = 0;
             } elseif ($calcType === '1' || $calcType === 'internal') {
-                $techPer       = (100 - $techPerOfAll) / 100;
-                $allPriceCalc  = $remaining + $costTotal;
-                $techShare     = (int) round($allPriceCalc * $techPer);
-                $companyShare  = max(0, $allPriceCalc - $techShare);
+                $companyPct   = max(0, min(100, $techPerOfAll));
+                $companyShare = (int) intdiv($customerTotal * $companyPct, 100);
+                $techShare    = max(0, $customerTotal - $companyShare);
             } else {
-                $techShare    = (int) intdiv($remaining * max(0, min(100, $percent)), 100);
-                $companyShare = max(0, $remaining - $techShare);
+                $companyPct   = max(0, min(100, $percent));
+                $companyShare = (int) intdiv($customerTotal * $companyPct, 100);
+                $techShare    = max(0, $customerTotal - $companyShare);
             }
         }
 
