@@ -472,10 +472,12 @@
 
             {{-- منبع داده سفارش (per-order source of truth) --}}
             @can('manage-crm-orders')
+            @php
+                $sot = $order->source_of_truth ?: 'auto';
+            @endphp
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">منبع داده این سفارش</h2>
-                    @php($sot = $order->source_of_truth ?: 'auto')
                     @if($sot === 'panel')
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">پنل لاراول اصل</span>
                     @elseif($sot === 'crm')
