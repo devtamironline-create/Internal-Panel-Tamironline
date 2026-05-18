@@ -128,4 +128,31 @@ class InvoiceController extends Controller
 
         return back()->with('success', 'فاکتور لغو شد.');
     }
+
+    /**
+     * Push دستی این فاکتور به WP CRM. مفید برای فاکتورهایی که قبلاً سینک
+     * نشده‌اند یا به دلیل خطایی wp_id نگرفته‌اند. در sync_logs نتیجهٔ
+     * کار قابل پیگیری است.
+     */
+    public function pushToWp(Invoice $invoice, \Modules\CRM\Services\WpPushService $push)
+    {
+        if (! $push->isEnabled()) {
+            return back()->with('error', 'سینک Laravel→WP در تنظیمات غیرفعال است.');
+        }
+
+        try {
+            $push->pushInvoice($invoice);
+            $invoice->refresh();
+            if ($invoice->wp_id) {
+                return back()->with('success', 'فاکتور به WP CRM ارسال شد (wp_id=' . $invoice->wp_id . ').');
+            }
+            return back()->with('error', 'ارسال انجام نشد — جزئیات را در «لاگ سینک» ببین.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('crm.invoice.push_to_wp_failed', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'خطا در ارسال: ' . $e->getMessage());
+        }
+    }
 }

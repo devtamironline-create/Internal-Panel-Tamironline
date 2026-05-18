@@ -9,7 +9,7 @@
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">فاکتور <span dir="ltr">{{ $invoice->invoice_code }}</span></h1>
             <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
             @can('manage-crm-financial')
                 @if($invoice->status === 'issued')
                 <form action="{{ route('crm.invoices.paid', $invoice) }}" method="POST" class="inline">
@@ -21,6 +21,21 @@
                     <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">لغو فاکتور</button>
                 </form>
                 @endif
+
+                {{-- Push دستی به WP — مفید برای فاکتورهایی که هنوز سینک نشده‌اند --}}
+                <form action="{{ route('crm.invoices.push-to-wp', $invoice) }}" method="POST" class="inline"
+                      onsubmit="return confirm('این فاکتور به WP CRM ارسال شود؟');">
+                    @csrf
+                    @if($invoice->wp_id)
+                        <button class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm" title="wp_id={{ $invoice->wp_id }} — برای ارسال مجدد">
+                            🔄 ارسال مجدد به WP
+                        </button>
+                    @else
+                        <button class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm" title="هنوز روی WP نیست">
+                            📤 ارسال به WP CRM
+                        </button>
+                    @endif
+                </form>
             @endcan
             <a href="{{ route('crm.invoices.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">بازگشت</a>
         </div>
