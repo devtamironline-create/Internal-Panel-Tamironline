@@ -583,23 +583,6 @@
         </div>
     @endif
 
-    {{-- ─────── Send "ready for delivery" SMS — only for completed orders + capable techs ─────── --}}
-    @if($technician->ready_for_delivery && $order->status === OrderStatus::Completed)
-        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
-            <div class="text-[11px] text-gray-400 mb-2">اطلاع‌رسانی به مشتری</div>
-            <p class="text-xs text-gray-600 leading-7 mb-3">
-                با کلیک روی دکمه زیر، پیامک «آماده تحویل» برای مشتری ارسال می‌شود.
-            </p>
-            <form method="POST" action="{{ route('tech.orders.deliver-sms', $order) }}">
-                @csrf
-                <button type="submit"
-                        class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition">
-                    ارسال پیامک آماده تحویل
-                </button>
-            </form>
-        </div>
-    @endif
-
     {{-- ─────── Notes (own notes + add form) ─────── --}}
     <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
         <div class="text-[11px] text-gray-400 mb-3">یادداشت‌های من برای این سفارش</div>
