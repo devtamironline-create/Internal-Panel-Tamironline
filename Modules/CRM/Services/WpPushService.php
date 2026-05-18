@@ -416,6 +416,89 @@ class WpPushService
         }
     }
 
+    // ─────────── Push فاکتور (financial post با ساختار invoice) ───────────
+    /**
+     * فاکتور لاراولی را به‌صورت post_type=financial در WP می‌سازد یا
+     * به‌روزرسانی می‌کند. ساختار invoice با شناسه‌ای از طریق فیلدهای
+     * price_customer و total_invoice (به‌جای wallet) از تراکنش
+     * کیف‌پول جدا می‌شود.
+     *
+     * اجازهٔ push چک می‌شود از طریق Order::shouldPushToWp() — یعنی همان
+     * منطق source_of_truth و order_sync_direction روی فاکتور هم اعمال
+     * می‌شود.
+     */
+    public function pushInvoice(\Modules\CRM\Models\Invoice $invoice): void
+    {
+        if (! $this->isEnabled()) return;
+
+        $order = $invoice->order_id ? Order::find($invoice->order_id) : null;
+        if (! $order || ! $order->wp_id) {
+            // سفارش هنوز روی WP نیست؛ فاکتور را نمی‌توان به یک order_id
+            // معتبر گره زد. اول باید سفارش push شود.
+            $this->logSync('outbound', 'financial-upsert',
+                ['invoice_id' => $invoice->id],
+                null, 'skipped', null,
+                'order_not_on_wp_yet',
+                ['entity_type' => 'invoice', 'entity_id' => $invoice->id]
+            );
+            return;
+        }
+
+        if (! $order->shouldPushToWp()) {
+            $sot = $order->source_of_truth ?: 'auto';
+            $this->logSync('outbound', 'financial-upsert',
+                ['invoice_id' => $invoice->id, 'wp_id' => $invoice->wp_id],
+                null, 'skipped', null,
+                $sot === 'auto'
+                    ? 'blocked_by_technician_sync_direction'
+                    : 'blocked_by_order_source_of_truth:' . $sot,
+                ['entity_type' => 'invoice', 'entity_id' => $invoice->id]
+            );
+            return;
+        }
+
+        $tech = $invoice->technician_id ? Technician::find($invoice->technician_id) : null;
+        if (! $tech || ! $tech->wp_id) {
+            $this->logSync('outbound', 'financial-upsert',
+                ['invoice_id' => $invoice->id],
+                null, 'skipped', null,
+                'technician_not_on_wp',
+                ['entity_type' => 'invoice', 'entity_id' => $invoice->id]
+            );
+            return;
+        }
+
+        $isPaid = $invoice->status === 'paid' || ! empty($invoice->paid_at);
+        $totalAmount = (int) $invoice->total_amount;
+        $costPrice = (int) ($order->cost_price ?? 0);
+
+        $fields = array_filter([
+            'technician_wp_id'     => (int) $tech->wp_id,
+            'order_id'             => (int) $order->wp_id,
+            'price_customer'       => $totalAmount,
+            'total_invoice'        => $totalAmount,
+            'cost_price'           => $costPrice ?: null,
+            'invoice_descripotion' => $order->invoice_descripotion ?? null,
+            'payment_status'       => $isPaid ? '1' : '0',
+            'post_title'           => $this->invoiceTitle($invoice, $totalAmount),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $resp = $this->sendTo('financial-upsert', [
+            'wp_id'  => $invoice->wp_id ?: 0,
+            'fields' => $fields,
+        ], ['entity_type' => 'invoice', 'entity_id' => $invoice->id]);
+
+        if ($resp && ! $invoice->wp_id && ! empty($resp['wp_id'])) {
+            $invoice->forceFill(['wp_id' => (int) $resp['wp_id']])->saveQuietly();
+        }
+    }
+
+    protected function invoiceTitle(\Modules\CRM\Models\Invoice $invoice, int $amount): string
+    {
+        $abs = number_format($amount);
+        return "فاکتور {$invoice->invoice_code} — {$abs}";
+    }
+
     // ─────────── Push تراکنش کیف‌پول ───────────
     public function pushWalletTransaction(\Modules\CRM\Models\WalletTransaction $tx): void
     {

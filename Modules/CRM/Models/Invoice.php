@@ -13,6 +13,7 @@ class Invoice extends Model
     protected $table = 'crm_invoices';
 
     protected $fillable = [
+        'wp_id',
         'invoice_code',
         'order_id',
         'customer_id',
@@ -30,6 +31,7 @@ class Invoice extends Model
     ];
 
     protected $casts = [
+        'wp_id' => 'integer',
         'total_amount' => 'integer',
         'tech_share' => 'integer',
         'company_share' => 'integer',
@@ -49,6 +51,26 @@ class Invoice extends Model
         static::addGlobalScope('active', function (Builder $q) {
             $q->whereNull($q->getModel()->getTable() . '.superseded_at');
         });
+
+        // Push فاکتور به WP — وقتی فاکتور در پنل لاراول ساخته یا به‌روز
+        // می‌شود، اگر سفارش مرتبط اجازهٔ push داشته باشد و فاکتور هنوز
+        // wp_id ندارد، یک financial post جدید در WP ساخته می‌شود. اگر
+        // wp_id دارد، همان post به‌روزرسانی می‌شود.
+        $push = function (self $invoice) {
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
+                return;
+            }
+            try {
+                app(\Modules\CRM\Services\WpPushService::class)->pushInvoice($invoice);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.wp_push.invoice_failed', [
+                    'invoice_id' => $invoice->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        };
+        static::created($push);
+        static::updated($push);
     }
 
     /** Scope: شامل فاکتورهای superseded هم بشود (برای صفحهٔ تاریخچهٔ سفارش). */
