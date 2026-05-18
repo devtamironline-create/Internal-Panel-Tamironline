@@ -591,7 +591,8 @@ class WpPushService
         if (! $tech || ! $tech->wp_id) return; // بدون wp_id تکنسین، WP نمی‌تواند تخصیص دهد
 
         // جهت سینک کیف‌پول تکنسین — اگر روی wp_to_laravel یا none باشد، outbound مسدود
-        if (! $tech->canPushWallet()) {
+        // مگر اینکه flag crm.wp_push.skip_direction_check ست شده باشد (برای resync دستی)
+        if (! $tech->canPushWallet() && ! app()->bound('crm.wp_push.skip_direction_check')) {
             $this->logSync('outbound', 'financial-upsert',
                 ['wp_id' => $tx->wp_id ?: 0, 'technician_wp_id' => $tech->wp_id],
                 null, 'skipped', null,
