@@ -440,6 +440,32 @@
                     <p class="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ $order->invoice_descripotion }}</p>
                 </div>
                 @endif
+
+                {{-- ارسال/ارسال مجدد فاکتور به WP CRM —
+                     فقط برای سفارش‌های Completed که فاکتور فعال دارند --}}
+                @php
+                    // global scope active روی Invoice فاکتورهای superseded را خارج می‌کند
+                    $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+                @endphp
+                @can('manage-crm-financial')
+                @if($activeInvoice)
+                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <form action="{{ route('crm.invoices.push-to-wp', $activeInvoice) }}" method="POST"
+                          onsubmit="return confirm('این فاکتور به WP CRM ارسال شود؟');">
+                        @csrf
+                        @if($activeInvoice->wp_id)
+                            <button class="w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm" title="wp_id={{ $activeInvoice->wp_id }}">
+                                🔄 ارسال مجدد فاکتور به WP
+                            </button>
+                        @else
+                            <button class="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm" title="فاکتور هنوز روی WP نیست">
+                                📤 ارسال فاکتور به WP CRM
+                            </button>
+                        @endif
+                    </form>
+                </div>
+                @endif
+                @endcan
             </div>
             @else
             {{-- سفارش بدون داده فاکتور — fallback به فیلدهای پایه --}}
