@@ -351,6 +351,23 @@ class WpPushService
         // که اینجا به شکل صحیح WP فرستاده می‌شوند:
         //   ready_for_delivery (Laravel bool) → ready_for_derliver ('1'/'0')
         //   img_personal (Laravel)            → img_Personal (WP)
+        // منطق محاسبه روی WP CRM:
+        //   - External (پیش‌فرض WP): tech_share = total_invoice × percent / 100
+        //     → پایهٔ محاسبه «مانده پس از کسر هزینه‌ها» است و percent =
+        //       درصد سهم تکنسین
+        //   - Internal (type_of_calc_tech=1): پایه = price_customer (جمع کل)
+        //     و tech_per_of_all = درصد سهم شرکت
+        //
+        // طبق قرارداد جدید Laravel، percent = «سهم شرکت از جمع کل».
+        // برای اینکه WP CRM همین منطق را اعمال کند، حالت Internal فورس
+        // می‌شود و tech_per_of_all = percent ارسال می‌شود.
+        $companyPercent = (int) ($tech->percent ?? 0);
+        // اگر tech_per_of_all دستی روی Laravel ست شده باشد، اولویت آن است؛
+        // در غیر این صورت از percent استفاده می‌کنیم.
+        $techPerOfAllOut = $tech->tech_per_of_all !== null && (int) $tech->tech_per_of_all > 0
+            ? (int) $tech->tech_per_of_all
+            : $companyPercent;
+
         $fields = array_filter([
             'first_name'        => $firstNameForWp,
             'firstname_tech'    => $tech->firstname_tech,
@@ -368,8 +385,9 @@ class WpPushService
             'type_tech'         => $this->mapTypeTechForWp($tech->type_tech),
             'province'          => $tech->province,
             'specialty'         => $tech->specialty,
-            'type_of_calc_tech' => $tech->type_of_calc_tech,
-            'tech_per_of_all'   => $tech->tech_per_of_all,
+            // فورس Internal تا پایهٔ محاسبه روی WP «جمع کل» باشد
+            'type_of_calc_tech' => '1',
+            'tech_per_of_all'   => $techPerOfAllOut ?: null,
             'cart_img'          => $tech->cart_img,
             'img_Personal'      => $tech->img_personal,     // تفاوت حروف P/p
             'ready_for_derliver' => $tech->ready_for_delivery !== null
@@ -490,6 +508,18 @@ class WpPushService
         //    اعداد پایه، توضیحات). WP CRM لیست قطعات را روی پست سفارش
         //    می‌خواند نه روی پست financial — پس بدون این مرحله، فاکتور
         //    در WP بدون قطعات نمایش داده می‌شود.
+        //    همچنین تکنسین را push می‌کنیم تا تنظیمات محاسبه (type_of_calc_tech،
+        //    tech_per_of_all) روی WP درست باشد و فاکتور با مبنای جمع کل
+        //    (Internal mode) محاسبه شود.
+        try {
+            $this->pushTechnician($tech);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('crm.wp_push.invoice.tech_sync_failed', [
+                'tech_id' => $tech->id,
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
         try {
             $this->pushOrder($order);
         } catch (\Throwable $e) {
