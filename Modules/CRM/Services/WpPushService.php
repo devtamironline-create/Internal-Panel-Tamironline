@@ -361,6 +361,17 @@ class WpPushService
         //   inbound جلوی override را گرفته). برای تکنسین‌های Laravel-only
         //   اگر ادمین خواست Internal باشد، در فرم تکنسین این فیلدها را
         //   ست می‌کند.
+        //
+        //   مهم: این دو فیلد را حتی اگر Laravel مقدار null/empty دارد،
+        //   با مقدار '' ارسال می‌کنیم — تا پلاگین WP delete_user_meta
+        //   بزند و WP به default خودش (External) برگردد. این برای بازگردانی
+        //   تکنسین‌هایی که قبلاً اشتباهاً Internal فورس شده بودند ضروری
+        //   است.
+        $calcTypeOut    = ($tech->type_of_calc_tech === null || $tech->type_of_calc_tech === '')
+            ? '' : (string) $tech->type_of_calc_tech;
+        $techPerOfAllOut = ($tech->tech_per_of_all === null || (int) $tech->tech_per_of_all === 0)
+            ? '' : (string) (int) $tech->tech_per_of_all;
+
         $fields = array_filter([
             'first_name'        => $firstNameForWp,
             'firstname_tech'    => $tech->firstname_tech,
@@ -378,8 +389,6 @@ class WpPushService
             'type_tech'         => $this->mapTypeTechForWp($tech->type_tech),
             'province'          => $tech->province,
             'specialty'         => $tech->specialty,
-            'type_of_calc_tech' => $tech->type_of_calc_tech,
-            'tech_per_of_all'   => $tech->tech_per_of_all,
             'cart_img'          => $tech->cart_img,
             'img_Personal'      => $tech->img_personal,     // تفاوت حروف P/p
             'ready_for_derliver' => $tech->ready_for_delivery !== null
@@ -387,6 +396,11 @@ class WpPushService
                 : null,
             'role'              => 'technician',
         ], fn ($v) => $v !== null && $v !== '');
+
+        // فیلدهای محاسبه — همیشه ارسال می‌شوند (حتی با '') تا WP بتواند
+        // reset کند. این فیلدها بعد از array_filter اضافه می‌شوند.
+        $fields['type_of_calc_tech'] = $calcTypeOut;
+        $fields['tech_per_of_all']   = $techPerOfAllOut;
 
         $resp = $this->sendTo('technician-upsert', [
             'wp_id'  => $tech->wp_id ?: 0,
