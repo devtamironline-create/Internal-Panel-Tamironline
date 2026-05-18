@@ -469,18 +469,50 @@ class WpPushService
         }
 
         $isPaid = $invoice->status === 'paid' || ! empty($invoice->paid_at);
-        $totalAmount = (int) $invoice->total_amount;
-        $costPrice = (int) ($order->cost_price ?? 0);
 
+        // مبالغ سه‌گانه طبق ساختار WP CRM:
+        //   price_customer = جمع کل صورت حساب (دریافتی از مشتری)
+        //   cost_price     = جمع هزینه‌ها (قطعات و ...)
+        //   total_invoice  = مانده پس از کسر هزینه‌ها
+        // اولویت با مقادیر صریح روی Order است؛ در نبود، از اطلاعات فاکتور
+        // و آرایه‌های parallel آن استخراج می‌شوند.
+        $priceCustomer = (int) ($order->price_customer ?? 0) ?: (int) $invoice->total_amount;
+        $costPrice     = (int) ($order->cost_price ?? 0);
+        if ($costPrice === 0 && is_array($order->buy_price_list)) {
+            $costPrice = (int) array_sum(array_map(fn ($v) => (int) $v, $order->buy_price_list));
+        }
+        $totalInvoice  = (int) ($order->total_invoice ?? 0);
+        if ($totalInvoice === 0 && $priceCustomer > 0) {
+            $totalInvoice = max(0, $priceCustomer - $costPrice);
+        }
+
+        // ۱) قبل از هر چیز، اطلاعات سفارش را روی WP همگام کن (parts list،
+        //    اعداد پایه، توضیحات). WP CRM لیست قطعات را روی پست سفارش
+        //    می‌خواند نه روی پست financial — پس بدون این مرحله، فاکتور
+        //    در WP بدون قطعات نمایش داده می‌شود.
+        try {
+            $this->pushOrder($order);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('crm.wp_push.invoice.preorder_sync_failed', [
+                'order_id' => $order->id,
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+            // ادامه می‌دهیم — فاکتور را push می‌کنیم؛ اگر سفارش push نشد،
+            // در WP فقط مبالغ اصلی نمایش داده می‌شوند بدون قطعات.
+        }
+
+        // ۲) ساخت/به‌روزرسانی پست financial با همهٔ متاهای موردنیاز WP CRM
         $fields = array_filter([
             'technician_wp_id'     => (int) $tech->wp_id,
             'order_id'             => (int) $order->wp_id,
-            'price_customer'       => $totalAmount,
-            'total_invoice'        => $totalAmount,
+            'price_customer'       => $priceCustomer ?: null,
             'cost_price'           => $costPrice ?: null,
+            'total_invoice'        => $totalInvoice ?: null,
+            'description'          => $order->description_tech ?? null,
             'invoice_descripotion' => $order->invoice_descripotion ?? null,
             'payment_status'       => $isPaid ? '1' : '0',
-            'post_title'           => $this->invoiceTitle($invoice, $totalAmount),
+            'post_title'           => $this->invoiceTitle($invoice, $priceCustomer),
         ], fn ($v) => $v !== null && $v !== '');
 
         $resp = $this->sendTo('financial-upsert', [
