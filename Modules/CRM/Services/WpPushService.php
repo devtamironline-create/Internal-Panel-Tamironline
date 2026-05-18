@@ -498,14 +498,29 @@ class WpPushService
         //   price_customer = جمع کل صورت حساب (دریافتی از مشتری)
         //   cost_price     = جمع هزینه‌ها (قطعات و ...)
         //   total_invoice  = مانده پس از کسر هزینه‌ها
-        // اولویت با مقادیر صریح روی Order است؛ در نبود، از اطلاعات فاکتور
-        // و آرایه‌های parallel آن استخراج می‌شوند.
-        $priceCustomer = (int) ($order->price_customer ?? 0) ?: (int) $invoice->total_amount;
-        $costPrice     = (int) ($order->cost_price ?? 0);
-        if ($costPrice === 0 && is_array($order->buy_price_list)) {
+        //
+        // زنجیرهٔ fallback برای پیدا کردن قیمت‌ها:
+        //   ۱) فیلد aggregate روی Order (price_customer / cost_price /
+        //      total_invoice که هنگام save خودکار پر می‌شود)
+        //   ۲) total_amount روی Invoice (محاسبه‌شدهٔ زمان صدور فاکتور)
+        //   ۳) sum روی آرایه‌های parallel WP (customer_price_list،
+        //      buy_price_list) — این مهم است چون گاهی تکنسین در فاکتور
+        //      آیتم می‌زند ولی aggregate خالی می‌ماند (مثلاً سفارش‌های
+        //      قدیمی که قبل از auto-populate ساخته شدند).
+        $priceCustomer = (int) ($order->price_customer ?? 0);
+        if ($priceCustomer === 0) {
+            $priceCustomer = (int) $invoice->total_amount;
+        }
+        if ($priceCustomer === 0 && is_array($order->customer_price_list) && ! empty($order->customer_price_list)) {
+            $priceCustomer = (int) array_sum(array_map(fn ($v) => (int) $v, $order->customer_price_list));
+        }
+
+        $costPrice = (int) ($order->cost_price ?? 0);
+        if ($costPrice === 0 && is_array($order->buy_price_list) && ! empty($order->buy_price_list)) {
             $costPrice = (int) array_sum(array_map(fn ($v) => (int) $v, $order->buy_price_list));
         }
-        $totalInvoice  = (int) ($order->total_invoice ?? 0);
+
+        $totalInvoice = (int) ($order->total_invoice ?? 0);
         if ($totalInvoice === 0 && $priceCustomer > 0) {
             $totalInvoice = max(0, $priceCustomer - $costPrice);
         }
@@ -532,17 +547,25 @@ class WpPushService
         }
 
         // ۲) ساخت/به‌روزرسانی پست financial با همهٔ متاهای موردنیاز WP CRM
-        $fields = array_filter([
-            'technician_wp_id'     => (int) $tech->wp_id,
-            'order_id'             => (int) $order->wp_id,
-            'price_customer'       => $priceCustomer ?: null,
-            'cost_price'           => $costPrice ?: null,
-            'total_invoice'        => $totalInvoice ?: null,
+        //    مهم: مبالغ همیشه به‌صورت صریح (حتی 0) ارسال می‌شوند — اگر
+        //    null شود و فیلتر آن را drop کند، WP مقدار قدیمی را نگه
+        //    می‌دارد و در لیست با عدد اشتباه نمایش می‌دهد.
+        $stringFields = array_filter([
             'description'          => $order->description_tech ?? null,
             'invoice_descripotion' => $order->invoice_descripotion ?? null,
-            'payment_status'       => $isPaid ? '1' : '0',
             'post_title'           => $this->invoiceTitle($invoice, $priceCustomer),
         ], fn ($v) => $v !== null && $v !== '');
+
+        $fields = array_merge($stringFields, [
+            'technician_wp_id' => (int) $tech->wp_id,
+            'order_id'         => (int) $order->wp_id,
+            // مبالغ — همیشه ارسال می‌شوند، حتی 0 (به‌صورت string تا WP
+            // delete_user_meta نکند چون 0 یک مقدار معتبر است)
+            'price_customer'   => (string) $priceCustomer,
+            'cost_price'       => (string) $costPrice,
+            'total_invoice'    => (string) $totalInvoice,
+            'payment_status'   => $isPaid ? '1' : '0',
+        ]);
 
         $resp = $this->sendTo('financial-upsert', [
             'wp_id'  => $invoice->wp_id ?: 0,

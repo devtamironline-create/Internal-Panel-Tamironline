@@ -21,6 +21,7 @@ class ResyncInvoices extends Command
 {
     protected $signature = 'crm:resync-invoices
                             {--all : همه (شامل فاکتورهایی که قبلاً wp_id گرفته‌اند)}
+                            {--with-superseded : شامل فاکتورهای superseded (آرشیو) هم باشد}
                             {--id= : فقط یک فاکتور خاص با id لاراولی}
                             {--limit= : حداکثر تعداد رکورد}
                             {--dry-run : فقط شمارش بدون push}';
@@ -36,7 +37,9 @@ class ResyncInvoices extends Command
             return self::FAILURE;
         }
 
-        $query = Invoice::query();
+        $query = $this->option('with-superseded')
+            ? Invoice::withSuperseded()
+            : Invoice::query();
 
         if ($id = $this->option('id')) {
             $query->where('id', (int) $id);
