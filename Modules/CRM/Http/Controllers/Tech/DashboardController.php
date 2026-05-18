@@ -246,15 +246,30 @@ class DashboardController extends Controller
         $this->ensureOwnership($order, $tech);
 
         // trim جلویی روی description تا اسپیس‌های padding در شمارش min/max
-        // نقش نداشته باشند. این از سواستفاده با اسپیس برای رد کردن
-        // اعتبارسنجی min:15 جلوگیری می‌کند.
+        // نقش نداشته باشند و از سواستفاده با اسپیس برای رد کردن min:15
+        // جلوگیری شود.
         $request->merge([
             'description' => trim((string) $request->input('description', '')),
         ]);
 
+        // توضیح فقط برای وضعیت‌هایی الزامی است که در view لیست شده‌اند
+        // (Coordinated, Suspended, Open, Declined, Transit). برای
+        // Completed/Cancelled و … توضیح اختیاری است چون فیلد جدا
+        // (invoice_descripotion) دارد یا اصلاً نیاز نیست.
+        $statusesRequiringDescription = [
+            OrderStatus::Coordinated->value,
+            OrderStatus::Suspended->value,
+            OrderStatus::Open->value,
+            OrderStatus::Declined->value,
+            OrderStatus::Transit->value,
+        ];
+        $needsDesc = in_array((string) $request->input('status'), $statusesRequiringDescription, true);
+
         $validated = $request->validate([
             'status' => 'required|string',
-            'description' => 'required|string|min:15|max:2000',
+            'description' => $needsDesc
+                ? 'required|string|min:15|max:2000'
+                : 'nullable|string|max:2000',
 
             // فیلدهای فاکتور — فقط زمانی استفاده می‌شوند که وضعیت = Completed.
             'price_customer' => 'nullable|integer|min:0',
@@ -270,7 +285,7 @@ class DashboardController extends Controller
             'save_as_draft' => 'nullable|boolean',
             'device_img1' => 'nullable|image|max:5120',
         ], [
-            'description.required' => 'برای ثبت تغییر وضعیت، توضیحات الزامی است.',
+            'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',
             'description.max' => 'توضیحات حداکثر ۲۰۰۰ کاراکتر.',
         ]);

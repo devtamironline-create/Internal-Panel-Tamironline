@@ -425,20 +425,24 @@
                 </div>
 
                 {{-- توضیحات وابسته به وضعیت انتخاب‌شده — اجباری برای ثبت تغییر.
-                     یک textarea مشترک با label/placeholder داینامیک: قبلاً برای
-                     هر وضعیت یک textarea جدا بود که با x-show پنهان می‌شدند،
-                     ولی همه با name="description" در DOM وجود داشتند و موقع
-                     submit آخری (که خالی بود) overwrite می‌کرد و خطای
-                     «توضیحات الزامی است» می‌داد. --}}
+                     یک textarea مشترک با label/placeholder داینامیک. وقتی
+                     کاربر وضعیت را عوض می‌کند، فیلد پاک می‌شود تا متن یک
+                     وضعیت روی وضعیت دیگر باقی نماند. --}}
                 <div x-show="@js(array_keys($statusDescPrompts)).includes(selected)"
-                     x-cloak class="pt-2">
+                     x-cloak class="pt-2"
+                     x-data="{ descValue: @js(old('description', '')), lastStatus: '' }"
+                     x-init="lastStatus = selected;
+                             $watch('selected', v => {
+                                 if (v !== lastStatus) { descValue = ''; lastStatus = v; }
+                             })">
                     <label class="text-[11px] text-rose-700 font-bold mb-1 block">
                         <span x-text="@js($statusDescPrompts)[selected] || ''"></span> *
                     </label>
-                    <textarea name="description" rows="3" minlength="15" maxlength="2000"
+                    <textarea name="description" rows="3" maxlength="2000"
+                              x-model="descValue"
                               :required="@js(array_keys($statusDescPrompts)).includes(selected)"
                               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
-                              placeholder="دلیل و توضیح را شرح دهید...">{{ old('description') }}</textarea>
+                              placeholder="دلیل و توضیح را شرح دهید..."></textarea>
                     @error('description')
                         <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
                     @enderror
