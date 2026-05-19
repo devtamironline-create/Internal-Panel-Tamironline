@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        apiPrefix: '',
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
@@ -51,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified.mobile' => \App\Http\Middleware\EnsureMobileIsVerified::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'internal.token' => \App\Http\Middleware\VerifyInternalToken::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -58,5 +61,25 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // پاسخ‌های روت‌های /v1/* همیشه JSON باشد و در پروداکشن stack-trace
+        // به فرانت برنگردد.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request, \Throwable $e) => $request->is('v1/*'));
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if (! $request->is('v1/*')) {
+                return null;
+            }
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                return null; // Laravel خودش 422 با ساختار درست برمی‌گرداند
+            }
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                return response()->json(
+                    ['message' => $e->getMessage() ?: 'Error'],
+                    $e->getStatusCode()
+                );
+            }
+            return response()->json([
+                'message' => app()->isProduction() ? 'Server error' : $e->getMessage(),
+            ], 500);
+        });
     })->create();
