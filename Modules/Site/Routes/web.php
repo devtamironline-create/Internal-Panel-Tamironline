@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Site\Http\Controllers\Admin\AboutStatController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
@@ -60,6 +61,16 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('/{id}',      [FaqController::class, 'update'])->name('update');
         Route::delete('/{id}',   [FaqController::class, 'destroy'])->name('destroy');
+    });
+
+    // آمار صفحه‌ی About
+    Route::prefix('about-stats')->name('about-stats.')->group(function () {
+        Route::get('/',          [AboutStatController::class, 'index'])->name('index');
+        Route::get('/create',    [AboutStatController::class, 'create'])->name('create');
+        Route::post('/',         [AboutStatController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AboutStatController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::put('/{id}',      [AboutStatController::class, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}',   [AboutStatController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 
     // تنظیمات عمومی سایت

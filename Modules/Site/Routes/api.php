@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Site\Http\Controllers\Api\V1\AboutStatController;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
@@ -22,6 +23,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.testimonials.index');
         Route::get('/catalog/brands', [CatalogBrandController::class, 'index'])
             ->name('api.v1.catalog.brands.index');
+        Route::get('/site/about-stats', [AboutStatController::class, 'index'])
+            ->name('api.v1.site.about-stats.index');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────
