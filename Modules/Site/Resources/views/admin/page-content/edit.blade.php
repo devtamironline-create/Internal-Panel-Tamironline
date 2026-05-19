@@ -146,6 +146,8 @@
                                 $source = $field['source'] ?? 'faqs';
                                 $list = $references[$source] ?? collect();
                                 $selectedIds = is_array($value) ? $value : [];
+                                // برای منابع int (devices/brands) IDها رو string می‌کنیم تا in_array کار کنه
+                                $selectedIdsCmp = array_map(fn ($v) => (string) $v, $selectedIds);
                             @endphp
                             <div class="border border-gray-200 rounded p-3">
                                 <label class="block text-sm font-semibold mb-1">{{ $fieldLabel }}</label>
@@ -154,6 +156,10 @@
                                         از <a href="{{ route('site.admin.faqs.index') }}" target="_blank" class="text-blue-600 hover:underline">مخزن سوالات</a> انتخاب کنید. ترتیب کلیک = ترتیب نمایش.
                                     @elseif($source === 'testimonials')
                                         از <a href="{{ route('site.admin.testimonials.index') }}" target="_blank" class="text-blue-600 hover:underline">مخزن نظرات</a> انتخاب کنید.
+                                    @elseif($source === 'devices')
+                                        از <a href="{{ route('crm.devices.index') }}" target="_blank" class="text-blue-600 hover:underline">دستگاه‌های CRM</a> انتخاب کنید. اگر هیچ‌کدام انتخاب نشود، همه‌ی دستگاه‌های فعال به‌صورت پیش‌فرض نمایش داده می‌شوند.
+                                    @elseif($source === 'brands')
+                                        از <a href="{{ route('crm.brands.index') }}" target="_blank" class="text-blue-600 hover:underline">برندهای CRM</a> انتخاب کنید.
                                     @endif
                                 </p>
                                 <div class="max-h-64 overflow-y-auto space-y-1">
@@ -162,14 +168,23 @@
                                             <input type="checkbox"
                                                    name="{{ $name }}[]"
                                                    value="{{ $ref->id }}"
-                                                   @checked(in_array($ref->id, old($name, $selectedIds), true))>
+                                                   @checked(in_array((string) $ref->id, $selectedIdsCmp, true))>
                                             <span class="text-xs">
                                                 @if($source === 'faqs')
                                                     {{ \Illuminate\Support\Str::limit($ref->question, 100) }}
                                                 @elseif($source === 'testimonials')
                                                     <span class="font-semibold">{{ $ref->customer_name }}</span> — {{ \Illuminate\Support\Str::limit($ref->topic, 60) }}
+                                                @elseif($source === 'devices')
+                                                    <span class="font-semibold">{{ $ref->name }}</span>
+                                                    <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
+                                                    @if($ref->icon) <span class="text-gray-400">[{{ $ref->icon }}]</span> @endif
+                                                    @if($ref->tone) <span class="text-gray-400">{{ $ref->tone }}</span> @endif
+                                                @elseif($source === 'brands')
+                                                    <span class="font-semibold">{{ $ref->name }}</span>
+                                                    <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
                                                 @endif
-                                                @unless($ref->is_published) <span class="text-amber-600">(پیش‌نویس)</span> @endunless
+                                                @if(property_exists($ref, 'is_published') && !$ref->is_published) <span class="text-amber-600">(پیش‌نویس)</span> @endif
+                                                @if(property_exists($ref, 'is_active') && !$ref->is_active) <span class="text-amber-600">(غیرفعال)</span> @endif
                                             </span>
                                         </label>
                                     @empty

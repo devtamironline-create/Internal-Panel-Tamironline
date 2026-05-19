@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Testimonial;
 use Modules\Site\Services\PageSectionService;
@@ -81,6 +83,16 @@ class PageContentController extends Controller
                 ->orderBy('sort_order')
                 ->orderByDesc('created_at')
                 ->get(['id', 'customer_name', 'topic', 'is_published']),
+            'devices' => Device::query()
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'icon', 'tone', 'is_active']),
+            'brands' => Brand::query()
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'logo', 'is_active']),
         ];
 
         return view('site::admin.page-content.edit', [

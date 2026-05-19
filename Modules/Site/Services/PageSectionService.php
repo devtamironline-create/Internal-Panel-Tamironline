@@ -102,6 +102,17 @@ class PageSectionService
             $payload = (array) $row->payload;
             $out[$sectionKey] = $this->hydrateReferences($payload, $def['fields'] ?? []);
         }
+
+        // ─── Auto-fallback مخصوص hero.services در صفحه‌ی home ───
+        // اگر سکشن hero منتشر است ولی هیچ device انتخاب نشده، همه‌ی devices
+        // فعال را برمی‌گردانیم تا فرانت همیشه چیزی برای نمایش داشته باشد.
+        if ($pageSlug === 'home' && isset($out['hero'])) {
+            $items = $out['hero']['services_items'] ?? [];
+            if (empty($items)) {
+                $out['hero']['services_items'] = $this->defaultDevicesForHero();
+            }
+        }
+
         return $out;
     }
 
@@ -183,14 +194,35 @@ class PageSectionService
             }
 
             if ($type === 'reference') {
-                $ids = Arr::get($payload, $key, []);
+                $ids    = Arr::get($payload, $key, []);
+                $source = $field['source'] ?? null;
                 if (! is_array($ids)) {
                     $ids = [];
                 }
-                $ids = array_values(array_filter($ids, fn ($v) => is_string($v) && $v !== ''));
+                $ids = array_values(array_filter($ids, fn ($v) => $v !== null && $v !== ''));
+                // برای منابع با primary integer (brands, devices) تبدیل به int
+                if (in_array($source, ['brands', 'devices'], true)) {
+                    $ids = array_values(array_unique(array_map('intval', $ids)));
+                }
                 $data[$key] = $ids;
-                $rules[$key]        = 'nullable|array';
-                $rules["{$key}.*"]  = $this->referenceItemRule($field['source'] ?? null);
+                $rules[$key]       = 'nullable|array';
+                $rules["{$key}.*"] = $this->referenceItemRule($source);
+                continue;
+            }
+
+            if ($type === 'responsive_image') {
+                $value = Arr::get($payload, $key, []);
+                if (! is_array($value)) {
+                    $value = [];
+                }
+                $desktop = isset($value['desktop']) && is_string($value['desktop']) ? trim($value['desktop']) : null;
+                $mobile  = isset($value['mobile'])  && is_string($value['mobile'])  ? trim($value['mobile'])  : null;
+                $data[$key] = [
+                    'desktop' => $desktop !== '' ? $desktop : null,
+                    'mobile'  => $mobile  !== '' ? $mobile  : null,
+                ];
+                $rules["{$key}.desktop"] = 'nullable|url|max:500';
+                $rules["{$key}.mobile"]  = 'nullable|url|max:500';
                 continue;
             }
 
@@ -241,6 +273,7 @@ class PageSectionService
             'faqs'         => 'string|exists:faqs,id',
             'testimonials' => 'string|exists:testimonials,id',
             'brands'       => 'integer|exists:crm_brands,id',
+            'devices'      => 'integer|exists:crm_devices,id',
             default        => 'string',
         };
     }
@@ -343,6 +376,54 @@ class PageSectionService
                 ->all();
         }
 
+        if ($source === 'devices') {
+            $rows = \Modules\CRM\Models\Device::query()
+                ->whereIn('id', $ids)
+                ->where('is_active', true)
+                ->get(['id', 'name', 'slug', 'icon', 'tone'])
+                ->keyBy('id');
+            return collect($ids)
+                ->map(fn ($id) => $rows->get((int) $id))
+                ->filter()
+                ->map(fn ($d) => $this->shapeDevice($d))
+                ->values()
+                ->all();
+        }
+
         return [];
+    }
+
+    /**
+     * شکل خروجی API برای یک Device.
+     */
+    private function shapeDevice(\Modules\CRM\Models\Device $d): array
+    {
+        return [
+            'id'    => (int) $d->id,
+            'label' => $d->name,
+            'slug'  => $d->slug,
+            'href'  => '/devices/' . $d->slug,
+            'icon'  => $d->icon,
+            'tone'  => $d->tone,
+        ];
+    }
+
+    /**
+     * fallback خودکار: اگر سکشن hero.services خالی باشد، همه‌ی devices فعال
+     * را به ترتیب sort_order برمی‌گرداند (با ترجیح is_featured).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function defaultDevicesForHero(): array
+    {
+        return \Modules\CRM\Models\Device::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'slug', 'icon', 'tone'])
+            ->map(fn ($d) => $this->shapeDevice($d))
+            ->all();
     }
 }

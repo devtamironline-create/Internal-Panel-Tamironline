@@ -34,6 +34,42 @@
         </template>
     </div>
 
+@elseif($type === 'responsive_image')
+    @php
+        $valArr = is_array($value) ? $value : [];
+        $desktop = $valArr['desktop'] ?? null;
+        $mobile  = $valArr['mobile']  ?? null;
+    @endphp
+    <div class="border border-gray-200 rounded p-3">
+        <label class="block text-sm font-semibold mb-2">{{ $label }}</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div x-data="{ url: @js(old($name . '.desktop', $desktop)) }">
+                <label class="block text-xs mb-1">دسکتاپ</label>
+                <input type="url" name="{{ $name }}[desktop]" x-model="url" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr"
+                       placeholder="https://...">
+                <template x-if="url">
+                    <div class="mt-2">
+                        <img :src="url" class="h-24 w-full object-contain rounded border border-gray-200 bg-gray-50" alt="desktop preview"
+                             @@error="$el.style.display='none'" @@load="$el.style.display='block'">
+                    </div>
+                </template>
+            </div>
+            <div x-data="{ url: @js(old($name . '.mobile', $mobile)) }">
+                <label class="block text-xs mb-1">موبایل</label>
+                <input type="url" name="{{ $name }}[mobile]" x-model="url" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr"
+                       placeholder="https://...">
+                <template x-if="url">
+                    <div class="mt-2">
+                        <img :src="url" class="h-24 w-auto rounded border border-gray-200 bg-gray-50" alt="mobile preview"
+                             @@error="$el.style.display='none'" @@load="$el.style.display='block'">
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
 @elseif($type === 'int')
     <div>
         <label class="block text-sm mb-1">{{ $label }}</label>
