@@ -6,6 +6,7 @@ use Modules\Site\Http\Controllers\Api\V1\ActivityController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
+use Modules\Site\Http\Controllers\Api\V1\PageController;
 use Modules\Site\Http\Controllers\Api\V1\TestimonialController;
 
 Route::prefix('v1')->group(function () {
@@ -25,6 +26,9 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.catalog.brands.index');
         Route::get('/site/about-stats', [AboutStatController::class, 'index'])
             ->name('api.v1.site.about-stats.index');
+        Route::get('/pages/{slug}', [PageController::class, 'show'])
+            ->whereAlpha('slug')
+            ->name('api.v1.pages.show');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────
