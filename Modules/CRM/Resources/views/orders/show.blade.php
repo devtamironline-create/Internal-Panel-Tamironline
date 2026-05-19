@@ -3,8 +3,11 @@
 @section('page-title', 'جزئیات سفارش')
 
 @section('main')
-@php use Modules\CRM\Enums\OrderStatus; @endphp
-<div class="p-6 space-y-6">
+@php
+    use Modules\CRM\Enums\OrderStatus;
+    $adminNotes = $order->adminNotes()->with('user')->get();
+@endphp
+<div class="p-6 space-y-6" x-data="{ showNotes: false }">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش <span dir="ltr">{{ $order->order_code }}</span></h1>
@@ -14,10 +17,86 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            @can('manage-crm-orders')
+            <button type="button" @click="showNotes = true"
+                    class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                یادداشت‌ها
+                @if($adminNotes->count() > 0)
+                    <span class="text-[10px] bg-white text-amber-700 rounded-full px-1.5 py-0.5 font-bold">{{ $adminNotes->count() }}</span>
+                @endif
+            </button>
+            @endcan
             @can('edit-crm-order')
             <a href="{{ route('crm.orders.edit', $order) }}" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ویرایش</a>
             @endcan
             <a href="{{ route('crm.orders.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">بازگشت</a>
+        </div>
+    </div>
+
+    {{-- ─── Modal یادداشت‌های اپراتور ─────────────────────────────── --}}
+    <div x-show="showNotes" x-cloak @keydown.escape.window="showNotes = false"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         @click.self="showNotes = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+             x-transition.scale.duration.150ms>
+            <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">
+                    یادداشت‌های اپراتور
+                    <span class="text-xs text-gray-500 font-normal mr-2">({{ $adminNotes->count() }} یادداشت)</span>
+                </h2>
+                <button type="button" @click="showNotes = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto flex-1">
+                {{-- فرم افزودن یادداشت --}}
+                <form method="POST" action="{{ route('crm.orders.notes.store', $order) }}" class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    @csrf
+                    <textarea name="content" rows="3" minlength="3" maxlength="2000" required
+                              class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                              placeholder="یادداشت خود را بنویسید... (حداقل ۳ کاراکتر)">{{ old('content') }}</textarea>
+                    @error('content')
+                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
+                    <div class="flex justify-end mt-2">
+                        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium">
+                            ثبت یادداشت
+                        </button>
+                    </div>
+                </form>
+
+                {{-- لیست یادداشت‌ها --}}
+                @if($adminNotes->isEmpty())
+                    <p class="text-sm text-gray-400 text-center py-6">هنوز یادداشتی ثبت نشده.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach($adminNotes as $note)
+                            <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                <div class="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-200 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                    {{ mb_substr($note->user?->first_name ?: '?', 0, 1) }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                            {{ trim(($note->user?->first_name ?? '') . ' ' . ($note->user?->last_name ?? '')) ?: 'اپراتور حذف‌شده' }}
+                                        </span>
+                                        <span class="text-[11px] text-gray-500 dark:text-gray-400" dir="ltr">@jdatetime($note->created_at)</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">{{ $note->content }}</p>
+                                    @if($note->user_id === auth()->id() || (auth()->user()?->can('manage-permissions') ?? false))
+                                        <form method="POST" action="{{ route('crm.orders.notes.destroy', [$order, $note->id]) }}" class="inline" onsubmit="return confirm('این یادداشت حذف شود؟');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-[11px] text-rose-600 hover:text-rose-800 mt-1">حذف</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -96,62 +175,6 @@
                     </dd>
                     @endif
                 </dl>
-            </div>
-
-            {{-- یادداشت‌های اپراتور — هر اپراتور می‌تواند یادداشت بنویسد،
-                 هر یادداشت با اسم نویسنده و زمان لاگ می‌شود. --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">یادداشت‌های اپراتور</h2>
-                    <span class="text-xs text-gray-500">{{ $order->adminNotes()->count() }} یادداشت</span>
-                </div>
-
-                {{-- فرم افزودن یادداشت جدید --}}
-                <form method="POST" action="{{ route('crm.orders.notes.store', $order) }}" class="mb-4">
-                    @csrf
-                    <textarea name="content" rows="3" minlength="3" maxlength="2000" required
-                              class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
-                              placeholder="یادداشت خود را بنویسید... (حداقل ۳ کاراکتر)">{{ old('content') }}</textarea>
-                    @error('content')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                    @enderror
-                    <div class="flex justify-end mt-2">
-                        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium">
-                            ثبت یادداشت
-                        </button>
-                    </div>
-                </form>
-
-                {{-- لیست یادداشت‌های ثبت‌شده --}}
-                @php $adminNotes = $order->adminNotes()->with('user')->get(); @endphp
-                @if($adminNotes->isEmpty())
-                    <p class="text-xs text-gray-400 text-center py-3">هنوز یادداشتی ثبت نشده.</p>
-                @else
-                    <ul class="space-y-3 max-h-96 overflow-y-auto">
-                        @foreach($adminNotes as $note)
-                            <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                    {{ mb_substr($note->user?->first_name ?: '?', 0, 1) }}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between flex-wrap gap-2">
-                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                            {{ trim(($note->user?->first_name ?? '') . ' ' . ($note->user?->last_name ?? '')) ?: 'اپراتور حذف‌شده' }}
-                                        </span>
-                                        <span class="text-[11px] text-gray-500 dark:text-gray-400" dir="ltr">@jdatetime($note->created_at)</span>
-                                    </div>
-                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">{{ $note->content }}</p>
-                                    @if($note->user_id === auth()->id() || (auth()->user()?->can('manage-permissions') ?? false))
-                                        <form method="POST" action="{{ route('crm.orders.notes.destroy', [$order, $note->id]) }}" class="inline" onsubmit="return confirm('این یادداشت حذف شود؟');">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="text-[11px] text-rose-600 hover:text-rose-800 mt-1">حذف</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
             </div>
 
             {{-- آیتم‌ها --}}
