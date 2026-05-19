@@ -14,6 +14,7 @@ use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
+use Modules\CRM\Console\Commands\SnapshotTechnicians;
 use Modules\CRM\Livewire\OrderWizard;
 
 class CrmServiceProvider extends ServiceProvider
@@ -58,6 +59,7 @@ class CrmServiceProvider extends ServiceProvider
                 ResyncInvoices::class,
                 ResyncWalletTransactions::class,
                 ActivateTechniciansByName::class,
+                SnapshotTechnicians::class,
             ]);
         }
     }

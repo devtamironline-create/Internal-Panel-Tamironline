@@ -61,15 +61,39 @@ class SyncSettingsController extends Controller
     {
         $lock = $request->boolean('lock');
         CrmSetting::set('tech_data_locked', $lock ? '1' : '0');
+
         if ($lock) {
             CrmSetting::set('tech_data_locked_at', now()->toDateTimeString());
+            // ساخت snapshot برای پشتیبان از وضعیت فعلی
+            try {
+                \Illuminate\Support\Facades\Artisan::call('crm:snapshot-technicians', ['--label' => 'lock-on']);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('crm.tech_lock.snapshot_failed', ['error' => $e->getMessage()]);
+            }
         }
 
         return redirect()->route('crm.sync.settings')
             ->with('success', $lock
-                ? 'قفل داده تکنسین فعال شد — از این لحظه Laravel منبع حقیقت است و WP CRM روی تکنسین‌های موجود اثر ندارد.'
+                ? 'قفل داده تکنسین فعال شد — کپی JSON از داده‌های فعلی هم ذخیره شد.'
                 : 'قفل داده تکنسین غیرفعال شد — WP CRM دوباره می‌تواند روی تکنسین‌ها overwrite کند.'
             );
+    }
+
+    /**
+     * دانلود آخرین snapshot تکنسین‌ها (مسیر در crm_settings.tech_data_lock_snapshot
+     * ذخیره می‌شود توسط command snapshot-technicians).
+     */
+    public function downloadTechSnapshot(): \Symfony\Component\HttpFoundation\Response
+    {
+        $path = CrmSetting::get('tech_data_lock_snapshot');
+        if (! $path) {
+            abort(404, 'هیچ snapshotی هنوز ساخته نشده. در /admin/crm/sync کلید قفل را روشن کن یا دستی این command را اجرا کن: php artisan crm:snapshot-technicians');
+        }
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        if (! $disk->exists($path)) {
+            abort(404, 'فایل snapshot روی دیسک نیست. دوباره command را اجرا کن.');
+        }
+        return $disk->download($path, basename($path));
     }
 
     /**

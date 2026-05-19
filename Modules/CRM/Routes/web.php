@@ -297,6 +297,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('resync-technicians', [SyncSettingsController::class, 'resyncTechnicians'])->name('resync-technicians');
         // قفل/بازکردن داده تکنسین در Laravel
         Route::post('tech-lock', [SyncSettingsController::class, 'updateTechLock'])->name('tech-lock.update');
+        Route::get('tech-snapshot/download', [SyncSettingsController::class, 'downloadTechSnapshot'])->name('tech-snapshot.download');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────

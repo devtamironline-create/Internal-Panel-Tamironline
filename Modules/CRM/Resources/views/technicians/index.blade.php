@@ -3,7 +3,54 @@
 @section('page-title', 'تکنسین‌های فعال')
 
 @section('main')
+@php
+    $techLocked = \Modules\CRM\Models\CrmSetting::get('tech_data_locked') === '1';
+    $techLockedAt = \Modules\CRM\Models\CrmSetting::get('tech_data_locked_at');
+    $techSnapshotPath = \Modules\CRM\Models\CrmSetting::get('tech_data_lock_snapshot');
+@endphp
 <div class="p-6 space-y-6">
+    {{-- بنر اطلاع‌رسانی قفل داده تکنسین در Laravel --}}
+    @if($techLocked && $techLockedAt)
+    <div class="bg-gradient-to-l from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 flex items-start gap-3">
+        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-700 dark:text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+        </div>
+        <div class="flex-1">
+            <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                داده‌های تکنسین به پنل لاراول منتقل شده
+            </h3>
+            <p class="text-xs text-emerald-800 dark:text-emerald-200 mt-1 leading-6">
+                از تاریخ <span class="font-mono font-bold" dir="ltr">{{ $techLockedAt }}</span>،
+                تمام اطلاعات تکنسین‌ها از این پنل خوانده می‌شود و WP CRM دیگر روی داده‌های موجود اثر ندارد.
+                ساخت تکنسین جدید از WP همچنان مجاز است.
+            </p>
+            <div class="flex flex-wrap items-center gap-3 mt-2 text-xs">
+                @if($techSnapshotPath)
+                    @can('manage-crm-sync')
+                    <a href="{{ route('crm.sync.tech-snapshot.download') }}"
+                       class="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 rounded-full hover:bg-emerald-50 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        دانلود کپی پشتیبان JSON
+                    </a>
+                    @endcan
+                @endif
+                @can('manage-crm-sync')
+                <a href="{{ route('crm.sync-logs.index') }}?status=skipped&entity_type=technician"
+                   class="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 hover:underline">
+                    مشاهدهٔ لاگ inboundهای مسدودشده →
+                </a>
+                <a href="{{ route('crm.sync.settings') }}"
+                   class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:underline">
+                    تنظیمات سینک
+                </a>
+                @endcan
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">تکنسین‌های فعال</h1>
