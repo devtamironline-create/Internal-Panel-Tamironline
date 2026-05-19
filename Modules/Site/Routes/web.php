@@ -5,6 +5,7 @@ use Modules\Site\Http\Controllers\Admin\AboutStatController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
+use Modules\Site\Http\Controllers\Admin\PageContentController;
 use Modules\Site\Http\Controllers\Admin\PageController;
 use Modules\Site\Http\Controllers\Admin\SettingsController;
 use Modules\Site\Http\Controllers\Admin\TestimonialController;
@@ -33,7 +34,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::delete('/{id}',             [TestimonialController::class, 'destroy'])->name('destroy');
     });
 
-    // صفحات سایت
+    // صفحات سایت — قدیمی (free-form content، در حال جایگزینی با page-content)
     Route::prefix('pages')->name('pages.')->group(function () {
         Route::get('/',          [PageController::class, 'index'])->name('index');
         Route::get('/create',    [PageController::class, 'create'])->name('create');
@@ -41,6 +42,13 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}/edit', [PageController::class, 'edit'])->name('edit');
         Route::put('/{id}',      [PageController::class, 'update'])->name('update');
         Route::delete('/{id}',   [PageController::class, 'destroy'])->name('destroy');
+    });
+
+    // محتوای صفحات سایت — section-based
+    Route::prefix('page-content')->name('page-content.')->group(function () {
+        Route::get('/',             [PageContentController::class, 'index'])->name('index');
+        Route::get('/{slug}',       [PageContentController::class, 'edit'])->whereAlpha('slug')->name('edit');
+        Route::put('/{slug}',       [PageContentController::class, 'update'])->whereAlpha('slug')->name('update');
     });
 
     // بنرها و اسلایدر
