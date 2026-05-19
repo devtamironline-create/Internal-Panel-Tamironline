@@ -53,8 +53,9 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 | 3 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
 | 4 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
 | 5 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
-| 6 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 7 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 6 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
+| 7 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
+| 8 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
 
 ---
 
@@ -348,13 +349,13 @@ Cache-Control: public, max-age=300, s-maxage=300
 
 ### 4.5 `GET /v1/catalog/brands`
 
-برندهای تحت پوشش — سکشن H6 صفحه‌ی Home. منبع: جدول CRM brands.
+برندهای تحت پوشش — سکشن H6 صفحه‌ی Home. منبع: جدول `crm_brands` در ماژول CRM.
 
 **Query params:**
 
 | پارامتر | نوع | پیش‌فرض | توضیح |
 |---|---|---|---|
-| `featured` | bool | false | فقط برندهای ویژه |
+| `featured` | bool | false | فقط برندهای ویژه (`is_featured=true`) |
 | `limit` | int | 50 | 1..100 |
 
 **Request example:**
@@ -395,9 +396,132 @@ GET /v1/catalog/brands?featured=true&limit=20
 Cache-Control: public, max-age=600, s-maxage=600
 ```
 
+**مدیریت ادمین:**
+- مسیر: `/admin/crm/brands`
+- ادمین می‌تواند پرچم «برند ویژه» را روی هر برند فعال/غیرفعال کند
+- ترتیب نمایش با فیلد `sort_order` تنظیم می‌شود
+
+**کاربرد در فرانت:**
+- سکشن H6 صفحه‌ی Home → `?featured=true` (مثلاً ۱۲ برند ویژه با لوگو)
+- صفحه‌ی «همه برندها» → بدون پارامتر (همه‌ی برندهای فعال)
+- آرشیو/جستجو بر اساس `slug` (URLهای پایدار)
+
 ---
 
-### 4.6 `GET /v1/site/about-stats`
+### 4.6 `GET /v1/catalog/devices`
+
+دستگاه‌های قابل تعمیر — منبع: جدول `crm_devices` در ماژول CRM.
+
+این endpoint منبع حقیقت برای فهرست دستگاه‌هاست. در صفحه‌ی Home از طریق
+`/v1/pages/home` به‌صورت embed (در `sections.hero.services_items`) هم در دسترس
+است، اما فرانت برای صفحات `/devices`، منوی هدر یا صفحه‌ی دستگاه می‌تواند
+مستقیماً این endpoint را صدا بزند.
+
+**Query params:**
+
+| پارامتر | نوع | پیش‌فرض | توضیح |
+|---|---|---|---|
+| `featured` | bool | false | فقط دستگاه‌های ویژه (`is_featured=true`) |
+| `limit` | int | 50 | 1..100 |
+
+**Request example:**
+```
+GET /v1/catalog/devices?limit=20
+GET /v1/catalog/devices?featured=true
+```
+
+**Response 200:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "label": "تعمیر لباسشویی",
+      "slug": "washing-machine",
+      "href": "/devices/washing-machine",
+      "icon": "washing-machine",
+      "tone": "tone-blue"
+    },
+    {
+      "id": 2,
+      "label": "تعمیر ظرفشویی",
+      "slug": "dishwasher",
+      "href": "/devices/dishwasher",
+      "icon": "droplets",
+      "tone": "tone-green"
+    }
+  ]
+}
+```
+
+**فیلدها:**
+
+| فیلد | نوع | الزامی | توضیح |
+|---|---|---|---|
+| `id` | int | بله | شناسه‌ی دستگاه |
+| `label` | string | بله | متن نمایش فارسی (همان `name` در CRM) |
+| `slug` | string | بله | کلید پایدار (kebab-case) — برای URL |
+| `href` | string | بله | لینک از پیش ساخته‌شده: `/devices/{slug}` |
+| `icon` | string \| null | خیر | کلید آیکن Lucide به‌صورت kebab-case (مثل `washing-machine`, `droplets`, `refrigerator`) |
+| `tone` | string \| null | خیر | کلاس CSS رنگ کارت — مقادیر مجاز: `tone-blue`, `tone-green`, `tone-cyan`, `tone-sky`, `tone-orange`, `tone-amber`, `tone-rose`, `tone-violet`, `tone-emerald` |
+
+**فیلتر سرور:**
+- فقط `is_active=true`
+- اگر `featured=true`، اضافه‌تر فقط `is_featured=true`
+- مرتب: `is_featured DESC, sort_order ASC, name ASC`
+  (ابتدا ویژه‌ها، سپس بقیه با ترتیب ادمین)
+
+**Headers:**
+```http
+Cache-Control: public, max-age=600, s-maxage=600
+```
+
+**مدیریت ادمین:**
+- مسیر: `/admin/crm/devices`
+- فیلدهای قابل‌ویرایش: `name`, `slug`, `icon`, `tone`, `sort_order`, `is_active`, `is_featured`
+- پرچم `is_featured` تعیین می‌کند کدام دستگاه‌ها در Hero صفحه‌ی Home (سکشن H1) به‌عنوان پیش‌فرض نمایش داده شوند
+
+**کاربرد در فرانت:**
+
+**۱. صفحه‌ی Home — سکشن Hero (H1):**
+دو راه:
+- **توصیه:** از `/v1/pages/home` بگیر و از `sections.hero.services_items` استفاده کن. این روش به ادمین اجازه می‌دهد دستگاه‌های دلخواه و ترتیب خاصی برای Hero مشخص کند. اگر ادمین چیزی انتخاب نکرد، خودکار به همه‌ی دستگاه‌های فعال (با `is_featured` اول) فال‌بک می‌شود.
+- **جایگزین:** `/v1/catalog/devices?featured=true` — اگر فقط دستگاه‌های ویژه را می‌خواهی بدون امکان override توسط ادمین.
+
+**۲. صفحه‌ی فهرست دستگاه‌ها (`/devices`):**
+```
+GET /v1/catalog/devices
+```
+همه‌ی دستگاه‌های فعال را برمی‌گرداند.
+
+**۳. مپ آیکن در فرانت:**
+چون `icon` یک string identifier است، فرانت باید یک مپ از kebab-case به کامپوننت Lucide داشته باشد:
+```typescript
+import { WashingMachine, Droplets, Refrigerator, Snowflake, Flame, Microwave, Package } from 'lucide-react';
+
+const iconMap: Record<string, LucideIcon> = {
+  'washing-machine': WashingMachine,
+  'droplets':        Droplets,
+  'refrigerator':    Refrigerator,
+  'snowflake':       Snowflake,
+  'flame':           Flame,
+  'microwave':       Microwave,
+  'package':         Package,
+  // ...
+};
+
+function ServiceIcon({ name }: { name: string | null }) {
+  const Icon = name ? iconMap[name] : null;
+  return Icon ? <Icon className="h-7 w-7" strokeWidth={1.6} /> : null;
+}
+```
+
+**۴. نام آیکن‌های مرسوم:**
+فرانت با ادمین هماهنگ کند که چه آیکن‌هایی پشتیبانی می‌شوند. مقادیر `icon` که در ادمین CRM ست می‌شوند باید در `iconMap` فرانت وجود داشته باشند، در غیر این صورت آیکن خالی برگشت داده می‌شود.
+
+---
+
+### 4.7 `GET /v1/site/about-stats`
 
 آمار صفحه‌ی About — سکشن A2.
 
@@ -436,7 +560,7 @@ Cache-Control: public, max-age=600, s-maxage=600
 
 ---
 
-### 4.7 `GET /v1/health`
+### 4.8 `GET /v1/health`
 
 سلامت سرویس برای health-check (CI/CD، Uptime monitoring).
 
@@ -601,7 +725,92 @@ export default async function HomePage() {
 
 ---
 
-## ۹) چک‌لیست راه‌اندازی فرانت
+## ۹) راهنمای Featured برای Brands و Devices
+
+دو entity در CRM (و فقط این دو) پرچم `is_featured` دارند:
+
+### Brand
+```
+crm_brands:
+  - is_active: bool        ← آیا برند فعال است؟
+  - is_featured: bool      ← آیا در صفحه‌ی اصلی نمایش داده شود؟
+  - sort_order: int        ← ترتیب نمایش
+```
+
+### Device
+```
+crm_devices:
+  - is_active: bool        ← آیا دستگاه قابل نمایش است؟
+  - is_featured: bool      ← آیا در Hero صفحه‌ی Home به‌عنوان پیش‌فرض بیاید؟
+  - sort_order: int        ← ترتیب نمایش
+  - icon: string|null      ← کلید آیکن Lucide (kebab-case)
+  - tone: string|null      ← کلاس CSS رنگ (tone-blue, ...)
+```
+
+### قانون اولویت فال‌بک
+
+برای **Hero (H1) صفحه‌ی Home**:
+
+| منبع داده | اولویت |
+|---|---|
+| ۱. `services_items` در `GET /v1/pages/home` | اول — اگر ادمین در پنل سایت دستگاه انتخاب کرده باشد |
+| ۲. همه‌ی `devices` فعال با ترتیب `is_featured DESC, sort_order ASC` | فال‌بک خودکار وقتی ادمین چیزی انتخاب نکرده |
+
+این یعنی فرانت **فقط یک‌بار** `GET /v1/pages/home` صدا می‌زند و `services_items`
+**همیشه** پر است (هیچ‌وقت `[]` نیست مگر هیچ device فعالی در CRM نباشد).
+
+### قانون اولویت برای brands
+
+برای **سکشن H6 صفحه‌ی Home** (لیست برندها):
+
+| منبع داده | استفاده |
+|---|---|
+| `GET /v1/catalog/brands?featured=true` | پیشنهادی — فقط برندهای ویژه |
+| `GET /v1/catalog/brands` | همه‌ی برندهای فعال |
+
+برخلاف devices، **برندها در `/v1/pages/home` embed نمی‌شوند** — فرانت مستقیماً
+endpoint کاتالوگ را صدا می‌زند.
+
+### مثال کامل ServiceCard
+
+با توجه به فرمت پاسخ `/v1/catalog/devices` که فیلد `tone` و `icon` را شامل می‌شود:
+
+```typescript
+type Service = {
+  id: number;
+  label: string;
+  slug: string;
+  href: string;
+  icon: string | null;   // 'washing-machine' | 'droplets' | ...
+  tone: string | null;   // 'tone-blue' | 'tone-green' | ...
+};
+
+function ServiceCard({ s, i }: { s: Service; i: number }) {
+  const Icon = s.icon ? iconMap[s.icon] : null;
+  return (
+    <Link
+      href={s.href}
+      className="group fade-up relative flex flex-col items-center gap-3 rounded-2xl border bg-white px-3 py-5 transition-all duration-300 hover:-translate-y-1 active:scale-[0.97] md:gap-2.5 md:px-2 md:py-5"
+      style={{
+        borderColor: 'var(--border)',
+        boxShadow: 'var(--sh-sm)',
+        animationDelay: `${i * 50 + 300}ms`,
+      }}
+    >
+      <span className={`icon-tile icon-tile--xl ${s.tone ?? 'tone-blue'} transition-transform duration-300 group-hover:scale-105`}>
+        {Icon && <Icon className="h-7 w-7" strokeWidth={1.6} />}
+      </span>
+      <span className="text-center text-[12.5px] leading-tight font-bold md:text-[12.5px]" style={{ color: 'var(--text)' }}>
+        {s.label}
+      </span>
+    </Link>
+  );
+}
+```
+
+---
+
+## ۱۰) چک‌لیست راه‌اندازی فرانت
 
 - [ ] `API_BASE_URL` در `.env.local` ست شود
 - [ ] `INTERNAL_API_TOKEN` در `.env.local` ست شود (فقط برای POST endpointها)
