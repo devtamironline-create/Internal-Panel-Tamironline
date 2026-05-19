@@ -13,19 +13,27 @@ class Device extends Model
         'name',
         'slug',
         'icon',
+        'tone',
         'sort_order',
         'is_active',
+        'is_featured',
     ];
 
     protected $casts = [
         'wp_id' => 'integer',
         'is_active' => 'boolean',
+        'is_featured' => 'boolean',
         'sort_order' => 'integer',
     ];
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
     }
 
     public function scopeOrdered($query)

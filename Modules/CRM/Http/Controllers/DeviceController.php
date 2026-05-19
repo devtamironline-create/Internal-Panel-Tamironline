@@ -27,13 +27,16 @@ class DeviceController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:crm_devices,slug',
             'icon' => 'nullable|string|max:500',
+            'tone' => 'nullable|string|max:30',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'is_featured' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+        $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
 
         Device::create($validated);
 
@@ -52,13 +55,16 @@ class DeviceController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:crm_devices,slug,' . $device->id,
             'icon' => 'nullable|string|max:500',
+            'tone' => 'nullable|string|max:30',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'is_featured' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
+        $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
 
         $device->update($validated);
 
