@@ -242,6 +242,7 @@ class Technician extends Authenticatable
     {
         $push = function (self $t) {
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushTechnician($t);
             } catch (\Throwable $e) {

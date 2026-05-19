@@ -33,7 +33,20 @@ class LogWpSyncInbound
 
     public function handle(Request $request, Closure $next)
     {
+        // در طول پردازش inbound، outbound push را معلق کن. این جلوی
+        // پس‌خوران (echo) را می‌گیرد: وقتی WP داده‌ای می‌فرستد و Laravel
+        // ذخیره می‌کند، listenerهای مدل (Invoice/Order/...) نباید همان
+        // داده را برگردانند به WP — وگرنه:
+        //   مثلاً تکنسین در WP سفارش را Completed کرد → WP→Laravel sync
+        //   → SyncFinancialController invoice جدید می‌سازد → Invoice
+        //   listener فایر می‌شود → pushInvoice → pushOrder → status قدیمی
+        //   Laravel به WP فرستاده می‌شود → بازگشت status روی WP.
+        app()->instance('crm.suppress_outbound_push', true);
+
         $response = $next($request);
+
+        // پاکسازی — به‌خصوص مهم در محیط long-running (Octane/queue).
+        app()->forgetInstance('crm.suppress_outbound_push');
 
         try {
             $path = ltrim($request->path(), '/'); // api/crm/sync/order

@@ -85,6 +85,7 @@ class Customer extends Model
     {
         $push = function (self $c) {
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushCustomer($c);
             } catch (\Throwable $e) {

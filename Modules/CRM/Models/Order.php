@@ -202,6 +202,8 @@ class Order extends Model
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 return; // در artisan/seedها push اتوماتیک نمی‌خواهیم
             }
+            // در طول inbound sync پاسخ ندهیم تا حلقه نشود
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushOrderCreate($order);
             } catch (\Throwable $e) {
@@ -224,6 +226,8 @@ class Order extends Model
                 // و ResolveOrphanTechnicians باعث push انبوه نشوند.
                 return;
             }
+            // در طول inbound sync پاسخ ندهیم تا حلقه نشود
+            if (app()->bound('crm.suppress_outbound_push')) return;
             // فیلدهایی که اگر تغییر کنند پوش لازم است. بقیه فیلدها
             // (مثل تنظیمات داخلی) ربطی به WP ندارند.
             $relevant = [

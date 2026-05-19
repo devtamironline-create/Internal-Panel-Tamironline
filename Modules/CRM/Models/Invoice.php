@@ -60,6 +60,10 @@ class Invoice extends Model
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 return;
             }
+            // در طول inbound sync پاسخ ندهیم — pushInvoice که داخلش
+            // pushOrder صدا می‌زند، می‌توانست status قدیمی Laravel را
+            // به WP برگرداند و باعث «بسته نشدن سفارش از سمت WP» شود.
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushInvoice($invoice);
             } catch (\Throwable $e) {
