@@ -45,7 +45,31 @@ class SyncSettingsController extends Controller
             'wpPushEnabled' => CrmSetting::get('wp_push_enabled') === '1',
             'wpPushUrl'     => CrmSetting::get('wp_push_url') ?? '',
             'wpPushSecret'  => CrmSetting::get('wp_push_secret') ?? '',
+
+            // قفل داده‌های تکنسین در Laravel (Laravel-authoritative)
+            'techDataLocked' => CrmSetting::get('tech_data_locked') === '1',
+            'techDataLockedAt' => CrmSetting::get('tech_data_locked_at'),
         ]);
+    }
+
+    /**
+     * Toggle قفل داده تکنسین — وقتی روشن باشد، inbound از WP CRM فقط
+     * تکنسین‌های جدید را می‌سازد و تغییرات روی تکنسین‌های موجود را
+     * اعمال نمی‌کند. Laravel منبع حقیقت می‌شود.
+     */
+    public function updateTechLock(Request $request): RedirectResponse
+    {
+        $lock = $request->boolean('lock');
+        CrmSetting::set('tech_data_locked', $lock ? '1' : '0');
+        if ($lock) {
+            CrmSetting::set('tech_data_locked_at', now()->toDateTimeString());
+        }
+
+        return redirect()->route('crm.sync.settings')
+            ->with('success', $lock
+                ? 'قفل داده تکنسین فعال شد — از این لحظه Laravel منبع حقیقت است و WP CRM روی تکنسین‌های موجود اثر ندارد.'
+                : 'قفل داده تکنسین غیرفعال شد — WP CRM دوباره می‌تواند روی تکنسین‌ها overwrite کند.'
+            );
     }
 
     /**

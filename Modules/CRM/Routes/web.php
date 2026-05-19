@@ -295,6 +295,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // تنظیمات سینک معکوس Laravel → WP
         Route::post('wp-push', [SyncSettingsController::class, 'updateWpPush'])->name('wp-push.update');
         Route::post('resync-technicians', [SyncSettingsController::class, 'resyncTechnicians'])->name('resync-technicians');
+        // قفل/بازکردن داده تکنسین در Laravel
+        Route::post('tech-lock', [SyncSettingsController::class, 'updateTechLock'])->name('tech-lock.update');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────

@@ -144,6 +144,23 @@ class SyncTechnicianController extends Controller
             }
 
             if ($tech) {
+                // قفل عمومی Laravel-authoritative — وقتی ادمین در
+                // /admin/crm/sync این کلید را روشن کرده، هیچ inbound
+                // updateای روی تکنسین‌های موجود اعمال نمی‌شود. این
+                // برای حالتی است که همه تکنسین‌ها در پنل لاراول کامل
+                // ثبت شده‌اند و دیگر WP نباید overwrite کند. ساخت
+                // تکنسین جدید (else شاخه پایین) همچنان مجاز است تا
+                // ادمین تکنسین‌های جدید WP را ببیند.
+                if (\Modules\CRM\Models\CrmSetting::get('tech_data_locked') === '1') {
+                    return [
+                        'action' => 'skipped',
+                        'id' => (int) $tech->id,
+                        'wp_id' => (int) $tech->wp_id,
+                        'reason' => 'tech_data_locked_to_laravel',
+                        'locked_at' => \Modules\CRM\Models\CrmSetting::get('tech_data_locked_at'),
+                    ];
+                }
+
                 // فیلدهای مدیریت‌شده توسط ادمین Laravel نباید با sync دوره‌ای
                 // WP بازنویسی شوند — وگرنه چرخهٔ بسته به وجود می‌آید (مثل
                 // درصد=۳۰ که در Laravel ست شده و WP دوباره به ۰ برمی‌گرداند).

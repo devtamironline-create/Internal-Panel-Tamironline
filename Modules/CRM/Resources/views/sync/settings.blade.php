@@ -172,6 +172,48 @@
         </p>
     </div>
 
+    {{-- ─── قفل داده تکنسین در Laravel (Laravel-authoritative) ─── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">قفل داده تکنسین در Laravel</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 leading-6">
+                    وقتی روشن باشد، هر inbound از WP CRM روی تکنسین‌های موجود <b>نادیده گرفته می‌شود</b>.
+                    Laravel منبع حقیقت تکنسین‌ها است. ساخت تکنسین جدید از WP همچنان مجاز است.
+                </p>
+            </div>
+            @if($techDataLocked ?? false)
+                <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold whitespace-nowrap">قفل فعال</span>
+            @else
+                <span class="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-bold whitespace-nowrap">قفل غیرفعال</span>
+            @endif
+        </div>
+
+        @if($techDataLocked ?? false)
+            @if(! empty($techDataLockedAt))
+                <p class="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                    قفل از تاریخ <span dir="ltr" class="font-mono">{{ $techDataLockedAt }}</span> فعال است.
+                    inbound‌های مسدود شده در <a href="{{ route('crm.sync-logs.index') }}?status=skipped&entity_type=technician" class="text-brand-600 hover:underline">لاگ سینک</a> با reason=tech_data_locked_to_laravel قابل پیگیری‌اند.
+                </p>
+            @endif
+            <form method="POST" action="{{ route('crm.sync.tech-lock.update') }}" onsubmit="return confirm('قفل تکنسین خاموش شود؟ از این لحظه WP CRM دوباره می‌تواند تکنسین‌های Laravel را override کند.');">
+                @csrf
+                <input type="hidden" name="lock" value="0">
+                <button type="submit" class="px-5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-bold">
+                    خاموش کردن قفل
+                </button>
+            </form>
+        @else
+            <form method="POST" action="{{ route('crm.sync.tech-lock.update') }}" onsubmit="return confirm('قفل تکنسین روشن شود؟ پس از این، تغییرات WP CRM روی تکنسین‌های موجود اعمال نمی‌شود.');">
+                @csrf
+                <input type="hidden" name="lock" value="1">
+                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold">
+                    روشن کردن قفل تکنسین
+                </button>
+            </form>
+        @endif
+    </div>
+
     {{-- راهنما --}}
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
         <h2 class="text-base font-bold text-blue-900 dark:text-blue-100 mb-2">راهنمای نصب / به‌روزرسانی</h2>
