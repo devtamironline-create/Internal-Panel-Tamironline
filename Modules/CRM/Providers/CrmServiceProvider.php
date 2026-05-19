@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
+use Modules\CRM\Console\Commands\ActivateTechniciansByName;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
@@ -56,6 +57,7 @@ class CrmServiceProvider extends ServiceProvider
                 ResyncTechnicians::class,
                 ResyncInvoices::class,
                 ResyncWalletTransactions::class,
+                ActivateTechniciansByName::class,
             ]);
         }
     }
