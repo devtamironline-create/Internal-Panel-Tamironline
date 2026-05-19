@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageController;
@@ -38,6 +39,16 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}/edit', [PageController::class, 'edit'])->name('edit');
         Route::put('/{id}',      [PageController::class, 'update'])->name('update');
         Route::delete('/{id}',   [PageController::class, 'destroy'])->name('destroy');
+    });
+
+    // بنرها و اسلایدر
+    Route::prefix('banners')->name('banners.')->group(function () {
+        Route::get('/',          [BannerController::class, 'index'])->name('index');
+        Route::get('/create',    [BannerController::class, 'create'])->name('create');
+        Route::post('/',         [BannerController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [BannerController::class, 'edit'])->name('edit');
+        Route::put('/{id}',      [BannerController::class, 'update'])->name('update');
+        Route::delete('/{id}',   [BannerController::class, 'destroy'])->name('destroy');
     });
 
     // سوالات متداول (مخزن)
