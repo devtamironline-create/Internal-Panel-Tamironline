@@ -19,7 +19,8 @@ use Modules\CRM\Models\Technician;
 class ImportTechnicianFromWp extends Command
 {
     protected $signature = 'crm:import-tech-from-wp {wp_id : شناسهٔ کاربر WP}
-                            {--force : بدون تأیید}';
+                            {--force : بدون تأیید}
+                            {--update-existing : اگر تکنسینی با همان موبایل (یا wp_id) از قبل هست، آن را با داده WP overwrite کن}';
 
     protected $description = 'وارد کردن یک تکنسین از WP CRM به پنل لاراول بر اساس wp_id';
 
@@ -64,10 +65,18 @@ class ImportTechnicianFromWp extends Command
             return self::FAILURE;
         }
 
-        // اگر تکنسین قبلاً در لاراول هست، خارج شو
+        // اگر تکنسین قبلاً در لاراول هست
         $existing = Technician::where('wp_id', $wpId)->first();
-        if ($existing) {
-            $this->warn("این تکنسین قبلاً در لاراول وجود دارد: id={$existing->id}، نام={$existing->firstname_tech}");
+        if (! $existing) {
+            // ممکن است با موبایل match کند (همان فرد، ولی wp_id نخورده)
+            $mobileFromMeta = $this->normalizeMobile(($wp->table($prefix.'usermeta')->where('user_id', $wpId)->where('meta_key', 'mobile')->value('meta_value')) ?? '');
+            if ($mobileFromMeta !== '') {
+                $existing = Technician::where('mobile', $mobileFromMeta)->first();
+            }
+        }
+        if ($existing && ! $this->option('update-existing')) {
+            $this->warn("این تکنسین قبلاً در لاراول وجود دارد: id={$existing->id}، نام={$existing->firstname_tech} (wp_id={$existing->wp_id})");
+            $this->line('برای overwrite با داده WP، فلگ --update-existing را اضافه کن.');
             return self::SUCCESS;
         }
 
@@ -133,11 +142,22 @@ class ImportTechnicianFromWp extends Command
         app()->instance('crm.suppress_outbound_push', true);
 
         try {
-            $tech = Technician::create($data);
-            $this->info("✓ تکنسین ساخته شد در لاراول:");
-            $this->line("  id={$tech->id}");
-            $this->line("  wp_id={$tech->wp_id}");
-            $this->line("  نام: {$tech->firstname_tech}");
+            if ($existing) {
+                // overwrite کامل با داده WP — id لاراولی حفظ می‌شود تا
+                // سفارش‌ها و فاکتورهای موجود به این رکورد متصل بمانند.
+                $oldWpId = $existing->wp_id;
+                $existing->forceFill($data)->save();
+                $this->info("✓ تکنسین به‌روز شد در لاراول:");
+                $this->line("  id={$existing->id} (حفظ شد)");
+                $this->line("  wp_id={$existing->wp_id} (قبلاً: " . ($oldWpId ?: 'NULL') . ')');
+                $this->line("  نام: {$existing->firstname_tech}");
+            } else {
+                $tech = Technician::create($data);
+                $this->info("✓ تکنسین ساخته شد در لاراول:");
+                $this->line("  id={$tech->id}");
+                $this->line("  wp_id={$tech->wp_id}");
+                $this->line("  نام: {$tech->firstname_tech}");
+            }
             return self::SUCCESS;
         } catch (\Throwable $e) {
             $this->error('خطا: ' . $e->getMessage());
