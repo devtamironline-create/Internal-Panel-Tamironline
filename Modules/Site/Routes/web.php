@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
+use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\TestimonialController;
 use Modules\Site\Http\Controllers\SiteAdminController;
 
@@ -26,5 +27,15 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/{id}',                [TestimonialController::class, 'update'])->name('update');
         Route::put('/{id}/toggle-publish', [TestimonialController::class, 'togglePublish'])->name('toggle-publish');
         Route::delete('/{id}',             [TestimonialController::class, 'destroy'])->name('destroy');
+    });
+
+    // سوالات متداول (مخزن)
+    Route::prefix('faqs')->name('faqs.')->group(function () {
+        Route::get('/',          [FaqController::class, 'index'])->name('index');
+        Route::get('/create',    [FaqController::class, 'create'])->name('create');
+        Route::post('/',         [FaqController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [FaqController::class, 'edit'])->name('edit');
+        Route::put('/{id}',      [FaqController::class, 'update'])->name('update');
+        Route::delete('/{id}',   [FaqController::class, 'destroy'])->name('destroy');
     });
 });
