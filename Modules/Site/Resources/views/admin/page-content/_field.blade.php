@@ -29,7 +29,7 @@
         <template x-if="url">
             <div class="mt-2">
                 <img :src="url" class="h-24 rounded border border-gray-200" alt="preview"
-                     @error="$el.style.display='none'" @load="$el.style.display='block'">
+                     @@error="$el.style.display='none'" @@load="$el.style.display='block'">
             </div>
         </template>
     </div>
