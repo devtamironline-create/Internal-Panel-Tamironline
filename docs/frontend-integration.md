@@ -130,7 +130,7 @@ Content-Type: application/json
 
 | پارامتر | نوع | قاعده |
 |---|---|---|
-| `slug` | string | فقط حروف انگلیسی — `home` \| `about` \| `contact` |
+| `slug` | string | فقط حروف انگلیسی — `home` \| `about` \| `contact` \| `layout` |
 
 **Request example:**
 ```
@@ -147,9 +147,11 @@ GET /v1/pages/home
       "subtitle": "...",
       "cta_label": "ثبت سفارش",
       "cta_url": "/order",
-      "services": [
-        { "label": "لباسشویی",   "slug": "lebas-shooyi",   "icon": "washing", "href": "/services/washing" },
-        { "label": "ماشین ظرفشویی", "slug": "zarf-shooyi", "icon": "dish",    "href": "/services/dishwasher" }
+      "services": [1, 2, 3],
+      "services_items": [
+        { "id": 1, "label": "تعمیر لباسشویی",   "slug": "washing-machine", "href": "/devices/washing-machine", "icon": "washing-machine", "tone": "tone-blue" },
+        { "id": 2, "label": "تعمیر ظرفشویی",   "slug": "dishwasher",      "href": "/devices/dishwasher",      "icon": "droplets",         "tone": "tone-green" },
+        { "id": 3, "label": "تعمیر یخچال",     "slug": "refrigerator",    "href": "/devices/refrigerator",    "icon": "refrigerator",     "tone": "tone-cyan" }
       ]
     },
     "why_us": {
@@ -158,8 +160,17 @@ GET /v1/pages/home
         { "icon": "check", "title": "تضمین کیفیت", "description": "..." }
       ]
     },
-    "steps": { "title": "...", "image_url": "https://...", "alt": "..." },
-    "promo": { "title": "...", "link_url": "...", "link_label": "..." },
+    "steps": {
+      "title": "...",
+      "image": { "desktop": "https://cdn/.../steps.png", "mobile": "https://cdn/.../steps-mobile.png" },
+      "alt": "..."
+    },
+    "promo": {
+      "title": "...",
+      "image": { "desktop": "https://...", "mobile": "https://..." },
+      "link_url": "...",
+      "link_label": "..."
+    },
     "faq": {
       "title": "پرسش‌های متداول",
       "faq_ids": ["01HX...", "01HY..."],
@@ -174,7 +185,9 @@ GET /v1/pages/home
 
 **نکات مهم برای فرانت:**
 - فقط سکشن‌های `is_published=true` در پاسخ هستند. سکشن غایب = خالی نمایش بده.
-- **فیلدهای reference خودکار hydrate می‌شوند.** برای `faq_ids` آرایه‌ای از IDها در `faq_ids` می‌بینید + آرایه‌ی کامل آیتم‌ها در `faq_ids_items`. فرانت از `<field>_items` استفاده کند.
+- **فیلدهای reference خودکار hydrate می‌شوند.** برای هر فیلد reference، یک آرایه‌ی IDها در `<field>` و یک آرایه‌ی کامل آیتم‌ها در `<field>_items` می‌بینید. فرانت از `<field>_items` استفاده کند.
+- **Hero.services فال‌بک خودکار:** اگر در `/v1/pages/home` ادمین هیچ device انتخاب نکرده باشد، `services_items` به‌صورت خودکار با همه‌ی دستگاه‌های فعال CRM (مرتب‌شده با is_featured و sort_order) پر می‌شود.
+- **تصاویر responsive:** فیلدهایی با کلیدهای `image`, `poster`, `logo` و... به‌صورت `{ desktop, mobile }` برمی‌گردند. اگر `mobile` خالی باشد، فرانت می‌تواند `desktop` را در همه‌ی viewportها استفاده کند.
 - ساختار payload هر سکشن دقیقاً مطابق schema در ادمین است — اگر فیلدی در ادمین خالی بماند، در پاسخ `null` یا غایب است.
 - `repeater` فیلدها به‌صورت آرایه‌ی JSON برمی‌گردند.
 
@@ -194,21 +207,27 @@ Cache-Control: public, max-age=300, s-maxage=300
 ##### Home (`/v1/pages/home`)
 | section_key | فیلدها |
 |---|---|
-| `hero` | title, subtitle, cta_label, cta_url, services[label, slug, icon, href] |
+| `hero` | title, subtitle, cta_label, cta_url, services[int], **services_items**[id, label, slug, href, icon, tone] |
 | `why_us` | title, subtitle, items[icon, title, description] |
-| `steps` | title, image_url, alt |
-| `promo` | title, subtitle, image_url, link_url, link_label |
+| `steps` | title, image{desktop, mobile}, alt |
+| `promo` | title, subtitle, image{desktop, mobile}, link_url, link_label |
 | `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
 
 ##### About (`/v1/pages/about`)
 | section_key | فیلدها |
 |---|---|
-| `hero` | title, subtitle, aparat_id, poster_url, description |
+| `hero` | title, subtitle, aparat_id, poster{desktop, mobile}, description |
 | `values` | title, subtitle, items[icon, title, description] |
-| `steps` | title, image_url, alt |
+| `steps` | title, image{desktop, mobile}, alt |
 | `timeline` | title, items[year, title, description] |
 | `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
-| `promo` | title, subtitle, image_url, link_url, link_label |
+| `promo` | title, subtitle, image{desktop, mobile}, link_url, link_label |
+
+##### Layout (`/v1/pages/layout`) — هدر و فوتر
+| section_key | فیلدها |
+|---|---|
+| `header` | logo{desktop, mobile}, logo_alt, cta_label, cta_url, phone_label, phone_number, nav_items[label, href] |
+| `footer` | logo{desktop, mobile}, description, groups[title, links], social[platform, icon, url], copyright_text, enamad_code |
 
 ##### Contact (`/v1/pages/contact`)
 | section_key | فیلدها |
