@@ -102,24 +102,63 @@
 </div>
 
 {{-- قوانین مالی --}}
-<div class="mb-6">
+<div class="mb-6" x-data="{ calcType: '{{ old('type_of_calc_tech', $technician->type_of_calc_tech ?? '') }}' }">
     <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">قوانین مالی و محدودیت‌ها</h3>
+
+    {{-- راهنمای منطق محاسبه — همیشه قابل دیدن، فعال بسته به روش محاسبه --}}
+    <div class="mb-4 p-3 rounded-lg border text-xs leading-7 transition-colors"
+         :class="(calcType === '1' || calcType === 'internal')
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'">
+        <strong>منطق محاسبه فعلی:</strong>
+        <span x-show="calcType === '1' || calcType === 'internal'">
+            داخلی (Internal) — <b>«درصد دوم»</b> به‌عنوان <u>سهم شرکت</u> از <u>جمع کل</u> در نظر گرفته می‌شود.
+            «درصد کمیسیون» نادیده گرفته می‌شود.
+        </span>
+        <span x-show="!(calcType === '1' || calcType === 'internal')">
+            خارجی (External — پیش‌فرض) — <b>«درصد کمیسیون»</b> به‌عنوان <u>سهم شرکت</u> از <u>جمع کل</u> در نظر گرفته می‌شود.
+            «درصد دوم» نادیده گرفته می‌شود.
+        </span>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">درصد کمیسیون (0-100)</label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-2">
+                درصد کمیسیون (0-100)
+                <span x-show="!(calcType === '1' || calcType === 'internal')"
+                      class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">فعال</span>
+                <span x-show="calcType === '1' || calcType === 'internal'"
+                      class="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 font-medium">غیرفعال</span>
+            </label>
             <input type="number" name="percent" min="0" max="100" value="{{ old('percent', $technician->percent ?? 0) }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                   :class="(calcType === '1' || calcType === 'internal')
+                            ? 'opacity-50 bg-gray-100 dark:bg-gray-800'
+                            : 'border-emerald-400 ring-1 ring-emerald-200'"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg transition-all">
+            <p class="text-[11px] text-gray-500 mt-1">برای حالت External (روش محاسبه خالی)</p>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">درصد دوم (tech_per_of_all)</label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-2">
+                درصد دوم (tech_per_of_all)
+                <span x-show="calcType === '1' || calcType === 'internal'"
+                      class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">فعال</span>
+                <span x-show="!(calcType === '1' || calcType === 'internal')"
+                      class="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 font-medium">غیرفعال</span>
+            </label>
             <input type="number" name="tech_per_of_all" min="0" max="100" value="{{ old('tech_per_of_all', $technician->tech_per_of_all ?? '') }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                   :class="(calcType === '1' || calcType === 'internal')
+                            ? 'border-emerald-400 ring-1 ring-emerald-200'
+                            : 'opacity-50 bg-gray-100 dark:bg-gray-800'"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg transition-all">
+            <p class="text-[11px] text-gray-500 mt-1">برای حالت Internal (روش محاسبه = 1)</p>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">روش محاسبه</label>
-            <input type="text" name="type_of_calc_tech" value="{{ old('type_of_calc_tech', $technician->type_of_calc_tech ?? '') }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"
-                   placeholder="percent_of_customer / percent_of_total">
+            <select name="type_of_calc_tech" x-model="calcType"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— خارجی (External) — درصد کمیسیون اعمال می‌شود</option>
+                <option value="1">داخلی (Internal) — درصد دوم اعمال می‌شود</option>
+            </select>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">سقف تعداد سفارش همزمان (خالی = نامحدود)</label>
