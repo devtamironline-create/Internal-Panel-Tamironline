@@ -49,11 +49,12 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 | # | Method | Path | Auth | Throttle | Cache | اولویت | وضعیت |
 |---|---|---|---|---|---|---|---|
 | 1 | POST | `/v1/contact-messages` | internal.token | 10/min | — | P0 | ✅ |
-| 2 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
-| 3 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
-| 4 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
-| 5 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 6 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 2 | GET | `/v1/pages/{slug}` | — | 60/min | 300s | P0 | ✅ |
+| 3 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
+| 4 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
+| 5 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
+| 6 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
+| 7 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
 
 ---
 
@@ -121,7 +122,107 @@ Content-Type: application/json
 
 ---
 
-### 4.2 `GET /v1/activity/recent`
+### 4.2 `GET /v1/pages/{slug}`
+
+محتوای ساختاریافته‌ی یک صفحه شامل تمام سکشن‌ها — قلب اتصال محتوای پویا.
+
+**Path params:**
+
+| پارامتر | نوع | قاعده |
+|---|---|---|
+| `slug` | string | فقط حروف انگلیسی — `home` \| `about` \| `contact` |
+
+**Request example:**
+```
+GET /v1/pages/home
+```
+
+**Response 200:**
+```json
+{
+  "slug": "home",
+  "sections": {
+    "hero": {
+      "title": "تعمیرکار درست در درست‌ترین زمان",
+      "subtitle": "...",
+      "cta_label": "ثبت سفارش",
+      "cta_url": "/order",
+      "services": [
+        { "label": "لباسشویی",   "slug": "lebas-shooyi",   "icon": "washing", "href": "/services/washing" },
+        { "label": "ماشین ظرفشویی", "slug": "zarf-shooyi", "icon": "dish",    "href": "/services/dishwasher" }
+      ]
+    },
+    "why_us": {
+      "title": "چرا تعمیرآنلاین؟",
+      "items": [
+        { "icon": "check", "title": "تضمین کیفیت", "description": "..." }
+      ]
+    },
+    "steps": { "title": "...", "image_url": "https://...", "alt": "..." },
+    "promo": { "title": "...", "link_url": "...", "link_label": "..." },
+    "faq": {
+      "title": "پرسش‌های متداول",
+      "faq_ids": ["01HX...", "01HY..."],
+      "faq_ids_items": [
+        { "id": "01HX...", "question": "...", "answer": "..." },
+        { "id": "01HY...", "question": "...", "answer": "..." }
+      ]
+    }
+  }
+}
+```
+
+**نکات مهم برای فرانت:**
+- فقط سکشن‌های `is_published=true` در پاسخ هستند. سکشن غایب = خالی نمایش بده.
+- **فیلدهای reference خودکار hydrate می‌شوند.** برای `faq_ids` آرایه‌ای از IDها در `faq_ids` می‌بینید + آرایه‌ی کامل آیتم‌ها در `faq_ids_items`. فرانت از `<field>_items` استفاده کند.
+- ساختار payload هر سکشن دقیقاً مطابق schema در ادمین است — اگر فیلدی در ادمین خالی بماند، در پاسخ `null` یا غایب است.
+- `repeater` فیلدها به‌صورت آرایه‌ی JSON برمی‌گردند.
+
+**Response 404:**
+```json
+{ "message": "Page not found" }
+```
+وقتی slug در schema تعریف نشده باشد.
+
+**Headers:**
+```http
+Cache-Control: public, max-age=300, s-maxage=300
+```
+
+#### سکشن‌های موجود
+
+##### Home (`/v1/pages/home`)
+| section_key | فیلدها |
+|---|---|
+| `hero` | title, subtitle, cta_label, cta_url, services[label, slug, icon, href] |
+| `why_us` | title, subtitle, items[icon, title, description] |
+| `steps` | title, image_url, alt |
+| `promo` | title, subtitle, image_url, link_url, link_label |
+| `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
+
+##### About (`/v1/pages/about`)
+| section_key | فیلدها |
+|---|---|
+| `hero` | title, subtitle, aparat_id, poster_url, description |
+| `values` | title, subtitle, items[icon, title, description] |
+| `steps` | title, image_url, alt |
+| `timeline` | title, items[year, title, description] |
+| `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
+| `promo` | title, subtitle, image_url, link_url, link_label |
+
+##### Contact (`/v1/pages/contact`)
+| section_key | فیلدها |
+|---|---|
+| `channels` | title, items[icon, title, value, link_url, description] |
+| `info` | phone, support_phone, email, address |
+| `hours` | note, items[day, hours] |
+| `map` | lat, lng, neshan_url, zoom |
+| `social` | items[platform, label, url, icon] |
+| `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
+
+---
+
+### 4.3 `GET /v1/activity/recent`
 
 فعالیت‌های زنده — سکشن H2 صفحه‌ی Home. منبع داده: سفارشات فعال CRM با وضعیت `completed`، `open`، `coordinated`، `transit` در ۴۸ ساعت اخیر.
 
@@ -173,7 +274,7 @@ Cache-Control: public, max-age=60, s-maxage=60
 
 ---
 
-### 4.3 `GET /v1/testimonials`
+### 4.4 `GET /v1/testimonials`
 
 نظرات مشتریان — سکشن H5 (Home) و A6 (About) از یک endpoint مشترک.
 
@@ -226,7 +327,7 @@ Cache-Control: public, max-age=300, s-maxage=300
 
 ---
 
-### 4.4 `GET /v1/catalog/brands`
+### 4.5 `GET /v1/catalog/brands`
 
 برندهای تحت پوشش — سکشن H6 صفحه‌ی Home. منبع: جدول CRM brands.
 
@@ -277,7 +378,7 @@ Cache-Control: public, max-age=600, s-maxage=600
 
 ---
 
-### 4.5 `GET /v1/site/about-stats`
+### 4.6 `GET /v1/site/about-stats`
 
 آمار صفحه‌ی About — سکشن A2.
 
@@ -316,7 +417,7 @@ Cache-Control: public, max-age=600, s-maxage=600
 
 ---
 
-### 4.6 `GET /v1/health`
+### 4.7 `GET /v1/health`
 
 سلامت سرویس برای health-check (CI/CD، Uptime monitoring).
 
@@ -439,42 +540,45 @@ export default async function HomePage() {
 
 ### Home (`/`)
 
-| سکشن | API آماده؟ | Endpoint |
+| سکشن | API | روش |
 |---|---|---|
-| H1. Hero (services list) | ❌ | — |
+| H1. Hero (services list) | ✅ | `GET /v1/pages/home` → `sections.hero` |
 | H2. Live Activity | ✅ | `GET /v1/activity/recent` |
-| H3. Why Us | ❌ | — |
-| H4. Steps Image | ❌ | — |
+| H3. Why Us | ✅ | `GET /v1/pages/home` → `sections.why_us` |
+| H4. Steps Image | ✅ | `GET /v1/pages/home` → `sections.steps` |
 | H5. Testimonials | ✅ | `GET /v1/testimonials` |
 | H6. Brands | ✅ | `GET /v1/catalog/brands?featured=true` |
-| H7. Promo Banner | ❌ | — |
-| H8. FAQ | ❌ | — |
+| H7. Promo Banner | ✅ | `GET /v1/pages/home` → `sections.promo` |
+| H8. FAQ | ✅ | `GET /v1/pages/home` → `sections.faq.faq_ids_items` |
 | H9. Booking form | ⏭️ حذف موقت | — |
 
 ### About (`/about`)
 
-| سکشن | API آماده؟ | Endpoint |
+| سکشن | API | روش |
 |---|---|---|
-| A1. About Hero (video) | ❌ | — |
+| A1. About Hero (video) | ✅ | `GET /v1/pages/about` → `sections.hero` |
 | A2. Stats | ✅ | `GET /v1/site/about-stats` |
-| A3. Values | ❌ | — |
-| A4. Steps Image | ❌ | — |
-| A5. Timeline | ❌ | — |
+| A3. Values | ✅ | `GET /v1/pages/about` → `sections.values` |
+| A4. Steps Image | ✅ | `GET /v1/pages/about` → `sections.steps` |
+| A5. Timeline | ✅ | `GET /v1/pages/about` → `sections.timeline` |
 | A6. Testimonials | ✅ | `GET /v1/testimonials` (همان H5) |
-| A7. About FAQ | ❌ | — |
-| A8. Promo Banner | ❌ | — |
+| A7. About FAQ | ✅ | `GET /v1/pages/about` → `sections.faq.faq_ids_items` |
+| A8. Promo Banner | ✅ | `GET /v1/pages/about` → `sections.promo` |
 
 ### Contact (`/contact`)
 
-| سکشن | API آماده؟ | Endpoint |
+| سکشن | API | روش |
 |---|---|---|
-| C1. Channels | ❌ | — |
+| C1. Channels | ✅ | `GET /v1/pages/contact` → `sections.channels` |
 | C2. Form | ✅ | `POST /v1/contact-messages` |
-| C3. Info | ❌ | — |
-| C4. Hours | ❌ | — |
-| C5. Map | ❌ | — |
-| C6. Social | ❌ | — |
-| C7. FAQ | ❌ | — |
+| C3. Info | ✅ | `GET /v1/pages/contact` → `sections.info` |
+| C4. Hours | ✅ | `GET /v1/pages/contact` → `sections.hours` |
+| C5. Map | ✅ | `GET /v1/pages/contact` → `sections.map` |
+| C6. Social | ✅ | `GET /v1/pages/contact` → `sections.social` |
+| C7. FAQ | ✅ | `GET /v1/pages/contact` → `sections.faq.faq_ids_items` |
+
+**نکته:** برای صفحات کامل، فرانت می‌تواند یک fetch به `GET /v1/pages/{slug}`
+بزند و تمام سکشن‌های آن صفحه را یکجا بگیرد.
 
 ---
 
