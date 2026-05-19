@@ -5,8 +5,15 @@ namespace Modules\Site\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Site\Models\Activity;
+use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Models\Order;
 
+/**
+ * فعالیت‌های زنده برای صفحه‌ی Home — از روی سفارش‌های فعال CRM.
+ *
+ * هیچ کش جداگانه‌ای ندارد؛ مستقیم از منبع حقیقت می‌خواند و در سطح
+ * HTTP با Cache-Control کش می‌شود (CDN/Next BFF).
+ */
 class ActivityController extends Controller
 {
     public function recent(Request $request): JsonResponse
@@ -15,20 +22,34 @@ class ActivityController extends Controller
         $limit = max(1, min($limit, 50));
 
         $now = now();
-        $items = Activity::query()
-            ->where('status', Activity::STATUS_COMPLETED)
-            ->where('happened_at', '>=', $now->copy()->subDays(2))
-            ->orderByDesc('happened_at')
-            ->limit($limit)
-            ->get(['device_slug', 'device_label', 'area', 'status', 'happened_at']);
+        $statuses = [
+            OrderStatus::Completed->value,
+            OrderStatus::Open->value,
+            OrderStatus::Coordinated->value,
+            OrderStatus::Transit->value,
+        ];
 
-        $data = $items->map(fn (Activity $a) => [
-            'device_slug'  => $a->device_slug,
-            'device_label' => $a->device_label,
-            'area'         => $a->area,
-            'status'       => $a->status,
-            'minutes_ago'  => (int) $a->happened_at->diffInMinutes($now),
-        ])->values();
+        $orders = Order::query()
+            ->with(['device:id,name', 'city:id,name'])
+            ->whereIn('status', $statuses)
+            ->where('created_at', '>=', $now->copy()->subDays(2))
+            ->latest('created_at')
+            ->limit($limit)
+            ->get(['id', 'device_id', 'city_id', 'status', 'created_at']);
+
+        $data = $orders->map(function (Order $o) use ($now) {
+            $statusValue = $o->status instanceof OrderStatus ? $o->status->value : (string) $o->status;
+            $publicStatus = $statusValue === OrderStatus::Completed->value ? 'completed' : 'in_progress';
+            $deviceLabel = optional($o->device)->name ?? 'دستگاه';
+
+            return [
+                'device_slug'  => str(\Illuminate\Support\Str::slug($deviceLabel, '-'))->limit(50, '')->value(),
+                'device_label' => $deviceLabel,
+                'area'         => optional($o->city)->name ?? '—',
+                'status'       => $publicStatus,
+                'minutes_ago'  => (int) $o->created_at->diffInMinutes($now),
+            ];
+        })->values();
 
         return response()
             ->json(['data' => $data])
