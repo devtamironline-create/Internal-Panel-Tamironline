@@ -5,6 +5,7 @@ use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageController;
+use Modules\Site\Http\Controllers\Admin\SettingsController;
 use Modules\Site\Http\Controllers\Admin\TestimonialController;
 use Modules\Site\Http\Controllers\SiteAdminController;
 
@@ -59,5 +60,11 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('/{id}',      [FaqController::class, 'update'])->name('update');
         Route::delete('/{id}',   [FaqController::class, 'destroy'])->name('destroy');
+    });
+
+    // تنظیمات عمومی سایت
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/',  [SettingsController::class, 'edit'])->name('edit');
+        Route::put('/', [SettingsController::class, 'update'])->name('update');
     });
 });
