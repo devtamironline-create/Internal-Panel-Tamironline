@@ -568,7 +568,7 @@
 
                 <!-- مدیریت سایت -->
                 @if(Route::has('site.admin.dashboard'))
-                @can('manage-site')
+                @canany(['manage-site', 'view-site-contact-messages', 'manage-site-contact-messages', 'manage-site-testimonials', 'manage-site-faqs', 'manage-site-pages', 'manage-site-banners', 'manage-site-settings'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('site.admin.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -582,9 +582,73 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                             داشبورد سایت
                         </a>
+
+                        @canany(['view-site-contact-messages', 'manage-site-contact-messages', 'manage-site'])
+                        <a href="{{ route('site.admin.contact-messages.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.contact-messages.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            پیام‌های تماس
+                            @php $newMsgCount = \Modules\Site\Models\ContactMessage::where('status', 'new')->count(); @endphp
+                            @if($newMsgCount > 0)
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $newMsgCount }}</span>
+                            @endif
+                        </a>
+                        @endcanany
+
+                        @canany(['manage-site-pages', 'manage-site'])
+                        <a href="{{ route('site.admin.pages.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.pages.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            صفحات سایت
+                        </a>
+                        @endcanany
+
+                        @canany(['manage-site-banners', 'manage-site'])
+                        <a href="{{ route('site.admin.banners.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.banners.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            بنرها و اسلایدر
+                        </a>
+                        @endcanany
+
+                        @canany(['manage-site-testimonials', 'manage-site'])
+                        <a href="{{ route('site.admin.testimonials.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.testimonials.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                            نظرات مشتریان
+                        </a>
+                        @endcanany
+
+                        @canany(['manage-site-faqs', 'manage-site'])
+                        <a href="{{ route('site.admin.faqs.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.faqs.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            سوالات متداول
+                        </a>
+                        @endcanany
+
+                        @if(Route::has('crm.brands.index'))
+                        @can('view-crm-taxonomies')
+                        <a href="{{ route('crm.brands.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.brands.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            برندها (CRM)
+                        </a>
+                        @endcan
+                        @endif
+
+                        @if(Route::has('crm.devices.index'))
+                        @can('view-crm-taxonomies')
+                        <a href="{{ route('crm.devices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.devices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                            دستگاه‌ها (CRM)
+                        </a>
+                        @endcan
+                        @endif
+
+                        @canany(['manage-site-settings', 'manage-site'])
+                        <a href="{{ route('site.admin.settings.edit') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.settings.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            تنظیمات سایت
+                        </a>
+                        @endcanany
                     </div>
                 </div>
-                @endcan
+                @endcanany
                 @endif
 
                 <!-- خدمات تعمیرات (CRM) -->
