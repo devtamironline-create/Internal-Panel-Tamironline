@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
+use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
 use Modules\Site\Http\Controllers\Api\V1\TestimonialController;
@@ -19,6 +20,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.activity.recent');
         Route::get('/testimonials', [TestimonialController::class, 'index'])
             ->name('api.v1.testimonials.index');
+        Route::get('/catalog/brands', [CatalogBrandController::class, 'index'])
+            ->name('api.v1.catalog.brands.index');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────

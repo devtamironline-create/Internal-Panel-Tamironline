@@ -29,11 +29,13 @@ class BrandController extends Controller
             'logo' => 'nullable|string|max:500',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'is_featured' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+        $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
 
         Brand::create($validated);
 
@@ -54,11 +56,13 @@ class BrandController extends Controller
             'logo' => 'nullable|string|max:500',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'is_featured' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
+        $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
 
         $brand->update($validated);
 

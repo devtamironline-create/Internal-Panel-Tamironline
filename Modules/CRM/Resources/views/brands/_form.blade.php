@@ -29,11 +29,16 @@
         @error('sort_order')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
-    <div class="flex items-end">
+    <div class="flex items-end gap-6">
         <label class="inline-flex items-center gap-2">
             <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $brand->is_active ?? true))
                    class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
             <span class="text-sm text-gray-700 dark:text-gray-200">فعال</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $brand->is_featured ?? false))
+                   class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+            <span class="text-sm text-gray-700 dark:text-gray-200">برند ویژه (نمایش در صفحه‌ی اصلی سایت)</span>
         </label>
     </div>
 </div>
