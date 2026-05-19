@@ -67,6 +67,8 @@ class Technician extends Authenticatable
         // جهت سینک (per-technician) — برای جلوگیری از overwrite ناخواسته بین WP↔Laravel
         'order_sync_direction',
         'wallet_sync_direction',
+
+        'training_completed_at',
     ];
 
     /**
@@ -116,6 +118,7 @@ class Technician extends Authenticatable
         'ready_for_delivery' => 'boolean',
         'password' => 'hashed',
         'last_login_at' => 'datetime',
+        'training_completed_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -159,6 +162,60 @@ class Technician extends Authenticatable
     public function walletTransactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);
+    }
+
+    /**
+     * ویدیوهایی که این تکنسین مشاهده کرده — برای training gate.
+     */
+    public function watchedVideos(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingVideo::class, 'crm_technician_video_views', 'technician_id', 'video_id')
+            ->withPivot('watched_at');
+    }
+
+    /** آیا آموزش این تکنسین تمام شده؟ */
+    public function isTrainingCompleted(): bool
+    {
+        return $this->training_completed_at !== null;
+    }
+
+    /**
+     * گزارش پیشرفت آموزش — تعداد دیده‌شده/کل، درصد، باقی‌مانده.
+     *
+     * @return array{watched:int, total:int, remaining:int, percent:int}
+     */
+    public function trainingProgress(): array
+    {
+        $total = TrainingVideo::active()->count();
+        if ($total === 0) {
+            // اگر هیچ ویدیویی فعال نیست، آموزش به‌صورت پیش‌فرض «تمام» است
+            return ['watched' => 0, 'total' => 0, 'remaining' => 0, 'percent' => 100];
+        }
+        $watched = $this->watchedVideos()
+            ->wherePivotNotNull('watched_at')
+            ->where('crm_training_videos.is_active', true)
+            ->count();
+        $remaining = max(0, $total - $watched);
+
+        return [
+            'watched'   => $watched,
+            'total'     => $total,
+            'remaining' => $remaining,
+            'percent'   => (int) round($watched / $total * 100),
+        ];
+    }
+
+    /** علامت‌گذاری یک ویدیو به‌عنوان دیده‌شده + بستن گیت اگر همه دیده شد. */
+    public function markVideoWatched(TrainingVideo $video): void
+    {
+        $this->watchedVideos()->syncWithoutDetaching([
+            $video->id => ['watched_at' => now()],
+        ]);
+
+        $progress = $this->refresh()->trainingProgress();
+        if ($progress['remaining'] === 0 && $this->training_completed_at === null) {
+            $this->forceFill(['training_completed_at' => now()])->saveQuietly();
+        }
     }
 
     /**

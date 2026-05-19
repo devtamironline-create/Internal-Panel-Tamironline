@@ -764,6 +764,7 @@ class DashboardController extends Controller
             'technician'        => $tech,
             'categories'        => $categories,
             'uncategorizedCount' => $uncategorizedCount,
+            'progress'          => $tech->trainingProgress(),
         ]);
     }
 
@@ -809,10 +810,38 @@ class DashboardController extends Controller
         }
         $video->load('category');
 
+        $tech = Auth::guard('tech')->user();
+        $alreadyWatched = $tech->watchedVideos()->where('video_id', $video->id)->exists();
+
         return view('crm::tech-panel.training-show', [
-            'technician' => Auth::guard('tech')->user(),
-            'video'      => $video,
+            'technician'     => $tech,
+            'video'          => $video,
+            'alreadyWatched' => $alreadyWatched,
+            'progress'       => $tech->trainingProgress(),
         ]);
+    }
+
+    /**
+     * علامت‌گذاری ویدیو به‌عنوان دیده‌شده — وقتی همه دیده شدند،
+     * training_completed_at ست می‌شود و پنل برای تکنسین فعال می‌شود.
+     */
+    public function markVideoWatched(TrainingVideo $video)
+    {
+        if (! $video->is_active) {
+            abort(404);
+        }
+        $tech = Auth::guard('tech')->user();
+        $tech->markVideoWatched($video);
+
+        $progress = $tech->refresh()->trainingProgress();
+
+        if ($progress['remaining'] === 0) {
+            return redirect()->route('tech.dashboard')
+                ->with('success', '🎉 تبریک! تمام ویدیوهای آموزشی را مشاهده کردید. پنل برای شما فعال شد.');
+        }
+
+        return redirect()->route('tech.training')
+            ->with('success', 'ویدیو ثبت شد — ' . $progress['remaining'] . ' ویدیو باقی مانده.');
     }
 
     /**

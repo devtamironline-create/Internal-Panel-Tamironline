@@ -343,8 +343,8 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('auth/login-password', [TechAuthController::class, 'loginWithPassword'])->name('auth.login-password');
     });
 
-    // Authenticated
-    Route::middleware('auth:tech')->group(function () {
+    // Authenticated — با training gate middleware
+    Route::middleware(['auth:tech', \Modules\CRM\Http\Middleware\RequireTrainingCompleted::class])->group(function () {
         Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
         Route::get('calendar', [TechPanelDashboardController::class, 'calendar'])->name('calendar');
@@ -372,6 +372,9 @@ Route::prefix('tech')->name('tech.')->group(function () {
             ->whereNumber('category');
         Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])
             ->name('training.show')
+            ->whereNumber('video');
+        Route::post('training/{video}/watched', [TechPanelDashboardController::class, 'markVideoWatched'])
+            ->name('training.video-watched')
             ->whereNumber('video');
 
         // ── تیکت‌های پشتیبانی ───────────────────────────────────
