@@ -10,6 +10,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
+use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
@@ -60,6 +61,7 @@ class CrmServiceProvider extends ServiceProvider
                 ResyncWalletTransactions::class,
                 ActivateTechniciansByName::class,
                 SnapshotTechnicians::class,
+                ImportTechnicianFromWp::class,
             ]);
         }
     }
