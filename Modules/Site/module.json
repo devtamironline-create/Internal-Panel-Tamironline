@@ -1,0 +1,11 @@
+{
+    "name": "Site",
+    "alias": "site",
+    "description": "مدیریت سایت (صفحات، بلاگ، تنظیمات، بنر)",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Site\\Providers\\SiteServiceProvider"
+    ],
+    "files": []
+}
