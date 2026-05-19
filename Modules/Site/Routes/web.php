@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
+use Modules\Site\Http\Controllers\Admin\PageController;
 use Modules\Site\Http\Controllers\Admin\TestimonialController;
 use Modules\Site\Http\Controllers\SiteAdminController;
 
@@ -27,6 +28,16 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/{id}',                [TestimonialController::class, 'update'])->name('update');
         Route::put('/{id}/toggle-publish', [TestimonialController::class, 'togglePublish'])->name('toggle-publish');
         Route::delete('/{id}',             [TestimonialController::class, 'destroy'])->name('destroy');
+    });
+
+    // صفحات سایت
+    Route::prefix('pages')->name('pages.')->group(function () {
+        Route::get('/',          [PageController::class, 'index'])->name('index');
+        Route::get('/create',    [PageController::class, 'create'])->name('create');
+        Route::post('/',         [PageController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [PageController::class, 'edit'])->name('edit');
+        Route::put('/{id}',      [PageController::class, 'update'])->name('update');
+        Route::delete('/{id}',   [PageController::class, 'destroy'])->name('destroy');
     });
 
     // سوالات متداول (مخزن)
