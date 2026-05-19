@@ -207,6 +207,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
         Route::post('orders/{order}/source-of-truth', [OrderController::class, 'updateSourceOfTruth'])->name('orders.source-of-truth');
+        Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
+        Route::delete('orders/{order}/notes/{note}', [OrderController::class, 'destroyNote'])->name('orders.notes.destroy')->whereNumber('note');
     });
 
     Route::middleware('can:change-crm-order-status')->group(function () {

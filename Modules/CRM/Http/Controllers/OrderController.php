@@ -422,6 +422,40 @@ class OrderController extends Controller
         return back()->with('success', 'منبع داده سفارش تغییر کرد: ' . $label);
     }
 
+    // ───────────── یادداشت‌های اپراتور ──────────────────────────
+    public function storeNote(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'content.required' => 'متن یادداشت الزامی است.',
+            'content.min' => 'یادداشت باید حداقل ۳ کاراکتر باشد.',
+            'content.max' => 'یادداشت حداکثر ۲۰۰۰ کاراکتر.',
+        ]);
+
+        $order->adminNotes()->create([
+            'user_id' => auth()->id(),
+            'content' => trim($validated['content']),
+        ]);
+
+        return back()->with('success', 'یادداشت ثبت شد.');
+    }
+
+    public function destroyNote(Order $order, int $note)
+    {
+        $note = \Modules\CRM\Models\OrderAdminNote::where('order_id', $order->id)
+            ->where('id', $note)
+            ->firstOrFail();
+
+        // فقط نویسنده یا ادمین کامل می‌تواند حذف کند
+        if ($note->user_id !== auth()->id() && ! auth()->user()->can('manage-permissions')) {
+            abort(403, 'فقط نویسنده یا ادمین می‌تواند یادداشت را حذف کند.');
+        }
+
+        $note->delete();
+        return back()->with('success', 'یادداشت حذف شد.');
+    }
+
     // ───────────── تغییر وضعیت ─────────────────────────────────
     public function changeStatus(Request $request, Order $order)
     {

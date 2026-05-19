@@ -301,6 +301,11 @@ class Order extends Model
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');
     }
 
+    public function adminNotes(): HasMany
+    {
+        return $this->hasMany(OrderAdminNote::class)->latest('created_at');
+    }
+
     // ─────────────────── Scopes ───────────────────────────────────
     public function scopeForTechnician($query, int $technicianId)
     {

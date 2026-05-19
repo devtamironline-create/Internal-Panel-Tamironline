@@ -98,6 +98,62 @@
                 </dl>
             </div>
 
+            {{-- یادداشت‌های اپراتور — هر اپراتور می‌تواند یادداشت بنویسد،
+                 هر یادداشت با اسم نویسنده و زمان لاگ می‌شود. --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">یادداشت‌های اپراتور</h2>
+                    <span class="text-xs text-gray-500">{{ $order->adminNotes()->count() }} یادداشت</span>
+                </div>
+
+                {{-- فرم افزودن یادداشت جدید --}}
+                <form method="POST" action="{{ route('crm.orders.notes.store', $order) }}" class="mb-4">
+                    @csrf
+                    <textarea name="content" rows="3" minlength="3" maxlength="2000" required
+                              class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                              placeholder="یادداشت خود را بنویسید... (حداقل ۳ کاراکتر)">{{ old('content') }}</textarea>
+                    @error('content')
+                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
+                    <div class="flex justify-end mt-2">
+                        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium">
+                            ثبت یادداشت
+                        </button>
+                    </div>
+                </form>
+
+                {{-- لیست یادداشت‌های ثبت‌شده --}}
+                @php $adminNotes = $order->adminNotes()->with('user')->get(); @endphp
+                @if($adminNotes->isEmpty())
+                    <p class="text-xs text-gray-400 text-center py-3">هنوز یادداشتی ثبت نشده.</p>
+                @else
+                    <ul class="space-y-3 max-h-96 overflow-y-auto">
+                        @foreach($adminNotes as $note)
+                            <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    {{ mb_substr($note->user?->first_name ?: '?', 0, 1) }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                            {{ trim(($note->user?->first_name ?? '') . ' ' . ($note->user?->last_name ?? '')) ?: 'اپراتور حذف‌شده' }}
+                                        </span>
+                                        <span class="text-[11px] text-gray-500 dark:text-gray-400" dir="ltr">@jdatetime($note->created_at)</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">{{ $note->content }}</p>
+                                    @if($note->user_id === auth()->id() || (auth()->user()?->can('manage-permissions') ?? false))
+                                        <form method="POST" action="{{ route('crm.orders.notes.destroy', [$order, $note->id]) }}" class="inline" onsubmit="return confirm('این یادداشت حذف شود؟');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-[11px] text-rose-600 hover:text-rose-800 mt-1">حذف</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
             {{-- آیتم‌ها --}}
             @php
                 $localItems = $order->items;
