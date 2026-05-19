@@ -157,6 +157,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-technician')->group(function () {
         Route::get('technicians/{technician}/edit', [TechnicianController::class, 'edit'])->name('technicians.edit');
         Route::put('technicians/{technician}', [TechnicianController::class, 'update'])->name('technicians.update');
+        Route::post('technicians/{technician}/training-gate', [TechnicianController::class, 'toggleTrainingGate'])->name('technicians.training-gate');
     });
     Route::middleware('can:delete-crm-technician')->group(function () {
         Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');

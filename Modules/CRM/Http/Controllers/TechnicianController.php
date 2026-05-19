@@ -240,6 +240,36 @@ class TechnicianController extends Controller
     }
 
     /**
+     * Toggle قفل آموزش روی یک تکنسین — ادمین می‌تواند تکنسین را
+     * مجبور به مشاهده ویدیوها کند (lock=1: ست کردن training_completed_at
+     * به null + پاک کردن watched_videos) یا قفل را برداشت (lock=0:
+     * training_completed_at = NOW()).
+     *
+     * این برای حالتی است که تکنسین باید دوباره آموزش ببیند، یا برعکس،
+     * تکنسین جدیدی که هنوز آموزش نگرفته ولی ادمین می‌خواهد بدون آموزش
+     * دسترسی بدهد.
+     */
+    public function toggleTrainingGate(Request $request, Technician $technician)
+    {
+        $request->validate([
+            'lock' => 'required|in:0,1',
+        ]);
+
+        if ($request->input('lock') === '1') {
+            // مجبور به آموزش — پاک کردن وضعیت تکمیل و رد دیدن‌های قبلی
+            $technician->forceFill(['training_completed_at' => null])->saveQuietly();
+            $technician->watchedVideos()->detach();
+            $msg = 'تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» مجبور به مشاهده ویدیوها شد.';
+        } else {
+            // برداشتن قفل — علامت‌گذاری به‌عنوان آموزش‌دیده
+            $technician->forceFill(['training_completed_at' => now()])->saveQuietly();
+            $msg = 'قفل آموزش برای تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» برداشته شد.';
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /**
      * ساخت/لینک حساب کاربری برای تکنسین تا بتواند وارد پنل شود.
      * نقش crm-technician را اختصاص می‌دهد و نتیجه را (به‌همراه رمز عبور
      * در صورت ساخت اکانت جدید) برای نمایش یک‌باره به ادمین برمی‌گرداند.
