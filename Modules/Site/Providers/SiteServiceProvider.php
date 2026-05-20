@@ -24,6 +24,11 @@ class SiteServiceProvider extends ServiceProvider
             'site.page-sections'
         );
 
+        $this->mergeConfigFrom(
+            module_path($this->name, 'Config/activity-areas.php'),
+            'site.activity-areas'
+        );
+
         $this->registerValidators();
     }
 
