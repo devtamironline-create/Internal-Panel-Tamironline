@@ -299,6 +299,22 @@ class OrderController extends Controller
     {
         $validated = $this->validateOrder($request, updating: true);
 
+        // ── ویرایش اطلاعات مشتری (روی پروفایل Customer هم اعمال می‌شود).
+        // اگر شماره موبایل جدید با مشتری دیگری تداخل دارد، خطا برگردان.
+        $newCustomerName   = $validated['customer_name']   ?? null;
+        $newCustomerMobile = $validated['customer_mobile'] ?? null;
+
+        $customer = $order->customer;
+        if ($customer && $newCustomerMobile && $newCustomerMobile !== $customer->mobile) {
+            $existing = \Modules\CRM\Models\Customer::where('mobile', $newCustomerMobile)
+                ->where('id', '!=', $customer->id)->first();
+            if ($existing) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['customer_mobile' => 'این شماره موبایل قبلاً برای مشتری دیگری ثبت شده. برای ادغام مشتری‌ها به‌صورت دستی اقدام کنید.']);
+            }
+        }
+
         $order->update([
             'brand_id' => $validated['brand_id'] ?? null,
             'device_id' => $validated['device_id'] ?? null,
@@ -313,7 +329,25 @@ class OrderController extends Controller
             'final_price' => $validated['final_price'] ?? null,
             'deposit' => $validated['deposit'] ?? 0,
             'notes' => $validated['notes'] ?? null,
+            'customer_name' => $newCustomerName ?? $order->customer_name,
+            'customer_mobile' => $newCustomerMobile ?? $order->customer_mobile,
         ]);
+
+        // ── اعمال تغییر روی Customer (observer در Customer::booted خودکار
+        //    به WP push می‌کند). فقط اگر مقدار فرق داشت بزن تا event بی‌دلیل
+        //    شلیک نشود.
+        if ($customer) {
+            $dirty = [];
+            if ($newCustomerName !== null && $newCustomerName !== $customer->first_name) {
+                $dirty['first_name'] = $newCustomerName;
+            }
+            if ($newCustomerMobile !== null && $newCustomerMobile !== $customer->mobile) {
+                $dirty['mobile'] = $newCustomerMobile;
+            }
+            if ($dirty) {
+                $customer->update($dirty);
+            }
+        }
 
         return redirect()->route('crm.orders.show', $order)->with('success', 'سفارش ویرایش شد.');
     }
@@ -742,6 +776,8 @@ class OrderController extends Controller
 
         if ($updating) {
             $rules['final_price'] = 'nullable|integer|min:0';
+            $rules['customer_name'] = 'nullable|string|max:255';
+            $rules['customer_mobile'] = 'nullable|string|max:20|regex:/^09\d{9}$/';
         } else {
             $rules['customer_id'] = 'required|exists:crm_customers,id';
             $rules['status'] = 'nullable|string|in:' . implode(',', array_keys(OrderStatus::options()));
