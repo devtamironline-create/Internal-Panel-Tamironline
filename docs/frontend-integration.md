@@ -8,6 +8,38 @@
 
 ---
 
+## ۰) شروع سریع
+
+برای راه‌اندازی فرانت، حداقل به این موارد نیاز دارید:
+
+```env
+# frontend/.env.local
+API_BASE_URL=https://panel.tamironline.com
+INTERNAL_API_TOKEN=<از تیم بک‌اند بگیرید>
+```
+
+**حداقل fetchهای لازم برای رندر سایت:**
+
+| صفحه | درخواست |
+|---|---|
+| همه‌ی صفحات (root layout) | `GET /v1/pages/layout` |
+| صفحه اصلی | `GET /v1/pages/home` |
+| درباره ما | `GET /v1/pages/about` |
+| تماس با ما | `GET /v1/pages/contact` |
+| صفحه دستگاه `/devices/{slug}` | `GET /v1/devices/{slug}` |
+
+این پنج fetch تقریباً همه‌ی محتوای داینامیک سایت را پوشش می‌دهند. سایر endpointها برای کاربردهای خاص (catalog، activity carousel، فرم تماس) هستند.
+
+**ارسال فرم تماس (تنها روت POST):**
+```
+POST /v1/contact-messages
+Authorization: Bearer <INTERNAL_API_TOKEN>
+```
+
+برای کامپوننت‌های آماده (Header، Footer، FeatureMarquee، SeoFooter) به §۱۲ مراجعه کنید.
+
+---
+
 ## ۱) اطلاعات کلی
 
 | مورد | مقدار |
