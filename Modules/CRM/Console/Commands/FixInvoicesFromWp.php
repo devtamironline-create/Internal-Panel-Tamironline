@@ -4,8 +4,8 @@ namespace Modules\CRM\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Invoice;
-use Modules\CRM\Services\CommissionCalculator;
 
 /**
  * تصحیح یک‌بارهٔ فاکتورهای تاریخی Panel با مقادیر اصلی WP.
@@ -35,7 +35,7 @@ class FixInvoicesFromWp extends Command
 
     protected $description = 'تصحیح company_share/tech_share فاکتورهای تاریخی با مقادیر اصلی WP (روی total_invoice)';
 
-    public function handle(CommissionCalculator $calc): int
+    public function handle(): int
     {
         $this->configureWpConnection();
         $prefix = env('WP_DB_PREFIX', 'or_');
@@ -71,12 +71,13 @@ class FixInvoicesFromWp extends Command
         $missing = 0;
         $samples = []; // 10 تای اول برای نمایش
 
-        $base->select(['id', 'wp_id', 'technician_id', 'order_id', 'total_amount', 'tech_share', 'company_share', 'commission_percent', 'calc_type'])
+        $base->with(['technician:id,wp_id', 'order:id,status'])
+            ->select(['id', 'wp_id', 'technician_id', 'order_id', 'total_amount', 'tech_share', 'company_share', 'commission_percent', 'calc_type'])
             ->orderBy('id')
-            ->chunkById(200, function ($invoices) use ($wp, $prefix, $calc, $bar, &$changed, &$unchanged, &$missing, &$samples) {
+            ->chunkById(200, function ($invoices) use ($wp, $prefix, $bar, &$changed, &$unchanged, &$missing, &$samples) {
                 $wpIds = $invoices->pluck('wp_id')->all();
 
-                // bulk: همه postmetaهای مرتبط
+                // bulk: همه postmetaهای مرتبط با فاکتورها
                 $metas = $wp->table($prefix.'postmeta')
                     ->whereIn('post_id', $wpIds)
                     ->whereIn('meta_key', ['price_customer', 'cost_price', 'total_invoice'])
@@ -85,6 +86,19 @@ class FixInvoicesFromWp extends Command
                 $metaByPost = [];
                 foreach ($metas as $m) {
                     $metaByPost[(int) $m->post_id][$m->meta_key] = $m->meta_value;
+                }
+
+                // bulk: درصد همه تکنسین‌های مرتبط از or_usermeta (مرجع WP)
+                $techWpIds = $invoices->pluck('technician.wp_id')->filter()->unique()->all();
+                $techMetaByUser = [];
+                if (! empty($techWpIds)) {
+                    $userMetas = $wp->table($prefix.'usermeta')
+                        ->whereIn('user_id', $techWpIds)
+                        ->whereIn('meta_key', ['percent', 'tech_per_of_all', 'type_of_calc_tech'])
+                        ->get();
+                    foreach ($userMetas as $um) {
+                        $techMetaByUser[(int) $um->user_id][$um->meta_key] = $um->meta_value;
+                    }
                 }
 
                 foreach ($invoices as $inv) {
@@ -99,32 +113,56 @@ class FixInvoicesFromWp extends Command
                     $costPrice = (int) ($meta['cost_price'] ?? 0);
                     $totalInvoice = (int) ($meta['total_invoice'] ?? 0);
 
-                    // اگر total_invoice خالی است، از price_customer−cost_price
                     if ($totalInvoice === 0 && $priceCustomer > 0) {
                         $totalInvoice = max(0, $priceCustomer - $costPrice);
                     }
                     if ($totalInvoice === 0) {
-                        // داده‌ای برای محاسبه نیست
                         $missing++;
                         $bar->advance();
                         continue;
                     }
 
                     $tech = $inv->technician;
-                    $order = $inv->order;
-                    if (! $tech || ! $order) {
+                    if (! $tech || ! $tech->wp_id) {
                         $missing++;
                         $bar->advance();
                         continue;
                     }
 
-                    // محاسبه با مبنای صحیح
-                    $totals = $calc->calculate($order, $tech, $totalInvoice);
-                    $newTotalAmount   = $totalInvoice; // مبنای کمیسیون = total_invoice
-                    $newTechShare     = (int) $totals['tech_share'];
-                    $newCompanyShare  = (int) $totals['company_share'];
-                    $newPercent       = (int) $totals['percent'];
-                    $newCalcType      = $totals['calc_type'] !== '' ? $totals['calc_type'] : null;
+                    // ── محاسبه با درصد WP (مرجع) ─────────────────────
+                    // به‌جای CommissionCalculator که از Panel می‌خواند،
+                    // درصد را مستقیم از or_usermeta WP می‌گیریم تا نتیجه
+                    // دقیقاً مثل WP CRM باشد.
+                    $wpMeta = $techMetaByUser[(int) $tech->wp_id] ?? [];
+                    $wpPercent      = (int) ($wpMeta['percent'] ?? 0);
+                    $wpTechPerAll   = (int) ($wpMeta['tech_per_of_all'] ?? 0);
+                    $wpCalcType     = (string) ($wpMeta['type_of_calc_tech'] ?? '');
+
+                    // ایاب و ذهاب (Transit) → تکنسین ۱۰۰٪
+                    $orderStatus = $inv->order?->status;
+                    $statusValue = $orderStatus instanceof OrderStatus ? $orderStatus->value : (string) $orderStatus;
+                    $isTransit = $statusValue === OrderStatus::Transit->value;
+
+                    if ($isTransit) {
+                        $newTechShare = $totalInvoice;
+                        $newCompanyShare = 0;
+                        $newPercent = 100;
+                        $newCalcType = $wpCalcType !== '' ? $wpCalcType : 'transit_full';
+                    } elseif ($wpCalcType === '1' || $wpCalcType === 'internal') {
+                        // Internal: درصد شرکت = tech_per_of_all
+                        $newCompanyShare = intdiv($totalInvoice * max(0, min(100, $wpTechPerAll)), 100);
+                        $newTechShare = max(0, $totalInvoice - $newCompanyShare);
+                        $newPercent = $wpTechPerAll;
+                        $newCalcType = $wpCalcType;
+                    } else {
+                        // External: درصد شرکت = percent
+                        $newCompanyShare = intdiv($totalInvoice * max(0, min(100, $wpPercent)), 100);
+                        $newTechShare = max(0, $totalInvoice - $newCompanyShare);
+                        $newPercent = $wpPercent;
+                        $newCalcType = $wpCalcType !== '' ? $wpCalcType : 'percent_of_total';
+                    }
+
+                    $newTotalAmount = $totalInvoice;
 
                     $isSame = (int) $inv->total_amount === $newTotalAmount
                         && (int) $inv->tech_share === $newTechShare
@@ -136,21 +174,23 @@ class FixInvoicesFromWp extends Command
                         continue;
                     }
 
-                    if (count($samples) < 10) {
+                    if (count($samples) < 15) {
                         $samples[] = [
                             'id' => $inv->id,
                             'wp_id' => $inv->wp_id,
-                            'before' => "total={$inv->total_amount}, tech={$inv->tech_share}, company={$inv->company_share}",
-                            'after' => "total={$newTotalAmount}, tech={$newTechShare}, company={$newCompanyShare}",
+                            'before' => "tech={$inv->tech_share}, company={$inv->company_share}",
+                            'after' => "tech={$newTechShare}, company={$newCompanyShare}",
                             'pc' => $priceCustomer,
                             'cp' => $costPrice,
                             'ti' => $totalInvoice,
+                            'wp_percent' => $wpPercent,
+                            'wp_internal' => $wpTechPerAll,
+                            'calc' => $wpCalcType === '1' ? 'INT' : 'EXT',
+                            'used' => "{$newPercent}%",
                         ];
                     }
 
                     if (! $this->option('dry-run')) {
-                        // مستقیم با DB::table تا event Invoice::updated شلیک
-                        // نشود (نمی‌خواهیم به WP push کنیم).
                         DB::table('crm_invoices')
                             ->where('id', $inv->id)
                             ->update([
@@ -180,9 +220,16 @@ class FixInvoicesFromWp extends Command
             $this->info('نمونه‌های قبل/بعد:');
             $rows = [];
             foreach ($samples as $s) {
-                $rows[] = [$s['id'], $s['wp_id'], "pc={$s['pc']} cp={$s['cp']} ti={$s['ti']}", $s['before'], $s['after']];
+                $rows[] = [
+                    $s['id'],
+                    $s['wp_id'],
+                    "pc={$s['pc']} cp={$s['cp']} ti={$s['ti']}",
+                    "WP:{$s['calc']} %={$s['wp_percent']} per_all={$s['wp_internal']} → {$s['used']}",
+                    $s['before'],
+                    $s['after'],
+                ];
             }
-            $this->table(['inv_id', 'wp_id', 'WP data', 'قبل', 'بعد'], $rows);
+            $this->table(['inv_id', 'wp_id', 'WP data', 'WP درصد تکنسین', 'قبل Panel', 'بعد (مطابق WP)'], $rows);
         }
 
         if ($this->option('dry-run')) {
