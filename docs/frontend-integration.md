@@ -150,9 +150,9 @@ GET /v1/pages/home
       "cta_url": "/order",
       "services": [1, 2, 3],
       "services_items": [
-        { "id": 1, "label": "تعمیر لباسشویی",   "slug": "washing-machine", "href": "/devices/washing-machine", "icon": "washing-machine", "tone": "tone-blue" },
-        { "id": 2, "label": "تعمیر ظرفشویی",   "slug": "dishwasher",      "href": "/devices/dishwasher",      "icon": "droplets",         "tone": "tone-green" },
-        { "id": 3, "label": "تعمیر یخچال",     "slug": "refrigerator",    "href": "/devices/refrigerator",    "icon": "refrigerator",     "tone": "tone-cyan" }
+        { "id": 1, "label": "تعمیر لباسشویی", "slug": "washing-machine", "href": "/devices/washing-machine", "icon": "washing-machine", "thumbnail": "https://panel.tamironline.com/storage/site/devices/wm.png", "tone": "tone-blue" },
+        { "id": 2, "label": "تعمیر ظرفشویی", "slug": "dishwasher",      "href": "/devices/dishwasher",      "icon": "droplets",         "thumbnail": null, "tone": "tone-green" },
+        { "id": 3, "label": "تعمیر یخچال",   "slug": "refrigerator",    "href": "/devices/refrigerator",    "icon": "refrigerator",     "thumbnail": null, "tone": "tone-cyan" }
       ]
     },
     "why_us": {
@@ -440,6 +440,7 @@ GET /v1/catalog/devices?featured=true
       "slug": "washing-machine",
       "href": "/devices/washing-machine",
       "icon": "washing-machine",
+      "thumbnail": "https://panel.tamironline.com/storage/site/devices/abc.png",
       "tone": "tone-blue"
     },
     {
@@ -448,6 +449,7 @@ GET /v1/catalog/devices?featured=true
       "slug": "dishwasher",
       "href": "/devices/dishwasher",
       "icon": "droplets",
+      "thumbnail": null,
       "tone": "tone-green"
     }
   ]
@@ -463,6 +465,7 @@ GET /v1/catalog/devices?featured=true
 | `slug` | string | بله | کلید پایدار (kebab-case) — برای URL |
 | `href` | string | بله | لینک از پیش ساخته‌شده: `/devices/{slug}` |
 | `icon` | string \| null | خیر | کلید آیکن Lucide به‌صورت kebab-case (مثل `washing-machine`, `droplets`, `refrigerator`) |
+| `thumbnail` | string \| null | خیر | URL کامل تصویر بندانگشتی (در صورت آپلود توسط ادمین). فرانت می‌تواند آن را در کنار/به‌جای آیکن نمایش دهد |
 | `tone` | string \| null | خیر | کلاس CSS رنگ کارت — مقادیر مجاز: `tone-blue`, `tone-green`, `tone-cyan`, `tone-sky`, `tone-orange`, `tone-amber`, `tone-rose`, `tone-violet`, `tone-emerald` |
 
 **فیلتر سرور:**
@@ -744,8 +747,24 @@ crm_devices:
   - is_featured: bool      ← آیا در Hero صفحه‌ی Home به‌عنوان پیش‌فرض بیاید؟
   - sort_order: int        ← ترتیب نمایش
   - icon: string|null      ← کلید آیکن Lucide (kebab-case)
+  - thumbnail: string|null ← URL کامل تصویر بندانگشتی (بعد از resolve)
   - tone: string|null      ← کلاس CSS رنگ (tone-blue, ...)
 ```
+
+### مدیریت تصویر در پنل ادمین
+
+برای هر دو entity، صفحه‌ی ویرایش یک **آپلودر دوگانه** دارد:
+
+1. **آپلود فایل**: ادمین می‌تواند فایل را با دکمه‌ی «انتخاب فایل» آپلود کند.
+   فایل در `storage/app/public/site/brands/` یا `storage/app/public/site/devices/`
+   ذخیره می‌شود و در پاسخ API به‌صورت URL کامل برمی‌گردد.
+2. **URL خارجی**: یا می‌تواند URL کامل (مثلاً CDN) را در فیلد URL paste کند.
+
+**برای فرانت تفاوتی ندارد** — API همیشه یک URL کامل برمی‌گرداند.
+
+نکته: اگر فیلد خالی باشد (`null`)، فرانت باید فال‌بک خود را اعمال کند:
+- برای device: نمایش `icon` (Lucide) به‌جای thumbnail
+- برای brand: نمایش text-only یا placeholder
 
 ### قانون اولویت فال‌بک
 
@@ -781,8 +800,9 @@ type Service = {
   label: string;
   slug: string;
   href: string;
-  icon: string | null;   // 'washing-machine' | 'droplets' | ...
-  tone: string | null;   // 'tone-blue' | 'tone-green' | ...
+  icon: string | null;        // 'washing-machine' | 'droplets' | ...
+  thumbnail: string | null;   // URL کامل (یا null)
+  tone: string | null;        // 'tone-blue' | 'tone-green' | ...
 };
 
 function ServiceCard({ s, i }: { s: Service; i: number }) {
@@ -798,7 +818,12 @@ function ServiceCard({ s, i }: { s: Service; i: number }) {
       }}
     >
       <span className={`icon-tile icon-tile--xl ${s.tone ?? 'tone-blue'} transition-transform duration-300 group-hover:scale-105`}>
-        {Icon && <Icon className="h-7 w-7" strokeWidth={1.6} />}
+        {/* اولویت: thumbnail آپلودشده، در غیر این صورت آیکن Lucide */}
+        {s.thumbnail ? (
+          <img src={s.thumbnail} alt={s.label} className="h-10 w-10 object-contain" />
+        ) : Icon ? (
+          <Icon className="h-7 w-7" strokeWidth={1.6} />
+        ) : null}
       </span>
       <span className="text-center text-[12.5px] leading-tight font-bold md:text-[12.5px]" style={{ color: 'var(--text)' }}>
         {s.label}
