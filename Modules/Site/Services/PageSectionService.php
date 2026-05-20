@@ -370,7 +370,7 @@ class PageSectionService
                     'id'   => (int) $b->id,
                     'name' => $b->name,
                     'slug' => $b->slug,
-                    'logo' => $b->logo,
+                    'logo' => \Modules\Site\Support\MediaUrl::resolve($b->logo),
                 ])
                 ->values()
                 ->all();
@@ -380,7 +380,7 @@ class PageSectionService
             $rows = \Modules\CRM\Models\Device::query()
                 ->whereIn('id', $ids)
                 ->where('is_active', true)
-                ->get(['id', 'name', 'slug', 'icon', 'tone'])
+                ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone'])
                 ->keyBy('id');
             return collect($ids)
                 ->map(fn ($id) => $rows->get((int) $id))
@@ -399,12 +399,13 @@ class PageSectionService
     private function shapeDevice(\Modules\CRM\Models\Device $d): array
     {
         return [
-            'id'    => (int) $d->id,
-            'label' => $d->name,
-            'slug'  => $d->slug,
-            'href'  => '/devices/' . $d->slug,
-            'icon'  => $d->icon,
-            'tone'  => $d->tone,
+            'id'        => (int) $d->id,
+            'label'     => $d->name,
+            'slug'      => $d->slug,
+            'href'      => '/devices/' . $d->slug,
+            'icon'      => $d->icon,
+            'thumbnail' => \Modules\Site\Support\MediaUrl::resolve($d->thumbnail ?? null),
+            'tone'      => $d->tone,
         ];
     }
 
@@ -422,7 +423,7 @@ class PageSectionService
             ->orderBy('sort_order')
             ->orderBy('name')
             ->limit(20)
-            ->get(['id', 'name', 'slug', 'icon', 'tone'])
+            ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone'])
             ->map(fn ($d) => $this->shapeDevice($d))
             ->all();
     }

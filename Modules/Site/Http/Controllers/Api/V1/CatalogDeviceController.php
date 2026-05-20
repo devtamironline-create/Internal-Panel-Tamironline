@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Device;
+use Modules\Site\Support\MediaUrl;
 
 /**
  * فهرست دستگاه‌ها برای مصرف فرانت — منبع: Modules\CRM\Models\Device.
@@ -31,15 +32,16 @@ class CatalogDeviceController extends Controller
             $query->featured();
         }
 
-        $devices = $query->limit($limit)->get(['id', 'name', 'slug', 'icon', 'tone']);
+        $devices = $query->limit($limit)->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
 
         $data = $devices->map(fn (Device $d) => [
-            'id'    => (int) $d->id,
-            'label' => $d->name,
-            'slug'  => $d->slug,
-            'href'  => '/devices/' . $d->slug,
-            'icon'  => $d->icon,
-            'tone'  => $d->tone,
+            'id'        => (int) $d->id,
+            'label'     => $d->name,
+            'slug'      => $d->slug,
+            'href'      => '/devices/' . $d->slug,
+            'icon'      => $d->icon,
+            'thumbnail' => MediaUrl::resolve($d->thumbnail),
+            'tone'      => $d->tone,
         ])->values();
 
         return response()

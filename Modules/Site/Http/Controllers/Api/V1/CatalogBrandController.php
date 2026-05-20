@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Brand;
+use Modules\Site\Support\MediaUrl;
 
 /**
  * فهرست برندها برای مصرف فرانت — منبع: Modules\CRM\Models\Brand.
@@ -34,7 +35,7 @@ class CatalogBrandController extends Controller
             'id'   => (int) $b->id,
             'name' => $b->name,
             'slug' => $b->slug,
-            'logo' => $b->logo,
+            'logo' => MediaUrl::resolve($b->logo),
         ])->values();
 
         return response()
