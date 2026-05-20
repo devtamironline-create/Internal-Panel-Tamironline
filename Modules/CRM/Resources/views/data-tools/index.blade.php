@@ -57,6 +57,22 @@
         </div>
     </div>
 
+    {{-- ───── تنظیم درصد گروهی تکنسین‌ها (لیست paste شده) ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 border-emerald-200 dark:border-emerald-800">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">📋 تنظیم درصد گروهی تکنسین‌ها</h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    لیست تکنسین‌ها را به‌صورت «نام + درصد سهم شرکت» paste کنید — سیستم تطبیق می‌دهد و در Panel و WP اعمال می‌کند. دارای پیش‌نمایش قبل از اعمال.
+                </p>
+            </div>
+            <a href="{{ route('crm.data-tools.bulk-percent') }}"
+               class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                باز کردن صفحه
+            </a>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {{-- ───── Resync وضعیت سفارش‌ها از WP ───── --}}

@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Technician;
 
@@ -175,6 +176,233 @@ class DataToolsController extends Controller
     /**
      * اجرای artisan و گرفتن خروجی برای نمایش.
      */
+    // ─── تنظیم درصد تکنسین‌ها به صورت گروهی (لیست paste شده) ──────
+
+    /** نمایش صفحه فرم. */
+    public function bulkPercentForm()
+    {
+        return view('crm::data-tools.bulk-percent');
+    }
+
+    /** پردازش لیست و نمایش پیش‌نمایش یا اعمال. */
+    public function bulkPercentApply(Request $request)
+    {
+        $request->validate([
+            'list' => 'required|string|max:50000',
+            'calc' => 'required|in:external,internal',
+            'action' => 'required|in:preview,apply',
+        ]);
+
+        $action = $request->input('action');
+        $calc = $request->input('calc');
+        $calcStored = $calc === 'internal' ? '1' : '';
+
+        $parsed = $this->parseList($request->input('list'));
+
+        // configure WP connection
+        $this->configureWpConnection();
+        $prefix = env('WP_DB_PREFIX', 'or_');
+
+        try {
+            $wp = DB::connection('wp_crm');
+            $wp->getPdo();
+            $wpAvailable = true;
+        } catch (\Throwable $e) {
+            $wpAvailable = false;
+        }
+
+        $results = [];
+        $applied = 0;
+        $notFound = 0;
+        $ambiguous = 0;
+
+        foreach ($parsed as $row) {
+            $name = $row['name'];
+            $percent = $row['percent'];
+
+            // ── جستجوی تکنسین با چند روش
+            $matches = $this->matchTechnicians($name);
+
+            $status = '';
+            $tech = null;
+
+            if ($matches->isEmpty()) {
+                $status = 'notfound';
+                $notFound++;
+            } elseif ($matches->count() > 1) {
+                $status = 'ambiguous';
+                $ambiguous++;
+            } else {
+                $tech = $matches->first();
+                $status = 'ok';
+            }
+
+            $currentPercent = null;
+            $currentCalc = null;
+            if ($tech) {
+                $currentCalc = (string) ($tech->type_of_calc_tech ?? '');
+                $isInternal = $currentCalc === '1' || $currentCalc === 'internal';
+                $currentPercent = $isInternal
+                    ? (int) ($tech->tech_per_of_all ?? 0)
+                    : (int) ($tech->percent ?? 0);
+            }
+
+            $entry = [
+                'input_name' => $name,
+                'input_percent' => $percent,
+                'status' => $status,
+                'tech_id' => $tech?->id,
+                'wp_id' => $tech?->wp_id,
+                'matched_name' => $tech ? ($tech->firstname_tech ?: trim(($tech->first_name ?? '') . ' ' . ($tech->last_name ?? ''))) : null,
+                'mobile' => $tech?->mobile,
+                'current_percent' => $currentPercent,
+                'matches_count' => $matches->count(),
+                'sample_matches' => $matches->count() > 1
+                    ? $matches->take(5)->map(fn($t) => $t->firstname_tech ?: trim(($t->first_name ?? '') . ' ' . ($t->last_name ?? ''))) ->implode(' / ')
+                    : null,
+            ];
+
+            // اعمال
+            if ($action === 'apply' && $status === 'ok' && $tech) {
+                $this->applyPercentToTech($tech, $percent, $calcStored, $calc, $wp, $prefix, $wpAvailable);
+                $applied++;
+                $entry['applied'] = true;
+            }
+
+            $results[] = $entry;
+        }
+
+        return view('crm::data-tools.bulk-percent', [
+            'results' => $results,
+            'action' => $action,
+            'calc' => $calc,
+            'list' => $request->input('list'),
+            'summary' => [
+                'total' => count($parsed),
+                'ok' => count($parsed) - $notFound - $ambiguous,
+                'notfound' => $notFound,
+                'ambiguous' => $ambiguous,
+                'applied' => $applied,
+            ],
+            'wp_available' => $wpAvailable,
+        ]);
+    }
+
+    /** Parse لیست paste شده — هر خط: نام<whitespace>عدد. */
+    private function parseList(string $raw): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $raw);
+        $parsed = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+            // اولین کلمه «نام تکنسین» و «درصد کمیسیون» هدر است — skip
+            if (str_contains($line, 'درصد') || str_contains($line, 'تکنسین')) continue;
+
+            // split از آخر — آخرین token عدد است، بقیه نام
+            if (! preg_match('/^(.+?)[\s\t]+([0-9]+)\s*$/u', $line, $m)) continue;
+            $name = trim($m[1]);
+            $percent = (int) $m[2];
+
+            if ($name === '' || $percent < 0 || $percent > 100) continue;
+
+            $parsed[] = ['name' => $name, 'percent' => $percent];
+        }
+
+        return $parsed;
+    }
+
+    /** پیدا کردن تکنسین با چند روش — exact roughly normalized then LIKE. */
+    private function matchTechnicians(string $name)
+    {
+        // نرمالایز: حذف کاراکترهای اضافی مثل zero-width و فاصله‌های متعدد
+        $normalized = preg_replace('/[\s\x{200C}\x{200D}\x{200E}\x{200F}]+/u', ' ', $name);
+        $normalized = trim($normalized);
+
+        // اولویت ۱: exact match روی firstname_tech
+        $exact = Technician::where('firstname_tech', $normalized)->get();
+        if ($exact->isNotEmpty()) return $exact;
+
+        // اولویت ۲: first_name + last_name exact
+        $parts = explode(' ', $normalized, 2);
+        if (count($parts) === 2) {
+            $exact2 = Technician::where('first_name', $parts[0])
+                ->where('last_name', $parts[1])
+                ->get();
+            if ($exact2->isNotEmpty()) return $exact2;
+        }
+
+        // اولویت ۳: LIKE %name% روی firstname_tech
+        $like = Technician::where('firstname_tech', 'like', '%' . $normalized . '%')->get();
+        if ($like->isNotEmpty()) return $like;
+
+        // اولویت ۴: LIKE روی first_name + last_name
+        return Technician::where(function ($q) use ($normalized) {
+            $q->whereRaw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) LIKE ?", ['%' . $normalized . '%']);
+        })->get();
+    }
+
+    /** اعمال درصد روی یک تکنسین در Panel و WP. */
+    private function applyPercentToTech($tech, int $percent, string $calcStored, string $calcKey, $wp, string $prefix, bool $wpAvailable): void
+    {
+        $isInternal = $calcStored === '1';
+
+        $panelUpdate = ['type_of_calc_tech' => $calcStored, 'updated_at' => now()];
+        if ($isInternal) {
+            $panelUpdate['tech_per_of_all'] = $percent;
+        } else {
+            $panelUpdate['percent'] = $percent;
+        }
+
+        DB::table('crm_technicians')
+            ->where('id', $tech->id)
+            ->update($panelUpdate);
+
+        // WP فقط اگر wp_id داشته باشد و WP در دسترس باشد
+        if (! $wpAvailable || ! $tech->wp_id) return;
+
+        $wpUpdate = ['type_of_calc_tech' => $calcStored];
+        if ($isInternal) {
+            $wpUpdate['tech_per_of_all'] = (string) $percent;
+        } else {
+            $wpUpdate['percent'] = (string) $percent;
+        }
+
+        foreach ($wpUpdate as $key => $value) {
+            $exists = $wp->table($prefix.'usermeta')
+                ->where('user_id', $tech->wp_id)
+                ->where('meta_key', $key)
+                ->exists();
+            if ($exists) {
+                $wp->table($prefix.'usermeta')
+                    ->where('user_id', $tech->wp_id)
+                    ->where('meta_key', $key)
+                    ->update(['meta_value' => $value]);
+            } else {
+                $wp->table($prefix.'usermeta')->insert([
+                    'user_id' => $tech->wp_id,
+                    'meta_key' => $key,
+                    'meta_value' => $value,
+                ]);
+            }
+        }
+    }
+
+    private function configureWpConnection(): void
+    {
+        config(['database.connections.wp_crm' => [
+            'driver'    => 'mysql',
+            'host'      => env('WP_DB_HOST', '127.0.0.1'),
+            'port'      => (int) env('WP_DB_PORT', 3306),
+            'database'  => env('WP_DB_NAME', 'crmtamironline_db_new'),
+            'username'  => env('WP_DB_USER', 'crmtamironline_db_new'),
+            'password'  => env('WP_DB_PASS', 'Rayanew_0935'),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+        ]]);
+    }
+
     private function runArtisan(string $command, array $params)
     {
         try {
