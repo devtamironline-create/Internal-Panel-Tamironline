@@ -242,7 +242,17 @@ class SyncFinancialController extends Controller
         ];
 
         if ($invoice) {
-            $invoice->fill($payload);
+            // فاکتور موجود — فقط فیلدهای متادیتا را آپدیت می‌کنیم.
+            // فیلدهای محاسبه‌شده (tech_share, company_share, total_amount،
+            // commission_percent, calc_type) دست‌نخورده می‌مانند تا تغییر
+            // درصد تکنسین در آینده، فاکتورهای تاریخی را بازنویسی نکند.
+            // این هم‌ارز روح کامیت قبلی (8d66249) است که jelogir
+            // re-calculation تاریخی شد.
+            $invoice->fill([
+                'status' => $payload['status'],
+                'issued_at' => $payload['issued_at'],
+                'paid_at' => $payload['paid_at'],
+            ]);
             $invoice->save();
             $action = 'updated';
         } else {
