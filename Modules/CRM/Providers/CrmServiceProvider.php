@@ -20,6 +20,7 @@ use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
+use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
@@ -78,6 +79,7 @@ class CrmServiceProvider extends ServiceProvider
                 FindWalletDuplicates::class,
                 ShowWpTechSettings::class,
                 SetTechPercent::class,
+                RestoreTechPercentFromHistory::class,
             ]);
         }
     }
