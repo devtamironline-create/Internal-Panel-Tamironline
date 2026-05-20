@@ -111,6 +111,10 @@ class PageSectionService
             if (empty($items)) {
                 $out['hero']['services_items'] = $this->defaultDevicesForHero();
             }
+            // تعداد کل دستگاه‌های فعال برای نمایش «+N خدمت دیگر»
+            $out['hero']['services_total'] = (int) \Modules\CRM\Models\Device::query()
+                ->where('is_active', true)
+                ->count();
         }
 
         return $out;

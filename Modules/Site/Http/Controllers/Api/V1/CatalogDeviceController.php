@@ -44,8 +44,14 @@ class CatalogDeviceController extends Controller
             'tone'      => $d->tone,
         ])->values();
 
+        // تعداد کل دستگاه‌های فعال — برای نمایش «+N خدمت دیگر» در فرانت.
+        $total = Device::query()->where('is_active', true)->count();
+
         return response()
-            ->json(['data' => $data])
+            ->json([
+                'data'  => $data,
+                'meta'  => ['total' => $total],
+            ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
 }

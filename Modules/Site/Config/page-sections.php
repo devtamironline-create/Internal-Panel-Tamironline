@@ -239,6 +239,26 @@ return [
                 ],
             ],
 
+            'service_features' => [
+                'label'       => 'ویژگی‌های ما (نوار افقی)',
+                'description' => 'نوار ثابت ویژگی‌ها که در همه‌ی صفحات سایت تکرار می‌شود (Feature Marquee).',
+                'fields' => [
+                    'aria_label' => ['label' => 'متن aria-label', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'speed'      => ['label' => 'سرعت اسکرول (پیش‌فرض ۸)', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:60'],
+                    'items'      => [
+                        'label' => 'ویژگی‌ها',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'icon_key' => ['label' => 'کلید آیکن Lucide', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                            'label'    => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'bg'       => ['label' => 'پس‌زمینه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                            'fg'       => ['label' => 'متن (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                            'border'   => ['label' => 'حاشیه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                        ],
+                    ],
+                ],
+            ],
+
         ],
     ],
 
