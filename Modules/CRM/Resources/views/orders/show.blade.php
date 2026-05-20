@@ -117,8 +117,8 @@
                 <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     <dt class="text-gray-500 dark:text-gray-400">مشتری</dt>
                     <dd class="text-gray-900 dark:text-gray-100">
-                        <a href="{{ route('crm.customers.show', $order->customer) }}" class="text-brand-600 hover:underline">{{ $order->customer_name }}</a>
-                        <span class="text-xs">(@tel($order->customer_mobile))</span>
+                        <a href="{{ route('crm.customers.show', $order->customer) }}" class="text-brand-600 hover:underline">{{ $order->customer?->first_name ?: $order->customer_name }}</a>
+                        <span class="text-xs">(@tel($order->customer?->mobile ?: $order->customer_mobile))</span>
                     </dd>
 
                     <dt class="text-gray-500 dark:text-gray-400">برند</dt>
