@@ -257,16 +257,19 @@ Cache-Control: public, max-age=300, s-maxage=300
 | `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
 | `promo` | title, subtitle, image{desktop, mobile}, link_url, link_label |
 
-##### Layout (`/v1/pages/layout`) — هدر، فوتر و ویژگی‌های مشترک
+##### Layout (`/v1/pages/layout`) — هدر، فوتر و المان‌های مشترک
 | section_key | فیلدها |
 |---|---|
-| `header` | logo{desktop, mobile}, logo_alt, cta_label, cta_url, phone_label, phone_number, nav_items[label, href] |
-| `footer` | logo{desktop, mobile}, description, groups[title, links], social[platform, icon, url], copyright_text, enamad_code |
+| `header` | logo{desktop, mobile}, logo_alt, cta_label, cta_url, phone_label, phone_number, nav_items[label, href], **services_dropdown**{trigger_label, title, subtitle, view_all_label, view_all_url, device_ids[], **device_ids_items**[]} |
+| `footer` | logo{desktop, mobile}, description, groups[title, links], **contact_info**{title, address, phone, phone_display, email}, **app_download**{title, subtitle, image{desktop, mobile}, stores[name, icon, url, image]}, social[platform, icon, url], copyright_text, enamad_code |
 | `service_features` | aria_label, speed, items[icon_key, label, bg, fg, border] |
-| `seo_footer` | title, paragraphs[text] |
+| `seo_footer` | title, **expand_label**, **collapse_label**, paragraphs[text] |
+| `mobile_cta` | is_active, **primary**{label, icon, type, value}, **secondary**{label, icon, type, value} |
 
+> **services_dropdown**, **contact_info**, **app_download**, **primary**, **secondary** زیرگروه (nested group) هستند و در پاسخ JSON به‌صورت object تو در تو ظاهر می‌شوند.
 > **service_features** نوار افقی ویژگی‌ها (FeatureMarquee) که فرانت روی همه‌ی صفحات تکرار می‌کند.
 > **seo_footer** بلوک متن سئوی پایین صفحه (با expand/collapse) — جزئیات در §۱۲.۲.
+> **mobile_cta** نوار چسبیده به پایین موبایل با ۲ دکمه (تماس / سفارش).
 
 ##### Contact (`/v1/pages/contact`)
 | section_key | فیلدها |
@@ -1072,7 +1075,18 @@ GET /v1/pages/layout
         { "label": "درباره ما",   "href": "/about" },
         { "label": "تماس با ما",  "href": "/contact" },
         { "label": "بلاگ",        "href": "/blog" }
-      ]
+      ],
+      "services_dropdown": {
+        "trigger_label": "خدمات",
+        "title": "خدمات تعمیر در محل",
+        "subtitle": "تعمیر لوازم خانگی با گارانتی ۶ ماهه — انتخاب دستگاه:",
+        "view_all_label": "مشاهده همه دستگاه‌ها",
+        "view_all_url": "/devices",
+        "device_ids": [1, 2, 3, 4, 5, 6, 7],
+        "device_ids_items": [
+          { "id": 1, "label": "تعمیر لباس‌شویی", "slug": "washing-machine", "href": "/devices/washing-machine", "icon": "washing-machine", "thumbnail": null, "tone": "tone-blue" }
+        ]
+      }
     },
     "footer": {
       "logo": { "desktop": "https://...", "mobile": "https://..." },
@@ -1081,6 +1095,22 @@ GET /v1/pages/layout
         { "title": "خدمات", "links": "تعمیر لباس‌شویی|/devices/washing-machine, تعمیر ظرفشویی|/devices/dishwasher" },
         { "title": "شرکت",  "links": "درباره ما|/about, تماس با ما|/contact, بلاگ|/blog" }
       ],
+      "contact_info": {
+        "title": "اطلاعات تماس",
+        "address": "تهران، خیابان مطهری، نرسیده به خیابان ترکمنستان، پلاک ۲۰",
+        "phone": "02145396",
+        "phone_display": "۰۲۱-۴۵۳۹۶",
+        "email": "support@tamironline.com"
+      },
+      "app_download": {
+        "title": "اپلیکیشن تعمیرآنلاین",
+        "subtitle": "سفارش سریع و پیگیری از موبایل — اندروید و iOS.",
+        "image": { "desktop": null, "mobile": null },
+        "stores": [
+          { "name": "Google Play", "icon": "google-play", "url": "https://play.google.com/store/apps/details?id=com.tamironline", "image": null },
+          { "name": "کافه بازار",  "icon": "bazaar",      "url": "https://cafebazaar.ir/app/com.tamironline", "image": null }
+        ]
+      },
       "social": [
         { "platform": "instagram", "icon": "instagram", "url": "https://instagram.com/tamironlinecom" },
         { "platform": "youtube",   "icon": "youtube",   "url": "https://youtube.com/@tamironlinecom" },
@@ -1205,6 +1235,89 @@ export function SeoFooter({ data }: { data: NonNullable<LayoutData>['seo_footer'
 
 **Cache-Control:** `public, max-age=300, s-maxage=300`
 
+#### Header › services_dropdown (مگامنوی خدمات)
+
+زیرگروه nested داخل `header`. در فرانت معمولاً به‌صورت hover-menu نمایش داده می‌شود.
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `trigger_label` | string \| null | متن آیتم منو در هدر (مثل «خدمات») |
+| `title` | string \| null | تیتر داخل dropdown |
+| `subtitle` | string \| null | زیرتیتر |
+| `view_all_label` | string \| null | متن لینک «همه دستگاه‌ها» |
+| `view_all_url` | string \| null | لینک |
+| `device_ids` | int[] | IDهای دستگاه‌ها (خام) |
+| `device_ids_items` | array | **آرایه‌ی hydrate شده** — هر آیتم: `{id, label, slug, href, icon, thumbnail, tone}` |
+
+#### Footer › contact_info (اطلاعات تماس داخل فوتر)
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `title` | string \| null | تیتر بلوک (مثل «اطلاعات تماس») |
+| `address` | string \| null | آدرس فیزیکی |
+| `phone` | string \| null | شماره برای `tel:` (مثلاً `02145396`) |
+| `phone_display` | string \| null | شماره نمایشی برای کاربر (مثلاً `۰۲۱-۴۵۳۹۶`) |
+| `email` | string \| null | ایمیل تماس |
+
+#### Footer › app_download (دانلود اپ)
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `title` | string \| null | تیتر بلوک |
+| `subtitle` | string \| null | زیرتیتر |
+| `image.desktop`/`image.mobile` | string \| null | تصویر تبلیغاتی |
+| `stores[].name` | string | نام فروشگاه (مثل `Google Play`) |
+| `stores[].icon` | string \| null | کلید آیکن |
+| `stores[].url` | string | لینک دانلود |
+| `stores[].image` | string \| null | URL تصویر badge (در صورت داشتن) |
+
+#### Mobile CTA (نوار چسبیده‌ی پایین موبایل)
+
+نمایش فقط در viewport موبایل (`md:hidden`).
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `is_active` | bool | روشن/خاموش |
+| `primary.label` | string \| null | متن دکمه اول |
+| `primary.icon` | string \| null | کلید آیکن |
+| `primary.type` | `tel` \| `link` \| `mailto` | نوع دکمه — تعیین می‌کند چطور وصل شود |
+| `primary.value` | string \| null | مقدار: شماره تلفن (برای `tel:`) یا مسیر (برای `link`) |
+| `secondary.*` | همان | دکمه دوم |
+
+**نمونه پاسخ کامل mobile_cta:**
+```json
+"mobile_cta": {
+  "is_active": true,
+  "primary":   { "label": "تماس",     "icon": "phone",  "type": "tel",  "value": "02145396" },
+  "secondary": { "label": "ثبت سفارش", "icon": "wrench", "type": "link", "value": "/order" }
+}
+```
+
+**نمونه‌ی رندر در فرانت:**
+```tsx
+function MobileCta({ data }: { data: LayoutData['mobile_cta'] }) {
+  if (!data?.is_active) return null;
+  const renderButton = (btn: { label: string|null; icon: string|null; type: string; value: string|null }) => {
+    if (!btn?.value || !btn?.label) return null;
+    const href = btn.type === 'tel'    ? `tel:${btn.value.replace(/[^\d+]/g, '')}`
+              : btn.type === 'mailto' ? `mailto:${btn.value}`
+              : btn.value;
+    const Icon = btn.icon ? iconMap[btn.icon] : null;
+    return <a href={href} className="flex-1 flex items-center justify-center gap-2 py-3 font-bold">
+      {Icon && <Icon className="h-5 w-5" />}
+      {btn.label}
+    </a>;
+  };
+  return (
+    <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t flex">
+      {renderButton(data.primary)}
+      <div className="w-px bg-gray-200" />
+      {renderButton(data.secondary)}
+    </div>
+  );
+}
+```
+
 ### ۱۲.۳ پیاده‌سازی پیشنهادی در Next.js — `app/layout.tsx`
 
 Layout فقط **یک‌بار** در root layout fetch می‌شود و بین تمام صفحات shared است:
@@ -1220,11 +1333,38 @@ export type LayoutData = {
     phone_label: string | null;
     phone_number: string | null;
     nav_items: { label: string; href: string }[];
+    services_dropdown: {
+      trigger_label: string | null;
+      title: string | null;
+      subtitle: string | null;
+      view_all_label: string | null;
+      view_all_url: string | null;
+      device_ids: number[];
+      device_ids_items: {
+        id: number; label: string; slug: string; href: string;
+        icon: string | null; thumbnail: string | null; tone: string | null;
+      }[];
+    } | null;
   } | null;
   footer: {
     logo: { desktop: string | null; mobile: string | null };
     description: string | null;
     groups: { title: string; links: string }[];
+    contact_info: {
+      title: string | null;
+      address: string | null;
+      phone: string | null;
+      phone_display: string | null;
+      email: string | null;
+    } | null;
+    app_download: {
+      title: string | null;
+      subtitle: string | null;
+      image: { desktop: string | null; mobile: string | null };
+      stores: {
+        name: string; icon: string | null; url: string; image: string | null;
+      }[];
+    } | null;
     social: { platform: string; icon: string | null; url: string }[];
     copyright_text: string | null;
     enamad_code: string | null;
@@ -1242,7 +1382,14 @@ export type LayoutData = {
   } | null;
   seo_footer: {
     title: string | null;
+    expand_label: string | null;
+    collapse_label: string | null;
     paragraphs: { text: string }[];
+  } | null;
+  mobile_cta: {
+    is_active: boolean;
+    primary:   { label: string | null; icon: string | null; type: 'tel'|'link'|'mailto'|null; value: string | null } | null;
+    secondary: { label: string | null; icon: string | null; type: 'tel'|'link'|'mailto'|null; value: string | null } | null;
   } | null;
 };
 
@@ -1250,9 +1397,10 @@ export async function getLayout(): Promise<LayoutData> {
   const res = await fetch(`${process.env.API_BASE_URL}/v1/pages/layout`, {
     next: { revalidate: 300, tags: ['layout'] },
   });
-  if (!res.ok) return { header: null, footer: null, service_features: null, seo_footer: null };
+  const empty = { header: null, footer: null, service_features: null, seo_footer: null, mobile_cta: null };
+  if (!res.ok) return empty;
   const json = await res.json();
-  return json.sections ?? { header: null, footer: null, service_features: null, seo_footer: null };
+  return { ...empty, ...(json.sections ?? {}) };
 }
 ```
 
@@ -1264,7 +1412,7 @@ import { SiteFooter } from '@/components/layout/Footer';
 import { FeatureMarquee } from '@/components/layout/FeatureMarquee';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { header, footer, service_features, seo_footer } = await getLayout();
+  const { header, footer, service_features, seo_footer, mobile_cta } = await getLayout();
 
   return (
     <html lang="fa" dir="rtl">
@@ -1274,6 +1422,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {children}
         {seo_footer && <SeoFooter data={seo_footer} />}
         <SiteFooter data={footer} />
+        {mobile_cta && <MobileCta data={mobile_cta} />}
       </body>
     </html>
   );

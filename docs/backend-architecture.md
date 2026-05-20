@@ -143,6 +143,40 @@ schema validate می‌شود.
 | `select` | dropdown | `"option_value"` |
 | `repeater` | آرایه‌ای از آیتم‌ها | `[{...}, {...}]` |
 | `reference` | انتخاب از مخزن | `[id1, id2, ...]` |
+| **`group`** | **زیرگروه فیلدها (nested)** | `{ sub_field: ..., ... }` |
+
+#### `group` — زیرگروه‌های nested
+
+برای ساختار سکشن‌های پیچیده، می‌توان از `group` استفاده کرد:
+
+```php
+'services_dropdown' => [
+    'label' => 'منوی Dropdown',
+    'type'  => 'group',
+    'fields' => [
+        'trigger_label' => ['type' => 'string', 'rules' => 'nullable|string|max:60'],
+        'device_ids'    => ['type' => 'reference', 'source' => 'devices'],
+        // هر field type دیگری: string, textarea, repeater, responsive_image, ...
+    ],
+],
+```
+
+**رفتار:**
+- `PageSectionService::processFields()` بازگشتی است — هر group با prefix dot-notation در rules ولی به‌صورت nested در payload
+- `hydrateReferences()` هم بازگشتی است — مثلاً `device_ids` داخل group هم خودکار `device_ids_items` می‌گیرد
+- فرم ادمین (`_fields.blade.php`) با recursive include خودش را برای group‌ها بازرندر می‌کند
+- payload شکل nested object می‌گیرد، نه flat
+
+**مثال payload در DB:**
+```json
+{
+  "trigger_label": "خدمات",
+  "services_dropdown": {
+    "trigger_label": "خدمات",
+    "device_ids": [1, 2, 3]
+  }
+}
+```
 
 #### Reference sources
 
