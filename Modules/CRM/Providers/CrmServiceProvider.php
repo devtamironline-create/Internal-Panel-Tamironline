@@ -18,6 +18,7 @@ use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
+use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
 use Modules\CRM\Console\Commands\WalletAudit;
 use Modules\CRM\Livewire\OrderWizard;
@@ -70,6 +71,7 @@ class CrmServiceProvider extends ServiceProvider
                 RebuildTechWallet::class,
                 WalletAudit::class,
                 FixInvoicesFromWp::class,
+                ShowWpTechSettings::class,
             ]);
         }
     }
