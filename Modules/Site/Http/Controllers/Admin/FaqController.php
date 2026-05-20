@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Site\Http\Requests\Admin\StoreFaqRequest;
 use Modules\Site\Models\Faq;
+use Modules\Site\Models\Taxonomy;
 
 class FaqController extends Controller
 {
@@ -48,15 +49,19 @@ class FaqController extends Controller
     public function create(): View
     {
         $this->checkAccess();
-        return view('site::admin.faqs.create');
+        $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_FAQ)->ordered()->get();
+        return view('site::admin.faqs.create', compact('taxonomies'));
     }
 
     public function store(StoreFaqRequest $request): RedirectResponse
     {
         $data = $request->validated();
         $data['is_published'] = $request->boolean('is_published');
+        $taxonomyIds = $this->validateTaxonomyIds($request);
+        unset($data['taxonomy_ids']);
 
-        Faq::create($data);
+        $faq = Faq::create($data);
+        $faq->taxonomies()->sync($taxonomyIds);
 
         return redirect()
             ->route('site.admin.faqs.index')
@@ -66,8 +71,10 @@ class FaqController extends Controller
     public function edit(string $id): View
     {
         $this->checkAccess();
-        $faq = Faq::findOrFail($id);
-        return view('site::admin.faqs.edit', compact('faq'));
+        $faq = Faq::with('taxonomies:id')->findOrFail($id);
+        $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_FAQ)->ordered()->get();
+        $selectedTaxonomies = $faq->taxonomies->pluck('id')->all();
+        return view('site::admin.faqs.edit', compact('faq', 'taxonomies', 'selectedTaxonomies'));
     }
 
     public function update(StoreFaqRequest $request, string $id): RedirectResponse
@@ -75,11 +82,31 @@ class FaqController extends Controller
         $faq = Faq::findOrFail($id);
         $data = $request->validated();
         $data['is_published'] = $request->boolean('is_published');
+        $taxonomyIds = $this->validateTaxonomyIds($request);
+        unset($data['taxonomy_ids']);
+
         $faq->update($data);
+        $faq->taxonomies()->sync($taxonomyIds);
 
         return redirect()
             ->route('site.admin.faqs.index')
             ->with('success', 'سوال به‌روز شد.');
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function validateTaxonomyIds(Request $request): array
+    {
+        $ids = (array) $request->input('taxonomy_ids', []);
+        $ids = array_values(array_unique(array_map('intval', array_filter($ids, fn ($v) => $v !== null && $v !== ''))));
+        if (empty($ids)) {
+            return [];
+        }
+        return Taxonomy::ofType(Taxonomy::TYPE_FAQ)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->all();
     }
 
     public function destroy(string $id): RedirectResponse
