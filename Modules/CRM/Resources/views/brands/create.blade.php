@@ -10,7 +10,7 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <form action="{{ route('crm.brands.store') }}" method="POST">
+        <form action="{{ route('crm.brands.store') }}" method="POST" enctype="multipart/form-data">
             @include('crm::brands._form')
         </form>
     </div>

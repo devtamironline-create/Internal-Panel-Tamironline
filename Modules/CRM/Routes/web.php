@@ -82,6 +82,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('brands', [BrandController::class, 'store'])->name('brands.store');
         Route::get('brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
         Route::put('brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+        Route::put('brands/{brand}/toggle/{flag}', [BrandController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('brands.toggle');
         Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
     });
 
