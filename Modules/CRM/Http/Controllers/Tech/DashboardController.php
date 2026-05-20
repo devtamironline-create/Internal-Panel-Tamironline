@@ -599,6 +599,13 @@ class DashboardController extends Controller
             OrderStatus::Transit,
         ];
 
+        // در حالت freeze، وضعیت‌های نهایی (نهایی‌سازی سفارش) از لیست
+        // حذف می‌شوند تا تکنسین حتی رادیو را نبیند. middleware هم
+        // اگر کسی از API مستقیم زد، آن را بلاک می‌کند.
+        if (\Modules\CRM\Models\CrmSetting::get('tech_panel_readonly') === '1') {
+            $base = array_filter($base, fn(OrderStatus $s) => ! $s->isFinal());
+        }
+
         return array_values(array_filter($base, fn(OrderStatus $s) => $s !== $order->status));
     }
 

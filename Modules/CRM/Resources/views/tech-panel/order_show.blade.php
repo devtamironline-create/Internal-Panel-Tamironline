@@ -355,6 +355,13 @@
         </div>
     @endif
 
+    {{-- ─────── Freeze banner (در حالت به‌روزرسانی پنل) ─────── --}}
+    @if(($isFrozen ?? false) && ! $order->status->isFinal())
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-7">
+            ⏳ پنل در حال به‌روزرسانی است — تا اطلاع ثانوی، <strong>نهایی‌سازی سفارش</strong> (پایان کار / کنسل / رد / ایاب و ذهاب) موقتاً غیرفعال است. می‌توانید همچنان وضعیت را به «هماهنگی»، «انتقال به تعمیرگاه» یا «نامشخص» تغییر دهید.
+        </div>
+    @endif
+
     {{-- ─────── Status change form ─────── --}}
     @if(count($allowedStatuses))
         @php

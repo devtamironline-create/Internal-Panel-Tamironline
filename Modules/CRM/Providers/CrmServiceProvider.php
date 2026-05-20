@@ -5,6 +5,7 @@ namespace Modules\CRM\Providers;
 use App\Models\Setting;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Modules\CRM\Models\CrmSetting;
 use Livewire\Livewire;
 use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
@@ -53,6 +54,7 @@ class CrmServiceProvider extends ServiceProvider
                 'brandDefaultAvatar' => Setting::get('tech_panel_default_avatar'),
                 'appName'            => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
                 'supportPhone'       => Setting::get('tech_panel_support_phone'),
+                'isFrozen'           => CrmSetting::get('tech_panel_readonly') === '1',
             ]);
         });
 

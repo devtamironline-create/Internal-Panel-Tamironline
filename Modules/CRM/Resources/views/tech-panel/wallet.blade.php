@@ -46,14 +46,20 @@
         <div class="text-xs text-gray-500 mt-2">{{ $balanceLabel }}</div>
 
         {{-- شارژ کیف‌پول از درگاه — هم‌ارز Tech_Payment پنل WP --}}
-        <a href="{{ route('tech.wallet.recharge') }}"
-           class="mt-4 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold text-sm"
-           style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            شارژ کیف‌پول
-        </a>
+        @if(! ($isFrozen ?? false))
+            <a href="{{ route('tech.wallet.recharge') }}"
+               class="mt-4 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold text-sm"
+               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                شارژ کیف‌پول
+            </a>
+        @else
+            <div class="mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-6">
+                ⏳ پنل در حال به‌روزرسانی است — شارژ کیف‌پول موقتاً غیرفعال است. لطفاً چند دقیقه دیگر مراجعه کنید.
+            </div>
+        @endif
     </div>
 
     {{-- ─────── Stats grid ─────── --}}
