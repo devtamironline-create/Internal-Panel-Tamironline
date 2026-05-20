@@ -121,6 +121,33 @@ class DataToolsController extends Controller
         return $this->runArtisan('crm:resync-order-statuses-from-wp', $params);
     }
 
+    /** بازرسی فقط-خواندنی کیف‌پول یک تکنسین (تشخیص ناهنجاری). */
+    public function walletAudit(Request $request)
+    {
+        $request->validate([
+            'tech_id' => 'nullable|integer|min:1',
+            'mobile'  => 'nullable|string|max:20',
+            'show_all' => 'nullable|boolean',
+        ]);
+
+        if (! $request->filled('tech_id') && ! $request->filled('mobile')) {
+            return back()->with('error', 'یکی از فیلدهای «id تکنسین» یا «موبایل» الزامی است.');
+        }
+
+        $params = [];
+        if ($request->filled('tech_id')) {
+            $params['tech'] = (int) $request->input('tech_id');
+        }
+        if ($request->filled('mobile')) {
+            $params['--mobile'] = $request->input('mobile');
+        }
+        if ($request->boolean('show_all')) {
+            $params['--show-all'] = true;
+        }
+
+        return $this->runArtisan('crm:wallet-audit', $params);
+    }
+
     /** Toggle حالت فقط-خواندنی پنل تکنسین. */
     public function toggleTechPanelReadonly(Request $request)
     {

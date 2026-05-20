@@ -89,6 +89,31 @@
             </form>
         </div>
 
+        {{-- ───── بازرسی کیف‌پول تکنسین (read-only) ───── --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-3 md:col-span-2 border-2 border-sky-200 dark:border-sky-800">
+            <div>
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">🔍 بازرسی کیف‌پول تکنسین (فقط‌خواندنی)</h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    گزارش کامل از تراکنش‌های کیف‌پول، فاکتورها، running sum و تشخیص ناهنجاری (mismatch کش/واقعی، wp_id تکراری، علامت غلط، company_share=0). هیچ تغییری انجام نمی‌دهد.
+                </p>
+            </div>
+            <form method="POST" action="{{ route('crm.data-tools.wallet-audit') }}"
+                  class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                @csrf
+                <input type="number" name="tech_id" min="1" placeholder="id تکنسین (Laravel)"
+                       class="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                <input type="text" name="mobile" placeholder="یا موبایل (09xxxxxxxxx)"
+                       class="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 px-2">
+                    <input type="checkbox" name="show_all" value="1" class="w-4 h-4">
+                    نمایش همه تراکنش‌ها (پیش‌فرض: ۲۰ تای بزرگ + ۲۰ تای آخر)
+                </label>
+                <button type="submit" class="md:col-span-3 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm font-bold">
+                    اجرای بازرسی
+                </button>
+            </form>
+        </div>
+
         {{-- ───── Import تکنسین از WP ───── --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-3">
             <div>

@@ -316,6 +316,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('activate-by-name', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'activateTechniciansByName'])->name('activate-by-name');
         Route::post('resync-order-statuses', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncOrderStatuses'])->name('resync-order-statuses');
         Route::post('toggle-tech-readonly', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTechPanelReadonly'])->name('toggle-tech-readonly');
+        Route::post('wallet-audit', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'walletAudit'])->name('wallet-audit');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────

@@ -18,6 +18,7 @@ use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
+use Modules\CRM\Console\Commands\WalletAudit;
 use Modules\CRM\Livewire\OrderWizard;
 
 class CrmServiceProvider extends ServiceProvider
@@ -66,6 +67,7 @@ class CrmServiceProvider extends ServiceProvider
                 SnapshotTechnicians::class,
                 ImportTechnicianFromWp::class,
                 RebuildTechWallet::class,
+                WalletAudit::class,
             ]);
         }
     }
