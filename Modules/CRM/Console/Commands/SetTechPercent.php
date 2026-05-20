@@ -33,6 +33,7 @@ class SetTechPercent extends Command
                             {--mobile= : موبایل تکنسین}
                             {--wp= : wp_id تکنسین}
                             {--all : همه تکنسین‌ها (بدون فیلتر)}
+                            {--laravel-only : فقط تکنسین‌های Laravel-only (بدون wp_id)}
                             {--percent= : درصد External (سهم شرکت 0-100)}
                             {--per-all= : درصد Internal — tech_per_of_all (سهم شرکت 0-100)}
                             {--calc= : نوع محاسبه — external|internal}
@@ -55,14 +56,22 @@ class SetTechPercent extends Command
         $prefix = env('WP_DB_PREFIX', 'or_');
 
         // ── انتخاب تکنسین‌ها ───────────────────────────────────────
-        $query = Technician::query()->whereNotNull('wp_id');
+        $laravelOnly = (bool) $this->option('laravel-only');
+        $query = Technician::query();
+        if ($laravelOnly) {
+            // تکنسین‌های Laravel-only: بدون wp_id
+            $query->whereNull('wp_id');
+        } else {
+            $query->whereNotNull('wp_id');
+        }
+
         if ($id = $this->option('tech')) {
             $query->where('id', (int) $id);
         } elseif ($mobile = $this->option('mobile')) {
             $query->where('mobile', $mobile);
         } elseif ($wpId = $this->option('wp')) {
             $query->where('wp_id', (int) $wpId);
-        } elseif (! $this->option('all')) {
+        } elseif (! $this->option('all') && ! $laravelOnly) {
             // اگر هیچ فیلتری نداده، فقط لیست همه را نشان بده
             $this->showAll($wp, $prefix);
             return self::SUCCESS;
@@ -113,12 +122,15 @@ class SetTechPercent extends Command
         $updated = 0;
 
         foreach ($techs as $tech) {
-            // فعلی WP
-            $wpMeta = $wp->table($prefix.'usermeta')
-                ->where('user_id', $tech->wp_id)
-                ->whereIn('meta_key', ['percent', 'tech_per_of_all', 'type_of_calc_tech'])
-                ->pluck('meta_value', 'meta_key')
-                ->toArray();
+            // فعلی WP — اگر wp_id ندارد (Laravel-only)، WP meta خالی
+            $wpMeta = [];
+            if ($tech->wp_id) {
+                $wpMeta = $wp->table($prefix.'usermeta')
+                    ->where('user_id', $tech->wp_id)
+                    ->whereIn('meta_key', ['percent', 'tech_per_of_all', 'type_of_calc_tech'])
+                    ->pluck('meta_value', 'meta_key')
+                    ->toArray();
+            }
 
             $name = mb_substr($tech->firstname_tech ?: trim($tech->first_name . ' ' . $tech->last_name), 0, 20);
 
@@ -155,7 +167,8 @@ class SetTechPercent extends Command
             }
 
             // ── اعمال WP ─────────────────────────────────────────
-            if (! $panelOnly) {
+            // اگر تکنسین wp_id ندارد (Laravel-only)، WP کاری نمی‌کنیم
+            if (! $panelOnly && $tech->wp_id) {
                 $wpUpdate = [];
                 if ($newPercent !== null) $wpUpdate['percent'] = (string) $newPercent;
                 if ($newPerAll !== null)  $wpUpdate['tech_per_of_all'] = (string) $newPerAll;
