@@ -776,8 +776,17 @@ export default async function HomePage() {
 | C6. Social | ✅ | `GET /v1/pages/contact` → `sections.social` |
 | C7. FAQ | ✅ | `GET /v1/pages/contact` → `sections.faq.faq_ids_items` |
 
+### Layout (هدر، فوتر، نوار ویژگی‌ها)
+
+| المان | API | روش |
+|---|---|---|
+| Header (لوگو، منو، CTA) | ✅ | `GET /v1/pages/layout` → `sections.header` |
+| Footer (لوگو، توضیح، گروه‌ها، شبکه‌های اجتماعی، کپی‌رایت، انماد) | ✅ | `GET /v1/pages/layout` → `sections.footer` |
+| Service Features (نوار ویژگی‌های ثابت) | ✅ | `GET /v1/pages/layout` → `sections.service_features` |
+
 **نکته:** برای صفحات کامل، فرانت می‌تواند یک fetch به `GET /v1/pages/{slug}`
-بزند و تمام سکشن‌های آن صفحه را یکجا بگیرد.
+بزند و تمام سکشن‌های آن صفحه را یکجا بگیرد. Layout هم یک‌بار در `app/layout.tsx`
+fetch می‌شود و در همه‌ی صفحات استفاده می‌شود — جزئیات کامل در §۱۲.
 
 ---
 
@@ -981,3 +990,439 @@ function ServiceCard({ s, i }: { s: Service; i: number }) {
 
 یک رکورد، صدها صفحه.
 
+
+---
+
+## ۱۲) اتصال هدر و فوتر سایت (Layout)
+
+سایت یک **هدر** و **فوتر** ثابت دارد که در همه‌ی صفحات تکرار می‌شود. به‌علاوه یک
+**نوار ویژگی‌های ثابت** (Service Features Marquee) که زیر هدر یا داخل صفحات
+نمایش داده می‌شود. همه‌ی این سه از یک endpoint می‌آیند:
+
+```
+GET /v1/pages/layout
+```
+
+### ۱۲.۱ ساختار پاسخ کامل
+
+**Request:**
+```
+GET /v1/pages/layout
+```
+
+**Response 200:**
+```json
+{
+  "slug": "layout",
+  "sections": {
+    "header": {
+      "logo": { "desktop": "https://panel.tamironline.com/storage/site/layout/logo.png", "mobile": "https://panel.tamironline.com/storage/site/layout/logo-mobile.png" },
+      "logo_alt": "تعمیرآنلاین",
+      "cta_label": "ثبت سفارش",
+      "cta_url": "/order",
+      "phone_label": "پشتیبانی",
+      "phone_number": "۰۲۱-۴۵۳۹۶",
+      "nav_items": [
+        { "label": "صفحه اصلی", "href": "/" },
+        { "label": "درباره ما",   "href": "/about" },
+        { "label": "تماس با ما",  "href": "/contact" },
+        { "label": "بلاگ",        "href": "/blog" }
+      ]
+    },
+    "footer": {
+      "logo": { "desktop": "https://...", "mobile": "https://..." },
+      "description": "تعمیرآنلاین، خدمات تعمیر لوازم خانگی در محل با بیش از ۸ سال سابقه.",
+      "groups": [
+        { "title": "خدمات", "links": "تعمیر لباس‌شویی|/devices/washing-machine, تعمیر ظرفشویی|/devices/dishwasher" },
+        { "title": "شرکت",  "links": "درباره ما|/about, تماس با ما|/contact, بلاگ|/blog" }
+      ],
+      "social": [
+        { "platform": "instagram", "icon": "instagram", "url": "https://instagram.com/tamironlinecom" },
+        { "platform": "youtube",   "icon": "youtube",   "url": "https://youtube.com/@tamironlinecom" },
+        { "platform": "aparat",    "icon": "video",     "url": "https://aparat.com/tamironline" }
+      ],
+      "copyright_text": "تمام حقوق مادی و معنوی این وب‌سایت متعلق به تعمیرآنلاین می‌باشد.",
+      "enamad_code": "<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/...'></a>"
+    },
+    "service_features": {
+      "aria_label": "ویژگی‌های ما",
+      "speed": 8,
+      "items": [
+        { "icon_key": "shield",      "label": "گارانتی ۶ ماهه کتبی", "bg": "#ecfdf5", "fg": "#047857", "border": "#a7f3d0" },
+        { "icon_key": "clock",       "label": "اعزام در ۳ ساعت",     "bg": "#eff6ff", "fg": "#1d4ed8", "border": "#bfdbfe" },
+        { "icon_key": "user-check",  "label": "تکنسین مجرب",          "bg": "#f5f3ff", "fg": "#6d28d9", "border": "#ddd6fe" },
+        { "icon_key": "wrench",      "label": "قطعات اصلی",           "bg": "#fffbeb", "fg": "#a16207", "border": "#fde68a" },
+        { "icon_key": "map-pin",     "label": "تعمیر در محل",         "bg": "#fff1f2", "fg": "#be123c", "border": "#fecdd3" },
+        { "icon_key": "credit-card", "label": "قیمت شفاف",            "bg": "#ecfeff", "fg": "#0e7490", "border": "#a5f3fc" },
+        { "icon_key": "thumbs-up",   "label": "رضایت ۹۸٪ مشتریان",    "bg": "#ffedd5", "fg": "#c2410c", "border": "#fed7aa" },
+        { "icon_key": "sparkles",    "label": "خدمات تخصصی",          "bg": "#fdf4ff", "fg": "#a21caf", "border": "#f5d0fe" },
+        { "icon_key": "award",       "label": "تجربه ۸+ سال",         "bg": "#f0fdfa", "fg": "#0f766e", "border": "#99f6e4" }
+      ]
+    }
+  }
+}
+```
+
+### ۱۲.۲ فیلدها و رفتار خاص
+
+#### Header
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `logo.desktop` / `logo.mobile` | string \| null | URL کامل (resolve شده توسط سرور). اگر mobile خالی است، desktop را در همه‌ی viewportها استفاده کنید. |
+| `logo_alt` | string \| null | متن جایگزین تصویر |
+| `cta_label` | string \| null | متن دکمه CTA (مثلاً «ثبت سفارش») |
+| `cta_url` | string \| null | مسیر — می‌تواند `/order` یا URL کامل باشد |
+| `phone_label` | string \| null | متن بالای شماره تلفن (مثلاً «پشتیبانی») |
+| `phone_number` | string \| null | شماره تلفن — می‌توانید با `tel:` به‌صورت لینک تماس کنید |
+| `nav_items[].label` | string | متن لینک منو |
+| `nav_items[].href` | string | مسیر داخلی Next.js یا URL کامل |
+
+#### Footer
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `logo.desktop` / `logo.mobile` | string \| null | لوگوی فوتر (در صورت داشتن طرح متفاوت) |
+| `description` | string \| null | توضیح کوتاه شرکت |
+| `groups[].title` | string | عنوان ستون |
+| `groups[].links` | string | لیست لینک‌ها به‌صورت `label|href` جدا با کاما (parse توسط فرانت — مثال در §۱۲.۳) |
+| `social[].platform` | string | شناسه (instagram, telegram, ...) |
+| `social[].icon` | string \| null | کلید آیکن — برای مپ به Lucide |
+| `social[].url` | string | URL کامل (validation: strict) |
+| `copyright_text` | string \| null | متن کپی‌رایت پایین |
+| `enamad_code` | string \| null | HTML خام نشان اعتماد الکترونیکی — با `dangerouslySetInnerHTML` رندر کنید |
+
+#### Service Features (نوار ویژگی‌ها)
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `aria_label` | string \| null | متن aria-label برای دسترس‌پذیری |
+| `speed` | int \| null | سرعت اسکرول (پیش‌فرض 8) |
+| `items[].icon_key` | string | کلید آیکن Lucide به‌صورت kebab-case (`shield`, `clock`, `user-check`, ...) |
+| `items[].label` | string | متن نمایش |
+| `items[].bg` | string \| null | رنگ پس‌زمینه (hex) |
+| `items[].fg` | string \| null | رنگ متن (hex) |
+| `items[].border` | string \| null | رنگ حاشیه (hex) |
+
+**Cache-Control:** `public, max-age=300, s-maxage=300`
+
+### ۱۲.۳ پیاده‌سازی پیشنهادی در Next.js — `app/layout.tsx`
+
+Layout فقط **یک‌بار** در root layout fetch می‌شود و بین تمام صفحات shared است:
+
+```typescript
+// frontend/src/lib/api/layout.ts
+export type LayoutData = {
+  header: {
+    logo: { desktop: string | null; mobile: string | null };
+    logo_alt: string | null;
+    cta_label: string | null;
+    cta_url: string | null;
+    phone_label: string | null;
+    phone_number: string | null;
+    nav_items: { label: string; href: string }[];
+  } | null;
+  footer: {
+    logo: { desktop: string | null; mobile: string | null };
+    description: string | null;
+    groups: { title: string; links: string }[];
+    social: { platform: string; icon: string | null; url: string }[];
+    copyright_text: string | null;
+    enamad_code: string | null;
+  } | null;
+  service_features: {
+    aria_label: string | null;
+    speed: number | null;
+    items: {
+      icon_key: string;
+      label: string;
+      bg: string | null;
+      fg: string | null;
+      border: string | null;
+    }[];
+  } | null;
+};
+
+export async function getLayout(): Promise<LayoutData> {
+  const res = await fetch(`${process.env.API_BASE_URL}/v1/pages/layout`, {
+    next: { revalidate: 300, tags: ['layout'] },
+  });
+  if (!res.ok) return { header: null, footer: null, service_features: null };
+  const json = await res.json();
+  return json.sections ?? { header: null, footer: null, service_features: null };
+}
+```
+
+```typescript
+// frontend/src/app/layout.tsx
+import { getLayout } from '@/lib/api/layout';
+import { SiteHeader } from '@/components/layout/Header';
+import { SiteFooter } from '@/components/layout/Footer';
+import { FeatureMarquee } from '@/components/layout/FeatureMarquee';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { header, footer, service_features } = await getLayout();
+
+  return (
+    <html lang="fa" dir="rtl">
+      <body>
+        <SiteHeader data={header} />
+        {service_features && <FeatureMarquee data={service_features} />}
+        {children}
+        <SiteFooter data={footer} />
+      </body>
+    </html>
+  );
+}
+```
+
+### ۱۲.۴ نمونه‌ی کامپوننت Header
+
+```tsx
+// frontend/src/components/layout/Header.tsx
+import Link from 'next/link';
+import Image from 'next/image';
+import type { LayoutData } from '@/lib/api/layout';
+
+export function SiteHeader({ data }: { data: LayoutData['header'] }) {
+  if (!data) return null;
+  const logo = data.logo?.desktop || null;
+
+  return (
+    <header className="sticky top-0 z-50 bg-white border-b">
+      <div className="container-x flex items-center justify-between py-3">
+        {logo && (
+          <Link href="/">
+            <Image src={logo} alt={data.logo_alt ?? 'لوگو'} width={140} height={40} priority />
+          </Link>
+        )}
+
+        <nav className="hidden md:flex gap-6">
+          {data.nav_items?.map((item) => (
+            <Link key={item.href} href={item.href} className="text-sm font-medium hover:text-blue-600">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-3">
+          {data.phone_number && (
+            <a href={`tel:${data.phone_number.replace(/[^\d+]/g, '')}`} className="text-sm">
+              <span className="text-gray-500">{data.phone_label}</span>{' '}
+              <span className="font-bold">{data.phone_number}</span>
+            </a>
+          )}
+          {data.cta_url && data.cta_label && (
+            <Link href={data.cta_url} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">
+              {data.cta_label}
+            </Link>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+
+### ۱۲.۵ نمونه‌ی کامپوننت Footer
+
+پارس لینک‌های گروه (`label|href` جدا با کاما):
+
+```tsx
+// frontend/src/components/layout/Footer.tsx
+import Link from 'next/link';
+import type { LayoutData } from '@/lib/api/layout';
+
+function parseLinks(raw: string | undefined | null): { label: string; href: string }[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const [label, href] = s.split('|').map((x) => x.trim());
+      return label && href ? { label, href } : null;
+    })
+    .filter((x): x is { label: string; href: string } => x !== null);
+}
+
+export function SiteFooter({ data }: { data: LayoutData['footer'] }) {
+  if (!data) return null;
+
+  return (
+    <footer className="bg-gray-900 text-white mt-16">
+      <div className="container-x py-12">
+        {data.description && (
+          <p className="text-sm text-gray-300 mb-8 max-w-2xl">{data.description}</p>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          {data.groups?.map((g, i) => (
+            <div key={i}>
+              <h3 className="font-bold mb-3">{g.title}</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                {parseLinks(g.links).map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-white">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {data.social && data.social.length > 0 && (
+          <div className="flex gap-4 mb-6">
+            {data.social.map((s) => (
+              <a key={s.platform} href={s.url} target="_blank" rel="noopener" aria-label={s.platform}>
+                <SocialIcon name={s.icon ?? s.platform} />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {data.enamad_code && (
+          <div
+            className="mb-6 inline-block"
+            dangerouslySetInnerHTML={{ __html: data.enamad_code }}
+          />
+        )}
+
+        {data.copyright_text && (
+          <div className="text-xs text-gray-500 border-t border-gray-800 pt-4">
+            {data.copyright_text}
+          </div>
+        )}
+      </div>
+    </footer>
+  );
+}
+```
+
+### ۱۲.۶ نمونه‌ی FeatureMarquee
+
+این کامپوننت در روت layout زیر هدر یا داخل صفحات کاربرد دارد. اگر فرانت
+از قبل `FeatureMarquee` تعریف شده، فقط دیتا را مپ کنید:
+
+```tsx
+// frontend/src/components/layout/FeatureMarquee.tsx
+import type { LayoutData } from '@/lib/api/layout';
+import { iconMap } from '@/lib/icons';
+
+export function FeatureMarquee({ data }: { data: LayoutData['service_features'] }) {
+  if (!data?.items?.length) return null;
+
+  return (
+    <div className="bg-gray-50 border-y" aria-label={data.aria_label ?? 'ویژگی‌ها'}>
+      <div
+        className="marquee flex gap-3 py-3 overflow-hidden"
+        style={{ animationDuration: `${(data.speed ?? 8) * 5}s` }}
+      >
+        {data.items.map((f, i) => {
+          const Icon = iconMap[f.icon_key];
+          return (
+            <div
+              key={i}
+              className="shrink-0 flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold border"
+              style={{
+                background: f.bg ?? '#f9fafb',
+                color: f.fg ?? '#111827',
+                borderColor: f.border ?? '#e5e7eb',
+              }}
+            >
+              {Icon && <Icon className="h-4 w-4" strokeWidth={1.8} />}
+              <span>{f.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+```
+
+### ۱۲.۷ Revalidation و کش
+
+Layout نسبتاً ایستا است ولی گاهی ادمین تغییر می‌دهد. توصیه:
+
+```typescript
+// نسبت به TTL سرور (s-maxage=300)، فرانت هم 300 ثانیه ISR
+export const revalidate = 300;
+```
+
+برای revalidation فوری بعد از تغییر در پنل ادمین، فرانت می‌تواند یک webhook
+endpoint تعریف کند که Laravel بعد از ذخیره‌ی layout صدا بزند و
+`revalidateTag('layout')` اجرا شود. این بخش هنوز پیاده نشده — اگر نیاز شد
+خبر بدهید.
+
+### ۱۲.۸ پیکربندی ادمین
+
+ادمین layout را از این مسیر ویرایش می‌کند:
+
+```
+/admin/site/page-content/layout
+```
+
+سه کارت می‌بیند: **هدر**، **فوتر**، **نوار ویژگی‌ها**. هر کارت یک toggle
+«منتشر شود» دارد. اگر toggle خاموش بود، آن سکشن در پاسخ API نمی‌آید
+(فرانت با `null` مواجه می‌شود → fallback به استاتیک).
+
+---
+
+## ۱۳) نکات لینک‌ها — `site_url` validator
+
+سرور برای فیلدهای لینک از قاعده‌ی `site_url` استفاده می‌کند که هم مسیر داخلی
+و هم URL کامل را قبول می‌کند:
+
+| ورودی | پذیرفته می‌شود؟ |
+|---|---|
+| `/order` | ✅ مسیر داخلی Next.js |
+| `/devices/washing-machine` | ✅ مسیر تو در تو |
+| `https://example.com` | ✅ URL کامل |
+| `http://example.com` | ✅ URL کامل (http) |
+| `mailto:support@tamironline.com` | ✅ پروتکل ایمیل |
+| `tel:02145396` | ✅ پروتکل تلفن |
+| `//evil.com` | ❌ protocol-relative (امنیتی) |
+| `javascript:...` | ❌ ممنوع |
+| `order` (بدون اسلش) | ❌ نامعتبر |
+
+**فیلدهایی که از `site_url` استفاده می‌کنند** (مسیر داخلی مجاز):
+- `home.hero.cta_url`
+- `home.promo.link_url`
+- `about.promo.link_url`
+- `layout.header.cta_url`
+- `layout.header.nav_items[].href`
+- `contact.channels.items[].link_url`
+- `responsive_image.desktop` / `responsive_image.mobile`
+
+**فیلدهایی که strict URL هستند** (فقط URL کامل):
+- `layout.footer.social[].url`
+- `contact.social.items[].url`
+- `contact.map.neshan_url`
+- `testimonials.audio_url`
+
+---
+
+## ۱۴) Endpoints — جریان کامل برای یک سایت کامل
+
+برای رندر کل سایت (Home + About + Contact)، فرانت در حالت ایده‌آل این
+درخواست‌ها را می‌زند (همگی به‌جز POST‌ها، با ISR):
+
+```
+1.  GET /v1/pages/layout          ← یک‌بار در root layout
+2.  GET /v1/pages/home            ← صفحه‌ی اصلی
+3.  GET /v1/pages/about           ← درباره ما
+4.  GET /v1/pages/contact         ← تماس با ما
+5.  GET /v1/devices/{slug}        ← صفحه‌ی هر دستگاه
+6.  GET /v1/catalog/devices       ← صفحه‌ی فهرست دستگاه‌ها
+7.  GET /v1/catalog/brands?featured=true  ← اگر در Home از endpoint جدا می‌خواهید
+8.  GET /v1/testimonials          ← اگر Carousel جداگانه دارید
+9.  GET /v1/activity/recent       ← اگر Live Activity جداگانه نیاز است
+10. GET /v1/site/about-stats      ← اگر A2 را جداگانه fetch می‌کنید
+```
+
+> اکثر اطلاعات از داخل `/v1/pages/{slug}` می‌آیند. endpoints catalog و
+> testimonials و activity فقط برای موارد خاص (Carouselهای داینامیک،
+> Live updates، صفحه فهرست) لازم می‌شوند.
