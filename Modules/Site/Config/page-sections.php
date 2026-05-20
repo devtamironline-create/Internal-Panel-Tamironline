@@ -269,6 +269,21 @@ return [
                 ],
             ],
 
+            'seo_footer' => [
+                'label'       => 'متن SEO پایین (Read More)',
+                'description' => 'بلوک متن سئوی پایین صفحات (کنار فوتر) — قابل expand/collapse در فرانت.',
+                'fields' => [
+                    'title'      => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'paragraphs' => [
+                        'label' => 'پاراگراف‌ها',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'text' => ['label' => 'متن پاراگراف', 'type' => 'textarea', 'rules' => 'required|string|max:3000'],
+                        ],
+                    ],
+                ],
+            ],
+
         ],
     ],
 
