@@ -231,8 +231,10 @@ Cache-Control: public, max-age=300, s-maxage=300
 | `header` | logo{desktop, mobile}, logo_alt, cta_label, cta_url, phone_label, phone_number, nav_items[label, href] |
 | `footer` | logo{desktop, mobile}, description, groups[title, links], social[platform, icon, url], copyright_text, enamad_code |
 | `service_features` | aria_label, speed, items[icon_key, label, bg, fg, border] |
+| `seo_footer` | title, paragraphs[text] |
 
-> **service_features** نوار افقی ویژگی‌ها (FeatureMarquee) است که فرانت روی همه‌ی صفحات تکرار می‌کند. ادمین یک‌بار آن را در `/admin/site/page-content/layout` پر می‌کند.
+> **service_features** نوار افقی ویژگی‌ها (FeatureMarquee) که فرانت روی همه‌ی صفحات تکرار می‌کند.
+> **seo_footer** بلوک متن سئوی پایین صفحه (با expand/collapse) — جزئیات در §۱۲.۲.
 
 ##### Contact (`/v1/pages/contact`)
 | section_key | فیلدها |
@@ -297,29 +299,37 @@ Cache-Control: public, max-age=300, s-maxage=300
 
 ### 4.4 `GET /v1/activity/recent`
 
-فعالیت‌های زنده — سکشن H2 صفحه‌ی Home. منبع داده: سفارشات فعال CRM با وضعیت `completed`، `open`، `coordinated`، `transit` در ۴۸ ساعت اخیر.
+فعالیت‌های زنده‌ی سایت — برای ایجاد حس فعال‌بودن. **دیتا تولیدی (فیک) است**، نه از سفارشات واقعی. منبع: ترکیب دستگاه‌های فعال CRM × لیست مناطق `config('site.activity-areas')` × زمان تصادفی.
 
 **Query params:**
 
-| پارامتر | نوع | پیش‌فرض | قاعده |
+| پارامتر | نوع | پیش‌فرض | توضیح |
 |---|---|---|---|
 | `limit` | int | 10 | 1..50 |
+| `device_slug` | string \| — | — | محدود به یک دستگاه (برای صفحه‌ی دستگاه) |
+| `brand_slug` | string \| — | — | محدود به یک برند (برای صفحه‌ی برند) |
 
-**Request example:**
-```
-GET /v1/activity/recent?limit=10
-```
+**کاربردهای فیلتر:**
+
+| صفحه فرانت | درخواست |
+|---|---|
+| Home (`/`) | `GET /v1/activity/recent?limit=10` |
+| Device page (`/devices/washing-machine`) | `GET /v1/activity/recent?device_slug=washing-machine&limit=10` |
+| Brand page (`/brands/lg`) | `GET /v1/activity/recent?brand_slug=lg&limit=10` |
+| Device + Brand combo | `GET /v1/activity/recent?device_slug=washing-machine&brand_slug=lg` |
 
 **Response 200:**
 ```json
 {
   "data": [
     {
-      "device_slug": "lebas-shooyi",
-      "device_label": "لباسشویی",
-      "area": "تهران",
+      "device_slug": "washing-machine",
+      "device_label": "تعمیر لباس‌شویی ال‌جی",
+      "brand_slug": "lg",
+      "brand_label": "ال‌جی",
+      "area": "تهران، سعادت‌آباد",
       "status": "completed",
-      "minutes_ago": 12
+      "minutes_ago": 4
     }
   ]
 }
@@ -330,20 +340,23 @@ GET /v1/activity/recent?limit=10
 | فیلد | نوع | توضیح |
 |---|---|---|
 | `device_slug` | string | برای لینک به صفحه‌ی دستگاه |
-| `device_label` | string | متن نمایش فارسی (نام دستگاه از CRM) |
-| `area` | string | فقط نام شهر — **بدون آدرس کامل** |
-| `status` | enum | `completed` \| `in_progress` |
-| `minutes_ago` | int | تفاوت دقیقه‌ای — سرور محاسبه می‌کند |
+| `device_label` | string | متن نمایش — اگر `brand_slug` داده شده، `"تعمیر {device} {brand}"`، در غیر این صورت `"تعمیر {device}"` |
+| `brand_slug` | string \| null | فقط در پاسخ‌های فیلترشده با `brand_slug` پر است |
+| `brand_label` | string \| null | همانند بالا |
+| `area` | string | یکی از مناطق تهران/کرج |
+| `status` | enum | `completed` (۷۵٪) \| `in_progress` (۲۵٪) |
+| `minutes_ago` | int | توزیع: ۶۰٪ < ۳۰ دقیقه، ۳۰٪ < ۶ ساعت، ۱۰٪ < ۴۸ ساعت |
 
 **Headers:**
 ```http
 Cache-Control: public, max-age=60, s-maxage=60
 ```
 
-**نکات امنیتی پیاده‌شده در سرور:**
-- نام/شماره/آدرس مشتری در پاسخ نیست
-- `area` فقط شهر است
-- وضعیت‌های جزئی CRM (مثلاً معلق، رد، کنسل، برگشتی) فیلتر شده‌اند
+**نکات پیاده‌سازی سرور:**
+- داده تصادفی ولی **با seed مبتنی بر دقیقه** — در پنجره‌ی ۶۰ ثانیه‌ای کش، dataset ثابت می‌ماند سپس rotate می‌شود
+- اگر `device_slug` یا `brand_slug` معتبر نباشد، `data: []` برمی‌گردد
+- منطقه‌ها فقط شهر/محله هستند، آدرس کامل نیست
+- نام مشتری، شماره تلفن یا اطلاعات شناسایی هیچ‌گاه در پاسخ نیست (دیتا فیک)
 
 ---
 
@@ -1104,6 +1117,60 @@ GET /v1/pages/layout
 | `items[].fg` | string \| null | رنگ متن (hex) |
 | `items[].border` | string \| null | رنگ حاشیه (hex) |
 
+#### SEO Footer (متن سئوی پایین صفحه)
+
+بلوک متن طولانی سئو که در پایین صفحات (معمولاً کنار/زیر فوتر اصلی) با
+امکان expand/collapse نمایش داده می‌شود.
+
+| فیلد | نوع | توضیح |
+|---|---|---|
+| `title` | string \| null | تیتر بلوک (مثلاً «درباره تعمیرآنلاین») |
+| `paragraphs[].text` | string | متن هر پاراگراف — تا ۳۰۰۰ کاراکتر |
+
+**نمونه‌ی پاسخ:**
+```json
+"seo_footer": {
+  "title": "درباره تعمیرآنلاین",
+  "paragraphs": [
+    { "text": "تعمیرآنلاین یکی از معتبرترین مجموعه‌ها ..." },
+    { "text": "تمامی خدمات با گارانتی کتبی ۶ ماهه ..." },
+    { "text": "علاوه بر خدمات تعمیر، تعمیرآنلاین خدمات نصب ..." }
+  ]
+}
+```
+
+**رفتار پیشنهادی فرانت:**
+- فقط پاراگراف اول را نشان دهید
+- دکمه‌ی «ادامه‌ی متن» برای expand کردن
+- اگر آرایه‌ی paragraphs خالی یا سکشن منتشر نشده باشد، بلوک را اصلاً نمایش ندهید
+
+```tsx
+// frontend/src/components/layout/SeoFooter.tsx
+import { useState } from 'react';
+import type { LayoutData } from '@/lib/api/layout';
+
+export function SeoFooter({ data }: { data: NonNullable<LayoutData>['seo_footer'] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!data?.paragraphs?.length) return null;
+
+  const visible = expanded ? data.paragraphs : data.paragraphs.slice(0, 1);
+
+  return (
+    <section aria-label={data.title ?? 'درباره'} className="seo-footer">
+      {data.title && <h2>{data.title}</h2>}
+      <div>
+        {visible.map((p, i) => <p key={i}>{p.text}</p>)}
+      </div>
+      {data.paragraphs.length > 1 && (
+        <button onClick={() => setExpanded(v => !v)}>
+          {expanded ? 'بستن' : 'ادامه‌ی متن'}
+        </button>
+      )}
+    </section>
+  );
+}
+```
+
 **Cache-Control:** `public, max-age=300, s-maxage=300`
 
 ### ۱۲.۳ پیاده‌سازی پیشنهادی در Next.js — `app/layout.tsx`
@@ -1141,15 +1208,19 @@ export type LayoutData = {
       border: string | null;
     }[];
   } | null;
+  seo_footer: {
+    title: string | null;
+    paragraphs: { text: string }[];
+  } | null;
 };
 
 export async function getLayout(): Promise<LayoutData> {
   const res = await fetch(`${process.env.API_BASE_URL}/v1/pages/layout`, {
     next: { revalidate: 300, tags: ['layout'] },
   });
-  if (!res.ok) return { header: null, footer: null, service_features: null };
+  if (!res.ok) return { header: null, footer: null, service_features: null, seo_footer: null };
   const json = await res.json();
-  return json.sections ?? { header: null, footer: null, service_features: null };
+  return json.sections ?? { header: null, footer: null, service_features: null, seo_footer: null };
 }
 ```
 
@@ -1161,7 +1232,7 @@ import { SiteFooter } from '@/components/layout/Footer';
 import { FeatureMarquee } from '@/components/layout/FeatureMarquee';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { header, footer, service_features } = await getLayout();
+  const { header, footer, service_features, seo_footer } = await getLayout();
 
   return (
     <html lang="fa" dir="rtl">
@@ -1169,6 +1240,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteHeader data={header} />
         {service_features && <FeatureMarquee data={service_features} />}
         {children}
+        {seo_footer && <SeoFooter data={seo_footer} />}
         <SiteFooter data={footer} />
       </body>
     </html>
