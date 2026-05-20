@@ -301,6 +301,18 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('tech-snapshot/download', [SyncSettingsController::class, 'downloadTechSnapshot'])->name('tech-snapshot.download');
     });
 
+    // ─── ابزارهای داده (import / resync / recompute) — برای مسئول داده ───
+    Route::middleware('can:manage-crm-sync')->prefix('data-tools')->name('data-tools.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'index'])->name('index');
+        Route::post('import-tech-from-wp', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'importTechFromWp'])->name('import-tech-from-wp');
+        Route::post('rebuild-tech-wallet', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'rebuildTechWallet'])->name('rebuild-tech-wallet');
+        Route::post('resync-technicians', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncTechnicians'])->name('resync-technicians');
+        Route::post('resync-invoices', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncInvoices'])->name('resync-invoices');
+        Route::post('resync-wallet-transactions', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncWalletTransactions'])->name('resync-wallet-transactions');
+        Route::post('recompute-balances', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'recomputeBalances'])->name('recompute-balances');
+        Route::post('activate-by-name', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'activateTechniciansByName'])->name('activate-by-name');
+    });
+
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────
     Route::middleware('can:manage-crm-sync')->prefix('sync-logs')->name('sync-logs.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\SyncLogController::class, 'index'])->name('index');
