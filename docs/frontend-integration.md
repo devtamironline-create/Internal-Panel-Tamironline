@@ -50,12 +50,13 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 |---|---|---|---|---|---|---|---|
 | 1 | POST | `/v1/contact-messages` | internal.token | 10/min | — | P0 | ✅ |
 | 2 | GET | `/v1/pages/{slug}` | — | 60/min | 300s | P0 | ✅ |
-| 3 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
-| 4 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
-| 5 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
-| 6 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
-| 7 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 8 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 3 | GET | `/v1/devices/{slug}` | — | 60/min | 300s | P0 | ✅ |
+| 4 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
+| 5 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
+| 6 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
+| 7 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
+| 8 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
+| 9 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
 
 ---
 
@@ -224,11 +225,14 @@ Cache-Control: public, max-age=300, s-maxage=300
 | `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
 | `promo` | title, subtitle, image{desktop, mobile}, link_url, link_label |
 
-##### Layout (`/v1/pages/layout`) — هدر و فوتر
+##### Layout (`/v1/pages/layout`) — هدر، فوتر و ویژگی‌های مشترک
 | section_key | فیلدها |
 |---|---|
 | `header` | logo{desktop, mobile}, logo_alt, cta_label, cta_url, phone_label, phone_number, nav_items[label, href] |
 | `footer` | logo{desktop, mobile}, description, groups[title, links], social[platform, icon, url], copyright_text, enamad_code |
+| `service_features` | aria_label, speed, items[icon_key, label, bg, fg, border] |
+
+> **service_features** نوار افقی ویژگی‌ها (FeatureMarquee) است که فرانت روی همه‌ی صفحات تکرار می‌کند. ادمین یک‌بار آن را در `/admin/site/page-content/layout` پر می‌کند.
 
 ##### Contact (`/v1/pages/contact`)
 | section_key | فیلدها |
@@ -242,7 +246,56 @@ Cache-Control: public, max-age=300, s-maxage=300
 
 ---
 
-### 4.3 `GET /v1/activity/recent`
+### 4.3 `GET /v1/devices/{slug}`
+
+محتوای صفحه‌ی یک دستگاه — `/devices/{slug}` در فرانت Next.js.
+
+**Path params:**
+
+| پارامتر | نوع | قاعده |
+|---|---|---|
+| `slug` | string | kebab-case، مثل `washing-machine`، `dishwasher` |
+
+**Request example:**
+```
+GET /v1/devices/washing-machine
+```
+
+**Response 200:**
+```json
+{
+  "device": {
+    "id": 1,
+    "label": "تعمیر لباس‌شویی",
+    "slug": "washing-machine",
+    "href": "/devices/washing-machine",
+    "icon": "washing-machine",
+    "thumbnail": "https://panel.tamironline.com/storage/site/devices/wm.png",
+    "tone": "tone-blue"
+  },
+  "sections": {}
+}
+```
+
+**Response 404:** `{ "message": "Device not found" }` اگر slug در CRM موجود نباشد یا غیرفعال باشد.
+
+**فیلد `sections`:**
+- در حال حاضر خالی (`{}`) برمی‌گردد چون صفحه‌ی الگوی `device` در schema تعریف نشده.
+- اگر در آینده schema با page `device` گسترش یابد (سکشن‌های مشترک برای همه‌ی دستگاه‌ها)، آن سکشن‌ها اینجا برمی‌گردند و **Placeholderها بر اساس همین دستگاه جایگزین می‌شوند**.
+
+**Placeholderها در FAQ و Testimonial:**
+- اگر متن سوال در ادمین `تعمیر {device} چقدر زمان می‌برد؟` باشد
+- در پاسخ `/v1/devices/washing-machine` تبدیل می‌شود به: `تعمیر تعمیر لباس‌شویی چقدر زمان می‌برد؟`
+- لیست placeholderهای پشتیبانی‌شده در §۱۱
+
+**Headers:**
+```http
+Cache-Control: public, max-age=300, s-maxage=300
+```
+
+---
+
+### 4.4 `GET /v1/activity/recent`
 
 فعالیت‌های زنده — سکشن H2 صفحه‌ی Home. منبع داده: سفارشات فعال CRM با وضعیت `completed`، `open`، `coordinated`، `transit` در ۴۸ ساعت اخیر.
 
@@ -294,7 +347,7 @@ Cache-Control: public, max-age=60, s-maxage=60
 
 ---
 
-### 4.4 `GET /v1/testimonials`
+### 4.5 `GET /v1/testimonials`
 
 نظرات مشتریان — سکشن H5 (Home) و A6 (About) از یک endpoint مشترک.
 
@@ -347,7 +400,7 @@ Cache-Control: public, max-age=300, s-maxage=300
 
 ---
 
-### 4.5 `GET /v1/catalog/brands`
+### 4.6 `GET /v1/catalog/brands`
 
 برندهای تحت پوشش — سکشن H6 صفحه‌ی Home. منبع: جدول `crm_brands` در ماژول CRM.
 
@@ -408,7 +461,7 @@ Cache-Control: public, max-age=600, s-maxage=600
 
 ---
 
-### 4.6 `GET /v1/catalog/devices`
+### 4.7 `GET /v1/catalog/devices`
 
 دستگاه‌های قابل تعمیر — منبع: جدول `crm_devices` در ماژول CRM.
 
@@ -524,7 +577,7 @@ function ServiceIcon({ name }: { name: string | null }) {
 
 ---
 
-### 4.7 `GET /v1/site/about-stats`
+### 4.8 `GET /v1/site/about-stats`
 
 آمار صفحه‌ی About — سکشن A2.
 
@@ -563,7 +616,7 @@ Cache-Control: public, max-age=600, s-maxage=600
 
 ---
 
-### 4.8 `GET /v1/health`
+### 4.9 `GET /v1/health`
 
 سلامت سرویس برای health-check (CI/CD، Uptime monitoring).
 
@@ -844,3 +897,87 @@ function ServiceCard({ s, i }: { s: Service; i: number }) {
 - [ ] برای endpointهای کش‌دار، از `revalidate` در fetch استفاده شود
 - [ ] خطاهای 422 به‌صورت فیلد-به-فیلد روی فرم نمایش داده شوند
 - [ ] خطای 429 پیام «درخواست‌های مکرر» نشان دهد و دکمه disable شود تا `Retry-After` ثانیه
+
+---
+
+## ۱۱) دسته‌بندی FAQ/Testimonial و Placeholderها
+
+دو قابلیت پیشرفته که در ادمین قابل استفاده هستند و در پاسخ API منعکس می‌شوند.
+
+### ۱۱.۱ دسته‌بندی (Taxonomies)
+
+ادمین می‌تواند برای FAQ و Testimonial **دسته‌بندی** تعریف کند (مثلاً `پشتیبانی`، `گارانتی`، `هزینه`). هر آیتم می‌تواند به چند دسته متعلق باشد.
+
+**در ادمین:**
+- مسیر: `/admin/site/taxonomies/faq` و `/admin/site/taxonomies/testimonial`
+- در فرم FAQ و Testimonial، چک‌باکس دسته‌ها دیده می‌شود
+- در فرم محتوای صفحه (`/admin/site/page-content/{slug}`)، در سکشن `faq` ادمین می‌تواند **چند دسته انتخاب کند**
+
+**در API — `category_ids` در سکشن faq:**
+
+```json
+"faq": {
+  "title": "سوالات متداول",
+  "subtitle": "...",
+  "category_ids": [3, 1],
+  "category_ids_items": [
+    {
+      "id": 3,
+      "slug": "support",
+      "label": "پشتیبانی",
+      "items": [
+        { "id": "01HX...", "question": "...", "answer": "..." }
+      ]
+    },
+    {
+      "id": 1,
+      "slug": "warranty",
+      "label": "شرایط گارانتی",
+      "items": [
+        { "id": "01HZ...", "question": "...", "answer": "..." }
+      ]
+    }
+  ],
+  "faq_ids": [],
+  "faq_ids_items": []
+}
+```
+
+**فرانت چه کند؟**
+- اگر `category_ids_items` طول دارد → آن را به‌صورت **تب** رندر کند (هر تب = یک دسته)
+- اگر `faq_ids_items` طول دارد → آن را به‌صورت لیست تخت رندر کند
+- اگر هر دو پر هستند → اولویت با `category_ids_items` (تب)؛ `faq_ids_items` می‌تواند یک تب «منتخب» باشد
+- اگر هر دو خالی → فال‌بک به محتوای استاتیک فرانت
+
+ترتیب تب‌ها = ترتیب انتخاب ادمین.
+
+### ۱۱.۲ Placeholderها (متن داینامیک بر اساس صفحه)
+
+در متن `question`، `answer` و `topic`، ادمین می‌تواند از placeholder استفاده کند که در پاسخ API بر اساس صفحه‌ی فرانت جایگزین می‌شوند.
+
+**Placeholderها:**
+
+| Placeholder | جایگزین می‌شود با |
+|---|---|
+| `{device}` | نام فارسی دستگاه |
+| `{device_slug}` | اسلاگ دستگاه |
+| `{page_title}` | عنوان صفحه |
+
+**نکته:** جایگزینی فقط در `GET /v1/devices/{slug}` فعال است (چون context آنجا دستگاه مشخص است). در `/v1/pages/home`، `/v1/pages/about` و... متن دست‌نخورده می‌ماند.
+
+**مثال:**
+
+ادمین FAQ ثبت می‌کند: `تعمیر {device} چقدر زمان می‌برد؟`
+
+پاسخ `/v1/devices/washing-machine`:
+```json
+"question": "تعمیر لباس‌شویی چقدر زمان می‌برد؟"
+```
+
+پاسخ `/v1/devices/refrigerator`:
+```json
+"question": "تعمیر یخچال چقدر زمان می‌برد؟"
+```
+
+یک رکورد، صدها صفحه.
+
