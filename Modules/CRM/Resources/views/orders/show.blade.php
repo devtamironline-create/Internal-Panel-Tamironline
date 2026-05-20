@@ -336,7 +336,7 @@
                                 <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ $log->note }}</div>
                                 @endif
                                 @if($log->changer)
-                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">توسط: {{ $log->changer->name ?? '—' }}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">توسط: {{ $log->changer->full_name ?? '—' }}</div>
                                 @endif
                             </div>
                         </li>

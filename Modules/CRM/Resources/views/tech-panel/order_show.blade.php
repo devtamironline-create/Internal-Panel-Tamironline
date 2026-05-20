@@ -744,7 +744,7 @@
                                 @jdatetime($log->created_at)
                                 @if($log->changer)
                                     <span class="text-gray-300">·</span>
-                                    <span dir="rtl" class="text-gray-500">{{ $log->changer->name }}</span>
+                                    <span dir="rtl" class="text-gray-500">{{ $log->changer->full_name }}</span>
                                 @endif
                             </div>
                         </div>
