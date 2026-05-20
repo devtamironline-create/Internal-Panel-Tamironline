@@ -10,6 +10,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
+use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
@@ -68,6 +69,7 @@ class CrmServiceProvider extends ServiceProvider
                 ImportTechnicianFromWp::class,
                 RebuildTechWallet::class,
                 WalletAudit::class,
+                FixInvoicesFromWp::class,
             ]);
         }
     }
