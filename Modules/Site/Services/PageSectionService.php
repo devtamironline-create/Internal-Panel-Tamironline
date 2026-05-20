@@ -258,8 +258,8 @@ class PageSectionService
                     'desktop' => $desktop !== '' ? $desktop : null,
                     'mobile'  => $mobile  !== '' ? $mobile  : null,
                 ];
-                $rules["{$key}.desktop"] = 'nullable|url|max:500';
-                $rules["{$key}.mobile"]  = 'nullable|url|max:500';
+                $rules["{$key}.desktop"] = 'nullable|site_url|max:500';
+                $rules["{$key}.mobile"]  = 'nullable|site_url|max:500';
                 continue;
             }
 
