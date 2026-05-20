@@ -6,6 +6,7 @@ use Modules\Site\Http\Controllers\Api\V1\ActivityController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
+use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
 use Modules\Site\Http\Controllers\Api\V1\PageController;
 use Modules\Site\Http\Controllers\Api\V1\TestimonialController;
@@ -32,6 +33,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/pages/{slug}', [PageController::class, 'show'])
             ->whereAlpha('slug')
             ->name('api.v1.pages.show');
+        Route::get('/devices/{slug}', [DevicePageController::class, 'show'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.devices.show');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────

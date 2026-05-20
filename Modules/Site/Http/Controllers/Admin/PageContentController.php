@@ -9,6 +9,7 @@ use Illuminate\View\View;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\Site\Models\Faq;
+use Modules\Site\Models\Taxonomy;
 use Modules\Site\Models\Testimonial;
 use Modules\Site\Services\PageSectionService;
 
@@ -93,6 +94,12 @@ class PageContentController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'logo', 'is_active']),
+            'faq_categories' => Taxonomy::ofType(Taxonomy::TYPE_FAQ)
+                ->ordered()
+                ->get(['id', 'slug', 'name', 'is_active']),
+            'testimonial_categories' => Taxonomy::ofType(Taxonomy::TYPE_TESTIMONIAL)
+                ->ordered()
+                ->get(['id', 'slug', 'name', 'is_active']),
         ];
 
         return view('site::admin.page-content.edit', [

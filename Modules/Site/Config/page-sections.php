@@ -87,10 +87,15 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول (H8)',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'faq_ids'  => [
-                        'label'  => 'سوالات انتخاب‌شده از مخزن',
+                    'title'           => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle'        => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids'    => [
+                        'label'  => 'دسته‌بندی‌ها (در فرانت به‌صورت تب نمایش داده می‌شوند)',
+                        'type'   => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids'         => [
+                        'label'  => 'یا سوالات منفرد از مخزن',
                         'type'   => 'reference',
                         'source' => 'faqs',
                     ],
@@ -161,10 +166,15 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول About (A7)',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'faq_ids'  => [
-                        'label'  => 'سوالات انتخاب‌شده از مخزن',
+                    'title'        => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle'     => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids' => [
+                        'label'  => 'دسته‌بندی‌ها (تب)',
+                        'type'   => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids'      => [
+                        'label'  => 'یا سوالات منفرد',
                         'type'   => 'reference',
                         'source' => 'faqs',
                     ],
@@ -339,10 +349,15 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول Contact (C7)',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'faq_ids'  => [
-                        'label'  => 'سوالات انتخاب‌شده از مخزن',
+                    'title'        => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle'     => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids' => [
+                        'label'  => 'دسته‌بندی‌ها (تب)',
+                        'type'   => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids'      => [
+                        'label'  => 'یا سوالات منفرد',
                         'type'   => 'reference',
                         'source' => 'faqs',
                     ],

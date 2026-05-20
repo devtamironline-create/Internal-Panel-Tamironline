@@ -160,6 +160,10 @@
                                         از <a href="{{ route('crm.devices.index') }}" target="_blank" class="text-blue-600 hover:underline">دستگاه‌های CRM</a> انتخاب کنید. اگر هیچ‌کدام انتخاب نشود، همه‌ی دستگاه‌های فعال به‌صورت پیش‌فرض نمایش داده می‌شوند.
                                     @elseif($source === 'brands')
                                         از <a href="{{ route('crm.brands.index') }}" target="_blank" class="text-blue-600 hover:underline">برندهای CRM</a> انتخاب کنید.
+                                    @elseif($source === 'faq_categories')
+                                        دسته‌های انتخاب‌شده در فرانت به‌صورت تب نمایش داده می‌شوند. <a href="{{ route('site.admin.taxonomies.index', 'faq') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها</a>.
+                                    @elseif($source === 'testimonial_categories')
+                                        دسته‌های انتخاب‌شده در فرانت به‌صورت تب نمایش داده می‌شوند. <a href="{{ route('site.admin.taxonomies.index', 'testimonial') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها</a>.
                                     @endif
                                 </p>
                                 <div class="max-h-64 overflow-y-auto space-y-1">
@@ -180,6 +184,9 @@
                                                     @if($ref->icon) <span class="text-gray-400">[{{ $ref->icon }}]</span> @endif
                                                     @if($ref->tone) <span class="text-gray-400">{{ $ref->tone }}</span> @endif
                                                 @elseif($source === 'brands')
+                                                    <span class="font-semibold">{{ $ref->name }}</span>
+                                                    <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
+                                                @elseif($source === 'faq_categories' || $source === 'testimonial_categories')
                                                     <span class="font-semibold">{{ $ref->name }}</span>
                                                     <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
                                                 @endif

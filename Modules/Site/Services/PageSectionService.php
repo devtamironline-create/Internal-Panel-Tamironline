@@ -85,7 +85,7 @@ class PageSectionService
      *
      * @return array<string, mixed>
      */
-    public function loadForPublic(string $pageSlug): array
+    public function loadForPublic(string $pageSlug, array $context = []): array
     {
         $rows = PageSection::query()
             ->forPage($pageSlug)
@@ -100,24 +100,57 @@ class PageSectionService
                 continue; // سکشن‌های پر نشده یا منتشر نشده در public نمی‌آیند
             }
             $payload = (array) $row->payload;
-            $out[$sectionKey] = $this->hydrateReferences($payload, $def['fields'] ?? []);
+            $hydrated = $this->hydrateReferences($payload, $def['fields'] ?? []);
+            $out[$sectionKey] = $this->applyPlaceholders($hydrated, $context);
         }
 
         // ─── Auto-fallback مخصوص hero.services در صفحه‌ی home ───
-        // اگر سکشن hero منتشر است ولی هیچ device انتخاب نشده، همه‌ی devices
-        // فعال را برمی‌گردانیم تا فرانت همیشه چیزی برای نمایش داشته باشد.
         if ($pageSlug === 'home' && isset($out['hero'])) {
             $items = $out['hero']['services_items'] ?? [];
             if (empty($items)) {
                 $out['hero']['services_items'] = $this->defaultDevicesForHero();
             }
-            // تعداد کل دستگاه‌های فعال برای نمایش «+N خدمت دیگر»
             $out['hero']['services_total'] = (int) \Modules\CRM\Models\Device::query()
                 ->where('is_active', true)
                 ->count();
         }
 
         return $out;
+    }
+
+    /**
+     * Placeholder‌های پشتیبانی‌شده:
+     *   {device}, {device_slug}, {page_title}
+     *
+     * Context مثلاً برای صفحه‌ی دستگاه از /v1/devices/{slug} پاس داده می‌شود:
+     *   ['device' => 'لباس‌شویی', 'device_slug' => 'washing-machine']
+     *
+     * @param  mixed  $value
+     * @param  array<string, string>  $context
+     */
+    private function applyPlaceholders($value, array $context)
+    {
+        if ($context === []) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $replacements = [];
+            foreach ($context as $k => $v) {
+                $replacements['{' . $k . '}'] = (string) $v;
+            }
+            return strtr($value, $replacements);
+        }
+
+        if (is_array($value)) {
+            $out = [];
+            foreach ($value as $k => $v) {
+                $out[$k] = $this->applyPlaceholders($v, $context);
+            }
+            return $out;
+        }
+
+        return $value;
     }
 
     /**
@@ -274,11 +307,13 @@ class PageSectionService
     private function referenceItemRule(?string $source): string
     {
         return match ($source) {
-            'faqs'         => 'string|exists:faqs,id',
-            'testimonials' => 'string|exists:testimonials,id',
-            'brands'       => 'integer|exists:crm_brands,id',
-            'devices'      => 'integer|exists:crm_devices,id',
-            default        => 'string',
+            'faqs'                => 'string|exists:faqs,id',
+            'testimonials'        => 'string|exists:testimonials,id',
+            'brands'              => 'integer|exists:crm_brands,id',
+            'devices'             => 'integer|exists:crm_devices,id',
+            'faq_categories'      => 'integer|exists:site_taxonomies,id',
+            'testimonial_categories' => 'integer|exists:site_taxonomies,id',
+            default               => 'string',
         };
     }
 
@@ -392,6 +427,60 @@ class PageSectionService
                 ->map(fn ($d) => $this->shapeDevice($d))
                 ->values()
                 ->all();
+        }
+
+        if ($source === 'faq_categories' || $source === 'testimonial_categories') {
+            $type = $source === 'faq_categories'
+                ? \Modules\Site\Models\Taxonomy::TYPE_FAQ
+                : \Modules\Site\Models\Taxonomy::TYPE_TESTIMONIAL;
+            $cats = \Modules\Site\Models\Taxonomy::query()
+                ->ofType($type)
+                ->active()
+                ->whereIn('id', $ids)
+                ->ordered()
+                ->get(['id', 'slug', 'name']);
+
+            // ترتیب آرایه‌ی ورودی محترم است
+            $catById = $cats->keyBy('id');
+            $ordered = collect($ids)->map(fn ($id) => $catById->get((int) $id))->filter();
+
+            return $ordered->map(function ($cat) use ($type) {
+                if ($type === \Modules\Site\Models\Taxonomy::TYPE_FAQ) {
+                    $items = $cat->faqs()
+                        ->where('faqs.is_published', true)
+                        ->orderBy('faqs.sort_order')
+                        ->orderByDesc('faqs.created_at')
+                        ->get(['faqs.id', 'faqs.question', 'faqs.answer'])
+                        ->map(fn ($f) => [
+                            'id'       => $f->id,
+                            'question' => $f->question,
+                            'answer'   => $f->answer,
+                        ])
+                        ->all();
+                } else {
+                    $items = $cat->testimonials()
+                        ->where('testimonials.is_published', true)
+                        ->orderBy('testimonials.sort_order')
+                        ->orderByDesc('testimonials.published_at')
+                        ->get(['testimonials.id', 'testimonials.customer_name', 'testimonials.topic', 'testimonials.rating', 'testimonials.audio_url', 'testimonials.duration_seconds', 'testimonials.published_at'])
+                        ->map(fn ($t) => [
+                            'id'               => $t->id,
+                            'customer_name'    => $t->customer_name,
+                            'topic'            => $t->topic,
+                            'rating'           => $t->rating,
+                            'audio_url'        => $t->audio_url,
+                            'duration_seconds' => $t->duration_seconds,
+                            'published_at'     => $t->published_at?->utc()->toIso8601ZuluString(),
+                        ])
+                        ->all();
+                }
+                return [
+                    'id'    => (int) $cat->id,
+                    'slug'  => $cat->slug,
+                    'label' => $cat->name,
+                    'items' => $items,
+                ];
+            })->values()->all();
         }
 
         return [];
