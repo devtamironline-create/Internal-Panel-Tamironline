@@ -203,13 +203,52 @@ class PageSectionService
      */
     private function validateSection(string $pageSlug, string $sectionKey, array $fields, array $payload): array
     {
-        $rules    = [];
-        $messages = [];
-        $data     = [];
+        $result = $this->processFields($fields, $payload);
+
+        $validator = Validator::make($result['data'], $result['rules'], []);
+
+        if ($validator->fails()) {
+            $prefixed = [];
+            foreach ($validator->errors()->toArray() as $field => $errs) {
+                $prefixed["sections.{$sectionKey}.payload.{$field}"] = $errs;
+            }
+            throw ValidationException::withMessages($prefixed);
+        }
+
+        return $result['data'];
+    }
+
+    /**
+     * پردازش بازگشتی فیلدها — برای سکشن و group های تو در تو.
+     * در همان فراخوانی، `data` نرمالایز شده و `rules` با کلیدهای dot-notation
+     * برمی‌گردد. group ها به‌صورت زیرشاخه‌ی همان data بازمی‌گردند.
+     *
+     * @param  array<string, array>  $fields
+     * @param  array<string, mixed>  $payload
+     * @return array{data: array<string, mixed>, rules: array<string, string>}
+     */
+    private function processFields(array $fields, array $payload, string $prefix = ''): array
+    {
+        $rules = [];
+        $data  = [];
 
         foreach ($fields as $key => $field) {
-            $type = $field['type'] ?? 'string';
+            $type     = $field['type'] ?? 'string';
+            $fullKey  = $prefix === '' ? $key : "{$prefix}.{$key}";
             $baseRules = $field['rules'] ?? 'nullable';
+
+            if ($type === 'group') {
+                $subPayload = Arr::get($payload, $key, []);
+                if (! is_array($subPayload)) {
+                    $subPayload = [];
+                }
+                $sub = $this->processFields($field['fields'] ?? [], $subPayload, $fullKey);
+                $data[$key] = $sub['data'];
+                foreach ($sub['rules'] as $rk => $rv) {
+                    $rules[$rk] = $rv;
+                }
+                continue;
+            }
 
             if ($type === 'repeater') {
                 $items = Arr::get($payload, $key, []);
@@ -219,13 +258,13 @@ class PageSectionService
                 $items = array_values(array_filter($items, fn ($i) => is_array($i) && $this->hasMeaningfulValues($i)));
                 $data[$key] = $items;
 
-                $rules[$key] = 'nullable|array';
+                $rules[$fullKey] = 'nullable|array';
                 foreach (($field['item_fields'] ?? []) as $itemKey => $itemDef) {
                     $itemRule = $itemDef['rules'] ?? 'nullable';
-                    if ($itemDef['type'] ?? null === 'bool') {
+                    if (($itemDef['type'] ?? null) === 'bool') {
                         $itemRule = str_replace('required', 'nullable', $itemRule);
                     }
-                    $rules["{$key}.*.{$itemKey}"] = $itemRule;
+                    $rules["{$fullKey}.*.{$itemKey}"] = $itemRule;
                 }
                 continue;
             }
@@ -237,13 +276,12 @@ class PageSectionService
                     $ids = [];
                 }
                 $ids = array_values(array_filter($ids, fn ($v) => $v !== null && $v !== ''));
-                // برای منابع با primary integer (brands, devices) تبدیل به int
                 if (in_array($source, ['brands', 'devices'], true)) {
                     $ids = array_values(array_unique(array_map('intval', $ids)));
                 }
                 $data[$key] = $ids;
-                $rules[$key]       = 'nullable|array';
-                $rules["{$key}.*"] = $this->referenceItemRule($source);
+                $rules[$fullKey]       = 'nullable|array';
+                $rules["{$fullKey}.*"] = $this->referenceItemRule($source);
                 continue;
             }
 
@@ -258,21 +296,21 @@ class PageSectionService
                     'desktop' => $desktop !== '' ? $desktop : null,
                     'mobile'  => $mobile  !== '' ? $mobile  : null,
                 ];
-                $rules["{$key}.desktop"] = 'nullable|site_url|max:500';
-                $rules["{$key}.mobile"]  = 'nullable|site_url|max:500';
+                $rules["{$fullKey}.desktop"] = 'nullable|site_url|max:500';
+                $rules["{$fullKey}.mobile"]  = 'nullable|site_url|max:500';
                 continue;
             }
 
             if ($type === 'bool') {
                 $data[$key] = (bool) Arr::get($payload, $key, false);
-                $rules[$key] = 'nullable|boolean';
+                $rules[$fullKey] = 'nullable|boolean';
                 continue;
             }
 
             if ($type === 'int') {
                 $value = Arr::get($payload, $key);
                 $data[$key] = ($value === null || $value === '') ? null : (int) $value;
-                $rules[$key] = $baseRules;
+                $rules[$fullKey] = $baseRules;
                 continue;
             }
 
@@ -284,21 +322,11 @@ class PageSectionService
                     $value = null;
                 }
             }
-            $data[$key]  = $value;
-            $rules[$key] = $baseRules;
+            $data[$key]      = $value;
+            $rules[$fullKey] = $baseRules;
         }
 
-        $validator = Validator::make($data, $rules, $messages);
-
-        if ($validator->fails()) {
-            $prefixed = [];
-            foreach ($validator->errors()->toArray() as $field => $errs) {
-                $prefixed["sections.{$sectionKey}.payload.{$field}"] = $errs;
-            }
-            throw ValidationException::withMessages($prefixed);
-        }
-
-        return $data;
+        return ['data' => $data, 'rules' => $rules];
     }
 
     /**
@@ -333,11 +361,22 @@ class PageSectionService
 
     /**
      * جایگزینی IDهای reference با داده‌ی hydrate شده از مخازن مربوطه.
+     * بازگشتی — برای group های تو در تو هم اعمال می‌شود.
      */
     private function hydrateReferences(array $payload, array $fields): array
     {
         foreach ($fields as $key => $field) {
-            if (($field['type'] ?? null) !== 'reference') {
+            $type = $field['type'] ?? null;
+
+            if ($type === 'group') {
+                $subPayload = $payload[$key] ?? [];
+                if (is_array($subPayload)) {
+                    $payload[$key] = $this->hydrateReferences($subPayload, $field['fields'] ?? []);
+                }
+                continue;
+            }
+
+            if ($type !== 'reference') {
                 continue;
             }
             $ids = (array) ($payload[$key] ?? []);
