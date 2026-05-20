@@ -14,6 +14,7 @@ use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
+use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
@@ -59,6 +60,7 @@ class CrmServiceProvider extends ServiceProvider
                 ResolveOrphanTechnicians::class,
                 ResyncTechnicians::class,
                 ResyncInvoices::class,
+                ResyncOrderStatusesFromWp::class,
                 ResyncWalletTransactions::class,
                 ActivateTechniciansByName::class,
                 SnapshotTechnicians::class,

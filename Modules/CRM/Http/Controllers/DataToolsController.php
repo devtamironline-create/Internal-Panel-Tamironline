@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Artisan;
+use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Technician;
 
 /**
@@ -22,7 +23,8 @@ class DataToolsController extends Controller
     public function index()
     {
         $techCount = Technician::count();
-        return view('crm::data-tools.index', compact('techCount'));
+        $techPanelReadonly = CrmSetting::get('tech_panel_readonly') === '1';
+        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly'));
     }
 
     /** Import یک تکنسین از WP. */
@@ -98,6 +100,39 @@ class DataToolsController extends Controller
             $params['--technician'] = (int) $id;
         }
         return $this->runArtisan('crm:wallet:recompute-balances', $params);
+    }
+
+    /** Resync وضعیت سفارش‌ها از WP به Laravel (سریع، فقط فیلد status). */
+    public function resyncOrderStatuses(Request $request)
+    {
+        $request->validate([
+            'limit'  => 'nullable|integer|min:1',
+            'offset' => 'nullable|integer|min:0',
+            'since'  => 'nullable|date_format:Y-m-d',
+            'dry_run' => 'nullable|boolean',
+        ]);
+
+        $params = [];
+        if ($request->filled('limit'))  $params['--limit']  = (int) $request->input('limit');
+        if ($request->filled('offset')) $params['--offset'] = (int) $request->input('offset');
+        if ($request->filled('since'))  $params['--since']  = $request->input('since');
+        if ($request->boolean('dry_run')) $params['--dry-run'] = true;
+
+        return $this->runArtisan('crm:resync-order-statuses-from-wp', $params);
+    }
+
+    /** Toggle حالت فقط-خواندنی پنل تکنسین. */
+    public function toggleTechPanelReadonly(Request $request)
+    {
+        $current = CrmSetting::get('tech_panel_readonly') === '1';
+        $next = $current ? '0' : '1';
+        CrmSetting::set('tech_panel_readonly', $next);
+
+        $msg = $next === '1'
+            ? '❄️ پنل تکنسین در حالت فقط-خواندنی قرار گرفت — تکنسین‌ها فقط می‌توانند مشاهده کنند.'
+            : '✅ پنل تکنسین از حالت فقط-خواندنی خارج شد — تکنسین‌ها می‌توانند تغییر ایجاد کنند.';
+
+        return back()->with('success', $msg);
     }
 
     /** فعال‌سازی گروهی تکنسین‌ها بر اساس لیست اسامی. */

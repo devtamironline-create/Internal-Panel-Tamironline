@@ -311,6 +311,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('resync-wallet-transactions', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncWalletTransactions'])->name('resync-wallet-transactions');
         Route::post('recompute-balances', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'recomputeBalances'])->name('recompute-balances');
         Route::post('activate-by-name', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'activateTechniciansByName'])->name('activate-by-name');
+        Route::post('resync-order-statuses', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncOrderStatuses'])->name('resync-order-statuses');
+        Route::post('toggle-tech-readonly', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTechPanelReadonly'])->name('toggle-tech-readonly');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────
@@ -356,8 +358,11 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('auth/login-password', [TechAuthController::class, 'loginWithPassword'])->name('auth.login-password');
     });
 
-    // Authenticated — با training gate middleware
-    Route::middleware(['auth:tech', \Modules\CRM\Http\Middleware\RequireTrainingCompleted::class])->group(function () {
+    // Authenticated — با training gate middleware + freeze read-only mode
+    Route::middleware(['auth:tech',
+        \Modules\CRM\Http\Middleware\TechPanelReadOnly::class,
+        \Modules\CRM\Http\Middleware\RequireTrainingCompleted::class,
+    ])->group(function () {
         Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
         Route::get('calendar', [TechPanelDashboardController::class, 'calendar'])->name('calendar');

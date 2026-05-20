@@ -31,7 +31,63 @@
         </div>
     @endif
 
+    {{-- ───── Freeze پنل تکنسین (full-width banner) ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ $techPanelReadonly ? 'border-rose-400' : 'border-gray-200 dark:border-gray-700' }}">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    ❄️ Freeze پنل تکنسین
+                    @if($techPanelReadonly)
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">فعال — فقط مشاهده</span>
+                    @else
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">غیرفعال — تکنسین‌ها می‌توانند کار کنند</span>
+                    @endif
+                </h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    وقتی فعال باشد، همه تکنسین‌ها فقط می‌توانند داده‌ها را ببینند و نمی‌توانند تغییری ایجاد کنند (POST/PUT/PATCH/DELETE برگردانده می‌شود). قبل از sync بزرگ از WP این را فعال کنید تا تکنسین‌ها تغییری در حین sync ایجاد نکنند.
+                </p>
+            </div>
+            <form method="POST" action="{{ route('crm.data-tools.toggle-tech-readonly') }}"
+                  onsubmit="return confirm('{{ $techPanelReadonly ? 'پنل تکنسین از حالت فقط-خواندنی خارج شود؟' : 'پنل تکنسین در حالت فقط-خواندنی قرار گیرد؟ تکنسین‌ها نمی‌توانند تغییری ایجاد کنند.' }}');">
+                @csrf
+                <button type="submit" class="px-5 py-2.5 {{ $techPanelReadonly ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700' }} text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                    {{ $techPanelReadonly ? 'خروج از حالت فقط-خواندنی' : 'فعال‌سازی حالت فقط-خواندنی' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {{-- ───── Resync وضعیت سفارش‌ها از WP ───── --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-3 md:col-span-2">
+            <div>
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">🔄 Resync وضعیت سفارش‌ها از WP → Laravel</h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    فقط فیلد <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">status</code> سفارش‌ها از WP CRM خوانده می‌شود و در صورت تفاوت با Laravel به‌روزرسانی می‌شود. سریع‌تر از resync کامل (فقط یک فیلد، query bulk).
+                    <br>
+                    <strong class="text-amber-600">توصیه:</strong> قبل از اجرا، Freeze بالا را فعال کنید. سپس ابتدا با <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">--dry-run</code> تعداد را چک کنید.
+                </p>
+            </div>
+            <form method="POST" action="{{ route('crm.data-tools.resync-order-statuses') }}"
+                  class="grid grid-cols-1 md:grid-cols-4 gap-2"
+                  onsubmit="return confirm('Resync وضعیت سفارش‌ها از WP — ممکن است چند دقیقه طول بکشد. ادامه دهیم؟');">
+                @csrf
+                <input type="number" name="limit" min="1" placeholder="limit (خالی = همه)"
+                       class="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                <input type="number" name="offset" min="0" placeholder="offset (id شروع)"
+                       class="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                <input type="date" name="since" placeholder="since (YYYY-MM-DD)"
+                       class="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 px-2">
+                    <input type="checkbox" name="dry_run" value="1" class="w-4 h-4">
+                    Dry-run (فقط شمارش)
+                </label>
+                <button type="submit" class="md:col-span-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-bold">
+                    شروع Resync وضعیت سفارش‌ها
+                </button>
+            </form>
+        </div>
 
         {{-- ───── Import تکنسین از WP ───── --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-3">
