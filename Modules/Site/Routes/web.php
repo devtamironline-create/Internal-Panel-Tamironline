@@ -8,6 +8,7 @@ use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageContentController;
 use Modules\Site\Http\Controllers\Admin\PageController;
 use Modules\Site\Http\Controllers\Admin\SettingsController;
+use Modules\Site\Http\Controllers\Admin\TaxonomyController;
 use Modules\Site\Http\Controllers\Admin\TestimonialController;
 use Modules\Site\Http\Controllers\SiteAdminController;
 
@@ -80,6 +81,16 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/{id}',      [AboutStatController::class, 'update'])->whereNumber('id')->name('update');
         Route::delete('/{id}',   [AboutStatController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
+
+    // دسته‌بندی‌های FAQ و Testimonial (تب در فرانت)
+    Route::prefix('taxonomies/{type}')->name('taxonomies.')
+        ->whereIn('type', ['faq', 'testimonial'])
+        ->group(function () {
+            Route::get('/',      [TaxonomyController::class, 'index'])->name('index');
+            Route::post('/',     [TaxonomyController::class, 'store'])->name('store');
+            Route::put('/{id}',  [TaxonomyController::class, 'update'])->whereNumber('id')->name('update');
+            Route::delete('/{id}', [TaxonomyController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        });
 
     // تنظیمات عمومی سایت
     Route::prefix('settings')->name('settings.')->group(function () {
