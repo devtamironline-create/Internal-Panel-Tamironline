@@ -41,6 +41,17 @@
         @error('sort_order')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
+    <div class="md:col-span-2">
+        @include('crm::partials.image-uploader', [
+            'name'        => 'thumbnail',
+            'fileName'    => 'thumbnail_file',
+            'label'       => 'تصویر بندانگشتی دستگاه',
+            'value'       => old('thumbnail', $device->thumbnail ?? null),
+            'placeholder' => 'https://cdn.example.com/devices/washing-machine.png',
+            'help'        => 'یک تصویر کوچک از دستگاه (در کنار آیکن استفاده می‌شود). ابعاد پیشنهادی ۳۰۰×۳۰۰ پیکسل.',
+        ])
+    </div>
+
     <div class="flex items-end gap-6">
         <label class="inline-flex items-center gap-2">
             <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $device->is_active ?? true))

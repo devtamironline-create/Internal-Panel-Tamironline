@@ -13,6 +13,7 @@ class Device extends Model
         'name',
         'slug',
         'icon',
+        'thumbnail',
         'tone',
         'sort_order',
         'is_active',
