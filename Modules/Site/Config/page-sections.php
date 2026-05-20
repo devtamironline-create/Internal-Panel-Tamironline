@@ -202,7 +202,7 @@ return [
 
             'header' => [
                 'label'       => 'هدر سایت',
-                'description' => 'لوگو، منو ناوبری و دکمه‌ی CTA.',
+                'description' => 'لوگو، منو ناوبری، دکمه CTA و dropdown خدمات.',
                 'fields' => [
                     'logo'          => ['label' => 'لوگو (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                     'logo_alt'      => ['label' => 'متن جایگزین لوگو', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
@@ -218,12 +218,29 @@ return [
                             'href'  => ['label' => 'لینک (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'required|site_url|max:200'],
                         ],
                     ],
+                    'services_dropdown' => [
+                        'label'       => 'منوی Dropdown خدمات',
+                        'description' => 'مگامنوی خدمات که با hover روی «خدمات» در هدر باز می‌شود.',
+                        'type'        => 'group',
+                        'fields' => [
+                            'trigger_label'  => ['label' => 'برچسب trigger در هدر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title'          => ['label' => 'تیتر داخل dropdown', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                            'subtitle'       => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                            'view_all_label' => ['label' => 'متن لینک «همه دستگاه‌ها»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'view_all_url'   => ['label' => 'لینک «همه دستگاه‌ها»', 'type' => 'string', 'rules' => 'nullable|site_url|max:200'],
+                            'device_ids'     => [
+                                'label'  => 'دستگاه‌های نمایش‌داده‌شده در dropdown',
+                                'type'   => 'reference',
+                                'source' => 'devices',
+                            ],
+                        ],
+                    ],
                 ],
             ],
 
             'footer' => [
                 'label'       => 'فوتر سایت',
-                'description' => 'لوگو، توضیح، گروه‌های لینک، شبکه‌های اجتماعی و حقوق ناشر.',
+                'description' => 'لوگو، توضیح، گروه‌های لینک، اطلاعات تماس، دانلود اپ، شبکه‌های اجتماعی و حقوق ناشر.',
                 'fields' => [
                     'logo'        => ['label' => 'لوگوی فوتر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                     'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
@@ -233,6 +250,38 @@ return [
                         'item_fields' => [
                             'title' => ['label' => 'تیتر گروه', 'type' => 'string', 'rules' => 'required|string|max:60'],
                             'links' => ['label' => 'لینک‌ها (label|href جدا با کاما)', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                        ],
+                    ],
+                    'contact_info' => [
+                        'label'       => 'اطلاعات تماس (در فوتر)',
+                        'description' => 'بلوک اطلاعات تماس که در ستون فوتر نمایش داده می‌شود.',
+                        'type'        => 'group',
+                        'fields' => [
+                            'title'         => ['label' => 'تیتر بلوک', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'address'       => ['label' => 'آدرس', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                            'phone'         => ['label' => 'شماره تماس (تلیبل tel:)', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                            'phone_display' => ['label' => 'شماره تماس نمایشی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                            'email'         => ['label' => 'ایمیل', 'type' => 'string', 'rules' => 'nullable|email|max:120'],
+                        ],
+                    ],
+                    'app_download' => [
+                        'label'       => 'بلوک دانلود اپلیکیشن',
+                        'description' => 'تیتر و لینک‌های دانلود اپ (Google Play، Cafe Bazaar، App Store، Sib Apple، ...).',
+                        'type'        => 'group',
+                        'fields' => [
+                            'title'    => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                            'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                            'image'    => ['label' => 'تصویر اپ (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                            'stores'   => [
+                                'label' => 'فروشگاه‌ها (لینک دانلود)',
+                                'type'  => 'repeater',
+                                'item_fields' => [
+                                    'name'  => ['label' => 'نام فروشگاه', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                                    'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                                    'url'   => ['label' => 'لینک', 'type' => 'string', 'rules' => 'required|site_url|max:500'],
+                                    'image' => ['label' => 'تصویر badge', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                                ],
+                            ],
                         ],
                     ],
                     'social' => [
@@ -273,12 +322,54 @@ return [
                 'label'       => 'متن SEO پایین (Read More)',
                 'description' => 'بلوک متن سئوی پایین صفحات (کنار فوتر) — قابل expand/collapse در فرانت.',
                 'fields' => [
-                    'title'      => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'title'          => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'expand_label'   => ['label' => 'متن دکمه نمایش بیشتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'collapse_label' => ['label' => 'متن دکمه بستن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'paragraphs' => [
                         'label' => 'پاراگراف‌ها',
                         'type'  => 'repeater',
                         'item_fields' => [
                             'text' => ['label' => 'متن پاراگراف', 'type' => 'textarea', 'rules' => 'required|string|max:3000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'mobile_cta' => [
+                'label'       => 'نوار CTA موبایل (Sticky Bottom)',
+                'description' => 'نوار چسبیده به پایین صفحه فقط در نمایش موبایل — معمولاً شامل دکمه‌ی تماس و دکمه‌ی ثبت سفارش.',
+                'fields' => [
+                    'is_active' => ['label' => 'فعال', 'type' => 'bool'],
+                    'primary' => [
+                        'label'       => 'دکمه اصلی',
+                        'description' => 'معمولاً تماس تلفنی.',
+                        'type'        => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'type'  => [
+                                'label'   => 'نوع',
+                                'type'    => 'select',
+                                'options' => ['tel' => 'tel (تماس)', 'link' => 'link (مسیر)', 'mailto' => 'mailto (ایمیل)'],
+                                'rules'   => 'nullable|in:tel,link,mailto',
+                            ],
+                            'value' => ['label' => 'مقدار (شماره تلفن یا مسیر)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                        ],
+                    ],
+                    'secondary' => [
+                        'label'       => 'دکمه دوم',
+                        'description' => 'معمولاً ثبت سفارش یا چت آنلاین.',
+                        'type'        => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'type'  => [
+                                'label'   => 'نوع',
+                                'type'    => 'select',
+                                'options' => ['tel' => 'tel (تماس)', 'link' => 'link (مسیر)', 'mailto' => 'mailto (ایمیل)'],
+                                'rules'   => 'nullable|in:tel,link,mailto',
+                            ],
+                            'value' => ['label' => 'مقدار (شماره تلفن یا مسیر)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                         ],
                     ],
                 ],
