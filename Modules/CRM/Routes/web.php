@@ -187,6 +187,11 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('orders/export/{format}', [OrderController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('orders.export');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+        // یادداشت‌های اپراتور — هر کاربری که می‌تواند سفارش را ببیند،
+        // می‌تواند یادداشت اضافه/حذف کند (حذف فقط یادداشت خودش).
+        Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
+        Route::delete('orders/{order}/notes/{note}', [OrderController::class, 'destroyNote'])->name('orders.notes.destroy')->whereNumber('note');
     });
     Route::middleware('can:create-crm-order')->group(function () {
         Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
@@ -208,8 +213,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
         Route::post('orders/{order}/source-of-truth', [OrderController::class, 'updateSourceOfTruth'])->name('orders.source-of-truth');
-        Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
-        Route::delete('orders/{order}/notes/{note}', [OrderController::class, 'destroyNote'])->name('orders.notes.destroy')->whereNumber('note');
     });
 
     Route::middleware('can:change-crm-order-status')->group(function () {
