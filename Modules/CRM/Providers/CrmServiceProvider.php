@@ -14,6 +14,7 @@ use Modules\CRM\Console\Commands\ActivateTechniciansByName;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
+use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
@@ -74,6 +75,7 @@ class CrmServiceProvider extends ServiceProvider
                 SnapshotTechnicians::class,
                 ImportTechnicianFromWp::class,
                 RebuildTechWallet::class,
+                PullTechPercentFromWp::class,
                 WalletAudit::class,
                 FixInvoicesFromWp::class,
                 FindWalletDuplicates::class,
