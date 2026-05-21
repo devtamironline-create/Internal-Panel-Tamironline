@@ -250,12 +250,15 @@ Cache-Control: public, max-age=300, s-maxage=300
 ##### About (`/v1/pages/about`)
 | section_key | فیلدها |
 |---|---|
-| `hero` | title, subtitle, aparat_id, poster{desktop, mobile}, description |
+| `hero` | title, subtitle, aparat_id, poster{desktop, mobile}, description, **highlights[icon, text]** |
+| `stats` | title, subtitle, items[key, value, label, tone] |
 | `values` | title, subtitle, items[icon, title, description] |
 | `steps` | title, image{desktop, mobile}, alt |
 | `timeline` | title, items[year, title, description] |
 | `faq` | title, subtitle, faq_ids[], **faq_ids_items[]** |
 | `promo` | title, subtitle, image{desktop, mobile}, link_url, link_label |
+
+> **stats** اکنون داخل `/v1/pages/about` است (پیشنهاد B). endpoint جداگانه `/v1/site/about-stats` فعلاً برای backward compat نگه‌داری می‌شود ولی deprecated است.
 
 ##### Layout (`/v1/pages/layout`) — هدر، فوتر و المان‌های مشترک
 | section_key | فیلدها |

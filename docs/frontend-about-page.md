@@ -9,13 +9,16 @@
 
 ## ۰) خلاصه — endpointهای لازم
 
-صفحه‌ی About به سه endpoint نیاز دارد:
+صفحه‌ی About به **دو** endpoint نیاز دارد:
 
 | # | Endpoint | محتوا |
 |---|---|---|
-| 1 | `GET /v1/pages/about` | همه‌ی سکشن‌های پویا (hero, values, steps, timeline, faq, promo) |
-| 2 | `GET /v1/site/about-stats` | کارت‌های آمار (A2) |
-| 3 | `GET /v1/testimonials` | نظرات مشتریان (A6) — مشترک با Home |
+| 1 | `GET /v1/pages/about` | همه‌ی سکشن‌های پویا — **hero (با highlights)، stats، values، steps، timeline، faq، promo** |
+| 2 | `GET /v1/testimonials` | نظرات مشتریان (A6) — مشترک با Home |
+
+> ⚠️ **تغییر:** آمار (A2) **قبلاً** از `/v1/site/about-stats` می‌آمد. الان به‌صورت
+> پیش‌فرض داخل `/v1/pages/about → sections.stats.items` آمده. endpoint قدیمی
+> برای backward compat موقتاً نگه داشته شده ولی deprecated است.
 
 به‌علاوه، **`GET /v1/pages/layout`** هم برای هدر/فوتر سایت — که در root
 layout فراخوانی می‌شود و در همه‌ی صفحات shared است (جزئیات: `frontend-integration.md` §۱۲).
@@ -26,9 +29,9 @@ layout فراخوانی می‌شود و در همه‌ی صفحات shared اس
 
 ```
 ┌─────────────────────────────────────┐
-│ A1. About Hero (با ویدیو آپارات)    │ ← sections.hero
+│ A1. About Hero (با ویدیو + بولت‌ها)  │ ← sections.hero (+ highlights[])
 ├─────────────────────────────────────┤
-│ A2. Stats (آمار: ۸+، ۵۰،۰۰۰+، ...) │ ← /v1/site/about-stats
+│ A2. Stats (آمار: ۸+، ۵۰،۰۰۰+، ...) │ ← sections.stats (با header)
 ├─────────────────────────────────────┤
 │ A3. Values (ارزش‌های ما)            │ ← sections.values
 ├─────────────────────────────────────┤
@@ -62,6 +65,18 @@ export type AboutHero = {
   aparat_id: string | null;
   poster: ResponsiveImage;
   description: string | null;
+  highlights: { icon: string | null; text: string }[];
+};
+
+export type AboutStatsSection = {
+  title: string | null;
+  subtitle: string | null;
+  items: {
+    key: string;
+    value: string;
+    label: string;
+    tone: 'blue' | 'green' | 'amber' | 'rose' | 'violet';
+  }[];
 };
 
 export type AboutValue = {
@@ -108,18 +123,12 @@ export type AboutPromo = {
 
 export type AboutSections = {
   hero?: AboutHero;
+  stats?: AboutStatsSection;
   values?: { title: string | null; subtitle: string | null; items: AboutValue[] };
   steps?: AboutSteps;
   timeline?: { title: string | null; items: AboutTimelineItem[] };
   faq?: AboutFaq;
   promo?: AboutPromo;
-};
-
-export type AboutStat = {
-  key: string;
-  value: string;
-  label: string;
-  tone: 'blue' | 'green' | 'amber' | 'rose' | 'violet';
 };
 
 export type Testimonial = {
@@ -132,20 +141,18 @@ export type Testimonial = {
   published_at: string;
 };
 
-/** سه fetch به‌صورت موازی برای سرعت بیشتر. */
+/** دو fetch به‌صورت موازی برای سرعت بیشتر. */
 export async function getAboutPageData() {
   const base = process.env.API_BASE_URL!;
-  const [pageRes, statsRes, testimonialsRes] = await Promise.all([
+  const [pageRes, testimonialsRes] = await Promise.all([
     fetch(`${base}/v1/pages/about`, { next: { revalidate: 300, tags: ['about', 'pages'] } }),
-    fetch(`${base}/v1/site/about-stats`, { next: { revalidate: 600, tags: ['about-stats'] } }),
     fetch(`${base}/v1/testimonials?limit=12`, { next: { revalidate: 300, tags: ['testimonials'] } }),
   ]);
 
   const sections: AboutSections = pageRes.ok ? (await pageRes.json()).sections ?? {} : {};
-  const stats: AboutStat[] = statsRes.ok ? (await statsRes.json()).data ?? [] : [];
   const testimonials: Testimonial[] = testimonialsRes.ok ? (await testimonialsRes.json()).data ?? [] : [];
 
-  return { sections, stats, testimonials };
+  return { sections, testimonials };
 }
 ```
 
@@ -167,12 +174,12 @@ import { PromoBanner } from '@/components/shared/PromoBanner';
 export const revalidate = 300;
 
 export default async function AboutPage() {
-  const { sections, stats, testimonials } = await getAboutPageData();
+  const { sections, testimonials } = await getAboutPageData();
 
   return (
     <main>
       {sections.hero && <AboutHero data={sections.hero} />}
-      {stats.length > 0 && <AboutStats items={stats} />}
+      {sections.stats && <AboutStats data={sections.stats} />}
       {sections.values && <AboutValues data={sections.values} />}
       {sections.steps && <AboutSteps data={sections.steps} />}
       {sections.timeline && <AboutTimeline data={sections.timeline} />}
@@ -192,6 +199,8 @@ export default async function AboutPage() {
 
 ```tsx
 import type { AboutHero as Data } from '@/lib/api/about';
+import { iconMap } from '@/lib/icons';
+import { CheckCircle } from 'lucide-react';
 
 export function AboutHero({ data }: { data: Data }) {
   return (
@@ -204,6 +213,21 @@ export function AboutHero({ data }: { data: Data }) {
             <div className="mt-6 text-[14px] leading-loose text-[color:var(--text-soft)]">
               {data.description}
             </div>
+          )}
+
+          {/* بولت‌های تیک‌دار (highlights) */}
+          {data.highlights?.length > 0 && (
+            <ul className="mt-6 space-y-3">
+              {data.highlights.map((h, i) => {
+                const Icon = h.icon ? iconMap[h.icon] ?? CheckCircle : CheckCircle;
+                return (
+                  <li key={i} className="flex items-center gap-3">
+                    <Icon className="h-5 w-5 text-emerald-600 shrink-0" strokeWidth={2} />
+                    <span className="text-[14px]">{h.text}</span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
 
@@ -234,15 +258,17 @@ export function AboutHero({ data }: { data: Data }) {
 | `aparat_id` | شناسه ویدیو آپارات — اگر null باشد، iframe رندر نمی‌شود |
 | `poster.desktop`/`mobile` | تصویر poster (اگر بخواهید قبل از click اول، تصویر نمایش دهید) |
 | `description` | توضیح بلندتر |
+| `highlights[].icon` | کلید Lucide (پیش‌فرض `check-circle` اگر null باشد) |
+| `highlights[].text` | متن بولت |
 
 ---
 
 ### A2. About Stats — `components/about/AboutStats.tsx`
 
 ```tsx
-import type { AboutStat } from '@/lib/api/about';
+import type { AboutStatsSection } from '@/lib/api/about';
 
-const TONE_CLASSES: Record<AboutStat['tone'], string> = {
+const TONE_CLASSES: Record<AboutStatsSection['items'][number]['tone'], string> = {
   blue:   'bg-blue-50 text-blue-700 border-blue-200',
   green:  'bg-emerald-50 text-emerald-700 border-emerald-200',
   amber:  'bg-amber-50 text-amber-700 border-amber-200',
@@ -250,13 +276,20 @@ const TONE_CLASSES: Record<AboutStat['tone'], string> = {
   violet: 'bg-violet-50 text-violet-700 border-violet-200',
 };
 
-export function AboutStats({ items }: { items: AboutStat[] }) {
-  if (!items.length) return null;
+export function AboutStats({ data }: { data: AboutStatsSection }) {
+  if (!data.items?.length) return null;
   return (
     <section className="section">
       <div className="container-x">
+        {(data.title || data.subtitle) && (
+          <div className="section-head text-center mb-6">
+            {data.title && <h2 className="heading">{data.title}</h2>}
+            {data.subtitle && <p className="lede mx-auto">{data.subtitle}</p>}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {items.map((s) => (
+          {data.items.map((s) => (
             <div
               key={s.key}
               className={`rounded-2xl border p-5 text-center ${TONE_CLASSES[s.tone] ?? TONE_CLASSES.blue}`}
@@ -276,6 +309,8 @@ export function AboutStats({ items }: { items: AboutStat[] }) {
 - `value` همان رشته‌ی نمایشی است (مثلاً `"۸+"` یا `"۵۰,۰۰۰+"`). فرانت **فرمت‌بندی نمی‌کند** — همان‌گونه که از سرور آمده نمایش بدهید.
 - `tone` کلید رنگ است؛ مپ به کلاس CSS سمت فرانت.
 - `key` برای React `key=` استفاده شود.
+- `title`/`subtitle` در صورت پر بودن، header سکشن می‌سازد (سابقاً نداشت — A2 تنها سکشن About بود که header نداشت).
+- در صورت نیاز به backward compat، می‌توانید همچنان از `/v1/site/about-stats` (آرایه‌ی items مستقیم بدون header) استفاده کنید.
 
 ---
 
@@ -660,14 +695,15 @@ export default async function AboutPage() {
 
 | کارت | چه چیزی پر کند |
 |---|---|
-| Hero | `title`، `subtitle`، `aparat_id` (شناسه ویدیو)، `description` |
+| Hero | `title`، `subtitle`، `aparat_id`، `description` + repeater **highlights** (icon، text) |
+| **Stats (جدید)** | `title`، `subtitle` + repeater **items** (key، value، label، tone) |
 | Values | لیست repeater — برای هر آیتم: آیکن، تیتر، توضیح |
 | Steps | `title` + آپلود تصویر دسکتاپ + موبایل |
 | Timeline | لیست repeater — برای هر آیتم: سال، تیتر، توضیح |
 | FAQ | انتخاب چند دسته از `/admin/site/taxonomies/faq` |
 | Promo | `title`، `subtitle`، تصویر، `link_url`، `link_label` |
 
-برای آمار: `/admin/site/about-stats` — افزودن/ویرایش هر آمار جداگانه (key، value، label، tone).
+> **نکته:** مسیر قدیمی `/admin/site/about-stats` همچنان کار می‌کند (deprecated). توصیه: همه‌چیز را در `/admin/site/page-content/about` ویرایش کنید — یک پنل واحد برای کل About.
 
 ---
 
