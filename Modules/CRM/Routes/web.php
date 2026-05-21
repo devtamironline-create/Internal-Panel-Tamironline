@@ -324,6 +324,16 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('bulk-balance', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkBalanceApply'])->name('bulk-balance.apply');
     });
 
+    // ─── مدیریت گروهی تکنسین‌ها — ادیت inline + soft delete ─────
+    Route::middleware('can:manage-crm-sync')->prefix('tech-manage')->name('tech-manage.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'index'])->name('index');
+        Route::get('trash', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'trash'])->name('trash');
+        Route::post('zero-all-wallets', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'zeroAllWallets'])->name('zero-all-wallets');
+        Route::post('{technician}', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'update'])->name('update')->whereNumber('technician');
+        Route::delete('{technician}', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'destroy'])->name('destroy')->whereNumber('technician');
+        Route::post('{id}/restore', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'restore'])->name('restore')->whereNumber('id');
+    });
+
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────
     Route::middleware('can:manage-crm-sync')->prefix('sync-logs')->name('sync-logs.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\SyncLogController::class, 'index'])->name('index');

@@ -31,6 +31,22 @@
         </div>
     @endif
 
+    {{-- ───── مدیریت گروهی تکنسین‌ها ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 border-indigo-200">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">⚙ مدیریت گروهی تکنسین‌ها</h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    لیست همه تکنسین‌ها با امکان ادیت inline: مانده کیف‌پول، حالت محاسبه (50/50 یا 70/30)، حذف (به trash منتقل می‌شود — نمایش داده نمی‌شود ولی قابل بازگردانی است).
+                </p>
+            </div>
+            <a href="{{ route('crm.tech-manage.index') }}"
+               class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                باز کردن صفحه
+            </a>
+        </div>
+    </div>
+
     {{-- ───── Sync Mode (کنترل ارتباط با WP) ───── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ ($syncMode ?? 'full') === 'full' ? 'border-gray-200' : 'border-rose-400' }}">
         <div class="flex items-center justify-between gap-4 flex-wrap">
