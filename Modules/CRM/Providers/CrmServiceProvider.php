@@ -18,6 +18,7 @@ use Modules\CRM\Console\Commands\FullRebuildFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
+use Modules\CRM\Console\Commands\PullNewOrdersFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
@@ -106,6 +107,7 @@ class CrmServiceProvider extends ServiceProvider
                 SupersedeAllInvoices::class,
                 ApplyFinalWalletBalances::class,
                 FullRebuildFromWp::class,
+                PullNewOrdersFromWp::class,
             ]);
         }
     }
