@@ -22,6 +22,7 @@ use Modules\CRM\Console\Commands\PullNewOrdersFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
+use Modules\CRM\Console\Commands\ReplaceTechInfo;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
 use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
 use Modules\CRM\Console\Commands\RestoreWalletFromSnapshot;
@@ -108,6 +109,7 @@ class CrmServiceProvider extends ServiceProvider
                 ApplyFinalWalletBalances::class,
                 FullRebuildFromWp::class,
                 PullNewOrdersFromWp::class,
+                ReplaceTechInfo::class,
             ]);
         }
     }
