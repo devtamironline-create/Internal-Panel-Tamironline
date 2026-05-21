@@ -25,7 +25,9 @@ class DataToolsController extends Controller
     {
         $techCount = Technician::count();
         $techPanelReadonly = CrmSetting::get('tech_panel_readonly') === '1';
-        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly'));
+        $syncMode = CrmSetting::get('crm_sync_mode', 'full');
+        $wpPushEnabled = CrmSetting::get('wp_push_enabled') === '1';
+        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly', 'syncMode', 'wpPushEnabled'));
     }
 
     /** Import یک تکنسین از WP. */
@@ -147,6 +149,26 @@ class DataToolsController extends Controller
         }
 
         return $this->runArtisan('crm:wallet-audit', $params);
+    }
+
+    /** تغییر حالت sync — full/orders_only/disabled. */
+    public function setSyncMode(Request $request)
+    {
+        $request->validate([
+            'mode' => 'required|in:full,orders_only,disabled',
+        ]);
+        $mode = $request->input('mode');
+        CrmSetting::set('crm_sync_mode', $mode);
+
+        // اگر orders_only یا disabled → outbound push هم خاموش
+        if ($mode !== 'full') {
+            CrmSetting::set('wp_push_enabled', '0');
+            $msg = '✓ حالت sync روی «' . $mode . '» — outbound push هم خاموش شد.';
+        } else {
+            $msg = '✓ حالت sync روی «full» — outbound push دستی می‌شود تنظیم کرد.';
+        }
+
+        return back()->with('success', $msg);
     }
 
     /** Toggle حالت فقط-خواندنی پنل تکنسین. */

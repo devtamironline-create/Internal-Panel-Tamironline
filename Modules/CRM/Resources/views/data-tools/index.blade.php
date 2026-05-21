@@ -31,6 +31,58 @@
         </div>
     @endif
 
+    {{-- ───── Sync Mode (کنترل ارتباط با WP) ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ ($syncMode ?? 'full') === 'full' ? 'border-gray-200' : 'border-rose-400' }}">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    🔌 وضعیت ارتباط با WP CRM
+                    @if(($syncMode ?? 'full') === 'full')
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">کامل — همه sync فعال</span>
+                    @elseif(($syncMode ?? 'full') === 'orders_only')
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">فقط سفارش</span>
+                    @else
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">کاملاً قطع</span>
+                    @endif
+                    @if(! ($wpPushEnabled ?? true))
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">push خاموش</span>
+                    @endif
+                </h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    <strong>کامل (full):</strong> همه inbound/outbound فعال<br>
+                    <strong>فقط سفارش (orders_only):</strong> فقط /api/crm/sync/order و /orders/batch کار می‌کند، push کلاً خاموش<br>
+                    <strong>کاملاً قطع (disabled):</strong> هیچ inbound کار نمی‌کند، push کلاً خاموش
+                </p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <form method="POST" action="{{ route('crm.data-tools.set-sync-mode') }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="orders_only">
+                    <button type="submit" onclick="return confirm('فقط orders sync می‌شود — push خاموش می‌شود. ادامه دهیم؟');"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">
+                        فقط سفارش
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('crm.data-tools.set-sync-mode') }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="disabled">
+                    <button type="submit" onclick="return confirm('همه ارتباط با WP قطع می‌شود. ادامه دهیم؟');"
+                            class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold">
+                        کاملاً قطع
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('crm.data-tools.set-sync-mode') }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="full">
+                    <button type="submit" onclick="return confirm('همه sync دوباره فعال می‌شود. ادامه دهیم؟');"
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">
+                        کامل
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     {{-- ───── Freeze پنل تکنسین (full-width banner) ───── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ $techPanelReadonly ? 'border-rose-400' : 'border-gray-200 dark:border-gray-700' }}">
         <div class="flex items-center justify-between gap-4 flex-wrap">
