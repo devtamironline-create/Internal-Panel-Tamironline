@@ -18,6 +18,7 @@ use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
+use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
@@ -86,6 +87,7 @@ class CrmServiceProvider extends ServiceProvider
                 RestoreTechPercentFromHistory::class,
                 RemoveManualAdjustments::class,
                 ResetWalletFromWp::class,
+                RestoreDeletedAdjustments::class,
             ]);
         }
     }
