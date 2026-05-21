@@ -21,6 +21,7 @@ use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
 use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
+use Modules\CRM\Console\Commands\RestoreWalletFromSnapshot;
 use Modules\CRM\Console\Commands\UndoRestoreAdjustments;
 use Modules\CRM\Console\Commands\UnsupersedeInvoices;
 use Modules\CRM\Console\Commands\VerifyInvoiceCalc;
@@ -98,6 +99,7 @@ class CrmServiceProvider extends ServiceProvider
                 UnsupersedeInvoices::class,
                 VerifyInvoiceCalc::class,
                 ImportInvoicesFromWp::class,
+                RestoreWalletFromSnapshot::class,
             ]);
         }
     }
