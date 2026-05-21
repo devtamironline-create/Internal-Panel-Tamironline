@@ -11,6 +11,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
+use Modules\CRM\Console\Commands\ApplyFinalWalletBalances;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
@@ -102,6 +103,7 @@ class CrmServiceProvider extends ServiceProvider
                 ImportInvoicesFromWp::class,
                 RestoreWalletFromSnapshot::class,
                 SupersedeAllInvoices::class,
+                ApplyFinalWalletBalances::class,
             ]);
         }
     }
