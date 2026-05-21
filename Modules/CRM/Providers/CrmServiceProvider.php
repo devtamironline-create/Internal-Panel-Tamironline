@@ -14,6 +14,7 @@ use Modules\CRM\Console\Commands\ActivateTechniciansByName;
 use Modules\CRM\Console\Commands\ApplyFinalWalletBalances;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
+use Modules\CRM\Console\Commands\FullRebuildFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
@@ -104,6 +105,7 @@ class CrmServiceProvider extends ServiceProvider
                 RestoreWalletFromSnapshot::class,
                 SupersedeAllInvoices::class,
                 ApplyFinalWalletBalances::class,
+                FullRebuildFromWp::class,
             ]);
         }
     }
