@@ -67,9 +67,15 @@ class ResetWalletFromWp extends Command
         $this->info(($apply ? '🔥 APPLY' : 'DRY-RUN') . " — تکنسین‌ها: {$techs->count()}");
         $this->newLine();
 
-        // Backup file
-        $backupFile = null;
-        $backup = ['timestamp' => now()->toIso8601String(), 'techs' => []];
+        // Backup file — stream per-tech to avoid memory exhaustion
+        $backupFp = null;
+        $backupPath = null;
+        if ($apply) {
+            Storage::disk('local')->makeDirectory('crm');
+            $backupPath = storage_path('app/crm/wallet-reset-' . now()->format('Y-m-d_His') . '.jsonl');
+            $backupFp = fopen($backupPath, 'w');
+            fwrite($backupFp, json_encode(['_meta' => ['timestamp' => now()->toIso8601String(), 'tech_count' => $techs->count()]], JSON_UNESCAPED_UNICODE) . "\n");
+        }
 
         $rows = [];
         $bar = $this->output->createProgressBar($techs->count());
@@ -93,19 +99,22 @@ class ResetWalletFromWp extends Command
             ];
 
             if ($apply) {
-                $backup['techs'][$tech->id] = [
+                // backup این تکنسین به فایل (هر تکنسین یک خط JSON)
+                $techBackup = [
                     'tech_id' => $tech->id,
                     'wp_id' => $tech->wp_id,
                     'name' => $name,
+                    'old_panel_balance' => $currentPanel,
+                    'new_balance_from_wp' => $wpBalance,
                     'wallet_txs' => DB::table('crm_tech_wallet_transactions')
                         ->where('technician_id', $tech->id)
                         ->get()->toArray(),
                     'invoices' => DB::table('crm_invoices')
                         ->where('technician_id', $tech->id)
                         ->get()->toArray(),
-                    'old_panel_balance' => $currentPanel,
-                    'new_balance_from_wp' => $wpBalance,
                 ];
+                fwrite($backupFp, json_encode($techBackup, JSON_UNESCAPED_UNICODE) . "\n");
+                unset($techBackup); // free memory
 
                 // ۱) حذف wallet_txs
                 DB::table('crm_tech_wallet_transactions')
@@ -144,19 +153,18 @@ class ResetWalletFromWp extends Command
             $bar->advance();
         }
 
+        if ($backupFp) {
+            fclose($backupFp);
+        }
+
         $bar->finish();
         $this->newLine(2);
 
         $this->table(['id', 'wp_id', 'نام', 'مانده Panel فعلی', 'مانده WP', 'diff'], $rows);
 
         if ($apply) {
-            // ذخیره backup
-            Storage::disk('local')->makeDirectory('crm');
-            $path = 'crm/wallet-reset-' . now()->format('Y-m-d_His') . '.json';
-            Storage::disk('local')->put($path, json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
             $this->info("✓ Reset انجام شد. {$techs->count()} تکنسین به مانده WP بازگشتند.");
-            $this->info("✓ Backup در: storage/app/{$path}");
+            $this->info("✓ Backup در: {$backupPath}");
         } else {
             $this->newLine();
             $this->warn('این dry-run بود. برای اعمال --apply اضافه کنید:');
