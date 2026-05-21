@@ -13,6 +13,7 @@ use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
+use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
@@ -22,6 +23,7 @@ use Modules\CRM\Console\Commands\ResetWalletFromWp;
 use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
 use Modules\CRM\Console\Commands\UndoRestoreAdjustments;
 use Modules\CRM\Console\Commands\UnsupersedeInvoices;
+use Modules\CRM\Console\Commands\VerifyInvoiceCalc;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
@@ -94,6 +96,8 @@ class CrmServiceProvider extends ServiceProvider
                 UndoRestoreAdjustments::class,
                 ReimportAllWalletFromWp::class,
                 UnsupersedeInvoices::class,
+                VerifyInvoiceCalc::class,
+                ImportInvoicesFromWp::class,
             ]);
         }
     }
