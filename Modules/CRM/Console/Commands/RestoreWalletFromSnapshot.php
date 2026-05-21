@@ -30,6 +30,7 @@ class RestoreWalletFromSnapshot extends Command
     protected $signature = 'crm:restore-wallet-from-snapshot
                             {--file= : نام فایل snapshot (نسبی به storage/app)}
                             {--apply : اعمال (پیش‌فرض dry-run)}
+                            {--zero-missing : تکنسین‌هایی که در snapshot نیستند را به صفر برسان}
                             {--recompute : بعد، wallet:recompute-balances اجرا شود}';
 
     protected $description = 'بازیابی wallet_balance تکنسین‌ها از snapshot ذخیره‌شده';
@@ -80,6 +81,14 @@ class RestoreWalletFromSnapshot extends Command
         $rows = [];
         $changedCount = 0;
         $totalDiff = 0;
+        $zeroedCount = 0;
+        $snapTechIds = [];
+
+        foreach ($techs as $snapTech) {
+            if (isset($snapTech['id'])) {
+                $snapTechIds[] = (int) $snapTech['id'];
+            }
+        }
 
         foreach ($techs as $snapTech) {
             $techId = (int) ($snapTech['id'] ?? 0);
@@ -142,6 +151,54 @@ class RestoreWalletFromSnapshot extends Command
             }
         }
 
+        // اگر --zero-missing: تکنسین‌های Panel که در snapshot نیستند را به ۰ برسان
+        if ($this->option('zero-missing')) {
+            $missingTechs = DB::table('crm_technicians')
+                ->whereNotIn('id', $snapTechIds ?: [0])
+                ->get(['id', 'wallet_balance', 'firstname_tech', 'first_name', 'last_name']);
+
+            foreach ($missingTechs as $mt) {
+                $currentWallet = (int) $mt->wallet_balance;
+                if ($currentWallet === 0 && ! $apply) continue;
+
+                $name = mb_substr($mt->firstname_tech ?: trim($mt->first_name . ' ' . $mt->last_name), 0, 22);
+                $rows[] = [
+                    $mt->id,
+                    $name . ' (خارج از snapshot)',
+                    number_format($currentWallet),
+                    '0',
+                    number_format(-$currentWallet),
+                ];
+
+                if ($apply) {
+                    // wipe + insert opening balance = 0
+                    DB::table('crm_tech_wallet_transactions')
+                        ->where('technician_id', $mt->id)
+                        ->delete();
+
+                    DB::table('crm_tech_wallet_transactions')->insert([
+                        'technician_id' => $mt->id,
+                        'order_id' => null,
+                        'invoice_id' => null,
+                        'wp_id' => null,
+                        'type' => WalletTxType::WalletCharge->value,
+                        'amount' => 0,
+                        'balance_after' => 0,
+                        'note' => 'صفر شد — خارج از snapshot ' . basename($file),
+                        'created_by' => null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    DB::table('crm_technicians')
+                        ->where('id', $mt->id)
+                        ->update(['wallet_balance' => 0, 'updated_at' => now()]);
+
+                    $zeroedCount++;
+                }
+            }
+        }
+
         // نمایش ۳۰ تای اول
         $this->table(['tech_id', 'نام', 'wallet فعلی', 'wallet snapshot', 'diff'], array_slice($rows, 0, 30));
         if (count($rows) > 30) {
@@ -150,7 +207,10 @@ class RestoreWalletFromSnapshot extends Command
 
         $this->newLine();
         if ($apply) {
-            $this->info("✓ {$changedCount} تکنسین بازیابی شد.");
+            $this->info("✓ {$changedCount} تکنسین از snapshot بازیابی شد.");
+            if ($this->option('zero-missing')) {
+                $this->info("✓ {$zeroedCount} تکنسین خارج از snapshot به صفر رسید.");
+            }
             $this->line('جمع diff: ' . number_format($totalDiff));
             if ($this->option('recompute')) {
                 $this->info('در حال recompute...');
