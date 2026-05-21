@@ -118,6 +118,44 @@ return [
                     'aparat_id'   => ['label' => 'Aparat ID', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'poster'      => ['label' => 'تصویر poster (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                     'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                    'highlights'  => [
+                        'label' => 'لیست بولت‌های Hero (تیک‌دار)',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'icon' => ['label' => 'کلید آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'text' => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'stats' => [
+                'label'       => 'آمار About (A2)',
+                'description' => 'هدر سکشن + آرایه‌ی آمار. منبع داده اصلی این بخش — جایگزین /v1/site/about-stats.',
+                'fields' => [
+                    'title'    => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items'    => [
+                        'label' => 'آمار',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'key'   => ['label' => 'کلید پایدار (snake_case)', 'type' => 'string', 'rules' => 'required|string|max:60|regex:/^[a-z][a-z0-9_]*$/'],
+                            'value' => ['label' => 'مقدار نمایشی', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                            'label' => ['label' => 'برچسب فارسی', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'tone'  => [
+                                'label'   => 'تم رنگ',
+                                'type'    => 'select',
+                                'options' => [
+                                    'blue'   => 'آبی',
+                                    'green'  => 'سبز',
+                                    'amber'  => 'کهربایی',
+                                    'rose'   => 'صورتی',
+                                    'violet' => 'بنفش',
+                                ],
+                                'rules'   => 'required|in:blue,green,amber,rose,violet',
+                            ],
+                        ],
+                    ],
                 ],
             ],
 

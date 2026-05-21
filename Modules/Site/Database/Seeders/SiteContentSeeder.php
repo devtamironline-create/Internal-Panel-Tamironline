@@ -220,6 +220,24 @@ class SiteContentSeeder extends Seeder
                     'title'       => 'درباره تعمیرآنلاین',
                     'subtitle'    => 'تعمیرآنلاین چگونه متولد شد؟',
                     'description' => 'تعمیرآنلاین در اردیبهشت ۱۳۹۶ با هدف تسهیل خدمات تعمیر لوازم خانگی متولد شد. امروز با بیش از ۲۰۰ تکنسین متخصص در ۲۲ منطقه‌ی تهران و ۱۱ منطقه‌ی کرج خدمت‌رسانی می‌کنیم.',
+                    'highlights'  => [
+                        ['icon' => 'shield-check', 'text' => 'تکنسین‌های متخصص با مجوز رسمی'],
+                        ['icon' => 'shield-check', 'text' => 'استفاده از قطعات اصلی و باکیفیت'],
+                        ['icon' => 'shield-check', 'text' => 'گارانتی کتبی ۶ ماهه'],
+                        ['icon' => 'shield-check', 'text' => 'قیمت شفاف، بدون هزینه پنهان'],
+                    ],
+                ],
+                'stats' => [
+                    'title'    => 'تعمیرآنلاین در یک نگاه',
+                    'subtitle' => 'اعداد و آماری که نشان‌دهنده‌ی کیفیت کار ماست',
+                    'items'    => [
+                        ['key' => 'experience_years', 'value' => '۸+',          'label' => 'سال تجربه',          'tone' => 'blue'],
+                        ['key' => 'repairs_count',    'value' => '۵۰,۰۰۰+',     'label' => 'تعمیر موفق',         'tone' => 'green'],
+                        ['key' => 'technicians',      'value' => '۲۰۰+',        'label' => 'تکنسین متخصص',        'tone' => 'amber'],
+                        ['key' => 'satisfaction',     'value' => '۹۸٪',         'label' => 'رضایت مشتری',         'tone' => 'rose'],
+                        ['key' => 'followers',        'value' => '۱.۵ میلیون+', 'label' => 'دنبال‌کننده',         'tone' => 'violet'],
+                        ['key' => 'service_areas',    'value' => '۳۳ منطقه',    'label' => 'تهران و کرج',         'tone' => 'blue'],
+                    ],
                 ],
                 'values' => [
                     'title'    => 'ارزش‌های ما',
