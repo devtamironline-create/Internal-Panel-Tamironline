@@ -28,18 +28,25 @@
     @endif
 
     {{-- ─── صفر کردن همه کیف‌پول‌ها ─── --}}
-    <div class="bg-rose-50 border-2 border-rose-200 rounded-xl p-4">
+    <div class="bg-rose-50 border-2 border-rose-200 rounded-xl p-4 space-y-3">
+        <div class="text-sm font-bold text-rose-800">🔥 صفر کردن همه کیف‌پول‌ها</div>
+        <p class="text-[11px] text-rose-700 leading-6">
+            wallet_txs همه تکنسین‌ها پاک می‌شود + یک opening balance = 0 درج می‌شود. <strong>فاکتورها در DB حفظ می‌شوند</strong> (هیچ‌گاه حذف نمی‌شوند) — برای گزارش‌گیری همیشه قابل دسترسی هستند.
+        </p>
         <form method="POST" action="{{ route('crm.tech-manage.zero-all-wallets') }}"
-              onsubmit="return confirm('مطمئنی همه کیف‌پول‌ها به صفر برسد؟ این عملیات destructive است.');"
-              class="flex items-center gap-3 flex-wrap">
+              onsubmit="return confirm('مطمئنی همه کیف‌پول‌ها به صفر برسد؟');"
+              class="space-y-2">
             @csrf
-            <span class="text-sm font-bold text-rose-800">🔥 صفر کردن همه کیف‌پول‌ها + supersede همه فاکتورها</span>
             <label class="flex items-center gap-2 text-xs text-rose-700">
                 <input type="checkbox" name="confirm" value="1" class="w-4 h-4">
-                تأیید می‌کنم
+                <strong>تأیید می‌کنم</strong>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-rose-700">
+                <input type="checkbox" name="supersede_invoices" value="1" class="w-4 h-4">
+                فاکتورها هم superseded شوند (در محاسبه invoice_debt نباشند، فقط در DB بمانند) — تیک نزدید: فاکتورها active بمانند و مانده نمایشی منفی خواهد بود
             </label>
             <button type="submit"
-                    class="ms-auto px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold">
+                    class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold">
                 اعمال
             </button>
         </form>

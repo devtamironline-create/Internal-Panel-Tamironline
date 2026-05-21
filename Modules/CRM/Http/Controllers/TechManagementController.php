@@ -133,6 +133,8 @@ class TechManagementController extends Controller
             return back()->with('error', 'برای تأیید، چک‌باکس تأیید را بزن.');
         }
 
+        $supersedeInvoices = $request->boolean('supersede_invoices');
+
         $count = 0;
         Technician::chunk(100, function ($chunk) use (&$count) {
             foreach ($chunk as $tech) {
@@ -167,11 +169,17 @@ class TechManagementController extends Controller
             }
         });
 
-        // فاکتورها هم superseded تا invoice_debt = 0
-        DB::table('crm_invoices')
-            ->whereNull('superseded_at')
-            ->update(['superseded_at' => now(), 'updated_at' => now()]);
+        $msg = "✓ کیف‌پول {$count} تکنسین صفر شد.";
 
-        return back()->with('success', "✓ کیف‌پول {$count} تکنسین صفر شد + همه فاکتورها superseded شدند.");
+        if ($supersedeInvoices) {
+            $superseded = DB::table('crm_invoices')
+                ->whereNull('superseded_at')
+                ->update(['superseded_at' => now(), 'updated_at' => now()]);
+            $msg .= " ✓ {$superseded} فاکتور superseded شد (در DB می‌مانند، فقط در محاسبه نیستند).";
+        } else {
+            $msg .= " فاکتورها دست‌نخورده ماندند (مانده نمایشی = ۰ منهای سهم شرکت = منفی).";
+        }
+
+        return back()->with('success', $msg);
     }
 }
