@@ -16,6 +16,7 @@ use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
+use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
 use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
@@ -90,6 +91,7 @@ class CrmServiceProvider extends ServiceProvider
                 ResetWalletFromWp::class,
                 RestoreDeletedAdjustments::class,
                 UndoRestoreAdjustments::class,
+                ReimportAllWalletFromWp::class,
             ]);
         }
     }
