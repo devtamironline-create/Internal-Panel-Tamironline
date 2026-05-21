@@ -24,8 +24,10 @@ use Modules\CRM\Models\Order;
 class PullNewOrdersFromWp extends Command
 {
     protected $signature = 'crm:pull-new-orders-from-wp
+                            {--wp-id= : فقط یک سفارش خاص با این wp_id}
                             {--since= : فقط سفارش‌های بعد از این تاریخ (YYYY-MM-DD)}
                             {--limit=500 : حداکثر تعداد}
+                            {--force : حتی اگر در Panel موجود است، دوباره وارد کن}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
     protected $description = 'Pull سفارش‌های WP که در Panel نیستند';
@@ -47,6 +49,9 @@ class PullNewOrdersFromWp extends Command
             ->where('post_type', 'orders')
             ->whereIn('post_status', ['publish', 'private', 'draft', 'pending']);
 
+        if ($wpId = $this->option('wp-id')) {
+            $query->where('ID', (int) $wpId);
+        }
         if ($since = $this->option('since')) {
             $query->where('post_date', '>=', $since . ' 00:00:00');
         }
@@ -58,9 +63,14 @@ class PullNewOrdersFromWp extends Command
             return self::SUCCESS;
         }
 
-        // exclude existing
-        $existingWpIds = Order::whereIn('wp_id', $allWpIds)->pluck('wp_id')->all();
-        $missingIds = array_diff($allWpIds, $existingWpIds);
+        // exclude existing (مگر --force)
+        if ($this->option('force')) {
+            $missingIds = $allWpIds;
+            $existingWpIds = [];
+        } else {
+            $existingWpIds = Order::whereIn('wp_id', $allWpIds)->pluck('wp_id')->all();
+            $missingIds = array_diff($allWpIds, $existingWpIds);
+        }
 
         $this->info(($apply ? '🔥 APPLY' : 'DRY-RUN') . " — سفارش WP بررسی‌شده: " . count($allWpIds));
         $this->info("از قبل در Panel: " . count($existingWpIds));
