@@ -176,6 +176,160 @@ class DataToolsController extends Controller
     /**
      * اجرای artisan و گرفتن خروجی برای نمایش.
      */
+    // ─── تنظیم مانده کیف‌پول به‌صورت گروهی (لیست paste شده) ───────
+
+    public function bulkBalanceForm()
+    {
+        return view('crm::data-tools.bulk-balance');
+    }
+
+    public function bulkBalanceApply(Request $request)
+    {
+        $request->validate([
+            'list' => 'required|string|max:50000',
+            'action' => 'required|in:preview,apply',
+        ]);
+
+        $action = $request->input('action');
+        $parsed = $this->parseBalanceList($request->input('list'));
+
+        $results = [];
+        $applied = 0;
+        $notFound = 0;
+        $ambiguous = 0;
+        $backup = ['timestamp' => now()->toIso8601String(), 'techs' => []];
+
+        foreach ($parsed as $row) {
+            $matches = $this->matchTechnicians($row['name']);
+
+            $entry = [
+                'input_name' => $row['name'],
+                'target' => $row['amount'],
+                'status' => '',
+                'matched_name' => null,
+                'tech_id' => null,
+                'matches_count' => $matches->count(),
+                'current_balance' => null,
+            ];
+
+            if ($matches->isEmpty()) {
+                $entry['status'] = 'notfound';
+                $notFound++;
+            } elseif ($matches->count() > 1) {
+                $entry['status'] = 'ambiguous';
+                $ambiguous++;
+            } else {
+                $tech = $matches->first();
+                $entry['status'] = 'ok';
+                $entry['tech_id'] = $tech->id;
+                $entry['matched_name'] = $tech->firstname_tech ?: trim(($tech->first_name ?? '') . ' ' . ($tech->last_name ?? ''));
+
+                $currentBalance = (int) $tech->wallet_balance - (int) DB::table('crm_invoices')
+                    ->where('technician_id', $tech->id)
+                    ->whereNull('superseded_at')
+                    ->sum('company_share');
+                $entry['current_balance'] = $currentBalance;
+
+                if ($action === 'apply') {
+                    // backup
+                    $backup['techs'][$tech->id] = [
+                        'tech_id' => $tech->id,
+                        'wp_id' => $tech->wp_id,
+                        'name' => $entry['matched_name'],
+                        'wallet_txs' => DB::table('crm_tech_wallet_transactions')
+                            ->where('technician_id', $tech->id)
+                            ->get()->toArray(),
+                        'invoices' => DB::table('crm_invoices')
+                            ->where('technician_id', $tech->id)
+                            ->get()->toArray(),
+                        'old_balance' => $currentBalance,
+                        'new_balance' => $row['amount'],
+                    ];
+
+                    // wipe + opening
+                    DB::table('crm_tech_wallet_transactions')
+                        ->where('technician_id', $tech->id)
+                        ->delete();
+
+                    DB::table('crm_invoices')
+                        ->where('technician_id', $tech->id)
+                        ->whereNull('superseded_at')
+                        ->update(['superseded_at' => now()]);
+
+                    $type = $row['amount'] >= 0 ? 'wallet_charge' : 'adjustment';
+                    DB::table('crm_tech_wallet_transactions')->insert([
+                        'technician_id' => $tech->id,
+                        'order_id' => null,
+                        'invoice_id' => null,
+                        'wp_id' => null,
+                        'type' => $type,
+                        'amount' => $row['amount'],
+                        'balance_after' => $row['amount'],
+                        'note' => 'موجودی افتتاحیه از WP CRM (تنظیم دستی توسط ادمین ' . now()->format('Y-m-d H:i') . ')',
+                        'created_by' => auth()->id(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    DB::table('crm_technicians')
+                        ->where('id', $tech->id)
+                        ->update(['wallet_balance' => $row['amount'], 'updated_at' => now()]);
+
+                    $entry['applied'] = true;
+                    $applied++;
+                }
+            }
+
+            $results[] = $entry;
+        }
+
+        // save backup if applied
+        if ($action === 'apply' && ! empty($backup['techs'])) {
+            \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory('crm');
+            $path = 'crm/wallet-bulk-balance-' . now()->format('Y-m-d_His') . '.json';
+            \Illuminate\Support\Facades\Storage::disk('local')->put(
+                $path,
+                json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            );
+        }
+
+        return view('crm::data-tools.bulk-balance', [
+            'results' => $results,
+            'action' => $action,
+            'list' => $request->input('list'),
+            'summary' => [
+                'total' => count($parsed),
+                'ok' => count($parsed) - $notFound - $ambiguous,
+                'notfound' => $notFound,
+                'ambiguous' => $ambiguous,
+                'applied' => $applied,
+            ],
+        ]);
+    }
+
+    /** Parse لیست: هر خط = نام<whitespace>amount (with optional sign). */
+    private function parseBalanceList(string $raw): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $raw);
+        $parsed = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+            if (str_contains($line, 'نام') || str_contains($line, 'مانده')) continue;
+
+            // پیدا کردن عدد امضادار از انتها
+            if (! preg_match('/^(.+?)[\s\t]+(-?[0-9]+)\s*$/u', $line, $m)) continue;
+            $name = trim($m[1]);
+            $amount = (int) $m[2];
+
+            if ($name === '') continue;
+            $parsed[] = ['name' => $name, 'amount' => $amount];
+        }
+
+        return $parsed;
+    }
+
     // ─── تنظیم درصد تکنسین‌ها به صورت گروهی (لیست paste شده) ──────
 
     /** نمایش صفحه فرم. */

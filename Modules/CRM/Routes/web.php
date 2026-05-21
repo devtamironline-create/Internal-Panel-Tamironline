@@ -319,6 +319,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('wallet-audit', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'walletAudit'])->name('wallet-audit');
         Route::get('bulk-percent', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkPercentForm'])->name('bulk-percent');
         Route::post('bulk-percent', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkPercentApply'])->name('bulk-percent.apply');
+        Route::get('bulk-balance', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkBalanceForm'])->name('bulk-balance');
+        Route::post('bulk-balance', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkBalanceApply'])->name('bulk-balance.apply');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────

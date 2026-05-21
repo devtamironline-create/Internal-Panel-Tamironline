@@ -181,18 +181,32 @@ class ResetWalletFromWp extends Command
      */
     private function computeWpBalance($wp, string $prefix, Technician $tech): int
     {
-        // پیدا کردن همه financial postهای تکنسین در WP
-        $postIds = $wp->table($prefix.'posts as p')
-            ->where('p.post_type', 'financial')
-            ->whereIn('p.post_status', ['publish', 'private'])
-            ->where(function ($q) use ($prefix, $tech) {
-                $q->whereIn('p.ID', function ($sub) use ($prefix, $tech) {
-                    $sub->select('post_id')->from($prefix.'postmeta')
-                        ->whereIn('meta_key', ['technician_id', 'technician', 'tech_id'])
-                        ->where('meta_value', (string) $tech->wp_id);
-                })->orWhere('p.post_author', $tech->wp_id);
-            })
-            ->pluck('p.ID')->all();
+        // پیدا کردن همه financial postهای تکنسین با دو روش جداگانه و union
+        // ۱) postmeta با کلیدهای رایج
+        $ids1 = $wp->table($prefix.'postmeta')
+            ->whereIn('meta_key', [
+                'technician_id', 'technician', 'tech_id',
+                'tech', 'to_tech', 'tech_user_id', 'tech_user',
+                'assigned_technician', 'for_tech',
+            ])
+            ->where('meta_value', (string) $tech->wp_id)
+            ->pluck('post_id')->all();
+
+        // ۲) post_author = wp_id تکنسین
+        $ids2 = $wp->table($prefix.'posts')
+            ->where('post_type', 'financial')
+            ->where('post_author', $tech->wp_id)
+            ->pluck('ID')->all();
+
+        $allIds = array_unique(array_merge((array) $ids1, (array) $ids2));
+        if (empty($allIds)) return 0;
+
+        // فقط financial post_type
+        $postIds = $wp->table($prefix.'posts')
+            ->whereIn('ID', $allIds)
+            ->where('post_type', 'financial')
+            ->whereIn('post_status', ['publish', 'private', 'draft', 'pending'])
+            ->pluck('ID')->all();
 
         if (empty($postIds)) return 0;
 
@@ -225,12 +239,7 @@ class ResetWalletFromWp extends Command
             $rewardType = $meta['reward_type'] ?? null;
             $orderWpId = (int) ($meta['order_id'] ?? 0);
 
-            // فقط رخدادهای پرداخت‌شده محاسبه می‌شوند
-            if ($paymentStatus !== 1 && $wallet !== 1 && ($rewardType === null || $rewardType === '')) {
-                continue;
-            }
-
-            // ۱) شارژ wallet → balance += wallet_pay
+            // ۱) شارژ wallet → balance += wallet_pay (مطلق نه علامت‌دار)
             if ($wallet === 1) {
                 $balance += (int) ($meta['wallet_pay'] ?? 0);
                 continue;
