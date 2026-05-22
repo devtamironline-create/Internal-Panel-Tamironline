@@ -141,7 +141,12 @@ class Invoice extends Model
     public static function generateInvoiceCode(): string
     {
         $prefix = 'INV-' . date('ym') . '-';
-        $last = static::where('invoice_code', 'like', $prefix . '%')->orderByDesc('id')->value('invoice_code');
+        // withoutGlobalScope تا فاکتورهای superseded هم شمرده شوند —
+        // وگرنه ممکن است کد قبلی (که superseded شده) تکرار شود.
+        $last = static::withoutGlobalScope('active')
+            ->where('invoice_code', 'like', $prefix . '%')
+            ->orderByDesc('id')
+            ->value('invoice_code');
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
         return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
