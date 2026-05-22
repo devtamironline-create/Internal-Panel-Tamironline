@@ -3,8 +3,10 @@
 namespace Modules\CRM\Services;
 
 use Illuminate\Support\Facades\DB;
+use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
+use Modules\CRM\Models\WalletTransaction;
 
 /**
  * تولید فاکتور از سفارش — هم‌سو با مدل مالی WP CRM.
@@ -40,7 +42,11 @@ class InvoiceService
 
         return DB::transaction(function () use ($order, $createdBy, $existing) {
             if ($existing) {
-                // مارک فاکتور قبلی به‌عنوان superseded — بدون global scope
+                // اگر فاکتور قبلی wallet tx همراه داشت، آن را پاک کن
+                // (بعد از create فاکتور جدید، wallet tx جدید ساخته می‌شود).
+                if ($existing->in_wallet) {
+                    WalletTransaction::where('invoice_id', $existing->id)->delete();
+                }
                 Invoice::withoutGlobalScope('active')
                     ->where('order_id', $order->id)
                     ->whereNull('superseded_at')
@@ -55,7 +61,7 @@ class InvoiceService
                    'tech_share' => 0, 'company_share' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
                    'percent' => 0, 'calc_type' => null];
 
-            return Invoice::create([
+            $invoice = Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
@@ -68,7 +74,39 @@ class InvoiceService
                 'status' => 'issued',
                 'issued_at' => now(),
                 'created_by' => $createdBy,
+                'in_wallet' => false, // ابتدا false، بعد از ساختن wallet tx → true
             ]);
+
+            // ─── ثبت تراکنش کیف‌پول برای سهم شرکت ─────────────────
+            // برای فاکتورهای جدید، یک wallet tx با مقدار -company_share
+            // ثبت می‌شود تا اثرش روی کیف‌پول تکنسین قابل ردیابی باشد.
+            // invoice_debt این فاکتورها صفر است (در getInvoiceDebt
+            // فیلتر می‌شود) تا double-count نشود.
+            if ($invoice->technician_id && (int) $invoice->company_share > 0) {
+                $last = (int) (WalletTransaction::where('technician_id', $invoice->technician_id)
+                    ->orderByDesc('id')->value('balance_after') ?? 0);
+                $amount = -1 * (int) $invoice->company_share;
+
+                WalletTransaction::create([
+                    'technician_id' => $invoice->technician_id,
+                    'order_id' => $order->id,
+                    'invoice_id' => $invoice->id,
+                    'wp_id' => null,
+                    'type' => WalletTxType::Commission->value,
+                    'amount' => $amount,
+                    'balance_after' => $last + $amount,
+                    'note' => 'سهم شرکت از فاکتور ' . $invoice->invoice_code,
+                    'created_by' => $createdBy,
+                ]);
+
+                // wallet_balance تکنسین را به‌روز کن
+                \Modules\CRM\Models\Technician::where('id', $invoice->technician_id)
+                    ->update(['wallet_balance' => $last + $amount]);
+
+                $invoice->update(['in_wallet' => true]);
+            }
+
+            return $invoice;
         });
     }
 }

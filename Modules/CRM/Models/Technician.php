@@ -232,7 +232,10 @@ class Technician extends Authenticatable
         if (array_key_exists('invoices_sum_company_share', $this->attributes)) {
             return (int) ($this->attributes['invoices_sum_company_share'] ?? 0);
         }
-        return (int) $this->invoices()->sum('company_share');
+        // فاکتورهایی که in_wallet=true → از این لحظه به بعد، اثرشان
+        // قبلاً در wallet_transactions ثبت شده. در invoice_debt شمرده
+        // نمی‌شوند تا double-count نشوند.
+        return (int) $this->invoices()->where('in_wallet', false)->sum('company_share');
     }
 
     /**
