@@ -9,7 +9,7 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <form action="{{ route('crm.devices.update', $device) }}" method="POST">
+        <form action="{{ route('crm.devices.update', $device) }}" method="POST" enctype="multipart/form-data">
             @method('PUT')
             @include('crm::devices._form')
         </form>

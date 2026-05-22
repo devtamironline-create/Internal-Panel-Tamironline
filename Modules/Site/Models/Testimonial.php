@@ -4,6 +4,7 @@ namespace Modules\Site\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Testimonial extends Model
 {
@@ -33,4 +34,10 @@ class Testimonial extends Model
         'sort_order'       => 'integer',
         'published_at'     => 'datetime',
     ];
+
+    public function taxonomies(): BelongsToMany
+    {
+        return $this->belongsToMany(Taxonomy::class, 'site_testimonial_taxonomies', 'testimonial_id', 'taxonomy_id')
+            ->where('site_taxonomies.type', Taxonomy::TYPE_TESTIMONIAL);
+    }
 }
