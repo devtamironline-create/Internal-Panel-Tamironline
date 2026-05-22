@@ -222,6 +222,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────
     Route::middleware('can:manage-crm-sms-templates')->group(function () {
+        // ─── صفحه یکپارچه مدیریت پیامک (تنظیمات + قالب‌ها + تست) ───
+        Route::get('sms-management', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'index'])->name('sms-management.index');
+        Route::post('sms-management/settings', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'updateSettings'])->name('sms-management.settings.update');
+        Route::post('sms-management/template/{template}', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'updateTemplate'])->name('sms-management.template.update');
+        Route::post('sms-management/template/{template}/toggle', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'toggle'])->name('sms-management.template.toggle');
+        Route::post('sms-management/test', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'test'])->name('sms-management.test');
+
+        // ─── route های قدیمی برای backward-compat ───
         Route::get('sms/templates', [SmsTemplateController::class, 'index'])->name('sms.templates.index');
         Route::get('sms/templates/{template}/edit', [SmsTemplateController::class, 'edit'])->name('sms.templates.edit');
         Route::put('sms/templates/{template}', [SmsTemplateController::class, 'update'])->name('sms.templates.update');

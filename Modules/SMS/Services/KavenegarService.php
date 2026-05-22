@@ -16,11 +16,35 @@ class KavenegarService
 
     public function __construct()
     {
-        $this->apiKey = config('sms.kavenegar.api_key') ?? '';
+        // اولویت با تنظیمات runtime در crm_settings (قابل ادیت از UI ادمین).
+        // در نبود آن از config (env) خوانده می‌شود.
+        $crmKey = $this->crmSetting('kavenegar_api_key');
+        $this->apiKey = $crmKey !== '' ? $crmKey : (config('sms.kavenegar.api_key') ?? '');
         $this->sender = config('sms.kavenegar.sender') ?? '';
-        $this->proxyEnabled = (bool) config('sms.proxy.enabled', false);
-        $this->proxyUrl = rtrim(config('sms.proxy.url', ''), '/');
-        $this->proxySecret = config('sms.proxy.secret', '');
+
+        $crmProxyEnabled = $this->crmSetting('sms_proxy_enabled');
+        $this->proxyEnabled = $crmProxyEnabled !== ''
+            ? ($crmProxyEnabled === '1')
+            : (bool) config('sms.proxy.enabled', false);
+
+        $crmProxyUrl = $this->crmSetting('sms_proxy_url');
+        $this->proxyUrl = rtrim($crmProxyUrl !== '' ? $crmProxyUrl : (config('sms.proxy.url', '')), '/');
+
+        $crmProxySecret = $this->crmSetting('sms_proxy_secret');
+        $this->proxySecret = $crmProxySecret !== '' ? $crmProxySecret : (config('sms.proxy.secret', ''));
+    }
+
+    /** خواندن یک تنظیم از crm_settings — اگر کلاس موجود نباشد، رشته خالی. */
+    protected function crmSetting(string $key): string
+    {
+        if (! class_exists(\Modules\CRM\Models\CrmSetting::class)) {
+            return '';
+        }
+        try {
+            return (string) (\Modules\CRM\Models\CrmSetting::get($key, '') ?? '');
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     public function send(string $receptor, string $message): array
