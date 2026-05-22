@@ -38,6 +38,8 @@ use Modules\CRM\Console\Commands\ResyncWalletTransactions;
 use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
+use Modules\CRM\Console\Commands\RestoreOrderStatuses;
+use Modules\CRM\Console\Commands\SnapshotOrderStatuses;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
 use Modules\CRM\Console\Commands\TechMergeFromWp;
 use Modules\CRM\Console\Commands\WalletAudit;
@@ -112,6 +114,8 @@ class CrmServiceProvider extends ServiceProvider
                 PullNewOrdersFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,
+                SnapshotOrderStatuses::class,
+                RestoreOrderStatuses::class,
             ]);
         }
     }

@@ -31,6 +31,7 @@ class ResyncOrderStatusesFromWp extends Command
                             {--limit= : حداکثر تعداد سفارش (پیش‌فرض همه)}
                             {--offset=0 : شروع از این offset (برای ادامه)}
                             {--since= : فقط سفارش‌های جدیدتر از این تاریخ (YYYY-MM-DD)}
+                            {--until= : فقط سفارش‌های قدیمی‌تر از این تاریخ (YYYY-MM-DD، شامل خود تاریخ)}
                             {--dry-run : فقط شمارش، بدون تغییر}';
 
     protected $description = 'بازخوانی فیلد status سفارش‌ها از WP CRM (سریع — فقط یک فیلد)';
@@ -53,6 +54,10 @@ class ResyncOrderStatusesFromWp extends Command
 
         if ($since = $this->option('since')) {
             $base->where('created_at', '>=', $since);
+        }
+        if ($until = $this->option('until')) {
+            // until شامل کل آن روز است
+            $base->where('created_at', '<', date('Y-m-d', strtotime($until . ' +1 day')));
         }
         $offset = (int) $this->option('offset');
         if ($offset > 0) {
