@@ -39,6 +39,7 @@ use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
+use Modules\CRM\Console\Commands\TechMergeFromWp;
 use Modules\CRM\Console\Commands\WalletAudit;
 use Modules\CRM\Livewire\OrderWizard;
 
@@ -110,6 +111,7 @@ class CrmServiceProvider extends ServiceProvider
                 FullRebuildFromWp::class,
                 PullNewOrdersFromWp::class,
                 ReplaceTechInfo::class,
+                TechMergeFromWp::class,
             ]);
         }
     }
