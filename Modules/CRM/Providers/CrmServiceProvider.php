@@ -41,6 +41,7 @@ use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
 use Modules\CRM\Console\Commands\InspectOrder;
 use Modules\CRM\Console\Commands\RestoreOrderStatuses;
+use Modules\CRM\Console\Commands\RestoreStatusFromEvents;
 use Modules\CRM\Console\Commands\SnapshotOrderStatuses;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
 use Modules\CRM\Console\Commands\TechMergeFromWp;
@@ -120,6 +121,7 @@ class CrmServiceProvider extends ServiceProvider
                 RestoreOrderStatuses::class,
                 DiffOrderStatuses::class,
                 InspectOrder::class,
+                RestoreStatusFromEvents::class,
             ]);
         }
     }
