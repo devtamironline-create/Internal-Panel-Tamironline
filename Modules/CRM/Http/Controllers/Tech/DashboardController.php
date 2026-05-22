@@ -404,7 +404,9 @@ class DashboardController extends Controller
         // پیش‌نویس‌ها فاکتور صادر نمی‌کنند — تکنسین می‌تواند بعداً دوباره ثبت
         // کند بدون save_as_draft تا فاکتور نهایی بخورد.
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id);
+            // forceRegenerate=true → اگر فاکتور قبلی برای این سفارش هست،
+            // superseded شود و فاکتور جدید با قیمت/قطعات فعلی ساخته شود.
+            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
         }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.

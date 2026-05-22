@@ -26,13 +26,27 @@ class InvoiceService
     {
     }
 
-    public function generateForOrder(Order $order, ?int $createdBy = null): ?Invoice
+    public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false): ?Invoice
     {
-        if ($existing = Invoice::where('order_id', $order->id)->first()) {
+        // اگر سفارش از قبل فاکتور active دارد:
+        //   - بدون forceRegenerate: همان برمی‌گردد (idempotent برای double-click)
+        //   - با forceRegenerate=true: فاکتور قبلی superseded و فاکتور جدید
+        //     با مقادیر فعلی Order ساخته می‌شود. این برای موقعی است که
+        //     تکنسین قیمت/قطعات را عوض کرده و دوباره Complete زده.
+        $existing = Invoice::where('order_id', $order->id)->first();
+        if ($existing && ! $forceRegenerate) {
             return $existing;
         }
 
-        return DB::transaction(function () use ($order, $createdBy) {
+        return DB::transaction(function () use ($order, $createdBy, $existing) {
+            if ($existing) {
+                // مارک فاکتور قبلی به‌عنوان superseded — بدون global scope
+                Invoice::withoutGlobalScope('active')
+                    ->where('order_id', $order->id)
+                    ->whereNull('superseded_at')
+                    ->update(['superseded_at' => now()]);
+            }
+
             $technician = $order->technician;
 
             $totals = $technician
