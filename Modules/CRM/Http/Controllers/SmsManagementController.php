@@ -56,13 +56,27 @@ class SmsManagementController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'body'  => 'required|string|max:2000',
+            'body'  => 'nullable|string|max:2000',
+            'kavenegar_template' => 'nullable|string|max:100',
+            'token_vars' => 'nullable|array',
+            'token_vars.token'  => 'nullable|string|max:255',
+            'token_vars.token2' => 'nullable|string|max:255',
+            'token_vars.token3' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
         ]);
 
+        $tokenVars = $validated['token_vars'] ?? [];
+        $tokenVars = [
+            'token'  => (string) ($tokenVars['token']  ?? ''),
+            'token2' => (string) ($tokenVars['token2'] ?? ''),
+            'token3' => (string) ($tokenVars['token3'] ?? ''),
+        ];
+
         $template->update([
             'title' => $validated['title'],
-            'body'  => $validated['body'],
+            'body'  => (string) ($validated['body'] ?? ''),
+            'kavenegar_template' => (string) ($validated['kavenegar_template'] ?? '') ?: null,
+            'token_vars' => $tokenVars,
             'is_active' => (bool) ($validated['is_active'] ?? false),
         ]);
 
@@ -75,15 +89,38 @@ class SmsManagementController extends Controller
         return back()->with('success', $template->is_active ? 'قالب فعال شد.' : 'قالب غیرفعال شد.');
     }
 
-    /** ارسال تست — یک پیامک به شماره داده‌شده با body دل‌خواه. */
+    /**
+     * ارسال تست:
+     *  - اگر template پر باشد → verify/lookup با token1/2/3
+     *  - در غیر اینصورت → sms/send با body
+     */
     public function test(Request $request, KavenegarService $sms)
     {
         $request->validate([
-            'mobile' => 'required|string|regex:/^09\d{9}$/',
-            'body'   => 'required|string|max:500',
+            'mobile'   => 'required|string|regex:/^09\d{9}$/',
+            'template' => 'nullable|string|max:100',
+            'token'    => 'nullable|string|max:255',
+            'token2'   => 'nullable|string|max:255',
+            'token3'   => 'nullable|string|max:255',
+            'body'     => 'nullable|string|max:500',
         ]);
 
-        $result = $sms->send($request->input('mobile'), $request->input('body'));
+        $mobile   = (string) $request->input('mobile');
+        $template = trim((string) $request->input('template'));
+        $body     = (string) $request->input('body');
+
+        if ($template !== '') {
+            $tokens = [
+                'token'  => (string) $request->input('token', ''),
+                'token2' => (string) $request->input('token2', ''),
+                'token3' => (string) $request->input('token3', ''),
+            ];
+            $result = $sms->sendTemplate($mobile, $template, $tokens);
+        } elseif ($body !== '') {
+            $result = $sms->send($mobile, $body);
+        } else {
+            return back()->with('error', '✗ یا نام template یا متن body باید پر باشد.');
+        }
 
         if ($result['success'] ?? false) {
             return back()->with('success', '✓ پیامک تست ارسال شد.');

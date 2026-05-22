@@ -22,7 +22,7 @@ class OrderSmsNotifier
     {
     }
 
-    public function notify(Order $order, SmsTrigger $trigger, ?int $sentBy = null): void
+    public function notify(Order $order, SmsTrigger $trigger, ?int $sentBy = null, array $extraVars = []): void
     {
         try {
             $template = SmsTemplate::forTrigger($trigger->value);
@@ -36,8 +36,32 @@ class OrderSmsNotifier
             }
 
             $order->loadMissing(['technician', 'customer']);
-            $body = $template->render($this->buildVariables($order));
+            $vars = array_merge($this->buildVariables($order), $extraVars);
 
+            // ─── دو حالت ارسال ─────────────────────────────────
+            // ۱) اگر kavenegar_template ست است → ارسال template-based
+            //    (verify/lookup.json) با token/token2/token3
+            // ۲) در غیر این‌صورت → ارسال متن آزاد (sms/send.json)
+            if (! empty($template->kavenegar_template)) {
+                $tokens = $template->renderTokens($vars);
+                $result = $this->sms->sendTemplate($recipient, $template->kavenegar_template, $tokens);
+
+                SmsLog::create([
+                    'order_id' => $order->id,
+                    'trigger_key' => $trigger->value,
+                    'recipient_mobile' => $recipient,
+                    'recipient_role' => $role,
+                    'body' => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
+                    'status' => $result['success'] ? 'success' : 'failed',
+                    'response' => $result['success'] ? null : ($result['message'] ?? null),
+                    'sent_by' => $sentBy,
+                    'created_at' => now(),
+                ]);
+                return;
+            }
+
+            // Fallback: متن آزاد
+            $body = $template->render($vars);
             $this->dispatch($order, $trigger->value, $recipient, $role, $body, $sentBy);
         } catch (\Throwable $e) {
             Log::error('CRM OrderSmsNotifier failed', [
@@ -79,17 +103,25 @@ class OrderSmsNotifier
 
     protected function buildVariables(Order $order): array
     {
+        $techFullName = $order->technician
+            ? trim((string) ($order->technician->firstname_tech
+                ?: ($order->technician->first_name ?? '') . ' ' . ($order->technician->last_name ?? '')))
+            : '';
+
         return [
             'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
             'customer_mobile' => $order->customer_mobile ?: '',
             'order_code' => $order->order_code ?: '',
-            'technician_name' => $order->technician
-                ? trim(($order->technician->first_name ?? '') . ' ' . ($order->technician->last_name ?? ''))
-                : '',
+            'order_id' => (string) $order->id,
+            'technician_name' => $techFullName,
             'technician_mobile' => $order->technician?->mobile ?? '',
             'status' => $order->status?->label() ?? '',
             'shop_name' => CrmSetting::get('shop_name', ''),
             'visit_date' => $order->visit_scheduled_at?->format('Y-m-d H:i') ?? '',
+            'subscription' => (string) ($order->customer?->subscription ?? ''),
+            'order_type' => 'تعمیر',
+            'amount' => (string) ($order->final_price ?: $order->total_invoice ?: $order->price_customer ?: 0),
+            'pay_link' => '',
         ];
     }
 
