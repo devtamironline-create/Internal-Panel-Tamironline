@@ -39,6 +39,7 @@ use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
+use Modules\CRM\Console\Commands\InspectOrder;
 use Modules\CRM\Console\Commands\RestoreOrderStatuses;
 use Modules\CRM\Console\Commands\SnapshotOrderStatuses;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
@@ -118,6 +119,7 @@ class CrmServiceProvider extends ServiceProvider
                 SnapshotOrderStatuses::class,
                 RestoreOrderStatuses::class,
                 DiffOrderStatuses::class,
+                InspectOrder::class,
             ]);
         }
     }
