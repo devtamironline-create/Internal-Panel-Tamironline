@@ -43,15 +43,21 @@ class SnapshotOrderStatuses extends Command
             return self::SUCCESS;
         }
 
-        $disk = Storage::disk('local');
         $dir = 'crm/snapshots';
-        if (! $disk->exists($dir)) $disk->makeDirectory($dir);
+        $absoluteDir = storage_path('app/' . $dir);
+        if (! is_dir($absoluteDir)) {
+            mkdir($absoluteDir, 0775, true);
+        }
 
         $label = $this->option('label') ? '-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $this->option('label')) : '';
         $filename = "{$dir}/orders-" . now()->format('Ymd-His') . "{$label}.json";
         $path = storage_path('app/' . $filename);
 
         $fp = fopen($path, 'w');
+        if ($fp === false) {
+            $this->error("نتوانست فایل بسازد: {$path}");
+            return self::FAILURE;
+        }
         fwrite($fp, json_encode([
             'snapshot_at' => now()->toIso8601String(),
             'since' => $since,
