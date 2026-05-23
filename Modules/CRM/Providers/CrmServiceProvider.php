@@ -39,6 +39,7 @@ use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
+use Modules\CRM\Console\Commands\DiagnoseOrderSync;
 use Modules\CRM\Console\Commands\InspectOrder;
 use Modules\CRM\Console\Commands\RestoreOrderStatuses;
 use Modules\CRM\Console\Commands\RestoreStatusFromEvents;
@@ -122,6 +123,7 @@ class CrmServiceProvider extends ServiceProvider
                 DiffOrderStatuses::class,
                 InspectOrder::class,
                 RestoreStatusFromEvents::class,
+                DiagnoseOrderSync::class,
             ]);
         }
     }
