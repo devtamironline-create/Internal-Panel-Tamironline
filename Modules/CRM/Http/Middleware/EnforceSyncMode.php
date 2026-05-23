@@ -11,15 +11,16 @@ use Modules\CRM\Models\CrmSetting;
  *
  * مقادیر مجاز:
  *   'full' (پیش‌فرض): همه endpointها کار می‌کنند
- *   'orders_only': فقط /order و /orders/batch — بقیه 423 می‌دهند
+ *   'orders_only': فقط /order /orders /customer /customers — بقیه 423 می‌دهند
+ *                  (مشتری اجازه دارد چون سفارش نیاز به customer_wp_id دارد)
  *   'disabled': همه endpointها 423 می‌دهند
  *
  * این middleware باید قبل از LogWpSyncInbound اجرا شود.
  */
 class EnforceSyncMode
 {
-    /** مسیرهای مربوط به orders که در حالت orders_only باز هستند. */
-    private const ORDER_PATHS = ['order', 'orders'];
+    /** مسیرهای مجاز در حالت orders_only — سفارش + مشتری (پیش‌نیاز سفارش). */
+    private const ORDERS_ONLY_PATHS = ['order', 'orders', 'customer', 'customers'];
 
     public function handle(Request $request, Closure $next)
     {
@@ -32,10 +33,9 @@ class EnforceSyncMode
         // مسیر را تشخیص بده: /api/crm/sync/{type}/...
         $parts = explode('/', ltrim($request->path(), '/'));
         $segment = $parts[3] ?? '';
-        // remove batch suffix from path (e.g. orders/batch)
-        $isOrder = in_array($segment, self::ORDER_PATHS, true);
+        $isAllowedInOrdersOnly = in_array($segment, self::ORDERS_ONLY_PATHS, true);
 
-        if ($mode === 'orders_only' && $isOrder) {
+        if ($mode === 'orders_only' && $isAllowedInOrdersOnly) {
             return $next($request);
         }
 

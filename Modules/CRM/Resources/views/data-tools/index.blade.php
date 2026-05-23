@@ -66,7 +66,7 @@
                 </h2>
                 <p class="text-[11px] text-gray-500 mt-1 leading-6">
                     <strong>کامل (full):</strong> همه inbound/outbound فعال<br>
-                    <strong>فقط سفارش (orders_only):</strong> فقط /api/crm/sync/order و /orders/batch کار می‌کند، push کلاً خاموش<br>
+                    <strong>فقط سفارش + مشتری (orders_only):</strong> فقط /order, /orders, /customer, /customers کار می‌کند (کیف‌پول/فاکتور/تکنسین/تنظیمات/تاکسونومی بسته)، push کلاً خاموش<br>
                     <strong>کاملاً قطع (disabled):</strong> هیچ inbound کار نمی‌کند، push کلاً خاموش
                 </p>
             </div>
