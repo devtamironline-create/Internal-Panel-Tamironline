@@ -83,12 +83,16 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 | 1 | POST | `/v1/contact-messages` | internal.token | 10/min | — | P0 | ✅ |
 | 2 | GET | `/v1/pages/{slug}` | — | 60/min | 300s | P0 | ✅ |
 | 3 | GET | `/v1/devices/{slug}` | — | 60/min | 300s | P0 | ✅ |
-| 4 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
-| 5 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
-| 6 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
-| 7 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
-| 8 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 9 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 4 | GET | `/v1/catalog/brands/{slug}` | internal.token | 60/min | 600s | P0 | ✅ |
+| 5 | GET | `/v1/catalog/devices/{slug}` | internal.token | 60/min | 600s | P0 | ✅ |
+| 6 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
+| 7 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
+| 8 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
+| 9 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
+| 10 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
+| 11 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+
+> **توجه:** detail endpoints (`/v1/catalog/brands/{slug}` و `/v1/catalog/devices/{slug}`) پشت `internal.token` هستن — فرانت BFF باید Bearer token بفرسته. جزئیات schema در `BACKEND_CATALOG_API.md`.
 
 ---
 
