@@ -29,6 +29,7 @@ class PullNewOrdersFromWp extends Command
                             {--since= : فقط سفارش‌های بعد از این تاریخ (YYYY-MM-DD)}
                             {--limit=500 : حداکثر تعداد}
                             {--status= : فیلتر post_status با کاما (مثلاً publish,private)؛ پیش‌فرض همه publish,private,draft,pending}
+                            {--debug : فقط dump متاها و taxonomyها (نیاز به --wp-id)}
                             {--force : حتی اگر در Panel موجود است، دوباره وارد کن}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
@@ -64,6 +65,45 @@ class PullNewOrdersFromWp extends Command
             $query->where('ID', (int) $wpId);
         } else {
             $query->whereIn('post_status', $statuses);
+        }
+
+        // ─── debug mode — فقط dump متاها و taxonomyها ─────────────
+        if ($this->option('debug')) {
+            if (! $wpId) {
+                $this->error('--debug نیاز به --wp-id دارد.');
+                return self::FAILURE;
+            }
+            $pid = (int) $wpId;
+            $post = $wp->table($prefix.'posts')->where('ID', $pid)->first();
+            if (! $post) {
+                $this->error("سفارش wp_id={$pid} پیدا نشد.");
+                return self::FAILURE;
+            }
+            $this->info("POST:");
+            foreach (['ID','post_type','post_status','post_author','post_title','post_date','post_modified'] as $f) {
+                $this->line("  {$f}: " . ($post->{$f} ?? '—'));
+            }
+
+            $this->newLine();
+            $this->info('POSTMETA (key → value):');
+            $metas = $wp->table($prefix.'postmeta')->where('post_id', $pid)->get(['meta_key','meta_value']);
+            foreach ($metas as $m) {
+                $v = mb_substr((string) $m->meta_value, 0, 100);
+                $this->line('  ' . str_pad((string) $m->meta_key, 32) . ' → ' . $v);
+            }
+
+            $this->newLine();
+            $this->info('TAXONOMIES:');
+            $tx = $wp->table($prefix.'term_relationships as tr')
+                ->join($prefix.'term_taxonomy as tt', 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
+                ->join($prefix.'terms as t', 't.term_id', '=', 'tt.term_id')
+                ->where('tr.object_id', $pid)
+                ->get(['tt.taxonomy','t.term_id','t.name']);
+            foreach ($tx as $r) {
+                $this->line("  {$r->taxonomy}: {$r->term_id} ({$r->name})");
+            }
+
+            return self::SUCCESS;
         }
         if ($since = $this->option('since')) {
             $query->where('post_date', '>=', $since . ' 00:00:00');
