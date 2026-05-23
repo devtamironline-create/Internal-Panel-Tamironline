@@ -46,7 +46,128 @@
     </div>
 </div>
 
-<div class="flex items-center gap-3 mt-6">
+{{-- ───────────────────────── CMS Override Fields ───────────────────────── --}}
+<div class="mt-8 space-y-4">
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h3 class="text-base font-bold text-blue-900 dark:text-blue-200">محتوای CMS — صفحه‌ی detail برند</h3>
+        <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+            هر فیلدی که خالی بگذارید، فرانت از <strong>fixture پیش‌فرض</strong> خود استفاده می‌کند. فقط آنچه می‌خواهید override کنید پر کنید.
+        </p>
+    </div>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg" open>
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">معرفی و رنگ‌ها</summary>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">شعار / Tagline (یک خط)</label>
+                <input type="text" name="tagline" value="{{ old('tagline', $brand->tagline ?? '') }}" maxlength="1000"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">توضیح کامل برند</label>
+                <textarea name="description" rows="4" maxlength="10000"
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $brand->description ?? '') }}</textarea>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">رنگ accent (hex)</label>
+                    <input type="text" name="tone" value="{{ old('tone', $brand->tone ?? '') }}" placeholder="#1428A0" dir="ltr"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
+                    @error('tone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">رنگ پس‌زمینه (hex)</label>
+                    <input type="text" name="bg" value="{{ old('bg', $brand->bg ?? '') }}" placeholder="#EEF2FF" dir="ltr"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
+                    @error('bg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">آمار (stats)</summary>
+        <div class="p-4">
+            @include('crm::partials.json-repeater', [
+                'name'  => 'stats',
+                'label' => 'کارت‌های آمار',
+                'help'  => 'مثلاً «۱۲+ سال تجربه»، «۵۰۰۰+ تعمیر موفق».',
+                'items' => old('stats', $brand->stats ?? []),
+                'item_fields' => [
+                    'value' => ['label' => 'مقدار', 'type' => 'string'],
+                    'label' => ['label' => 'برچسب', 'type' => 'string'],
+                ],
+            ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">مشکلات رایج (issues)</summary>
+        <div class="p-4">
+            @include('crm::partials.json-repeater', [
+                'name'  => 'issues',
+                'label' => 'مشکلات و راه‌حل‌های مرتبط با این برند',
+                'help'  => 'مثلاً «خاموش شدن ناگهانی»، «صدای غیرعادی موتور».',
+                'items' => old('issues', $brand->issues ?? []),
+                'item_fields' => [
+                    'title'       => ['label' => 'عنوان مشکل', 'type' => 'string'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea'],
+                    'icon'        => ['label' => 'آیکن Lucide (PascalCase: Zap, Wrench, ...)', 'type' => 'string'],
+                ],
+            ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">چرا ما (why_us)</summary>
+        <div class="p-4">
+            @include('crm::partials.json-repeater', [
+                'name'  => 'why_us',
+                'label' => 'دلایل انتخاب ما برای این برند',
+                'help'  => 'مثلاً «قطعات اصلی»، «تکنسین متخصص برند».',
+                'items' => old('why_us', $brand->why_us ?? []),
+                'item_fields' => [
+                    'title'       => ['label' => 'عنوان', 'type' => 'string'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea'],
+                    'icon'        => ['label' => 'آیکن Lucide', 'type' => 'string'],
+                ],
+            ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">سوالات متداول (faq)</summary>
+        <div class="p-4">
+            @include('crm::partials.json-repeater', [
+                'name'  => 'faq',
+                'label' => 'سوالات متداول مخصوص این برند',
+                'items' => old('faq', $brand->faq ?? []),
+                'item_fields' => [
+                    'question' => ['label' => 'سوال', 'type' => 'string'],
+                    'answer'   => ['label' => 'پاسخ', 'type' => 'textarea'],
+                ],
+            ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">سئو (SEO)</summary>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Meta Title</label>
+                <input type="text" name="meta_title" value="{{ old('meta_title', $brand->meta_title ?? '') }}" maxlength="200"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Meta Description</label>
+                <textarea name="meta_description" rows="2" maxlength="500"
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('meta_description', $brand->meta_description ?? '') }}</textarea>
+            </div>
+        </div>
+    </details>
+</div>
+
+<div class="flex items-center gap-3 mt-6 sticky bottom-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur p-3 -mx-3">
     <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ذخیره</button>
     <a href="{{ route('crm.brands.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">انصراف</a>
 </div>

@@ -105,6 +105,25 @@ class DeviceController extends Controller
             'sort_order'     => 'nullable|integer|min:0',
             'is_active'      => 'nullable|boolean',
             'is_featured'    => 'nullable|boolean',
+
+            // CMS-override fields
+            'short_name'       => 'nullable|string|max:80',
+            'description'      => 'nullable|string|max:10000',
+            'service_name'     => 'nullable|string|max:160',
+            'technician_name'  => 'nullable|string|max:160',
+            'starting_price'   => 'nullable|integer|min:0',
+            'accent'           => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'bg'               => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'meta_title'       => 'nullable|string|max:200',
+            'meta_description' => 'nullable|string|max:500',
+
+            'issues'               => 'nullable|array',
+            'issues.*.title'       => 'nullable|string|max:160',
+            'issues.*.description' => 'nullable|string|max:1000',
+
+            'faq'                  => 'nullable|array',
+            'faq.*.question'       => 'nullable|string|max:300',
+            'faq.*.answer'         => 'nullable|string|max:5000',
         ]);
     }
 
@@ -115,6 +134,46 @@ class DeviceController extends Controller
         $validated['is_active']   = (bool) ($validated['is_active']   ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['thumbnail_file']);
+
+        // پاکسازی ردیف‌های خالی repeater
+        foreach (['issues', 'faq'] as $key) {
+            if (isset($validated[$key]) && is_array($validated[$key])) {
+                $validated[$key] = $this->cleanRepeater($validated[$key]);
+                if (empty($validated[$key])) {
+                    $validated[$key] = null;
+                }
+            }
+        }
+    }
+
+    /**
+     * حذف ردیف‌های خالی repeater (ردیف‌هایی که هیچ مقدار غیرخالی ندارند).
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function cleanRepeater(array $rows): array
+    {
+        $cleaned = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $hasValue = false;
+            foreach ($row as $v) {
+                if (is_string($v) && trim($v) !== '') {
+                    $hasValue = true;
+                    break;
+                }
+            }
+            if ($hasValue) {
+                $cleaned[] = array_map(
+                    fn ($v) => is_string($v) ? (trim($v) === '' ? null : trim($v)) : $v,
+                    $row
+                );
+            }
+        }
+        return array_values($cleaned);
     }
 
     private function handleThumbnail(Request $request, ?Device $device): ?string
