@@ -27,6 +27,7 @@ final class CatalogMerger
         if (is_array($override) && empty($override)) {
             return $template;
         }
+
         return $override;
     }
 
@@ -52,6 +53,7 @@ final class CatalogMerger
                 $out[$key] = $value;
             }
         }
+
         return $out;
     }
 
@@ -81,7 +83,7 @@ final class CatalogMerger
             foreach ((array) ($cat['items'] ?? []) as $item) {
                 $out[] = [
                     'question' => $item['question'] ?? null,
-                    'answer'   => $item['answer'] ?? null,
+                    'answer' => $item['answer'] ?? null,
                 ];
             }
         }
@@ -89,9 +91,10 @@ final class CatalogMerger
         foreach ((array) ($faq['faq_ids_items'] ?? []) as $item) {
             $out[] = [
                 'question' => $item['question'] ?? null,
-                'answer'   => $item['answer'] ?? null,
+                'answer' => $item['answer'] ?? null,
             ];
         }
+
         return $out;
     }
 
@@ -109,5 +112,13 @@ final class CatalogMerger
     public static function templateWhyUs(array $sections): array
     {
         return (array) ($sections['why_us']['items'] ?? []);
+    }
+
+    /**
+     * استخراج مراحل سرویس از template (section.service_steps.items).
+     */
+    public static function templateServiceSteps(array $sections): array
+    {
+        return (array) ($sections['service_steps']['items'] ?? []);
     }
 }

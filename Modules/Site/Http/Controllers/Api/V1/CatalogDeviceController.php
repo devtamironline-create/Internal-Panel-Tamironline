@@ -21,9 +21,7 @@ use Modules\Site\Support\MediaUrl;
  */
 class CatalogDeviceController extends Controller
 {
-    public function __construct(private PageSectionService $sections)
-    {
-    }
+    public function __construct(private PageSectionService $sections) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -43,21 +41,21 @@ class CatalogDeviceController extends Controller
         $devices = $query->limit($limit)->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
 
         $data = $devices->map(fn (Device $d) => [
-            'id'        => (int) $d->id,
-            'label'     => $d->name,
-            'slug'      => $d->slug,
-            'href'      => '/devices/' . $d->slug,
-            'icon'      => $d->icon,
+            'id' => (int) $d->id,
+            'label' => $d->name,
+            'slug' => $d->slug,
+            'href' => '/devices/'.$d->slug,
+            'icon' => $d->icon,
             'thumbnail' => MediaUrl::resolve($d->thumbnail),
-            'tone'      => $d->tone,
+            'tone' => $d->tone,
         ])->values();
 
         $total = Device::query()->where('is_active', true)->count();
 
         return response()
             ->json([
-                'data'  => $data,
-                'meta'  => ['total' => $total],
+                'data' => $data,
+                'meta' => ['total' => $total],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
@@ -83,10 +81,10 @@ class CatalogDeviceController extends Controller
 
         // Template با placeholder substitution برای این دستگاه
         $context = [
-            'device'       => $device->short_name ?? $device->name,
+            'device' => $device->short_name ?? $device->name,
             'device_label' => $device->name,
-            'device_slug'  => $device->slug,
-            'page_title'   => $device->service_name ?? $device->name,
+            'device_slug' => $device->slug,
+            'page_title' => $device->service_name ?? $device->name,
         ];
         $template = $this->sections->pageExists('device')
             ? $this->sections->loadForPublic('device', $context)
@@ -96,36 +94,39 @@ class CatalogDeviceController extends Controller
 
         return response()
             ->json([
-                'id'              => (int) $device->id,
-                'label'           => $device->name,
-                'slug'            => $device->slug,
+                'id' => (int) $device->id,
+                'label' => $device->name,
+                'slug' => $device->slug,
 
                 // متن‌ها: override ?? template
-                'name'            => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? $device->name),
-                'short_name'      => CatalogMerger::pick($device->short_name, $device->name),
-                'service_name'    => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? null),
+                'name' => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? $device->name),
+                'short_name' => CatalogMerger::pick($device->short_name, $device->name),
+                'service_name' => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? null),
                 'technician_name' => CatalogMerger::pick($device->technician_name, $flat['technician_name'] ?? null),
-                'description'     => CatalogMerger::pick($device->description, $flat['description'] ?? null),
-                'tagline'         => CatalogMerger::pick(null, $flat['tagline'] ?? null),
+                'description' => CatalogMerger::pick($device->description, $flat['description'] ?? null),
+                'tagline' => CatalogMerger::pick(null, $flat['tagline'] ?? null),
+                'subtitle' => CatalogMerger::pick($device->subtitle, $flat['subtitle'] ?? null),
+                'eyebrow' => CatalogMerger::pick($device->eyebrow, $flat['eyebrow'] ?? null),
 
                 // ظاهر
-                'starting_price'  => $device->starting_price !== null ? (int) $device->starting_price : null,
-                'accent'          => $device->accent,
-                'bg'              => $device->bg,
-                'icon'            => $device->icon,
-                'thumbnail'       => MediaUrl::resolve($device->thumbnail),
-                'tone'            => $device->tone, // CSS class
+                'starting_price' => $device->starting_price !== null ? (int) $device->starting_price : null,
+                'accent' => $device->accent,
+                'bg' => $device->bg,
+                'icon' => $device->icon,
+                'thumbnail' => MediaUrl::resolve($device->thumbnail),
+                'tone' => $device->tone, // CSS class
 
                 // آرایه‌ها: override ?? template
-                'issues'          => CatalogMerger::pick($device->issues, CatalogMerger::templateIssues($template)),
-                'faq'             => CatalogMerger::pick($device->faq, CatalogMerger::templateFaq($template)),
+                'issues' => CatalogMerger::pick($device->issues, CatalogMerger::templateIssues($template)),
+                'faq' => CatalogMerger::pick($device->faq, CatalogMerger::templateFaq($template)),
 
                 // پشتیبانی و گارانتی
-                'warranty_text'   => CatalogMerger::pick($device->warranty_text, $flat['warranty_text'] ?? null),
-                'support_info'    => CatalogMerger::pick($device->support_info, $flat['support_info'] ?? null),
+                'warranty_text' => CatalogMerger::pick($device->warranty_text, $flat['warranty_text'] ?? null),
+                'support_info' => CatalogMerger::pick($device->support_info, $flat['support_info'] ?? null),
+                'service_steps' => CatalogMerger::pick($device->service_steps, CatalogMerger::templateServiceSteps($template)),
 
                 // SEO
-                'meta_title'       => CatalogMerger::pick($device->meta_title, $flat['meta_title'] ?? null),
+                'meta_title' => CatalogMerger::pick($device->meta_title, $flat['meta_title'] ?? null),
                 'meta_description' => CatalogMerger::pick($device->meta_description, $flat['meta_description'] ?? null),
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');

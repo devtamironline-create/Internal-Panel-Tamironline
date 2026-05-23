@@ -97,6 +97,18 @@
                            placeholder="تکنسین لباسشویی"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">بالای تیتر (eyebrow)</label>
+                    <input type="text" name="eyebrow" value="{{ old('eyebrow', $device->eyebrow ?? '') }}" maxlength="120"
+                           placeholder="سرویس تخصصی"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
+                    <input type="text" name="subtitle" value="{{ old('subtitle', $device->subtitle ?? '') }}" maxlength="500"
+                           placeholder="در محل، با گارانتی، بدون پیش‌پرداخت"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </div>
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium mb-1">توضیح کامل</label>
                     <textarea name="description" rows="4" maxlength="10000"
@@ -158,6 +170,41 @@
                     'answer'   => ['label' => 'پاسخ', 'type' => 'textarea'],
                 ],
             ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">مراحل سرویس (service_steps)</summary>
+        <div class="p-4">
+            @include('crm::partials.json-repeater', [
+                'name'  => 'service_steps',
+                'label' => 'مراحل کاری سفارش تا تحویل',
+                'help'  => 'مثلاً: ۱) ثبت سفارش، ۲) ارزیابی، ۳) تعمیر، ۴) تحویل.',
+                'items' => old('service_steps', $device->service_steps ?? []),
+                'item_fields' => [
+                    'title'       => ['label' => 'عنوان', 'type' => 'string'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea'],
+                    'icon'        => ['label' => 'آیکون (lucide name)', 'type' => 'string'],
+                ],
+            ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">گارانتی و پشتیبانی</summary>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">متن گارانتی</label>
+                <textarea name="warranty_text" rows="3" maxlength="3000"
+                          placeholder="گارانتی ۶ ماهه روی تعمیرات و قطعات."
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('warranty_text', $device->warranty_text ?? '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">اطلاعات پشتیبانی</label>
+                <textarea name="support_info" rows="3" maxlength="3000"
+                          placeholder="پشتیبانی ۲۴/۷ از طریق تلفن و واتساپ."
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('support_info', $device->support_info ?? '') }}</textarea>
+            </div>
         </div>
     </details>
 

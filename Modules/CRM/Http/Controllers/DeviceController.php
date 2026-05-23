@@ -97,48 +97,57 @@ class DeviceController extends Controller
     private function validateRequest(Request $request, ?int $id = null): array
     {
         return $request->validate([
-            'name'           => 'required|string|max:255',
-            'slug'           => 'nullable|string|max:255|unique:crm_devices,slug' . ($id ? ',' . $id : ''),
-            'icon'           => 'nullable|string|max:60',
-            'tone'           => 'nullable|string|max:30',
-            'thumbnail'      => 'nullable|string|max:500',
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:crm_devices,slug'.($id ? ','.$id : ''),
+            'icon' => 'nullable|string|max:60',
+            'tone' => 'nullable|string|max:30',
+            'thumbnail' => 'nullable|string|max:500',
             'thumbnail_file' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
-            'sort_order'     => 'nullable|integer|min:0',
-            'is_active'      => 'nullable|boolean',
-            'is_featured'    => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
+            'is_featured' => 'nullable|boolean',
 
             // CMS-override fields
-            'short_name'       => 'nullable|string|max:80',
-            'description'      => 'nullable|string|max:10000',
-            'service_name'     => 'nullable|string|max:160',
-            'technician_name'  => 'nullable|string|max:160',
-            'starting_price'   => 'nullable|integer|min:0',
-            'accent'           => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
-            'bg'               => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
-            'meta_title'       => 'nullable|string|max:200',
+            'short_name' => 'nullable|string|max:80',
+            'subtitle' => 'nullable|string|max:500',
+            'eyebrow' => 'nullable|string|max:120',
+            'description' => 'nullable|string|max:10000',
+            'service_name' => 'nullable|string|max:160',
+            'technician_name' => 'nullable|string|max:160',
+            'starting_price' => 'nullable|integer|min:0',
+            'accent' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'bg' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'meta_title' => 'nullable|string|max:200',
             'meta_description' => 'nullable|string|max:500',
+            'warranty_text' => 'nullable|string|max:3000',
+            'support_info' => 'nullable|string|max:3000',
 
-            'issues'               => 'nullable|array',
-            'issues.*.title'       => 'nullable|string|max:160',
+            'issues' => 'nullable|array',
+            'issues.*.title' => 'nullable|string|max:160',
             'issues.*.description' => 'nullable|string|max:1000',
 
-            'faq'                  => 'nullable|array',
-            'faq.*.question'       => 'nullable|string|max:300',
-            'faq.*.answer'         => 'nullable|string|max:5000',
+            'faq' => 'nullable|array',
+            'faq.*.question' => 'nullable|string|max:300',
+            'faq.*.answer' => 'nullable|string|max:5000',
+
+            'service_steps' => 'nullable|array',
+            'service_steps.*.title' => 'nullable|string|max:160',
+            'service_steps.*.description' => 'nullable|string|max:1000',
+            'service_steps.*.icon' => 'nullable|string|max:60',
         ]);
     }
 
     private function applyDefaults(array &$validated, bool $isNew): void
     {
-        $validated['slug']        = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $this->assertEnglishSlug($validated['slug']);
-        $validated['sort_order']  = $validated['sort_order'] ?? 0;
-        $validated['is_active']   = (bool) ($validated['is_active']   ?? ($isNew ? true : false));
+        $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['thumbnail_file']);
 
         // پاکسازی ردیف‌های خالی repeater
-        foreach (['issues', 'faq'] as $key) {
+        foreach (['issues', 'faq', 'service_steps'] as $key) {
             if (isset($validated[$key]) && is_array($validated[$key])) {
                 $validated[$key] = $this->cleanRepeater($validated[$key]);
                 if (empty($validated[$key])) {
@@ -189,6 +198,7 @@ class DeviceController extends Controller
                 );
             }
         }
+
         return array_values($cleaned);
     }
 
@@ -201,6 +211,7 @@ class DeviceController extends Controller
             if ($device) {
                 $this->deleteStoredImage($device->thumbnail);
             }
+
             return $path;
         }
 
@@ -208,10 +219,12 @@ class DeviceController extends Controller
             if ($device) {
                 $this->deleteStoredImage($device->thumbnail);
             }
+
             return null;
         }
 
         $url = trim((string) $request->input('thumbnail', ''));
+
         return $url === '' ? ($device?->thumbnail) : $url;
     }
 

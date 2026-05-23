@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Device extends Model
 {
@@ -17,6 +18,8 @@ class Device extends Model
         'thumbnail',
         'tone',
         'description',
+        'subtitle',
+        'eyebrow',
         'service_name',
         'technician_name',
         'starting_price',
@@ -28,6 +31,7 @@ class Device extends Model
         'meta_description',
         'warranty_text',
         'support_info',
+        'service_steps',
         'sort_order',
         'is_active',
         'is_featured',
@@ -40,7 +44,8 @@ class Device extends Model
         'sort_order' => 'integer',
         'starting_price' => 'integer',
         'issues' => 'array',
-        'faq'    => 'array',
+        'faq' => 'array',
+        'service_steps' => 'array',
     ];
 
     public function scopeActive($query)
@@ -56,5 +61,15 @@ class Device extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
+     * برندهایی که این دستگاه را پشتیبانی می‌کنند.
+     */
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Brand::class, 'crm_device_brands', 'device_id', 'brand_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_device_brands.sort_order');
     }
 }

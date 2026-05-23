@@ -28,20 +28,20 @@ return [
 
     // ─── صفحه‌ی اصلی ────────────────────────────────────────────────
     'home' => [
-        'title'    => 'صفحه‌ی اصلی',
+        'title' => 'صفحه‌ی اصلی',
         'sections' => [
 
             'hero' => [
-                'label'       => 'سکشن Hero (H1)',
+                'label' => 'سکشن Hero (H1)',
                 'description' => 'تیتر اصلی، زیرتیتر و لیست خدمات اصلی (دستگاه‌ها).',
                 'fields' => [
-                    'title'     => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'  => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'cta_label' => ['label' => 'متن دکمه CTA', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                    'cta_url'   => ['label' => 'لینک دکمه (مسیر داخلی /order یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
-                    'services'  => [
-                        'label'  => 'لیست خدمات اصلی (انتخاب از دستگاه‌های CRM)',
-                        'type'   => 'reference',
+                    'cta_url' => ['label' => 'لینک دکمه (مسیر داخلی /order یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                    'services' => [
+                        'label' => 'لیست خدمات اصلی (انتخاب از دستگاه‌های CRM)',
+                        'type' => 'reference',
                         'source' => 'devices',
                     ],
                 ],
@@ -50,14 +50,14 @@ return [
             'why_us' => [
                 'label' => 'چرا ما (H3)',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'items'    => [
+                    'items' => [
                         'label' => 'آیتم‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'icon'        => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'title'       => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:80'],
+                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:80'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:300'],
                         ],
                     ],
@@ -67,19 +67,19 @@ return [
             'steps' => [
                 'label' => 'تصویر مراحل (H4)',
                 'fields' => [
-                    'title'     => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'alt'       => ['label' => 'متن جایگزین (alt)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'alt' => ['label' => 'متن جایگزین (alt)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                 ],
             ],
 
             'promo' => [
                 'label' => 'بنر تبلیغاتی (H7)',
                 'fields' => [
-                    'title'      => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'   => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'image'  => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'link_url'   => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'link_url' => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                     'link_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
@@ -87,16 +87,16 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول (H8)',
                 'fields' => [
-                    'title'           => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'        => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'category_ids'    => [
-                        'label'  => 'دسته‌بندی‌ها (در فرانت به‌صورت تب نمایش داده می‌شوند)',
-                        'type'   => 'reference',
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids' => [
+                        'label' => 'دسته‌بندی‌ها (در فرانت به‌صورت تب نمایش داده می‌شوند)',
+                        'type' => 'reference',
                         'source' => 'faq_categories',
                     ],
-                    'faq_ids'         => [
-                        'label'  => 'یا سوالات منفرد از مخزن',
-                        'type'   => 'reference',
+                    'faq_ids' => [
+                        'label' => 'یا سوالات منفرد از مخزن',
+                        'type' => 'reference',
                         'source' => 'faqs',
                     ],
                 ],
@@ -107,20 +107,20 @@ return [
 
     // ─── صفحه‌ی درباره ما ──────────────────────────────────────────
     'about' => [
-        'title'    => 'صفحه‌ی درباره ما',
+        'title' => 'صفحه‌ی درباره ما',
         'sections' => [
 
             'hero' => [
                 'label' => 'About Hero (A1)',
                 'fields' => [
-                    'title'       => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:120'],
-                    'subtitle'    => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'aparat_id'   => ['label' => 'Aparat ID', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                    'poster'      => ['label' => 'تصویر poster (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'poster' => ['label' => 'تصویر poster (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                     'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
-                    'highlights'  => [
+                    'highlights' => [
                         'label' => 'لیست بولت‌های Hero (تیک‌دار)',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'icon' => ['label' => 'کلید آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                             'text' => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:200'],
@@ -130,29 +130,29 @@ return [
             ],
 
             'stats' => [
-                'label'       => 'آمار About (A2)',
+                'label' => 'آمار About (A2)',
                 'description' => 'هدر سکشن + آرایه‌ی آمار. منبع داده اصلی این بخش — جایگزین /v1/site/about-stats.',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'items'    => [
+                    'items' => [
                         'label' => 'آمار',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'key'   => ['label' => 'کلید پایدار (snake_case)', 'type' => 'string', 'rules' => 'required|string|max:60|regex:/^[a-z][a-z0-9_]*$/'],
+                            'key' => ['label' => 'کلید پایدار (snake_case)', 'type' => 'string', 'rules' => 'required|string|max:60|regex:/^[a-z][a-z0-9_]*$/'],
                             'value' => ['label' => 'مقدار نمایشی', 'type' => 'string', 'rules' => 'required|string|max:60'],
                             'label' => ['label' => 'برچسب فارسی', 'type' => 'string', 'rules' => 'required|string|max:120'],
-                            'tone'  => [
-                                'label'   => 'تم رنگ',
-                                'type'    => 'select',
+                            'tone' => [
+                                'label' => 'تم رنگ',
+                                'type' => 'select',
                                 'options' => [
-                                    'blue'   => 'آبی',
-                                    'green'  => 'سبز',
-                                    'amber'  => 'کهربایی',
-                                    'rose'   => 'صورتی',
+                                    'blue' => 'آبی',
+                                    'green' => 'سبز',
+                                    'amber' => 'کهربایی',
+                                    'rose' => 'صورتی',
                                     'violet' => 'بنفش',
                                 ],
-                                'rules'   => 'required|in:blue,green,amber,rose,violet',
+                                'rules' => 'required|in:blue,green,amber,rose,violet',
                             ],
                         ],
                     ],
@@ -162,14 +162,14 @@ return [
             'values' => [
                 'label' => 'ارزش‌های ما (A3)',
                 'fields' => [
-                    'title'    => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'items'    => [
+                    'items' => [
                         'label' => 'ارزش‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'icon'        => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'title'       => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:80'],
+                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:80'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:400'],
                         ],
                     ],
@@ -179,9 +179,9 @@ return [
             'steps' => [
                 'label' => 'تصویر مراحل (A4)',
                 'fields' => [
-                    'title'     => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'alt'       => ['label' => 'متن جایگزین', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'alt' => ['label' => 'متن جایگزین', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                 ],
             ],
 
@@ -191,10 +191,10 @@ return [
                     'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'items' => [
                         'label' => 'موارد',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'year'        => ['label' => 'سال', 'type' => 'string', 'rules' => 'required|string|max:20'],
-                            'title'       => ['label' => 'تیتر رویداد', 'type' => 'string', 'rules' => 'required|string|max:100'],
+                            'year' => ['label' => 'سال', 'type' => 'string', 'rules' => 'required|string|max:20'],
+                            'title' => ['label' => 'تیتر رویداد', 'type' => 'string', 'rules' => 'required|string|max:100'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:400'],
                         ],
                     ],
@@ -204,16 +204,16 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول About (A7)',
                 'fields' => [
-                    'title'        => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'     => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
                     'category_ids' => [
-                        'label'  => 'دسته‌بندی‌ها (تب)',
-                        'type'   => 'reference',
+                        'label' => 'دسته‌بندی‌ها (تب)',
+                        'type' => 'reference',
                         'source' => 'faq_categories',
                     ],
-                    'faq_ids'      => [
-                        'label'  => 'یا سوالات منفرد',
-                        'type'   => 'reference',
+                    'faq_ids' => [
+                        'label' => 'یا سوالات منفرد',
+                        'type' => 'reference',
                         'source' => 'faqs',
                     ],
                 ],
@@ -222,10 +222,10 @@ return [
             'promo' => [
                 'label' => 'بنر تبلیغاتی (A8)',
                 'fields' => [
-                    'title'      => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'   => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'image'  => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'link_url'   => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'link_url' => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                     'link_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
@@ -235,40 +235,40 @@ return [
 
     // ─── هدر و فوتر سایت (Layout مشترک) ──────────────────────────────
     'layout' => [
-        'title'    => 'هدر و فوتر',
+        'title' => 'هدر و فوتر',
         'sections' => [
 
             'header' => [
-                'label'       => 'هدر سایت',
+                'label' => 'هدر سایت',
                 'description' => 'لوگو، منو ناوبری، دکمه CTA و dropdown خدمات.',
                 'fields' => [
-                    'logo'          => ['label' => 'لوگو (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'logo_alt'      => ['label' => 'متن جایگزین لوگو', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'cta_label'     => ['label' => 'متن دکمه CTA', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                    'cta_url'       => ['label' => 'لینک دکمه CTA (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
-                    'phone_label'   => ['label' => 'متن شماره تماس', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                    'phone_number'  => ['label' => 'شماره تماس', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
-                    'nav_items'     => [
+                    'logo' => ['label' => 'لوگو (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'logo_alt' => ['label' => 'متن جایگزین لوگو', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'cta_label' => ['label' => 'متن دکمه CTA', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'cta_url' => ['label' => 'لینک دکمه CTA (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                    'phone_label' => ['label' => 'متن شماره تماس', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'phone_number' => ['label' => 'شماره تماس', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                    'nav_items' => [
                         'label' => 'آیتم‌های منوی ناوبری',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:60'],
-                            'href'  => ['label' => 'لینک (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'required|site_url|max:200'],
+                            'href' => ['label' => 'لینک (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'required|site_url|max:200'],
                         ],
                     ],
                     'services_dropdown' => [
-                        'label'       => 'منوی Dropdown خدمات',
+                        'label' => 'منوی Dropdown خدمات',
                         'description' => 'مگامنوی خدمات که با hover روی «خدمات» در هدر باز می‌شود.',
-                        'type'        => 'group',
+                        'type' => 'group',
                         'fields' => [
-                            'trigger_label'  => ['label' => 'برچسب trigger در هدر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'title'          => ['label' => 'تیتر داخل dropdown', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                            'subtitle'       => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                            'trigger_label' => ['label' => 'برچسب trigger در هدر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title' => ['label' => 'تیتر داخل dropdown', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                            'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
                             'view_all_label' => ['label' => 'متن لینک «همه دستگاه‌ها»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'view_all_url'   => ['label' => 'لینک «همه دستگاه‌ها»', 'type' => 'string', 'rules' => 'nullable|site_url|max:200'],
-                            'device_ids'     => [
-                                'label'  => 'دستگاه‌های نمایش‌داده‌شده در dropdown',
-                                'type'   => 'reference',
+                            'view_all_url' => ['label' => 'لینک «همه دستگاه‌ها»', 'type' => 'string', 'rules' => 'nullable|site_url|max:200'],
+                            'device_ids' => [
+                                'label' => 'دستگاه‌های نمایش‌داده‌شده در dropdown',
+                                'type' => 'reference',
                                 'source' => 'devices',
                             ],
                         ],
@@ -277,46 +277,46 @@ return [
             ],
 
             'footer' => [
-                'label'       => 'فوتر سایت',
+                'label' => 'فوتر سایت',
                 'description' => 'لوگو، توضیح، گروه‌های لینک، اطلاعات تماس، دانلود اپ، شبکه‌های اجتماعی و حقوق ناشر.',
                 'fields' => [
-                    'logo'        => ['label' => 'لوگوی فوتر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'logo' => ['label' => 'لوگوی فوتر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                     'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'groups'      => [
+                    'groups' => [
                         'label' => 'گروه‌های لینک',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'title' => ['label' => 'تیتر گروه', 'type' => 'string', 'rules' => 'required|string|max:60'],
                             'links' => ['label' => 'لینک‌ها (label|href جدا با کاما)', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
                         ],
                     ],
                     'contact_info' => [
-                        'label'       => 'اطلاعات تماس (در فوتر)',
+                        'label' => 'اطلاعات تماس (در فوتر)',
                         'description' => 'بلوک اطلاعات تماس که در ستون فوتر نمایش داده می‌شود.',
-                        'type'        => 'group',
+                        'type' => 'group',
                         'fields' => [
-                            'title'         => ['label' => 'تیتر بلوک', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'address'       => ['label' => 'آدرس', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                            'phone'         => ['label' => 'شماره تماس (تلیبل tel:)', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                            'title' => ['label' => 'تیتر بلوک', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'address' => ['label' => 'آدرس', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                            'phone' => ['label' => 'شماره تماس (تلیبل tel:)', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
                             'phone_display' => ['label' => 'شماره تماس نمایشی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
-                            'email'         => ['label' => 'ایمیل', 'type' => 'string', 'rules' => 'nullable|email|max:120'],
+                            'email' => ['label' => 'ایمیل', 'type' => 'string', 'rules' => 'nullable|email|max:120'],
                         ],
                     ],
                     'app_download' => [
-                        'label'       => 'بلوک دانلود اپلیکیشن',
+                        'label' => 'بلوک دانلود اپلیکیشن',
                         'description' => 'تیتر و لینک‌های دانلود اپ (Google Play، Cafe Bazaar، App Store، Sib Apple، ...).',
-                        'type'        => 'group',
+                        'type' => 'group',
                         'fields' => [
-                            'title'    => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                            'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                             'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                            'image'    => ['label' => 'تصویر اپ (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                            'stores'   => [
+                            'image' => ['label' => 'تصویر اپ (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                            'stores' => [
                                 'label' => 'فروشگاه‌ها (لینک دانلود)',
-                                'type'  => 'repeater',
+                                'type' => 'repeater',
                                 'item_fields' => [
-                                    'name'  => ['label' => 'نام فروشگاه', 'type' => 'string', 'rules' => 'required|string|max:60'],
-                                    'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                                    'url'   => ['label' => 'لینک', 'type' => 'string', 'rules' => 'required|site_url|max:500'],
+                                    'name' => ['label' => 'نام فروشگاه', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                                    'icon' => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                                    'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'required|site_url|max:500'],
                                     'image' => ['label' => 'تصویر badge', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                                 ],
                             ],
@@ -324,48 +324,48 @@ return [
                     ],
                     'social' => [
                         'label' => 'شبکه‌های اجتماعی',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'platform' => ['label' => 'پلتفرم', 'type' => 'string', 'rules' => 'required|string|max:30'],
-                            'icon'     => ['label' => 'آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'url'      => ['label' => 'لینک', 'type' => 'url', 'rules' => 'required|url|max:500'],
+                            'icon' => ['label' => 'آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'url', 'rules' => 'required|url|max:500'],
                         ],
                     ],
                     'copyright_text' => ['label' => 'متن حقوق', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                    'enamad_code'    => ['label' => 'کد HTML اعتماد الکترونیکی', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                    'enamad_code' => ['label' => 'کد HTML اعتماد الکترونیکی', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
                 ],
             ],
 
             'service_features' => [
-                'label'       => 'ویژگی‌های ما (نوار افقی)',
+                'label' => 'ویژگی‌های ما (نوار افقی)',
                 'description' => 'نوار ثابت ویژگی‌ها که در همه‌ی صفحات سایت تکرار می‌شود (Feature Marquee).',
                 'fields' => [
                     'aria_label' => ['label' => 'متن aria-label', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'speed'      => ['label' => 'سرعت اسکرول (پیش‌فرض ۸)', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:60'],
-                    'items'      => [
+                    'speed' => ['label' => 'سرعت اسکرول (پیش‌فرض ۸)', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:60'],
+                    'items' => [
                         'label' => 'ویژگی‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'icon_key' => ['label' => 'کلید آیکن Lucide', 'type' => 'string', 'rules' => 'required|string|max:60'],
-                            'label'    => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:120'],
-                            'bg'       => ['label' => 'پس‌زمینه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
-                            'fg'       => ['label' => 'متن (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
-                            'border'   => ['label' => 'حاشیه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                            'label' => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'bg' => ['label' => 'پس‌زمینه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                            'fg' => ['label' => 'متن (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
+                            'border' => ['label' => 'حاشیه (hex)', 'type' => 'string', 'rules' => 'nullable|string|max:20'],
                         ],
                     ],
                 ],
             ],
 
             'seo_footer' => [
-                'label'       => 'متن SEO پایین (Read More)',
+                'label' => 'متن SEO پایین (Read More)',
                 'description' => 'بلوک متن سئوی پایین صفحات (کنار فوتر) — قابل expand/collapse در فرانت.',
                 'fields' => [
-                    'title'          => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                    'expand_label'   => ['label' => 'متن دکمه نمایش بیشتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'expand_label' => ['label' => 'متن دکمه نمایش بیشتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'collapse_label' => ['label' => 'متن دکمه بستن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'paragraphs' => [
                         'label' => 'پاراگراف‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'text' => ['label' => 'متن پاراگراف', 'type' => 'textarea', 'rules' => 'required|string|max:3000'],
                         ],
@@ -374,38 +374,38 @@ return [
             ],
 
             'mobile_cta' => [
-                'label'       => 'نوار CTA موبایل (Sticky Bottom)',
+                'label' => 'نوار CTA موبایل (Sticky Bottom)',
                 'description' => 'نوار چسبیده به پایین صفحه فقط در نمایش موبایل — معمولاً شامل دکمه‌ی تماس و دکمه‌ی ثبت سفارش.',
                 'fields' => [
                     'is_active' => ['label' => 'فعال', 'type' => 'bool'],
                     'primary' => [
-                        'label'       => 'دکمه اصلی',
+                        'label' => 'دکمه اصلی',
                         'description' => 'معمولاً تماس تلفنی.',
-                        'type'        => 'group',
+                        'type' => 'group',
                         'fields' => [
                             'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'type'  => [
-                                'label'   => 'نوع',
-                                'type'    => 'select',
+                            'icon' => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'type' => [
+                                'label' => 'نوع',
+                                'type' => 'select',
                                 'options' => ['tel' => 'tel (تماس)', 'link' => 'link (مسیر)', 'mailto' => 'mailto (ایمیل)'],
-                                'rules'   => 'nullable|in:tel,link,mailto',
+                                'rules' => 'nullable|in:tel,link,mailto',
                             ],
                             'value' => ['label' => 'مقدار (شماره تلفن یا مسیر)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                         ],
                     ],
                     'secondary' => [
-                        'label'       => 'دکمه دوم',
+                        'label' => 'دکمه دوم',
                         'description' => 'معمولاً ثبت سفارش یا چت آنلاین.',
-                        'type'        => 'group',
+                        'type' => 'group',
                         'fields' => [
                             'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'icon'  => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'type'  => [
-                                'label'   => 'نوع',
-                                'type'    => 'select',
+                            'icon' => ['label' => 'کلید آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'type' => [
+                                'label' => 'نوع',
+                                'type' => 'select',
                                 'options' => ['tel' => 'tel (تماس)', 'link' => 'link (مسیر)', 'mailto' => 'mailto (ایمیل)'],
-                                'rules'   => 'nullable|in:tel,link,mailto',
+                                'rules' => 'nullable|in:tel,link,mailto',
                             ],
                             'value' => ['label' => 'مقدار (شماره تلفن یا مسیر)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                         ],
@@ -418,7 +418,7 @@ return [
 
     // ─── صفحه‌ی تماس با ما ──────────────────────────────────────────
     'contact' => [
-        'title'    => 'صفحه‌ی تماس با ما',
+        'title' => 'صفحه‌ی تماس با ما',
         'sections' => [
 
             'channels' => [
@@ -427,12 +427,12 @@ return [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'items' => [
                         'label' => 'کارت‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'icon'        => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:80'],
-                            'value'       => ['label' => 'مقدار', 'type' => 'string', 'rules' => 'required|string|max:120'],
-                            'link_url'    => ['label' => 'لینک (داخلی یا کامل: /order، tel:، mailto:، https://...)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:80'],
+                            'value' => ['label' => 'مقدار', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'link_url' => ['label' => 'لینک (داخلی یا کامل: /order، tel:، mailto:، https://...)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                             'description' => ['label' => 'توضیح', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                         ],
                     ],
@@ -442,22 +442,22 @@ return [
             'info' => [
                 'label' => 'اطلاعات تماس (C3)',
                 'fields' => [
-                    'phone'         => ['label' => 'تلفن', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                    'phone' => ['label' => 'تلفن', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
                     'support_phone' => ['label' => 'پشتیبانی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
-                    'email'         => ['label' => 'ایمیل', 'type' => 'string', 'rules' => 'nullable|email|max:120'],
-                    'address'       => ['label' => 'آدرس', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'email' => ['label' => 'ایمیل', 'type' => 'string', 'rules' => 'nullable|email|max:120'],
+                    'address' => ['label' => 'آدرس', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                 ],
             ],
 
             'hours' => [
                 'label' => 'ساعات کاری (C4)',
                 'fields' => [
-                    'note'  => ['label' => 'یادداشت', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'note' => ['label' => 'یادداشت', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'items' => [
                         'label' => 'ساعات روزانه',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'day'   => ['label' => 'روز', 'type' => 'string', 'rules' => 'required|string|max:30'],
+                            'day' => ['label' => 'روز', 'type' => 'string', 'rules' => 'required|string|max:30'],
                             'hours' => ['label' => 'ساعت', 'type' => 'string', 'rules' => 'required|string|max:50'],
                         ],
                     ],
@@ -467,10 +467,10 @@ return [
             'map' => [
                 'label' => 'نقشه (C5)',
                 'fields' => [
-                    'lat'        => ['label' => 'عرض جغرافیایی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
-                    'lng'        => ['label' => 'طول جغرافیایی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                    'lat' => ['label' => 'عرض جغرافیایی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                    'lng' => ['label' => 'طول جغرافیایی', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
                     'neshan_url' => ['label' => 'لینک نشان', 'type' => 'url', 'rules' => 'nullable|url|max:500'],
-                    'zoom'       => ['label' => 'بزرگ‌نمایی پیش‌فرض', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:20'],
+                    'zoom' => ['label' => 'بزرگ‌نمایی پیش‌فرض', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:20'],
                 ],
             ],
 
@@ -479,12 +479,12 @@ return [
                 'fields' => [
                     'items' => [
                         'label' => 'لینک‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'platform' => ['label' => 'پلتفرم', 'type' => 'string', 'rules' => 'required|string|max:30'],
-                            'label'    => ['label' => 'نام نمایشی', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'url'      => ['label' => 'لینک', 'type' => 'url', 'rules' => 'required|url|max:500'],
-                            'icon'     => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'label' => ['label' => 'نام نمایشی', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'url', 'rules' => 'required|url|max:500'],
+                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
                 ],
@@ -493,16 +493,16 @@ return [
             'faq' => [
                 'label' => 'سوالات متداول Contact (C7)',
                 'fields' => [
-                    'title'        => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle'     => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
                     'category_ids' => [
-                        'label'  => 'دسته‌بندی‌ها (تب)',
-                        'type'   => 'reference',
+                        'label' => 'دسته‌بندی‌ها (تب)',
+                        'type' => 'reference',
                         'source' => 'faq_categories',
                     ],
-                    'faq_ids'      => [
-                        'label'  => 'یا سوالات منفرد',
-                        'type'   => 'reference',
+                    'faq_ids' => [
+                        'label' => 'یا سوالات منفرد',
+                        'type' => 'reference',
                         'source' => 'faqs',
                     ],
                 ],
@@ -519,38 +519,56 @@ return [
     //
     // Placeholderها در متن‌ها: {device}, {device_label}, {device_slug}
     'device' => [
-        'title'    => 'الگوی صفحه دستگاه (پیش‌فرض همه دستگاه‌ها)',
+        'title' => 'الگوی صفحه دستگاه (پیش‌فرض همه دستگاه‌ها)',
         'sections' => [
 
             'identity' => [
-                'label'       => 'هویت و نام‌ها (پیش‌فرض)',
+                'label' => 'هویت و نام‌ها (پیش‌فرض)',
                 'description' => 'متن‌های پایه — از {device} برای نام دستگاه استفاده کنید.',
                 'fields' => [
-                    'service_name'    => ['label' => 'نام سرویس', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'eyebrow' => ['label' => 'بالای تیتر (eyebrow)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'service_name' => ['label' => 'نام سرویس', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (Hero)', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'technician_name' => ['label' => 'عنوان تکنسین', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'tagline'         => ['label' => 'شعار صفحه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                    'description'     => ['label' => 'توضیح کامل', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
+                    'tagline' => ['label' => 'شعار صفحه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'description' => ['label' => 'توضیح کامل', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
                 ],
             ],
 
             'support' => [
-                'label'       => 'گارانتی و پشتیبانی',
+                'label' => 'گارانتی و پشتیبانی',
                 'description' => 'متن‌های ضمانت و پشتیبانی — مشترک بین همه دستگاه‌ها مگر override شود.',
                 'fields' => [
                     'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
-                    'support_info'  => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                    'support_info' => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                ],
+            ],
+
+            'service_steps' => [
+                'label' => 'مراحل سرویس (پیش‌فرض)',
+                'description' => 'مراحل کاری از ثبت سفارش تا تحویل — placeholderها در عنوان/توضیح خودکار جایگزین می‌شوند.',
+                'fields' => [
+                    'items' => [
+                        'label' => 'مراحل',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان مرحله', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
                 ],
             ],
 
             'issues' => [
-                'label'       => 'مشکلات رایج (پیش‌فرض)',
+                'label' => 'مشکلات رایج (پیش‌فرض)',
                 'description' => 'لیست issues مشترک. می‌توانید از {device} در عنوان/توضیح استفاده کنید.',
                 'fields' => [
                     'items' => [
                         'label' => 'آیتم‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
                         ],
                     ],
@@ -558,17 +576,17 @@ return [
             ],
 
             'faq' => [
-                'label'       => 'سوالات متداول (پیش‌فرض)',
+                'label' => 'سوالات متداول (پیش‌فرض)',
                 'description' => 'از مخزن FAQ انتخاب کنید (دسته‌بندی یا منفرد). placeholderها در متن سوال/پاسخ خودکار جایگزین می‌شوند.',
                 'fields' => [
                     'category_ids' => [
-                        'label'  => 'دسته‌بندی FAQ',
-                        'type'   => 'reference',
+                        'label' => 'دسته‌بندی FAQ',
+                        'type' => 'reference',
                         'source' => 'faq_categories',
                     ],
                     'faq_ids' => [
-                        'label'  => 'سوالات منفرد',
-                        'type'   => 'reference',
+                        'label' => 'سوالات منفرد',
+                        'type' => 'reference',
                         'source' => 'faqs',
                     ],
                 ],
@@ -577,7 +595,7 @@ return [
             'seo' => [
                 'label' => 'سئو (پیش‌فرض)',
                 'fields' => [
-                    'meta_title'       => ['label' => 'Meta Title (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_title' => ['label' => 'Meta Title (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                 ],
             ],
@@ -587,13 +605,13 @@ return [
 
     // ─── الگوی صفحه‌ی برند ──────────────────────────────────────────
     'brand' => [
-        'title'    => 'الگوی صفحه برند (پیش‌فرض همه برندها)',
+        'title' => 'الگوی صفحه برند (پیش‌فرض همه برندها)',
         'sections' => [
 
             'identity' => [
                 'label' => 'هویت (پیش‌فرض)',
                 'fields' => [
-                    'tagline'     => ['label' => 'شعار', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'tagline' => ['label' => 'شعار', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
                 ],
             ],
@@ -603,7 +621,7 @@ return [
                 'fields' => [
                     'items' => [
                         'label' => 'آمار',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
                             'value' => ['label' => 'مقدار', 'type' => 'string', 'rules' => 'required|string|max:60'],
                             'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:120'],
@@ -617,11 +635,11 @@ return [
                 'fields' => [
                     'items' => [
                         'label' => 'آیتم‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
-                            'icon'        => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
                 ],
@@ -632,11 +650,11 @@ return [
                 'fields' => [
                     'items' => [
                         'label' => 'آیتم‌ها',
-                        'type'  => 'repeater',
+                        'type' => 'repeater',
                         'item_fields' => [
-                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
                             'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
-                            'icon'        => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
                 ],
@@ -646,7 +664,7 @@ return [
                 'label' => 'سوالات متداول (پیش‌فرض)',
                 'fields' => [
                     'category_ids' => ['label' => 'دسته‌بندی FAQ', 'type' => 'reference', 'source' => 'faq_categories'],
-                    'faq_ids'      => ['label' => 'سوالات منفرد', 'type' => 'reference', 'source' => 'faqs'],
+                    'faq_ids' => ['label' => 'سوالات منفرد', 'type' => 'reference', 'source' => 'faqs'],
                 ],
             ],
 
@@ -654,14 +672,14 @@ return [
                 'label' => 'گارانتی و پشتیبانی',
                 'fields' => [
                     'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
-                    'support_info'  => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                    'support_info' => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
                 ],
             ],
 
             'seo' => [
                 'label' => 'سئو (پیش‌فرض)',
                 'fields' => [
-                    'meta_title'       => ['label' => 'Meta Title (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_title' => ['label' => 'Meta Title (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                 ],
             ],
