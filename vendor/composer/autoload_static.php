@@ -4176,6 +4176,7 @@ class ComposerStaticInit460b75cf4a696888a31d9da22051e69c
         'Modules\\Attendance\\Providers\\AttendanceServiceProvider' => __DIR__ . '/../..' . '/Modules/Attendance/Providers/AttendanceServiceProvider.php',
         'Modules\\CRM\\Concerns\\ExportsListToFile' => __DIR__ . '/../..' . '/Modules/CRM/Concerns/ExportsListToFile.php',
         'Modules\\CRM\\Console\\Commands\\BackfillInvoices' => __DIR__ . '/../..' . '/Modules/CRM/Console/Commands/BackfillInvoices.php',
+        'Modules\\CRM\\Console\\Commands\\FixNonEnglishSlugs' => __DIR__ . '/../..' . '/Modules/CRM/Console/Commands/FixNonEnglishSlugs.php',
         'Modules\\CRM\\Console\\Commands\\RecomputeInvoices' => __DIR__ . '/../..' . '/Modules/CRM/Console/Commands/RecomputeInvoices.php',
         'Modules\\CRM\\Console\\Commands\\RecomputeWalletBalances' => __DIR__ . '/../..' . '/Modules/CRM/Console/Commands/RecomputeWalletBalances.php',
         'Modules\\CRM\\Console\\Commands\\ResolveOrphanTechnicians' => __DIR__ . '/../..' . '/Modules/CRM/Console/Commands/ResolveOrphanTechnicians.php',

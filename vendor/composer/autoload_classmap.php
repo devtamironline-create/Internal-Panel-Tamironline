@@ -3485,6 +3485,7 @@ return array(
     'Modules\\Attendance\\Providers\\AttendanceServiceProvider' => $baseDir . '/Modules/Attendance/Providers/AttendanceServiceProvider.php',
     'Modules\\CRM\\Concerns\\ExportsListToFile' => $baseDir . '/Modules/CRM/Concerns/ExportsListToFile.php',
     'Modules\\CRM\\Console\\Commands\\BackfillInvoices' => $baseDir . '/Modules/CRM/Console/Commands/BackfillInvoices.php',
+    'Modules\\CRM\\Console\\Commands\\FixNonEnglishSlugs' => $baseDir . '/Modules/CRM/Console/Commands/FixNonEnglishSlugs.php',
     'Modules\\CRM\\Console\\Commands\\RecomputeInvoices' => $baseDir . '/Modules/CRM/Console/Commands/RecomputeInvoices.php',
     'Modules\\CRM\\Console\\Commands\\RecomputeWalletBalances' => $baseDir . '/Modules/CRM/Console/Commands/RecomputeWalletBalances.php',
     'Modules\\CRM\\Console\\Commands\\ResolveOrphanTechnicians' => $baseDir . '/Modules/CRM/Console/Commands/ResolveOrphanTechnicians.php',
