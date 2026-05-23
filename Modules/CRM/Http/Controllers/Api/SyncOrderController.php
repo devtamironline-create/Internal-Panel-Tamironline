@@ -55,12 +55,28 @@ class SyncOrderController extends Controller
 
         $created = 0;
         $updated = 0;
+        $skipped = 0;
+        $skippedDetails = [];
         $errors = [];
 
         foreach ($data['items'] as $i => $item) {
             try {
                 $r = $this->upsertOne($item);
-                $r['action'] === 'created' ? $created++ : $updated++;
+                if ($r['action'] === 'created') {
+                    $created++;
+                } elseif ($r['action'] === 'updated') {
+                    $updated++;
+                } else {
+                    // 'skipped' (source_of_truth بلاک کرد). قبلاً اشتباها
+                    // به‌عنوان updated شمارش می‌شد — این باعث می‌شد افزونهٔ
+                    // WP فکر کند سفارش سینک شد و تلاش مجدد نکند.
+                    $skipped++;
+                    $skippedDetails[] = [
+                        'index' => $i,
+                        'wp_id' => $item['wp_id'] ?? null,
+                        'reason' => $r['reason'] ?? 'unknown',
+                    ];
+                }
             } catch (Throwable $e) {
                 $errors[] = [
                     'index' => $i,
@@ -75,6 +91,8 @@ class SyncOrderController extends Controller
             'total' => count($data['items']),
             'created' => $created,
             'updated' => $updated,
+            'skipped' => $skipped,
+            'skipped_details' => $skippedDetails,
             'errors' => $errors,
         ]);
     }
