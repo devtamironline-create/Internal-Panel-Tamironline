@@ -217,7 +217,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-2 overflow-x-auto">
         <div class="flex items-center gap-1 min-w-max">
             {{-- تب همه --}}
-            @php $isAll = $status === ''; @endphp
+            @php $isAll = $status === '' && $technicianId !== 'none'; @endphp
             <a href="{{ route('crm.orders.index', $baseQuery) }}"
                class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
                       {{ $isAll ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
@@ -225,6 +225,22 @@
                 <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
                             {{ $isAll ? 'bg-brand-100 text-brand-700' : ($statusCounts['all'] > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
                     {{ number_format($statusCounts['all']) }}
+                </span>
+            </a>
+
+            {{-- تب بدون تکنسین --}}
+            @php
+                $isNoTech = $technicianId === 'none';
+                $noTechCount = (int) ($statusCounts['no_tech'] ?? 0);
+                $noTechUrl = route('crm.orders.index', array_merge($baseQuery, ['technician_id' => 'none']));
+            @endphp
+            <a href="{{ $noTechUrl }}"
+               class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                      {{ $isNoTech ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                بدون تکنسین
+                <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                            {{ $isNoTech ? 'bg-rose-100 text-rose-700' : ($noTechCount > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                    {{ number_format($noTechCount) }}
                 </span>
             </a>
             @foreach(OrderStatus::cases() as $case)

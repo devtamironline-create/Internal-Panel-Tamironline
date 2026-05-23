@@ -50,15 +50,17 @@ class OrderController extends Controller
 
         // closure برای اعمال همهٔ فیلترهای غیر-status — هم در query اصلی
         // و هم در شمارش تب‌های وضعیت استفاده می‌شود.
-        $applyNonStatusFilters = function ($q) use (
+        $applyNonStatusFilters = function ($q, bool $includeTech = true) use (
             $search, $technicianId, $provinceId, $cityId, $brandId, $deviceId,
             $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo
         ) {
             if ($search !== '') {
                 $q->search($search);
             }
-            if ($technicianId === 'none') $q->whereNull('technician_id');
-            elseif ($technicianId)        $q->where('technician_id', $technicianId);
+            if ($includeTech) {
+                if ($technicianId === 'none') $q->whereNull('technician_id');
+                elseif ($technicianId)        $q->where('technician_id', $technicianId);
+            }
             if ($provinceId)          $q->where('province_id', $provinceId);
             if ($cityId)              $q->where('city_id', $cityId);
             if ($brandId)             $q->where('brand_id', $brandId);
@@ -110,6 +112,11 @@ class OrderController extends Controller
         // شمارش تب «بازگشت‌خورده» جدا — return_type IS NOT NULL
         $statusCounts[\Modules\CRM\Enums\OrderStatus::Returned->value] =
             (clone $countQuery)->whereNotNull('return_type')->count();
+
+        // شمارش تب «بدون تکنسین» — همان فیلترها به‌جز technician_id
+        $noTechCountQuery = Order::query();
+        $applyNonStatusFilters($noTechCountQuery, false);
+        $statusCounts['no_tech'] = $noTechCountQuery->whereNull('technician_id')->count();
 
         // داده‌های کمکی برای dropdown ها
         $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech']);
