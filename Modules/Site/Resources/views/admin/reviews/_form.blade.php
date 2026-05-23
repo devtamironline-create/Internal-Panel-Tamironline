@@ -1,5 +1,5 @@
 @php
-    $t = $testimonial ?? null;
+    $r = $review ?? null;
     $taxonomies = $taxonomies ?? collect();
     $selT = $selectedTaxonomies ?? [];
     $selTcmp = array_map('intval', $selT);
@@ -19,40 +19,40 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm mb-1">نام مشتری <span class="text-red-500">*</span></label>
-        <input type="text" name="customer_name" value="{{ old('customer_name', $t?->customer_name) }}"
+        <input type="text" name="author_name" value="{{ old('author_name', $r?->author_name) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm" required maxlength="80">
     </div>
 
     <div>
         <label class="block text-sm mb-1">موضوع <span class="text-red-500">*</span></label>
-        <input type="text" name="topic" value="{{ old('topic', $t?->topic) }}"
+        <input type="text" name="topic" value="{{ old('topic', $r?->topic) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm" required maxlength="120"
                placeholder="مثال: تعمیر {device}">
-        <p class="text-xs text-gray-500 mt-1">Placeholder قابل استفاده: <code class="bg-gray-100 px-1 rounded">{device}</code>، <code class="bg-gray-100 px-1 rounded">{device_slug}</code>.</p>
+        <p class="text-xs text-gray-500 mt-1">Placeholder: <code class="bg-gray-100 px-1 rounded">{device}</code>، <code class="bg-gray-100 px-1 rounded">{device_slug}</code>.</p>
     </div>
 
     <div>
         <label class="block text-sm mb-1">امتیاز (۱ تا ۵) <span class="text-red-500">*</span></label>
-        <input type="number" name="rating" min="1" max="5" value="{{ old('rating', $t?->rating ?? 5) }}"
+        <input type="number" name="rating" min="1" max="5" value="{{ old('rating', $r?->rating ?? 5) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm" required>
     </div>
 
     <div>
         <label class="block text-sm mb-1">ترتیب نمایش</label>
-        <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $t?->sort_order ?? 0) }}"
+        <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $r?->sort_order ?? 0) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm">
     </div>
 
     <div class="sm:col-span-2">
         <label class="block text-sm mb-1">لینک فایل صوتی</label>
-        <input type="url" name="audio_url" value="{{ old('audio_url', $t?->audio_url) }}"
+        <input type="url" name="audio_url" value="{{ old('audio_url', $r?->audio_url) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr" maxlength="500" dir="ltr"
                placeholder="https://...">
     </div>
 
     <div>
         <label class="block text-sm mb-1">مدت زمان (ثانیه)</label>
-        <input type="number" name="duration_seconds" min="1" max="7200" value="{{ old('duration_seconds', $t?->duration_seconds) }}"
+        <input type="number" name="duration_seconds" min="1" max="7200" value="{{ old('duration_seconds', $r?->duration_seconds) }}"
                class="w-full px-3 py-2 border border-gray-200 rounded text-sm">
     </div>
 
@@ -77,16 +77,13 @@
 
     <div class="sm:col-span-2">
         <label class="block text-sm mb-2">دستگاه‌های مرتبط</label>
-        <p class="text-xs text-gray-500 mb-2">اگر هیچ دستگاهی انتخاب نشود، این نظر در صفحه‌ی همه‌ی دستگاه‌ها (generic) نمایش داده می‌شود.</p>
+        <p class="text-xs text-gray-500 mb-2">اگر هیچ دستگاهی انتخاب نشود، این توصیه‌نامه به‌صورت generic در همه‌ی دستگاه‌ها نمایش داده می‌شود.</p>
         <div class="border border-gray-200 rounded p-3 max-h-48 overflow-y-auto">
             @forelse($devices as $d)
                 <label class="flex items-start gap-2 p-1 hover:bg-gray-50 rounded">
                     <input type="checkbox" name="device_ids[]" value="{{ $d->id }}"
                            @checked(in_array((int) $d->id, old('device_ids') ? array_map('intval', old('device_ids')) : $selDcmp, true))>
-                    <span class="text-sm">
-                        {{ $d->name }}
-                        <span class="text-xs text-gray-500 font-mono">/{{ $d->slug }}</span>
-                    </span>
+                    <span class="text-sm">{{ $d->name }} <span class="text-xs text-gray-500 font-mono">/{{ $d->slug }}</span></span>
                 </label>
             @empty
                 <p class="text-xs text-gray-400">دستگاهی فعال نیست.</p>
@@ -94,10 +91,14 @@
         </div>
     </div>
 
-    <div class="sm:col-span-2">
+    <div class="sm:col-span-2 flex items-center gap-4">
         <label class="inline-flex items-center gap-2">
-            <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $t?->is_published))>
+            <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $r?->is_published))>
             <span class="text-sm">منتشر شود</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $r?->is_featured))>
+            <span class="text-sm">ویژه (نمایش بالای لیست)</span>
         </label>
     </div>
 </div>
