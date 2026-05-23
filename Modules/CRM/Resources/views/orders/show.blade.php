@@ -121,6 +121,9 @@
                         <span class="text-xs">(@tel($order->customer?->mobile ?: $order->customer_mobile))</span>
                     </dd>
 
+                    <dt class="text-gray-500 dark:text-gray-400">نحوه آشنایی</dt>
+                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->introduction ?: '—' }}</dd>
+
                     <dt class="text-gray-500 dark:text-gray-400">برند</dt>
                     <dd class="text-gray-900 dark:text-gray-100">{{ $order->brand?->name ?: '—' }}</dd>
 
