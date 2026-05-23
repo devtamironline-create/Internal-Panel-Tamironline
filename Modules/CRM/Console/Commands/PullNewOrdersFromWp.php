@@ -269,14 +269,30 @@ class PullNewOrdersFromWp extends Command
         }
 
         try {
-            Customer::firstOrCreate(
-                ['wp_id' => $userId],
-                [
+            // پترن SyncCustomerController: اول با wp_id، سپس با mobile.
+            // crm_customers روی mobile unique است، پس اگر مشتری از قبل با
+            // همین شماره (با wp_id=null یا متفاوت) باشد، باید آن را
+            // به‌جای create جدید، update کنیم.
+            $customer = Customer::where('wp_id', $userId)->first()
+                ?: Customer::where('mobile', $mobile)->first();
+
+            if ($customer) {
+                $customer->wp_id = $userId;
+                if (! $customer->first_name && ! empty($meta['first_name'])) {
+                    $customer->first_name = $meta['first_name'];
+                }
+                if (! $customer->phone && ! empty($meta['phone'])) {
+                    $customer->phone = $meta['phone'];
+                }
+                $customer->save();
+            } else {
+                Customer::create([
+                    'wp_id'      => $userId,
                     'mobile'     => $mobile,
                     'first_name' => $meta['first_name'] ?? null,
                     'phone'      => $meta['phone'] ?? null,
-                ]
-            );
+                ]);
+            }
             return true;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('pull_new_orders.customer_create_failed', [
