@@ -91,12 +91,43 @@
             @endif
         </div>
 
-        @php $hiddenZeros = $technicians->count() - $debtors->count() - $creditors->count(); @endphp
-        @if($hiddenZeros > 0)
-            <p class="text-xs text-gray-400 text-center">
-                {{ number_format($hiddenZeros) }} تکنسین با مانده صفر در این لیست نمایش داده نشدند.
-            </p>
-        @endif
+        {{-- بدون بدهی (حاشیه خاکستری) — تکنسین‌های فعال با مانده صفر --}}
+        <div class="rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-gray-50/40 dark:bg-gray-900/20 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
+                    </svg>
+                    بدون بدهی
+                </h2>
+                <span class="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                    {{ number_format($noDebt->count()) }} تکنسین
+                </span>
+            </div>
+
+            @if($noDebt->isEmpty())
+                <p class="text-xs text-gray-500 italic py-2">تکنسین فعالی با مانده صفر وجود ندارد.</p>
+            @else
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($noDebt as $t)
+                        <a href="{{ route('crm.wallet.show', $t) }}"
+                           class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 hover:shadow-md hover:border-gray-400 transition">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $t->full_name }}</div>
+                            <div class="mt-2 text-2xl font-bold text-gray-600 dark:text-gray-300">
+                                ۰ <span class="text-sm font-normal">تومان</span>
+                            </div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">بدون بدهی</div>
+                            <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-500 grid grid-cols-2 gap-1">
+                                <span>کیف‌پول:</span>
+                                <span class="text-left {{ $t->wallet_balance >= 0 ? 'text-emerald-700' : 'text-red-700' }}" dir="ltr">{{ number_format($t->wallet_balance) }}</span>
+                                <span>سهم شرکت:</span>
+                                <span class="text-left text-amber-700" dir="ltr">−{{ number_format($t->invoice_debt) }}</span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- لیست تراکنش‌ها --}}

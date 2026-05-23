@@ -34,20 +34,27 @@ class WalletController extends Controller
         $technicians = Technician::query()
             ->withSum('invoices', 'company_share')
             ->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance']);
+            ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance', 'status']);
+
+        // برای کارت‌های بالای صفحه فقط تکنسین‌های فعال (status=active) شمرده می‌شوند.
+        $activeTechnicians = $technicians->where('status', 'active');
 
         // تفکیک: مانده‌های منفی → بدهکار، مانده‌های مثبت → بستانکار،
-        // مانده صفر اصلاً نمایش داده نمی‌شود. مرتب‌سازی در هر گروه بر
-        // اساس قدر مطلق مانده (نزولی) تا تکنسین‌های با بزرگ‌ترین رقم
-        // اول دیده شوند.
-        $debtors = $technicians
+        // مانده صفر → بدون بدهی. مرتب‌سازی در هر گروه بر اساس قدر مطلق
+        // مانده (نزولی) تا تکنسین‌های با بزرگ‌ترین رقم اول دیده شوند.
+        $debtors = $activeTechnicians
             ->filter(fn (Technician $t) => (int) $t->true_balance < 0)
             ->sortBy(fn (Technician $t) => (int) $t->true_balance)
             ->values();
 
-        $creditors = $technicians
+        $creditors = $activeTechnicians
             ->filter(fn (Technician $t) => (int) $t->true_balance > 0)
             ->sortByDesc(fn (Technician $t) => (int) $t->true_balance)
+            ->values();
+
+        $noDebt = $activeTechnicians
+            ->filter(fn (Technician $t) => (int) $t->true_balance === 0)
+            ->sortBy(fn (Technician $t) => $t->full_name)
             ->values();
 
         return view('crm::wallet.index', [
@@ -55,6 +62,7 @@ class WalletController extends Controller
             'technicians' => $technicians,
             'debtors' => $debtors,
             'creditors' => $creditors,
+            'noDebt' => $noDebt,
             'technicianId' => $technicianId,
             'type' => $type,
             'types' => WalletTxType::options(),
