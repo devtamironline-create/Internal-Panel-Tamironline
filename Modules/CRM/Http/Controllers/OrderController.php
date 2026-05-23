@@ -33,7 +33,9 @@ class OrderController extends Controller
     {
         $search = $request->string('q')->toString();
         $status = $request->string('status')->toString();
-        $technicianId = $request->integer('technician_id');
+        // technician_id می‌تواند ID عددی یا sentinel «none» برای فیلتر «بدون تکنسین» باشد.
+        $techParam = $request->string('technician_id')->toString();
+        $technicianId = $techParam === 'none' ? 'none' : ((int) $techParam ?: null);
         $provinceId = $request->integer('province_id');
         $cityId = $request->integer('city_id');
         $brandId = $request->integer('brand_id');
@@ -55,7 +57,8 @@ class OrderController extends Controller
             if ($search !== '') {
                 $q->search($search);
             }
-            if ($technicianId)        $q->where('technician_id', $technicianId);
+            if ($technicianId === 'none') $q->whereNull('technician_id');
+            elseif ($technicianId)        $q->where('technician_id', $technicianId);
             if ($provinceId)          $q->where('province_id', $provinceId);
             if ($cityId)              $q->where('city_id', $cityId);
             if ($brandId)             $q->where('brand_id', $brandId);
@@ -169,7 +172,9 @@ class OrderController extends Controller
         $query = Order::query()->latest();
 
         if ($s = trim((string) $request->string('q'))) $query->search($s);
-        if ($v = $request->integer('technician_id')) $query->where('technician_id', $v);
+        $techParam = $request->string('technician_id')->toString();
+        if ($techParam === 'none')              $query->whereNull('technician_id');
+        elseif ($v = (int) $techParam)          $query->where('technician_id', $v);
         if ($v = $request->integer('province_id'))   $query->where('province_id', $v);
         if ($v = $request->integer('city_id'))       $query->where('city_id', $v);
         if ($v = $request->integer('brand_id'))      $query->where('brand_id', $v);

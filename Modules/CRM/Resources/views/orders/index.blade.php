@@ -85,6 +85,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تکنسین</label>
                 <select name="technician_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                     <option value="">— همه —</option>
+                    <option value="none" @selected($technicianId === 'none')>— بدون تکنسین —</option>
                     @foreach($technicians as $t)
                         @php $tname = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))); @endphp
                         <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ $tname ?: '—' }}</option>
