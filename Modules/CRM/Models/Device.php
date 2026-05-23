@@ -26,6 +26,8 @@ class Device extends Model
         'faq',
         'meta_title',
         'meta_description',
+        'warranty_text',
+        'support_info',
         'sort_order',
         'is_active',
         'is_featured',

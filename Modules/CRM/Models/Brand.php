@@ -23,6 +23,9 @@ class Brand extends Model
         'faq',
         'meta_title',
         'meta_description',
+        'warranty_text',
+        'support_info',
+        'supported_device_slugs',
         'sort_order',
         'is_active',
         'is_featured',
@@ -37,6 +40,7 @@ class Brand extends Model
         'issues'  => 'array',
         'why_us'  => 'array',
         'faq'     => 'array',
+        'supported_device_slugs' => 'array',
     ];
 
     public function scopeActive($query)
