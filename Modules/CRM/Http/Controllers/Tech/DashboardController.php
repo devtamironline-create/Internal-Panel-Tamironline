@@ -42,7 +42,7 @@ class DashboardController extends Controller
 
         // برای دکوریشن مالی هدر/باکس‌ها لازم است sum سهم شرکت روی technician
         // cache شود تا accessor invoice_debt یک query اضافه نزند.
-        $tech->loadSum('invoices', 'company_share');
+        $tech->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         // تقویم داشبورد — ۷ روز آینده با تفکیک سفارش‌ها بر اساس بازهٔ
         // ساعتی (۹–۱۲، ۱۲–۱۵، ۱۵–۱۸، ۱۸–۲۱). همان VISIT_SLOTS که در
@@ -642,7 +642,7 @@ class DashboardController extends Controller
         $transactions = $query->latest()->paginate(15)->withQueryString();
 
         // refresh accessor با لود withSum فاکتورها — جلوگیری از N+1.
-        $tech->loadSum('invoices', 'company_share');
+        $tech->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         return view('crm::tech-panel.wallet', [
             'technician' => $tech,

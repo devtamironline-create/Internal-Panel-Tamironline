@@ -223,18 +223,21 @@ class Technician extends Authenticatable
      * مجموع سهم شرکت از فاکتورهای این تکنسین — بدهی تکنسین به شرکت.
      * این عدد مستقل از تراکنش‌های wallet ذخیره می‌شود (در crm_invoices).
      *
-     * اگر مدل با ->withSum('invoices', 'company_share') بارگذاری شده
-     * باشد (برای جلوگیری از N+1 در لیست‌ها)، از همان attribute استفاده
-     * می‌کنیم؛ وگرنه یک query جداگانه می‌زنیم.
+     * ⚠ فاکتورهایی که in_wallet=true دارند، کمیسیون‌شان قبلاً در
+     * wallet_transactions ثبت شده — اگر اینجا هم شمرده شوند double-count
+     * می‌شود و true_balance اشتباه (بیشتر منفی از واقع) برمی‌گردد.
+     *
+     * بنابراین:
+     *   - fallback (شاخه دوم) on-demand فقط in_wallet=false را می‌شمرد.
+     *   - اگر preloaded است (شاخه اول)، caller باید withSum/loadSum را با
+     *     constraint `->where('in_wallet', false)` صدا زده باشد، یعنی:
+     *     ->withSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share')
      */
     public function getInvoiceDebtAttribute(): int
     {
         if (array_key_exists('invoices_sum_company_share', $this->attributes)) {
             return (int) ($this->attributes['invoices_sum_company_share'] ?? 0);
         }
-        // فاکتورهایی که in_wallet=true → از این لحظه به بعد، اثرشان
-        // قبلاً در wallet_transactions ثبت شده. در invoice_debt شمرده
-        // نمی‌شوند تا double-count نشوند.
         return (int) $this->invoices()->where('in_wallet', false)->sum('company_share');
     }
 

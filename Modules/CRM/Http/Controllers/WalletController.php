@@ -32,7 +32,7 @@ class WalletController extends Controller
             ->withQueryString();
 
         $technicians = Technician::query()
-            ->withSum('invoices', 'company_share')
+            ->withSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wallet_balance', 'status']);
 

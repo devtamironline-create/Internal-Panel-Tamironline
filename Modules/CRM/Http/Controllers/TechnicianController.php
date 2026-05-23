@@ -114,7 +114,7 @@ class TechnicianController extends Controller
         $technician->load(['user']);
         // برای نمایش مانده دقیق در کارت کیف‌پول، sum سهم شرکت را cache می‌کنیم
         // تا accessor invoice_debt در view یک query اضافه نزند.
-        $technician->loadSum('invoices', 'company_share');
+        $technician->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         return view('crm::technicians.show', compact('technician'));
     }
@@ -157,7 +157,7 @@ class TechnicianController extends Controller
         }
 
         // ۲) لود invoice_debt
-        $technician->loadSum('invoices', 'company_share');
+        $technician->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
         $invoiceDebt = (int) $technician->invoice_debt;
 
         // ۳) و ۴) محاسبه delta
