@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Modules\CRM\Console\Commands\BackfillInvoices;
+use Modules\CRM\Console\Commands\FixNonEnglishSlugs;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
@@ -50,6 +51,7 @@ class CrmServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 BackfillInvoices::class,
+                FixNonEnglishSlugs::class,
                 RecomputeInvoices::class,
                 RecomputeWalletBalances::class,
                 ResolveOrphanTechnicians::class,

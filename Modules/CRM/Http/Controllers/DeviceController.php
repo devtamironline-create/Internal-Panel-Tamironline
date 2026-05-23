@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Device;
 
 class DeviceController extends Controller
@@ -130,6 +131,7 @@ class DeviceController extends Controller
     private function applyDefaults(array &$validated, bool $isNew): void
     {
         $validated['slug']        = $validated['slug'] ?: Str::slug($validated['name']);
+        $this->assertEnglishSlug($validated['slug']);
         $validated['sort_order']  = $validated['sort_order'] ?? 0;
         $validated['is_active']   = (bool) ($validated['is_active']   ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
@@ -143,6 +145,20 @@ class DeviceController extends Controller
                     $validated[$key] = null;
                 }
             }
+        }
+    }
+
+    /**
+     * تضمین اینکه slug فقط با English kebab-case است. URLهای /devices/{slug}
+     * در فرانت Next.js مسیرسازی می‌شوند و باید ASCII باشند — slug فارسی
+     * مشکل encoding و SEO ایجاد می‌کند.
+     */
+    private function assertEnglishSlug(string $slug): void
+    {
+        if (! preg_match('/^[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?$/', $slug)) {
+            throw ValidationException::withMessages([
+                'slug' => 'اسلاگ باید با حروف کوچک انگلیسی، عدد و خط تیره باشد. اگر نام دستگاه فارسی است، حتماً یک اسلاگ انگلیسی وارد کنید (مثل washing-machine).',
+            ]);
         }
     }
 
