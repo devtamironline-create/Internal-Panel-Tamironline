@@ -28,8 +28,9 @@ class ActivityController extends Controller
         $limit = (int) $request->query('limit', 10);
         $limit = max(1, min($limit, 50));
 
-        $deviceSlug = $request->query('device_slug');
-        $brandSlug  = $request->query('brand_slug');
+        // پشتیبانی از هر دو ?device و ?device_slug (alias کوتاه و طولانی)
+        $deviceSlug = $request->query('device') ?? $request->query('device_slug');
+        $brandSlug  = $request->query('brand')  ?? $request->query('brand_slug');
 
         $devices = $this->devices($deviceSlug);
         $brand   = $brandSlug ? Brand::query()
@@ -49,6 +50,11 @@ class ActivityController extends Controller
             $areas = ['تهران'];
         }
 
+        // برندهای فعال برای انتساب تصادفی وقتی brand فیلتر نشده
+        $allBrands = $brand
+            ? collect([$brand])
+            : Brand::query()->where('is_active', true)->get(['id', 'name', 'slug']);
+
         // seed مبتنی بر دقیقه — در یک پنجره‌ی ۶۰ ثانیه‌ای ثابت می‌ماند
         // تا با کش HTTP هم‌خوان باشد.
         $seedKey = (int) floor(time() / 60) . ($deviceSlug ?? '') . ($brandSlug ?? '');
@@ -59,19 +65,28 @@ class ActivityController extends Controller
             $device = $devices[$rng->getInt(0, $devices->count() - 1)];
             $area   = $areas[$rng->getInt(0, count($areas) - 1)];
 
-            // توزیع زمان: بیشتر در نیم‌ساعت اخیر برای حس «زنده»
+            // برند: اگر فیلتر شده، همان؛ در غیر این صورت یکی تصادفی (اگر برندی موجود باشد)
+            $rowBrand = $brand;
+            if (! $rowBrand && $allBrands->isNotEmpty()) {
+                $rowBrand = $allBrands[$rng->getInt(0, $allBrands->count() - 1)];
+            }
+
             $minutesAgo = $this->pickMinutesAgo($rng);
             $status     = $rng->getInt(0, 100) < 75 ? 'completed' : 'in_progress';
 
-            $label = $brand
-                ? sprintf('تعمیر %s %s', $device->name, $brand->name)
+            $label = $rowBrand
+                ? sprintf('تعمیر %s %s', $device->name, $rowBrand->name)
                 : sprintf('تعمیر %s', $device->name);
 
             $data[] = [
+                // ULID-style id برای فرانت (برای React key)
+                'id'           => 'act_' . substr(md5($seedKey . $i), 0, 16),
                 'device_slug'  => $device->slug,
-                'device_label' => $label,
-                'brand_slug'   => $brand?->slug,
-                'brand_label'  => $brand?->name,
+                'device_name'  => $device->name,         // spec field
+                'device_label' => $label,                // backward compat (متن کامل)
+                'brand'        => $rowBrand?->name,      // spec field
+                'brand_slug'   => $rowBrand?->slug,
+                'brand_label'  => $rowBrand?->name,      // backward compat
                 'area'         => $area,
                 'status'       => $status,
                 'minutes_ago'  => $minutesAgo,

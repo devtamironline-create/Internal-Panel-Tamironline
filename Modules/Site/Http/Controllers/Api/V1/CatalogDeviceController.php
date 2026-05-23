@@ -6,17 +6,25 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Device;
+use Modules\Site\Services\PageSectionService;
+use Modules\Site\Support\CatalogMerger;
 use Modules\Site\Support\MediaUrl;
 
 /**
- * فهرست دستگاه‌ها برای مصرف فرانت — منبع: Modules\CRM\Models\Device.
+ * Catalog endpoints برای دستگاه‌ها.
  *
- * فقط دستگاه‌های فعال برمی‌گردد. با ?featured=true فقط دستگاه‌های ویژه
- * (پرچم is_featured) خروجی می‌شوند — مناسب لیست خدمات اصلی صفحه‌ی Home
- * در صورتی که فرانت بخواهد به‌جای hero.services_items مستقیماً صدا بزند.
+ * Detail (/v1/catalog/devices/{slug}) از الگوی Template + Override استفاده می‌کند:
+ *   - Template از site_page_sections (page_slug='device') با placeholderهای
+ *     {device}, {device_label}, {device_slug} پر می‌شود
+ *   - Override از فیلدهای CMS در crm_devices خوانده می‌شود
+ *   - merge: override (اگر non-null/non-empty) ?? template
  */
 class CatalogDeviceController extends Controller
 {
+    public function __construct(private PageSectionService $sections)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $limit = (int) $request->query('limit', 50);
@@ -44,7 +52,6 @@ class CatalogDeviceController extends Controller
             'tone'      => $d->tone,
         ])->values();
 
-        // تعداد کل دستگاه‌های فعال — برای نمایش «+N خدمت دیگر» در فرانت.
         $total = Device::query()->where('is_active', true)->count();
 
         return response()
@@ -56,9 +63,12 @@ class CatalogDeviceController extends Controller
     }
 
     /**
-     * GET /v1/catalog/devices/{slug} — جزئیات یک دستگاه با تمام فیلدهای CMS.
+     * GET /v1/catalog/devices/{slug} — جزئیات یک دستگاه.
      *
-     * هر فیلد null یعنی «ادمین چیزی وارد نکرده» — فرانت از fixture استفاده می‌کند.
+     * Merge logic:
+     *   override (per-device CMS column) ?? template (page_sections.device با placeholder substitution)
+     *
+     * فیلدهای null/empty در crm_devices به Template fallback می‌شوند.
      */
     public function show(string $slug): JsonResponse
     {
@@ -71,26 +81,52 @@ class CatalogDeviceController extends Controller
             return response()->json(['message' => 'Not Found'], 404);
         }
 
+        // Template با placeholder substitution برای این دستگاه
+        $context = [
+            'device'       => $device->short_name ?? $device->name,
+            'device_label' => $device->name,
+            'device_slug'  => $device->slug,
+            'page_title'   => $device->service_name ?? $device->name,
+        ];
+        $template = $this->sections->pageExists('device')
+            ? $this->sections->loadForPublic('device', $context)
+            : [];
+
+        $flat = CatalogMerger::flattenTemplate($template);
+
         return response()
             ->json([
-                'id'               => (int) $device->id,
-                'label'            => $device->name,
-                'slug'             => $device->slug,
-                'name'             => $device->service_name ?? $device->name, // عنوان صفحه
-                'short_name'       => $device->short_name,
-                'description'      => $device->description,
-                'service_name'     => $device->service_name,
-                'technician_name'  => $device->technician_name,
-                'starting_price'   => $device->starting_price !== null ? (int) $device->starting_price : null,
-                'accent'           => $device->accent,
-                'bg'               => $device->bg,
-                'icon'             => $device->icon,
-                'thumbnail'        => MediaUrl::resolve($device->thumbnail),
-                'tone'             => $device->tone, // CSS class (مثل tone-blue) — برای backward compat
-                'issues'           => $device->issues ?? [],
-                'faq'              => $device->faq ?? [],
-                'meta_title'       => $device->meta_title,
-                'meta_description' => $device->meta_description,
+                'id'              => (int) $device->id,
+                'label'           => $device->name,
+                'slug'            => $device->slug,
+
+                // متن‌ها: override ?? template
+                'name'            => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? $device->name),
+                'short_name'      => CatalogMerger::pick($device->short_name, $device->name),
+                'service_name'    => CatalogMerger::pick($device->service_name, $flat['service_name'] ?? null),
+                'technician_name' => CatalogMerger::pick($device->technician_name, $flat['technician_name'] ?? null),
+                'description'     => CatalogMerger::pick($device->description, $flat['description'] ?? null),
+                'tagline'         => CatalogMerger::pick(null, $flat['tagline'] ?? null),
+
+                // ظاهر
+                'starting_price'  => $device->starting_price !== null ? (int) $device->starting_price : null,
+                'accent'          => $device->accent,
+                'bg'              => $device->bg,
+                'icon'            => $device->icon,
+                'thumbnail'       => MediaUrl::resolve($device->thumbnail),
+                'tone'            => $device->tone, // CSS class
+
+                // آرایه‌ها: override ?? template
+                'issues'          => CatalogMerger::pick($device->issues, CatalogMerger::templateIssues($template)),
+                'faq'             => CatalogMerger::pick($device->faq, CatalogMerger::templateFaq($template)),
+
+                // پشتیبانی و گارانتی
+                'warranty_text'   => CatalogMerger::pick($device->warranty_text, $flat['warranty_text'] ?? null),
+                'support_info'    => CatalogMerger::pick($device->support_info, $flat['support_info'] ?? null),
+
+                // SEO
+                'meta_title'       => CatalogMerger::pick($device->meta_title, $flat['meta_title'] ?? null),
+                'meta_description' => CatalogMerger::pick($device->meta_description, $flat['meta_description'] ?? null),
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }

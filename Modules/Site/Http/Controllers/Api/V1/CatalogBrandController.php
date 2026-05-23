@@ -6,27 +6,44 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Brand;
+use Modules\Site\Services\PageSectionService;
+use Modules\Site\Support\CatalogMerger;
 use Modules\Site\Support\MediaUrl;
 
 /**
- * فهرست برندها برای مصرف فرانت — منبع: Modules\CRM\Models\Brand.
+ * Catalog endpoints برای برندها.
  *
- * فقط برندهای فعال برمی‌گردد. با ?featured=true فقط برندهای ویژه
- * (پرچم is_featured) خروجی می‌شوند — مناسب سکشن H6 صفحه‌ی Home.
+ * Detail از الگوی Template + Override (مثل devices) استفاده می‌کند.
+ * Template در page_sections.brand با placeholderهای {brand}, {brand_slug}.
  */
 class CatalogBrandController extends Controller
 {
+    public function __construct(private PageSectionService $sections)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min($limit, 100));
 
-        $query = Brand::query()
-            ->active()
-            ->ordered();
+        $query = Brand::query()->active()->ordered();
 
         if ($request->boolean('featured')) {
             $query->featured();
+        }
+
+        // فیلتر بر اساس device slug — برندهایی که این دستگاه را پشتیبانی می‌کنند
+        $deviceSlug = trim((string) $request->query('device', ''));
+        if ($deviceSlug !== '') {
+            // brand.supported_device_slugs یک JSON array است
+            $driver = $query->getQuery()->getConnection()->getDriverName();
+            if ($driver === 'mysql' || $driver === 'mariadb') {
+                $query->whereJsonContains('supported_device_slugs', $deviceSlug);
+            } else {
+                // برای sqlite و سایر driverها: like در JSON serialized
+                $query->where('supported_device_slugs', 'like', '%"' . $deviceSlug . '"%');
+            }
         }
 
         $brands = $query->limit($limit)->get(['id', 'name', 'slug', 'logo']);
@@ -38,7 +55,6 @@ class CatalogBrandController extends Controller
             'logo' => MediaUrl::resolve($b->logo),
         ])->values();
 
-        // تعداد کل برندهای فعال — برای meta.total در فرانت
         $total = Brand::query()->where('is_active', true)->count();
 
         return response()
@@ -50,10 +66,7 @@ class CatalogBrandController extends Controller
     }
 
     /**
-     * GET /v1/catalog/brands/{slug} — جزئیات یک برند با تمام فیلدهای CMS.
-     *
-     * هر فیلد null یعنی «ادمین چیزی وارد نکرده» — فرانت از fixture استفاده می‌کند.
-     * آرایه‌های خالی هم مثل null عمل می‌کنند (فرانت بررسی .length می‌کند).
+     * GET /v1/catalog/brands/{slug} — جزئیات یک برند با merge logic.
      */
     public function show(string $slug): JsonResponse
     {
@@ -66,22 +79,45 @@ class CatalogBrandController extends Controller
             return response()->json(['message' => 'Not Found'], 404);
         }
 
+        $context = [
+            'brand'      => $brand->name,
+            'brand_slug' => $brand->slug,
+            'page_title' => $brand->name,
+        ];
+        $template = $this->sections->pageExists('brand')
+            ? $this->sections->loadForPublic('brand', $context)
+            : [];
+
+        $flat = CatalogMerger::flattenTemplate($template);
+
         return response()
             ->json([
                 'id'               => (int) $brand->id,
                 'name'             => $brand->name,
                 'slug'             => $brand->slug,
                 'logo'             => MediaUrl::resolve($brand->logo),
-                'tagline'          => $brand->tagline,
-                'description'      => $brand->description,
+
+                // متن‌ها: override ?? template
+                'tagline'          => CatalogMerger::pick($brand->tagline, $flat['tagline'] ?? null),
+                'description'      => CatalogMerger::pick($brand->description, $flat['description'] ?? null),
+
+                // ظاهر (فقط override — رنگ‌ها معمولاً اختصاصی برند هستند)
                 'tone'             => $brand->tone,
                 'bg'               => $brand->bg,
-                'stats'            => $brand->stats ?? [],
-                'issues'           => $brand->issues ?? [],
-                'why_us'           => $brand->why_us ?? [],
-                'faq'              => $brand->faq ?? [],
-                'meta_title'       => $brand->meta_title,
-                'meta_description' => $brand->meta_description,
+
+                // آرایه‌ها: override ?? template
+                'stats'            => CatalogMerger::pick($brand->stats, CatalogMerger::templateStats($template)),
+                'issues'           => CatalogMerger::pick($brand->issues, CatalogMerger::templateIssues($template)),
+                'why_us'           => CatalogMerger::pick($brand->why_us, CatalogMerger::templateWhyUs($template)),
+                'faq'              => CatalogMerger::pick($brand->faq, CatalogMerger::templateFaq($template)),
+
+                // گارانتی و پشتیبانی
+                'warranty_text'    => CatalogMerger::pick($brand->warranty_text, $flat['warranty_text'] ?? null),
+                'support_info'     => CatalogMerger::pick($brand->support_info, $flat['support_info'] ?? null),
+
+                // SEO
+                'meta_title'       => CatalogMerger::pick($brand->meta_title, $flat['meta_title'] ?? null),
+                'meta_description' => CatalogMerger::pick($brand->meta_description, $flat['meta_description'] ?? null),
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }

@@ -7,6 +7,7 @@ use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
+use Modules\Site\Http\Controllers\Api\V1\DeviceReviewController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
 use Modules\Site\Http\Controllers\Api\V1\PageController;
 use Modules\Site\Http\Controllers\Api\V1\TestimonialController;
@@ -53,6 +54,23 @@ Route::prefix('v1')->group(function () {
         Route::get('/catalog/devices/{slug}', [CatalogDeviceController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.catalog.devices.show');
+    });
+
+    // ── Device Reviews — public read, public write with throttle ──
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/catalog/devices/{slug}/reviews', [DeviceReviewController::class, 'index'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.devices.reviews.index');
+    });
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/catalog/devices/{slug}/reviews', [DeviceReviewController::class, 'store'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.devices.reviews.store');
+    });
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/catalog/reviews/{id}/like', [DeviceReviewController::class, 'like'])
+            ->where('id', '[0-9A-Za-z]{26}')
+            ->name('api.v1.catalog.reviews.like');
     });
 
 });

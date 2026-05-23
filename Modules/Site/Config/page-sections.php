@@ -511,4 +511,162 @@ return [
         ],
     ],
 
+    // ─── الگوی صفحه‌ی دستگاه (template برای همه دستگاه‌ها) ──────────
+    // ادمین در /admin/site/page-content/device این متن‌های پیش‌فرض را
+    // تنظیم می‌کند. در /v1/catalog/devices/{slug} هر فیلد per-device
+    // (در crm_devices) اگر null باشد، از این template با placeholder
+    // substituted استفاده می‌شود.
+    //
+    // Placeholderها در متن‌ها: {device}, {device_label}, {device_slug}
+    'device' => [
+        'title'    => 'الگوی صفحه دستگاه (پیش‌فرض همه دستگاه‌ها)',
+        'sections' => [
+
+            'identity' => [
+                'label'       => 'هویت و نام‌ها (پیش‌فرض)',
+                'description' => 'متن‌های پایه — از {device} برای نام دستگاه استفاده کنید.',
+                'fields' => [
+                    'service_name'    => ['label' => 'نام سرویس', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'technician_name' => ['label' => 'عنوان تکنسین', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'tagline'         => ['label' => 'شعار صفحه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'description'     => ['label' => 'توضیح کامل', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
+                ],
+            ],
+
+            'support' => [
+                'label'       => 'گارانتی و پشتیبانی',
+                'description' => 'متن‌های ضمانت و پشتیبانی — مشترک بین همه دستگاه‌ها مگر override شود.',
+                'fields' => [
+                    'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                    'support_info'  => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                ],
+            ],
+
+            'issues' => [
+                'label'       => 'مشکلات رایج (پیش‌فرض)',
+                'description' => 'لیست issues مشترک. می‌توانید از {device} در عنوان/توضیح استفاده کنید.',
+                'fields' => [
+                    'items' => [
+                        'label' => 'آیتم‌ها',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'faq' => [
+                'label'       => 'سوالات متداول (پیش‌فرض)',
+                'description' => 'از مخزن FAQ انتخاب کنید (دسته‌بندی یا منفرد). placeholderها در متن سوال/پاسخ خودکار جایگزین می‌شوند.',
+                'fields' => [
+                    'category_ids' => [
+                        'label'  => 'دسته‌بندی FAQ',
+                        'type'   => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids' => [
+                        'label'  => 'سوالات منفرد',
+                        'type'   => 'reference',
+                        'source' => 'faqs',
+                    ],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو (پیش‌فرض)',
+                'fields' => [
+                    'meta_title'       => ['label' => 'Meta Title (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
+    // ─── الگوی صفحه‌ی برند ──────────────────────────────────────────
+    'brand' => [
+        'title'    => 'الگوی صفحه برند (پیش‌فرض همه برندها)',
+        'sections' => [
+
+            'identity' => [
+                'label' => 'هویت (پیش‌فرض)',
+                'fields' => [
+                    'tagline'     => ['label' => 'شعار', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
+                ],
+            ],
+
+            'stats' => [
+                'label' => 'آمار پیش‌فرض',
+                'fields' => [
+                    'items' => [
+                        'label' => 'آمار',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'value' => ['label' => 'مقدار', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'issues' => [
+                'label' => 'مشکلات رایج (پیش‌فرض)',
+                'fields' => [
+                    'items' => [
+                        'label' => 'آیتم‌ها',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
+                            'icon'        => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'why_us' => [
+                'label' => 'چرا ما (پیش‌فرض)',
+                'fields' => [
+                    'items' => [
+                        'label' => 'آیتم‌ها',
+                        'type'  => 'repeater',
+                        'item_fields' => [
+                            'title'       => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
+                            'icon'        => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'faq' => [
+                'label' => 'سوالات متداول (پیش‌فرض)',
+                'fields' => [
+                    'category_ids' => ['label' => 'دسته‌بندی FAQ', 'type' => 'reference', 'source' => 'faq_categories'],
+                    'faq_ids'      => ['label' => 'سوالات منفرد', 'type' => 'reference', 'source' => 'faqs'],
+                ],
+            ],
+
+            'support' => [
+                'label' => 'گارانتی و پشتیبانی',
+                'fields' => [
+                    'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                    'support_info'  => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو (پیش‌فرض)',
+                'fields' => [
+                    'meta_title'       => ['label' => 'Meta Title (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
 ];
