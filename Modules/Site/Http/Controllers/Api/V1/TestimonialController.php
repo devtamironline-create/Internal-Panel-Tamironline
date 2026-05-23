@@ -6,8 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Device;
-use Modules\Site\Models\Testimonial;
+use Modules\Site\Models\Review;
 
+/**
+ * Alias backward-compat برای /v1/testimonials.
+ * منبع داده پس از یکپارچه‌سازی: site_reviews با type=audio.
+ *
+ * فیلتر per-device منطق اولویت‌بندی دارد: ابتدا testimonialهای لینک‌شده
+ * به این دستگاه، سپس testimonialهای generic (بدون لینک به هیچ دستگاهی).
+ */
 class TestimonialController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -15,13 +22,13 @@ class TestimonialController extends Controller
         $limit = (int) $request->query('limit', 12);
         $limit = max(1, min($limit, 50));
 
-        $query = Testimonial::query()
-            ->where('is_published', true)
+        $query = Review::query()
+            ->audio()
+            ->published()
+            ->orderByDesc('is_featured')
             ->orderBy('sort_order')
             ->orderByDesc('published_at');
 
-        // فیلتر per-device: اگر testimonialهایی به این device لینک شده‌اند،
-        // اولویت با آن‌ها — در غیر این صورت testimonialهای generic (بدون pivot)
         $deviceSlug = $request->query('device') ?? $request->query('device_slug');
         if ($deviceSlug) {
             $device = Device::query()
@@ -31,9 +38,7 @@ class TestimonialController extends Controller
 
             if ($device) {
                 $query->where(function ($q) use ($device) {
-                    // testimonialهایی که به این device لینک شده‌اند
                     $q->whereHas('devices', fn ($qq) => $qq->where('crm_devices.id', $device->id))
-                      // یا generic (هیچ device link شده‌ای ندارند)
                         ->orWhereDoesntHave('devices');
                 });
             }
@@ -41,16 +46,16 @@ class TestimonialController extends Controller
 
         $items = $query->limit($limit)->get();
 
-        $data = $items->map(fn (Testimonial $t) => [
+        $data = $items->map(fn (Review $t) => [
             'id' => $t->id,
-            'customer_name' => $t->customer_name,
-            'author_name' => $t->customer_name, // alias مطابق spec
+            'customer_name' => $t->author_name,
+            'author_name' => $t->author_name,
             'topic' => $t->topic,
             'rating' => (int) $t->rating,
             'audio_url' => $t->audio_url,
             'duration_seconds' => $t->duration_seconds,
             'audio_duration' => $this->formatDuration($t->duration_seconds),
-            'initials' => $this->initials($t->customer_name),
+            'initials' => $this->initials($t->author_name),
             'published_at' => $t->published_at?->utc()->toIso8601ZuluString(),
         ])->values();
 
@@ -59,9 +64,6 @@ class TestimonialController extends Controller
             ->header('Cache-Control', 'public, max-age=300, s-maxage=300');
     }
 
-    /**
-     * تبدیل ثانیه به فرمت MM:SS — برای فیلد audio_duration.
-     */
     private function formatDuration(?int $seconds): ?string
     {
         if ($seconds === null || $seconds < 0) {
@@ -73,9 +75,6 @@ class TestimonialController extends Controller
         return sprintf('%02d:%02d', $minutes, $secs);
     }
 
-    /**
-     * استخراج اولین کاراکتر معنی‌دار نام برای آواتار متنی.
-     */
     private function initials(?string $name): ?string
     {
         if (! $name) {
