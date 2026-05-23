@@ -111,8 +111,9 @@
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium mb-1">توضیح کامل</label>
-                    <textarea name="description" rows="4" maxlength="10000"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
+                    <textarea name="description" rows="8" maxlength="10000"
+                              class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">می‌توانید از قالب‌بندی غنی (تیتر، فهرست، لینک، تصویر) استفاده کنید. خروجی به‌صورت HTML در فرانت render می‌شود.</p>
                 </div>
             </div>
         </div>
