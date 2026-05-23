@@ -19,11 +19,12 @@ class Taxonomy extends Model
     ];
 
     protected $casts = [
-        'is_active'  => 'boolean',
+        'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
 
-    public const TYPE_FAQ         = 'faq';
+    public const TYPE_FAQ = 'faq';
+
     public const TYPE_TESTIMONIAL = 'testimonial';
 
     public function scopeOfType($query, string $type)
@@ -46,8 +47,19 @@ class Taxonomy extends Model
         return $this->belongsToMany(Faq::class, 'site_faq_taxonomies', 'taxonomy_id', 'faq_id');
     }
 
+    /**
+     * نظرات/توصیه‌نامه‌ها (پس از یکپارچه‌سازی reviews — فقط audio reviews تاکسونومی دارند).
+     */
+    public function reviews(): BelongsToMany
+    {
+        return $this->belongsToMany(Review::class, 'site_review_taxonomies', 'taxonomy_id', 'review_id');
+    }
+
+    /**
+     * Alias backward-compat برای کدهایی که هنوز testimonials() را صدا می‌زنند.
+     */
     public function testimonials(): BelongsToMany
     {
-        return $this->belongsToMany(Testimonial::class, 'site_testimonial_taxonomies', 'taxonomy_id', 'testimonial_id');
+        return $this->reviews();
     }
 }

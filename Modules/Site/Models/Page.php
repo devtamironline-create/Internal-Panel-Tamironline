@@ -34,11 +34,13 @@ class Page extends Model
     public function testimonials(): BelongsToMany
     {
         return $this->belongsToMany(
-            Testimonial::class,
+            Review::class,
             'site_page_testimonials',
             'page_id',
             'testimonial_id'
-        )->withPivot('sort_order')->orderBy('site_page_testimonials.sort_order');
+        )->where('site_reviews.type', Review::TYPE_AUDIO)
+            ->withPivot('sort_order')
+            ->orderBy('site_page_testimonials.sort_order');
     }
 
     public function faqs(): BelongsToMany
