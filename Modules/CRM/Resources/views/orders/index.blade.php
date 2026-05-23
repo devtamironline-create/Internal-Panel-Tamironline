@@ -83,14 +83,20 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تکنسین</label>
-                <select name="technician_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    <option value="none" @selected($technicianId === 'none')>— بدون تکنسین —</option>
-                    @foreach($technicians as $t)
-                        @php $tname = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))); @endphp
-                        <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ $tname ?: '—' }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $techOptions = ['' => '— همه —', 'none' => '— بدون تکنسین —'];
+                    foreach ($technicians as $t) {
+                        $tname = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? '')));
+                        $techOptions[(string) $t->id] = $tname ?: '—';
+                    }
+                    $techValue = $technicianId === null ? '' : (string) $technicianId;
+                @endphp
+                <x-searchable-select
+                    name="technician_id"
+                    :options="$techOptions"
+                    :value="$techValue"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی تکنسین..." />
             </div>
         </div>
 
@@ -108,21 +114,29 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">برند</label>
-                <select name="brand_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    @foreach($brands as $b)
-                        <option value="{{ $b->id }}" @selected($brandId === $b->id)>{{ $b->name }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $brandOptions = ['' => '— همه —'];
+                    foreach ($brands as $b) { $brandOptions[(string) $b->id] = $b->name; }
+                @endphp
+                <x-searchable-select
+                    name="brand_id"
+                    :options="$brandOptions"
+                    :value="$brandId"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی برند..." />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دستگاه</label>
-                <select name="device_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    @foreach($devices as $d)
-                        <option value="{{ $d->id }}" @selected($deviceId === $d->id)>{{ $d->name }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $deviceOptions = ['' => '— همه —'];
+                    foreach ($devices as $d) { $deviceOptions[(string) $d->id] = $d->name; }
+                @endphp
+                <x-searchable-select
+                    name="device_id"
+                    :options="$deviceOptions"
+                    :value="$deviceId"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی دستگاه..." />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع سفارش</label>
@@ -136,12 +150,16 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">معرف</label>
                 @if(count($introductionList))
-                    <select name="introduction" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                        <option value="">— همه —</option>
-                        @foreach($introductionList as $opt)
-                            <option value="{{ $opt }}" @selected($introduction === $opt)>{{ $opt }}</option>
-                        @endforeach
-                    </select>
+                    @php
+                        $introOptions = ['' => '— همه —'];
+                        foreach ($introductionList as $opt) { $introOptions[(string) $opt] = (string) $opt; }
+                    @endphp
+                    <x-searchable-select
+                        name="introduction"
+                        :options="$introOptions"
+                        :value="$introduction"
+                        placeholder="— همه —"
+                        searchPlaceholder="جستجو..." />
                 @else
                     <input type="text" name="introduction" value="{{ $introduction }}" placeholder="مثلاً اینستاگرام"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
