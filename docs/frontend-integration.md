@@ -85,12 +85,20 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 | 3 | GET | `/v1/devices/{slug}` | — | 60/min | 300s | P0 | ✅ |
 | 4 | GET | `/v1/catalog/brands/{slug}` | internal.token | 60/min | 600s | P0 | ✅ |
 | 5 | GET | `/v1/catalog/devices/{slug}` | internal.token | 60/min | 600s | P0 | ✅ |
-| 6 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
-| 7 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
-| 8 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
-| 9 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
-| 10 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 11 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 6 | GET | `/v1/catalog/devices/{slug}/reviews` | — | 60/min | 60s | P0 | ✅ |
+| 7 | POST | `/v1/catalog/devices/{slug}/reviews` | — | 5/min | — | P0 | ✅ |
+| 8 | POST | `/v1/catalog/reviews/{id}/like` | — | 30/min | — | P0 | ✅ |
+| 9 | GET | `/v1/activity/recent` | — | 60/min | 60s | P1 | ✅ |
+| 10 | GET | `/v1/testimonials` | — | 60/min | 300s | P1 | ✅ |
+| 11 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
+| 12 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
+| 13 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
+| 14 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+
+> **توجه:**
+> - `/v1/catalog/devices/{slug}` و `/v1/catalog/brands/{slug}` از **الگوی Template + Override** استفاده می‌کنند — ادمین یک‌بار template را با placeholderها در `/admin/site/page-content/{device,brand}` تنظیم می‌کند، و هر دستگاه/برند می‌تواند فیلدهای خاصی را override کند. جزئیات کامل در `docs/BACKEND_DEVICE_PAGE_API.md` §۱۳.
+> - Reviews public هستند (بدون internal.token) چون مرورگر کاربر مستقیماً POST می‌کند.
+> - `/v1/activity/recent` پارامتر `?device={slug}` و `?brand={slug}` را می‌پذیرد (و alias های `device_slug` / `brand_slug` همچنان کار می‌کنند).
 
 > **توجه:** detail endpoints (`/v1/catalog/brands/{slug}` و `/v1/catalog/devices/{slug}`) پشت `internal.token` هستن — فرانت BFF باید Bearer token بفرسته. جزئیات schema در `BACKEND_CATALOG_API.md`.
 
