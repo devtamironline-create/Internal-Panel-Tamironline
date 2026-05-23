@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Admin\AboutStatController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
+use Modules\Site\Http\Controllers\Admin\DeviceReviewController as AdminDeviceReviewController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageContentController;
 use Modules\Site\Http\Controllers\Admin\PageController;
@@ -96,5 +97,14 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/',  [SettingsController::class, 'edit'])->name('edit');
         Route::put('/', [SettingsController::class, 'update'])->name('update');
+    });
+
+    // نظرات کاربران صفحات دستگاه
+    Route::prefix('device-reviews')->name('device-reviews.')->group(function () {
+        Route::get('/',            [AdminDeviceReviewController::class, 'index'])->name('index');
+        Route::get('/{id}',        [AdminDeviceReviewController::class, 'show'])->whereAlphaNumeric('id')->name('show');
+        Route::put('/{id}/status', [AdminDeviceReviewController::class, 'updateStatus'])->whereAlphaNumeric('id')->name('update-status');
+        Route::post('/{id}/reply', [AdminDeviceReviewController::class, 'reply'])->whereAlphaNumeric('id')->name('reply');
+        Route::delete('/{id}',     [AdminDeviceReviewController::class, 'destroy'])->whereAlphaNumeric('id')->name('destroy');
     });
 });
