@@ -5,6 +5,7 @@ namespace Modules\CRM\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Modules\CRM\Http\Controllers\Api\SyncOrderController;
+use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Order;
 
 /**
@@ -93,6 +94,7 @@ class PullNewOrdersFromWp extends Command
 
         $created = 0;
         $failed = 0;
+        $customersAdded = 0;
 
         $bar = $this->output->createProgressBar(count($missingIds));
         $bar->start();
@@ -107,6 +109,16 @@ class PullNewOrdersFromWp extends Command
 
             foreach ($posts as $pid => $post) {
                 $data = $this->buildPayloadFromWp($pid, $post, $metaByPost[$pid] ?? []);
+
+                // اطمینان از وجود مشتری — اگر در پنل نباشد، on-the-fly از
+                // WP DB می‌کشیم. علت اصلی گم شدن سفارش‌ها در سینک عادی
+                // همین «customer not synced yet» بود.
+                $custWpId = (int) ($data['customer_wp_id'] ?? 0);
+                if ($custWpId > 0 && ! Customer::where('wp_id', $custWpId)->exists()) {
+                    if ($this->ensureCustomer($wp, $prefix, $custWpId)) {
+                        $customersAdded++;
+                    }
+                }
 
                 try {
                     // مستقیم upsertOne استفاده کن — همان منطق inbound endpoint
@@ -127,9 +139,63 @@ class PullNewOrdersFromWp extends Command
         $bar->finish();
         $this->newLine(2);
         $this->info("✓ ایجاد شد: {$created}");
+        if ($customersAdded > 0) $this->info("✓ مشتری جدید ایمپورت شد (پیش‌نیاز سفارش): {$customersAdded}");
         if ($failed > 0) $this->warn("✗ شکست خورد: {$failed} (در laravel.log جزئیات)");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * مشتری گم‌شده را از WP DB (wp_users + wp_usermeta) ایمپورت کن.
+     * مرجع نگاشت: CustomerImporter (role=customer، متاهای first_name/mobile/phone).
+     *
+     * @return bool true اگر مشتری ساخته/پیدا شد، false اگر اطلاعات کافی نبود.
+     */
+    private function ensureCustomer($wp, string $prefix, int $userId): bool
+    {
+        $user = $wp->table($prefix.'users')->where('ID', $userId)->first();
+        if (! $user) {
+            \Illuminate\Support\Facades\Log::warning('pull_new_orders.missing_customer_user', [
+                'customer_wp_id' => $userId,
+            ]);
+            return false;
+        }
+
+        $meta = $wp->table($prefix.'usermeta')
+            ->where('user_id', $userId)
+            ->whereIn('meta_key', ['first_name', 'mobile', 'phone', 'last_name'])
+            ->pluck('meta_value', 'meta_key')
+            ->all();
+
+        // mobile در WP گاهی چندتایی است (مثلاً 09... -09...)؛ اولی را می‌گیریم.
+        $mobileRaw = trim((string) ($meta['mobile'] ?? $user->user_login ?? ''));
+        $parts = preg_split('/[\s\-,،\/]+/u', $mobileRaw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $mobile = trim((string) ($parts[0] ?? ''));
+
+        if ($mobile === '') {
+            \Illuminate\Support\Facades\Log::warning('pull_new_orders.customer_no_mobile', [
+                'customer_wp_id' => $userId,
+            ]);
+            return false;
+        }
+
+        try {
+            Customer::firstOrCreate(
+                ['wp_id' => $userId],
+                [
+                    'mobile'     => $mobile,
+                    'first_name' => $meta['first_name'] ?? null,
+                    'phone'      => $meta['phone'] ?? null,
+                ]
+            );
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('pull_new_orders.customer_create_failed', [
+                'customer_wp_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /** ساخت payload شبیه آنچه WP plugin می‌فرستد. */
