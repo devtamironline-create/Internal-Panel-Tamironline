@@ -185,8 +185,19 @@ class PullNewOrdersFromWp extends Command
                 $metaByPost[(int) $m->post_id][$m->meta_key] = $m->meta_value;
             }
 
+            // taxonomyهای هر سفارش (state, city, brand, device)
+            $taxes = $wp->table($prefix.'term_relationships as tr')
+                ->join($prefix.'term_taxonomy as tt', 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
+                ->whereIn('tr.object_id', $chunk)
+                ->whereIn('tt.taxonomy', ['state', 'city', 'brand', 'device'])
+                ->get(['tr.object_id', 'tt.taxonomy', 'tt.term_id']);
+            $taxByPost = [];
+            foreach ($taxes as $t) {
+                $taxByPost[(int) $t->object_id][(string) $t->taxonomy] = (int) $t->term_id;
+            }
+
             foreach ($posts as $pid => $post) {
-                $data = $this->buildPayloadFromWp($pid, $post, $metaByPost[$pid] ?? []);
+                $data = $this->buildPayloadFromWp($pid, $post, $metaByPost[$pid] ?? [], $taxByPost[$pid] ?? []);
 
                 // اطمینان از وجود مشتری — اگر در پنل نباشد، on-the-fly از
                 // WP DB می‌کشیم. علت اصلی گم شدن سفارش‌ها در سینک عادی
@@ -276,8 +287,21 @@ class PullNewOrdersFromWp extends Command
         }
     }
 
-    /** ساخت payload شبیه آنچه WP plugin می‌فرستد. */
-    private function buildPayloadFromWp(int $pid, $post, array $meta): array
+    /**
+     * ساخت payload هم‌سازگار با SyncOrderController::rules().
+     *
+     * نگاشت کلیدهای WP postmeta → کلیدهای API:
+     *   customer       → customer_wp_id (post_author هم fallback)
+     *   technician     → technician_wp_id
+     *   brand_id       → brand_wp_id
+     *   device_id      → device_wp_id
+     *   (taxonomy state) → state_wp_id
+     *   (taxonomy city)  → city_wp_id
+     *
+     * نمونه دیتای واقعی WP که بر اساس آن این نگاشت ساخته شد در
+     * commit مربوطه (debug dump سفارش 176251) آمده.
+     */
+    private function buildPayloadFromWp(int $pid, $post, array $meta, array $tax = []): array
     {
         $payload = [
             'wp_id' => $pid,
@@ -288,18 +312,75 @@ class PullNewOrdersFromWp extends Command
             'post_author' => (int) ($post->post_author ?? 0),
         ];
 
-        // همه postmeta را به‌صورت خام عبور می‌دهیم — کنترلر validation انجام می‌دهد
+        // — نگاشت کلیدهای WP → API —
+        $renames = [
+            'customer'       => 'customer_wp_id',
+            'technician'     => 'technician_wp_id',
+            'brand_id'       => 'brand_wp_id',
+            'device_id'      => 'device_wp_id',
+        ];
+
+        // — کلیدهایی که در API استفاده نمی‌شوند (validation اضافی نمی‌خواهد) —
+        $skipKeys = [
+            'device_name', 'device_slug',
+            'brand_name', 'brand_slug',
+            'city_name', 'province_name',
+            'created_at', 'created_at_gmt',
+            'created_at_jalali', 'created_at_jalali_date', 'created_at_jalali_time',
+            'scheduled_date_jalali', 'scheduled_date_gregorian',
+            'tracking_code',
+        ];
+
+        $arrayKeys = ['piece_list', 'customer_price_list', 'buy_price_list'];
+        $arrayKeysLooseDecode = ['order_description_content', 'order_note_content', 'log_return'];
+        $serializedArrayKeys = ['objection'];
+
         foreach ($meta as $key => $value) {
-            // سعی به decode JSON برای array fields
-            if (in_array($key, ['piece_list', 'customer_price_list', 'buy_price_list'], true)) {
-                $decoded = json_decode($value, true);
-                $payload[$key] = is_array($decoded) ? $decoded : (is_string($value) ? maybe_unserialize_php($value) : []);
-            } elseif (in_array($key, ['order_description_content', 'order_note_content', 'log_return'], true)) {
-                $decoded = json_decode($value, true);
-                $payload[$key] = is_array($decoded) ? $decoded : [];
-            } else {
-                $payload[$key] = $value;
+            if (in_array($key, $skipKeys, true)) {
+                continue;
             }
+
+            $targetKey = $renames[$key] ?? $key;
+
+            if (in_array($key, $arrayKeys, true)) {
+                $decoded = json_decode((string) $value, true);
+                $payload[$targetKey] = is_array($decoded)
+                    ? $decoded
+                    : (is_string($value) ? maybe_unserialize_php($value) : []);
+            } elseif (in_array($key, $arrayKeysLooseDecode, true)) {
+                $decoded = json_decode((string) $value, true);
+                if (! is_array($decoded)) {
+                    $decoded = is_string($value) ? maybe_unserialize_php($value) : [];
+                }
+                $payload[$targetKey] = is_array($decoded) ? $decoded : [];
+            } elseif (in_array($key, $serializedArrayKeys, true)) {
+                // objection در WP serialized PHP است (a:1:{...})
+                $unser = is_string($value) ? maybe_unserialize_php($value) : null;
+                $payload[$targetKey] = is_array($unser) ? $unser : ($value !== '' ? [$value] : []);
+            } else {
+                $payload[$targetKey] = $value;
+            }
+        }
+
+        // — fallback مشتری از post_author اگر postmeta نداشت —
+        if (empty($payload['customer_wp_id']) && ! empty($payload['post_author'])) {
+            $payload['customer_wp_id'] = (int) $payload['post_author'];
+        }
+
+        // — taxonomies → state_wp_id / city_wp_id (brand/device از postmeta گرفته شد) —
+        if (! empty($tax['state']))  $payload['state_wp_id'] = (int) $tax['state'];
+        if (! empty($tax['city']))   $payload['city_wp_id']  = (int) $tax['city'];
+        // اگر brand_id/device_id در postmeta نبود، از taxonomy
+        if (empty($payload['brand_wp_id']) && ! empty($tax['brand'])) {
+            $payload['brand_wp_id'] = (int) $tax['brand'];
+        }
+        if (empty($payload['device_wp_id']) && ! empty($tax['device'])) {
+            $payload['device_wp_id'] = (int) $tax['device'];
+        }
+
+        // — پاک کردن تکنسین خالی (validation min:1 نیاز دارد) —
+        if (isset($payload['technician_wp_id']) && (int) $payload['technician_wp_id'] === 0) {
+            unset($payload['technician_wp_id']);
         }
 
         return $payload;
