@@ -28,6 +28,7 @@ class PullNewOrdersFromWp extends Command
                             {--wp-id= : فقط یک سفارش خاص با این wp_id}
                             {--since= : فقط سفارش‌های بعد از این تاریخ (YYYY-MM-DD)}
                             {--limit=500 : حداکثر تعداد}
+                            {--include-drafts : draft/pending/private را هم در نظر بگیر (پیش‌فرض فقط publish)}
                             {--force : حتی اگر در Panel موجود است، دوباره وارد کن}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
@@ -46,9 +47,15 @@ class PullNewOrdersFromWp extends Command
         $prefix = env('WP_DB_PREFIX', 'or_');
         $apply = (bool) $this->option('apply');
 
+        // پیش‌فرض فقط publish — drafts و pending در WP معمولاً سفارش
+        // واقعی نیستند (auto-draft، نیمه‌کاره). با --include-drafts باز شوند.
+        $statuses = $this->option('include-drafts')
+            ? ['publish', 'private', 'draft', 'pending']
+            : ['publish'];
+
         $query = $wp->table($prefix.'posts')
             ->where('post_type', 'orders')
-            ->whereIn('post_status', ['publish', 'private', 'draft', 'pending']);
+            ->whereIn('post_status', $statuses);
 
         if ($wpId = $this->option('wp-id')) {
             $query->where('ID', (int) $wpId);
@@ -74,6 +81,7 @@ class PullNewOrdersFromWp extends Command
         }
 
         $this->info(($apply ? '🔥 APPLY' : 'DRY-RUN') . " — سفارش WP بررسی‌شده: " . count($allWpIds));
+        $this->info("فیلتر post_status: " . implode(', ', $statuses));
         $this->info("از قبل در Panel: " . count($existingWpIds));
         $this->info("گم‌شده (قابل ایمپورت): " . count($missingIds));
 
@@ -81,6 +89,31 @@ class PullNewOrdersFromWp extends Command
             $this->info('✓ همه سفارش‌های WP در Panel موجودند.');
             return self::SUCCESS;
         }
+
+        // breakdown گم‌شده‌ها بر اساس post_status + sample
+        $sampleSize = min(20, count($missingIds));
+        $sample = array_slice($missingIds, 0, $sampleSize);
+        $sampleRows = $wp->table($prefix.'posts')
+            ->whereIn('ID', $sample)
+            ->get(['ID', 'post_status', 'post_date', 'post_title']);
+        $byStatus = $wp->table($prefix.'posts')
+            ->whereIn('ID', $missingIds)
+            ->selectRaw('post_status, COUNT(*) cnt')
+            ->groupBy('post_status')
+            ->pluck('cnt', 'post_status')
+            ->all();
+
+        $this->newLine();
+        $this->line('— تفکیک گم‌شده‌ها بر اساس post_status —');
+        foreach ($byStatus as $st => $cnt) {
+            $this->line("  $st: $cnt");
+        }
+        $this->newLine();
+        $this->line("— نمونهٔ {$sampleSize} گم‌شدهٔ اول —");
+        $this->table(
+            ['wp_id', 'post_status', 'post_date', 'post_title'],
+            $sampleRows->map(fn ($r) => [$r->ID, $r->post_status, $r->post_date, mb_substr((string) $r->post_title, 0, 40)])->all()
+        );
 
         if (! $apply) {
             $this->newLine();
