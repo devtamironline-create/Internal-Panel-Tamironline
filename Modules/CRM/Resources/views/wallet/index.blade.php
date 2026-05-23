@@ -138,7 +138,7 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($transactions as $tx)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-3 text-xs text-gray-600 whitespace-nowrap" dir="ltr">{{ $tx->created_at?->format('Y-m-d H:i') }}</td>
+                    <td class="px-6 py-3 text-xs text-gray-600 whitespace-nowrap" dir="ltr">@jdatetime($tx->created_at)</td>
                     <td class="px-6 py-3 text-sm">{{ $tx->technician->full_name }}</td>
                     <td class="px-6 py-3">
                         <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span>
