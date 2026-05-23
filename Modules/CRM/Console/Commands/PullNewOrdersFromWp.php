@@ -28,7 +28,7 @@ class PullNewOrdersFromWp extends Command
                             {--wp-id= : فقط یک سفارش خاص با این wp_id}
                             {--since= : فقط سفارش‌های بعد از این تاریخ (YYYY-MM-DD)}
                             {--limit=500 : حداکثر تعداد}
-                            {--include-drafts : draft/pending/private را هم در نظر بگیر (پیش‌فرض فقط publish)}
+                            {--status= : فیلتر post_status با کاما (مثلاً publish,private)؛ پیش‌فرض همه publish,private,draft,pending}
                             {--force : حتی اگر در Panel موجود است، دوباره وارد کن}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
@@ -47,11 +47,12 @@ class PullNewOrdersFromWp extends Command
         $prefix = env('WP_DB_PREFIX', 'or_');
         $apply = (bool) $this->option('apply');
 
-        // پیش‌فرض فقط publish — drafts و pending در WP معمولاً سفارش
-        // واقعی نیستند (auto-draft، نیمه‌کاره). با --include-drafts باز شوند.
-        $statuses = $this->option('include-drafts')
-            ? ['publish', 'private', 'draft', 'pending']
-            : ['publish'];
+        // پیش‌فرض همان statusهای استاندارد همهٔ کامندهای WP-importing
+        // (publish, private, draft, pending). CRM واقعی این پروژه عمدتاً
+        // private است نه publish. با --status می‌توان محدود کرد.
+        $statuses = $this->option('status')
+            ? array_filter(array_map('trim', explode(',', $this->option('status'))))
+            : ['publish', 'private', 'draft', 'pending'];
 
         $query = $wp->table($prefix.'posts')
             ->where('post_type', 'orders')
