@@ -10,6 +10,7 @@ use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
 use Modules\Site\Http\Controllers\Api\V1\DeviceReviewController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
 use Modules\Site\Http\Controllers\Api\V1\PageController;
+use Modules\Site\Http\Controllers\Api\V1\SettingsController;
 use Modules\Site\Http\Controllers\Api\V1\TestimonialController;
 
 Route::prefix('v1')->group(function () {
@@ -31,6 +32,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.catalog.devices.index');
         Route::get('/site/about-stats', [AboutStatController::class, 'index'])
             ->name('api.v1.site.about-stats.index');
+        Route::get('/settings/global', [SettingsController::class, 'global'])
+            ->name('api.v1.settings.global');
         Route::get('/pages/{slug}', [PageController::class, 'show'])
             ->whereAlpha('slug')
             ->name('api.v1.pages.show');
