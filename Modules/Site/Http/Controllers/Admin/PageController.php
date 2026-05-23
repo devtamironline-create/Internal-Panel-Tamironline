@@ -9,7 +9,7 @@ use Illuminate\View\View;
 use Modules\Site\Http\Requests\Admin\StorePageRequest;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Page;
-use Modules\Site\Models\Testimonial;
+use Modules\Site\Models\Review;
 
 class PageController extends Controller
 {
@@ -47,8 +47,8 @@ class PageController extends Controller
     {
         $this->checkAccess();
 
-        $testimonials = Testimonial::query()->orderBy('sort_order')->get(['id', 'customer_name', 'topic', 'is_published']);
-        $faqs         = Faq::query()->orderBy('sort_order')->get(['id', 'question', 'is_published']);
+        $testimonials = Review::audio()->orderBy('sort_order')->get(['id', 'author_name as customer_name', 'topic', 'is_published']);
+        $faqs = Faq::query()->orderBy('sort_order')->get(['id', 'question', 'is_published']);
 
         return view('site::admin.pages.create', compact('testimonials', 'faqs'));
     }
@@ -62,7 +62,7 @@ class PageController extends Controller
         }
 
         $testimonialIds = $data['testimonial_ids'] ?? [];
-        $faqIds         = $data['faq_ids'] ?? [];
+        $faqIds = $data['faq_ids'] ?? [];
         unset($data['testimonial_ids'], $data['faq_ids']);
 
         $page = Page::create($data);
@@ -81,11 +81,11 @@ class PageController extends Controller
 
         $page = Page::with(['testimonials:id', 'faqs:id'])->findOrFail($id);
 
-        $testimonials = Testimonial::query()->orderBy('sort_order')->get(['id', 'customer_name', 'topic', 'is_published']);
-        $faqs         = Faq::query()->orderBy('sort_order')->get(['id', 'question', 'is_published']);
+        $testimonials = Review::audio()->orderBy('sort_order')->get(['id', 'author_name as customer_name', 'topic', 'is_published']);
+        $faqs = Faq::query()->orderBy('sort_order')->get(['id', 'question', 'is_published']);
 
         $selectedTestimonials = $page->testimonials->pluck('id')->all();
-        $selectedFaqs         = $page->faqs->pluck('id')->all();
+        $selectedFaqs = $page->faqs->pluck('id')->all();
 
         return view('site::admin.pages.edit', compact('page', 'testimonials', 'faqs', 'selectedTestimonials', 'selectedFaqs'));
     }
@@ -105,7 +105,7 @@ class PageController extends Controller
         }
 
         $testimonialIds = $data['testimonial_ids'] ?? [];
-        $faqIds         = $data['faq_ids'] ?? [];
+        $faqIds = $data['faq_ids'] ?? [];
         unset($data['testimonial_ids'], $data['faq_ids']);
 
         $page->update($data);
@@ -131,7 +131,7 @@ class PageController extends Controller
     /**
      * تبدیل آرایه‌ی idها به ساختار pivot با sort_order بر اساس ترتیب آرایه.
      *
-     * @param array<int, string> $ids
+     * @param  array<int, string>  $ids
      * @return array<string, array{sort_order: int}>
      */
     private function withOrder(array $ids): array
@@ -140,6 +140,7 @@ class PageController extends Controller
         foreach (array_values($ids) as $i => $id) {
             $out[$id] = ['sort_order' => $i];
         }
+
         return $out;
     }
 }

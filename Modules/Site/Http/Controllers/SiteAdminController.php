@@ -7,7 +7,7 @@ use Modules\Site\Models\Banner;
 use Modules\Site\Models\ContactMessage;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Page;
-use Modules\Site\Models\Testimonial;
+use Modules\Site\Models\Review;
 
 class SiteAdminController extends Controller
 {
@@ -20,7 +20,9 @@ class SiteAdminController extends Controller
         $permitted = [
             'manage-site', 'manage-permissions',
             'view-site-contact-messages', 'manage-site-contact-messages',
-            'manage-site-testimonials', 'manage-site-faqs',
+            'manage-site-reviews', 'view-site-reviews',
+            'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews',
+            'manage-site-faqs',
             'manage-site-pages', 'manage-site-banners', 'manage-site-settings',
         ];
         foreach ($permitted as $p) {
@@ -36,12 +38,13 @@ class SiteAdminController extends Controller
         $this->checkAccess();
 
         $stats = [
-            'contact_new'      => ContactMessage::where('status', 'new')->count(),
-            'contact_total'    => ContactMessage::count(),
-            'pages'            => Page::count(),
-            'banners'          => Banner::where('is_published', true)->count(),
-            'testimonials'     => Testimonial::where('is_published', true)->count(),
-            'faqs'             => Faq::where('is_published', true)->count(),
+            'contact_new' => ContactMessage::where('status', 'new')->count(),
+            'contact_total' => ContactMessage::count(),
+            'pages' => Page::count(),
+            'banners' => Banner::where('is_published', true)->count(),
+            'testimonials' => Review::audio()->where('is_published', true)->count(),
+            'reviews_pending' => Review::text()->pending()->count(),
+            'faqs' => Faq::where('is_published', true)->count(),
         ];
 
         return view('site::admin.dashboard', compact('stats'));

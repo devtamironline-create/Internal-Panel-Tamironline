@@ -24,6 +24,7 @@ class PageSectionService
         if ($pageSlug === null) {
             return $all;
         }
+
         return $all[$pageSlug] ?? [];
     }
 
@@ -72,10 +73,11 @@ class PageSectionService
         foreach ($this->sectionsOf($pageSlug) as $sectionKey => $def) {
             $row = $rows->get($sectionKey);
             $out[$sectionKey] = [
-                'payload'      => $row?->payload ?? [],
+                'payload' => $row?->payload ?? [],
                 'is_published' => $row ? (bool) $row->is_published : true,
             ];
         }
+
         return $out;
     }
 
@@ -137,8 +139,9 @@ class PageSectionService
         if (is_string($value)) {
             $replacements = [];
             foreach ($context as $k => $v) {
-                $replacements['{' . $k . '}'] = (string) $v;
+                $replacements['{'.$k.'}'] = (string) $v;
             }
+
             return strtr($value, $replacements);
         }
 
@@ -147,6 +150,7 @@ class PageSectionService
             foreach ($value as $k => $v) {
                 $out[$k] = $this->applyPlaceholders($v, $context);
             }
+
             return $out;
         }
 
@@ -171,8 +175,8 @@ class PageSectionService
 
         foreach ($sections as $sectionKey => $def) {
             $sectionInput = $input[$sectionKey] ?? ['payload' => [], 'is_published' => false];
-            $payload      = (array) ($sectionInput['payload'] ?? []);
-            $isPublished  = (bool) ($sectionInput['is_published'] ?? false);
+            $payload = (array) ($sectionInput['payload'] ?? []);
+            $isPublished = (bool) ($sectionInput['is_published'] ?? false);
 
             $cleanPayload = $this->validateSection(
                 $pageSlug,
@@ -182,7 +186,7 @@ class PageSectionService
             );
 
             $validated[$sectionKey] = [
-                'payload'      => $cleanPayload,
+                'payload' => $cleanPayload,
                 'is_published' => $isPublished,
             ];
         }
@@ -230,11 +234,11 @@ class PageSectionService
     private function processFields(array $fields, array $payload, string $prefix = ''): array
     {
         $rules = [];
-        $data  = [];
+        $data = [];
 
         foreach ($fields as $key => $field) {
-            $type     = $field['type'] ?? 'string';
-            $fullKey  = $prefix === '' ? $key : "{$prefix}.{$key}";
+            $type = $field['type'] ?? 'string';
+            $fullKey = $prefix === '' ? $key : "{$prefix}.{$key}";
             $baseRules = $field['rules'] ?? 'nullable';
 
             if ($type === 'group') {
@@ -247,6 +251,7 @@ class PageSectionService
                 foreach ($sub['rules'] as $rk => $rv) {
                     $rules[$rk] = $rv;
                 }
+
                 continue;
             }
 
@@ -266,11 +271,12 @@ class PageSectionService
                     }
                     $rules["{$fullKey}.*.{$itemKey}"] = $itemRule;
                 }
+
                 continue;
             }
 
             if ($type === 'reference') {
-                $ids    = Arr::get($payload, $key, []);
+                $ids = Arr::get($payload, $key, []);
                 $source = $field['source'] ?? null;
                 if (! is_array($ids)) {
                     $ids = [];
@@ -280,8 +286,9 @@ class PageSectionService
                     $ids = array_values(array_unique(array_map('intval', $ids)));
                 }
                 $data[$key] = $ids;
-                $rules[$fullKey]       = 'nullable|array';
+                $rules[$fullKey] = 'nullable|array';
                 $rules["{$fullKey}.*"] = $this->referenceItemRule($source);
+
                 continue;
             }
 
@@ -291,19 +298,21 @@ class PageSectionService
                     $value = [];
                 }
                 $desktop = isset($value['desktop']) && is_string($value['desktop']) ? trim($value['desktop']) : null;
-                $mobile  = isset($value['mobile'])  && is_string($value['mobile'])  ? trim($value['mobile'])  : null;
+                $mobile = isset($value['mobile']) && is_string($value['mobile']) ? trim($value['mobile']) : null;
                 $data[$key] = [
                     'desktop' => $desktop !== '' ? $desktop : null,
-                    'mobile'  => $mobile  !== '' ? $mobile  : null,
+                    'mobile' => $mobile !== '' ? $mobile : null,
                 ];
                 $rules["{$fullKey}.desktop"] = 'nullable|site_url|max:500';
-                $rules["{$fullKey}.mobile"]  = 'nullable|site_url|max:500';
+                $rules["{$fullKey}.mobile"] = 'nullable|site_url|max:500';
+
                 continue;
             }
 
             if ($type === 'bool') {
                 $data[$key] = (bool) Arr::get($payload, $key, false);
                 $rules[$fullKey] = 'nullable|boolean';
+
                 continue;
             }
 
@@ -311,6 +320,7 @@ class PageSectionService
                 $value = Arr::get($payload, $key);
                 $data[$key] = ($value === null || $value === '') ? null : (int) $value;
                 $rules[$fullKey] = $baseRules;
+
                 continue;
             }
 
@@ -322,7 +332,7 @@ class PageSectionService
                     $value = null;
                 }
             }
-            $data[$key]      = $value;
+            $data[$key] = $value;
             $rules[$fullKey] = $baseRules;
         }
 
@@ -335,13 +345,13 @@ class PageSectionService
     private function referenceItemRule(?string $source): string
     {
         return match ($source) {
-            'faqs'                => 'string|exists:faqs,id',
-            'testimonials'        => 'string|exists:testimonials,id',
-            'brands'              => 'integer|exists:crm_brands,id',
-            'devices'             => 'integer|exists:crm_devices,id',
-            'faq_categories'      => 'integer|exists:site_taxonomies,id',
+            'faqs' => 'string|exists:faqs,id',
+            'testimonials' => 'string|exists:site_reviews,id',
+            'brands' => 'integer|exists:crm_brands,id',
+            'devices' => 'integer|exists:crm_devices,id',
+            'faq_categories' => 'integer|exists:site_taxonomies,id',
             'testimonial_categories' => 'integer|exists:site_taxonomies,id',
-            default               => 'string',
+            default => 'string',
         };
     }
 
@@ -351,11 +361,20 @@ class PageSectionService
     private function hasMeaningfulValues(array $item): bool
     {
         foreach ($item as $v) {
-            if (is_string($v) && trim($v) !== '') return true;
-            if (is_numeric($v)) return true;
-            if (is_bool($v) && $v) return true;
-            if (is_array($v) && $v !== []) return true;
+            if (is_string($v) && trim($v) !== '') {
+                return true;
+            }
+            if (is_numeric($v)) {
+                return true;
+            }
+            if (is_bool($v) && $v) {
+                return true;
+            }
+            if (is_array($v) && $v !== []) {
+                return true;
+            }
         }
+
         return false;
     }
 
@@ -373,6 +392,7 @@ class PageSectionService
                 if (is_array($subPayload)) {
                     $payload[$key] = $this->hydrateReferences($subPayload, $field['fields'] ?? []);
                 }
+
                 continue;
             }
 
@@ -381,11 +401,13 @@ class PageSectionService
             }
             $ids = (array) ($payload[$key] ?? []);
             if ($ids === []) {
-                $payload[$key . '_items'] = [];
+                $payload[$key.'_items'] = [];
+
                 continue;
             }
-            $payload[$key . '_items'] = $this->resolveReference($field['source'] ?? null, $ids);
+            $payload[$key.'_items'] = $this->resolveReference($field['source'] ?? null, $ids);
         }
+
         return $payload;
     }
 
@@ -401,35 +423,38 @@ class PageSectionService
                 ->where('is_published', true)
                 ->get(['id', 'question', 'answer'])
                 ->keyBy('id');
+
             return collect($ids)
                 ->map(fn ($id) => $rows->get($id))
                 ->filter()
                 ->map(fn ($f) => [
-                    'id'       => $f->id,
+                    'id' => $f->id,
                     'question' => $f->question,
-                    'answer'   => $f->answer,
+                    'answer' => $f->answer,
                 ])
                 ->values()
                 ->all();
         }
 
         if ($source === 'testimonials') {
-            $rows = \Modules\Site\Models\Testimonial::query()
+            $rows = \Modules\Site\Models\Review::query()
+                ->audio()
                 ->whereIn('id', $ids)
                 ->where('is_published', true)
-                ->get(['id', 'customer_name', 'topic', 'rating', 'audio_url', 'duration_seconds', 'published_at'])
+                ->get(['id', 'author_name', 'topic', 'rating', 'audio_url', 'duration_seconds', 'published_at'])
                 ->keyBy('id');
+
             return collect($ids)
                 ->map(fn ($id) => $rows->get($id))
                 ->filter()
                 ->map(fn ($t) => [
-                    'id'               => $t->id,
-                    'customer_name'    => $t->customer_name,
-                    'topic'            => $t->topic,
-                    'rating'           => $t->rating,
-                    'audio_url'        => $t->audio_url,
+                    'id' => $t->id,
+                    'customer_name' => $t->author_name,
+                    'topic' => $t->topic,
+                    'rating' => $t->rating,
+                    'audio_url' => $t->audio_url,
                     'duration_seconds' => $t->duration_seconds,
-                    'published_at'     => $t->published_at?->utc()->toIso8601ZuluString(),
+                    'published_at' => $t->published_at?->utc()->toIso8601ZuluString(),
                 ])
                 ->values()
                 ->all();
@@ -441,11 +466,12 @@ class PageSectionService
                 ->where('is_active', true)
                 ->get(['id', 'name', 'slug', 'logo'])
                 ->keyBy('id');
+
             return collect($ids)
                 ->map(fn ($id) => $rows->get((int) $id))
                 ->filter()
                 ->map(fn ($b) => [
-                    'id'   => (int) $b->id,
+                    'id' => (int) $b->id,
                     'name' => $b->name,
                     'slug' => $b->slug,
                     'logo' => \Modules\Site\Support\MediaUrl::resolve($b->logo),
@@ -460,6 +486,7 @@ class PageSectionService
                 ->where('is_active', true)
                 ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone'])
                 ->keyBy('id');
+
             return collect($ids)
                 ->map(fn ($id) => $rows->get((int) $id))
                 ->filter()
@@ -491,31 +518,33 @@ class PageSectionService
                         ->orderByDesc('faqs.created_at')
                         ->get(['faqs.id', 'faqs.question', 'faqs.answer'])
                         ->map(fn ($f) => [
-                            'id'       => $f->id,
+                            'id' => $f->id,
                             'question' => $f->question,
-                            'answer'   => $f->answer,
+                            'answer' => $f->answer,
                         ])
                         ->all();
                 } else {
-                    $items = $cat->testimonials()
-                        ->where('testimonials.is_published', true)
-                        ->orderBy('testimonials.sort_order')
-                        ->orderByDesc('testimonials.published_at')
-                        ->get(['testimonials.id', 'testimonials.customer_name', 'testimonials.topic', 'testimonials.rating', 'testimonials.audio_url', 'testimonials.duration_seconds', 'testimonials.published_at'])
+                    $items = $cat->reviews()
+                        ->where('site_reviews.type', \Modules\Site\Models\Review::TYPE_AUDIO)
+                        ->where('site_reviews.is_published', true)
+                        ->orderBy('site_reviews.sort_order')
+                        ->orderByDesc('site_reviews.published_at')
+                        ->get(['site_reviews.id', 'site_reviews.author_name', 'site_reviews.topic', 'site_reviews.rating', 'site_reviews.audio_url', 'site_reviews.duration_seconds', 'site_reviews.published_at'])
                         ->map(fn ($t) => [
-                            'id'               => $t->id,
-                            'customer_name'    => $t->customer_name,
-                            'topic'            => $t->topic,
-                            'rating'           => $t->rating,
-                            'audio_url'        => $t->audio_url,
+                            'id' => $t->id,
+                            'customer_name' => $t->author_name,
+                            'topic' => $t->topic,
+                            'rating' => $t->rating,
+                            'audio_url' => $t->audio_url,
                             'duration_seconds' => $t->duration_seconds,
-                            'published_at'     => $t->published_at?->utc()->toIso8601ZuluString(),
+                            'published_at' => $t->published_at?->utc()->toIso8601ZuluString(),
                         ])
                         ->all();
                 }
+
                 return [
-                    'id'    => (int) $cat->id,
-                    'slug'  => $cat->slug,
+                    'id' => (int) $cat->id,
+                    'slug' => $cat->slug,
                     'label' => $cat->name,
                     'items' => $items,
                 ];
@@ -531,13 +560,13 @@ class PageSectionService
     private function shapeDevice(\Modules\CRM\Models\Device $d): array
     {
         return [
-            'id'        => (int) $d->id,
-            'label'     => $d->name,
-            'slug'      => $d->slug,
-            'href'      => '/devices/' . $d->slug,
-            'icon'      => $d->icon,
+            'id' => (int) $d->id,
+            'label' => $d->name,
+            'slug' => $d->slug,
+            'href' => '/devices/'.$d->slug,
+            'icon' => $d->icon,
             'thumbnail' => \Modules\Site\Support\MediaUrl::resolve($d->thumbnail ?? null),
-            'tone'      => $d->tone,
+            'tone' => $d->tone,
         ];
     }
 

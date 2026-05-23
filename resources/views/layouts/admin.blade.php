@@ -568,7 +568,7 @@
 
                 <!-- مدیریت سایت -->
                 @if(Route::has('site.admin.dashboard'))
-                @canany(['manage-site', 'view-site-contact-messages', 'manage-site-contact-messages', 'manage-site-testimonials', 'manage-site-faqs', 'manage-site-pages', 'manage-site-banners', 'manage-site-settings'])
+                @canany(['manage-site', 'view-site-contact-messages', 'manage-site-contact-messages', 'manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'manage-site-faqs', 'manage-site-pages', 'manage-site-banners', 'manage-site-settings'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('site.admin.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -608,10 +608,14 @@
                         </a>
                         @endcanany
 
-                        @canany(['manage-site-testimonials', 'manage-site'])
-                        <a href="{{ route('site.admin.testimonials.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.testimonials.*') ? 'sidebar-menu-item-active' : '' }}">
+                        @canany(['manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'manage-site'])
+                        <a href="{{ route('site.admin.reviews.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.reviews.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                            نظرات مشتریان
+                            نظرات و توصیه‌نامه‌ها
+                            @php $pendingReviews = \Modules\Site\Models\Review::pending()->count(); @endphp
+                            @if($pendingReviews > 0)
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingReviews }}</span>
+                            @endif
                         </a>
                         @endcanany
 
@@ -626,23 +630,21 @@
                         </a>
                         @endcanany
 
-                        @canany(['manage-site-testimonials', 'manage-site'])
+                        @canany(['manage-site-reviews', 'manage-site-testimonials', 'manage-site'])
                         <a href="{{ route('site.admin.taxonomies.index', 'testimonial') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.taxonomies.*') && request()->route('type') === 'testimonial' ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                             دسته‌بندی نظرات
                         </a>
                         @endcanany
 
-                        @canany(['view-site-device-reviews', 'manage-site-device-reviews', 'manage-site'])
-                        <a href="{{ route('site.admin.device-reviews.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.device-reviews.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                            نظرات کاربران
-                            @php $pendingReviews = \Modules\Site\Models\DeviceReview::where('status', 'pending')->count(); @endphp
-                            @if($pendingReviews > 0)
-                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingReviews }}</span>
-                            @endif
+                        @if(Route::has('crm.devices.index'))
+                        @can('view-crm-taxonomies')
+                        <a href="{{ route('site.admin.device-content') }}" class="sidebar-menu-item">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            محتوای صفحات دستگاه
                         </a>
-                        @endcanany
+                        @endcan
+                        @endif
 
                         @if(Route::has('crm.brands.index'))
                         @can('view-crm-taxonomies')
