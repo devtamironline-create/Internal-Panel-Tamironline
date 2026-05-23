@@ -46,13 +46,19 @@
 | ۳ | `GET /v1/catalog/devices/{slug}/reviews` | ✅ | `DeviceReviewController::index()` |
 | ۴ | `POST /v1/catalog/devices/{slug}/reviews` | ✅ | `DeviceReviewController::store()` |
 | ۵ | `POST /v1/catalog/reviews/{id}/like` | ✅ | `DeviceReviewController::like()` (IP-based unique) |
-| ۶ | `GET /v1/catalog/brands?device=` filter | ✅ | `CatalogBrandController::index()` با `whereJsonContains` |
+| ۶ | `GET /v1/catalog/brands?device=` filter | ✅ | `CatalogBrandController::index()` با pivot `crm_device_brands` (`whereHas('devices')`) |
 | ۷ | `warranty_text`, `support_info` در device detail | ✅ | ستون‌های جدید روی `crm_devices` + Template/Override merge |
-| ۸ | جدول `site_device_reviews` | ✅ | migration `2026_05_23_011` |
-| ۹ | جدول `site_device_review_replies` | ✅ | همان migration |
-| ۱۰ | پانل ادمین برای مدیریت نظرات | ✅ | `/admin/site/device-reviews` (index، show، status، reply، delete) |
-| ۱۱ | Like rate-limit IP-based | ✅ | جدول `site_device_review_likes` با unique(review_id, ip) |
-| ۱۲ | Permissions جدید | ✅ | `view-site-device-reviews`, `manage-site-device-reviews` |
+| ۸ | جدول reviews | ✅ | جدول واحد `site_reviews` (migration `2026_05_23_030`) با `type=audio|text` — جایگزین `testimonials` و `site_device_reviews` |
+| ۹ | جدول replies | ✅ | `site_review_replies` (پس از یکپارچه‌سازی) |
+| ۱۰ | پانل ادمین برای مدیریت نظرات | ✅ | `/admin/site/reviews` (یکپارچه: audio + text، با تب type و فیلتر status/device) |
+| ۱۱ | Like rate-limit IP-based | ✅ | جدول `site_review_likes` با unique(review_id, ip) |
+| ۱۲ | Permissions جدید | ✅ | `view-site-reviews`, `manage-site-reviews` (legacyهای قبلی هم نگه داشته شده‌اند) |
+| ۱۳ | فیلدهای hero (`subtitle`, `eyebrow`) | ✅ | migration `2026_05_23_020` + merge در `CatalogDeviceController::show()` |
+| ۱۴ | `service_steps` repeater | ✅ | ستون JSON روی `crm_devices` + section در template + merge |
+| ۱۵ | brand↔device pivot | ✅ | جدول `crm_device_brands` (migration `2026_05_23_021`) — جایگزین `supported_device_slugs` JSON |
+| ۱۶ | testimonial↔device pivot (per-device filter) | ✅ | جدول `site_review_devices` با fallback به generic |
+| ۱۷ | `/v1/settings/global` | ✅ | `SettingsController::global()` — phone/order_url/social از `site_settings` |
+| ۱۸ | HTML rich editor روی device/brand description | ✅ | TinyMCE self-hosted در `/vendor/tinymce/` + sanitize allowlist روی backend (`Modules\CRM\Support\HtmlSanitizer`) |
 
 ---
 

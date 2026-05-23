@@ -93,7 +93,16 @@ INTERNAL_API_TOKEN=<از تیم بک‌اند گرفته شود>
 | 11 | GET | `/v1/catalog/brands` | — | 60/min | 600s | P2 | ✅ |
 | 12 | GET | `/v1/catalog/devices` | — | 60/min | 600s | P2 | ✅ |
 | 13 | GET | `/v1/site/about-stats` | — | 60/min | 600s | P2 | ✅ |
-| 14 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+| 14 | GET | `/v1/settings/global` | — | 60/min | 600s | P1 | ✅ |
+| 15 | GET | `/v1/health` | — | 120/min | — | — | ✅ |
+
+### 🆕 تغییرات اخیر در قراردادها
+
+- **`description` در `/v1/catalog/devices/{slug}` و `/v1/catalog/brands/{slug}` اکنون HTML است** (خروجی TinyMCE با sanitize allowlist روی backend). در فرانت با `dangerouslySetInnerHTML` یا `html-react-parser` render کنید، نه به‌صورت متن ساده. داده‌های قدیمی plain text همچنان معتبر است (CSS `white-space: pre-line` برای حفظ newlineها).
+- **`/v1/catalog/devices/{slug}` فیلدهای جدید دارد**: `subtitle`, `eyebrow`, `service_steps[{title, description, icon}]` — همگی با merge logic (override per-device ?? template).
+- **`/v1/catalog/brands?device={slug}` از pivot table می‌خواند** (به‌جای `supported_device_slugs` JSON). در پنل ادمین برند می‌توان دستگاه‌های پشتیبانی‌شده را multi-select کرد.
+- **`/v1/testimonials?device={slug}` ایمپلمنت per-device با fallback به generic**: نظراتی که به این دستگاه pivot دارند اولویت دارند؛ بقیه نظرات بدون device link هم نمایش داده می‌شوند.
+- **یکپارچه‌شدن مدل reviews**: testimonials (audio) و device-reviews (text) در یک جدول `site_reviews` ذخیره می‌شوند، اما شکل response دو endpoint بدون تغییر است.
 
 > **توجه:**
 > - `/v1/catalog/devices/{slug}` و `/v1/catalog/brands/{slug}` از **الگوی Template + Override** استفاده می‌کنند — ادمین یک‌بار template را با placeholderها در `/admin/site/page-content/{device,brand}` تنظیم می‌کند، و هر دستگاه/برند می‌تواند فیلدهای خاصی را override کند. جزئیات کامل در `docs/BACKEND_DEVICE_PAGE_API.md` §۱۳.
