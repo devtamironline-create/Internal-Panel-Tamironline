@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\CRM\Models\Device;
 use Modules\Site\Http\Requests\Admin\StoreTestimonialRequest;
 use Modules\Site\Models\Taxonomy;
 use Modules\Site\Models\Testimonial;
@@ -53,7 +54,12 @@ class TestimonialController extends Controller
     {
         $this->checkAccess();
         $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_TESTIMONIAL)->ordered()->get();
-        return view('site::admin.testimonials.create', compact('taxonomies'));
+        $devices = Device::query()->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $selectedDeviceIds = [];
+
+        return view('site::admin.testimonials.create', compact('taxonomies', 'devices', 'selectedDeviceIds'));
     }
 
     public function store(StoreTestimonialRequest $request): RedirectResponse
@@ -66,10 +72,12 @@ class TestimonialController extends Controller
         }
 
         $taxonomyIds = $this->validateTaxonomyIds($request);
-        unset($data['taxonomy_ids']);
+        $deviceIds = $this->validateDeviceIds($request);
+        unset($data['taxonomy_ids'], $data['device_ids']);
 
         $t = Testimonial::create($data);
         $t->taxonomies()->sync($taxonomyIds);
+        $t->devices()->sync($deviceIds);
 
         return redirect()
             ->route('site.admin.testimonials.index')
@@ -80,11 +88,15 @@ class TestimonialController extends Controller
     {
         $this->checkAccess();
 
-        $testimonial = Testimonial::with('taxonomies:id')->findOrFail($id);
+        $testimonial = Testimonial::with('taxonomies:id', 'devices:id')->findOrFail($id);
         $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_TESTIMONIAL)->ordered()->get();
         $selectedTaxonomies = $testimonial->taxonomies->pluck('id')->all();
+        $devices = Device::query()->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $selectedDeviceIds = $testimonial->devices->pluck('id')->map(fn ($i) => (int) $i)->all();
 
-        return view('site::admin.testimonials.edit', compact('testimonial', 'taxonomies', 'selectedTaxonomies'));
+        return view('site::admin.testimonials.edit', compact('testimonial', 'taxonomies', 'selectedTaxonomies', 'devices', 'selectedDeviceIds'));
     }
 
     public function update(StoreTestimonialRequest $request, string $id): RedirectResponse
@@ -102,10 +114,12 @@ class TestimonialController extends Controller
         }
 
         $taxonomyIds = $this->validateTaxonomyIds($request);
-        unset($data['taxonomy_ids']);
+        $deviceIds = $this->validateDeviceIds($request);
+        unset($data['taxonomy_ids'], $data['device_ids']);
 
         $testimonial->update($data);
         $testimonial->taxonomies()->sync($taxonomyIds);
+        $testimonial->devices()->sync($deviceIds);
 
         return redirect()
             ->route('site.admin.testimonials.index')
@@ -122,9 +136,29 @@ class TestimonialController extends Controller
         if (empty($ids)) {
             return [];
         }
+
         return Taxonomy::ofType(Taxonomy::TYPE_TESTIMONIAL)
             ->whereIn('id', $ids)
             ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function validateDeviceIds(Request $request): array
+    {
+        $ids = (array) $request->input('device_ids', []);
+        $ids = array_values(array_unique(array_map('intval', array_filter($ids, fn ($v) => $v !== null && $v !== ''))));
+        if (empty($ids)) {
+            return [];
+        }
+
+        return Device::query()
+            ->whereIn('id', $ids)
+            ->where('is_active', true)
+            ->pluck('id')
+            ->map(fn ($i) => (int) $i)
             ->all();
     }
 

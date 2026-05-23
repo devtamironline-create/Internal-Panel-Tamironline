@@ -3,6 +3,9 @@
     $taxonomies = $taxonomies ?? collect();
     $selT = $selectedTaxonomies ?? [];
     $selTcmp = array_map('intval', $selT);
+    $devices = $devices ?? collect();
+    $selD = $selectedDeviceIds ?? [];
+    $selDcmp = array_map('intval', $selD);
 @endphp
 
 @if($errors->any())
@@ -68,6 +71,25 @@
                 </label>
             @empty
                 <p class="text-xs text-gray-400">دسته‌ای تعریف نشده. <a href="{{ route('site.admin.taxonomies.index', 'testimonial') }}" class="text-blue-600 hover:underline" target="_blank">ایجاد دسته‌بندی</a></p>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="sm:col-span-2">
+        <label class="block text-sm mb-2">دستگاه‌های مرتبط</label>
+        <p class="text-xs text-gray-500 mb-2">اگر هیچ دستگاهی انتخاب نشود، این نظر در صفحه‌ی همه‌ی دستگاه‌ها (generic) نمایش داده می‌شود.</p>
+        <div class="border border-gray-200 rounded p-3 max-h-48 overflow-y-auto">
+            @forelse($devices as $d)
+                <label class="flex items-start gap-2 p-1 hover:bg-gray-50 rounded">
+                    <input type="checkbox" name="device_ids[]" value="{{ $d->id }}"
+                           @checked(in_array((int) $d->id, old('device_ids') ? array_map('intval', old('device_ids')) : $selDcmp, true))>
+                    <span class="text-sm">
+                        {{ $d->name }}
+                        <span class="text-xs text-gray-500 font-mono">/{{ $d->slug }}</span>
+                    </span>
+                </label>
+            @empty
+                <p class="text-xs text-gray-400">دستگاهی فعال نیست.</p>
             @endforelse
         </div>
     </div>

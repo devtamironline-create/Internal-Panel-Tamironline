@@ -28,16 +28,30 @@ class Testimonial extends Model
     ];
 
     protected $casts = [
-        'rating'           => 'integer',
+        'rating' => 'integer',
         'duration_seconds' => 'integer',
-        'is_published'     => 'boolean',
-        'sort_order'       => 'integer',
-        'published_at'     => 'datetime',
+        'is_published' => 'boolean',
+        'sort_order' => 'integer',
+        'published_at' => 'datetime',
     ];
 
     public function taxonomies(): BelongsToMany
     {
         return $this->belongsToMany(Taxonomy::class, 'site_testimonial_taxonomies', 'testimonial_id', 'taxonomy_id')
             ->where('site_taxonomies.type', Taxonomy::TYPE_TESTIMONIAL);
+    }
+
+    /**
+     * دستگاه‌هایی که این testimonial به آن‌ها مرتبط است.
+     * بدون رکورد در pivot → testimonial generic (در همه نمایش داده می‌شود).
+     */
+    public function devices(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\CRM\Models\Device::class,
+            'site_testimonial_devices',
+            'testimonial_id',
+            'device_id'
+        );
     }
 }
