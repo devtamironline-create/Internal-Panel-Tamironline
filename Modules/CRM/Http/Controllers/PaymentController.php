@@ -163,10 +163,26 @@ class PaymentController extends Controller
         $verify = $this->zibal->verify($trackId);
 
         if ($verify['success']) {
-            DB::transaction(function () use ($payment, $verify) {
-                // اگر قبلاً verified شده، دوبار credit نکن (callback ممکن است
-                // با retry فایر شود؛ idempotency حیاتی است).
-                $alreadyVerified = $payment->status === 'verified';
+            DB::transaction(function () use ($trackId, $verify, &$payment) {
+                // قفل ردیف payment برای جلوگیری از race condition.
+                // Zibal callback می‌تواند هم browser redirect باشد و هم
+                // server-to-server webhook — هر دو می‌توانند تقریباً
+                // همزمان فایر شوند. بدون lockForUpdate، هر دو نسخه‌ی
+                // pending را می‌بینند و هر دو recordTransaction می‌زنند
+                // → دو تراکنش شارژ کیف‌پول برای یک پرداخت.
+                $payment = Payment::where('track_id', $trackId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $payment) {
+                    return;
+                }
+
+                // پس از قفل، status را re-read کن — اگر callback همزمان
+                // دیگر زودتر verify کرده، خروج فوری بدون credit مجدد.
+                if ($payment->status === 'verified') {
+                    return;
+                }
 
                 $payment->update([
                     'status' => 'verified',
@@ -178,10 +194,6 @@ class PaymentController extends Controller
                     'gateway_response' => $verify['raw'] ?? null,
                     'verified_at' => $payment->verified_at ?? now(),
                 ]);
-
-                if ($alreadyVerified) {
-                    return;
-                }
 
                 // ─── purpose: wallet_charge ─── شارژ کیف‌پول تکنسین
                 if ($payment->purpose === 'wallet_charge' && $payment->technician_id) {
@@ -206,6 +218,9 @@ class PaymentController extends Controller
                     ]);
                 }
             });
+
+            // re-fetch با relationها برای view (lock داخل transaction relationها را نداشت)
+            $payment = Payment::where('track_id', $trackId)->with('invoice.customer')->first();
 
             // پیام مناسب با نوع تراکنش
             if ($payment->purpose === 'wallet_charge') {
