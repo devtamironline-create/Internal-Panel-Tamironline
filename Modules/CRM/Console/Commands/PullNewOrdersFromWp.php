@@ -50,16 +50,20 @@ class PullNewOrdersFromWp extends Command
         // پیش‌فرض همان statusهای استاندارد همهٔ کامندهای WP-importing
         // (publish, private, draft, pending). CRM واقعی این پروژه عمدتاً
         // private است نه publish. با --status می‌توان محدود کرد.
+        // وقتی --wp-id داده شده، فیلتر status اعمال نمی‌شود — کاربر
+        // صراحتاً یک ID خاص خواسته و باید بدون توجه به status بیاید
+        // (مثلاً custom statusهای پلاگین orders).
         $statuses = $this->option('status')
             ? array_filter(array_map('trim', explode(',', $this->option('status'))))
             : ['publish', 'private', 'draft', 'pending'];
 
         $query = $wp->table($prefix.'posts')
-            ->where('post_type', 'orders')
-            ->whereIn('post_status', $statuses);
+            ->where('post_type', 'orders');
 
         if ($wpId = $this->option('wp-id')) {
             $query->where('ID', (int) $wpId);
+        } else {
+            $query->whereIn('post_status', $statuses);
         }
         if ($since = $this->option('since')) {
             $query->where('post_date', '>=', $since . ' 00:00:00');
