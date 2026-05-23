@@ -72,4 +72,28 @@ class Device extends Model
             ->withPivot('sort_order')
             ->orderBy('crm_device_brands.sort_order');
     }
+
+    /**
+     * FAQهای اختصاصی این دستگاه از بانک FAQ.
+     */
+    public function faqs(): BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Faq::class, 'crm_device_faqs', 'device_id', 'faq_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_device_faqs.sort_order');
+    }
+
+    /**
+     * نظرات/توصیه‌نامه‌های انتخاب‌شده برای نمایش در صفحه این دستگاه
+     * (از بانک site_reviews — هم audio هم text).
+     */
+    public function reviews(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\Site\Models\Review::class,
+            'site_review_devices',
+            'device_id',
+            'review_id'
+        );
+    }
 }

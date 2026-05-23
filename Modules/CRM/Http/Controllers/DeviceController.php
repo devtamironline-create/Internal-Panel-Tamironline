@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Support\HtmlSanitizer;
+use Modules\Site\Models\Faq;
+use Modules\Site\Models\Review;
 
 class DeviceController extends Controller
 {
@@ -41,7 +43,7 @@ class DeviceController extends Controller
 
     public function create()
     {
-        return view('crm::devices.create');
+        return view('crm::devices.create', $this->formData(null));
     }
 
     public function store(Request $request)
@@ -49,9 +51,13 @@ class DeviceController extends Controller
         $validated = $this->validateRequest($request);
         $validated['thumbnail'] = $this->handleThumbnail($request, null);
 
+        $faqIds = $this->extractFaqIds($validated);
+        $reviewIds = $this->extractReviewIds($validated);
         $this->applyDefaults($validated, true);
 
-        Device::create($validated);
+        $device = Device::create($validated);
+        $device->faqs()->sync($this->withSortOrder($faqIds));
+        $device->reviews()->sync($reviewIds);
 
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه با موفقیت اضافه شد.');
@@ -59,7 +65,7 @@ class DeviceController extends Controller
 
     public function edit(Device $device)
     {
-        return view('crm::devices.edit', compact('device'));
+        return view('crm::devices.edit', array_merge(['device' => $device], $this->formData($device)));
     }
 
     public function update(Request $request, Device $device)
@@ -67,12 +73,41 @@ class DeviceController extends Controller
         $validated = $this->validateRequest($request, $device->id);
         $validated['thumbnail'] = $this->handleThumbnail($request, $device);
 
+        $faqIds = $this->extractFaqIds($validated);
+        $reviewIds = $this->extractReviewIds($validated);
         $this->applyDefaults($validated, false);
 
         $device->update($validated);
+        $device->faqs()->sync($this->withSortOrder($faqIds));
+        $device->reviews()->sync($reviewIds);
 
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه ویرایش شد.');
+    }
+
+    /**
+     * فهرست FAQها و reviewهای موجود + idهای انتخاب‌شده برای فرم.
+     *
+     * @return array<string, mixed>
+     */
+    private function formData(?Device $device): array
+    {
+        return [
+            'allFaqs' => Faq::query()
+                ->where('is_published', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->get(['id', 'question']),
+            'selectedFaqIds' => $device ? $device->faqs()->pluck('faqs.id')->all() : [],
+            'allReviews' => Review::query()
+                ->where('status', Review::STATUS_APPROVED)
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->limit(500)
+                ->get(['id', 'type', 'author_name', 'topic', 'rating', 'content']),
+            'selectedReviewIds' => $device ? $device->reviews()->pluck('site_reviews.id')->all() : [],
+        ];
     }
 
     public function destroy(Device $device)
@@ -135,7 +170,53 @@ class DeviceController extends Controller
             'service_steps.*.title' => 'nullable|string|max:160',
             'service_steps.*.description' => 'nullable|string|max:1000',
             'service_steps.*.icon' => 'nullable|string|max:60',
+
+            'faq_ids' => 'nullable|array',
+            'faq_ids.*' => 'string|exists:faqs,id',
+
+            'review_ids' => 'nullable|array',
+            'review_ids.*' => 'string|exists:site_reviews,id',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, string>
+     */
+    private function extractFaqIds(array &$validated): array
+    {
+        $ids = array_values(array_filter((array) ($validated['faq_ids'] ?? []), fn ($v) => is_string($v) && $v !== ''));
+        unset($validated['faq_ids']);
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, string>
+     */
+    private function extractReviewIds(array &$validated): array
+    {
+        $ids = array_values(array_filter((array) ($validated['review_ids'] ?? []), fn ($v) => is_string($v) && $v !== ''));
+        unset($validated['review_ids']);
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * تبدیل آرایه idها به ساختار pivot با sort_order طبق ترتیب آرایه.
+     *
+     * @param  array<int, string>  $ids
+     * @return array<string, array{sort_order: int}>
+     */
+    private function withSortOrder(array $ids): array
+    {
+        $out = [];
+        foreach (array_values($ids) as $i => $id) {
+            $out[$id] = ['sort_order' => $i];
+        }
+
+        return $out;
     }
 
     private function applyDefaults(array &$validated, bool $isNew): void

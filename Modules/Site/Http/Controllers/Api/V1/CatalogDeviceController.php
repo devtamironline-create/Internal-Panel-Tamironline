@@ -92,6 +92,13 @@ class CatalogDeviceController extends Controller
 
         $flat = CatalogMerger::flattenTemplate($template);
 
+        // FAQهای انتخاب‌شده از بانک (per-device pivot) — اولویت بر FAQهای inline و template
+        $pickedFaqs = $device->faqs()
+            ->where('faqs.is_published', true)
+            ->get(['faqs.id', 'faqs.question', 'faqs.answer'])
+            ->map(fn ($f) => ['id' => $f->id, 'question' => $f->question, 'answer' => $f->answer])
+            ->all();
+
         return response()
             ->json([
                 'id' => (int) $device->id,
@@ -118,7 +125,10 @@ class CatalogDeviceController extends Controller
 
                 // آرایه‌ها: override ?? template
                 'issues' => CatalogMerger::pick($device->issues, CatalogMerger::templateIssues($template)),
-                'faq' => CatalogMerger::pick($device->faq, CatalogMerger::templateFaq($template)),
+                'faq' => CatalogMerger::pick(
+                    ! empty($pickedFaqs) ? $pickedFaqs : $device->faq,
+                    CatalogMerger::templateFaq($template)
+                ),
 
                 // پشتیبانی و گارانتی
                 'warranty_text' => CatalogMerger::pick($device->warranty_text, $flat['warranty_text'] ?? null),

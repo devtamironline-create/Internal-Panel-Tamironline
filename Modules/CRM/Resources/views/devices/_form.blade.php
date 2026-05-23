@@ -1,3 +1,9 @@
+@php
+    $allFaqs           = $allFaqs           ?? collect();
+    $selectedFaqIds    = $selectedFaqIds    ?? [];
+    $allReviews        = $allReviews        ?? collect();
+    $selectedReviewIds = $selectedReviewIds ?? [];
+@endphp
 @csrf
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
@@ -48,7 +54,7 @@
             'label'       => 'تصویر بندانگشتی دستگاه',
             'value'       => old('thumbnail', $device->thumbnail ?? null),
             'placeholder' => 'https://cdn.example.com/devices/washing-machine.png',
-            'help'        => 'یک تصویر کوچک از دستگاه (در کنار آیکن استفاده می‌شود). ابعاد پیشنهادی ۳۰۰×۳۰۰ پیکسل.',
+            'help'        => 'یک تصویر کوچک از دستگاه. ابعاد پیشنهادی: ۴۰۰×۴۰۰ پیکسل (مربعی، PNG شفاف یا WebP).',
         ])
     </div>
 
@@ -66,8 +72,8 @@
     </div>
 </div>
 
-{{-- ───────────────────────── CMS Override Fields ───────────────────────── --}}
-<div class="mt-8 space-y-4">
+{{-- ───────────────────────── CMS Override Fields (Flat - single section) ───────────────────────── --}}
+<div class="mt-8 space-y-6">
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <h3 class="text-base font-bold text-blue-900 dark:text-blue-200">محتوای CMS — صفحه‌ی detail دستگاه</h3>
         <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
@@ -75,53 +81,52 @@
         </p>
     </div>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg" open>
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">نام‌ها و توضیح</summary>
-        <div class="p-4 space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">نام کوتاه (short_name)</label>
-                    <input type="text" name="short_name" value="{{ old('short_name', $device->short_name ?? '') }}" maxlength="80"
-                           placeholder="لباسشویی"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">نام سرویس (service_name)</label>
-                    <input type="text" name="service_name" value="{{ old('service_name', $device->service_name ?? '') }}" maxlength="160"
-                           placeholder="تعمیر لباسشویی"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium mb-1">عنوان تکنسین</label>
-                    <input type="text" name="technician_name" value="{{ old('technician_name', $device->technician_name ?? '') }}" maxlength="160"
-                           placeholder="تکنسین لباسشویی"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">بالای تیتر (eyebrow)</label>
-                    <input type="text" name="eyebrow" value="{{ old('eyebrow', $device->eyebrow ?? '') }}" maxlength="120"
-                           placeholder="سرویس تخصصی"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
-                    <input type="text" name="subtitle" value="{{ old('subtitle', $device->subtitle ?? '') }}" maxlength="500"
-                           placeholder="در محل، با گارانتی، بدون پیش‌پرداخت"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium mb-1">توضیح کامل</label>
-                    <textarea name="description" rows="8" maxlength="10000"
-                              class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
-                    <p class="text-xs text-gray-500 mt-1">می‌توانید از قالب‌بندی غنی (تیتر، فهرست، لینک، تصویر) استفاده کنید. خروجی به‌صورت HTML در فرانت render می‌شود.</p>
-                </div>
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
+        {{-- نام‌ها و توضیح --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">نام کوتاه (short_name)</label>
+                <input type="text" name="short_name" value="{{ old('short_name', $device->short_name ?? '') }}" maxlength="80"
+                       placeholder="لباسشویی"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">نام سرویس (service_name)</label>
+                <input type="text" name="service_name" value="{{ old('service_name', $device->service_name ?? '') }}" maxlength="160"
+                       placeholder="تعمیر لباسشویی"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+
+            {{-- عنوان تکنسین — مخفی از دید ادمین (با CSS) ولی هنوز submit می‌شود --}}
+            <div class="sm:col-span-2" style="display:none">
+                <label class="block text-sm font-medium mb-1">عنوان تکنسین</label>
+                <input type="text" name="technician_name" value="{{ old('technician_name', $device->technician_name ?? '') }}" maxlength="160"
+                       placeholder="تکنسین لباسشویی"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">بالای تیتر (eyebrow)</label>
+                <input type="text" name="eyebrow" value="{{ old('eyebrow', $device->eyebrow ?? '') }}" maxlength="120"
+                       placeholder="سرویس تخصصی"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
+                <input type="text" name="subtitle" value="{{ old('subtitle', $device->subtitle ?? '') }}" maxlength="500"
+                       placeholder="در محل، با گارانتی، بدون پیش‌پرداخت"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium mb-1">توضیح کامل</label>
+                <textarea name="description" rows="8" maxlength="10000"
+                          class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">می‌توانید از قالب‌بندی غنی (تیتر، فهرست، لینک، تصویر) استفاده کنید. خروجی به‌صورت HTML در فرانت render می‌شود.</p>
             </div>
         </div>
-    </details>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">قیمت و رنگ‌ها</summary>
-        <div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {{-- قیمت و رنگ‌ها --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <div>
                 <label class="block text-sm font-medium mb-1">قیمت شروع (ریال)</label>
                 <input type="number" name="starting_price" value="{{ old('starting_price', $device->starting_price ?? '') }}" min="0"
@@ -141,15 +146,65 @@
                 @error('bg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
-    </details>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">مشکلات رایج (issues)</summary>
-        <div class="p-4">
+        {{-- FAQ از بانک — انتخاب چندتایی از /admin/site/faqs --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <label class="block text-sm font-medium mb-2">سوالات متداول این دستگاه</label>
+            <p class="text-xs text-gray-500 mb-2">
+                از <a href="{{ route('site.admin.faqs.index') }}" target="_blank" class="text-blue-600 hover:underline">بانک FAQ</a>
+                سوالاتی را که می‌خواهید روی صفحه‌ی این دستگاه نشان داده شوند انتخاب کنید. ترتیب علامت‌زدن = ترتیب نمایش.
+            </p>
+            @php $selFaqs = old('faq_ids', $selectedFaqIds); @endphp
+            <div class="border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                @forelse($allFaqs as $f)
+                    <label class="flex items-start gap-2 p-1 hover:bg-white dark:hover:bg-gray-800 rounded">
+                        <input type="checkbox" name="faq_ids[]" value="{{ $f->id }}"
+                               @checked(in_array($f->id, $selFaqs, true))
+                               class="mt-1">
+                        <span class="text-sm">{{ $f->question }}</span>
+                    </label>
+                @empty
+                    <p class="text-xs text-gray-400">FAQ منتشرشده‌ای موجود نیست. <a href="{{ route('site.admin.faqs.create') }}" target="_blank" class="text-blue-600 hover:underline">ایجاد سوال جدید</a></p>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- Reviews از بانک — انتخاب چندتایی از /admin/site/reviews --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <label class="block text-sm font-medium mb-2">دیدگاه‌های نمایش‌داده‌شده در این دستگاه</label>
+            <p class="text-xs text-gray-500 mb-2">
+                از <a href="{{ route('site.admin.reviews.index') }}" target="_blank" class="text-blue-600 hover:underline">بانک نظرات</a>
+                دیدگاه‌هایی را که می‌خواهید روی این دستگاه نمایش داده شوند انتخاب کنید (شامل توصیه‌نامه‌های صوتی و نظرات متنی تأییدشده).
+            </p>
+            @php $selReviews = old('review_ids', $selectedReviewIds); @endphp
+            <div class="border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                @forelse($allReviews as $r)
+                    <label class="flex items-start gap-2 p-1 hover:bg-white dark:hover:bg-gray-800 rounded">
+                        <input type="checkbox" name="review_ids[]" value="{{ $r->id }}"
+                               @checked(in_array($r->id, $selReviews, true))
+                               class="mt-1">
+                        <span class="text-sm">
+                            @if($r->type === \Modules\Site\Models\Review::TYPE_AUDIO)
+                                <span class="px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700">صوتی</span>
+                            @else
+                                <span class="px-1.5 py-0.5 rounded text-xs bg-sky-100 text-sky-700">متنی</span>
+                            @endif
+                            <strong>{{ $r->author_name }}</strong> — {{ str_repeat('★', (int) $r->rating) }}
+                            @if($r->topic) — {{ $r->topic }} @endif
+                            @if($r->content) — <span class="text-gray-500">{{ \Illuminate\Support\Str::limit($r->content, 80) }}</span> @endif
+                        </span>
+                    </label>
+                @empty
+                    <p class="text-xs text-gray-400">دیدگاه تأییدشده‌ای موجود نیست. <a href="{{ route('site.admin.reviews.create') }}" target="_blank" class="text-blue-600 hover:underline">ایجاد توصیه‌نامه</a></p>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- مشکلات رایج — مخفی از دید ادمین (با CSS) --}}
+        <div style="display:none">
             @include('crm::partials.json-repeater', [
                 'name'  => 'issues',
                 'label' => 'مشکلات رایج این دستگاه',
-                'help'  => 'مثلاً «آب‌نبستن درب»، «صدای غیرعادی».',
                 'items' => old('issues', $device->issues ?? []),
                 'item_fields' => [
                     'title'       => ['label' => 'عنوان مشکل', 'type' => 'string'],
@@ -157,30 +212,12 @@
                 ],
             ])
         </div>
-    </details>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">سوالات متداول (faq)</summary>
-        <div class="p-4">
-            @include('crm::partials.json-repeater', [
-                'name'  => 'faq',
-                'label' => 'سوالات متداول مخصوص این دستگاه',
-                'items' => old('faq', $device->faq ?? []),
-                'item_fields' => [
-                    'question' => ['label' => 'سوال', 'type' => 'string'],
-                    'answer'   => ['label' => 'پاسخ', 'type' => 'textarea'],
-                ],
-            ])
-        </div>
-    </details>
-
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">مراحل سرویس (service_steps)</summary>
-        <div class="p-4">
+        {{-- مراحل سرویس — مخفی از دید ادمین (با CSS) --}}
+        <div style="display:none">
             @include('crm::partials.json-repeater', [
                 'name'  => 'service_steps',
                 'label' => 'مراحل کاری سفارش تا تحویل',
-                'help'  => 'مثلاً: ۱) ثبت سفارش، ۲) ارزیابی، ۳) تعمیر، ۴) تحویل.',
                 'items' => old('service_steps', $device->service_steps ?? []),
                 'item_fields' => [
                     'title'       => ['label' => 'عنوان', 'type' => 'string'],
@@ -189,29 +226,23 @@
                 ],
             ])
         </div>
-    </details>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">گارانتی و پشتیبانی</summary>
-        <div class="p-4 space-y-4">
+        {{-- گارانتی و پشتیبانی — مخفی از دید ادمین (با CSS) --}}
+        <div class="space-y-4" style="display:none">
             <div>
                 <label class="block text-sm font-medium mb-1">متن گارانتی</label>
                 <textarea name="warranty_text" rows="3" maxlength="3000"
-                          placeholder="گارانتی ۶ ماهه روی تعمیرات و قطعات."
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('warranty_text', $device->warranty_text ?? '') }}</textarea>
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">اطلاعات پشتیبانی</label>
                 <textarea name="support_info" rows="3" maxlength="3000"
-                          placeholder="پشتیبانی ۲۴/۷ از طریق تلفن و واتساپ."
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('support_info', $device->support_info ?? '') }}</textarea>
             </div>
         </div>
-    </details>
 
-    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">سئو (SEO)</summary>
-        <div class="p-4 space-y-4">
+        {{-- سئو --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <div>
                 <label class="block text-sm font-medium mb-1">Meta Title</label>
                 <input type="text" name="meta_title" value="{{ old('meta_title', $device->meta_title ?? '') }}" maxlength="200"
@@ -223,7 +254,7 @@
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('meta_description', $device->meta_description ?? '') }}</textarea>
             </div>
         </div>
-    </details>
+    </div>
 </div>
 
 <div class="flex items-center gap-3 mt-6 sticky bottom-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur p-3 -mx-3">
