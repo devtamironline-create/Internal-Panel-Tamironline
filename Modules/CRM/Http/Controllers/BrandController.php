@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Brand;
+use Modules\CRM\Support\HtmlSanitizer;
 
 class BrandController extends Controller
 {
@@ -166,6 +167,11 @@ class BrandController extends Controller
         $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['logo_file']);
+
+        // پاک‌سازی HTML خروجی TinyMCE قبل از ذخیره (allowlist tags + attrs)
+        if (array_key_exists('description', $validated)) {
+            $validated['description'] = HtmlSanitizer::clean($validated['description']);
+        }
 
         // پاکسازی ردیف‌های خالی repeater (هر آرایه که هیچ مقدار غیرخالی ندارد حذف می‌شود)
         foreach (['stats', 'issues', 'why_us', 'faq'] as $key) {

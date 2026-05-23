@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Device;
+use Modules\CRM\Support\HtmlSanitizer;
 
 class DeviceController extends Controller
 {
@@ -145,6 +146,11 @@ class DeviceController extends Controller
         $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['thumbnail_file']);
+
+        // پاک‌سازی HTML خروجی TinyMCE قبل از ذخیره (allowlist tags + attrs)
+        if (array_key_exists('description', $validated)) {
+            $validated['description'] = HtmlSanitizer::clean($validated['description']);
+        }
 
         // پاکسازی ردیف‌های خالی repeater
         foreach (['issues', 'faq', 'service_steps'] as $key) {
