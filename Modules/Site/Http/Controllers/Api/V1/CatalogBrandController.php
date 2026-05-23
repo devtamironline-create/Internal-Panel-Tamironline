@@ -38,8 +38,51 @@ class CatalogBrandController extends Controller
             'logo' => MediaUrl::resolve($b->logo),
         ])->values();
 
+        // تعداد کل برندهای فعال — برای meta.total در فرانت
+        $total = Brand::query()->where('is_active', true)->count();
+
         return response()
-            ->json(['data' => $data])
+            ->json([
+                'data' => $data,
+                'meta' => ['total' => $total],
+            ])
+            ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * GET /v1/catalog/brands/{slug} — جزئیات یک برند با تمام فیلدهای CMS.
+     *
+     * هر فیلد null یعنی «ادمین چیزی وارد نکرده» — فرانت از fixture استفاده می‌کند.
+     * آرایه‌های خالی هم مثل null عمل می‌کنند (فرانت بررسی .length می‌کند).
+     */
+    public function show(string $slug): JsonResponse
+    {
+        $brand = Brand::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $brand) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        return response()
+            ->json([
+                'id'               => (int) $brand->id,
+                'name'             => $brand->name,
+                'slug'             => $brand->slug,
+                'logo'             => MediaUrl::resolve($brand->logo),
+                'tagline'          => $brand->tagline,
+                'description'      => $brand->description,
+                'tone'             => $brand->tone,
+                'bg'               => $brand->bg,
+                'stats'            => $brand->stats ?? [],
+                'issues'           => $brand->issues ?? [],
+                'why_us'           => $brand->why_us ?? [],
+                'faq'              => $brand->faq ?? [],
+                'meta_title'       => $brand->meta_title,
+                'meta_description' => $brand->meta_description,
+            ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
 }

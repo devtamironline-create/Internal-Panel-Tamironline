@@ -54,4 +54,44 @@ class CatalogDeviceController extends Controller
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
+
+    /**
+     * GET /v1/catalog/devices/{slug} — جزئیات یک دستگاه با تمام فیلدهای CMS.
+     *
+     * هر فیلد null یعنی «ادمین چیزی وارد نکرده» — فرانت از fixture استفاده می‌کند.
+     */
+    public function show(string $slug): JsonResponse
+    {
+        $device = Device::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $device) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        return response()
+            ->json([
+                'id'               => (int) $device->id,
+                'label'            => $device->name,
+                'slug'             => $device->slug,
+                'name'             => $device->service_name ?? $device->name, // عنوان صفحه
+                'short_name'       => $device->short_name,
+                'description'      => $device->description,
+                'service_name'     => $device->service_name,
+                'technician_name'  => $device->technician_name,
+                'starting_price'   => $device->starting_price !== null ? (int) $device->starting_price : null,
+                'accent'           => $device->accent,
+                'bg'               => $device->bg,
+                'icon'             => $device->icon,
+                'thumbnail'        => MediaUrl::resolve($device->thumbnail),
+                'tone'             => $device->tone, // CSS class (مثل tone-blue) — برای backward compat
+                'issues'           => $device->issues ?? [],
+                'faq'              => $device->faq ?? [],
+                'meta_title'       => $device->meta_title,
+                'meta_description' => $device->meta_description,
+            ])
+            ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
 }

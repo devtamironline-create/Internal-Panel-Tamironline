@@ -44,4 +44,15 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.contact-messages.store');
     });
 
+    // ── Internal-only detail endpoints (BFF → API) ────────────────
+    // catalog brand/device detail با تمام فیلدهای CMS — فقط برای فرانت Next.js
+    Route::middleware(['internal.token', 'throttle:60,1'])->group(function () {
+        Route::get('/catalog/brands/{slug}', [CatalogBrandController::class, 'show'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.brands.show');
+        Route::get('/catalog/devices/{slug}', [CatalogDeviceController::class, 'show'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.devices.show');
+    });
+
 });

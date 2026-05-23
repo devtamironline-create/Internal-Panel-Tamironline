@@ -11,10 +11,21 @@ class Device extends Model
     protected $fillable = [
         'wp_id',
         'name',
+        'short_name',
         'slug',
         'icon',
         'thumbnail',
         'tone',
+        'description',
+        'service_name',
+        'technician_name',
+        'starting_price',
+        'accent',
+        'bg',
+        'issues',
+        'faq',
+        'meta_title',
+        'meta_description',
         'sort_order',
         'is_active',
         'is_featured',
@@ -25,6 +36,9 @@ class Device extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
+        'starting_price' => 'integer',
+        'issues' => 'array',
+        'faq'    => 'array',
     ];
 
     public function scopeActive($query)

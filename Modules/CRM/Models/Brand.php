@@ -13,6 +13,16 @@ class Brand extends Model
         'name',
         'slug',
         'logo',
+        'tagline',
+        'description',
+        'tone',
+        'bg',
+        'stats',
+        'issues',
+        'why_us',
+        'faq',
+        'meta_title',
+        'meta_description',
         'sort_order',
         'is_active',
         'is_featured',
@@ -23,6 +33,10 @@ class Brand extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
+        'stats'   => 'array',
+        'issues'  => 'array',
+        'why_us'  => 'array',
+        'faq'     => 'array',
     ];
 
     public function scopeActive($query)
