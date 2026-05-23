@@ -101,14 +101,18 @@
 
     {{-- لیست تراکنش‌ها --}}
     <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex flex-wrap items-end gap-3">
-        <div>
+        <div class="w-64">
             <label class="block text-xs font-medium text-gray-500 mb-1">تکنسین</label>
-            <select name="technician_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                <option value="">— همه —</option>
-                @foreach($technicians as $t)
-                <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ $t->full_name }}</option>
-                @endforeach
-            </select>
+            @php
+                $techOptions = ['' => '— همه —'];
+                foreach ($technicians as $t) { $techOptions[(string) $t->id] = $t->full_name; }
+            @endphp
+            <x-searchable-select
+                name="technician_id"
+                :options="$techOptions"
+                :value="$technicianId"
+                placeholder="— همه —"
+                searchPlaceholder="جستجوی تکنسین..." />
         </div>
         <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">نوع</label>
