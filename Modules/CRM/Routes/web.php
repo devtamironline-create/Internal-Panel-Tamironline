@@ -242,6 +242,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:view-crm-financial')->group(function () {
         Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
         Route::get('wallet/technician/{technician}', [WalletController::class, 'show'])->name('wallet.show');
+
+        // ─── گزارش مالی (هم‌سو با list_financial.php پنل WP) ─
+        Route::get('reports/financial', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'index'])
+            ->name('reports.financial');
+        Route::get('reports/financial/export', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'export'])
+            ->name('reports.financial.export');
     });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
