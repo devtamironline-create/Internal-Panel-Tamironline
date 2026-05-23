@@ -45,9 +45,11 @@ class BrandController extends Controller
         $logoPath = $this->handleLogo($request, null);
         $validated['logo'] = $logoPath;
 
+        $deviceIds = $this->extractDeviceIds($validated);
         $this->applyDefaults($validated, true);
 
-        Brand::create($validated);
+        $brand = Brand::create($validated);
+        $brand->devices()->sync($deviceIds);
 
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند با موفقیت اضافه شد.');
@@ -64,9 +66,11 @@ class BrandController extends Controller
         $logoPath = $this->handleLogo($request, $brand);
         $validated['logo'] = $logoPath;
 
+        $deviceIds = $this->extractDeviceIds($validated);
         $this->applyDefaults($validated, false);
 
         $brand->update($validated);
+        $brand->devices()->sync($deviceIds);
 
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند ویرایش شد.');
@@ -98,48 +102,68 @@ class BrandController extends Controller
     private function validateRequest(Request $request, ?int $id = null): array
     {
         return $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => 'nullable|string|max:255|unique:crm_brands,slug' . ($id ? ',' . $id : ''),
-            'logo'        => 'nullable|string|max:500',
-            'logo_file'   => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
-            'sort_order'  => 'nullable|integer|min:0',
-            'is_active'   => 'nullable|boolean',
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:crm_brands,slug'.($id ? ','.$id : ''),
+            'logo' => 'nullable|string|max:500',
+            'logo_file' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
 
             // CMS-override fields
-            'tagline'          => 'nullable|string|max:1000',
-            'description'      => 'nullable|string|max:10000',
-            'tone'             => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
-            'bg'               => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
-            'meta_title'       => 'nullable|string|max:200',
+            'tagline' => 'nullable|string|max:1000',
+            'description' => 'nullable|string|max:10000',
+            'tone' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'bg' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
+            'meta_title' => 'nullable|string|max:200',
             'meta_description' => 'nullable|string|max:500',
+            'warranty_text' => 'nullable|string|max:3000',
+            'support_info' => 'nullable|string|max:3000',
 
-            'stats'                => 'nullable|array',
-            'stats.*.value'        => 'nullable|string|max:60',
-            'stats.*.label'        => 'nullable|string|max:120',
+            'stats' => 'nullable|array',
+            'stats.*.value' => 'nullable|string|max:60',
+            'stats.*.label' => 'nullable|string|max:120',
 
-            'issues'               => 'nullable|array',
-            'issues.*.title'       => 'nullable|string|max:160',
+            'issues' => 'nullable|array',
+            'issues.*.title' => 'nullable|string|max:160',
             'issues.*.description' => 'nullable|string|max:1000',
-            'issues.*.icon'        => 'nullable|string|max:60',
+            'issues.*.icon' => 'nullable|string|max:60',
 
-            'why_us'               => 'nullable|array',
-            'why_us.*.title'       => 'nullable|string|max:160',
+            'why_us' => 'nullable|array',
+            'why_us.*.title' => 'nullable|string|max:160',
             'why_us.*.description' => 'nullable|string|max:1000',
-            'why_us.*.icon'        => 'nullable|string|max:60',
+            'why_us.*.icon' => 'nullable|string|max:60',
 
-            'faq'                  => 'nullable|array',
-            'faq.*.question'       => 'nullable|string|max:300',
-            'faq.*.answer'         => 'nullable|string|max:5000',
+            'faq' => 'nullable|array',
+            'faq.*.question' => 'nullable|string|max:300',
+            'faq.*.answer' => 'nullable|string|max:5000',
+
+            'device_ids' => 'nullable|array',
+            'device_ids.*' => 'integer|exists:crm_devices,id',
         ]);
+    }
+
+    /**
+     * استخراج device_ids از داده‌های validated و حذف کلید از آرایه‌ی به‌روزرسانی
+     * (چون device_ids ستون پویوت است، نه فیلد جدول crm_brands).
+     *
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int>
+     */
+    private function extractDeviceIds(array &$validated): array
+    {
+        $ids = array_map('intval', (array) ($validated['device_ids'] ?? []));
+        unset($validated['device_ids']);
+
+        return array_values(array_unique($ids));
     }
 
     private function applyDefaults(array &$validated, bool $isNew): void
     {
-        $validated['slug']        = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $this->assertEnglishSlug($validated['slug']);
-        $validated['sort_order']  = $validated['sort_order'] ?? 0;
-        $validated['is_active']   = (bool) ($validated['is_active']   ?? ($isNew ? true : false));
+        $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['logo_file']);
 
@@ -194,6 +218,7 @@ class BrandController extends Controller
                 );
             }
         }
+
         return array_values($cleaned);
     }
 
@@ -211,6 +236,7 @@ class BrandController extends Controller
             if ($brand) {
                 $this->deleteStoredImage($brand->logo);
             }
+
             return $path;
         }
 
@@ -218,10 +244,12 @@ class BrandController extends Controller
             if ($brand) {
                 $this->deleteStoredImage($brand->logo);
             }
+
             return null;
         }
 
         $url = trim((string) $request->input('logo', ''));
+
         return $url === '' ? ($brand?->logo) : $url;
     }
 

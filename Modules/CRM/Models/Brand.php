@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Brand extends Model
 {
@@ -25,7 +26,6 @@ class Brand extends Model
         'meta_description',
         'warranty_text',
         'support_info',
-        'supported_device_slugs',
         'sort_order',
         'is_active',
         'is_featured',
@@ -36,12 +36,21 @@ class Brand extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
-        'stats'   => 'array',
-        'issues'  => 'array',
-        'why_us'  => 'array',
-        'faq'     => 'array',
-        'supported_device_slugs' => 'array',
+        'stats' => 'array',
+        'issues' => 'array',
+        'why_us' => 'array',
+        'faq' => 'array',
     ];
+
+    /**
+     * دستگاه‌هایی که این برند پشتیبانی می‌کند.
+     */
+    public function devices(): BelongsToMany
+    {
+        return $this->belongsToMany(Device::class, 'crm_device_brands', 'brand_id', 'device_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_device_brands.sort_order');
+    }
 
     public function scopeActive($query)
     {

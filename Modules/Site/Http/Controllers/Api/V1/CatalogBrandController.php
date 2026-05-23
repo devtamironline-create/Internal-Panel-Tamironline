@@ -18,9 +18,7 @@ use Modules\Site\Support\MediaUrl;
  */
 class CatalogBrandController extends Controller
 {
-    public function __construct(private PageSectionService $sections)
-    {
-    }
+    public function __construct(private PageSectionService $sections) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -34,22 +32,19 @@ class CatalogBrandController extends Controller
         }
 
         // فیلتر بر اساس device slug — برندهایی که این دستگاه را پشتیبانی می‌کنند
+        // از طریق pivot table crm_device_brands
         $deviceSlug = trim((string) $request->query('device', ''));
         if ($deviceSlug !== '') {
-            // brand.supported_device_slugs یک JSON array است
-            $driver = $query->getQuery()->getConnection()->getDriverName();
-            if ($driver === 'mysql' || $driver === 'mariadb') {
-                $query->whereJsonContains('supported_device_slugs', $deviceSlug);
-            } else {
-                // برای sqlite و سایر driverها: like در JSON serialized
-                $query->where('supported_device_slugs', 'like', '%"' . $deviceSlug . '"%');
-            }
+            $query->whereHas('devices', function ($q) use ($deviceSlug) {
+                $q->where('crm_devices.slug', $deviceSlug)
+                    ->where('crm_devices.is_active', true);
+            });
         }
 
         $brands = $query->limit($limit)->get(['id', 'name', 'slug', 'logo']);
 
         $data = $brands->map(fn (Brand $b) => [
-            'id'   => (int) $b->id,
+            'id' => (int) $b->id,
             'name' => $b->name,
             'slug' => $b->slug,
             'logo' => MediaUrl::resolve($b->logo),
@@ -80,7 +75,7 @@ class CatalogBrandController extends Controller
         }
 
         $context = [
-            'brand'      => $brand->name,
+            'brand' => $brand->name,
             'brand_slug' => $brand->slug,
             'page_title' => $brand->name,
         ];
@@ -92,31 +87,31 @@ class CatalogBrandController extends Controller
 
         return response()
             ->json([
-                'id'               => (int) $brand->id,
-                'name'             => $brand->name,
-                'slug'             => $brand->slug,
-                'logo'             => MediaUrl::resolve($brand->logo),
+                'id' => (int) $brand->id,
+                'name' => $brand->name,
+                'slug' => $brand->slug,
+                'logo' => MediaUrl::resolve($brand->logo),
 
                 // متن‌ها: override ?? template
-                'tagline'          => CatalogMerger::pick($brand->tagline, $flat['tagline'] ?? null),
-                'description'      => CatalogMerger::pick($brand->description, $flat['description'] ?? null),
+                'tagline' => CatalogMerger::pick($brand->tagline, $flat['tagline'] ?? null),
+                'description' => CatalogMerger::pick($brand->description, $flat['description'] ?? null),
 
                 // ظاهر (فقط override — رنگ‌ها معمولاً اختصاصی برند هستند)
-                'tone'             => $brand->tone,
-                'bg'               => $brand->bg,
+                'tone' => $brand->tone,
+                'bg' => $brand->bg,
 
                 // آرایه‌ها: override ?? template
-                'stats'            => CatalogMerger::pick($brand->stats, CatalogMerger::templateStats($template)),
-                'issues'           => CatalogMerger::pick($brand->issues, CatalogMerger::templateIssues($template)),
-                'why_us'           => CatalogMerger::pick($brand->why_us, CatalogMerger::templateWhyUs($template)),
-                'faq'              => CatalogMerger::pick($brand->faq, CatalogMerger::templateFaq($template)),
+                'stats' => CatalogMerger::pick($brand->stats, CatalogMerger::templateStats($template)),
+                'issues' => CatalogMerger::pick($brand->issues, CatalogMerger::templateIssues($template)),
+                'why_us' => CatalogMerger::pick($brand->why_us, CatalogMerger::templateWhyUs($template)),
+                'faq' => CatalogMerger::pick($brand->faq, CatalogMerger::templateFaq($template)),
 
                 // گارانتی و پشتیبانی
-                'warranty_text'    => CatalogMerger::pick($brand->warranty_text, $flat['warranty_text'] ?? null),
-                'support_info'     => CatalogMerger::pick($brand->support_info, $flat['support_info'] ?? null),
+                'warranty_text' => CatalogMerger::pick($brand->warranty_text, $flat['warranty_text'] ?? null),
+                'support_info' => CatalogMerger::pick($brand->support_info, $flat['support_info'] ?? null),
 
                 // SEO
-                'meta_title'       => CatalogMerger::pick($brand->meta_title, $flat['meta_title'] ?? null),
+                'meta_title' => CatalogMerger::pick($brand->meta_title, $flat['meta_title'] ?? null),
                 'meta_description' => CatalogMerger::pick($brand->meta_description, $flat['meta_description'] ?? null),
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');

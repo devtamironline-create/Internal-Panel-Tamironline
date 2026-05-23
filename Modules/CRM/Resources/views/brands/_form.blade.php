@@ -44,6 +44,31 @@
             <span class="text-sm text-gray-700 dark:text-gray-200">برند ویژه (نمایش در صفحه‌ی اصلی سایت)</span>
         </label>
     </div>
+
+    @php
+        $allDevices = \Modules\CRM\Models\Device::query()->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $selectedDeviceIds = old(
+            'device_ids',
+            isset($brand) ? $brand->devices()->pluck('crm_devices.id')->all() : []
+        );
+        $selectedDeviceIds = array_map('intval', (array) $selectedDeviceIds);
+    @endphp
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            دستگاه‌های قابل پشتیبانی توسط این برند
+        </label>
+        <p class="text-xs text-gray-500 mb-2">با Ctrl/Cmd چند مورد را انتخاب کنید. برای فیلتر برندها بر اساس دستگاه در سایت استفاده می‌شود.</p>
+        <select name="device_ids[]" multiple size="6"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
+            @foreach ($allDevices as $d)
+                <option value="{{ $d->id }}" @selected(in_array((int) $d->id, $selectedDeviceIds, true))>
+                    {{ $d->name }} ({{ $d->slug }})
+                </option>
+            @endforeach
+        </select>
+    </div>
 </div>
 
 {{-- ───────────────────────── CMS Override Fields ───────────────────────── --}}
@@ -147,6 +172,22 @@
                     'answer'   => ['label' => 'پاسخ', 'type' => 'textarea'],
                 ],
             ])
+        </div>
+    </details>
+
+    <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold bg-gray-50 dark:bg-gray-800">گارانتی و پشتیبانی</summary>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">متن گارانتی</label>
+                <textarea name="warranty_text" rows="3" maxlength="3000"
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('warranty_text', $brand->warranty_text ?? '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">اطلاعات پشتیبانی</label>
+                <textarea name="support_info" rows="3" maxlength="3000"
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('support_info', $brand->support_info ?? '') }}</textarea>
+            </div>
         </div>
     </details>
 
