@@ -94,7 +94,14 @@ class OrderController extends Controller
             $query->where('status', $status);
         }
 
-        $orders = $query->latest()->paginate(25)->withQueryString();
+        // تعداد در صفحه — قابل تنظیم با ?per_page=. مقادیر مجاز محدود
+        // می‌شوند تا کاربر نتواند با عدد خیلی بزرگ سرور را overload کند.
+        $perPage = (int) $request->query('per_page', 50);
+        if (! in_array($perPage, [25, 50, 100, 200], true)) {
+            $perPage = 50;
+        }
+
+        $orders = $query->latest()->paginate($perPage)->withQueryString();
 
         // ─── شمارش تب‌های وضعیت با اعمال بقیهٔ فیلترها ───────────────
         $countQuery = Order::query();
@@ -137,7 +144,7 @@ class OrderController extends Controller
             'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
             'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
             'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
-            'statusCounts'
+            'statusCounts', 'perPage'
         ));
     }
 

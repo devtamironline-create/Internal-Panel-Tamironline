@@ -358,6 +358,18 @@
         </table>
     </div>
 
-    <div>{{ $orders->links() }}</div>
+    <div class="flex items-center justify-between flex-wrap gap-3 px-2">
+        <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <label for="per-page-select">تعداد در صفحه:</label>
+            <select id="per-page-select"
+                    onchange="(()=>{ const u=new URL(window.location); u.searchParams.set('per_page', this.value); u.searchParams.delete('page'); window.location=u; }).call(this)"
+                    class="px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-xs">
+                @foreach([25, 50, 100, 200] as $opt)
+                    <option value="{{ $opt }}" @selected(($perPage ?? 50) === $opt)>{{ $opt }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>{{ $orders->links() }}</div>
+    </div>
 </div>
 @endsection
