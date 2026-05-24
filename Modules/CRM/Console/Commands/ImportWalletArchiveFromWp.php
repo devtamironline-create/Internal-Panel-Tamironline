@@ -36,6 +36,7 @@ class ImportWalletArchiveFromWp extends Command
                             {--since= : فقط بعد از این تاریخ (YYYY-MM-DD)}
                             {--limit=20000 : حداکثر تعداد پست بررسی‌شده}
                             {--tech= : فقط برای یک تکنسین (panel id)}
+                            {--debug-skipped : چاپ متاهای ۵ مورد اول skip شده (برای تشخیص نوع)}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
     protected $description = 'ایمپورت تراکنش‌های آرشیوی کیف‌پول از WP به جدول crm_wallet_archive_txs (فقط نمایش — خارج از محاسبه)';
@@ -132,6 +133,7 @@ class ImportWalletArchiveFromWp extends Command
 
         $inserted = 0;
         $skipped = 0;
+        $skippedSamples = []; // برای --debug-skipped
 
         $bar = $this->output->createProgressBar(count($toProcess));
         $bar->start();
@@ -159,6 +161,12 @@ class ImportWalletArchiveFromWp extends Command
                 $row = $this->buildArchiveRow((int) $pid, $post, $meta, $techWpToPanel);
                 if (! $row) {
                     $skipped++;
+                    if ($this->option('debug-skipped') && count($skippedSamples) < 5) {
+                        $skippedSamples[] = [
+                            'wp_post_id' => $pid,
+                            'meta' => $meta,
+                        ];
+                    }
                     $bar->advance();
                     continue;
                 }
@@ -178,6 +186,19 @@ class ImportWalletArchiveFromWp extends Command
         $this->info("✓ ایمپورت شد: {$inserted}");
         if ($skipped > 0) {
             $this->line("  رد شده (نوع نامشخص یا داده ناقص): {$skipped}");
+        }
+
+        if (! empty($skippedSamples)) {
+            $this->newLine();
+            $this->line('— نمونه‌های skip شده —');
+            foreach ($skippedSamples as $idx => $s) {
+                $this->line(($idx + 1) . ") wp_post_id={$s['wp_post_id']}:");
+                foreach ($s['meta'] as $k => $v) {
+                    $v = mb_substr((string) $v, 0, 80);
+                    $this->line("    {$k} → {$v}");
+                }
+                $this->newLine();
+            }
         }
 
         $this->newLine();
