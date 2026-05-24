@@ -32,6 +32,24 @@
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
     @endif
 
+    {{-- ─── بک‌فیل از روی لاگ — برای سفارش‌های بدون technician_wp_id ─── --}}
+    @if($totalNoWpId > 0)
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div class="text-sm text-amber-800 dark:text-amber-200">
+            <b>{{ number_format($totalNoWpId) }}</b> سفارش technician_wp_id ندارند ولی ممکن است در <b>لاگ پنل قدیمی</b>
+            (order_description_content) شناسهٔ تکنسین موجود باشد.
+            با این دکمه از author رویدادهای «انجام کار / ایجاد فاکتور» شناسه استخراج و ست می‌شود.
+        </div>
+        <form method="POST" action="{{ route('crm.orphan-orders.backfill-from-log') }}"
+              onsubmit="return confirm('بک‌فیل technician_wp_id از روی لاگ سفارش‌ها؟\n\nاین فقط مقدار technician_wp_id را پر می‌کند — هیچ assignment‌ای انجام نمی‌شود. بعد از این، گروه‌بندی جدید را می‌بینید و خودتان تصمیم می‌گیرید.');">
+            @csrf
+            <button class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                🔍 بک‌فیل از روی لاگ
+            </button>
+        </form>
+    </div>
+    @endif
+
     {{-- ─── دکمه auto-assign برای match‌های دقیق ─── --}}
     @if($matchedTechs->count() > 0)
     <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">

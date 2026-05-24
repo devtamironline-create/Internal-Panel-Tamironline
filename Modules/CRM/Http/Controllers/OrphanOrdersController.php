@@ -93,6 +93,86 @@ class OrphanOrdersController extends Controller
     }
 
     /**
+     * بک‌فیل technician_wp_id از روی لاگ سفارش (order_description_content).
+     *
+     * برای orphanهایی که حتی technician_wp_id ندارند (مثلاً قبل از
+     * commit 7e87945 ایمپورت شده‌اند)، author رویدادهای داخل لاگ
+     * را می‌خوانیم — معمولاً wp_id تکنسین یا اپراتور است.
+     *
+     * بعد از این، orphan page گروه‌بندی جدید نشان می‌دهد و اپراتور
+     * می‌تواند با Auto-Assign یا assign دستی ادامه دهد.
+     */
+    public function backfillFromLog(Request $request)
+    {
+        app()->instance('crm.suppress_outbound_push', true);
+
+        $orders = Order::query()
+            ->whereNull('technician_id')
+            ->whereNull('technician_wp_id')
+            ->whereNotNull('order_description_content')
+            ->get(['id', 'order_description_content']);
+
+        $filled = 0;
+        $skipped = 0;
+
+        foreach ($orders as $order) {
+            $events = $order->wp_events;
+            if (empty($events) || ! is_array($events)) {
+                $skipped++;
+                continue;
+            }
+
+            // اولویت: author رویدادی که status='انجام کار' یا 'ایجاد فاکتور' دارد.
+            // در نبود، author هر event با شناسهٔ عددی.
+            $preferredWpId = null;
+            $fallbackWpId = null;
+
+            foreach ($events as $ev) {
+                $author = $ev['author'] ?? null;
+                if (! is_numeric($author) || (int) $author <= 0) {
+                    continue;
+                }
+                $wpId = (int) $author;
+
+                $status = mb_strtolower((string) ($ev['status'] ?? ''));
+                $subject = (string) ($ev['subject'] ?? '');
+
+                if (
+                    str_contains($status, 'انجام کار')
+                    || str_contains($subject, 'انجام کار')
+                    || str_contains($subject, 'ایجاد فاکتور')
+                    || str_contains($subject, 'صدور فاکتور')
+                ) {
+                    $preferredWpId = $wpId;
+                    break;
+                }
+
+                if ($fallbackWpId === null) {
+                    $fallbackWpId = $wpId;
+                }
+            }
+
+            $resolvedWpId = $preferredWpId ?? $fallbackWpId;
+            if (! $resolvedWpId) {
+                $skipped++;
+                continue;
+            }
+
+            DB::table('crm_orders')
+                ->where('id', $order->id)
+                ->update([
+                    'technician_wp_id' => $resolvedWpId,
+                    'updated_at' => now(),
+                ]);
+            $filled++;
+        }
+
+        return back()->with('success',
+            "بک‌فیل از لاگ: {$filled} سفارش technician_wp_id ست شد، {$skipped} سفارش لاگ مناسب نداشت. حالا با Auto-Assign یا dropdown ادامه بده."
+        );
+    }
+
+    /**
      * Auto-assign — همه گروه‌هایی که match دقیق در پنل دارند، یک‌جا
      * assign می‌شوند (هم‌ارز crm:orders:resolve-technicians).
      */
