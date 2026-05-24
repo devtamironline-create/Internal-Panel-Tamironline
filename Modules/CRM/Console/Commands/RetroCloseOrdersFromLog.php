@@ -42,6 +42,7 @@ class RetroCloseOrdersFromLog extends Command
                             {--until= : فقط سفارش‌های ایجاد شده قبل از این تاریخ}
                             {--order-code= : فقط یک سفارش خاص با این کد}
                             {--order-id= : فقط یک سفارش با panel id}
+                            {--refresh : سفارش‌های is_legacy_closed را هم پردازش کن (به‌روزرسانی legacy_tech_share و سایر فیلدها)}
                             {--apply : اعمال (پیش‌فرض dry-run)}';
 
     protected $description = 'بستن retro-active سفارش‌هایی که در لاگ WP رویداد انجام کار دارند، بدون ساخت Invoice/WalletTx';
@@ -54,10 +55,26 @@ class RetroCloseOrdersFromLog extends Command
         $orderCode = $this->option('order-code');
         $orderId = $this->option('order-id');
 
-        $query = Order::query()
-            ->where('status', '!=', OrderStatus::Completed->value)
-            ->where('is_legacy_closed', false)
-            ->whereNotNull('order_description_content');
+        $refresh = (bool) $this->option('refresh');
+        // وقتی --order-code یا --order-id داده شده، کاربر صراحتاً همان سفارش
+        // را خواسته؛ پس حتی اگر قبلاً legacy_closed شده باشد، اجازه پردازش
+        // مجدد می‌دهیم (برای به‌روزرسانی legacy_tech_share و سایر فیلدها).
+        $explicitTarget = $orderCode || $orderId;
+        $allowRefresh = $refresh || $explicitTarget;
+
+        $query = Order::query()->whereNotNull('order_description_content');
+
+        if (! $allowRefresh) {
+            $query->where('status', '!=', OrderStatus::Completed->value)
+                  ->where('is_legacy_closed', false);
+        } else {
+            // در حالت refresh: فقط سفارش‌هایی که یا قبلاً legacy_closed شده‌اند
+            // یا هنوز Completed نیستند. (تا فاکتور‌های واقعی پنل را دست نزنیم.)
+            $query->where(function ($q) {
+                $q->where('is_legacy_closed', true)
+                  ->orWhere('status', '!=', OrderStatus::Completed->value);
+            });
+        }
 
         if ($orderCode) {
             $query->where('order_code', $orderCode);
