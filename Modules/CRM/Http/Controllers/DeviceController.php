@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Faq;
@@ -53,11 +54,13 @@ class DeviceController extends Controller
 
         $faqIds = $this->extractFaqIds($validated);
         $reviewIds = $this->extractReviewIds($validated);
+        $brandIds = $this->extractBrandIds($validated);
         $this->applyDefaults($validated, true);
 
         $device = Device::create($validated);
         $device->faqs()->sync($this->withSortOrder($faqIds));
         $device->reviews()->sync($reviewIds);
+        $device->brands()->sync($this->withSortOrder($brandIds));
 
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه با موفقیت اضافه شد.');
@@ -75,11 +78,13 @@ class DeviceController extends Controller
 
         $faqIds = $this->extractFaqIds($validated);
         $reviewIds = $this->extractReviewIds($validated);
+        $brandIds = $this->extractBrandIds($validated);
         $this->applyDefaults($validated, false);
 
         $device->update($validated);
         $device->faqs()->sync($this->withSortOrder($faqIds));
         $device->reviews()->sync($reviewIds);
+        $device->brands()->sync($this->withSortOrder($brandIds));
 
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه ویرایش شد.');
@@ -107,6 +112,14 @@ class DeviceController extends Controller
                 ->limit(500)
                 ->get(['id', 'type', 'author_name', 'topic', 'rating', 'content']),
             'selectedReviewIds' => $device ? $device->reviews()->pluck('site_reviews.id')->all() : [],
+            'allBrands' => Brand::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'logo']),
+            'selectedBrandIds' => $device
+                ? $device->brands()->pluck('crm_brands.id')->map(fn ($i) => (int) $i)->all()
+                : [],
         ];
     }
 
@@ -187,7 +200,22 @@ class DeviceController extends Controller
 
             'review_ids' => 'nullable|array',
             'review_ids.*' => 'string|exists:site_reviews,id',
+
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'integer|exists:crm_brands,id',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, int>
+     */
+    private function extractBrandIds(array &$validated): array
+    {
+        $ids = array_values(array_map('intval', array_filter((array) ($validated['brand_ids'] ?? []), fn ($v) => $v !== null && $v !== '')));
+        unset($validated['brand_ids']);
+
+        return array_values(array_unique($ids));
     }
 
     /**

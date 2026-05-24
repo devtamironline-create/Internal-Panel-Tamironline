@@ -239,6 +239,18 @@
             </div>
         </div>
 
+        {{-- برندهای پشتیبانی‌شده توسط این دستگاه --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            @include('crm::partials.multi-picker', [
+                'name'        => 'brand_ids',
+                'items'       => $allBrands ?? collect(),
+                'selectedIds' => $selectedBrandIds ?? [],
+                'label'       => 'برندهای پشتیبانی‌شده توسط این دستگاه',
+                'help'        => 'برندهایی را که برای این دستگاه تعمیر می‌کنید انتخاب کنید. اگر هیچ‌کدام را انتخاب نکنید، در API همه‌ی برندهای فعال نمایش داده می‌شوند.',
+                'emptyText'   => 'برند فعالی موجود نیست.',
+            ])
+        </div>
+
         {{-- FAQ از بانک — انتخاب چندتایی از /admin/site/faqs --}}
         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
             <label class="block text-sm font-medium mb-2">سوالات متداول این دستگاه</label>

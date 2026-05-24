@@ -48,7 +48,7 @@
     @php
         $allDevices = \Modules\CRM\Models\Device::query()->where('is_active', true)
             ->orderBy('sort_order')->orderBy('name')
-            ->get(['id', 'name', 'slug']);
+            ->get(['id', 'name', 'slug', 'thumbnail', 'icon']);
         $selectedDeviceIds = old(
             'device_ids',
             isset($brand) ? $brand->devices()->pluck('crm_devices.id')->all() : []
@@ -56,18 +56,14 @@
         $selectedDeviceIds = array_map('intval', (array) $selectedDeviceIds);
     @endphp
     <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-            دستگاه‌های قابل پشتیبانی توسط این برند
-        </label>
-        <p class="text-xs text-gray-500 mb-2">با Ctrl/Cmd چند مورد را انتخاب کنید. برای فیلتر برندها بر اساس دستگاه در سایت استفاده می‌شود.</p>
-        <select name="device_ids[]" multiple size="6"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
-            @foreach ($allDevices as $d)
-                <option value="{{ $d->id }}" @selected(in_array((int) $d->id, $selectedDeviceIds, true))>
-                    {{ $d->name }} ({{ $d->slug }})
-                </option>
-            @endforeach
-        </select>
+        @include('crm::partials.multi-picker', [
+            'name'        => 'device_ids',
+            'items'       => $allDevices,
+            'selectedIds' => $selectedDeviceIds,
+            'label'       => 'دستگاه‌های قابل پشتیبانی توسط این برند',
+            'help'        => 'دستگاه‌هایی را که این برند تعمیر می‌کند انتخاب کنید. برای فیلتر برندها بر اساس دستگاه در سایت استفاده می‌شود (تغییر pivot crm_device_brands).',
+            'emptyText'   => 'دستگاه فعالی موجود نیست.',
+        ])
     </div>
 </div>
 
