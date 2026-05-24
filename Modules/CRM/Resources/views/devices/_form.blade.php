@@ -253,55 +253,58 @@
 
         {{-- FAQ از بانک — انتخاب چندتایی از /admin/site/faqs --}}
         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <label class="block text-sm font-medium mb-2">سوالات متداول این دستگاه</label>
-            <p class="text-xs text-gray-500 mb-2">
-                از <a href="{{ route('site.admin.faqs.index') }}" target="_blank" class="text-blue-600 hover:underline">بانک FAQ</a>
-                سوالاتی را که می‌خواهید روی صفحه‌ی این دستگاه نشان داده شوند انتخاب کنید. ترتیب علامت‌زدن = ترتیب نمایش.
-            </p>
-            @php $selFaqs = old('faq_ids', $selectedFaqIds); @endphp
-            <div class="border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-                @forelse($allFaqs as $f)
-                    <label class="flex items-start gap-2 p-1 hover:bg-white dark:hover:bg-gray-800 rounded">
-                        <input type="checkbox" name="faq_ids[]" value="{{ $f->id }}"
-                               @checked(in_array($f->id, $selFaqs, true))
-                               class="mt-1">
-                        <span class="text-sm">{{ $f->question }}</span>
-                    </label>
-                @empty
-                    <p class="text-xs text-gray-400">FAQ منتشرشده‌ای موجود نیست. <a href="{{ route('site.admin.faqs.create') }}" target="_blank" class="text-blue-600 hover:underline">ایجاد سوال جدید</a></p>
-                @endforelse
-            </div>
+            @php
+                $faqItems = ($allFaqs ?? collect())->map(fn ($f) => (object) [
+                    'id' => $f->id,
+                    'label' => $f->question,
+                    'description_text' => \Illuminate\Support\Str::limit(strip_tags((string) ($f->answer ?? '')), 180),
+                    'badge' => 'FAQ',
+                    'badge_color' => 'indigo',
+                ]);
+            @endphp
+            @include('crm::partials.multi-picker', [
+                'name'        => 'faq_ids',
+                'items'       => $faqItems,
+                'selectedIds' => $selectedFaqIds ?? [],
+                'columns'     => 'wide',
+                'label'       => 'سوالات متداول این دستگاه',
+                'help'        => 'از بانک FAQ سوالاتی که می‌خواهید روی صفحه‌ی این دستگاه نشان داده شوند انتخاب کنید. ترتیب انتخاب = ترتیب نمایش. ' .
+                                 'مدیریت بانک: ' .
+                                 '<a href="' . route('site.admin.faqs.index') . '" target="_blank">/admin/site/faqs</a>',
+                'emptyText'   => 'هنوز سوال منتشرشده‌ای در بانک FAQ نیست.',
+            ])
         </div>
 
         {{-- Reviews از بانک — انتخاب چندتایی از /admin/site/reviews --}}
         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <label class="block text-sm font-medium mb-2">دیدگاه‌های نمایش‌داده‌شده در این دستگاه</label>
-            <p class="text-xs text-gray-500 mb-2">
-                از <a href="{{ route('site.admin.reviews.index') }}" target="_blank" class="text-blue-600 hover:underline">بانک نظرات</a>
-                دیدگاه‌هایی را که می‌خواهید روی این دستگاه نمایش داده شوند انتخاب کنید (شامل توصیه‌نامه‌های صوتی و نظرات متنی تأییدشده).
-            </p>
-            @php $selReviews = old('review_ids', $selectedReviewIds); @endphp
-            <div class="border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-                @forelse($allReviews as $r)
-                    <label class="flex items-start gap-2 p-1 hover:bg-white dark:hover:bg-gray-800 rounded">
-                        <input type="checkbox" name="review_ids[]" value="{{ $r->id }}"
-                               @checked(in_array($r->id, $selReviews, true))
-                               class="mt-1">
-                        <span class="text-sm">
-                            @if($r->type === \Modules\Site\Models\Review::TYPE_AUDIO)
-                                <span class="px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700">صوتی</span>
-                            @else
-                                <span class="px-1.5 py-0.5 rounded text-xs bg-sky-100 text-sky-700">متنی</span>
-                            @endif
-                            <strong>{{ $r->author_name }}</strong> — {{ str_repeat('★', (int) $r->rating) }}
-                            @if($r->topic) — {{ $r->topic }} @endif
-                            @if($r->content) — <span class="text-gray-500">{{ \Illuminate\Support\Str::limit($r->content, 80) }}</span> @endif
-                        </span>
-                    </label>
-                @empty
-                    <p class="text-xs text-gray-400">دیدگاه تأییدشده‌ای موجود نیست. <a href="{{ route('site.admin.reviews.create') }}" target="_blank" class="text-blue-600 hover:underline">ایجاد توصیه‌نامه</a></p>
-                @endforelse
-            </div>
+            @php
+                $reviewItems = ($allReviews ?? collect())->map(function ($r) {
+                    $isAudio = $r->type === \Modules\Site\Models\Review::TYPE_AUDIO;
+                    $stars = str_repeat('★', (int) $r->rating) . str_repeat('☆', max(0, 5 - (int) $r->rating));
+                    $body = $isAudio
+                        ? ($r->topic ? $r->topic . ' (' . $stars . ')' : $stars)
+                        : ($r->content ? $stars . ' — ' . \Illuminate\Support\Str::limit(strip_tags((string) $r->content), 180) : $stars);
+
+                    return (object) [
+                        'id' => $r->id,
+                        'label' => $r->author_name,
+                        'description_text' => $body,
+                        'badge' => $isAudio ? 'صوتی' : 'متنی',
+                        'badge_color' => $isAudio ? 'purple' : 'sky',
+                    ];
+                });
+            @endphp
+            @include('crm::partials.multi-picker', [
+                'name'        => 'review_ids',
+                'items'       => $reviewItems,
+                'selectedIds' => $selectedReviewIds ?? [],
+                'columns'     => 'wide',
+                'label'       => 'دیدگاه‌های نمایش‌داده‌شده در این دستگاه',
+                'help'        => 'از بانک نظرات (شامل توصیه‌نامه‌های صوتی و نظرات متنی تأییدشده) انتخاب کنید. ' .
+                                 'مدیریت بانک: ' .
+                                 '<a href="' . route('site.admin.reviews.index') . '" target="_blank">/admin/site/reviews</a>',
+                'emptyText'   => 'دیدگاه تأییدشده‌ای در بانک نیست.',
+            ])
         </div>
 
         {{-- مشکلات رایج — مخفی از دید ادمین (با CSS) --}}

@@ -1,32 +1,44 @@
 @php
     /**
-     * Multi-picker قابل استفاده برای انتخاب چندتایی برند/دستگاه/... با UI کارتی.
+     * Multi-picker قابل استفاده برای انتخاب چندتایی برند/دستگاه/FAQ/Review و موارد مشابه.
      *
      * Props:
-     *   $name        — نام فیلد فرم (مثل 'device_ids' یا 'brand_ids')
-     *   $items       — Collection|array از آیتم‌ها (هر آیتم باید id, label, slug, image داشته باشد)
-     *   $selectedIds — array<int> از idهای انتخاب‌شده
+     *   $name        — نام فیلد فرم (مثل 'device_ids', 'faq_ids', 'review_ids')
+     *   $items       — Collection|array از آیتم‌ها (هر آیتم می‌تواند داشته باشد:
+     *                  id, label/name/question, slug, image/logo/thumbnail,
+     *                  description (پیش‌نمایش متنی), badge (متن chip), badge_color)
+     *   $selectedIds — array از idهای انتخاب‌شده (int یا string ULID)
      *   $label       — متن لیبل بالای picker
      *   $help        — راهنمای زیر لیبل (اختیاری)
      *   $emptyText   — متنی که اگر آیتمی نباشد نمایش داده می‌شود
-     *
-     * هر آیتم به این شکل نرمالایز می‌شود:
-     *   ['id' => int, 'label' => 'name', 'slug' => 'kebab', 'image' => 'url|null']
+     *   $columns     — 'compact' (4 ستون، برای آیتم‌های تصویری) |
+     *                  'wide'    (2 ستون، برای متن طولانی)
      */
     $name        = $name ?? 'ids';
     $label       = $label ?? 'انتخاب';
     $help        = $help ?? null;
     $emptyText   = $emptyText ?? 'موردی برای نمایش وجود ندارد.';
     $items       = $items ?? collect();
-    $selectedIds = array_values(array_map('intval', (array) ($selectedIds ?? [])));
+    $selectedIds = array_values((array) ($selectedIds ?? []));
+    $columns     = $columns ?? 'compact';
+    $colsClass   = $columns === 'wide'
+        ? 'grid-cols-1 lg:grid-cols-2'
+        : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4';
 
     // نرمال‌سازی آیتم‌ها به آرایه‌ی ساده برای Alpine
-    $itemsArr = collect($items)->map(fn ($i) => [
-        'id'    => (int) ($i->id ?? 0),
-        'label' => (string) ($i->label ?? $i->name ?? '—'),
-        'slug'  => (string) ($i->slug ?? ''),
-        'image' => $i->image ?? $i->logo ?? $i->thumbnail ?? null,
-    ])->values()->all();
+    $itemsArr = collect($items)->map(function ($i) {
+        $id = is_object($i) ? ($i->id ?? null) : ($i['id'] ?? null);
+
+        return [
+            'id'          => $id,
+            'label'       => (string) (data_get($i, 'label') ?? data_get($i, 'name') ?? data_get($i, 'question') ?? '—'),
+            'slug'        => (string) (data_get($i, 'slug') ?? ''),
+            'image'       => data_get($i, 'image') ?? data_get($i, 'logo') ?? data_get($i, 'thumbnail') ?? null,
+            'description' => data_get($i, 'description_text'),
+            'badge'       => data_get($i, 'badge'),
+            'badge_color' => data_get($i, 'badge_color') ?? 'gray',
+        ];
+    })->values()->all();
 @endphp
 
 <div x-data="{
@@ -34,22 +46,41 @@
         selected: @js($selectedIds),
         items: @js($itemsArr),
         toggle(id) {
-            if (this.selected.includes(id)) {
-                this.selected = this.selected.filter(x => x !== id);
-            } else {
+            const idx = this.selected.findIndex(x => x == id);
+            if (idx === -1) {
                 this.selected.push(id);
+            } else {
+                this.selected.splice(idx, 1);
             }
         },
-        isSelected(id) { return this.selected.includes(id); },
+        isSelected(id) { return this.selected.some(x => x == id); },
         get filtered() {
             const q = this.search.trim().toLowerCase();
             if (!q) return this.items;
             return this.items.filter(i =>
-                i.label.toLowerCase().includes(q) || i.slug.toLowerCase().includes(q)
+                (i.label || '').toLowerCase().includes(q)
+                || (i.slug || '').toLowerCase().includes(q)
+                || (i.description || '').toLowerCase().includes(q)
             );
         },
-        selectAll() { this.selected = this.items.map(i => i.id); },
+        selectAll() {
+            this.filtered.forEach(i => {
+                if (!this.isSelected(i.id)) this.selected.push(i.id);
+            });
+        },
         clearAll() { this.selected = []; },
+        badgeClass(color) {
+            const map = {
+                purple: 'bg-purple-100 text-purple-700',
+                sky:    'bg-sky-100 text-sky-700',
+                amber:  'bg-amber-100 text-amber-700',
+                emerald:'bg-emerald-100 text-emerald-700',
+                rose:   'bg-rose-100 text-rose-700',
+                indigo: 'bg-indigo-100 text-indigo-700',
+                gray:   'bg-gray-100 text-gray-700',
+            };
+            return map[color] || map.gray;
+        }
      }"
      class="space-y-2">
 
@@ -58,7 +89,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ $label }}</label>
             @if($help)
-                <p class="text-xs text-gray-500 mt-1">{{ $help }}</p>
+                <p class="text-xs text-gray-500 mt-1 [&_a]:text-blue-600 [&_a]:hover:underline">{!! $help !!}</p>
             @endif
         </div>
         <div class="flex items-center gap-2 text-xs">
@@ -72,7 +103,7 @@
 
     {{-- جستجو --}}
     <div class="relative">
-        <input type="text" x-model.debounce.150ms="search" placeholder="جستجو در نام یا slug..."
+        <input type="text" x-model.debounce.150ms="search" placeholder="جستجو..."
                class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500">
         <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
@@ -80,11 +111,11 @@
     </div>
 
     {{-- گرید کارت‌ها --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
+    <div class="grid {{ $colsClass }} gap-2 max-h-[28rem] overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
         <template x-for="item in filtered" :key="item.id">
             <label
                 @click.prevent="toggle(item.id)"
-                class="relative flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border-2 rounded-lg cursor-pointer transition hover:shadow-md"
+                class="relative flex items-start gap-3 p-3 bg-white dark:bg-gray-800 border-2 rounded-lg cursor-pointer transition hover:shadow-md"
                 :class="isSelected(item.id) ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'">
 
                 {{-- چک‌مارک گوشه --}}
@@ -99,15 +130,28 @@
                          class="w-12 h-12 rounded object-contain bg-white border border-gray-100 shrink-0">
                 </template>
                 <template x-if="!item.image">
-                    <div class="w-12 h-12 rounded bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center text-gray-400 text-xs shrink-0">
-                        <span x-text="item.label.charAt(0)"></span>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-700 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-sm shrink-0">
+                        <span x-text="(item.label || '?').charAt(0)"></span>
                     </div>
                 </template>
 
-                {{-- نام + slug --}}
+                {{-- محتوای کارت --}}
                 <div class="min-w-0 flex-1">
-                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" x-text="item.label"></div>
-                    <div class="text-xs text-gray-500 font-mono truncate ltr" dir="ltr" x-text="item.slug"></div>
+                    {{-- badge بالای تیتر --}}
+                    <template x-if="item.badge">
+                        <span class="inline-block mb-1 px-2 py-0.5 rounded text-[10px] font-bold"
+                              :class="badgeClass(item.badge_color)" x-text="item.badge"></span>
+                    </template>
+                    {{-- تیتر --}}
+                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug" x-text="item.label"></div>
+                    {{-- slug --}}
+                    <template x-if="item.slug">
+                        <div class="text-xs text-gray-500 font-mono truncate ltr mt-0.5" dir="ltr" x-text="item.slug"></div>
+                    </template>
+                    {{-- description / پیش‌نمایش --}}
+                    <template x-if="item.description">
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed line-clamp-3" x-text="item.description"></p>
+                    </template>
                 </div>
             </label>
         </template>
