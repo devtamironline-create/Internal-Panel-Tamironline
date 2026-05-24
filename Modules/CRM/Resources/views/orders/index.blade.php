@@ -359,6 +359,7 @@
     </div>
 
     <div class="flex items-center justify-between flex-wrap gap-3 px-2">
+        <div>{{ $orders->links() }}</div>
         <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
             <label for="per-page-select">تعداد در صفحه:</label>
             <select id="per-page-select"
@@ -369,7 +370,6 @@
                 @endforeach
             </select>
         </div>
-        <div>{{ $orders->links() }}</div>
     </div>
 </div>
 @endsection
