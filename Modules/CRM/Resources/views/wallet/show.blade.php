@@ -95,9 +95,9 @@
                     <div class="flex items-start gap-2 text-xs">
                         <span class="text-rose-700 dark:text-rose-300 font-bold">⚠ فقط نمایش</span>
                         <p class="text-rose-700 dark:text-rose-300 leading-6">
-                            این تراکنش‌ها قبل از reset مالی (sync با WP) ثبت بودند و الان فقط برای مرور تاریخی نگه‌داری شده‌اند.
+                            این تراکنش‌ها قبل از reset مالی ثبت بودند و الان فقط برای مرور تاریخی نگه‌داری شده‌اند.
                             <b>هیچ‌کدام در محاسبهٔ موجودی فعلی، true_balance، invoice_debt یا گزارش مالی وارد نمی‌شوند.</b>
-                            داده‌ها از فایل آرشیو storage/app/crm/wallet-reset-*.jsonl خوانده می‌شوند.
+                            منابع: فایل‌های JSONL (storage/app/crm/wallet-reset-*.jsonl) + جدول crm_wallet_archive_txs (ایمپورت از WP).
                         </p>
                     </div>
                 </div>
@@ -126,12 +126,18 @@
                             <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">{{ $a['created_at'] ?? '—' }}</td>
                             <td class="px-4 py-2"><span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $typeBadge }}">{{ $typeLabel }}</span></td>
                             <td class="px-4 py-2 font-bold {{ $amount >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ ($amount >= 0 ? '+' : '') . number_format($amount) }}</td>
-                            <td class="px-4 py-2 text-gray-500">{{ number_format((int) ($a['balance_after'] ?? 0)) }}</td>
+                            <td class="px-4 py-2 text-gray-500">
+                                @if(array_key_exists('balance_after', $a) && $a['balance_after'] !== null)
+                                    {{ number_format((int) $a['balance_after']) }}
+                                @else
+                                    <span class="text-gray-300">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-2 text-xs text-gray-600">{{ $a['note'] ?? '—' }}</td>
                             <td class="px-4 py-2 text-[10px] text-gray-400" dir="ltr">
-                                {{ $a['_source_file'] ?? '' }}
+                                {{ $a['_source'] ?? $a['_source_file'] ?? '' }}
                                 @if(! empty($a['_reset_at']))
-                                    <br>reset: {{ \Carbon\Carbon::parse($a['_reset_at'])->format('Y-m-d H:i') }}
+                                    <br>{{ \Carbon\Carbon::parse($a['_reset_at'])->format('Y-m-d H:i') }}
                                 @endif
                             </td>
                         </tr>

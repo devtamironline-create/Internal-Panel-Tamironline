@@ -42,6 +42,7 @@ use Modules\CRM\Console\Commands\DiffOrderStatuses;
 use Modules\CRM\Console\Commands\BackupWalletData;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
+use Modules\CRM\Console\Commands\ImportWalletArchiveFromWp;
 use Modules\CRM\Console\Commands\InspectOrder;
 use Modules\CRM\Console\Commands\RestoreOrderStatuses;
 use Modules\CRM\Console\Commands\RestoreStatusFromEvents;
@@ -128,6 +129,7 @@ class CrmServiceProvider extends ServiceProvider
                 DiagnoseOrderSync::class,
                 DiagnoseOrderFinancialHealth::class,
                 BackupWalletData::class,
+                ImportWalletArchiveFromWp::class,
             ]);
         }
     }

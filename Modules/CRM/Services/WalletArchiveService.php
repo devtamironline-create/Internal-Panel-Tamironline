@@ -3,11 +3,18 @@
 namespace Modules\CRM\Services;
 
 use Illuminate\Support\Facades\Log;
+use Modules\CRM\Models\WalletArchiveTx;
 
 /**
- * سرویس فقط-خوان برای نمایش تاریخچهٔ تراکنش‌های کیف‌پولی که در
- * crm:reset-wallet-from-wp --apply حذف شدند و در فایل‌های JSONL
- * بک‌آپ شدند (storage/app/crm/wallet-reset-*.jsonl).
+ * سرویس فقط-خوان برای نمایش تاریخچهٔ تراکنش‌های کیف‌پولی که قبل از
+ * reset مالی وجود داشتند. دو منبع داده پشتیبانی می‌شود:
+ *
+ *   ۱) فایل‌های JSONL در storage/app/crm/wallet-reset-*.jsonl
+ *      (ساخته‌شده توسط ResetWalletFromWp وقتی --apply اجرا شده باشد)
+ *
+ *   ۲) جدول crm_wallet_archive_txs که توسط کامند
+ *      crm:wallet:import-archive-from-wp از WP CRM پر می‌شود
+ *      (post_type=financial)
  *
  * ⚠️ این داده‌ها هرگز نباید در محاسبه‌ی هیچ مقدار مالی استفاده شوند:
  *   - wallet_balance ✗
@@ -17,7 +24,7 @@ use Illuminate\Support\Facades\Log;
  *   - SyncFinancial inbound ✗
  *
  * فقط برای نمایش read-only در UI کیف‌پول هر تکنسین به‌عنوان «تاریخچهٔ
- * قبل از reset». این سرویس تنها از فایل می‌خواند و هیچ DB write یا
+ * قبل از reset». این سرویس تنها read انجام می‌دهد — هیچ DB write یا
  * تأثیری بر هیچ aggregate ندارد.
  */
 class WalletArchiveService
@@ -104,33 +111,67 @@ class WalletArchiveService
 
     /**
      * فقط تراکنش‌های wallet (flat) آرشیوی این تکنسین — برای نمایش در
-     * یک جدول واحد. ترتیب بر اساس created_at قدیمی‌ترین → جدیدترین.
+     * یک جدول واحد. شامل دو منبع: JSONL + crm_wallet_archive_txs.
      *
      * @return array<int, array<string, mixed>>
      */
     public function getFlatTransactions(int $technicianId): array
     {
-        $archives = $this->getForTechnician($technicianId);
         $rows = [];
 
-        foreach ($archives as $arch) {
+        // منبع ۱: فایل‌های JSONL (wallet-reset-*.jsonl)
+        foreach ($this->getForTechnician($technicianId) as $arch) {
             foreach ($arch['wallet_txs'] as $tx) {
                 $rows[] = $tx + [
-                    '_source_file' => $arch['source_file'],
+                    '_source' => 'JSONL: ' . $arch['source_file'],
                     '_reset_at' => $arch['reset_at'],
                 ];
             }
         }
 
-        // مرتب‌سازی بر اساس id اصلی (که با ترتیب زمانی یکی است)
-        usort($rows, fn ($a, $b) => ((int) ($a['id'] ?? 0)) <=> ((int) ($b['id'] ?? 0)));
+        // منبع ۲: جدول crm_wallet_archive_txs (ایمپورت‌شده از WP)
+        $dbRows = WalletArchiveTx::query()
+            ->where('technician_id', $technicianId)
+            ->orderBy('wp_created_at')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($dbRows as $r) {
+            $rows[] = [
+                'id' => $r->wp_post_id, // برای ترتیب
+                'type' => $r->type,
+                'amount' => (int) $r->amount,
+                'balance_after' => null, // در منبع WP running balance نداریم
+                'note' => $r->note,
+                'created_at' => $r->wp_created_at?->toDateTimeString(),
+                'wp_id' => $r->wp_post_id,
+                '_source' => 'WP archive (post_id=' . $r->wp_post_id . ')',
+                '_reset_at' => $r->imported_at?->toDateTimeString(),
+                '_refid' => $r->refid,
+                '_payment_status' => $r->payment_status,
+            ];
+        }
+
+        // مرتب‌سازی بر اساس created_at (قدیمی‌ترین → جدیدترین).
+        // اگر created_at نبود، fallback به id.
+        usort($rows, function ($a, $b) {
+            $ta = $a['created_at'] ?? null;
+            $tb = $b['created_at'] ?? null;
+            if ($ta && $tb) {
+                return strcmp((string) $ta, (string) $tb);
+            }
+            return ((int) ($a['id'] ?? 0)) <=> ((int) ($b['id'] ?? 0));
+        });
 
         return $rows;
     }
 
-    /** آیا هیچ آرشیوی برای این تکنسین وجود دارد؟ */
+    /** آیا هیچ آرشیوی (JSONL یا DB) برای این تکنسین وجود دارد؟ */
     public function hasArchive(int $technicianId): bool
     {
-        return ! empty($this->getForTechnician($technicianId));
+        if (! empty($this->getForTechnician($technicianId))) {
+            return true;
+        }
+        return WalletArchiveTx::where('technician_id', $technicianId)->exists();
     }
 }
