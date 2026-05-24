@@ -174,7 +174,7 @@ class DailyActivityController extends Controller
                 ];
             }
 
-            usort($events, fn ($a, $b) => $a['time']->lessThan($b['time']) ? -1 : 1);
+            usort($events, fn ($a, $b) => $a['time']->getTimestamp() <=> $b['time']->getTimestamp());
 
             // ─── Anomaly detection ─────────────────────────────────
             $anomalies = [];
@@ -222,7 +222,7 @@ class DailyActivityController extends Controller
         }
 
         // مرتب‌سازی نزولی بر اساس آخرین event
-        usort($records, fn ($a, $b) => $b['last_event_at']->compare($a['last_event_at']));
+        usort($records, fn ($a, $b) => $b['last_event_at']->getTimestamp() <=> $a['last_event_at']->getTimestamp());
 
         $summary = [
             'total_orders' => count($records),
