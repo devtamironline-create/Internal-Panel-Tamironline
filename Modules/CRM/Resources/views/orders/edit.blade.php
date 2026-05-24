@@ -19,7 +19,7 @@
                     <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">اطلاعات مشتری</h3>
                     <span class="text-[11px] text-amber-700 dark:text-amber-300">⚠ تغییر این فیلدها روی پروفایل مشتری اعمال می‌شود</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">نام مشتری</label>
                         <input type="text" name="customer_name" maxlength="255"
@@ -34,6 +34,14 @@
                                placeholder="09xxxxxxxxx"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                         @error('customer_mobile')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">شماره ثابت</label>
+                        <input type="text" name="customer_phone" maxlength="20" dir="ltr"
+                               value="{{ old('customer_phone', $order->customer?->phone ?: $order->customer_phone ?? '') }}"
+                               placeholder="021xxxxxxxx"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                        @error('customer_phone')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
             </div>

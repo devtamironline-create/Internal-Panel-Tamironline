@@ -332,6 +332,8 @@ class OrderController extends Controller
     {
         $order->load(['customer']);
 
+        $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []);
+
         return view('crm::orders.edit', [
             'order' => $order,
             'brands' => Brand::active()->ordered()->get(['id', 'name']),
@@ -340,6 +342,9 @@ class OrderController extends Controller
             'cities' => $order->province_id
                 ? City::where('province_id', $order->province_id)->ordered()->get(['id', 'name'])
                 : collect(),
+            'technicians' => Technician::orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),
+            'introductionList' => is_array($introductionList) ? array_values(array_filter(array_map('strval', $introductionList))) : [],
         ]);
     }
 
@@ -379,6 +384,15 @@ class OrderController extends Controller
             'notes' => $validated['notes'] ?? null,
             'customer_name' => $newCustomerName ?? $order->customer_name,
             'customer_mobile' => $newCustomerMobile ?? $order->customer_mobile,
+            // فیلدهای اضافه‌شده — هم‌سو با OrderWizard هنگام ثبت
+            'introduction' => $validated['introduction'] ?? $order->introduction,
+            'order_type' => $validated['order_type'] ?? $order->order_type,
+            'technician_id' => array_key_exists('technician_id', $validated)
+                ? ($validated['technician_id'] ?: null)
+                : $order->technician_id,
+            'subscription' => array_key_exists('subscription', $validated)
+                ? ($validated['subscription'] ?: null)
+                : $order->subscription,
         ]);
 
         // ── اعمال تغییر روی Customer (observer در Customer::booted خودکار
@@ -391,6 +405,10 @@ class OrderController extends Controller
             }
             if ($newCustomerMobile !== null && $newCustomerMobile !== $customer->mobile) {
                 $dirty['mobile'] = $newCustomerMobile;
+            }
+            $newCustomerPhone = $validated['customer_phone'] ?? null;
+            if ($newCustomerPhone !== null && $newCustomerPhone !== $customer->phone) {
+                $dirty['phone'] = $newCustomerPhone;
             }
             if ($dirty) {
                 $customer->update($dirty);
@@ -826,10 +844,17 @@ class OrderController extends Controller
             $rules['final_price'] = 'nullable|integer|min:0';
             $rules['customer_name'] = 'nullable|string|max:255';
             $rules['customer_mobile'] = 'nullable|string|max:20|regex:/^09\d{9}$/';
+            $rules['customer_phone'] = 'nullable|string|max:20';
         } else {
             $rules['customer_id'] = 'required|exists:crm_customers,id';
             $rules['status'] = 'nullable|string|in:' . implode(',', array_keys(OrderStatus::options()));
         }
+
+        // فیلدهای مشترک edit + create که از فرم می‌آیند
+        $rules['introduction'] = 'nullable|string|max:255';
+        $rules['order_type'] = 'nullable|string|in:repair,service,install';
+        $rules['technician_id'] = 'nullable|integer|exists:crm_technicians,id';
+        $rules['subscription'] = 'nullable|integer|min:0';
 
         return $request->validate($rules);
     }
