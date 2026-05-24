@@ -123,7 +123,7 @@
                 @if($source === 'faqs')
                     از <a href="{{ route('site.admin.faqs.index') }}" target="_blank" class="text-blue-600 hover:underline">مخزن سوالات</a> انتخاب کنید. ترتیب کلیک = ترتیب نمایش.
                 @elseif($source === 'testimonials')
-                    از <a href="{{ route('site.admin.testimonials.index') }}" target="_blank" class="text-blue-600 hover:underline">مخزن نظرات</a> انتخاب کنید.
+                    از <a href="{{ route('site.admin.reviews.index', ['type' => 'audio']) }}" target="_blank" class="text-blue-600 hover:underline">مخزن نظرات</a> انتخاب کنید.
                 @elseif($source === 'devices')
                     از <a href="{{ route('crm.devices.index') }}" target="_blank" class="text-blue-600 hover:underline">دستگاه‌های CRM</a> انتخاب کنید.
                 @elseif($source === 'brands')
