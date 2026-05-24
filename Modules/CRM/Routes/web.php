@@ -252,6 +252,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // ─── فعالیت روزانه (timeline + anomaly detection) ─
         Route::get('reports/daily-activity', [\Modules\CRM\Http\Controllers\Reports\DailyActivityController::class, 'index'])
             ->name('reports.daily-activity');
+
+        // ─── سفارش‌های یتیم (بدون تکنسین) — bulk assign ─
+        Route::get('orphan-orders', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'index'])
+            ->name('orphan-orders.index');
+        Route::post('orphan-orders/assign', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'assign'])
+            ->name('orphan-orders.assign');
+        Route::post('orphan-orders/auto-assign', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'autoAssignMatched'])
+            ->name('orphan-orders.auto-assign');
     });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
