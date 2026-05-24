@@ -39,6 +39,24 @@
                 @endcan
             @endif
 
+            {{-- دکمه بستن از روی لاگ قدیمی (Legacy Close) — فقط اگر سفارش هنوز Completed
+                 نیست و در لاگ پنل قدیمی رویداد «انجام کار» وجود دارد. این مسیر هیچ
+                 Invoice یا WalletTransaction ایجاد نمی‌کند. --}}
+            @if($order->status !== OrderStatus::Completed && ! $order->is_legacy_closed && ! empty($order->order_description_content))
+                @can('manage-crm-financial')
+                <form method="POST" action="{{ route('crm.orders.retro-close', $order) }}"
+                      onsubmit="return confirm('بستن این سفارش بر اساس لاگ پنل قدیمی؟\n\nاعداد مالی از لاگ خوانده می‌شود و فلگ legacy ست می‌شود.\nهیچ فاکتور یا تراکنش کیف‌پولی ساخته نخواهد شد.');">
+                    @csrf
+                    <button type="submit"
+                            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg inline-flex items-center gap-2 text-sm font-bold"
+                            title="بستن سفارش بر اساس لاگ پنل قدیمی — بدون ساخت فاکتور یا تراکنش کیف‌پول">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                        🗄 بستن از لاگ قدیمی
+                    </button>
+                </form>
+                @endcan
+            @endif
+
             @can('view-crm-orders')
             <button type="button" @click="showNotes = true"
                     class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg inline-flex items-center gap-2">

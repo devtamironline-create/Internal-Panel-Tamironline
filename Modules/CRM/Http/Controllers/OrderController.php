@@ -17,6 +17,7 @@ use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\InvoiceService;
+use Modules\CRM\Services\LegacyCloseService;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 class OrderController extends Controller
@@ -295,6 +296,36 @@ class OrderController extends Controller
             'suggestions' => $suggestions,
             'activeInvoice' => $activeInvoice,
         ]);
+    }
+
+    /**
+     * بستن دستی سفارش بر اساس لاگ پنل WP (Legacy Close).
+     *
+     * این متد دکمهٔ «بستن از روی لاگ قدیمی» را در صفحهٔ سفارش پشتیبانی
+     * می‌کند. هیچ Invoice یا WalletTransaction ساخته نمی‌شود — فقط
+     * status=Completed + فیلدهای مالی از لاگ.
+     *
+     * شرایط نمایش دکمه (در view): status != Completed && !is_legacy_closed.
+     * controller هم همان شرایط را double-check می‌کند.
+     */
+    public function retroClose(Order $order, LegacyCloseService $legacy)
+    {
+        if ($order->status === OrderStatus::Completed && ! $order->is_legacy_closed) {
+            return back()->with('error', 'این سفارش از قبل به‌صورت عادی Completed شده — این مسیر فقط برای سفارش‌های بدون فاکتور است.');
+        }
+
+        $extracted = $legacy->extractFromOrder($order);
+        if (! $extracted) {
+            return back()->with('error', 'لاگ «انجام کار» با اعداد مالی در این سفارش پیدا نشد.');
+        }
+
+        $legacy->applyToOrder($order, $extracted);
+
+        return back()->with('success',
+            'سفارش بسته شد (legacy). سهم تکنسین: ' . number_format($extracted['tech_share']) .
+            ' / سهم شرکت: ' . number_format($extracted['company_share']) .
+            ' — هیچ فاکتور یا تراکنش کیف‌پولی ساخته نشد.'
+        );
     }
 
     public function edit(Order $order)
