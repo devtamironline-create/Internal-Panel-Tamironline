@@ -57,4 +57,5 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::post('/appliance-categories', [TechnicianAdminController::class, 'storeApplianceCategory'])->name('appliance-categories.store');
     Route::put('/appliance-categories/{id}', [TechnicianAdminController::class, 'updateApplianceCategory'])->name('appliance-categories.update');
     Route::delete('/appliance-categories/{id}', [TechnicianAdminController::class, 'deleteApplianceCategory'])->name('appliance-categories.delete');
+    Route::post('/appliance-categories/reorder', [TechnicianAdminController::class, 'reorderApplianceCategories'])->name('appliance-categories.reorder');
 });

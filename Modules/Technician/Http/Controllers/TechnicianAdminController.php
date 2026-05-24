@@ -951,6 +951,29 @@ class TechnicianAdminController extends Controller
     }
 
     /**
+     * مرتب‌سازی drag-drop دسته‌های دستگاه — دریافت آرایه‌ای از idها به
+     * ترتیب جدید و به‌روزرسانی sort_order. روی هر سطح (ریشه‌ها یا
+     * زیرمجموعه‌های یک parent خاص) به‌صورت جداگانه فراخوانی می‌شود.
+     */
+    public function reorderApplianceCategories(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:appliance_categories,id',
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+            foreach ($validated['ids'] as $index => $id) {
+                \DB::table('appliance_categories')
+                    ->where('id', (int) $id)
+                    ->update(['sort_order' => $index + 1, 'updated_at' => now()]);
+            }
+        });
+
+        return response()->json(['ok' => true, 'count' => count($validated['ids'])]);
+    }
+
+    /**
      * ارسال پیامک اطلاع‌رسانی بر اساس وضعیت
      */
     private function sendStatusSms(TechnicianRegistration $registration, string $status): void
