@@ -248,6 +248,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->name('reports.financial');
         Route::get('reports/financial/export', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'export'])
             ->name('reports.financial.export');
+
+        // ─── فعالیت روزانه (timeline + anomaly detection) ─
+        Route::get('reports/daily-activity', [\Modules\CRM\Http\Controllers\Reports\DailyActivityController::class, 'index'])
+            ->name('reports.daily-activity');
     });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
