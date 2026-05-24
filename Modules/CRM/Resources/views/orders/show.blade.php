@@ -799,16 +799,90 @@
                     <span>این سفارش در وضعیت نهایی است. برای تغییر، از «بازگشت سفارش» در پایین استفاده کنید.</span>
                 </div>
                 @else
-                <form action="{{ route('crm.orders.status.change', $order) }}" method="POST" class="space-y-2">
+                <form action="{{ route('crm.orders.status.change', $order) }}" method="POST" class="space-y-3"
+                      enctype="multipart/form-data"
+                      x-data="{
+                          status: '',
+                          isCompleted() { return this.status === 'completed'; },
+                          isCancelled() { return this.status === 'cancelled' || this.status === 'declined'; },
+                      }">
                     @csrf
-                    <select name="status" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <select name="status" required x-model="status"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                         <option value="">— انتخاب وضعیت جدید —</option>
                         @foreach($allowedTransitions as $target)
                         <option value="{{ $target->value }}">{{ $target->label() }}</option>
                         @endforeach
                     </select>
-                    <textarea name="note" rows="2" placeholder="توضیح (اختیاری)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
-                    <button class="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm">ثبت تغییر</button>
+
+                    {{-- توضیح / دلیل — برای کنسل/رد اجباری، برای بقیه اختیاری --}}
+                    <div>
+                        <textarea name="note" rows="2"
+                                  :placeholder="isCancelled() ? 'دلیل کنسل / رد (اجباری)' : 'توضیح (اختیاری)'"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
+                        @error('note')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    {{-- بخش فاکتور — فقط وقتی status=Completed --}}
+                    <div x-show="isCompleted()" x-cloak class="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <div class="text-xs font-bold text-gray-700 dark:text-gray-200 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded px-3 py-2">
+                            💡 با تکمیل سفارش، فاکتور و سهم شرکت خودکار محاسبه می‌شود. اطلاعات مالی زیر را وارد کنید.
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-600 mb-1">جمع کل صورت‌حساب (تومان)</label>
+                                <input type="number" name="price_customer" min="0"
+                                       value="{{ old('price_customer', $order->price_customer ?? '') }}"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-600 mb-1">هزینه قطعات (تومان)</label>
+                                <input type="number" name="cost_price" min="0"
+                                       value="{{ old('cost_price', $order->cost_price ?? '') }}"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-600 mb-1">اجرت</label>
+                                <input type="number" name="hire" min="0"
+                                       value="{{ old('hire', $order->hire ?? 0) }}"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-600 mb-1">ایاب و ذهاب</label>
+                                <input type="number" name="transportation" min="0"
+                                       value="{{ old('transportation', $order->transportation ?? 0) }}"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[11px] text-gray-600 mb-1">تخفیف</label>
+                                <input type="number" name="discount" min="0"
+                                       value="{{ old('discount', $order->discount ?? 0) }}"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] text-gray-600 mb-1">توضیحات فاکتور (به مشتری ارسال می‌شود) <span class="text-rose-600">*</span></label>
+                            <textarea name="invoice_descripotion" rows="3"
+                                      placeholder="مثلاً: تعویض پمپ تخلیه + سرویس کلی"
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">{{ old('invoice_descripotion', $order->invoice_descripotion ?? '') }}</textarea>
+                            @error('invoice_descripotion')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] text-gray-600 mb-1">عکس دستگاه بعد از تعمیر (اختیاری)</label>
+                            <input type="file" name="device_img1" accept="image/*"
+                                   class="w-full text-xs">
+                        </div>
+
+                        <label class="inline-flex items-center gap-2 text-xs text-gray-700">
+                            <input type="checkbox" name="save_as_draft" value="1" class="w-4 h-4">
+                            <span>پیش‌نویس (فاکتور صادر نمی‌شود — فقط ذخیره برای ویرایش بعدی)</span>
+                        </label>
+                    </div>
+
+                    <button class="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-bold">ثبت تغییر</button>
                 </form>
                 @endif
             </div>

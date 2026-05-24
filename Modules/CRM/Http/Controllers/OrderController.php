@@ -567,9 +567,39 @@ class OrderController extends Controller
     // ───────────── تغییر وضعیت ─────────────────────────────────
     public function changeStatus(Request $request, Order $order)
     {
-        $validated = $request->validate([
+        $rules = [
             'status' => ['required', 'string'],
-            'note' => 'nullable|string|max:1000',
+            'note' => 'nullable|string|max:2000',
+        ];
+
+        $statusValue = (string) $request->input('status');
+        $isCompleting = $statusValue === OrderStatus::Completed->value;
+        $isCancelling = in_array($statusValue, [OrderStatus::Cancelled->value, OrderStatus::Declined->value], true);
+
+        // برای کنسل/رد، دلیل اجباری
+        if ($isCancelling) {
+            $rules['note'] = 'required|string|min:5|max:2000';
+        }
+
+        // برای تکمیل، فیلدهای فاکتور — هم‌سو با Tech/DashboardController
+        if ($isCompleting) {
+            $rules += [
+                'price_customer' => 'nullable|integer|min:0',
+                'cost_price' => 'nullable|integer|min:0',
+                'hire' => 'nullable|integer|min:0',
+                'transportation' => 'nullable|integer|min:0',
+                'discount' => 'nullable|integer|min:0',
+                'invoice_descripotion' => 'required|string|min:5|max:2000',
+                'save_as_draft' => 'nullable|boolean',
+                'device_img1' => 'nullable|image|max:10240',
+            ];
+        }
+
+        $validated = $request->validate($rules, [
+            'note.required' => 'برای کنسل/رد سفارش، دلیل الزامی است.',
+            'note.min' => 'دلیل باید حداقل ۵ کاراکتر باشد.',
+            'invoice_descripotion.required' => 'توضیحات فاکتور (متن قابل ارسال به مشتری) اجباری است.',
+            'invoice_descripotion.min' => 'توضیحات فاکتور حداقل ۵ کاراکتر.',
         ]);
 
         $newStatus = OrderStatus::tryFrom($validated['status']);
@@ -600,8 +630,28 @@ class OrderController extends Controller
 
         if ($newStatus === OrderStatus::Completed) {
             $updates['completed_at'] = now();
+
+            // فیلدهای فاکتور — مثل تکنسین
+            foreach (['price_customer', 'cost_price', 'hire', 'transportation', 'discount'] as $field) {
+                if (array_key_exists($field, $validated) && $validated[$field] !== null) {
+                    $updates[$field] = (int) $validated[$field];
+                }
+            }
+            if (filled($validated['invoice_descripotion'] ?? null)) {
+                $updates['invoice_descripotion'] = $validated['invoice_descripotion'];
+            }
+            // total_invoice = max(0, price_customer - cost_price) — هم‌سو با tech
+            $effPC = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
+            $effCP = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+            $updates['total_invoice'] = max(0, $effPC - $effCP);
+            $updates['save_as_draft'] = (bool) ($validated['save_as_draft'] ?? false);
+
+            if ($request->hasFile('device_img1')) {
+                $path = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');
+                $updates['device_img1'] = $path;
+            }
         }
-        if (in_array($newStatus, [OrderStatus::Cancelled, OrderStatus::Declined])) {
+        if ($isCancelling) {
             $updates['cancel_reason'] = $validated['note'] ?? null;
         }
 
@@ -616,9 +666,9 @@ class OrderController extends Controller
             'created_at' => now(),
         ]);
 
-        // تولید خودکار فاکتور در تکمیل سفارش (idempotent)
-        if ($newStatus === OrderStatus::Completed) {
-            $this->invoiceService->generateForOrder($order->refresh(), auth()->id());
+        // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
+        if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
+            $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
         }
 
         // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن
