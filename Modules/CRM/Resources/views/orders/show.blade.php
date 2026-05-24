@@ -43,7 +43,7 @@
                  نیست و در لاگ پنل قدیمی رویداد «انجام کار» وجود دارد. این مسیر هیچ
                  Invoice یا WalletTransaction ایجاد نمی‌کند. --}}
             @if($order->status !== OrderStatus::Completed && ! $order->is_legacy_closed && ! empty($order->order_description_content))
-                @can('manage-crm-financial')
+                @can('manage-crm-legacy-close')
                 <form method="POST" action="{{ route('crm.orders.retro-close', $order) }}"
                       onsubmit="return confirm('بستن این سفارش بر اساس لاگ پنل قدیمی؟\n\nاعداد مالی از لاگ خوانده می‌شود و فلگ legacy ست می‌شود.\nهیچ فاکتور یا تراکنش کیف‌پولی ساخته نخواهد شد.');">
                     @csrf

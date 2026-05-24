@@ -242,18 +242,20 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:view-crm-financial')->group(function () {
         Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
         Route::get('wallet/technician/{technician}', [WalletController::class, 'show'])->name('wallet.show');
+    });
 
-        // ─── گزارش مالی (هم‌سو با list_financial.php پنل WP) ─
+    // ─── گزارش‌های CRM (مالی، فعالیت روزانه) — permission مجزا ────
+    Route::middleware('can:view-crm-reports')->group(function () {
         Route::get('reports/financial', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'index'])
             ->name('reports.financial');
         Route::get('reports/financial/export', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'export'])
             ->name('reports.financial.export');
-
-        // ─── فعالیت روزانه (timeline + anomaly detection) ─
         Route::get('reports/daily-activity', [\Modules\CRM\Http\Controllers\Reports\DailyActivityController::class, 'index'])
             ->name('reports.daily-activity');
+    });
 
-        // ─── سفارش‌های یتیم (بدون تکنسین) — bulk assign ─
+    // ─── سفارش‌های یتیم (bulk assign تکنسین) — permission مجزا ───
+    Route::middleware('can:manage-crm-orphan-orders')->group(function () {
         Route::get('orphan-orders', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'index'])
             ->name('orphan-orders.index');
         Route::post('orphan-orders/assign', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'assign'])
@@ -287,10 +289,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
-        Route::post('orders/{order}/retro-close', [OrderController::class, 'retroClose'])->name('orders.retro-close');
         Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');
         Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
         Route::post('invoices/{invoice}/push-to-wp', [InvoiceController::class, 'pushToWp'])->name('invoices.push-to-wp');
+    });
+
+    // ─── retro-close (بستن از لاگ قدیمی بدون فاکتور) — permission مجزا ───
+    Route::middleware('can:manage-crm-legacy-close')->group(function () {
+        Route::post('orders/{order}/retro-close', [OrderController::class, 'retroClose'])->name('orders.retro-close');
     });
 
     // ─── درگاه پرداخت (ادمین) ─────────────────────────────────────

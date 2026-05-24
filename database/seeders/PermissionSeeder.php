@@ -99,6 +99,11 @@ class PermissionSeeder extends Seeder
             'view-crm-invoices' => 'مشاهده فاکتورهای CRM',
             'manage-crm-payment-gateway' => 'مدیریت درگاه پرداخت CRM',
 
+            // CRM - گزارش‌ها و ابزارهای مدیریتی
+            'view-crm-reports' => 'مشاهده گزارش‌های مدیریتی CRM (مالی، فعالیت روزانه)',
+            'manage-crm-orphan-orders' => 'مدیریت سفارش‌های یتیم (تخصیص bulk تکنسین)',
+            'manage-crm-legacy-close' => 'بستن retro-active سفارش از لاگ قدیمی (بدون ساخت فاکتور)',
+
             // CRM - هزینه‌ها
             'view-crm-costs' => 'مشاهده هزینه‌های CRM',
             'manage-crm-costs' => 'مدیریت هزینه‌های CRM',

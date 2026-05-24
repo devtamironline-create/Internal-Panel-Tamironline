@@ -568,7 +568,7 @@
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-costs', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-costs', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -684,8 +684,9 @@
                         @endcanany
 
                         {{-- ── گزارش‌ها ── --}}
-                        @can('view-crm-financial')
+                        @canany(['view-crm-reports', 'manage-crm-orphan-orders'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">گزارش‌ها</div>
+                        @can('view-crm-reports')
                         <a href="{{ route('crm.reports.financial') }}" class="sidebar-menu-item {{ request()->routeIs('crm.reports.financial*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                             گزارش مالی
@@ -694,11 +695,14 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             فعالیت روزانه
                         </a>
+                        @endcan
+                        @can('manage-crm-orphan-orders')
                         <a href="{{ route('crm.orphan-orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orphan-orders.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                             سفارش‌های یتیم
                         </a>
                         @endcan
+                        @endcanany
 
                         {{-- ── پیکربندی ── --}}
                         @canany(['view-crm-taxonomies', 'manage-crm-sms-templates'])
