@@ -1193,15 +1193,48 @@
             if (typeof tinymce !== 'undefined' && document.querySelector('.rich-editor')) {
                 tinymce.init({
                     selector: '.rich-editor',
-                    height: 300,
+                    height: 500,
+                    min_height: 320,
                     directionality: 'rtl',
                     language: 'fa',
-                    plugins: 'lists link image code table',
-                    toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
-                    menubar: false,
+                    plugins: 'advlist anchor autolink autoresize charmap code codesample directionality emoticons fullscreen help image insertdatetime link lists media nonbreaking pagebreak preview quickbars searchreplace table visualblocks visualchars wordcount',
+                    toolbar: [
+                        'undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor removeformat',
+                        'alignleft aligncenter alignright alignjustify | ltr rtl | bullist numlist outdent indent | link unlink anchor image media table',
+                        'codesample blockquote hr pagebreak charmap emoticons | searchreplace visualblocks visualchars | code preview fullscreen help'
+                    ].join(' | '),
+                    menubar: 'edit insert view format table tools',
                     branding: false,
-                    content_style: 'body { font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; }',
-                    setup: function(editor) { editor.on('change', function() { editor.save(); }); }
+                    promotion: false,
+                    browser_spellcheck: true,
+                    contextmenu: 'link image table',
+                    image_advtab: true,
+                    image_caption: true,
+                    image_title: true,
+                    link_default_target: '_blank',
+                    link_assume_external_targets: 'https',
+                    link_context_toolbar: true,
+                    quickbars_insert_toolbar: 'quickimage quicktable hr',
+                    quickbars_selection_toolbar: 'bold italic underline | h2 h3 | blockquote quicklink',
+                    table_advtab: true,
+                    table_appearance_options: true,
+                    paste_data_images: false,
+                    block_formats: 'پاراگراف=p; تیتر ۱=h1; تیتر ۲=h2; تیتر ۳=h3; تیتر ۴=h4; تیتر ۵=h5; تیتر ۶=h6; نقل قول=blockquote; کد=pre',
+                    font_size_formats: '12px 14px 16px 18px 20px 24px 28px 32px 40px',
+                    codesample_languages: [
+                        { text: 'PHP', value: 'php' },
+                        { text: 'JavaScript', value: 'javascript' },
+                        { text: 'TypeScript', value: 'typescript' },
+                        { text: 'HTML/XML', value: 'markup' },
+                        { text: 'CSS', value: 'css' },
+                        { text: 'Bash', value: 'bash' },
+                        { text: 'SQL', value: 'sql' },
+                        { text: 'JSON', value: 'json' }
+                    ],
+                    media_live_embeds: true,
+                    media_alt_source: false,
+                    content_style: 'body { font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; font-size: 15px; line-height: 1.9; } img { max-width: 100%; height: auto; } table { border-collapse: collapse; } table td, table th { border: 1px solid #ddd; padding: 6px 10px; } blockquote { border-right: 3px solid #999; padding: .25rem 1rem; color: #555; } pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; direction: ltr; text-align: left; }',
+                    setup: function(editor) { editor.on('change input undo redo', function() { editor.save(); }); }
                 });
             }
         });

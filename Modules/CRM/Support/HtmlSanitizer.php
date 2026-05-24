@@ -22,7 +22,7 @@ final class HtmlSanitizer
      * @var array<string, list<string>>
      */
     private const ALLOWED = [
-        'p' => ['style'],
+        'p' => ['style', 'dir'],
         'br' => [],
         'hr' => [],
         'strong' => [],
@@ -31,34 +31,66 @@ final class HtmlSanitizer
         'i' => [],
         'u' => [],
         's' => [],
-        'h1' => ['style'],
-        'h2' => ['style'],
-        'h3' => ['style'],
-        'h4' => ['style'],
-        'h5' => ['style'],
-        'h6' => ['style'],
-        'ul' => [],
-        'ol' => ['start'],
-        'li' => [],
-        'a' => ['href', 'title', 'target', 'rel'],
-        'img' => ['src', 'alt', 'title', 'width', 'height'],
-        'blockquote' => [],
-        'pre' => [],
-        'code' => [],
-        'span' => ['style'],
-        'div' => ['style'],
-        'table' => ['border', 'cellspacing', 'cellpadding'],
-        'thead' => [],
-        'tbody' => [],
-        'tr' => [],
-        'td' => ['colspan', 'rowspan', 'style'],
-        'th' => ['colspan', 'rowspan', 'style'],
+        'sub' => [],
+        'sup' => [],
+        'mark' => [],
+        'h1' => ['style', 'dir', 'id'],
+        'h2' => ['style', 'dir', 'id'],
+        'h3' => ['style', 'dir', 'id'],
+        'h4' => ['style', 'dir', 'id'],
+        'h5' => ['style', 'dir', 'id'],
+        'h6' => ['style', 'dir', 'id'],
+        'ul' => ['style'],
+        'ol' => ['start', 'style'],
+        'li' => ['style'],
+        'a' => ['href', 'title', 'target', 'rel', 'name', 'id'],
+        'img' => ['src', 'alt', 'title', 'width', 'height', 'style', 'class'],
+        'figure' => ['class', 'style'],
+        'figcaption' => ['style'],
+        'blockquote' => ['style', 'cite'],
+        'pre' => ['class', 'style'],
+        'code' => ['class'],
+        'span' => ['style', 'class'],
+        'div' => ['style', 'class'],
+        'table' => ['border', 'cellspacing', 'cellpadding', 'style', 'class'],
+        'caption' => [],
+        'colgroup' => [],
+        'col' => ['span', 'style'],
+        'thead' => ['style'],
+        'tbody' => ['style'],
+        'tfoot' => ['style'],
+        'tr' => ['style'],
+        'td' => ['colspan', 'rowspan', 'style', 'scope'],
+        'th' => ['colspan', 'rowspan', 'style', 'scope'],
+        'iframe' => ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title'],
     ];
 
     /**
      * Style propertyهای مجاز (همه چیز دیگر از attribute style حذف می‌شود).
      */
-    private const ALLOWED_STYLE_PROPS = ['text-align', 'direction'];
+    private const ALLOWED_STYLE_PROPS = [
+        'text-align', 'direction', 'color', 'background-color',
+        'font-size', 'font-family', 'font-weight', 'font-style',
+        'text-decoration', 'line-height', 'letter-spacing',
+        'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+        'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+        'border', 'border-color', 'border-width', 'border-style', 'border-radius',
+        'width', 'height', 'max-width', 'min-width',
+        'float', 'clear', 'vertical-align',
+    ];
+
+    /**
+     * دامنه‌های مجاز برای iframe (embed ویدیو/نقشه). srcهای خارج از این لیست حذف می‌شوند.
+     */
+    private const IFRAME_ALLOWED_HOSTS = [
+        'youtube.com', 'www.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com',
+        'youtu.be',
+        'aparat.com', 'www.aparat.com',
+        'vimeo.com', 'player.vimeo.com',
+        'google.com', 'www.google.com', // برای نقشه
+        'maps.google.com',
+        'neshan.org', 'www.neshan.org',
+    ];
 
     /**
      * Protocolهای مجاز برای href و src (جلوگیری از javascript:, data: غیرامن).
@@ -71,7 +103,7 @@ final class HtmlSanitizer
      * تگ‌هایی که علاوه بر حذف خودشان، محتوای داخلی هم باید حذف شود
      * (نه unwrap) — script/style executable است یا formatting خراب می‌کند.
      */
-    private const STRIP_WITH_CONTENT = ['script', 'style', 'iframe', 'object', 'embed', 'svg'];
+    private const STRIP_WITH_CONTENT = ['script', 'style', 'object', 'embed', 'svg'];
 
     /**
      * پاک‌سازی یک رشته‌ی HTML. ورودی null/خالی بدون تغییر برمی‌گردد.
@@ -139,6 +171,14 @@ final class HtmlSanitizer
                 }
 
                 self::cleanAttributes($child, $tag);
+
+                // iframe بدون src قابل قبول → حذف کامل
+                if ($tag === 'iframe' && ! $child->hasAttribute('src')) {
+                    $child->parentNode?->removeChild($child);
+
+                    continue;
+                }
+
                 self::sanitizeNode($child);
             } elseif ($child->nodeType === XML_COMMENT_NODE) {
                 $child->parentNode?->removeChild($child);
@@ -177,7 +217,11 @@ final class HtmlSanitizer
                     $toRemove[] = $name;
                 }
             } elseif ($name === 'src') {
-                if (! self::isSafeUrl($value, self::ALLOWED_IMG_PROTOCOLS)) {
+                if ($tag === 'iframe') {
+                    if (! self::isAllowedIframeSrc($value)) {
+                        $toRemove[] = $name;
+                    }
+                } elseif (! self::isSafeUrl($value, self::ALLOWED_IMG_PROTOCOLS)) {
                     $toRemove[] = $name;
                 }
             } elseif ($name === 'style') {
@@ -198,6 +242,24 @@ final class HtmlSanitizer
         foreach ($toRemove as $name) {
             $el->removeAttribute($name);
         }
+    }
+
+    private static function isAllowedIframeSrc(string $url): bool
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return false;
+        }
+        if (! str_starts_with(strtolower($url), 'https://') && ! str_starts_with(strtolower($url), 'http://')) {
+            return false;
+        }
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+        $host = strtolower($host);
+
+        return in_array($host, self::IFRAME_ALLOWED_HOSTS, true);
     }
 
     private static function isSafeUrl(string $url, array $protocols): bool
