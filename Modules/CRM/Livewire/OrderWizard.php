@@ -494,14 +494,33 @@ class OrderWizard extends Component
             }
 
             $createdOrders = DB::transaction(function () {
-                // ۱) مشتری
-                $customer = $this->showNewCustomerForm
-                    ? Customer::create([
-                        'first_name' => $this->newName,
-                        'mobile' => $this->newMobile,
-                        'phone' => $this->newPhone ?: null,
-                    ])
-                    : Customer::findOrFail($this->customerId);
+                // ۱) مشتری — اگر فرم مشتری جدید پر شده، ولی شماره موبایل
+                //    تکراری است (مشتری از قبل وجود دارد)، همان را استفاده کن.
+                if ($this->showNewCustomerForm) {
+                    $existing = Customer::where('mobile', $this->newMobile)->first();
+                    if ($existing) {
+                        // مشتری موجود — فیلدهای خالی را با ورودی پر کن
+                        $updates = [];
+                        if (! $existing->first_name && $this->newName) {
+                            $updates['first_name'] = $this->newName;
+                        }
+                        if (! $existing->phone && $this->newPhone) {
+                            $updates['phone'] = $this->newPhone;
+                        }
+                        if (! empty($updates)) {
+                            $existing->update($updates);
+                        }
+                        $customer = $existing;
+                    } else {
+                        $customer = Customer::create([
+                            'first_name' => $this->newName,
+                            'mobile' => $this->newMobile,
+                            'phone' => $this->newPhone ?: null,
+                        ]);
+                    }
+                } else {
+                    $customer = Customer::findOrFail($this->customerId);
+                }
 
                 // لیست همهٔ دستگاه‌ها: دستگاه اصلی + extraDevices.
                 // برای هر دستگاه یک Order جداگانه ساخته می‌شود (مشتری/
