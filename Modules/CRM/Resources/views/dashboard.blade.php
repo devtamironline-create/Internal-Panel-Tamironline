@@ -10,25 +10,72 @@
 <div class="p-4 md:p-6 space-y-5">
 
     {{-- ─── هدر + فیلتر بازه ─── --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📊 داشبورد خدمات تعمیرات</h1>
-            <p class="text-xs text-gray-500 mt-1">آمار سفارشات بازهٔ انتخابی + تأخیرها + روند کل</p>
+    <div class="flex flex-col gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">📊 داشبورد خدمات تعمیرات</h1>
+                <p class="text-xs text-gray-500 mt-1">آمار سفارشات بازه انتخابی + تأخیرها + روند کل</p>
+            </div>
         </div>
-        <form method="GET" class="flex items-end gap-2 flex-wrap">
-            <div>
-                <label class="block text-[10px] font-medium text-gray-500 mb-1">از تاریخ</label>
-                <input type="text" name="from_date" value="{{ $fromJ }}" dir="ltr" placeholder="1405/03/01" readonly
-                       class="jalali-datepicker w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg cursor-pointer bg-white text-xs">
+
+        {{-- پری‌ست‌های سریع + بازه دلخواه --}}
+        @php
+            use Morilog\Jalali\Jalalian;
+            $todayJ = Jalalian::now()->format('Y/m/d');
+            $yesterdayJ = Jalalian::fromCarbon(now()->subDay())->format('Y/m/d');
+            $weekAgoJ = Jalalian::fromCarbon(now()->subWeek())->format('Y/m/d');
+            $monthAgoJ = Jalalian::fromCarbon(now()->subMonth())->format('Y/m/d');
+
+            $presets = [
+                'today'     => ['label' => 'امروز',          'from' => $todayJ,     'to' => $todayJ],
+                'yesterday' => ['label' => 'دیروز',          'from' => $yesterdayJ, 'to' => $yesterdayJ],
+                'week'      => ['label' => 'یک هفته گذشته',  'from' => $weekAgoJ,   'to' => $todayJ],
+                'month'     => ['label' => 'ماه گذشته',      'from' => $monthAgoJ,  'to' => $todayJ],
+            ];
+            // تشخیص پری‌ست فعال بر اساس تاریخ‌های فعلی
+            $activePreset = 'custom';
+            foreach ($presets as $key => $p) {
+                if ($p['from'] === $fromJ && $p['to'] === $toJ) {
+                    $activePreset = $key;
+                    break;
+                }
+            }
+        @endphp
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 flex items-center gap-2 flex-wrap"
+             x-data="{ showCustom: {{ $activePreset === 'custom' ? 'true' : 'false' }} }">
+            @foreach($presets as $key => $p)
+                <a href="{{ route('crm.dashboard', array_merge(request()->query(), ['from_date' => $p['from'], 'to_date' => $p['to']])) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors
+                          {{ $activePreset === $key ? 'bg-brand-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}">
+                    {{ $p['label'] }}
+                </a>
+            @endforeach
+            <button type="button" @click="showCustom = !showCustom"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors
+                           {{ $activePreset === 'custom' ? 'bg-brand-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}">
+                تاریخ انتخابی
+            </button>
+
+            <form method="GET" x-show="showCustom" x-cloak class="flex items-end gap-2 flex-wrap border-r border-gray-300 dark:border-gray-600 pr-3 me-2">
+                <div>
+                    <label class="block text-[10px] font-medium text-gray-500 mb-1">از</label>
+                    <input type="text" name="from_date" value="{{ $fromJ }}" dir="ltr" placeholder="1405/03/01" readonly
+                           class="jalali-datepicker w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded cursor-pointer bg-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-medium text-gray-500 mb-1">تا</label>
+                    <input type="text" name="to_date" value="{{ $toJ }}" dir="ltr" placeholder="1405/03/31" readonly
+                           class="jalali-datepicker w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded cursor-pointer bg-white text-xs">
+                </div>
+                <input type="hidden" name="chart_period" value="{{ $chartPeriod }}">
+                <button class="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-bold">اعمال</button>
+            </form>
+
+            <div class="text-[11px] text-gray-500 me-auto">
+                بازه فعلی: <b dir="ltr">{{ $fromJ }}</b> تا <b dir="ltr">{{ $toJ }}</b>
             </div>
-            <div>
-                <label class="block text-[10px] font-medium text-gray-500 mb-1">تا تاریخ</label>
-                <input type="text" name="to_date" value="{{ $toJ }}" dir="ltr" placeholder="1405/03/31" readonly
-                       class="jalali-datepicker w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg cursor-pointer bg-white text-xs">
-            </div>
-            <input type="hidden" name="chart_period" value="{{ $chartPeriod }}">
-            <button class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold">اعمال</button>
-        </form>
+        </div>
     </div>
 
     {{-- ─── کارت‌های خلاصه ─── --}}
