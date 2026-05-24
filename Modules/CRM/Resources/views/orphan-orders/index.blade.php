@@ -71,6 +71,26 @@
     </div>
     @endif
 
+    {{-- ─── خواندن تکنسین واقعی از WP postmeta — قوی‌ترین راه ─── --}}
+    @if($totalWithWpId > 0 || $totalNoWpId > 0)
+    <div class="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div class="text-sm text-sky-800 dark:text-sky-200 flex-1">
+            <b>قوی‌ترین مسیر:</b> در WP CRM هر سفارش یک postmeta با کلید
+            <code>technician</code> دارد که شناسهٔ تکنسین واقعی را نگه می‌دارد
+            (متفاوت از author رویدادها که معمولاً اپراتور است).
+            با این دکمه مستقیماً از WP DB می‌خوانیم و در صورت match با پنل،
+            خودکار به تکنسین assign می‌کنیم.
+        </div>
+        <form method="POST" action="{{ route('crm.orphan-orders.backfill-from-wp-postmeta') }}"
+              onsubmit="return confirm('خواندن تکنسین واقعی از WP postmeta برای همه orphanها؟\n\nبرای هر سفارش postmeta «technician» خوانده می‌شود. اگر در پنل match دارد، خودکار technician_id ست می‌شود.');">
+            @csrf
+            <button class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                🌐 خواندن از WP postmeta
+            </button>
+        </form>
+    </div>
+    @endif
+
     {{-- ─── دکمه auto-assign برای match‌های دقیق ─── --}}
     @if($matchedTechs->count() > 0)
     <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">

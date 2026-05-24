@@ -245,6 +245,120 @@ class OrphanOrdersController extends Controller
     }
 
     /**
+     * بازنویسی technician_wp_id از روی WP postmeta «technician».
+     *
+     * در WP، هر سفارش یک postmeta با کلید 'technician' دارد که شناسهٔ
+     * تکنسین واقعی است (متفاوت از author رویدادها که اپراتور است).
+     *
+     * این برای حل سفارش‌هایی است که author لاگشان اپراتور بوده نه تکنسین.
+     *
+     * فقط orphanهایی پردازش می‌شوند که:
+     *   - technician_id = null
+     *   - wp_id (id سفارش در WP) موجود است
+     */
+    public function backfillFromWpPostmeta(Request $request)
+    {
+        $this->configureWpConnection();
+        try {
+            $wp = DB::connection('wp_crm');
+            $wp->getPdo();
+        } catch (\Throwable $e) {
+            return back()->with('error', 'اتصال به WP DB ناموفق: ' . $e->getMessage());
+        }
+
+        app()->instance('crm.suppress_outbound_push', true);
+
+        $prefix = env('WP_DB_PREFIX', 'or_');
+        $panelTechWpIds = Technician::whereNotNull('wp_id')->pluck('id', 'wp_id')->all();
+
+        // orphanهایی که wp_id دارن — برای پرس‌و‌جوی WP
+        $orders = Order::query()
+            ->whereNull('technician_id')
+            ->whereNotNull('wp_id')
+            ->get(['id', 'wp_id', 'technician_wp_id']);
+
+        if ($orders->isEmpty()) {
+            return back()->with('info', 'هیچ orphan‌ای با wp_id برای پرس‌و‌جوی WP وجود ندارد.');
+        }
+
+        $updated = 0;
+        $changedWpId = 0;
+        $autoAssigned = 0;
+        $unchanged = 0;
+        $noMetaInWp = 0;
+
+        // batch query WP postmeta
+        $wpIds = $orders->pluck('wp_id')->all();
+        $techMetas = [];
+        foreach (array_chunk($wpIds, 500) as $chunk) {
+            $rows = $wp->table($prefix . 'postmeta')
+                ->whereIn('post_id', $chunk)
+                ->where('meta_key', 'technician')
+                ->get(['post_id', 'meta_value']);
+            foreach ($rows as $row) {
+                $val = (int) $row->meta_value;
+                if ($val > 0) {
+                    $techMetas[(int) $row->post_id] = $val;
+                }
+            }
+        }
+
+        foreach ($orders as $order) {
+            $wpTechId = $techMetas[(int) $order->wp_id] ?? null;
+
+            if (! $wpTechId) {
+                $noMetaInWp++;
+                continue;
+            }
+
+            $changes = [];
+
+            // اگر technician_wp_id فعلی متفاوت است، به‌روز کن
+            if ((int) $order->technician_wp_id !== $wpTechId) {
+                $changes['technician_wp_id'] = $wpTechId;
+                $changedWpId++;
+            }
+
+            // اگر این wp_id در پنل match دارد، technician_id را هم ست کن
+            if (isset($panelTechWpIds[$wpTechId])) {
+                $changes['technician_id'] = $panelTechWpIds[$wpTechId];
+                $autoAssigned++;
+            }
+
+            if (! empty($changes)) {
+                $changes['updated_at'] = now();
+                DB::table('crm_orders')
+                    ->where('id', $order->id)
+                    ->update($changes);
+                $updated++;
+            } else {
+                $unchanged++;
+            }
+        }
+
+        return back()->with('success',
+            "خواندن از WP postmeta: {$updated} سفارش پردازش شد. "
+            . "wp_id تغییر کرد: {$changedWpId} — "
+            . "خودکار assign شد به تکنسین پنل: {$autoAssigned} — "
+            . "بدون postmeta در WP: {$noMetaInWp} — بدون تغییر: {$unchanged}."
+        );
+    }
+
+    private function configureWpConnection(): void
+    {
+        config(['database.connections.wp_crm' => [
+            'driver'    => 'mysql',
+            'host'      => env('WP_DB_HOST', '127.0.0.1'),
+            'port'      => (int) env('WP_DB_PORT', 3306),
+            'database'  => env('WP_DB_NAME', 'crmtamironline_db_new'),
+            'username'  => env('WP_DB_USER', 'crmtamironline_db_new'),
+            'password'  => env('WP_DB_PASS', 'Rayanew_0935'),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+        ]]);
+    }
+
+    /**
      * بازنویسی technician_wp_id برای orphanهایی که current wp_id آن‌ها
      * در پنل match ندارد — اگر در لاگ author دیگری هست که در پنل match
      * دارد، آن را ترجیح بده.
