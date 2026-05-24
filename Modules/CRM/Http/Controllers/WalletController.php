@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Models\WalletTransaction;
+use Modules\CRM\Services\WalletArchiveService;
 use Modules\CRM\Services\WalletService;
 use Modules\SMS\Services\KavenegarService;
 
@@ -69,16 +70,21 @@ class WalletController extends Controller
         ]);
     }
 
-    public function show(Technician $technician)
+    public function show(Technician $technician, WalletArchiveService $archive)
     {
         $transactions = WalletTransaction::with(['order', 'invoice', 'creator'])
             ->where('technician_id', $technician->id)
             ->latest()
             ->paginate(30);
 
+        // تراکنش‌های قدیمی پاک‌شده در reset (فقط نمایش — هرگز در محاسبه
+        // وارد نمی‌شود). از فایل JSONL در storage/app/crm خوانده می‌شود.
+        $archivedTxs = $archive->getFlatTransactions($technician->id);
+
         return view('crm::wallet.show', [
             'technician' => $technician,
             'transactions' => $transactions,
+            'archivedTxs' => $archivedTxs,
             'types' => WalletTxType::options(),
         ]);
     }
