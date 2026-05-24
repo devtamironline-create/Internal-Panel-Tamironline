@@ -106,6 +106,8 @@ class RetroCloseOrdersFromLog extends Command
                     number_format($extracted['price_customer']),
                     number_format($extracted['cost_price']),
                     number_format($extracted['total_invoice']),
+                    number_format($extracted['tech_share']),
+                    number_format($extracted['company_share']),
                 ];
 
                 if ($apply) {
@@ -121,6 +123,8 @@ class RetroCloseOrdersFromLog extends Command
                             'total_invoice' => $extracted['total_invoice'],
                             'final_price' => $extracted['price_customer'], // نمایش در «خلاصه مالی»
                             'is_legacy_closed' => 1,
+                            'legacy_tech_share' => $extracted['tech_share'],
+                            'legacy_company_share' => $extracted['company_share'],
                             'updated_at' => now(),
                         ]);
                 }
@@ -136,7 +140,7 @@ class RetroCloseOrdersFromLog extends Command
         if (! empty($detailRows)) {
             $this->line('— نمونهٔ ۲۰ مورد اول —');
             $this->table(
-                ['id', 'order_code', 'تاریخ بسته‌شدن', 'price_customer', 'cost_price', 'total_invoice'],
+                ['id', 'order_code', 'تاریخ', 'price_customer', 'cost_price', 'total_invoice', 'سهم تکنسین', 'سهم شرکت'],
                 array_slice($detailRows, 0, 20)
             );
             if (count($detailRows) > 20) {
@@ -228,10 +232,21 @@ class RetroCloseOrdersFromLog extends Command
         $priceCustomer = $this->extractAmount($combinedContent, ['جمع کل صورت حساب', 'جمع کل صورت‌حساب', 'مبلغ کل', 'price_customer']);
         $costPrice = $this->extractAmount($combinedContent, ['هزینه قطعات مصرفی', 'هزینه قطعات', 'cost_price']);
         $totalInvoice = $this->extractAmount($combinedContent, ['مانده کل', 'مانده فاکتور', 'total_invoice']);
+        $techShareLog = $this->extractAmount($combinedContent, ['سهم تکنسین', 'tech_share']);
+        $companyShareLog = $this->extractAmount($combinedContent, ['سهم شرکت', 'company_share']);
 
         // اگر total_invoice پیدا نشد، محاسبه کن
         if ($totalInvoice === 0 && $priceCustomer > 0) {
             $totalInvoice = max(0, $priceCustomer - $costPrice);
+        }
+
+        // اگر سهم تکنسین در لاگ نیست ولی سهم شرکت هست، تکنسین = مانده − شرکت
+        if ($techShareLog === 0 && $companyShareLog > 0 && $totalInvoice > 0) {
+            $techShareLog = max(0, $totalInvoice - $companyShareLog);
+        }
+        // برعکس: اگر سهم شرکت نیست ولی تکنسین هست
+        if ($companyShareLog === 0 && $techShareLog > 0 && $totalInvoice > 0) {
+            $companyShareLog = max(0, $totalInvoice - $techShareLog);
         }
 
         // اگر هیچ عددی پیدا نشد، رد کن (شرط user: «لاگ انجام کار با عدد»)
@@ -248,6 +263,8 @@ class RetroCloseOrdersFromLog extends Command
             'price_customer' => $priceCustomer,
             'cost_price' => $costPrice,
             'total_invoice' => $totalInvoice,
+            'tech_share' => $techShareLog,
+            'company_share' => $companyShareLog,
         ];
     }
 
