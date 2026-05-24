@@ -19,6 +19,9 @@ use Modules\CRM\Models\WalletArchiveTx;
  *   - wallet=='1'        → wallet_charge (مبلغ = wallet_pay)
  *   - reward_type=='1'  → reward         (مبلغ = total_invoice)
  *   - reward_type=='2'  → penalty        (مبلغ = total_invoice)
+ *   - total_invoice > 0 + بدون wallet/reward_type → commission (سهم شرکت
+ *     از فاکتور). مبلغ منفی = total_invoice × percent / 100 محاسبه‌شده
+ *     از روی تکنسین جاری (چون WP postmeta percent تاریخی نگه نمی‌دارد).
  *
  * idempotent: ایندکس unique روی wp_post_id جلوی duplicate را می‌گیرد.
  * می‌توان هر چندبار اجرا کرد، هر بار فقط رکوردهای جدید اضافه می‌شوند.
@@ -131,6 +134,20 @@ class ImportWalletArchiveFromWp extends Command
             ->pluck('id', 'wp_id')
             ->all();
 
+        // map از panel id → [percent, tech_per_of_all, type_of_calc_tech] برای
+        // محاسبه‌ی company_share تراکنش‌های نوع commission. این داده‌ی فعلی
+        // تکنسین است (WP postmeta percent تاریخی نگه نمی‌دارد، پس نزدیک‌ترین
+        // برآورد ممکن است).
+        $techConfig = Technician::query()
+            ->select(['id', 'percent', 'tech_per_of_all', 'type_of_calc_tech'])
+            ->get()
+            ->mapWithKeys(fn ($t) => [(int) $t->id => [
+                'percent' => max(0, min(100, (int) ($t->percent ?? 0))),
+                'tech_per_of_all' => max(0, min(100, (int) ($t->tech_per_of_all ?? 0))),
+                'calc_type' => (string) ($t->type_of_calc_tech ?? ''),
+            ]])
+            ->all();
+
         $inserted = 0;
         $skipped = 0;
         $skippedSamples = []; // برای --debug-skipped
@@ -158,7 +175,7 @@ class ImportWalletArchiveFromWp extends Command
                 $meta = $metaByPost[(int) $pid] ?? [];
 
                 // تشخیص نوع تراکنش
-                $row = $this->buildArchiveRow((int) $pid, $post, $meta, $techWpToPanel);
+                $row = $this->buildArchiveRow((int) $pid, $post, $meta, $techWpToPanel, $techConfig);
                 if (! $row) {
                     $skipped++;
                     if ($this->option('debug-skipped') && count($skippedSamples) < 5) {
@@ -208,9 +225,10 @@ class ImportWalletArchiveFromWp extends Command
     }
 
     /**
+     * @param array<int,array{percent:int, tech_per_of_all:int, calc_type:string}> $techConfig
      * @return array<string,mixed>|null  null = رد کن (نوع تراکنش از روی متاها مشخص نشد)
      */
-    private function buildArchiveRow(int $pid, $post, array $meta, array $techWpToPanel): ?array
+    private function buildArchiveRow(int $pid, $post, array $meta, array $techWpToPanel, array $techConfig): ?array
     {
         $now = now();
 
@@ -221,10 +239,12 @@ class ImportWalletArchiveFromWp extends Command
         $refid = $meta['refid'] ?? null;
         $description = $meta['description'] ?? null;
         $rewardDesc = $meta['rewardDesc'] ?? null;
+        $techPanelId = $techWpId ? ($techWpToPanel[$techWpId] ?? null) : null;
 
         // تشخیص type + amount از روی متاها
         $type = null;
         $amount = 0;
+        $extraNoteParts = [];
 
         if (! empty($meta['wallet']) && (string) $meta['wallet'] === '1') {
             // شارژ کیف‌پول
@@ -239,13 +259,47 @@ class ImportWalletArchiveFromWp extends Command
                 $type = 'penalty';
                 $amount = -abs((int) ($meta['total_invoice'] ?? 0));
             }
+        } elseif (! empty($meta['total_invoice']) && (int) $meta['total_invoice'] > 0) {
+            // فاکتور — تراکنش منفی commission (سهم شرکت). محاسبه با درصد
+            // فعلی تکنسین (WP percent تاریخی نگه نمی‌دارد). هم‌سو با
+            // InvoiceService::generateForOrder که amount = -company_share
+            // می‌نویسد.
+            $totalInvoice = abs((int) $meta['total_invoice']);
+            $cfg = $techPanelId ? ($techConfig[$techPanelId] ?? null) : null;
+
+            if (! $cfg) {
+                // تکنسین در پنل نیست یا تنظیمی ندارد → نمی‌توان company_share
+                // محاسبه کرد، رد کن.
+                return null;
+            }
+
+            // هم‌سازی با CommissionCalculator:
+            //   - internal (calc_type=='1') → company_share = total * tech_per_of_all / 100
+            //   - external (پیش‌فرض) → company_share = total * percent / 100
+            $isInternal = ($cfg['calc_type'] === '1' || $cfg['calc_type'] === 'internal');
+            $usedPercent = $isInternal ? $cfg['tech_per_of_all'] : $cfg['percent'];
+            $companyShare = intdiv($totalInvoice * $usedPercent, 100);
+
+            if ($companyShare === 0) {
+                return null;
+            }
+
+            $type = 'commission';
+            $amount = -$companyShare; // منفی: کسر از کیف‌پول تکنسین
+
+            $extraNoteParts[] = 'سهم شرکت از فاکتور';
+            $extraNoteParts[] = 'مبلغ فاکتور: ' . number_format($totalInvoice);
+            $extraNoteParts[] = 'درصد: ' . $usedPercent . '%';
+            if ($isInternal) {
+                $extraNoteParts[] = '(internal)';
+            }
         }
 
         if (! $type || $amount === 0) {
             return null;
         }
 
-        $noteParts = [];
+        $noteParts = $extraNoteParts;
         if ($description) $noteParts[] = $description;
         if ($rewardDesc) $noteParts[] = $rewardDesc;
         if ($refid) $noteParts[] = 'refid: ' . $refid;
@@ -253,7 +307,7 @@ class ImportWalletArchiveFromWp extends Command
 
         return [
             'wp_post_id' => $pid,
-            'technician_id' => $techWpId ? ($techWpToPanel[$techWpId] ?? null) : null,
+            'technician_id' => $techPanelId,
             'technician_wp_id' => $techWpId,
             'order_wp_id' => $orderWpId,
             'type' => $type,
