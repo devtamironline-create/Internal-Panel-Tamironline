@@ -21,6 +21,7 @@ class BackfillInvoices extends Command
 {
     protected $signature = 'crm:invoices:backfill
                              {--technician= : محدود به یک تکنسین (id)}
+                             {--since= : فقط سفارش‌های Completed بعد از این تاریخ (YYYY-MM-DD یا 7d, 1w, 1m)}
                              {--dry-run : فقط شمارش، بدون ساخت فاکتور}';
 
     protected $description = 'تولید فاکتور و کمیسیون برای سفارش‌های Completed که هنوز فاکتور ندارند.';
@@ -29,6 +30,7 @@ class BackfillInvoices extends Command
     {
         $techId = $this->option('technician');
         $dryRun = (bool) $this->option('dry-run');
+        $since = $this->parseSince($this->option('since'));
 
         // Invoice global scope «active» را برای این چک نباید اعمال کنیم —
         // سفارش‌هایی که فاکتور superseded دارند هم نباید دوباره فاکتور
@@ -44,6 +46,16 @@ class BackfillInvoices extends Command
 
         if ($techId) {
             $query->where('technician_id', (int) $techId);
+        }
+        if ($since) {
+            // ترجیح: completed_at؛ fallback به created_at اگر null
+            $query->where(function ($q) use ($since) {
+                $q->where('completed_at', '>=', $since)
+                  ->orWhere(function ($qq) use ($since) {
+                      $qq->whereNull('completed_at')->where('created_at', '>=', $since);
+                  });
+            });
+            $this->line("فیلتر زمانی فعال: از {$since->toDateTimeString()}");
         }
 
         $total = (clone $query)->count();
@@ -98,5 +110,34 @@ class BackfillInvoices extends Command
         $this->comment('برای بازنویسی balance_after تراکنش‌های کیف‌پول، crm:wallet:recompute-balances را اجرا کنید.');
 
         return $errors > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * تبدیل --since به Carbon. پشتیبانی از:
+     *   YYYY-MM-DD یا YYYY-MM-DD HH:MM:SS
+     *   نسبی: 7d (7 روز پیش)، 1w (1 هفته)، 1m (1 ماه)
+     */
+    private function parseSince(?string $value): ?\Carbon\Carbon
+    {
+        if (! $value) return null;
+        $value = trim($value);
+        if ($value === '') return null;
+
+        if (preg_match('/^(\d+)([dwmy])$/i', $value, $m)) {
+            $n = (int) $m[1];
+            return match (strtolower($m[2])) {
+                'd' => now()->subDays($n)->startOfDay(),
+                'w' => now()->subWeeks($n)->startOfDay(),
+                'm' => now()->subMonths($n)->startOfDay(),
+                'y' => now()->subYears($n)->startOfDay(),
+            };
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value);
+        } catch (\Throwable $e) {
+            $this->warn("--since فرمت نامعتبر: {$value} — نادیده گرفته شد.");
+            return null;
+        }
     }
 }

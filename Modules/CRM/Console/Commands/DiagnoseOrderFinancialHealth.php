@@ -40,6 +40,7 @@ class DiagnoseOrderFinancialHealth extends Command
 {
     protected $signature = 'crm:invoices:diagnose-financial
                             {--tech= : فقط برای یک تکنسین (id)}
+                            {--since= : فقط سفارش‌های Completed بعد از این تاریخ (YYYY-MM-DD یا 7d, 1w, 1m)}
                             {--apply : فیکس واقعی موارد ۲ و ۳ (پیش‌فرض dry-run)}
                             {--recompute : بعد از فیکس، crm:wallet:recompute-balances هم بزن}';
 
@@ -49,10 +50,14 @@ class DiagnoseOrderFinancialHealth extends Command
     {
         $techId = $this->option('tech') ? (int) $this->option('tech') : null;
         $apply = (bool) $this->option('apply');
+        $since = $this->parseSince($this->option('since'));
 
         $this->info(($apply ? '🔥 APPLY' : 'DRY-RUN') . ' — تحلیل مالی سفارش‌های Completed');
         if ($techId) {
             $this->line("محدود به تکنسین: {$techId}");
+        }
+        if ($since) {
+            $this->line("فیلتر زمانی: از {$since->toDateTimeString()}");
         }
         $this->newLine();
 
@@ -65,6 +70,14 @@ class DiagnoseOrderFinancialHealth extends Command
                     ->whereColumn('crm_invoices.order_id', 'crm_orders.id');
             });
         if ($techId) $case1Q->where('technician_id', $techId);
+        if ($since) {
+            $case1Q->where(function ($q) use ($since) {
+                $q->where('completed_at', '>=', $since)
+                  ->orWhere(function ($qq) use ($since) {
+                      $qq->whereNull('completed_at')->where('created_at', '>=', $since);
+                  });
+            });
+        }
 
         $case1Count = (clone $case1Q)->count();
         $this->line("  تعداد: {$case1Count}");
@@ -80,6 +93,7 @@ class DiagnoseOrderFinancialHealth extends Command
             ->whereNotNull('technician_id')
             ->where('company_share', '>', 0);
         if ($techId) $case2Q->where('technician_id', $techId);
+        if ($since) $case2Q->where('issued_at', '>=', $since);
 
         $case2 = $case2Q->orderBy('id')->get(['id', 'invoice_code', 'order_id', 'technician_id', 'company_share', 'tech_share', 'total_amount', 'issued_at']);
 
@@ -106,6 +120,7 @@ class DiagnoseOrderFinancialHealth extends Command
                     ->whereColumn('crm_tech_wallet_transactions.invoice_id', 'crm_invoices.id');
             });
         if ($techId) $case3Q->where('technician_id', $techId);
+        if ($since) $case3Q->where('issued_at', '>=', $since);
 
         $case3 = $case3Q->orderBy('id')->get(['id', 'invoice_code', 'order_id', 'technician_id', 'company_share', 'issued_at']);
         $this->line("  تعداد: " . $case3->count());
@@ -208,5 +223,34 @@ class DiagnoseOrderFinancialHealth extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * تبدیل --since به Carbon. پشتیبانی از:
+     *   YYYY-MM-DD یا YYYY-MM-DD HH:MM:SS
+     *   نسبی: 7d (7 روز پیش)، 1w (1 هفته)، 1m (1 ماه)
+     */
+    private function parseSince(?string $value): ?\Carbon\Carbon
+    {
+        if (! $value) return null;
+        $value = trim($value);
+        if ($value === '') return null;
+
+        if (preg_match('/^(\d+)([dwmy])$/i', $value, $m)) {
+            $n = (int) $m[1];
+            return match (strtolower($m[2])) {
+                'd' => now()->subDays($n)->startOfDay(),
+                'w' => now()->subWeeks($n)->startOfDay(),
+                'm' => now()->subMonths($n)->startOfDay(),
+                'y' => now()->subYears($n)->startOfDay(),
+            };
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value);
+        } catch (\Throwable $e) {
+            $this->warn("--since فرمت نامعتبر: {$value} — نادیده گرفته شد.");
+            return null;
+        }
     }
 }
