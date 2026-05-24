@@ -85,6 +85,11 @@ class Review extends Model
         return $this->belongsToMany(Device::class, 'site_review_devices', 'review_id', 'device_id');
     }
 
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\CRM\Models\Brand::class, 'site_review_brands', 'review_id', 'brand_id');
+    }
+
     public function taxonomies(): BelongsToMany
     {
         return $this->belongsToMany(Taxonomy::class, 'site_review_taxonomies', 'review_id', 'taxonomy_id')

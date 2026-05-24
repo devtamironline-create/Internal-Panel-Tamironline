@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Api\V1\AboutStatController;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
+use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
@@ -57,6 +58,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/catalog/devices/{slug}', [CatalogDeviceController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.catalog.devices.show');
+
+        // صفحه‌ی ترکیبی device × brand
+        Route::get('/catalog/devices/{deviceSlug}/{brandSlug}', [CatalogDeviceBrandController::class, 'show'])
+            ->where('deviceSlug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->where('brandSlug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.device-brand.show');
     });
 
     // ── Device Reviews — public read, public write with throttle ──

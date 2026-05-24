@@ -5,6 +5,7 @@ use Modules\CRM\Http\Controllers\BrandController;
 use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
+use Modules\CRM\Http\Controllers\DeviceBrandPageController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\ImpersonateController;
 use Modules\CRM\Http\Controllers\InvoiceController;
@@ -13,16 +14,16 @@ use Modules\CRM\Http\Controllers\OrderController;
 use Modules\CRM\Http\Controllers\OrderItemController;
 use Modules\CRM\Http\Controllers\PaymentController;
 use Modules\CRM\Http\Controllers\ProvinceController;
-use Modules\CRM\Http\Controllers\WalletController;
 use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
+use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
+use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardController;
+use Modules\CRM\Http\Controllers\TechDashboardController;
+use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\TechPanelSettingsController;
 use Modules\CRM\Http\Controllers\TrainingAdminController;
 use Modules\CRM\Http\Controllers\TrainingFileController;
-use Modules\CRM\Http\Controllers\TechDashboardController;
-use Modules\CRM\Http\Controllers\TechnicianController;
-use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
-use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardController;
+use Modules\CRM\Http\Controllers\WalletController;
 
 // ─── سرو تصاویر برند پنل تکنسین (لوگو/بنر/Hero) — عمومی، چون در صفحه
 //     ورود قبل از احراز هویت استفاده می‌شوند. جایگزین asset('storage/...')
@@ -97,6 +98,18 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
         Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('devices.toggle');
         Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
+    });
+
+    // ─── صفحه‌های ترکیبی (device, brand) ─── /devices/{slug}/{brand}
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('device-brand-pages', [DeviceBrandPageController::class, 'index'])->name('device-brand-pages.index');
+    });
+    Route::middleware('can:manage-crm-devices')->group(function () {
+        Route::get('device-brand-pages/create', [DeviceBrandPageController::class, 'create'])->name('device-brand-pages.create');
+        Route::post('device-brand-pages', [DeviceBrandPageController::class, 'store'])->name('device-brand-pages.store');
+        Route::get('device-brand-pages/{devicebrandpage}/edit', [DeviceBrandPageController::class, 'edit'])->name('device-brand-pages.edit');
+        Route::put('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'update'])->name('device-brand-pages.update');
+        Route::delete('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'destroy'])->name('device-brand-pages.destroy');
     });
 
     // ─── تاکسونومی ── استان‌ها ──────────────────────────────────────

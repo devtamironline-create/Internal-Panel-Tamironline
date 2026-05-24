@@ -664,6 +664,15 @@
                         @endcan
                         @endif
 
+                        @if(Route::has('crm.device-brand-pages.index'))
+                        @can('view-crm-taxonomies')
+                        <a href="{{ route('crm.device-brand-pages.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-brand-pages.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                            صفحات ترکیبی (device × brand)
+                        </a>
+                        @endcan
+                        @endif
+
                         @canany(['manage-site-settings', 'manage-site'])
                         <a href="{{ route('site.admin.about-stats.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.about-stats.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
