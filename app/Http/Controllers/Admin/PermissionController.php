@@ -134,10 +134,10 @@ class PermissionController extends Controller
             'manage-warehouse' => 'مدیریت انبار',
 
             // تکنسین (ماژول Technician)
-            'manage-technicians' => 'مدیریت درخواست‌های تکنسین',
-            'approve-technician' => 'تایید/رد درخواست تکنسین',
+            'manage-technicians' => 'مدیریت کامل درخواست‌های تکنسین (مشاهده + همه عملیات)',
+            'approve-technician' => 'تغییر وضعیت ثبت‌نام تکنسین (تایید / رد / آرشیو)',
             'delete-technician' => 'حذف درخواست تکنسین',
-            'edit-technician-registration' => 'ویرایش ثبت‌نام تکنسین',
+            'edit-technician-registration' => 'ویرایش اطلاعات ثبت‌نام تکنسین',
 
             // CRM - داشبورد / سفارش
             'view-crm-dashboard' => 'مشاهده داشبورد CRM',
