@@ -715,12 +715,14 @@ class DashboardController extends Controller
         $callbackUrl = route('crm.payment.callback');
         $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
 
+        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
+
         $response = $zibal->request(
             amount: $amount,
             callbackUrl: $callbackUrl,
             orderId: $orderId,
             mobile: $tech->mobile,
-            description: 'شارژ کیف‌پول تکنسین #' . $tech->id,
+            description: 'شارژ کیف‌پول — ' . $techName,
         );
 
         $payment = Payment::create([

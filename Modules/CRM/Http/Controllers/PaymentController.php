@@ -259,14 +259,16 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         $status = $request->string('status')->toString();
+        $purpose = $request->string('purpose')->toString();
 
-        $payments = Payment::with(['invoice', 'customer'])
+        $payments = Payment::with(['invoice', 'customer', 'technician'])
             ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($purpose, fn ($q) => $q->where('purpose', $purpose))
             ->latest()
             ->paginate(30)
             ->withQueryString();
 
-        return view('crm::payment.index', compact('payments', 'status'));
+        return view('crm::payment.index', compact('payments', 'status', 'purpose'));
     }
 
     public function settings()
