@@ -56,6 +56,13 @@ class OrderWizard extends Component
     public array $objections = [];
     public string $objectionDescription = '';
 
+    /**
+     * دستگاه‌های اضافه — هر بار submit، یک Order جداگانه ساخته می‌شود
+     * برای هر دستگاه (مشتری/آدرس/تکنسین/زمان مراجعه مشترک).
+     * شکل: [['brand_id'=>?, 'device_id'=>?, 'objections'=>[], 'objection_description'=>'']]
+     */
+    public array $extraDevices = [];
+
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
     public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
@@ -351,6 +358,38 @@ class OrderWizard extends Component
         }
     }
 
+    // ─── چند دستگاه در یک ثبت ────────────────────────────────────
+
+    public function addExtraDevice(): void
+    {
+        $this->extraDevices[] = [
+            'brand_id' => null,
+            'device_id' => null,
+            'objections' => [],
+            'objection_description' => '',
+        ];
+    }
+
+    public function removeExtraDevice(int $index): void
+    {
+        unset($this->extraDevices[$index]);
+        $this->extraDevices = array_values($this->extraDevices);
+    }
+
+    public function toggleExtraObjection(int $index, string $value): void
+    {
+        if (! isset($this->extraDevices[$index])) return;
+        $current = $this->extraDevices[$index]['objections'] ?? [];
+        $idx = array_search($value, $current, true);
+        if ($idx === false) {
+            $current[] = $value;
+        } else {
+            unset($current[$idx]);
+            $current = array_values($current);
+        }
+        $this->extraDevices[$index]['objections'] = $current;
+    }
+
     public function next(): void
     {
         $this->validateStep($this->currentStep);
@@ -454,67 +493,100 @@ class OrderWizard extends Component
                 $this->validateStep($s);
             }
 
-            $order = DB::transaction(function () {
-            // ۱) مشتری
-            $customer = $this->showNewCustomerForm
-                ? Customer::create([
-                    'first_name' => $this->newName,
-                    'mobile' => $this->newMobile,
-                    'phone' => $this->newPhone ?: null,
-                ])
-                : Customer::findOrFail($this->customerId);
+            $createdOrders = DB::transaction(function () {
+                // ۱) مشتری
+                $customer = $this->showNewCustomerForm
+                    ? Customer::create([
+                        'first_name' => $this->newName,
+                        'mobile' => $this->newMobile,
+                        'phone' => $this->newPhone ?: null,
+                    ])
+                    : Customer::findOrFail($this->customerId);
 
-            // ۲) ایرادها → string با کاما (مطابق WP)
-            $problemTitle = ! empty($this->objections)
-                ? implode('، ', $this->objections)
-                : null;
+                // لیست همهٔ دستگاه‌ها: دستگاه اصلی + extraDevices.
+                // برای هر دستگاه یک Order جداگانه ساخته می‌شود (مشتری/
+                // آدرس/تکنسین/زمان مراجعه مشترک، دستگاه و ایرادها متفاوت).
+                $allDevices = [[
+                    'brand_id' => $this->brandId,
+                    'device_id' => $this->deviceId,
+                    'objections' => $this->objections,
+                    'objection_description' => $this->objectionDescription,
+                ]];
+                foreach ($this->extraDevices as $extra) {
+                    // فقط دستگاه‌هایی که حداقل brand+device دارند
+                    if (! empty($extra['brand_id']) && ! empty($extra['device_id'])) {
+                        $allDevices[] = [
+                            'brand_id' => (int) $extra['brand_id'],
+                            'device_id' => (int) $extra['device_id'],
+                            'objections' => $extra['objections'] ?? [],
+                            'objection_description' => $extra['objection_description'] ?? '',
+                        ];
+                    }
+                }
 
-            $order = Order::create([
-                'order_code' => Order::generateOrderCode(),
-                'customer_id' => $customer->id,
-                'subscription' => $this->subscription !== '' ? (int) $this->subscription : null,
-                'introduction' => $this->introduction ?: null,
-                'order_type' => $this->orderType,
-                'brand_id' => $this->brandId,
-                'device_id' => $this->deviceId,
-                'technician_id' => $this->technicianId,
-                'customer_name' => $customer->display_name,
-                'customer_mobile' => $customer->mobile,
-                'customer_phone' => $customer->phone,
-                'province_id' => $this->provinceId,
-                'city_id' => $this->cityId,
-                'address' => $this->address,
-                'problem_title' => $problemTitle,
-                'problem_description' => $this->objectionDescription ?: null,
-                'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
-                    ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
-                    : null,
-                // هم‌ارز WP CRM: حتی با تخصیص تکنسین، وضعیت روی «جدید»
-                // می‌ماند. تکنسین باید با مشتری تماس بگیرد و سپس خودش به
-                // «هماهنگ شده» تغییر دهد.
-                'status' => OrderStatus::New->value,
-                'assigned_at' => $this->technicianId ? now() : null,
-                'created_by' => auth()->id(),
-            ]);
+                $orders = [];
+                foreach ($allDevices as $dev) {
+                    $problemTitle = ! empty($dev['objections'])
+                        ? implode('، ', $dev['objections'])
+                        : null;
 
-            OrderStatusLog::create([
-                'order_id' => $order->id,
-                'from_status' => null,
-                'to_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
-                'note' => 'ثبت اولیه سفارش از ویزارد',
-                'changed_by' => auth()->id(),
-                'created_at' => now(),
-            ]);
+                    $o = Order::create([
+                        'order_code' => Order::generateOrderCode(),
+                        'customer_id' => $customer->id,
+                        'subscription' => $this->subscription !== '' ? (int) $this->subscription : null,
+                        'introduction' => $this->introduction ?: null,
+                        'order_type' => $this->orderType,
+                        'brand_id' => $dev['brand_id'],
+                        'device_id' => $dev['device_id'],
+                        'technician_id' => $this->technicianId,
+                        'customer_name' => $customer->display_name,
+                        'customer_mobile' => $customer->mobile,
+                        'customer_phone' => $customer->phone,
+                        'province_id' => $this->provinceId,
+                        'city_id' => $this->cityId,
+                        'address' => $this->address,
+                        'problem_title' => $problemTitle,
+                        'problem_description' => $dev['objection_description'] ?: null,
+                        'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
+                            ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
+                            : null,
+                        'status' => OrderStatus::New->value,
+                        'assigned_at' => $this->technicianId ? now() : null,
+                        'created_by' => auth()->id(),
+                    ]);
 
-            return $order;
+                    OrderStatusLog::create([
+                        'order_id' => $o->id,
+                        'from_status' => null,
+                        'to_status' => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
+                        'note' => count($allDevices) > 1
+                            ? 'ثبت اولیه سفارش از ویزارد (یکی از ' . count($allDevices) . ' دستگاه ثبت‌شده)'
+                            : 'ثبت اولیه سفارش از ویزارد',
+                        'changed_by' => auth()->id(),
+                        'created_at' => now(),
+                    ]);
+
+                    $orders[] = $o;
+                }
+
+                return $orders;
             });
 
-            $smsNotifier->notify($order, SmsTrigger::OrderCreated);
-            if ($order->technician_id) {
-                $smsNotifier->notify($order->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+            // SMS برای هر سفارش
+            foreach ($createdOrders as $o) {
+                $smsNotifier->notify($o, SmsTrigger::OrderCreated);
+                if ($o->technician_id) {
+                    $smsNotifier->notify($o->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+                }
             }
 
-            session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
+            $order = $createdOrders[0]; // برای redirect به اولین سفارش
+            $count = count($createdOrders);
+            session()->flash('success',
+                $count === 1
+                    ? 'سفارش ثبت شد: ' . $order->order_code
+                    : "{$count} سفارش ثبت شد: " . collect($createdOrders)->pluck('order_code')->implode('، ')
+            );
 
             // اجازهٔ خروج از wizard را به JS بده تا beforeunload prompt
             // هنگام redirect نهایی نشان داده نشود.
