@@ -245,6 +245,91 @@ class OrphanOrdersController extends Controller
     }
 
     /**
+     * بازنویسی technician_wp_id برای orphanهایی که current wp_id آن‌ها
+     * در پنل match ندارد — اگر در لاگ author دیگری هست که در پنل match
+     * دارد، آن را ترجیح بده.
+     *
+     * این برای زمانی است که run اول بک‌فیل یک wp_id حذف‌شده/قدیمی را
+     * ست کرده و حالا می‌خواهیم به wp_idی که در پنل موجود است سویچ کنیم.
+     */
+    public function rebackfillPreferPanelMatch(Request $request)
+    {
+        app()->instance('crm.suppress_outbound_push', true);
+
+        // wp_idهای موجود در پنل
+        $panelTechWpIds = Technician::whereNotNull('wp_id')->pluck('wp_id')->flip()->all();
+
+        // فقط orphanهایی که technician_wp_id فعلی‌شون در پنل match ندارد
+        $orders = Order::query()
+            ->whereNull('technician_id')
+            ->whereNotNull('technician_wp_id')
+            ->whereNotIn('technician_wp_id', array_keys($panelTechWpIds))
+            ->whereNotNull('order_description_content')
+            ->get(['id', 'technician_wp_id', 'order_description_content']);
+
+        $updated = 0;
+        $unchanged = 0;
+
+        foreach ($orders as $order) {
+            $events = $order->wp_events;
+            if (! is_array($events)) {
+                $unchanged++;
+                continue;
+            }
+
+            // همه authorها از لاگ + شناسایی priority + matched panel
+            $authors = [];
+            $priorityAuthor = null;
+            foreach ($events as $ev) {
+                $author = $ev['author'] ?? null;
+                if (! is_numeric($author) || (int) $author <= 0) continue;
+                $wpId = (int) $author;
+                $authors[$wpId] = ($authors[$wpId] ?? 0) + 1;
+
+                $status = mb_strtolower((string) ($ev['status'] ?? ''));
+                $subject = (string) ($ev['subject'] ?? '');
+                if (
+                    str_contains($status, 'انجام کار')
+                    || str_contains($subject, 'انجام کار')
+                    || str_contains($subject, 'ایجاد فاکتور')
+                    || str_contains($subject, 'صدور فاکتور')
+                ) {
+                    $priorityAuthor = $wpId;
+                }
+            }
+
+            // ترجیح: priority اگر در پنل هست → matched با بیشترین تعداد → priority بدون match
+            $resolved = null;
+            if ($priorityAuthor && isset($panelTechWpIds[$priorityAuthor])) {
+                $resolved = $priorityAuthor;
+            } else {
+                $matchedAuthors = array_filter($authors, fn ($_, $wpId) => isset($panelTechWpIds[$wpId]), ARRAY_FILTER_USE_BOTH);
+                if (! empty($matchedAuthors)) {
+                    arsort($matchedAuthors);
+                    $resolved = (int) array_key_first($matchedAuthors);
+                }
+            }
+
+            // فقط در صورتی تغییر بده که با مقدار فعلی فرق دارد و بهتر است (match پنل)
+            if ($resolved && $resolved !== (int) $order->technician_wp_id) {
+                DB::table('crm_orders')
+                    ->where('id', $order->id)
+                    ->update([
+                        'technician_wp_id' => $resolved,
+                        'updated_at' => now(),
+                    ]);
+                $updated++;
+            } else {
+                $unchanged++;
+            }
+        }
+
+        return back()->with('success',
+            "بازنویسی wp_id بر اساس match پنل: {$updated} سفارش به‌روزرسانی شد، {$unchanged} سفارش بدون تغییر باقی ماند (هیچ author دیگری در لاگ‌شان match پنل نداشت)."
+        );
+    }
+
+    /**
      * ست کردن technician_wp_id برای یک سفارش خاص — برای زمانی که اپراتور
      * از بین چند candidate در لاگ یکی را دستی انتخاب می‌کند.
      * فقط technician_wp_id را ست می‌کند؛ سپس Auto-Assign یا dropdown

@@ -264,6 +264,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->name('orphan-orders.backfill-from-log');
         Route::post('orphan-orders/set-wp-id', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'setWpIdForOrder'])
             ->name('orphan-orders.set-wp-id');
+        Route::post('orphan-orders/rebackfill-prefer-panel', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'rebackfillPreferPanelMatch'])
+            ->name('orphan-orders.rebackfill-prefer-panel');
     });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');

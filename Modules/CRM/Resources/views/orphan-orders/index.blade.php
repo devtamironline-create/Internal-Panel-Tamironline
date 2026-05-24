@@ -50,6 +50,27 @@
     </div>
     @endif
 
+    {{-- ─── بازنویسی wp_id برای orphanهای match‌نشده — اولویت با match پنل ─── --}}
+    @php
+        $unmatchedGroupsCount = $groups->filter(fn ($g) => ! $matchedTechs->has($g->technician_wp_id))->count();
+    @endphp
+    @if($unmatchedGroupsCount > 0)
+    <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div class="text-sm text-purple-800 dark:text-purple-200 flex-1">
+            <b>{{ $unmatchedGroupsCount }}</b> گروه با technician_wp_id‌ای که در پنل match ندارند.
+            اگر در لاگ این سفارش‌ها author دیگری هست که در پنل match دارد، با این دکمه
+            <b>technician_wp_id</b> آنها به‌روز می‌شود (ترجیح: رویداد «انجام کار» با match پنل، سپس بیشترین فراوانی).
+        </div>
+        <form method="POST" action="{{ route('crm.orphan-orders.rebackfill-prefer-panel') }}"
+              onsubmit="return confirm('بازنویسی technician_wp_id orphanهایی که match پنل ندارند بر اساس لاگ؟\n\nاگر در لاگ author دیگری که در پنل match دارد پیدا شود، wp_id فعلی با آن جایگزین می‌شود.');">
+            @csrf
+            <button class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                🔄 بازنویسی wp_id با اولویت match پنل
+            </button>
+        </form>
+    </div>
+    @endif
+
     {{-- ─── دکمه auto-assign برای match‌های دقیق ─── --}}
     @if($matchedTechs->count() > 0)
     <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
