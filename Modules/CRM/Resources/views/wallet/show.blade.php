@@ -70,7 +70,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                         @forelse($transactions as $tx)
                         <tr>
-                            <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">{{ $tx->created_at?->format('Y-m-d H:i') }}</td>
+                            <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">@jdatetime($tx->created_at)</td>
                             <td class="px-4 py-2"><span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span></td>
                             <td class="px-4 py-2 font-bold {{ $tx->amount >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ ($tx->amount >= 0 ? '+' : '') . number_format($tx->amount) }}</td>
                             <td class="px-4 py-2">{{ number_format($tx->balance_after) }}</td>
@@ -123,7 +123,7 @@
                             $typeBadge = $typeEnum?->badgeClass() ?? 'bg-gray-100 text-gray-700';
                         @endphp
                         <tr class="opacity-75">
-                            <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">{{ $a['created_at'] ?? '—' }}</td>
+                            <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">@jdatetime($a['created_at'])</td>
                             <td class="px-4 py-2"><span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $typeBadge }}">{{ $typeLabel }}</span></td>
                             <td class="px-4 py-2 font-bold {{ $amount >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ ($amount >= 0 ? '+' : '') . number_format($amount) }}</td>
                             <td class="px-4 py-2 text-xs">
@@ -142,7 +142,7 @@
                             <td class="px-4 py-2 text-[10px] text-gray-400" dir="ltr">
                                 {{ $a['_source'] ?? $a['_source_file'] ?? '' }}
                                 @if(! empty($a['_reset_at']))
-                                    <br>{{ \Carbon\Carbon::parse($a['_reset_at'])->format('Y-m-d H:i') }}
+                                    <br>@jdatetime($a['_reset_at'])
                                 @endif
                             </td>
                         </tr>

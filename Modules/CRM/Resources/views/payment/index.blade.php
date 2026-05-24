@@ -43,7 +43,7 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($payments as $payment)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-3 text-xs text-gray-500 whitespace-nowrap" dir="ltr">{{ $payment->created_at?->format('Y-m-d H:i') }}</td>
+                    <td class="px-6 py-3 text-xs text-gray-500 whitespace-nowrap" dir="ltr">@jdatetime($payment->created_at)</td>
                     <td class="px-6 py-3 text-sm">
                         @if($payment->invoice)
                         <a href="{{ route('crm.invoices.show', $payment->invoice) }}" class="text-brand-600 hover:underline" dir="ltr">{{ $payment->invoice->invoice_code }}</a>
