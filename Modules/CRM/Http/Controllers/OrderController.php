@@ -284,11 +284,16 @@ class OrderController extends Controller
                 ->suggestForOrder($order, 5);
         }
 
+        // فاکتور فعال این سفارش (اگر وجود دارد) — برای نمایش دکمه «صدور فاکتور»
+        // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
+        $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+
         return view('crm::orders.show', [
             'order' => $order,
             'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
             'suggestions' => $suggestions,
+            'activeInvoice' => $activeInvoice,
         ]);
     }
 
