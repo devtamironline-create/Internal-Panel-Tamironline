@@ -619,74 +619,79 @@ return [
         'title' => 'الگوی صفحه برند (پیش‌فرض همه برندها)',
         'sections' => [
 
-            'identity' => [
-                'label' => 'هویت (پیش‌فرض)',
+            // ─── 1. Hero ──────────────────────────────────────────────
+            'hero' => [
+                'label' => 'Hero (پیش‌فرض)',
+                'description' => 'فیلدهای بالای صفحه: badge/تیتر/زیرتیتر/کپشن. از {brand} برای نام برند استفاده کنید.',
                 'fields' => [
-                    'tagline' => ['label' => 'شعار', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                    'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
-                ],
-            ],
-
-            'stats' => [
-                'label' => 'آمار پیش‌فرض',
-                'fields' => [
-                    'items' => [
-                        'label' => 'آمار',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'value' => ['label' => 'مقدار', 'type' => 'string', 'rules' => 'required|string|max:60'],
-                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                    'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'cta_primary' => [
+                        'label' => 'دکمه‌ی ثبت سفارش',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
-                ],
-            ],
-
-            'issues' => [
-                'label' => 'مشکلات رایج (پیش‌فرض)',
-                'fields' => [
-                    'items' => [
-                        'label' => 'آیتم‌ها',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
-                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
+                    'cta_secondary' => [
+                        'label' => 'دکمه‌ی تماس فوری',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک (tel: یا URL)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                             'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
                 ],
             ],
 
-            'why_us' => [
-                'label' => 'چرا ما (پیش‌فرض)',
+            // ─── 2. Steps (مراحل دریافت خدمات) — global by default ──
+            'steps' => [
+                'label' => 'مراحل دریافت خدمات (تصویر)',
+                'description' => 'دو تصویر برای دسکتاپ و موبایل. در هر برند می‌توانید این بخش را غیرفعال کنید یا تصاویر را override کنید.',
                 'fields' => [
-                    'items' => [
-                        'label' => 'آیتم‌ها',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
-                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
-                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                        ],
-                    ],
+                    'image' => ['label' => 'تصویر مراحل (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'alt' => ['label' => 'متن جایگزین (alt)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                 ],
             ],
 
+            // ─── 4. Content (محتوای کامل HTML) ──────────────────────
+            'content' => [
+                'label' => 'محتوای متنی کامل (پیش‌فرض)',
+                'description' => 'محتوای detail برند — می‌توانید از قالب‌بندی HTML استفاده کنید. placeholder {brand} پشتیبانی می‌شود.',
+                'fields' => [
+                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:200000'],
+                ],
+            ],
+
+            // ─── 5. FAQ ─────────────────────────────────────────────
             'faq' => [
                 'label' => 'سوالات متداول (پیش‌فرض)',
+                'description' => 'از مخزن FAQ انتخاب کنید (دسته‌بندی یا منفرد).',
                 'fields' => [
                     'category_ids' => ['label' => 'دسته‌بندی FAQ', 'type' => 'reference', 'source' => 'faq_categories'],
                     'faq_ids' => ['label' => 'سوالات منفرد', 'type' => 'reference', 'source' => 'faqs'],
                 ],
             ],
 
-            'support' => [
-                'label' => 'گارانتی و پشتیبانی',
+            // ─── 7. Testimonials (پیش‌فرض از بانک reviews) ──────────
+            'testimonials' => [
+                'label' => 'نظرات مشتریان (پیش‌فرض)',
+                'description' => 'reviewهای انتخابی برای نمایش به‌صورت پیش‌فرض در همه‌ی صفحات برند.',
                 'fields' => [
-                    'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
-                    'support_info' => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                    'testimonial_ids' => [
+                        'label' => 'انتخاب از بانک نظرات',
+                        'type' => 'reference',
+                        'source' => 'testimonials',
+                    ],
                 ],
             ],
 
+            // ─── SEO ────────────────────────────────────────────────
             'seo' => [
                 'label' => 'سئو (پیش‌فرض)',
                 'fields' => [

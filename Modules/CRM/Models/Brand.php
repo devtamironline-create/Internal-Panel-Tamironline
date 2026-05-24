@@ -15,6 +15,9 @@ class Brand extends Model
         'slug',
         'logo',
         'tagline',
+        'eyebrow',
+        'subtitle',
+        'caption',
         'description',
         'tone',
         'bg',
@@ -26,6 +29,15 @@ class Brand extends Model
         'meta_description',
         'warranty_text',
         'support_info',
+        'cta_primary_label',
+        'cta_primary_url',
+        'cta_primary_icon',
+        'cta_secondary_label',
+        'cta_secondary_url',
+        'cta_secondary_icon',
+        'steps_image_desktop',
+        'steps_image_mobile',
+        'sections_enabled',
         'sort_order',
         'is_active',
         'is_featured',
@@ -40,6 +52,7 @@ class Brand extends Model
         'issues' => 'array',
         'why_us' => 'array',
         'faq' => 'array',
+        'sections_enabled' => 'array',
     ];
 
     /**
@@ -50,6 +63,40 @@ class Brand extends Model
         return $this->belongsToMany(Device::class, 'crm_device_brands', 'brand_id', 'device_id')
             ->withPivot('sort_order')
             ->orderBy('crm_device_brands.sort_order');
+    }
+
+    /**
+     * FAQهای اختصاصی این برند از بانک FAQ.
+     */
+    public function faqs(): BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Faq::class, 'crm_brand_faqs', 'brand_id', 'faq_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_brand_faqs.sort_order');
+    }
+
+    /**
+     * دسته‌بندی‌های FAQ انتخاب‌شده برای این برند.
+     */
+    public function faqCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Taxonomy::class, 'crm_brand_faq_categories', 'brand_id', 'taxonomy_id')
+            ->where('site_taxonomies.type', \Modules\Site\Models\Taxonomy::TYPE_FAQ)
+            ->withPivot('sort_order')
+            ->orderBy('crm_brand_faq_categories.sort_order');
+    }
+
+    /**
+     * نظرات/توصیه‌نامه‌های انتخاب‌شده برای نمایش در صفحه این برند.
+     */
+    public function reviews(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\Site\Models\Review::class,
+            'site_review_brands',
+            'brand_id',
+            'review_id'
+        );
     }
 
     public function scopeActive($query)

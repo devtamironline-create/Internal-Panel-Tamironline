@@ -8,7 +8,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
 use Modules\CRM\Support\HtmlSanitizer;
+use Modules\Site\Models\Faq;
+use Modules\Site\Models\Review;
+use Modules\Site\Models\Taxonomy;
 
 class BrandController extends Controller
 {
@@ -37,7 +41,7 @@ class BrandController extends Controller
 
     public function create()
     {
-        return view('crm::brands.create');
+        return view('crm::brands.create', $this->formData(null));
     }
 
     public function store(Request $request)
@@ -47,10 +51,16 @@ class BrandController extends Controller
         $validated['logo'] = $logoPath;
 
         $deviceIds = $this->extractDeviceIds($validated);
+        $faqIds = $this->extractFaqIds($validated);
+        $faqCategoryIds = $this->extractFaqCategoryIds($validated);
+        $reviewIds = $this->extractReviewIds($validated);
         $this->applyDefaults($validated, true);
 
         $brand = Brand::create($validated);
-        $brand->devices()->sync($deviceIds);
+        $brand->devices()->sync($this->withSortOrder($deviceIds));
+        $brand->faqs()->sync($this->withSortOrder($faqIds));
+        $brand->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
+        $brand->reviews()->sync($reviewIds);
 
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند با موفقیت اضافه شد.');
@@ -58,7 +68,7 @@ class BrandController extends Controller
 
     public function edit(Brand $brand)
     {
-        return view('crm::brands.edit', compact('brand'));
+        return view('crm::brands.edit', array_merge(['brand' => $brand], $this->formData($brand)));
     }
 
     public function update(Request $request, Brand $brand)
@@ -68,13 +78,62 @@ class BrandController extends Controller
         $validated['logo'] = $logoPath;
 
         $deviceIds = $this->extractDeviceIds($validated);
+        $faqIds = $this->extractFaqIds($validated);
+        $faqCategoryIds = $this->extractFaqCategoryIds($validated);
+        $reviewIds = $this->extractReviewIds($validated);
         $this->applyDefaults($validated, false);
 
         $brand->update($validated);
-        $brand->devices()->sync($deviceIds);
+        $brand->devices()->sync($this->withSortOrder($deviceIds));
+        $brand->faqs()->sync($this->withSortOrder($faqIds));
+        $brand->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
+        $brand->reviews()->sync($reviewIds);
 
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند ویرایش شد.');
+    }
+
+    /**
+     * منابع picker و idهای انتخاب‌شده برای فرم.
+     *
+     * @return array<string, mixed>
+     */
+    private function formData(?Brand $brand): array
+    {
+        return [
+            'allDevices' => Device::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'thumbnail', 'icon']),
+            'selectedDeviceIds' => $brand
+                ? $brand->devices()->pluck('crm_devices.id')->map(fn ($i) => (int) $i)->all()
+                : [],
+            'allFaqs' => Faq::query()
+                ->where('is_published', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->get(['id', 'question', 'answer']),
+            'selectedFaqIds' => $brand ? $brand->faqs()->pluck('faqs.id')->all() : [],
+            'allFaqCategories' => Taxonomy::query()
+                ->ofType(Taxonomy::TYPE_FAQ)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->withCount(['faqs' => fn ($q) => $q->where('is_published', true)])
+                ->get(['id', 'slug', 'name']),
+            'selectedFaqCategoryIds' => $brand
+                ? $brand->faqCategories()->pluck('site_taxonomies.id')->map(fn ($i) => (int) $i)->all()
+                : [],
+            'allReviews' => Review::query()
+                ->where('status', Review::STATUS_APPROVED)
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->limit(500)
+                ->get(['id', 'type', 'author_name', 'topic', 'rating', 'content']),
+            'selectedReviewIds' => $brand ? $brand->reviews()->pluck('site_reviews.id')->all() : [],
+        ];
     }
 
     public function destroy(Brand $brand)
@@ -113,6 +172,9 @@ class BrandController extends Controller
 
             // CMS-override fields
             'tagline' => 'nullable|string|max:1000',
+            'eyebrow' => 'nullable|string|max:120',
+            'subtitle' => 'nullable|string|max:500',
+            'caption' => 'nullable|string|max:500',
             'description' => 'nullable|string|max:200000',
             'tone' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
             'bg' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
@@ -120,6 +182,16 @@ class BrandController extends Controller
             'meta_description' => 'nullable|string|max:500',
             'warranty_text' => 'nullable|string|max:3000',
             'support_info' => 'nullable|string|max:3000',
+            'cta_primary_label' => 'nullable|string|max:60',
+            'cta_primary_url' => 'nullable|string|max:500',
+            'cta_primary_icon' => 'nullable|string|max:60',
+            'cta_secondary_label' => 'nullable|string|max:60',
+            'cta_secondary_url' => 'nullable|string|max:500',
+            'cta_secondary_icon' => 'nullable|string|max:60',
+            'steps_image_desktop' => 'nullable|string|max:500',
+            'steps_image_mobile' => 'nullable|string|max:500',
+            'sections_enabled' => 'nullable|array',
+            'sections_enabled.*' => 'nullable|boolean',
 
             'stats' => 'nullable|array',
             'stats.*.value' => 'nullable|string|max:60',
@@ -141,13 +213,19 @@ class BrandController extends Controller
 
             'device_ids' => 'nullable|array',
             'device_ids.*' => 'integer|exists:crm_devices,id',
+
+            'faq_ids' => 'nullable|array',
+            'faq_ids.*' => 'string|exists:faqs,id',
+
+            'faq_category_ids' => 'nullable|array',
+            'faq_category_ids.*' => 'integer|exists:site_taxonomies,id',
+
+            'review_ids' => 'nullable|array',
+            'review_ids.*' => 'string|exists:site_reviews,id',
         ]);
     }
 
     /**
-     * استخراج device_ids از داده‌های validated و حذف کلید از آرایه‌ی به‌روزرسانی
-     * (چون device_ids ستون پویوت است، نه فیلد جدول crm_brands).
-     *
      * @param  array<string, mixed>  $validated  passed by reference
      * @return array<int>
      */
@@ -157,6 +235,56 @@ class BrandController extends Controller
         unset($validated['device_ids']);
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, string>
+     */
+    private function extractFaqIds(array &$validated): array
+    {
+        $ids = array_values(array_filter((array) ($validated['faq_ids'] ?? []), fn ($v) => is_string($v) && $v !== ''));
+        unset($validated['faq_ids']);
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, int>
+     */
+    private function extractFaqCategoryIds(array &$validated): array
+    {
+        $ids = array_values(array_map('intval', array_filter((array) ($validated['faq_category_ids'] ?? []), fn ($v) => $v !== null && $v !== '')));
+        unset($validated['faq_category_ids']);
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, string>
+     */
+    private function extractReviewIds(array &$validated): array
+    {
+        $ids = array_values(array_filter((array) ($validated['review_ids'] ?? []), fn ($v) => is_string($v) && $v !== ''));
+        unset($validated['review_ids']);
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<int, int|string>  $ids
+     * @return array<int|string, array{sort_order: int}>
+     */
+    private function withSortOrder(array $ids): array
+    {
+        $out = [];
+        foreach (array_values($ids) as $i => $id) {
+            $out[$id] = ['sort_order' => $i];
+        }
+
+        return $out;
     }
 
     private function applyDefaults(array &$validated, bool $isNew): void
