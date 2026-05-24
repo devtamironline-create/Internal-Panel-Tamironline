@@ -109,7 +109,6 @@
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">نوع</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">مبلغ</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">سفارش</th>
-                            <th class="px-4 py-2 text-right text-gray-500 uppercase">balance_after وقت آن</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">یادداشت</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">منبع</th>
                         </tr>
@@ -135,13 +134,6 @@
                                        target="_blank">{{ $ord['code'] }}</a>
                                 @elseif($ord && $ord['wp_id'])
                                     <span class="text-gray-400" dir="ltr" title="در پنل نیست">wp:{{ $ord['wp_id'] }}</span>
-                                @else
-                                    <span class="text-gray-300">—</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-2 text-gray-500">
-                                @if(array_key_exists('balance_after', $a) && $a['balance_after'] !== null)
-                                    {{ number_format((int) $a['balance_after']) }}
                                 @else
                                     <span class="text-gray-300">—</span>
                                 @endif
