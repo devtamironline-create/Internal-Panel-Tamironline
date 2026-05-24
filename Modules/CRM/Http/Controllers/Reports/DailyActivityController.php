@@ -89,18 +89,24 @@ class DailyActivityController extends Controller
         // ─── لود سفارش‌ها + همه‌ی events مربوط به این روز ────────
         $orders = Order::query()
             ->whereIn('id', $orderIds)
-            ->with(['customer:id,first_name,mobile', 'technician:id,first_name,last_name,firstname_tech,wp_id'])
+            ->with([
+                'customer:id,first_name,mobile',
+                'technician:id,first_name,last_name,firstname_tech,wp_id',
+                'creator:id,name,email',
+            ])
             ->get();
 
         $statusLogs = OrderStatusLog::query()
             ->whereIn('order_id', $orderIds)
             ->whereBetween('created_at', [$start, $end])
+            ->with('changer:id,name,email')
             ->orderBy('created_at')
             ->get()
             ->groupBy('order_id');
 
         $invoices = Invoice::query()
             ->whereIn('order_id', $orderIds)
+            ->with('creator:id,name,email')
             ->orderBy('issued_at')
             ->get()
             ->groupBy('order_id');
@@ -108,6 +114,7 @@ class DailyActivityController extends Controller
         $walletTxs = WalletTransaction::query()
             ->whereIn('order_id', $orderIds)
             ->whereBetween('created_at', [$start, $end])
+            ->with('creator:id,name,email')
             ->orderBy('created_at')
             ->get()
             ->groupBy('order_id');
@@ -130,33 +137,47 @@ class DailyActivityController extends Controller
             $events = [];
             $createdInWindow = $order->created_at && $order->created_at->between($start, $end);
             if ($createdInWindow) {
+                $by = $order->creator
+                    ? trim($order->creator->name ?: $order->creator->email ?: ('کاربر #' . $order->creator->id))
+                    : 'سیستم/سینک WP';
                 $events[] = [
                     'time' => $order->created_at,
                     'kind' => 'created',
                     'icon' => '🆕',
                     'label' => 'سفارش ایجاد شد',
-                    'detail' => 'وضعیت اولیه: ' . ($order->status?->label() ?? '—'),
+                    'detail' => 'توسط: ' . $by . ' — وضعیت اولیه: ' . ($order->status?->label() ?? '—'),
                 ];
             }
             foreach ($logs as $log) {
                 $from = OrderStatus::tryFrom((string) $log->from_status)?->label() ?? ($log->from_status ?? '—');
                 $to = OrderStatus::tryFrom((string) $log->to_status)?->label() ?? $log->to_status;
+                $by = $log->changer
+                    ? trim($log->changer->name ?: $log->changer->email ?: ('کاربر #' . $log->changer->id))
+                    : 'سیستم';
+                $detail = 'توسط: ' . $by;
+                if ($log->note) {
+                    $detail .= ' — ' . $log->note;
+                }
                 $events[] = [
                     'time' => $log->created_at,
                     'kind' => 'status',
                     'icon' => '🔄',
                     'label' => "وضعیت: {$from} → {$to}",
-                    'detail' => $log->note,
+                    'detail' => $detail,
                 ];
             }
             foreach ($invs as $inv) {
                 if ($inv->issued_at && $inv->issued_at->between($start, $end)) {
+                    $by = $inv->creator
+                        ? trim($inv->creator->name ?: $inv->creator->email ?: ('کاربر #' . $inv->creator->id))
+                        : 'سیستم';
                     $events[] = [
                         'time' => $inv->issued_at,
                         'kind' => 'invoice',
                         'icon' => '📄',
                         'label' => 'فاکتور صادر شد: ' . $inv->invoice_code,
-                        'detail' => 'سهم شرکت: ' . number_format((int) $inv->company_share)
+                        'detail' => 'توسط: ' . $by
+                            . ' — سهم شرکت: ' . number_format((int) $inv->company_share)
                             . ' / تکنسین: ' . number_format((int) $inv->tech_share)
                             . ' / in_wallet: ' . ($inv->in_wallet ? 'بله' : 'خیر'),
                     ];
@@ -164,13 +185,20 @@ class DailyActivityController extends Controller
             }
             foreach ($wtxs as $tx) {
                 $type = $tx->type instanceof WalletTxType ? $tx->type : WalletTxType::tryFrom((string) $tx->type);
+                $by = $tx->creator
+                    ? trim($tx->creator->name ?: $tx->creator->email ?: ('کاربر #' . $tx->creator->id))
+                    : 'سیستم';
+                $detail = 'توسط: ' . $by;
+                if ($tx->note) {
+                    $detail .= ' — ' . $tx->note;
+                }
                 $events[] = [
                     'time' => $tx->created_at,
                     'kind' => 'wallet',
                     'icon' => '💰',
                     'label' => 'کیف‌پول: ' . ($type?->label() ?? '—')
                         . ' ' . (($tx->amount >= 0 ? '+' : '') . number_format((int) $tx->amount)),
-                    'detail' => $tx->note,
+                    'detail' => $detail,
                 ];
             }
 
