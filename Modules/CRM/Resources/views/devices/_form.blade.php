@@ -82,6 +82,35 @@
     </div>
 
     <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
+
+        {{-- ─── Section toggles (فعال/غیرفعال کردن سکشن‌های صفحه) ─── --}}
+        @php
+            $secs = old('sections_enabled', $device->sections_enabled ?? []);
+            $secEnabled = fn(string $k, bool $default = true) => array_key_exists($k, (array) $secs)
+                ? (bool) $secs[$k] : $default;
+        @endphp
+        <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+            <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-2">سکشن‌های فعال در این صفحه</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                @foreach([
+                    'hero'          => 'Hero',
+                    'steps'         => 'مراحل خدمات',
+                    'live_activity' => 'Live Activity',
+                    'content'       => 'محتوای کامل',
+                    'faq'           => 'سوالات متداول',
+                    'brands'        => 'برندها',
+                    'testimonials'  => 'نظرات مشتریان',
+                ] as $key => $label)
+                    <label class="inline-flex items-center gap-2">
+                        <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
+                        <input type="checkbox" name="sections_enabled[{{ $key }}]" value="1"
+                               @checked($secEnabled($key, true))>
+                        <span>{{ $label }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
         {{-- نام‌ها و توضیح --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -106,22 +135,85 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1">بالای تیتر (eyebrow)</label>
+                <label class="block text-sm font-medium mb-1">Badge / بالای تیتر (eyebrow)</label>
                 <input type="text" name="eyebrow" value="{{ old('eyebrow', $device->eyebrow ?? '') }}" maxlength="120"
                        placeholder="سرویس تخصصی"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div>
+                <label class="block text-sm font-medium mb-1">کپشن (متن کوتاه زیر زیرتیتر)</label>
+                <input type="text" name="caption" value="{{ old('caption', $device->caption ?? '') }}" maxlength="500"
+                       placeholder="بیش از ۱۰ سال تجربه..."
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </div>
+            <div class="sm:col-span-2">
                 <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
                 <input type="text" name="subtitle" value="{{ old('subtitle', $device->subtitle ?? '') }}" maxlength="500"
                        placeholder="در محل، با گارانتی، بدون پیش‌پرداخت"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium mb-1">توضیح کامل</label>
-                <textarea name="description" rows="8" maxlength="10000"
+                <label class="block text-sm font-medium mb-1">محتوای کامل صفحه (سکشن content)</label>
+                <textarea name="description" rows="10" maxlength="10000"
                           class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
-                <p class="text-xs text-gray-500 mt-1">می‌توانید از قالب‌بندی غنی (تیتر، فهرست، لینک، تصویر) استفاده کنید. خروجی به‌صورت HTML در فرانت render می‌شود.</p>
+                <p class="text-xs text-gray-500 mt-1">محتوای متنی غنی برای سکشن «محتوای کامل». خروجی به‌صورت HTML در فرانت render می‌شود.</p>
+            </div>
+        </div>
+
+        {{-- ─── دکمه‌های CTA (Hero) ─── --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <h4 class="text-sm font-bold mb-3">دکمه‌های اصلی Hero</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
+                    <p class="text-xs font-bold text-gray-600">دکمه ثبت سفارش (Primary)</p>
+                    <input type="text" name="cta_primary_label" value="{{ old('cta_primary_label', $device->cta_primary_label ?? '') }}" maxlength="60"
+                           placeholder="ثبت سفارش"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
+                    <input type="text" name="cta_primary_url" value="{{ old('cta_primary_url', $device->cta_primary_url ?? '') }}" maxlength="500" dir="ltr"
+                           placeholder="/order یا https://..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                    <input type="text" name="cta_primary_icon" value="{{ old('cta_primary_icon', $device->cta_primary_icon ?? '') }}" maxlength="60" dir="ltr"
+                           placeholder="shopping-cart"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                    <p class="text-xs text-gray-500">آیکن Lucide به kebab-case.</p>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
+                    <p class="text-xs font-bold text-gray-600">دکمه تماس فوری (Secondary)</p>
+                    <input type="text" name="cta_secondary_label" value="{{ old('cta_secondary_label', $device->cta_secondary_label ?? '') }}" maxlength="60"
+                           placeholder="تماس فوری"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
+                    <input type="text" name="cta_secondary_url" value="{{ old('cta_secondary_url', $device->cta_secondary_url ?? '') }}" maxlength="500" dir="ltr"
+                           placeholder="tel:02112345678"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                    <input type="text" name="cta_secondary_icon" value="{{ old('cta_secondary_icon', $device->cta_secondary_icon ?? '') }}" maxlength="60" dir="ltr"
+                           placeholder="phone"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                    <p class="text-xs text-gray-500">اگر خالی بگذارید، از مقدار سراسری استفاده می‌شود.</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- ─── تصاویر مراحل خدمات (override on global) ─── --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <h4 class="text-sm font-bold mb-1">تصاویر سکشن مراحل دریافت خدمات</h4>
+            <p class="text-xs text-gray-500 mb-3">
+                مقدار پیش‌فرض سراسری از
+                <a href="{{ route('site.admin.page-content.edit', 'device') }}" target="_blank" class="text-blue-600 hover:underline">صفحه‌ی الگوی device</a>
+                خوانده می‌شود. اگر این فیلدها را پر کنید، در صفحه‌ی این دستگاه override می‌شود.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1">URL تصویر دسکتاپ</label>
+                    <input type="text" name="steps_image_desktop" value="{{ old('steps_image_desktop', $device->steps_image_desktop ?? '') }}" maxlength="500" dir="ltr"
+                           placeholder="https://...desktop.png"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1">URL تصویر موبایل</label>
+                    <input type="text" name="steps_image_mobile" value="{{ old('steps_image_mobile', $device->steps_image_mobile ?? '') }}" maxlength="500" dir="ltr"
+                           placeholder="https://...mobile.png"
+                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                </div>
             </div>
         </div>
 

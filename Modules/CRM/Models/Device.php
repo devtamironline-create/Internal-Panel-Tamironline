@@ -20,6 +20,7 @@ class Device extends Model
         'description',
         'subtitle',
         'eyebrow',
+        'caption',
         'service_name',
         'technician_name',
         'starting_price',
@@ -32,6 +33,15 @@ class Device extends Model
         'warranty_text',
         'support_info',
         'service_steps',
+        'cta_primary_label',
+        'cta_primary_url',
+        'cta_primary_icon',
+        'cta_secondary_label',
+        'cta_secondary_url',
+        'cta_secondary_icon',
+        'steps_image_desktop',
+        'steps_image_mobile',
+        'sections_enabled',
         'sort_order',
         'is_active',
         'is_featured',
@@ -46,6 +56,7 @@ class Device extends Model
         'issues' => 'array',
         'faq' => 'array',
         'service_steps' => 'array',
+        'sections_enabled' => 'array',
     ];
 
     public function scopeActive($query)

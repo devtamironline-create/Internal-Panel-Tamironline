@@ -519,62 +519,59 @@ return [
     //
     // Placeholderها در متن‌ها: {device}, {device_label}, {device_slug}
     'device' => [
-        'title' => 'الگوی صفحه دستگاه (پیش‌فرض همه دستگاه‌ها)',
+        'title' => 'الگوی سراسری صفحه دستگاه (پیش‌فرض همه دستگاه‌ها)',
         'sections' => [
 
-            'identity' => [
-                'label' => 'هویت و نام‌ها (پیش‌فرض)',
-                'description' => 'متن‌های پایه — از {device} برای نام دستگاه استفاده کنید.',
+            // ─── 1. Hero ──────────────────────────────────────────────
+            'hero' => [
+                'label' => 'Hero (پیش‌فرض)',
+                'description' => 'فیلدهای بالای صفحه: badge/تیتر/زیرتیتر/کپشن. از {device} برای نام دستگاه استفاده کنید.',
                 'fields' => [
-                    'eyebrow' => ['label' => 'بالای تیتر (eyebrow)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'service_name' => ['label' => 'نام سرویس', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر (Hero)', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'technician_name' => ['label' => 'عنوان تکنسین', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'tagline' => ['label' => 'شعار صفحه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                    'description' => ['label' => 'توضیح کامل', 'type' => 'textarea', 'rules' => 'nullable|string|max:10000'],
-                ],
-            ],
-
-            'support' => [
-                'label' => 'گارانتی و پشتیبانی',
-                'description' => 'متن‌های ضمانت و پشتیبانی — مشترک بین همه دستگاه‌ها مگر override شود.',
-                'fields' => [
-                    'warranty_text' => ['label' => 'متن گارانتی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
-                    'support_info' => ['label' => 'اطلاعات پشتیبانی', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
-                ],
-            ],
-
-            'service_steps' => [
-                'label' => 'مراحل سرویس (پیش‌فرض)',
-                'description' => 'مراحل کاری از ثبت سفارش تا تحویل — placeholderها در عنوان/توضیح خودکار جایگزین می‌شوند.',
-                'fields' => [
-                    'items' => [
-                        'label' => 'مراحل',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'title' => ['label' => 'عنوان مرحله', 'type' => 'string', 'rules' => 'required|string|max:160'],
-                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
-                            'icon' => ['label' => 'آیکون', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'caption' => ['label' => 'کپشن (متن کوتاه زیر زیرتیتر)', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'cta_primary' => [
+                        'label' => 'دکمه‌ی ثبت سفارش',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                    'cta_secondary' => [
+                        'label' => 'دکمه‌ی تماس فوری',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک (tel: یا URL)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                         ],
                     ],
                 ],
             ],
 
-            'issues' => [
-                'label' => 'مشکلات رایج (پیش‌فرض)',
-                'description' => 'لیست issues مشترک. می‌توانید از {device} در عنوان/توضیح استفاده کنید.',
+            // ─── 2. Steps (مراحل دریافت خدمات) — global by default ──
+            'steps' => [
+                'label' => 'مراحل دریافت خدمات (تصویر)',
+                'description' => 'دو تصویر برای دسکتاپ و موبایل. در هر دستگاه می‌توانید این بخش را غیرفعال کنید یا تصاویر را override کنید.',
                 'fields' => [
-                    'items' => [
-                        'label' => 'آیتم‌ها',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:160'],
-                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'required|string|max:1000'],
-                        ],
-                    ],
+                    'image' => ['label' => 'تصویر مراحل (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'alt' => ['label' => 'متن جایگزین (alt)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                 ],
             ],
 
+            // ─── 4. Content (محتوای کامل HTML) ──────────────────────
+            'content' => [
+                'label' => 'محتوای متنی کامل (پیش‌فرض)',
+                'description' => 'محتوای detail دستگاه — می‌توانید از قالب‌بندی HTML استفاده کنید. placeholder {device} پشتیبانی می‌شود.',
+                'fields' => [
+                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:50000'],
+                ],
+            ],
+
+            // ─── 5. FAQ — از بانک FAQ ───────────────────────────────
             'faq' => [
                 'label' => 'سوالات متداول (پیش‌فرض)',
                 'description' => 'از مخزن FAQ انتخاب کنید (دسته‌بندی یا منفرد). placeholderها در متن سوال/پاسخ خودکار جایگزین می‌شوند.',
@@ -592,6 +589,20 @@ return [
                 ],
             ],
 
+            // ─── 7. Testimonials (پیش‌فرض از بانک reviews) ──────────
+            'testimonials' => [
+                'label' => 'نظرات مشتریان (پیش‌فرض)',
+                'description' => 'reviewهای انتخابی برای نمایش به‌صورت پیش‌فرض در همه‌ی صفحات دستگاه. در هر دستگاه می‌توانید انتخاب اختصاصی override کنید.',
+                'fields' => [
+                    'testimonial_ids' => [
+                        'label' => 'انتخاب از بانک نظرات',
+                        'type' => 'reference',
+                        'source' => 'testimonials',
+                    ],
+                ],
+            ],
+
+            // ─── SEO ────────────────────────────────────────────────
             'seo' => [
                 'label' => 'سئو (پیش‌فرض)',
                 'fields' => [
