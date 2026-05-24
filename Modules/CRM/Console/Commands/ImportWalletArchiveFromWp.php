@@ -277,11 +277,24 @@ class ImportWalletArchiveFromWp extends Command
                 $amount = -abs((int) ($meta['total_invoice'] ?? 0));
             }
         } elseif (! empty($meta['total_invoice']) && (int) $meta['total_invoice'] > 0) {
-            // فاکتور — تراکنش منفی commission (سهم شرکت). محاسبه با درصد
-            // فعلی تکنسین (WP percent تاریخی نگه نمی‌دارد). هم‌سو با
-            // InvoiceService::generateForOrder که amount = -company_share
-            // می‌نویسد.
-            $totalInvoice = abs((int) $meta['total_invoice']);
+            // فاکتور — تراکنش منفی commission (سهم شرکت).
+            //
+            // ⚠ منبع مبلغ مهم است:
+            //   - WP postmeta total_invoice = price_customer − cost_price (مانده)
+            //   - ولی CommissionCalculator پنل از price_customer (کل صورت‌حساب)
+            //     استفاده می‌کند، نه total_invoice.
+            //
+            // برای هم‌سازی با محاسبه‌ی پنل، اولویت با price_customer است.
+            // اگر price_customer در postmeta نبود، fallback به total_invoice.
+            //
+            // نمونه: ORD-2604-65045 → price_customer=7,200,000، cost_price=
+            // 2,000,000، total_invoice=5,200,000. سهم شرکت=25% از price_customer
+            // = 1,800,000 (نه 25% از 5,200,000 = 1,300,000).
+            $priceCustomer = (int) ($meta['price_customer'] ?? 0);
+            $totalInvoice = (int) $meta['total_invoice'];
+            $baseAmount = $priceCustomer > 0 ? $priceCustomer : abs($totalInvoice);
+            $usedBaseLabel = $priceCustomer > 0 ? 'مبلغ پرداختی مشتری' : 'مبلغ فاکتور (fallback)';
+
             $cfg = $techPanelId ? ($techConfig[$techPanelId] ?? null) : null;
 
             if (! $cfg) {
@@ -295,7 +308,7 @@ class ImportWalletArchiveFromWp extends Command
             //   - external (پیش‌فرض) → company_share = total * percent / 100
             $isInternal = ($cfg['calc_type'] === '1' || $cfg['calc_type'] === 'internal');
             $usedPercent = $isInternal ? $cfg['tech_per_of_all'] : $cfg['percent'];
-            $companyShare = intdiv($totalInvoice * $usedPercent, 100);
+            $companyShare = intdiv($baseAmount * $usedPercent, 100);
 
             if ($companyShare === 0) {
                 return null;
@@ -305,7 +318,7 @@ class ImportWalletArchiveFromWp extends Command
             $amount = -$companyShare; // منفی: کسر از کیف‌پول تکنسین
 
             $extraNoteParts[] = 'سهم شرکت از فاکتور';
-            $extraNoteParts[] = 'مبلغ فاکتور: ' . number_format($totalInvoice);
+            $extraNoteParts[] = $usedBaseLabel . ': ' . number_format($baseAmount);
             $extraNoteParts[] = 'درصد: ' . $usedPercent . '%';
             if ($isInternal) {
                 $extraNoteParts[] = '(internal)';
