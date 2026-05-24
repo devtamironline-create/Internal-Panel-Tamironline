@@ -154,7 +154,7 @@
             </div>
             <div class="sm:col-span-2">
                 <label class="block text-sm font-medium mb-1">محتوای کامل صفحه (سکشن content)</label>
-                <textarea name="description" rows="10" maxlength="10000"
+                <textarea name="description" rows="10"
                           class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
                 <p class="text-xs text-gray-500 mt-1">محتوای متنی غنی برای سکشن «محتوای کامل». خروجی به‌صورت HTML در فرانت render می‌شود.</p>
             </div>

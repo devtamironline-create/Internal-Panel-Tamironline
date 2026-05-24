@@ -148,7 +148,7 @@ class DeviceController extends Controller
             'subtitle' => 'nullable|string|max:500',
             'eyebrow' => 'nullable|string|max:120',
             'caption' => 'nullable|string|max:500',
-            'description' => 'nullable|string|max:10000',
+            'description' => 'nullable|string|max:200000',
             'cta_primary_label' => 'nullable|string|max:60',
             'cta_primary_url' => 'nullable|string|max:500',
             'cta_primary_icon' => 'nullable|string|max:60',

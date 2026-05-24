@@ -113,7 +113,7 @@ class BrandController extends Controller
 
             // CMS-override fields
             'tagline' => 'nullable|string|max:1000',
-            'description' => 'nullable|string|max:10000',
+            'description' => 'nullable|string|max:200000',
             'tone' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
             'bg' => 'nullable|string|max:20|regex:/^#[0-9a-fA-F]{3,8}$/',
             'meta_title' => 'nullable|string|max:200',

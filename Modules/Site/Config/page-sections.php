@@ -567,7 +567,7 @@ return [
                 'label' => 'محتوای متنی کامل (پیش‌فرض)',
                 'description' => 'محتوای detail دستگاه — می‌توانید از قالب‌بندی HTML استفاده کنید. placeholder {device} پشتیبانی می‌شود.',
                 'fields' => [
-                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:50000'],
+                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:200000'],
                 ],
             ],
 
