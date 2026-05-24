@@ -79,4 +79,16 @@ class DeviceBrandPage extends Model
             'review_id'
         );
     }
+
+    /**
+     * تضمین وجود رکورد برای یک pair (device, brand). اگر قبلاً ساخته
+     * شده باشد دست‌نخورده برمی‌گردد — overrideهای ادمین نباید پاک شوند.
+     */
+    public static function ensureForPair(int $deviceId, int $brandId): self
+    {
+        return static::firstOrCreate(
+            ['device_id' => $deviceId, 'brand_id' => $brandId],
+            ['is_active' => true]
+        );
+    }
 }

@@ -703,4 +703,79 @@ return [
         ],
     ],
 
+    // ─── الگوی سراسری صفحه‌ی ترکیبی device × brand ─────────────────
+    'device_brand' => [
+        'title' => 'الگوی سراسری صفحه‌ی ترکیبی دستگاه × برند',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero (پیش‌فرض ترکیبی)',
+                'description' => 'placeholderهای {device}, {brand} پشتیبانی می‌شوند.',
+                'fields' => [
+                    'badge' => ['label' => 'Badge', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'cta_primary' => [
+                        'label' => 'دکمه‌ی ثبت سفارش',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                    'cta_secondary' => [
+                        'label' => 'دکمه‌ی تماس فوری',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'steps' => [
+                'label' => 'مراحل دریافت خدمات (تصویر)',
+                'fields' => [
+                    'image' => ['label' => 'تصویر مراحل (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'alt' => ['label' => 'متن جایگزین', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                ],
+            ],
+
+            'content' => [
+                'label' => 'محتوای متنی کامل (پیش‌فرض ترکیبی)',
+                'fields' => [
+                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:200000'],
+                ],
+            ],
+
+            'faq' => [
+                'label' => 'سوالات متداول (پیش‌فرض ترکیبی)',
+                'fields' => [
+                    'category_ids' => ['label' => 'دسته‌بندی FAQ', 'type' => 'reference', 'source' => 'faq_categories'],
+                    'faq_ids' => ['label' => 'سوالات منفرد', 'type' => 'reference', 'source' => 'faqs'],
+                ],
+            ],
+
+            'testimonials' => [
+                'label' => 'نظرات مشتریان (پیش‌فرض ترکیبی)',
+                'fields' => [
+                    'testimonial_ids' => ['label' => 'انتخاب از بانک نظرات', 'type' => 'reference', 'source' => 'testimonials'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو (پیش‌فرض ترکیبی)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
 ];

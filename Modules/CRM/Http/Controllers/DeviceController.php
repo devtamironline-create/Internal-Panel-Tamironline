@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
+use Modules\CRM\Models\DeviceBrandPage;
 use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Review;
@@ -65,6 +66,11 @@ class DeviceController extends Controller
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
 
+        // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
+        foreach ($brandIds as $brandId) {
+            DeviceBrandPage::ensureForPair((int) $device->id, (int) $brandId);
+        }
+
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه با موفقیت اضافه شد.');
     }
@@ -90,6 +96,11 @@ class DeviceController extends Controller
         $device->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
+
+        // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
+        foreach ($brandIds as $brandId) {
+            DeviceBrandPage::ensureForPair((int) $device->id, (int) $brandId);
+        }
 
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه ویرایش شد.');

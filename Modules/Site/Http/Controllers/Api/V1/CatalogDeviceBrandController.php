@@ -45,7 +45,8 @@ class CatalogDeviceBrandController extends Controller
             ->where('is_active', true)
             ->first();
 
-        // Template با placeholder substitution (از همان device template)
+        // Template با placeholder substitution — اولویت با device_brand
+        // (الگوی اختصاصی ترکیبی) و fallback به template device استاندارد.
         $context = [
             'device' => $device->short_name ?? $device->name,
             'device_label' => $device->name,
@@ -54,9 +55,11 @@ class CatalogDeviceBrandController extends Controller
             'brand_slug' => $brand->slug,
             'page_title' => ($device->service_name ?? $device->name).' '.$brand->name,
         ];
-        $template = $this->sections->pageExists('device')
-            ? $this->sections->loadForPublic('device', $context)
-            : [];
+        $template = $this->sections->pageExists('device_brand')
+            ? $this->sections->loadForPublic('device_brand', $context)
+            : ($this->sections->pageExists('device')
+                ? $this->sections->loadForPublic('device', $context)
+                : []);
 
         $sectionsEnabled = array_replace(
             (array) ($brand->sections_enabled ?? []),
