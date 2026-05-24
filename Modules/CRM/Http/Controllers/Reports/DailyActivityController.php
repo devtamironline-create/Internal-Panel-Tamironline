@@ -211,7 +211,8 @@ class DailyActivityController extends Controller
             $movedToCompletedToday = $logs->contains(fn ($l) => $l->to_status === OrderStatus::Completed->value);
             $hasActiveInvoice = $invs->whereNull('superseded_at')->isNotEmpty();
 
-            if ($movedToCompletedToday && ! $hasActiveInvoice) {
+            // سفارش‌های is_legacy_closed عمداً بدون فاکتورند — flag نکن
+            if ($movedToCompletedToday && ! $hasActiveInvoice && ! $order->is_legacy_closed) {
                 $anomalies[] = ['type' => 'completed_no_invoice', 'msg' => 'Completed شد اما فاکتور ندارد'];
                 $anomCounts['completed_no_invoice']++;
             }

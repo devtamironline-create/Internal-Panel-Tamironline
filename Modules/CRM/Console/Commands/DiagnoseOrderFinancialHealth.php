@@ -65,6 +65,7 @@ class DiagnoseOrderFinancialHealth extends Command
         $this->line('═══ حالت ۱: سفارش Completed بدون فاکتور ═══');
         $case1Q = Order::query()
             ->where('status', OrderStatus::Completed->value)
+            ->where('is_legacy_closed', false) // retro-closed عمداً بدون فاکتورند
             ->whereNotExists(function ($sub) {
                 $sub->selectRaw('1')->from('crm_invoices')
                     ->whereColumn('crm_invoices.order_id', 'crm_orders.id');

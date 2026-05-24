@@ -11,14 +11,20 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش <span dir="ltr">{{ $order->order_code }}</span></h1>
-            <div class="flex items-center gap-2 mt-2">
+            <div class="flex items-center gap-2 mt-2 flex-wrap">
                 <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
+                @if($order->is_legacy_closed)
+                <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-300" title="این سفارش بر اساس لاگ پنل قدیمی بسته شده — فاکتور یا تراکنش کیف‌پول برای آن ساخته نشده">
+                    🗄 بسته‌شده قدیمی — بدون فاکتور
+                </span>
+                @endif
                 <span class="text-xs text-gray-500 dark:text-gray-400">ثبت شده در <span dir="ltr">@jdatetime($order->created_at)</span></span>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            {{-- دکمه صدور فاکتور — فقط اگر سفارش Completed باشد و فاکتور فعال نداشته باشد --}}
-            @if($order->status === OrderStatus::Completed && ! $activeInvoice)
+            {{-- دکمه صدور فاکتور — فقط اگر سفارش Completed باشد، فاکتور فعال نداشته باشد،
+                 و سفارش is_legacy_closed نباشد (سفارش‌های retro-closed عمداً بدون فاکتور می‌مانند) --}}
+            @if($order->status === OrderStatus::Completed && ! $activeInvoice && ! $order->is_legacy_closed)
                 @can('manage-crm-financial')
                 <form method="POST" action="{{ route('crm.orders.invoice.generate', $order) }}"
                       onsubmit="return confirm('صدور فاکتور برای این سفارش؟ تراکنش منفی commission هم در کیف‌پول تکنسین ثبت خواهد شد.');">

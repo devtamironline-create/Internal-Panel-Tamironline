@@ -27,6 +27,7 @@ class Order extends Model
         'status', 'cancel_reason',
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
         'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
+        'is_legacy_closed',
 
         // مالی
         'estimated_price', 'final_price', 'deposit',
@@ -79,6 +80,7 @@ class Order extends Model
         'send_sms_tec' => 'boolean',
         'send_sms_customer' => 'boolean',
         'save_as_draft' => 'boolean',
+        'is_legacy_closed' => 'boolean',
         'happy_call' => 'boolean',
         'hc_customer' => 'boolean',
         'hc_tech' => 'boolean',

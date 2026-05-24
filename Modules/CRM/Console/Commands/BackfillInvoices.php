@@ -37,6 +37,7 @@ class BackfillInvoices extends Command
         // بگیرند. پس مستقیم روی ستون order_id (unique) چک می‌کنیم.
         $query = Order::query()
             ->where('status', OrderStatus::Completed->value)
+            ->where('is_legacy_closed', false) // retro-closed عمداً بدون فاکتورند
             ->whereNotExists(function ($sub) {
                 $sub->selectRaw('1')
                     ->from('crm_invoices')
