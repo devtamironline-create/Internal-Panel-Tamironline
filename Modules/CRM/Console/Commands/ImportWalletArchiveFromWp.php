@@ -109,18 +109,15 @@ class ImportWalletArchiveFromWp extends Command
 
         $this->info(($apply ? '🔥 APPLY' : 'DRY-RUN') . ' — financial postهای WP بررسی‌شده: ' . count($postIds));
 
-        // قبلاً ایمپورت‌شده‌ها را skip کن (idempotent)
+        // قبلاً ایمپورت‌شده‌ها را شمارش می‌کنیم — ولی همه را re-process می‌کنیم
+        // تا فیلدهای ممکن گم‌شده (مثل order_wp_id) به‌روز شوند (upsert).
+        // ایمپورت idempotent است: upsert بر اساس wp_post_id unique.
         $existing = WalletArchiveTx::whereIn('wp_post_id', $postIds)
             ->pluck('wp_post_id')
             ->all();
-        $toProcess = array_values(array_diff($postIds, $existing));
-        $this->line('از قبل ایمپورت‌شده: ' . count($existing));
-        $this->line('جدید (قابل ایمپورت): ' . count($toProcess));
-
-        if (empty($toProcess)) {
-            $this->info('✓ همه‌چیز هم‌سو است.');
-            return self::SUCCESS;
-        }
+        $toProcess = $postIds; // همه را re-process کن (upsert رکورد موجود را به‌روز می‌کند)
+        $this->line('از قبل ایمپورت‌شده: ' . count($existing) . ' (در صورت تغییر، به‌روز می‌شوند)');
+        $this->line('کل برای پردازش (insert/update): ' . count($toProcess));
 
         if (! $apply) {
             $this->newLine();
@@ -192,15 +189,26 @@ class ImportWalletArchiveFromWp extends Command
             }
 
             if (! empty($batchInsert)) {
-                // insertOrIgnore تا اگر دو request همزمان شد، حداکثر یکی موفق شود
-                DB::table('crm_wallet_archive_txs')->insertOrIgnore($batchInsert);
+                // upsert بر اساس wp_post_id — رکوردهای موجود به‌روز می‌شوند،
+                // جدیدها insert می‌شوند. این جلوی duplicate را می‌گیرد و
+                // فیلدهای گم‌شده در run‌های قبلی (مثل order_wp_id) را پر می‌کند.
+                DB::table('crm_wallet_archive_txs')->upsert(
+                    $batchInsert,
+                    ['wp_post_id'],                     // unique by
+                    [                                    // columns to update if exists
+                        'technician_id', 'technician_wp_id', 'order_wp_id',
+                        'type', 'amount', 'note', 'refid', 'payment_status',
+                        'wp_created_at',
+                        // imported_at را به‌روز نمی‌کنیم تا تاریخ ایمپورت اول حفظ شود
+                    ]
+                );
                 $inserted += count($batchInsert);
             }
         }
 
         $bar->finish();
         $this->newLine(2);
-        $this->info("✓ ایمپورت شد: {$inserted}");
+        $this->info("✓ پردازش شد (insert/update): {$inserted}");
         if ($skipped > 0) {
             $this->line("  رد شده (نوع نامشخص یا داده ناقص): {$skipped}");
         }
@@ -234,7 +242,16 @@ class ImportWalletArchiveFromWp extends Command
 
         // technician_wp_id از متا یا fallback به post_author
         $techWpId = (int) ($meta['technician_wp_id'] ?? $post->post_author ?? 0) ?: null;
-        $orderWpId = isset($meta['order_wp_id']) ? (int) $meta['order_wp_id'] : null;
+
+        // order_wp_id — کلید واقعی postmeta در WP «order_id» است (نه order_wp_id).
+        // هر دو را امتحان می‌کنیم برای پشتیبانی از payloadهای مختلف.
+        $orderWpId = null;
+        if (! empty($meta['order_id'])) {
+            $orderWpId = (int) $meta['order_id'];
+        } elseif (! empty($meta['order_wp_id'])) {
+            $orderWpId = (int) $meta['order_wp_id'];
+        }
+        if ($orderWpId === 0) $orderWpId = null;
         $paymentStatus = (int) ($meta['payment_status'] ?? 0);
         $refid = $meta['refid'] ?? null;
         $description = $meta['description'] ?? null;
