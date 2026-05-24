@@ -39,6 +39,7 @@ use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
+use Modules\CRM\Console\Commands\BackupWalletData;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
 use Modules\CRM\Console\Commands\InspectOrder;
@@ -126,6 +127,7 @@ class CrmServiceProvider extends ServiceProvider
                 RestoreStatusFromEvents::class,
                 DiagnoseOrderSync::class,
                 DiagnoseOrderFinancialHealth::class,
+                BackupWalletData::class,
             ]);
         }
     }
