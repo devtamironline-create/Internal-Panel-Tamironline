@@ -3,6 +3,7 @@
 namespace Modules\CRM\Services;
 
 use Illuminate\Support\Facades\Log;
+use Modules\CRM\Models\Order;
 use Modules\CRM\Models\WalletArchiveTx;
 
 /**
@@ -136,7 +137,34 @@ class WalletArchiveService
             ->orderBy('id')
             ->get();
 
+        // batch lookup سفارش‌های مرتبط (برای نمایش order_code با لینک)
+        $orderWpIds = $dbRows->pluck('order_wp_id')->filter()->unique()->values()->all();
+        $ordersByWpId = [];
+        if (! empty($orderWpIds)) {
+            $ordersByWpId = Order::whereIn('wp_id', $orderWpIds)
+                ->get(['id', 'wp_id', 'order_code'])
+                ->keyBy('wp_id')
+                ->all();
+        }
+
         foreach ($dbRows as $r) {
+            $orderInfo = null;
+            if ($r->order_wp_id && isset($ordersByWpId[$r->order_wp_id])) {
+                $o = $ordersByWpId[$r->order_wp_id];
+                $orderInfo = [
+                    'id' => (int) $o->id,
+                    'code' => (string) $o->order_code,
+                    'wp_id' => (int) $o->wp_id,
+                ];
+            } elseif ($r->order_wp_id) {
+                // در پنل نیست — فقط wp_id را نمایش بده
+                $orderInfo = [
+                    'id' => null,
+                    'code' => null,
+                    'wp_id' => (int) $r->order_wp_id,
+                ];
+            }
+
             $rows[] = [
                 'id' => $r->wp_post_id, // برای ترتیب
                 'type' => $r->type,
@@ -149,6 +177,7 @@ class WalletArchiveService
                 '_reset_at' => $r->imported_at?->toDateTimeString(),
                 '_refid' => $r->refid,
                 '_payment_status' => $r->payment_status,
+                '_order' => $orderInfo,
             ];
         }
 
