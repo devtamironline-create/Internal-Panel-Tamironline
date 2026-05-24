@@ -67,7 +67,32 @@ class BackfillInvoices extends Command
 
         $this->info("تعداد سفارش‌های واجد شرایط: {$total}" . ($dryRun ? '  (dry-run — هیچ تغییری اعمال نمی‌شود)' : ''));
 
+        // در dry-run هم لیست سفارش‌ها را نشان بده تا قبل از اجرا چک شوند.
+        // در حالت واقعی هم بعد از اجرا برای هر کدام نتیجه را گزارش می‌کنیم.
+        $previewQuery = (clone $query)->limit(100)
+            ->get(['id', 'order_code', 'technician_id', 'price_customer', 'cost_price', 'completed_at', 'created_at']);
+
+        if ($previewQuery->isNotEmpty()) {
+            $previewRows = $previewQuery->map(fn ($o) => [
+                $o->id,
+                $o->order_code,
+                $o->technician_id ?? '—',
+                number_format((int) ($o->price_customer ?? 0)),
+                number_format((int) ($o->cost_price ?? 0)),
+                ($o->completed_at ?: $o->created_at)?->format('Y-m-d H:i') ?? '—',
+            ])->all();
+            $this->newLine();
+            $this->line('— لیست سفارش‌ها' . ($total > 100 ? ' (۱۰۰ مورد اول)' : '') . ' —');
+            $this->table(
+                ['id', 'order_code', 'tech_id', 'price_customer', 'cost_price', 'completed_at'],
+                $previewRows
+            );
+        }
+
         if ($dryRun) {
+            $this->newLine();
+            $this->warn('این dry-run بود — برای اعمال:');
+            $this->line('php artisan crm:invoices:backfill' . ($this->option('since') ? ' --since=' . $this->option('since') : '') . ($this->option('technician') ? ' --technician=' . $this->option('technician') : ''));
             return self::SUCCESS;
         }
 
@@ -75,8 +100,9 @@ class BackfillInvoices extends Command
         $created = 0;
         $skipped = 0;
         $errors = 0;
+        $createdLog = []; // لیست سفارش‌هایی که واقعاً فاکتور برایشان ساخته شد
 
-        $query->chunkById(100, function ($orders) use ($invoiceService, $bar, &$created, &$skipped, &$errors) {
+        $query->chunkById(100, function ($orders) use ($invoiceService, $bar, &$created, &$skipped, &$errors, &$createdLog) {
             foreach ($orders as $order) {
                 try {
                     $existing = Invoice::where('order_id', $order->id)->first();
@@ -85,6 +111,15 @@ class BackfillInvoices extends Command
                         $skipped++;
                     } elseif ($invoice) {
                         $created++;
+                        $createdLog[] = [
+                            $order->id,
+                            $order->order_code,
+                            $invoice->invoice_code,
+                            number_format((int) $invoice->total_amount),
+                            number_format((int) $invoice->tech_share),
+                            number_format((int) $invoice->company_share),
+                            $invoice->in_wallet ? '✓' : '✗',
+                        ];
                     } else {
                         $skipped++;
                     }
@@ -104,6 +139,20 @@ class BackfillInvoices extends Command
         $this->line("از قبل موجود/رد شده: {$skipped}");
         if ($errors > 0) {
             $this->error("خطا: {$errors}");
+        }
+
+        // گزارش جزئیات سفارش‌هایی که فاکتور برایشان ساخته شد
+        if (! empty($createdLog)) {
+            $this->newLine();
+            $this->line('— فاکتورهای ساخته‌شده —');
+            $this->table(
+                ['order_id', 'order_code', 'invoice_code', 'total', 'tech_share', 'company_share', 'wallet_tx'],
+                array_slice($createdLog, 0, 100)
+            );
+            if (count($createdLog) > 100) {
+                $this->line('... و ' . (count($createdLog) - 100) . ' مورد دیگر.');
+            }
+            $this->info('ستون wallet_tx: ✓ یعنی تراکنش منفی commission هم ساخته شد، ✗ یعنی نشد (مثلاً تکنسین null یا company_share=0).');
         }
 
         $this->newLine();
