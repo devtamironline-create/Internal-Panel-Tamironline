@@ -147,7 +147,7 @@ class OrderController extends Controller
         $query = $this->buildIndexQuery($request);
 
         $headers = [
-            'کد سفارش', 'نوع', 'مشتری', 'موبایل', 'دستگاه', 'برند',
+            'کد سفارش', 'نوع', 'نحوه آشنایی', 'مشتری', 'موبایل', 'دستگاه', 'برند',
             'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
@@ -155,6 +155,7 @@ class OrderController extends Controller
                 yield [
                     $o->order_code,
                     $o->order_type === 'service' ? 'نصب' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
+                    $o->introduction ?: '—',
                     $o->customer_name ?: $o->customer?->display_name,
                     $o->customer_mobile,
                     $o->device?->name,
