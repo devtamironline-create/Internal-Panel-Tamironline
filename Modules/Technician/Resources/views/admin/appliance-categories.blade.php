@@ -284,11 +284,19 @@ function applianceCategoryEditor() {
         });
     }
 
-    // SortableJS از CDN لود شود اگر موجود نباشد
+    // SortableJS از asset محلی لود می‌شود — CDN خارجی (jsdelivr و غیره)
+    // در ایران اغلب فیلتر/کند است و در مرورگرهای ویندوزی fail می‌کرد.
     if (typeof Sortable === 'undefined') {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+        s.src = '/vendor/js/Sortable.min.js';
         s.onload = init;
+        s.onerror = function () {
+            const el = document.getElementById('reorder-status');
+            if (el) {
+                el.textContent = '✗ بارگذاری SortableJS ناموفق — صفحه را refresh کنید';
+                el.style.color = '#b91c1c';
+            }
+        };
         document.head.appendChild(s);
     } else {
         init();
