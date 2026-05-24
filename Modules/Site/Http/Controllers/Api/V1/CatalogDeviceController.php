@@ -179,13 +179,26 @@ class CatalogDeviceController extends Controller
      */
     private function buildFaq(Device $device, array $template): array
     {
-        // اولویت ۱: انتخاب per-device از بانک (pivot crm_device_faqs)
-        $picked = $device->faqs()
+        // اولویت ۱: union(دسته‌بندی‌های انتخاب‌شده، سوالات منفرد انتخاب‌شده) از بانک FAQ
+        $byCategory = collect();
+        if ($device->faqCategories()->exists()) {
+            $catIds = $device->faqCategories()->pluck('site_taxonomies.id')->all();
+            $byCategory = \Modules\Site\Models\Faq::query()
+                ->where('is_published', true)
+                ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->get(['id', 'question', 'answer']);
+        }
+
+        $byIndividual = $device->faqs()
             ->where('faqs.is_published', true)
             ->get(['faqs.id', 'faqs.question', 'faqs.answer']);
 
-        if ($picked->isNotEmpty()) {
-            return $picked->map(fn ($f) => [
+        $merged = $byCategory->concat($byIndividual)->unique('id')->values();
+
+        if ($merged->isNotEmpty()) {
+            return $merged->map(fn ($f) => [
                 'id' => $f->id,
                 'question' => $f->question,
                 'answer' => $f->answer,

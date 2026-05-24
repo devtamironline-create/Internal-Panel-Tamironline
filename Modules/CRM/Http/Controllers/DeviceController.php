@@ -12,6 +12,7 @@ use Modules\CRM\Models\Device;
 use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Review;
+use Modules\Site\Models\Taxonomy;
 
 class DeviceController extends Controller
 {
@@ -53,12 +54,14 @@ class DeviceController extends Controller
         $validated['thumbnail'] = $this->handleThumbnail($request, null);
 
         $faqIds = $this->extractFaqIds($validated);
+        $faqCategoryIds = $this->extractFaqCategoryIds($validated);
         $reviewIds = $this->extractReviewIds($validated);
         $brandIds = $this->extractBrandIds($validated);
         $this->applyDefaults($validated, true);
 
         $device = Device::create($validated);
         $device->faqs()->sync($this->withSortOrder($faqIds));
+        $device->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
 
@@ -77,12 +80,14 @@ class DeviceController extends Controller
         $validated['thumbnail'] = $this->handleThumbnail($request, $device);
 
         $faqIds = $this->extractFaqIds($validated);
+        $faqCategoryIds = $this->extractFaqCategoryIds($validated);
         $reviewIds = $this->extractReviewIds($validated);
         $brandIds = $this->extractBrandIds($validated);
         $this->applyDefaults($validated, false);
 
         $device->update($validated);
         $device->faqs()->sync($this->withSortOrder($faqIds));
+        $device->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
 
@@ -104,6 +109,16 @@ class DeviceController extends Controller
                 ->orderByDesc('created_at')
                 ->get(['id', 'question']),
             'selectedFaqIds' => $device ? $device->faqs()->pluck('faqs.id')->all() : [],
+            'allFaqCategories' => Taxonomy::query()
+                ->ofType(Taxonomy::TYPE_FAQ)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->withCount(['faqs' => fn ($q) => $q->where('is_published', true)])
+                ->get(['id', 'slug', 'name']),
+            'selectedFaqCategoryIds' => $device
+                ? $device->faqCategories()->pluck('site_taxonomies.id')->map(fn ($i) => (int) $i)->all()
+                : [],
             'allReviews' => Review::query()
                 ->where('status', Review::STATUS_APPROVED)
                 ->orderByDesc('is_featured')
@@ -198,12 +213,27 @@ class DeviceController extends Controller
             'faq_ids' => 'nullable|array',
             'faq_ids.*' => 'string|exists:faqs,id',
 
+            'faq_category_ids' => 'nullable|array',
+            'faq_category_ids.*' => 'integer|exists:site_taxonomies,id',
+
             'review_ids' => 'nullable|array',
             'review_ids.*' => 'string|exists:site_reviews,id',
 
             'brand_ids' => 'nullable|array',
             'brand_ids.*' => 'integer|exists:crm_brands,id',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated  passed by reference
+     * @return array<int, int>
+     */
+    private function extractFaqCategoryIds(array &$validated): array
+    {
+        $ids = array_values(array_map('intval', array_filter((array) ($validated['faq_category_ids'] ?? []), fn ($v) => $v !== null && $v !== '')));
+        unset($validated['faq_category_ids']);
+
+        return array_values(array_unique($ids));
     }
 
     /**

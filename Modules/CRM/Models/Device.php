@@ -95,6 +95,18 @@ class Device extends Model
     }
 
     /**
+     * دسته‌بندی‌های FAQ انتخاب‌شده برای این دستگاه — تمام سوالات این دسته‌ها
+     * در API به‌صورت خودکار شامل می‌شوند.
+     */
+    public function faqCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Taxonomy::class, 'crm_device_faq_categories', 'device_id', 'taxonomy_id')
+            ->where('site_taxonomies.type', \Modules\Site\Models\Taxonomy::TYPE_FAQ)
+            ->withPivot('sort_order')
+            ->orderBy('crm_device_faq_categories.sort_order');
+    }
+
+    /**
      * نظرات/توصیه‌نامه‌های انتخاب‌شده برای نمایش در صفحه این دستگاه
      * (از بانک site_reviews — هم audio هم text).
      */

@@ -251,6 +251,32 @@
             ])
         </div>
 
+        {{-- دسته‌بندی FAQ — کل سوالات یک دسته به‌صورت یکجا --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            @php
+                $faqCatItems = ($allFaqCategories ?? collect())->map(fn ($c) => (object) [
+                    'id' => (int) $c->id,
+                    'label' => $c->name,
+                    'slug' => $c->slug,
+                    'description_text' => 'شامل ' . ($c->faqs_count ?? 0) . ' سوال منتشرشده.',
+                    'badge' => 'دسته‌بندی',
+                    'badge_color' => 'emerald',
+                ]);
+            @endphp
+            @include('crm::partials.multi-picker', [
+                'name'        => 'faq_category_ids',
+                'items'       => $faqCatItems,
+                'selectedIds' => $selectedFaqCategoryIds ?? [],
+                'columns'     => 'wide',
+                'label'       => 'دسته‌بندی سوالات متداول',
+                'help'        => 'با انتخاب هر دسته‌بندی، تمام سوالات منتشرشده‌ی آن به‌صورت خودکار در صفحه‌ی این دستگاه نمایش داده می‌شوند. ' .
+                                 'می‌توانید علاوه بر آن سوالات منفرد هم در باکس پایین انتخاب کنید. ' .
+                                 'مدیریت دسته‌ها: ' .
+                                 '<a href="' . route('site.admin.taxonomies.index', 'faq') . '" target="_blank">/admin/site/taxonomies/faq</a>',
+                'emptyText'   => 'دسته‌بندی فعالی برای FAQ تعریف نشده.',
+            ])
+        </div>
+
         {{-- FAQ از بانک — انتخاب چندتایی از /admin/site/faqs --}}
         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
             @php
