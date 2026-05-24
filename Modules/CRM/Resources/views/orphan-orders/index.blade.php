@@ -142,5 +142,71 @@
     </div>
     @endif
 
+    {{-- ─── سفارش‌های حل‌نشده — لیست با همه candidate authors از لاگ ─── --}}
+    @if(! empty($unresolvedDetail))
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">🔍 سفارش‌های حل‌نشده — همه شناسه‌های لاگ</h2>
+            <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                این سفارش‌ها لاگ دارند ولی technician_wp_id ست نشده. ممکنه چند کاندید در لاگ باشن.
+                هر شناسه را ببینید (با تعداد رویدادها و context). برای assign کردن، روی badge شناسه کلیک کنید
+                — technician_wp_id ست می‌شود و بعد می‌توانید از بخش گروه‌بندی بالا assign نهایی را انجام دهید.
+                نشانه‌گذاری: <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px]">✓</span> یعنی wp_id در پنل match دارد.
+            </p>
+            <p class="text-[10px] text-gray-400 mt-1">نمایش حداکثر ۱۰۰ مورد اول. اگر بیشتر است، بعد از assign این موارد دوباره refresh کنید.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs">
+                    <tr>
+                        <th class="px-4 py-2 text-right text-gray-500 uppercase">کد سفارش</th>
+                        <th class="px-4 py-2 text-right text-gray-500 uppercase">تاریخ</th>
+                        <th class="px-4 py-2 text-right text-gray-500 uppercase">شناسه‌های موجود در لاگ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    @foreach($unresolvedDetail as $row)
+                    @php $o = $row['order']; @endphp
+                    <tr>
+                        <td class="px-4 py-3 text-xs whitespace-nowrap">
+                            <a href="{{ route('crm.orders.show', $o->id) }}" target="_blank"
+                               class="text-brand-600 hover:underline" dir="ltr">{{ $o->order_code }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-xs text-gray-500" dir="ltr">@jdatetime($o->created_at)</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($row['authors'] as $wpId => $info)
+                                    @php
+                                        $matched = $candidateTechs->get($wpId);
+                                        $matchedName = $matched ? trim($matched->firstname_tech ?: ($matched->first_name . ' ' . ($matched->last_name ?? ''))) : null;
+                                        $ctx = implode(' / ', array_slice($info['contexts'], 0, 3));
+                                    @endphp
+                                    <form method="POST" action="{{ route('crm.orphan-orders.set-wp-id') }}" class="inline"
+                                          onsubmit="return confirm('ست کردن technician_wp_id={{ $wpId }} برای سفارش {{ $o->order_code }}؟');">
+                                        @csrf
+                                        <input type="hidden" name="order_id" value="{{ $o->id }}">
+                                        <input type="hidden" name="technician_wp_id" value="{{ $wpId }}">
+                                        <button type="submit"
+                                                class="px-2 py-1 rounded text-[11px] border {{ $matched ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' }}"
+                                                title="{{ $ctx ?: 'بدون توضیح' }}">
+                                            @if($matched)
+                                                ✓ {{ $matchedName }}
+                                            @else
+                                                wp:{{ $wpId }}
+                                            @endif
+                                            <span class="text-[10px] opacity-70">({{ $info['count'] }} رویداد)</span>
+                                        </button>
+                                    </form>
+                                @endforeach
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
 </div>
 @endsection

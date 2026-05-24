@@ -50,6 +50,54 @@ class OrphanOrdersController extends Controller
             ->whereNull('technician_wp_id')
             ->count();
 
+        // ─── سفارش‌های حل‌نشده — لیست با همه‌ی candidate authors از لاگ ──
+        // برای نمایش، فقط ۱۰۰ مورد اول که لاگ دارند.
+        $unresolvedOrders = Order::query()
+            ->whereNull('technician_id')
+            ->whereNull('technician_wp_id')
+            ->whereNotNull('order_description_content')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get(['id', 'order_code', 'created_at', 'order_description_content', 'customer_id']);
+
+        $unresolvedDetail = [];
+        $allCandidateWpIds = [];
+        foreach ($unresolvedOrders as $o) {
+            $events = $o->wp_events;
+            if (! is_array($events)) continue;
+
+            $authors = []; // wp_id => [count, contexts[]]
+            foreach ($events as $ev) {
+                $author = $ev['author'] ?? null;
+                if (! is_numeric($author) || (int) $author <= 0) continue;
+                $wpId = (int) $author;
+                if (! isset($authors[$wpId])) {
+                    $authors[$wpId] = ['count' => 0, 'contexts' => []];
+                }
+                $authors[$wpId]['count']++;
+                $status = (string) ($ev['status'] ?? '');
+                $subject = (string) ($ev['subject'] ?? '');
+                $ctx = trim($subject . ($status ? " ({$status})" : ''));
+                if ($ctx !== '' && ! in_array($ctx, $authors[$wpId]['contexts'], true)) {
+                    $authors[$wpId]['contexts'][] = $ctx;
+                }
+                $allCandidateWpIds[$wpId] = true;
+            }
+
+            if (empty($authors)) continue;
+
+            arsort($authors);
+            $unresolvedDetail[] = [
+                'order' => $o,
+                'authors' => $authors,
+            ];
+        }
+
+        // map از wp_id کاندید → panel tech (برای نمایش نام/match)
+        $candidateTechs = Technician::whereIn('wp_id', array_keys($allCandidateWpIds))
+            ->get(['id', 'wp_id', 'first_name', 'last_name', 'firstname_tech'])
+            ->keyBy('wp_id');
+
         $totalOrphan = Order::query()->whereNull('technician_id')->count();
 
         return view('crm::orphan-orders.index', [
@@ -59,6 +107,8 @@ class OrphanOrdersController extends Controller
             'totalOrphan' => $totalOrphan,
             'totalWithWpId' => $groups->sum('cnt'),
             'totalNoWpId' => $totalNoWpId,
+            'unresolvedDetail' => $unresolvedDetail,
+            'candidateTechs' => $candidateTechs,
         ]);
     }
 
@@ -112,6 +162,9 @@ class OrphanOrdersController extends Controller
             ->whereNotNull('order_description_content')
             ->get(['id', 'order_description_content']);
 
+        // map از تکنسین‌های موجود در پنل → wp_id (برای ترجیح هنگام چند کاندید)
+        $panelTechWpIds = Technician::whereNotNull('wp_id')->pluck('wp_id')->flip()->all();
+
         $filled = 0;
         $skipped = 0;
 
@@ -122,10 +175,9 @@ class OrphanOrdersController extends Controller
                 continue;
             }
 
-            // اولویت: author رویدادی که status='انجام کار' یا 'ایجاد فاکتور' دارد.
-            // در نبود، author هر event با شناسهٔ عددی.
-            $preferredWpId = null;
-            $fallbackWpId = null;
+            // استخراج همه‌ی authorهای عددی با شمارش‌شون
+            $authors = []; // wp_id => count
+            $priorityAuthor = null; // author رویداد «انجام کار» / «ایجاد فاکتور»
 
             foreach ($events as $ev) {
                 $author = $ev['author'] ?? null;
@@ -133,27 +185,46 @@ class OrphanOrdersController extends Controller
                     continue;
                 }
                 $wpId = (int) $author;
+                $authors[$wpId] = ($authors[$wpId] ?? 0) + 1;
 
                 $status = mb_strtolower((string) ($ev['status'] ?? ''));
                 $subject = (string) ($ev['subject'] ?? '');
-
                 if (
                     str_contains($status, 'انجام کار')
                     || str_contains($subject, 'انجام کار')
                     || str_contains($subject, 'ایجاد فاکتور')
                     || str_contains($subject, 'صدور فاکتور')
                 ) {
-                    $preferredWpId = $wpId;
-                    break;
-                }
-
-                if ($fallbackWpId === null) {
-                    $fallbackWpId = $wpId;
+                    $priorityAuthor = $wpId;
                 }
             }
 
-            $resolvedWpId = $preferredWpId ?? $fallbackWpId;
-            if (! $resolvedWpId) {
+            if (empty($authors)) {
+                $skipped++;
+                continue;
+            }
+
+            // انتخاب بهترین کاندید:
+            //   ۱) priorityAuthor (event «انجام کار») اگر در پنل match دارد
+            //   ۲) اگر فقط یک تکنسین panel-matched هست، همان
+            //   ۳) priorityAuthor (حتی بدون match پنل)
+            //   ۴) author با بیشترین فراوانی
+            $resolved = null;
+            if ($priorityAuthor && isset($panelTechWpIds[$priorityAuthor])) {
+                $resolved = $priorityAuthor;
+            } else {
+                $matchedPanel = array_filter(array_keys($authors), fn ($w) => isset($panelTechWpIds[$w]));
+                if (count($matchedPanel) === 1) {
+                    $resolved = $matchedPanel[0];
+                } elseif ($priorityAuthor) {
+                    $resolved = $priorityAuthor;
+                } else {
+                    arsort($authors);
+                    $resolved = (int) array_key_first($authors);
+                }
+            }
+
+            if (! $resolved) {
                 $skipped++;
                 continue;
             }
@@ -161,14 +232,43 @@ class OrphanOrdersController extends Controller
             DB::table('crm_orders')
                 ->where('id', $order->id)
                 ->update([
-                    'technician_wp_id' => $resolvedWpId,
+                    'technician_wp_id' => $resolved,
                     'updated_at' => now(),
                 ]);
             $filled++;
         }
 
         return back()->with('success',
-            "بک‌فیل از لاگ: {$filled} سفارش technician_wp_id ست شد، {$skipped} سفارش لاگ مناسب نداشت. حالا با Auto-Assign یا dropdown ادامه بده."
+            "بک‌فیل از لاگ: {$filled} سفارش technician_wp_id ست شد، {$skipped} سفارش لاگ مناسب نداشت. "
+            . "موارد چندگانه: ترجیح با match پنل، سپس رویداد «انجام کار»، سپس بیشترین فراوانی."
+        );
+    }
+
+    /**
+     * ست کردن technician_wp_id برای یک سفارش خاص — برای زمانی که اپراتور
+     * از بین چند candidate در لاگ یکی را دستی انتخاب می‌کند.
+     * فقط technician_wp_id را ست می‌کند؛ سپس Auto-Assign یا dropdown
+     * استاندارد گروه‌بندی orphan را ادامه می‌دهد.
+     */
+    public function setWpIdForOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|integer|exists:crm_orders,id',
+            'technician_wp_id' => 'required|integer|min:1',
+        ]);
+
+        app()->instance('crm.suppress_outbound_push', true);
+
+        DB::table('crm_orders')
+            ->where('id', $validated['order_id'])
+            ->whereNull('technician_id')
+            ->update([
+                'technician_wp_id' => (int) $validated['technician_wp_id'],
+                'updated_at' => now(),
+            ]);
+
+        return back()->with('success',
+            "technician_wp_id={$validated['technician_wp_id']} برای سفارش #{$validated['order_id']} ست شد."
         );
     }
 
