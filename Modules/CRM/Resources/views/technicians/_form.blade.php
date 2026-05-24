@@ -85,6 +85,27 @@
                    placeholder="مثلاً regular / senior / expert / freelance">
         </div>
         <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع خدمات قابل ارائه</label>
+            @php
+                $selectedServices = old('service_types', $technician->service_types ?? []);
+                if (! is_array($selectedServices)) $selectedServices = [];
+            @endphp
+            <div class="flex flex-wrap gap-4 mt-1">
+                @foreach(['repair' => 'تعمیر', 'service' => 'سرویس', 'install' => 'نصب'] as $val => $label)
+                    <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input type="checkbox" name="service_types[]" value="{{ $val }}"
+                               @checked(in_array($val, $selectedServices, true))
+                               class="w-4 h-4">
+                        <span class="text-sm">{{ $label }}</span>
+                    </label>
+                @endforeach
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">
+                در پیشنهاد تکنسین برای سفارش‌ها، فقط تکنسین‌هایی که نوع سفارش را در این لیست دارند نمایش داده می‌شوند.
+                اگر هیچ‌کدام انتخاب نشود، رفتار قدیمی حفظ می‌شود (همه نوع سفارش را قبول می‌کند).
+            </p>
+        </div>
+        <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">توضیحات</label>
             <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('description', $technician->description ?? '') }}</textarea>
         </div>

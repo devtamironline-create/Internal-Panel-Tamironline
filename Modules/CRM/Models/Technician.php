@@ -47,6 +47,7 @@ class Technician extends Authenticatable
         // تخصص و توضیحات
         'specialty',
         'type_tech',
+        'service_types',
         'description',
 
         // تصاویر
@@ -120,6 +121,7 @@ class Technician extends Authenticatable
         'password' => 'hashed',
         'last_login_at' => 'datetime',
         'training_completed_at' => 'datetime',
+        'service_types' => 'array',
     ];
 
     protected $hidden = [

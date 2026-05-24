@@ -97,6 +97,19 @@ class TechnicianSuggestionService
                 if ($deviceIds->isEmpty() || ! $deviceIds->contains($order->device_id)) return false;
             }
 
+            // تطبیق نوع خدمت — اگر سفارش order_type دارد و تکنسین
+            // service_types ست کرده، باید match شود. اگر تکنسین
+            // service_types خالی/null دارد، رفتار قبلی حفظ می‌شود
+            // (همه نوع را قبول می‌کند) — backward compatible.
+            if ($order->order_type) {
+                $techTypes = $t->service_types;
+                if (is_array($techTypes) && ! empty($techTypes)) {
+                    if (! in_array($order->order_type, $techTypes, true)) {
+                        return false;
+                    }
+                }
+            }
+
             // ذخیره برای استفاده در امتیازدهی
             $t->setAttribute('_now_orders', $now);
             return true;

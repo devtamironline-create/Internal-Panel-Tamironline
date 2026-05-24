@@ -220,6 +220,11 @@ class TechnicianController extends Controller
             ? null
             : max(0, min(5, (float) $satisfaction));
 
+        // service_types وقتی هیچ checkbox تیک نخورده، در request نمی‌آید —
+        // برای پشتیبانی از «uncheck all» در فرم ویرایش، ضریحاً empty array
+        // می‌گذاریم (form همیشه این فیلد را در page دارد).
+        $validated['service_types'] = $request->input('service_types', []);
+
         $technician->update($validated);
 
         // sync pivot ها — شامل خالی‌سازی هم می‌شود
@@ -355,6 +360,8 @@ class TechnicianController extends Controller
             // تخصص
             'specialty' => 'nullable|string|max:255',
             'type_tech' => 'nullable|string|max:30',
+            'service_types' => 'nullable|array',
+            'service_types.*' => 'in:repair,service,install',
             'description' => 'nullable|string|max:5000',
 
             // تصاویر

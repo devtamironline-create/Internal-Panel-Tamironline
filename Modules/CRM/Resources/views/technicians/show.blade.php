@@ -58,6 +58,21 @@
                 <dt class="text-gray-500 dark:text-gray-400">سطح/نوع</dt>
                 <dd class="text-gray-900 dark:text-gray-100">{{ $technician->type_tech ?: '—' }}</dd>
 
+                <dt class="text-gray-500 dark:text-gray-400">نوع خدمات</dt>
+                <dd class="text-gray-900 dark:text-gray-100">
+                    @php
+                        $serviceLabels = ['repair' => 'تعمیر', 'service' => 'سرویس', 'install' => 'نصب'];
+                        $techServices = is_array($technician->service_types) ? $technician->service_types : [];
+                    @endphp
+                    @if(empty($techServices))
+                        <span class="text-gray-400 text-xs">— (همه نوع)</span>
+                    @else
+                        @foreach($techServices as $st)
+                            <span class="inline-block px-2 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 me-1">{{ $serviceLabels[$st] ?? $st }}</span>
+                        @endforeach
+                    @endif
+                </dd>
+
                 <dt class="text-gray-500 dark:text-gray-400">درصد کمیسیون</dt>
                 <dd class="text-gray-900 dark:text-gray-100">{{ $technician->percent ?? 0 }}%</dd>
 
