@@ -92,21 +92,21 @@ class DailyActivityController extends Controller
             ->with([
                 'customer:id,first_name,mobile',
                 'technician:id,first_name,last_name,firstname_tech,wp_id',
-                'creator:id,name,email',
+                'creator:id,first_name,last_name,email',
             ])
             ->get();
 
         $statusLogs = OrderStatusLog::query()
             ->whereIn('order_id', $orderIds)
             ->whereBetween('created_at', [$start, $end])
-            ->with('changer:id,name,email')
+            ->with('changer:id,first_name,last_name,email')
             ->orderBy('created_at')
             ->get()
             ->groupBy('order_id');
 
         $invoices = Invoice::query()
             ->whereIn('order_id', $orderIds)
-            ->with('creator:id,name,email')
+            ->with('creator:id,first_name,last_name,email')
             ->orderBy('issued_at')
             ->get()
             ->groupBy('order_id');
@@ -114,7 +114,7 @@ class DailyActivityController extends Controller
         $walletTxs = WalletTransaction::query()
             ->whereIn('order_id', $orderIds)
             ->whereBetween('created_at', [$start, $end])
-            ->with('creator:id,name,email')
+            ->with('creator:id,first_name,last_name,email')
             ->orderBy('created_at')
             ->get()
             ->groupBy('order_id');
@@ -138,7 +138,7 @@ class DailyActivityController extends Controller
             $createdInWindow = $order->created_at && $order->created_at->between($start, $end);
             if ($createdInWindow) {
                 $by = $order->creator
-                    ? trim($order->creator->name ?: $order->creator->email ?: ('کاربر #' . $order->creator->id))
+                    ? trim($order->creator->full_name ?: $order->creator->email ?: ('کاربر #' . $order->creator->id))
                     : 'سیستم/سینک WP';
                 $events[] = [
                     'time' => $order->created_at,
@@ -152,7 +152,7 @@ class DailyActivityController extends Controller
                 $from = OrderStatus::tryFrom((string) $log->from_status)?->label() ?? ($log->from_status ?? '—');
                 $to = OrderStatus::tryFrom((string) $log->to_status)?->label() ?? $log->to_status;
                 $by = $log->changer
-                    ? trim($log->changer->name ?: $log->changer->email ?: ('کاربر #' . $log->changer->id))
+                    ? trim($log->changer->full_name ?: $log->changer->email ?: ('کاربر #' . $log->changer->id))
                     : 'سیستم';
                 $detail = 'توسط: ' . $by;
                 if ($log->note) {
@@ -169,7 +169,7 @@ class DailyActivityController extends Controller
             foreach ($invs as $inv) {
                 if ($inv->issued_at && $inv->issued_at->between($start, $end)) {
                     $by = $inv->creator
-                        ? trim($inv->creator->name ?: $inv->creator->email ?: ('کاربر #' . $inv->creator->id))
+                        ? trim($inv->creator->full_name ?: $inv->creator->email ?: ('کاربر #' . $inv->creator->id))
                         : 'سیستم';
                     $events[] = [
                         'time' => $inv->issued_at,
@@ -186,7 +186,7 @@ class DailyActivityController extends Controller
             foreach ($wtxs as $tx) {
                 $type = $tx->type instanceof WalletTxType ? $tx->type : WalletTxType::tryFrom((string) $tx->type);
                 $by = $tx->creator
-                    ? trim($tx->creator->name ?: $tx->creator->email ?: ('کاربر #' . $tx->creator->id))
+                    ? trim($tx->creator->full_name ?: $tx->creator->email ?: ('کاربر #' . $tx->creator->id))
                     : 'سیستم';
                 $detail = 'توسط: ' . $by;
                 if ($tx->note) {
