@@ -92,6 +92,10 @@ class PageContentController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'logo', 'is_active']),
+            'device_categories' => \Modules\CRM\Models\DeviceCategory::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'icon', 'tone', 'is_active']),
             'faq_categories' => Taxonomy::ofType(Taxonomy::TYPE_FAQ)
                 ->ordered()
                 ->get(['id', 'slug', 'name', 'is_active']),

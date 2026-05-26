@@ -127,7 +127,9 @@
                 @elseif($source === 'devices')
                     از <a href="{{ route('crm.devices.index') }}" target="_blank" class="text-blue-600 hover:underline">دستگاه‌های CRM</a> انتخاب کنید.
                 @elseif($source === 'brands')
-                    از <a href="{{ route('crm.brands.index') }}" target="_blank" class="text-blue-600 hover:underline">برندهای CRM</a> انتخاب کنید.
+                    از <a href="{{ route('crm.brands.index') }}" target="_blank" class="text-blue-600 hover:underline">برندهای CRM</a> انتخاب کنید. خالی = نمایش همه.
+                @elseif($source === 'device_categories')
+                    از <a href="{{ route('crm.device-categories.index') }}" target="_blank" class="text-blue-600 hover:underline">دسته‌بندی دستگاه‌ها</a> انتخاب/مرتب کنید. خالی = نمایش همه‌ی دسته‌های فعال.
                 @elseif($source === 'faq_categories')
                     دسته‌های انتخاب‌شده در فرانت به‌صورت تب نمایش داده می‌شوند. <a href="{{ route('site.admin.taxonomies.index', 'faq') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها</a>.
                 @elseif($source === 'testimonial_categories')
@@ -153,6 +155,10 @@
                             @elseif($source === 'brands')
                                 <span class="font-semibold">{{ $ref->name }}</span>
                                 <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
+                            @elseif($source === 'device_categories')
+                                <span class="font-semibold">{{ $ref->name }}</span>
+                                <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>
+                                @if($ref->icon) <span class="text-gray-400">[{{ $ref->icon }}]</span> @endif
                             @elseif($source === 'faq_categories' || $source === 'testimonial_categories')
                                 <span class="font-semibold">{{ $ref->name }}</span>
                                 <span class="text-gray-500 font-mono">/{{ $ref->slug }}</span>

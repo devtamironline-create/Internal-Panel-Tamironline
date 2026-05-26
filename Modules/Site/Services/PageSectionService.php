@@ -349,6 +349,7 @@ class PageSectionService
             'testimonials' => 'string|exists:site_reviews,id',
             'brands' => 'integer|exists:crm_brands,id',
             'devices' => 'integer|exists:crm_devices,id',
+            'device_categories' => 'integer|exists:crm_device_categories,id',
             'faq_categories' => 'integer|exists:site_taxonomies,id',
             'testimonial_categories' => 'integer|exists:site_taxonomies,id',
             default => 'string',
@@ -491,6 +492,28 @@ class PageSectionService
                 ->map(fn ($id) => $rows->get((int) $id))
                 ->filter()
                 ->map(fn ($d) => $this->shapeDevice($d))
+                ->values()
+                ->all();
+        }
+
+        if ($source === 'device_categories') {
+            $rows = \Modules\CRM\Models\DeviceCategory::query()
+                ->whereIn('id', $ids)
+                ->where('is_active', true)
+                ->get(['id', 'name', 'slug', 'icon', 'tone', 'description'])
+                ->keyBy('id');
+
+            return collect($ids)
+                ->map(fn ($id) => $rows->get((int) $id))
+                ->filter()
+                ->map(fn ($c) => [
+                    'id' => (int) $c->id,
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                    'icon' => $c->icon,
+                    'tone' => $c->tone,
+                    'description' => $c->description,
+                ])
                 ->values()
                 ->all();
         }

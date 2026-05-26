@@ -26,6 +26,78 @@
 
 return [
 
+    // ─── صفحه‌ی خدمات (لیست دسته‌بندی دستگاه‌ها + برندها) ──────────────
+    'services' => [
+        'title' => 'صفحه‌ی خدمات (/services)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero صفحه‌ی خدمات',
+                'description' => 'تیتر و زیرتیتر بالای صفحه. لیست دسته‌بندی‌ها و برندها به‌صورت زنده از API می‌آید.',
+                'fields' => [
+                    'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+            'intro' => [
+                'label' => 'متن معرفی (اختیاری)',
+                'description' => 'محتوای متنی غنی که بالای لیست خدمات نمایش داده می‌شود.',
+                'fields' => [
+                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:50000'],
+                ],
+            ],
+
+            'categories' => [
+                'label' => 'سکشن دسته‌بندی دستگاه‌ها',
+                'description' => 'تیتر سکشن + انتخاب دستی دسته‌بندی‌ها. اگر هیچ دسته‌ای انتخاب نکنید، فرانت همه‌ی دسته‌های فعال را از /v1/catalog/device-categories نمایش می‌دهد.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids' => [
+                        'label' => 'انتخاب/ترتیب دستی دسته‌بندی‌ها (خالی = همه)',
+                        'type' => 'reference',
+                        'source' => 'device_categories',
+                    ],
+                ],
+            ],
+
+            'brands' => [
+                'label' => 'سکشن برندها',
+                'description' => 'تیتر سکشن + انتخاب دستی برندها. اگر خالی بگذارید، فرانت همه‌ی برندهای فعال را از /v1/catalog/brands نمایش می‌دهد.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'brand_ids' => [
+                        'label' => 'انتخاب/ترتیب دستی برندها (خالی = همه)',
+                        'type' => 'reference',
+                        'source' => 'brands',
+                    ],
+                ],
+            ],
+
+            'cta' => [
+                'label' => 'بنر CTA پایین صفحه',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'button_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'button_url' => ['label' => 'لینک دکمه', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
     // ─── صفحه‌ی اصلی ────────────────────────────────────────────────
     'home' => [
         'title' => 'صفحه‌ی اصلی',
