@@ -685,17 +685,20 @@ class DashboardController extends Controller
     }
 
     // ─── شارژ کیف‌پول از درگاه (هم‌ارز Tech_Payment پنل WP) ────────
-    public function walletRecharge(ZibalService $zibal)
+    public function walletRecharge(ZibalService $zibal, \Modules\CRM\Services\MellatService $mellat)
     {
         $tech = Auth::guard('tech')->user();
+        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
+        $configured = $gateway === 'mellat' ? $mellat->isConfigured() : $zibal->isConfigured();
 
         return view('crm::tech-panel.wallet_recharge', [
             'technician' => $tech,
-            'gatewayConfigured' => $zibal->isConfigured(),
+            'gatewayConfigured' => $configured,
+            'activeGateway' => $gateway,
         ]);
     }
 
-    public function walletRechargeInitiate(Request $request, ZibalService $zibal)
+    public function walletRechargeInitiate(Request $request, ZibalService $zibal, \Modules\CRM\Services\MellatService $mellat)
     {
         $tech = Auth::guard('tech')->user();
 
@@ -707,15 +710,50 @@ class DashboardController extends Controller
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 
+        $amount = (int) $validated['amount'];
+        $callbackUrl = route('crm.payment.callback');
+        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
+        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
+
+        // ─── درگاه ملت ─────────────────────────────────────────────
+        if ($gateway === 'mellat') {
+            if (! $mellat->isConfigured()) {
+                return back()->with('error', 'درگاه ملت توسط ادمین تنظیم نشده است.');
+            }
+            // orderId عددی یکتا برای ملت (saleOrderId)
+            $orderId = (int) (now()->format('ymdHis') . random_int(10, 99));
+
+            $response = $mellat->request(amount: $amount, callbackUrl: $callbackUrl, orderId: $orderId);
+
+            $payment = Payment::create([
+                'technician_id' => $tech->id,
+                'gateway' => 'mellat',
+                'purpose' => 'wallet_charge',
+                'amount' => $amount,
+                'track_id' => (string) $orderId, // saleOrderId — کلید تطبیق در callback
+                'status' => $response['success'] ? 'pending' : 'failed',
+                'result_message' => $response['message'] ?? null,
+                'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
+                'requested_at' => now(),
+            ]);
+
+            if (! $response['success']) {
+                return back()->with('error', $response['message'] ?? 'خطا در شروع پرداخت ملت.');
+            }
+
+            // ملت نیاز به redirect با POST دارد — صفحهٔ auto-submit
+            return view('crm::payment.mellat-redirect', [
+                'startPayUrl' => $response['startPayUrl'],
+                'refId' => $response['refId'],
+            ]);
+        }
+
+        // ─── درگاه Zibal (پیش‌فرض) ─────────────────────────────────
         if (! $zibal->isConfigured()) {
             return back()->with('error', 'درگاه پرداخت توسط ادمین تنظیم نشده است.');
         }
 
-        $amount = (int) $validated['amount'];
-        $callbackUrl = route('crm.payment.callback');
-        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
         $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
-
         $response = $zibal->request(
             amount: $amount,
             callbackUrl: $callbackUrl,
