@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
+use Modules\CRM\Models\DeviceCategory;
 use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Review;
@@ -114,6 +115,7 @@ class DeviceController extends Controller
     private function formData(?Device $device): array
     {
         return [
+            'deviceCategories' => DeviceCategory::query()->ordered()->get(['id', 'name']),
             'allFaqs' => Faq::query()
                 ->where('is_published', true)
                 ->orderBy('sort_order')
@@ -174,6 +176,7 @@ class DeviceController extends Controller
         return $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:crm_devices,slug'.($id ? ','.$id : ''),
+            'device_category_id' => 'nullable|integer|exists:crm_device_categories,id',
             'icon' => 'nullable|string|max:60',
             'tone' => 'nullable|string|max:30',
             'thumbnail' => 'nullable|string|max:500',

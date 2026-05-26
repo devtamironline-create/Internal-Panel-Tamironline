@@ -41,6 +41,20 @@
     </div>
 
     <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دسته‌بندی والد</label>
+        <select name="device_category_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
+            <option value="">— بدون دسته —</option>
+            @foreach(($deviceCategories ?? collect()) as $cat)
+                <option value="{{ $cat->id }}" @selected((int) old('device_category_id', $device->device_category_id ?? 0) === (int) $cat->id)>{{ $cat->name }}</option>
+            @endforeach
+        </select>
+        <p class="text-xs text-gray-500 mt-1">
+            گروه کلی مثل «لوازم آشپزخانه». <a href="{{ route('crm.device-categories.index') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها ↗</a>
+        </p>
+        @error('device_category_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">ترتیب نمایش</label>
         <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $device->sort_order ?? 0) }}"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">

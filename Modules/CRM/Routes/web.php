@@ -6,6 +6,7 @@ use Modules\CRM\Http\Controllers\CityController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceBrandPageController;
+use Modules\CRM\Http\Controllers\DeviceCategoryController;
 use Modules\CRM\Http\Controllers\DeviceController;
 use Modules\CRM\Http\Controllers\ImpersonateController;
 use Modules\CRM\Http\Controllers\InvoiceController;
@@ -85,6 +86,19 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
         Route::put('brands/{brand}/toggle/{flag}', [BrandController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('brands.toggle');
         Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
+    });
+
+    // ─── دسته‌بندی والد دستگاه‌ها ───────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('device-categories', [DeviceCategoryController::class, 'index'])->name('device-categories.index');
+    });
+    Route::middleware('can:manage-crm-devices')->group(function () {
+        Route::get('device-categories/create', [DeviceCategoryController::class, 'create'])->name('device-categories.create');
+        Route::post('device-categories', [DeviceCategoryController::class, 'store'])->name('device-categories.store');
+        Route::get('device-categories/{devicecategory}/edit', [DeviceCategoryController::class, 'edit'])->name('device-categories.edit');
+        Route::put('device-categories/{devicecategory}', [DeviceCategoryController::class, 'update'])->name('device-categories.update');
+        Route::put('device-categories/{devicecategory}/toggle', [DeviceCategoryController::class, 'toggle'])->name('device-categories.toggle');
+        Route::delete('device-categories/{devicecategory}', [DeviceCategoryController::class, 'destroy'])->name('device-categories.destroy');
     });
 
     // ─── تاکسونومی ── دستگاه‌ها ─────────────────────────────────────

@@ -31,6 +31,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.catalog.brands.index');
         Route::get('/catalog/devices', [CatalogDeviceController::class, 'index'])
             ->name('api.v1.catalog.devices.index');
+        Route::get('/catalog/device-categories', [CatalogDeviceController::class, 'categories'])
+            ->name('api.v1.catalog.device-categories.index');
         Route::get('/site/about-stats', [AboutStatController::class, 'index'])
             ->name('api.v1.site.about-stats.index');
         Route::get('/settings/global', [SettingsController::class, 'global'])

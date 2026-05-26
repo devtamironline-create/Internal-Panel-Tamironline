@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Device extends Model
@@ -11,6 +12,7 @@ class Device extends Model
 
     protected $fillable = [
         'wp_id',
+        'device_category_id',
         'name',
         'short_name',
         'slug',
@@ -49,6 +51,7 @@ class Device extends Model
 
     protected $casts = [
         'wp_id' => 'integer',
+        'device_category_id' => 'integer',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
@@ -58,6 +61,14 @@ class Device extends Model
         'service_steps' => 'array',
         'sections_enabled' => 'array',
     ];
+
+    /**
+     * دسته‌بندی والد این دستگاه (مثل «لوازم آشپزخانه»).
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(DeviceCategory::class, 'device_category_id');
+    }
 
     public function scopeActive($query)
     {

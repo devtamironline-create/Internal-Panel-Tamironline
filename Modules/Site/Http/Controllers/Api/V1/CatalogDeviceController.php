@@ -38,7 +38,15 @@ class CatalogDeviceController extends Controller
             $query->featured();
         }
 
-        $devices = $query->limit($limit)->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
+        // فیلتر بر اساس دسته‌بندی والد (slug)
+        $categorySlug = trim((string) $request->query('category', ''));
+        if ($categorySlug !== '') {
+            $query->whereHas('category', fn ($q) => $q->where('slug', $categorySlug)->where('is_active', true));
+        }
+
+        $devices = $query->with('category:id,name,slug,icon,tone')
+            ->limit($limit)
+            ->get(['id', 'device_category_id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
 
         $data = $devices->map(fn (Device $d) => [
             'id' => (int) $d->id,
@@ -48,6 +56,13 @@ class CatalogDeviceController extends Controller
             'icon' => $d->icon,
             'thumbnail' => MediaUrl::resolve($d->thumbnail),
             'tone' => $d->tone,
+            'category' => $d->category ? [
+                'id' => (int) $d->category->id,
+                'name' => $d->category->name,
+                'slug' => $d->category->slug,
+                'icon' => $d->category->icon,
+                'tone' => $d->category->tone,
+            ] : null,
         ])->values();
 
         $total = Device::query()->where('is_active', true)->count();
@@ -57,6 +72,42 @@ class CatalogDeviceController extends Controller
                 'data' => $data,
                 'meta' => ['total' => $total],
             ])
+            ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * GET /v1/catalog/device-categories — لیست دسته‌بندی‌های والد + دستگاه‌های هر دسته.
+     * برای منو/گروه‌بندی صفحه‌ی فهرست دستگاه‌ها.
+     */
+    public function categories(): JsonResponse
+    {
+        $categories = \Modules\CRM\Models\DeviceCategory::query()
+            ->active()
+            ->ordered()
+            ->with(['devices' => fn ($q) => $q->where('is_active', true)
+                ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('name')])
+            ->get(['id', 'name', 'slug', 'icon', 'tone', 'description']);
+
+        $data = $categories->map(fn ($c) => [
+            'id' => (int) $c->id,
+            'name' => $c->name,
+            'slug' => $c->slug,
+            'icon' => $c->icon,
+            'tone' => $c->tone,
+            'description' => $c->description,
+            'devices' => $c->devices->map(fn ($d) => [
+                'id' => (int) $d->id,
+                'label' => $d->name,
+                'slug' => $d->slug,
+                'href' => '/devices/'.$d->slug,
+                'icon' => $d->icon,
+                'thumbnail' => MediaUrl::resolve($d->thumbnail),
+                'tone' => $d->tone,
+            ])->values(),
+        ])->values();
+
+        return response()
+            ->json(['data' => $data])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
 
