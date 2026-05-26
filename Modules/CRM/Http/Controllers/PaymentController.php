@@ -10,7 +10,6 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Payment;
 use Modules\CRM\Models\Technician;
-use Modules\CRM\Services\AqayePardakhtService;
 use Modules\CRM\Services\WalletService;
 use Modules\CRM\Services\ZibalService;
 
@@ -19,7 +18,6 @@ class PaymentController extends Controller
     public function __construct(
         protected ZibalService $zibal,
         protected WalletService $wallet,
-        protected AqayePardakhtService $aqp,
     ) {
     }
 
@@ -125,12 +123,6 @@ class PaymentController extends Controller
     // ─────────────── Callback از درگاه (بدون لاگین) ───────────────
     public function callback(Request $request)
     {
-        // درگاه آقای پرداخت با پارامتر transid (+ status) callback می‌کند.
-        // اگر transid بود و trackId نبود → آقای پرداخت.
-        if ($request->filled('transid') && ! $request->filled('trackId')) {
-            return $this->aqpCallback($request);
-        }
-
         $trackId = $request->input('trackId');
         $success = $request->input('success');
 
@@ -290,107 +282,24 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Callback درگاه آقای پرداخت. پارامترها: transid, status (1=موفق),
-     * tracking_number, cardnumber, bank, invoice_id.
-     * اگر status=1 → verify سرور به سرور، سپس credit.
-     */
-    protected function aqpCallback(Request $request)
-    {
-        $transid = (string) $request->input('transid', '');
-        $status = (string) $request->input('status', '');
-        $trackingNumber = (string) $request->input('tracking_number', '');
-
-        $payment = Payment::where('track_id', $transid)->with('invoice.customer')->first();
-        if (! $payment) {
-            return view('crm::payment.result', [
-                'ok' => false, 'message' => 'تراکنش یافت نشد.', 'invoice' => null, 'payment' => null,
-            ]);
-        }
-
-        // status != 1 → تراکنش ناموفق (طبق داکیومنت، در این حالت verify نکن)
-        if ($status !== '1') {
-            $payment->update([
-                'status' => 'failed',
-                'result_message' => 'پرداخت ناموفق یا لغو شده.',
-            ]);
-            return view('crm::payment.result', [
-                'ok' => false,
-                'message' => 'پرداخت ناموفق بود یا توسط کاربر لغو شد.',
-                'invoice' => $payment->invoice,
-                'payment' => $payment,
-            ]);
-        }
-
-        // verify سرور به سرور
-        $verify = $this->aqp->verify($transid, (int) $payment->amount);
-
-        if ($verify['success']) {
-            DB::transaction(function () use ($transid, $trackingNumber, &$payment) {
-                $payment = Payment::where('track_id', $transid)->lockForUpdate()->first();
-                if (! $payment || $payment->status === 'verified') {
-                    return;
-                }
-                $payment->update([
-                    'status' => 'verified',
-                    'ref_number' => $trackingNumber ?: $transid,
-                    'verified_at' => now(),
-                ]);
-                $this->applyVerifiedPaymentEffects($payment, $trackingNumber ?: $transid);
-            });
-
-            $payment = Payment::where('track_id', $transid)->with('invoice.customer')->first();
-
-            return view('crm::payment.result', [
-                'ok' => true,
-                'message' => $payment->purpose === 'wallet_charge'
-                    ? 'شارژ کیف‌پول با موفقیت انجام شد. مبلغ به موجودی شما اضافه شد.'
-                    : 'پرداخت با موفقیت انجام شد.',
-                'invoice' => $payment->invoice,
-                'payment' => $payment->refresh(),
-            ]);
-        }
-
-        $payment->update([
-            'status' => 'failed',
-            'result_code' => $verify['code'] ?? null,
-            'result_message' => $verify['message'] ?? 'تایید پرداخت ناموفق.',
-        ]);
-        return view('crm::payment.result', [
-            'ok' => false,
-            'message' => $verify['message'] ?? 'تایید پرداخت ناموفق بود.',
-            'invoice' => $payment->invoice,
-            'payment' => $payment,
-        ]);
-    }
-
     public function settings()
     {
         return view('crm::payment.settings', [
             'merchant' => CrmSetting::get('zibal_merchant') ?? '',
             'sandbox' => CrmSetting::get('zibal_sandbox') === '1',
             'callbackUrl' => route('crm.payment.callback'),
-            'activeGateway' => CrmSetting::get('payment_gateway', 'zibal'),
-            'aqpPin' => CrmSetting::get('aqp_pin') ?? '',
-            'aqpSandbox' => CrmSetting::get('aqp_sandbox') === '1',
         ]);
     }
 
     public function updateSettings(Request $request)
     {
         $validated = $request->validate([
-            'payment_gateway' => 'required|in:zibal,aqayepardakht',
             'zibal_merchant' => 'nullable|string|max:100',
             'zibal_sandbox' => 'nullable|boolean',
-            'aqp_pin' => 'nullable|string|max:100',
-            'aqp_sandbox' => 'nullable|boolean',
         ]);
 
-        CrmSetting::set('payment_gateway', $validated['payment_gateway']);
         CrmSetting::set('zibal_merchant', $validated['zibal_merchant'] ?? '');
         CrmSetting::set('zibal_sandbox', (bool) ($validated['zibal_sandbox'] ?? false) ? '1' : '0');
-        CrmSetting::set('aqp_pin', $validated['aqp_pin'] ?? '');
-        CrmSetting::set('aqp_sandbox', (bool) ($validated['aqp_sandbox'] ?? false) ? '1' : '0');
 
         return back()->with('success', 'تنظیمات درگاه ذخیره شد.');
     }

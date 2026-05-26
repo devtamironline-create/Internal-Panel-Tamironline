@@ -685,20 +685,17 @@ class DashboardController extends Controller
     }
 
     // ─── شارژ کیف‌پول از درگاه (هم‌ارز Tech_Payment پنل WP) ────────
-    public function walletRecharge(ZibalService $zibal, \Modules\CRM\Services\AqayePardakhtService $aqp)
+    public function walletRecharge(ZibalService $zibal)
     {
         $tech = Auth::guard('tech')->user();
-        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
-        $configured = $gateway === 'aqayepardakht' ? $aqp->isConfigured() : $zibal->isConfigured();
 
         return view('crm::tech-panel.wallet_recharge', [
             'technician' => $tech,
-            'gatewayConfigured' => $configured,
-            'activeGateway' => $gateway,
+            'gatewayConfigured' => $zibal->isConfigured(),
         ]);
     }
 
-    public function walletRechargeInitiate(Request $request, ZibalService $zibal, \Modules\CRM\Services\AqayePardakhtService $aqp)
+    public function walletRechargeInitiate(Request $request, ZibalService $zibal)
     {
         $tech = Auth::guard('tech')->user();
 
@@ -710,51 +707,15 @@ class DashboardController extends Controller
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 
-        $amount = (int) $validated['amount'];
-        $callbackUrl = route('crm.payment.callback');
-        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
-        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
-
-        // ─── درگاه آقای پرداخت ──────────────────────────────────────
-        if ($gateway === 'aqayepardakht') {
-            if (! $aqp->isConfigured()) {
-                return back()->with('error', 'درگاه آقای پرداخت توسط ادمین تنظیم نشده است.');
-            }
-            $invoiceId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis');
-
-            $response = $aqp->request(
-                amount: $amount,
-                callbackUrl: $callbackUrl,
-                invoiceId: $invoiceId,
-                mobile: $tech->mobile,
-                description: 'شارژ کیف‌پول — ' . $techName,
-            );
-
-            $payment = Payment::create([
-                'technician_id' => $tech->id,
-                'gateway' => 'aqayepardakht',
-                'purpose' => 'wallet_charge',
-                'amount' => $amount,
-                'track_id' => $response['transid'] ?? null, // transid کلید تطبیق در callback
-                'status' => $response['success'] ? 'pending' : 'failed',
-                'result_message' => $response['message'] ?? null,
-                'gateway_response' => $response['raw'] ?? null,
-                'requested_at' => now(),
-            ]);
-
-            if (! $response['success']) {
-                return back()->with('error', $response['message'] ?? 'خطا در شروع پرداخت آقای پرداخت.');
-            }
-
-            return redirect()->away($response['paymentUrl']);
-        }
-
-        // ─── درگاه Zibal (پیش‌فرض) ─────────────────────────────────
         if (! $zibal->isConfigured()) {
             return back()->with('error', 'درگاه پرداخت توسط ادمین تنظیم نشده است.');
         }
 
+        $amount = (int) $validated['amount'];
+        $callbackUrl = route('crm.payment.callback');
+        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
         $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+
         $response = $zibal->request(
             amount: $amount,
             callbackUrl: $callbackUrl,
