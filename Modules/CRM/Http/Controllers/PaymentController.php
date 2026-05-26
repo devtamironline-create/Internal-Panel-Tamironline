@@ -10,7 +10,7 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Payment;
 use Modules\CRM\Models\Technician;
-use Modules\CRM\Services\MellatService;
+use Modules\CRM\Services\AqayePardakhtService;
 use Modules\CRM\Services\WalletService;
 use Modules\CRM\Services\ZibalService;
 
@@ -19,7 +19,7 @@ class PaymentController extends Controller
     public function __construct(
         protected ZibalService $zibal,
         protected WalletService $wallet,
-        protected MellatService $mellat,
+        protected AqayePardakhtService $aqp,
     ) {
     }
 
@@ -125,10 +125,10 @@ class PaymentController extends Controller
     // ─────────────── Callback از درگاه (بدون لاگین) ───────────────
     public function callback(Request $request)
     {
-        // درگاه ملت با پارامترهای متفاوت callback می‌کند (RefId, ResCode,
-        // SaleOrderId, SaleReferenceId). اگر این پارامترها بودند → ملت.
-        if ($request->filled('SaleOrderId') || $request->filled('RefId')) {
-            return $this->mellatCallback($request);
+        // درگاه آقای پرداخت با پارامتر transid (+ status) callback می‌کند.
+        // اگر transid بود و trackId نبود → آقای پرداخت.
+        if ($request->filled('transid') && ! $request->filled('trackId')) {
+            return $this->aqpCallback($request);
         }
 
         $trackId = $request->input('trackId');
@@ -291,57 +291,55 @@ class PaymentController extends Controller
     }
 
     /**
-     * Callback درگاه ملت. پارامترها: RefId, ResCode, SaleOrderId,
-     * SaleReferenceId, CardHolderPan. ابتدا ResCode بررسی، سپس
-     * verify+settle، در نهایت credit.
+     * Callback درگاه آقای پرداخت. پارامترها: transid, status (1=موفق),
+     * tracking_number, cardnumber, bank, invoice_id.
+     * اگر status=1 → verify سرور به سرور، سپس credit.
      */
-    protected function mellatCallback(Request $request)
+    protected function aqpCallback(Request $request)
     {
-        $resCode = (string) $request->input('ResCode', '');
-        $saleOrderId = (string) $request->input('SaleOrderId', '');
-        $saleReferenceId = (string) $request->input('SaleReferenceId', '');
+        $transid = (string) $request->input('transid', '');
+        $status = (string) $request->input('status', '');
+        $trackingNumber = (string) $request->input('tracking_number', '');
 
-        // payment با track_id = SaleOrderId
-        $payment = Payment::where('track_id', $saleOrderId)->with('invoice.customer')->first();
+        $payment = Payment::where('track_id', $transid)->with('invoice.customer')->first();
         if (! $payment) {
             return view('crm::payment.result', [
                 'ok' => false, 'message' => 'تراکنش یافت نشد.', 'invoice' => null, 'payment' => null,
             ]);
         }
 
-        // ResCode != 0 → کاربر لغو کرد یا خطا
-        if ($resCode !== '0') {
+        // status != 1 → تراکنش ناموفق (طبق داکیومنت، در این حالت verify نکن)
+        if ($status !== '1') {
             $payment->update([
-                'status' => $resCode === '17' ? 'cancelled' : 'failed',
-                'result_code' => $resCode,
-                'result_message' => $this->mellat->resCodeMessage($resCode),
+                'status' => 'failed',
+                'result_message' => 'پرداخت ناموفق یا لغو شده.',
             ]);
             return view('crm::payment.result', [
                 'ok' => false,
-                'message' => $resCode === '17' ? 'پرداخت توسط کاربر لغو شد.' : $this->mellat->resCodeMessage($resCode),
+                'message' => 'پرداخت ناموفق بود یا توسط کاربر لغو شد.',
                 'invoice' => $payment->invoice,
                 'payment' => $payment,
             ]);
         }
 
-        // verify + settle (server-to-server)
-        $vs = $this->mellat->verifyAndSettle((int) $saleOrderId, (int) $saleReferenceId);
+        // verify سرور به سرور
+        $verify = $this->aqp->verify($transid, (int) $payment->amount);
 
-        if ($vs['success']) {
-            DB::transaction(function () use ($saleOrderId, $saleReferenceId, &$payment) {
-                $payment = Payment::where('track_id', $saleOrderId)->lockForUpdate()->first();
+        if ($verify['success']) {
+            DB::transaction(function () use ($transid, $trackingNumber, &$payment) {
+                $payment = Payment::where('track_id', $transid)->lockForUpdate()->first();
                 if (! $payment || $payment->status === 'verified') {
                     return;
                 }
                 $payment->update([
                     'status' => 'verified',
-                    'ref_number' => $saleReferenceId,
+                    'ref_number' => $trackingNumber ?: $transid,
                     'verified_at' => now(),
                 ]);
-                $this->applyVerifiedPaymentEffects($payment, $saleReferenceId);
+                $this->applyVerifiedPaymentEffects($payment, $trackingNumber ?: $transid);
             });
 
-            $payment = Payment::where('track_id', $saleOrderId)->with('invoice.customer')->first();
+            $payment = Payment::where('track_id', $transid)->with('invoice.customer')->first();
 
             return view('crm::payment.result', [
                 'ok' => true,
@@ -355,12 +353,12 @@ class PaymentController extends Controller
 
         $payment->update([
             'status' => 'failed',
-            'result_code' => $vs['resCode'] ?? null,
-            'result_message' => $vs['message'] ?? 'تایید پرداخت ناموفق.',
+            'result_code' => $verify['code'] ?? null,
+            'result_message' => $verify['message'] ?? 'تایید پرداخت ناموفق.',
         ]);
         return view('crm::payment.result', [
             'ok' => false,
-            'message' => $vs['message'] ?? 'تایید پرداخت ناموفق بود.',
+            'message' => $verify['message'] ?? 'تایید پرداخت ناموفق بود.',
             'invoice' => $payment->invoice,
             'payment' => $payment,
         ]);
@@ -373,32 +371,26 @@ class PaymentController extends Controller
             'sandbox' => CrmSetting::get('zibal_sandbox') === '1',
             'callbackUrl' => route('crm.payment.callback'),
             'activeGateway' => CrmSetting::get('payment_gateway', 'zibal'),
-            'mellatTerminalId' => CrmSetting::get('mellat_terminal_id') ?? '',
-            'mellatUsername' => CrmSetting::get('mellat_username') ?? '',
-            'mellatPassword' => CrmSetting::get('mellat_password') ?? '',
+            'aqpPin' => CrmSetting::get('aqp_pin') ?? '',
+            'aqpSandbox' => CrmSetting::get('aqp_sandbox') === '1',
         ]);
     }
 
     public function updateSettings(Request $request)
     {
         $validated = $request->validate([
-            'payment_gateway' => 'required|in:zibal,mellat',
+            'payment_gateway' => 'required|in:zibal,aqayepardakht',
             'zibal_merchant' => 'nullable|string|max:100',
             'zibal_sandbox' => 'nullable|boolean',
-            'mellat_terminal_id' => 'nullable|string|max:50',
-            'mellat_username' => 'nullable|string|max:100',
-            'mellat_password' => 'nullable|string|max:100',
+            'aqp_pin' => 'nullable|string|max:100',
+            'aqp_sandbox' => 'nullable|boolean',
         ]);
 
         CrmSetting::set('payment_gateway', $validated['payment_gateway']);
         CrmSetting::set('zibal_merchant', $validated['zibal_merchant'] ?? '');
         CrmSetting::set('zibal_sandbox', (bool) ($validated['zibal_sandbox'] ?? false) ? '1' : '0');
-        CrmSetting::set('mellat_terminal_id', $validated['mellat_terminal_id'] ?? '');
-        CrmSetting::set('mellat_username', $validated['mellat_username'] ?? '');
-        // رمز را فقط اگر مقدار جدید داده شده به‌روز کن (تا با خالی‌گذاشتن پاک نشود)
-        if (filled($validated['mellat_password'] ?? null)) {
-            CrmSetting::set('mellat_password', $validated['mellat_password']);
-        }
+        CrmSetting::set('aqp_pin', $validated['aqp_pin'] ?? '');
+        CrmSetting::set('aqp_sandbox', (bool) ($validated['aqp_sandbox'] ?? false) ? '1' : '0');
 
         return back()->with('success', 'تنظیمات درگاه ذخیره شد.');
     }
