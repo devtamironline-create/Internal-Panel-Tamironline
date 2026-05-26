@@ -53,6 +53,23 @@
       "button_label": "ثبت سفارش",
       "button_url": "/order"
     },
+    "faq": {
+      "title": "سوالات متداول",
+      "subtitle": "...",
+      // اگر دسته انتخاب شده باشد، به‌صورت تب‌بندی‌شده hydrate می‌شود:
+      "category_ids_items": [
+        { "id": 1, "slug": "support", "name": "پشتیبانی", "items": [ { "id": "01J…", "question": "…", "answer": "…" } ] }
+      ],
+      // یا سوالات منفرد:
+      "faq_ids_items": [ { "id": "01J…", "question": "…", "answer": "…" } ]
+    },
+    "testimonials": {
+      "title": "نظر مشتریان ما",
+      "subtitle": "...",
+      "testimonial_ids_items": [
+        { "id": "01J…", "customer_name": "علی", "topic": "…", "rating": 5, "audio_url": "https://…", "duration_seconds": 87, "published_at": "2026-05-20T…Z" }
+      ]
+    },
     "seo": { "meta_title": "...", "meta_description": "..." }
   }
 }
@@ -165,6 +182,25 @@ export default async function ServicesPage() {
         brands={brandList}
       />
 
+      {/* FAQ — انتخاب از بانک؛ خالی = fixture استاتیک فرانت */}
+      {(s.faq?.faq_ids_items?.length || s.faq?.category_ids_items?.length) && (
+        <FaqSection
+          title={s.faq.title ?? 'سوالات متداول'}
+          subtitle={s.faq.subtitle}
+          categories={s.faq.category_ids_items ?? []}
+          items={s.faq.faq_ids_items ?? []}
+        />
+      )}
+
+      {/* نظرات — انتخاب از بانک؛ خالی = fixture استاتیک */}
+      {s.testimonials?.testimonial_ids_items?.length && (
+        <TestimonialsSection
+          title={s.testimonials.title ?? 'نظر مشتریان'}
+          subtitle={s.testimonials.subtitle}
+          items={s.testimonials.testimonial_ids_items}
+        />
+      )}
+
       {s.cta && (
         <CtaBanner title={s.cta.title} subtitle={s.cta.subtitle}
                    label={s.cta.button_label} url={s.cta.button_url} />
@@ -222,8 +258,31 @@ export interface ServicesPageResponse {
     categories?: { title?: string; subtitle?: string; category_ids_items?: DeviceCategory[] };
     brands?:     { title?: string; subtitle?: string; brand_ids_items?: Brand[] };
     cta?:        { title?: string; subtitle?: string; button_label?: string; button_url?: string };
+    faq?: {
+      title?: string;
+      subtitle?: string;
+      category_ids_items?: { id: number; slug: string; name: string; items: FaqItem[] }[];
+      faq_ids_items?: FaqItem[];
+    };
+    testimonials?: {
+      title?: string;
+      subtitle?: string;
+      testimonial_ids_items?: TestimonialItem[];
+    };
     seo?:        { meta_title?: string; meta_description?: string };
   };
+}
+
+export interface FaqItem { id: string; question: string; answer: string; }
+
+export interface TestimonialItem {
+  id: string;
+  customer_name: string;
+  topic: string | null;
+  rating: number;
+  audio_url: string | null;
+  duration_seconds: number | null;
+  published_at: string | null;
 }
 ```
 

@@ -87,6 +87,39 @@ return [
                 ],
             ],
 
+            'faq' => [
+                'label' => 'سوالات متداول صفحه‌ی خدمات',
+                'description' => 'تیتر سکشن + انتخاب از بانک FAQ (دسته‌بندی یا سوال منفرد). اگر خالی بماند، فرانت می‌تواند fixture استاتیک خود را نشان دهد.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'category_ids' => [
+                        'label' => 'دسته‌بندی FAQ',
+                        'type' => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids' => [
+                        'label' => 'سوالات منفرد',
+                        'type' => 'reference',
+                        'source' => 'faqs',
+                    ],
+                ],
+            ],
+
+            'testimonials' => [
+                'label' => 'نظرات مشتریان صفحه‌ی خدمات',
+                'description' => 'تیتر سکشن + انتخاب توصیه‌نامه‌های صوتی از بانک نظرات. اگر خالی بماند، فرانت fixture استاتیک خود را نشان می‌دهد.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'testimonial_ids' => [
+                        'label' => 'انتخاب از بانک نظرات',
+                        'type' => 'reference',
+                        'source' => 'testimonials',
+                    ],
+                ],
+            ],
+
             'seo' => [
                 'label' => 'سئو',
                 'fields' => [
