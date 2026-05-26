@@ -300,12 +300,35 @@ class PaymentController extends Controller
         $resCode = (string) $request->input('ResCode', '');
         $saleOrderId = (string) $request->input('SaleOrderId', '');
         $saleReferenceId = (string) $request->input('SaleReferenceId', '');
+        $refId = (string) $request->input('RefId', '');
 
         // payment با track_id = SaleOrderId
         $payment = Payment::where('track_id', $saleOrderId)->with('invoice.customer')->first();
         if (! $payment) {
             return view('crm::payment.result', [
                 'ok' => false, 'message' => 'تراکنش یافت نشد.', 'invoice' => null, 'payment' => null,
+            ]);
+        }
+
+        // کنترل امنیتی اجباری (الزام داکیومنت به‌پرداخت ملت):
+        // RefId برگشتی باید دقیقاً همان RefId دریافتی از bpPayRequest باشد.
+        // در غیر این صورت callback جعلی/نامعتبر است و نباید verify/settle شود.
+        $storedRefId = (string) (data_get($payment->gateway_response, 'refId') ?? '');
+        if ($storedRefId !== '' && $refId !== '' && ! hash_equals($storedRefId, $refId)) {
+            \Illuminate\Support\Facades\Log::warning('Mellat callback RefId mismatch', [
+                'saleOrderId' => $saleOrderId,
+                'received_refId' => $refId,
+                'stored_refId' => $storedRefId,
+            ]);
+            $payment->update([
+                'status' => 'failed',
+                'result_message' => 'عدم تطابق RefId در callback درگاه ملت.',
+            ]);
+            return view('crm::payment.result', [
+                'ok' => false,
+                'message' => 'خطای امنیتی: اطلاعات تراکنش بازگشتی معتبر نیست.',
+                'invoice' => $payment->invoice,
+                'payment' => $payment,
             ]);
         }
 
