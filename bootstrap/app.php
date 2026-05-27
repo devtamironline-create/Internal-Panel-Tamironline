@@ -55,6 +55,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'join-technician/register/biometric-callback',
+            // callback درگاه پرداخت (ملت با POST و بدون توکن CSRF برمی‌گردد)
+            'crm/payment/callback',
+            'public/crm/payment/callback',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
