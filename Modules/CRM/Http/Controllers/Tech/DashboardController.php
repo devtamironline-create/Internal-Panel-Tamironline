@@ -702,11 +702,16 @@ class DashboardController extends Controller
     {
         $tech = Auth::guard('tech')->user();
 
+        // حالت تست موقت: با test_mode حداقل مبلغ به ۱۰٬۰۰۰ تومان کاهش می‌یابد
+        // تا بتوان کل چرخهٔ درگاه را با مبلغ کم آزمایش کرد. بعد از تست حذف شود.
+        $isTest = $request->boolean('test_mode');
+        $minAmount = $isTest ? 10000 : 500000;
+
         $validated = $request->validate([
-            'amount' => ['required', 'integer', 'min:500000', 'max:50000000'],
+            'amount' => ['required', 'integer', 'min:' . $minAmount, 'max:50000000'],
         ], [
             'amount.required' => 'مبلغ الزامی است.',
-            'amount.min' => 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
+            'amount.min' => $isTest ? 'حداقل مبلغ تست ۱۰٬۰۰۰ تومان است.' : 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 
