@@ -5,6 +5,7 @@ use Modules\Site\Http\Controllers\Admin\AboutStatController;
 use Modules\Site\Http\Controllers\Admin\ArticleController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\BlogTopicController;
+use Modules\Site\Http\Controllers\Admin\CommentController as AdminCommentController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageContentController;
@@ -48,6 +49,16 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     Route::get('/device-content', function () {
         return redirect()->route('crm.devices.index');
     })->name('device-content');
+
+    // کامنت‌های polymorphic (مقالات/دستگاه‌ها/برندها)
+    Route::prefix('comments')->name('comments.')->group(function () {
+        Route::get('/', [AdminCommentController::class, 'index'])->name('index');
+        Route::post('/bulk', [AdminCommentController::class, 'bulk'])->name('bulk');
+        Route::get('/{id}', [AdminCommentController::class, 'show'])->whereNumber('id')->name('show');
+        Route::put('/{id}/status', [AdminCommentController::class, 'updateStatus'])->whereNumber('id')->name('update-status');
+        Route::post('/{id}/reply', [AdminCommentController::class, 'reply'])->whereNumber('id')->name('reply');
+        Route::delete('/{id}', [AdminCommentController::class, 'destroy'])->whereNumber('id')->name('destroy');
+    });
 
     // مقالات بلاگ
     Route::prefix('blog')->name('blog.')->group(function () {

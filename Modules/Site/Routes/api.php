@@ -7,6 +7,7 @@ use Modules\Site\Http\Controllers\Api\V1\BlogController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
+use Modules\Site\Http\Controllers\Api\V1\CommentController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
 use Modules\Site\Http\Controllers\Api\V1\DeviceReviewController;
@@ -45,12 +46,31 @@ Route::prefix('v1')->group(function () {
         Route::get('/blog/articles/{slug}', [BlogController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.blog.articles.show');
+
+        // ── Comments (polymorphic — الان فقط Article) ───────────
+        Route::get('/blog/articles/{slug}/comments', [CommentController::class, 'indexForArticle'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.blog.articles.comments.index');
+
+        // pages + devices (public read)
         Route::get('/pages/{slug}', [PageController::class, 'show'])
             ->whereAlpha('slug')
             ->name('api.v1.pages.show');
         Route::get('/devices/{slug}', [DevicePageController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.devices.show');
+    });
+
+    // ── Public writes با throttle محدودتر ────────────────────────
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/blog/articles/{slug}/comments', [CommentController::class, 'storeForArticle'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.blog.articles.comments.store');
+    });
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/comments/{id}/like', [CommentController::class, 'like'])
+            ->whereNumber('id')
+            ->name('api.v1.comments.like');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────

@@ -6,12 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
+use Modules\Site\Models\Concerns\HasComments;
 
 /**
  * مقاله‌ی بلاگ — می‌تواند به چند تاپیک، چند دستگاه و چند برند مرتبط باشد.
  */
 class Article extends Model
 {
+    use HasComments;
+
     protected $table = 'site_blog_articles';
 
     protected $fillable = [

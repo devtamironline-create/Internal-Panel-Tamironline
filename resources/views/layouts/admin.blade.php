@@ -619,6 +619,17 @@
                         </a>
                         @endcanany
 
+                        @canany(['view-site-comments', 'manage-site-comments', 'manage-site'])
+                        <a href="{{ route('site.admin.comments.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.comments.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            کامنت‌ها
+                            @php $pendingC = \Modules\Site\Models\Comment::where('status','pending')->count(); @endphp
+                            @if($pendingC > 0)
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingC }}</span>
+                            @endif
+                        </a>
+                        @endcanany
+
                         @canany(['manage-site-pages', 'manage-site'])
                         <a href="{{ route('site.admin.blog.articles.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.articles.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
