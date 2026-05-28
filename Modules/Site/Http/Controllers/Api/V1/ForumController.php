@@ -391,14 +391,19 @@ class ForumController extends Controller
      */
     private function tabCounts(Request $request): array
     {
-        $base = fn () => $this->applyFilters(Question::query()->approved(), $request);
+        $build = function () use ($request) {
+            $q = Question::query()->approved();
+            $this->applyFilters($q, $request);
+
+            return $q;
+        };
 
         return [
-            'latest' => (clone $base())->count(),
-            'hot' => (clone $base())->where('is_hot', true)->count(),
-            'unanswered' => (clone $base())->where('resolution_status', Question::RES_UNANSWERED)->count(),
-            'expert' => (clone $base())->whereIn('resolution_status', [Question::RES_EXPERT_ANSWERED, Question::RES_SOLVED])->count(),
-            'featured' => (clone $base())->where('is_featured', true)->count(),
+            'latest' => $build()->count(),
+            'hot' => $build()->where('is_hot', true)->count(),
+            'unanswered' => $build()->where('resolution_status', Question::RES_UNANSWERED)->count(),
+            'expert' => $build()->whereIn('resolution_status', [Question::RES_EXPERT_ANSWERED, Question::RES_SOLVED])->count(),
+            'featured' => $build()->where('is_featured', true)->count(),
         ];
     }
 
