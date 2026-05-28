@@ -131,6 +131,85 @@ return [
         ],
     ],
 
+    // ─── صفحه‌ی بلاگ (/blog) ────────────────────────────────────────
+    'blog' => [
+        'title' => 'صفحه‌ی بلاگ (/blog)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero بالای صفحه‌ی بلاگ',
+                'fields' => [
+                    'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'highlight' => ['label' => 'بخش گرادیانت تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+            'search' => [
+                'label' => 'سرچ مقالات',
+                'fields' => [
+                    'placeholder' => ['label' => 'متن placeholder سرچ', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'button_label' => ['label' => 'متن دکمه‌ی سرچ', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                ],
+            ],
+
+            'banner' => [
+                'label' => 'بنر بین سرچ و لیست مقالات',
+                'description' => 'دو تصویر برای دسکتاپ و موبایل + لینک هدف.',
+                'fields' => [
+                    'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'alt' => ['label' => 'متن جایگزین', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                ],
+            ],
+
+            'sections_visibility' => [
+                'label' => 'فعال/غیرفعال‌سازی سکشن‌ها',
+                'fields' => [
+                    'show_topics_marquee' => ['label' => 'نمایش marquee تاپیک‌ها', 'type' => 'bool'],
+                    'show_search' => ['label' => 'نمایش سرچ', 'type' => 'bool'],
+                    'show_banner' => ['label' => 'نمایش بنر', 'type' => 'bool'],
+                    'show_categories' => ['label' => 'نمایش دسته‌بندی دستگاه‌ها', 'type' => 'bool'],
+                    'show_brands' => ['label' => 'نمایش برندها', 'type' => 'bool'],
+                ],
+            ],
+
+            'categories_section' => [
+                'label' => 'تیتر سکشن دسته‌بندی دستگاه‌ها',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'brands_section' => [
+                'label' => 'تیتر سکشن برندها',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'articles_section' => [
+                'label' => 'تیتر سکشن مقالات',
+                'fields' => [
+                    'title' => ['label' => 'تیتر (مثل «جدیدترین مقالات»)', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'page_size' => ['label' => 'تعداد در هر صفحه (pagination)', 'type' => 'int', 'rules' => 'nullable|integer|min:3|max:50'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
     // ─── صفحه‌ی اصلی ────────────────────────────────────────────────
     'home' => [
         'title' => 'صفحه‌ی اصلی',

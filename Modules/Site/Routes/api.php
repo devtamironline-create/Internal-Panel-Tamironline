@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Api\V1\AboutStatController;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
+use Modules\Site\Http\Controllers\Api\V1\BlogController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
@@ -37,6 +38,13 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.site.about-stats.index');
         Route::get('/settings/global', [SettingsController::class, 'global'])
             ->name('api.v1.settings.global');
+
+        // ── Blog ─────────────────────────────────────────────────
+        Route::get('/blog/topics', [BlogController::class, 'topics'])->name('api.v1.blog.topics');
+        Route::get('/blog/articles', [BlogController::class, 'index'])->name('api.v1.blog.articles.index');
+        Route::get('/blog/articles/{slug}', [BlogController::class, 'show'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.blog.articles.show');
         Route::get('/pages/{slug}', [PageController::class, 'show'])
             ->whereAlpha('slug')
             ->name('api.v1.pages.show');

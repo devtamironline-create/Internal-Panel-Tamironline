@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Admin\AboutStatController;
+use Modules\Site\Http\Controllers\Admin\ArticleController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
+use Modules\Site\Http\Controllers\Admin\BlogTopicController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
 use Modules\Site\Http\Controllers\Admin\PageContentController;
@@ -46,6 +48,29 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     Route::get('/device-content', function () {
         return redirect()->route('crm.devices.index');
     })->name('device-content');
+
+    // مقالات بلاگ
+    Route::prefix('blog')->name('blog.')->group(function () {
+        // تاپیک‌ها
+        Route::prefix('topics')->name('topics.')->group(function () {
+            Route::get('/', [BlogTopicController::class, 'index'])->name('index');
+            Route::get('/create', [BlogTopicController::class, 'create'])->name('create');
+            Route::post('/', [BlogTopicController::class, 'store'])->name('store');
+            Route::get('/{topic}/edit', [BlogTopicController::class, 'edit'])->name('edit');
+            Route::put('/{topic}', [BlogTopicController::class, 'update'])->name('update');
+            Route::delete('/{topic}', [BlogTopicController::class, 'destroy'])->name('destroy');
+        });
+
+        // مقالات
+        Route::prefix('articles')->name('articles.')->group(function () {
+            Route::get('/', [ArticleController::class, 'index'])->name('index');
+            Route::get('/create', [ArticleController::class, 'create'])->name('create');
+            Route::post('/', [ArticleController::class, 'store'])->name('store');
+            Route::get('/{article}/edit', [ArticleController::class, 'edit'])->name('edit');
+            Route::put('/{article}', [ArticleController::class, 'update'])->name('update');
+            Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('destroy');
+        });
+    });
 
     // صفحات سایت — قدیمی (free-form content، در حال جایگزینی با page-content)
     Route::prefix('pages')->name('pages.')->group(function () {
