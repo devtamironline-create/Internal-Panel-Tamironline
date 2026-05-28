@@ -80,28 +80,41 @@
         </form>
     </div>
 
-    {{-- Bulk actions form (wraps the list) --}}
-    <form method="POST" action="{{ route('site.admin.comments.bulk') }}"
-          x-data="{ ids: [], get pickedCount(){ return this.ids.length; }, toggle(id){ const i = this.ids.indexOf(id); i===-1 ? this.ids.push(id) : this.ids.splice(i,1); }, isPicked(id){ return this.ids.includes(id); } }"
-          @submit="if(!confirm('این اقدام روی '+pickedCount+' کامنت اعمال می‌شود. ادامه؟')) $event.preventDefault();">
-        @csrf
+    {{-- ─── Bulk actions form (جدا و مستقل از list — جلوگیری از nested form) ─── --}}
+    <div x-data="{
+            ids: [],
+            get pickedCount(){ return this.ids.length; },
+            toggle(id){ const i = this.ids.indexOf(id); i===-1 ? this.ids.push(id) : this.ids.splice(i,1); },
+            isPicked(id){ return this.ids.includes(id); },
+            submitBulk(action){
+                if (!this.pickedCount) return;
+                if (!confirm('این اقدام روی '+this.pickedCount+' کامنت اعمال می‌شود. ادامه؟')) return;
+                document.getElementById('bulk-action-input').value = action;
+                // hidden idsها از طریق template x-for خودکار درج می‌شوند
+                document.getElementById('bulk-form').submit();
+            }
+         }">
+
+        {{-- فرم bulk، روی صفحه پنهان (faceless) — فقط برای حمل token + ids + action --}}
+        <form id="bulk-form" method="POST" action="{{ route('site.admin.comments.bulk') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="action" id="bulk-action-input" value="">
+            <template x-for="id in ids" :key="id">
+                <input type="hidden" name="ids[]" :value="id">
+            </template>
+        </form>
 
         {{-- Sticky bulk bar --}}
         <div class="sticky top-0 z-10 mb-3 bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-2 flex-wrap"
              x-show="pickedCount > 0" x-cloak>
             <span class="text-sm text-gray-700"><span x-text="pickedCount"></span> کامنت انتخاب شده</span>
             <span class="text-gray-300">|</span>
-            <button type="submit" name="action" value="approve" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">تأیید همه</button>
-            <button type="submit" name="action" value="reject"  class="px-3 py-1.5 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700">رد همه</button>
-            <button type="submit" name="action" value="spam"    class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">اسپم</button>
-            <button type="submit" name="action" value="delete"  class="px-3 py-1.5 rounded-lg bg-red-900 text-white text-sm hover:bg-red-950 ml-auto">حذف</button>
+            <button type="button" @click="submitBulk('approve')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">تأیید همه</button>
+            <button type="button" @click="submitBulk('reject')"  class="px-3 py-1.5 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700">رد همه</button>
+            <button type="button" @click="submitBulk('spam')"    class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">اسپم</button>
+            <button type="button" @click="submitBulk('delete')"  class="px-3 py-1.5 rounded-lg bg-red-900 text-white text-sm hover:bg-red-950 ml-auto">حذف</button>
             <button type="button" @click="ids = []" class="text-sm text-gray-500 hover:underline">لغو انتخاب</button>
         </div>
-
-        {{-- hidden ids inputs --}}
-        <template x-for="id in ids" :key="id">
-            <input type="hidden" name="ids[]" :value="id">
-        </template>
 
         {{-- List --}}
         <div class="space-y-3">
@@ -196,7 +209,7 @@
                 </div>
             @endforelse
         </div>
-    </form>
+    </div>
 
     <div class="mt-4">{{ $comments->links() }}</div>
 </div>
