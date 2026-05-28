@@ -410,9 +410,10 @@ class ForumController extends Controller
     private function uniqueQuestionSlug(string $title): string
     {
         $base = Str::slug($title, '-', '');
-        // اگر transliteration ASCII تولید نکرد، یک کلید عددی fallback بگذار
+        // اگر transliteration ASCII تولید نکرد (مثلاً عنوان فقط فارسی است)
+        // از hex random برای داشتن lowercase pure استفاده می‌کنیم.
         if (! preg_match('/^[a-z0-9\-]{2,}$/', $base)) {
-            $base = 'q-'.Str::random(8);
+            $base = 'q-'.bin2hex(random_bytes(4));   // 8 hex chars [0-9a-f]
         }
         $base = Str::limit($base, 200, '');
         $slug = $base;
