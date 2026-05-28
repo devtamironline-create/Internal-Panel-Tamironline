@@ -117,12 +117,11 @@ class ForumController extends Controller
 
         $device = Device::where('slug', $data['device_slug'])->first(['id']);
         $brand = ! empty($data['brand_slug']) ? Brand::where('slug', $data['brand_slug'])->first(['id']) : null;
-
-        $slug = $this->uniqueQuestionSlug($data['title']);
         $token = Str::random(40);
 
+        // الگوی {id}-{persian-slug} — insert با slug موقت، سپس update با id واقعی
         $question = Question::create([
-            'slug' => $slug,
+            'slug' => 'tmp-'.bin2hex(random_bytes(6)),
             'title' => trim($data['title']),
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
             'model' => $data['model'] ?? null,
@@ -136,6 +135,8 @@ class ForumController extends Controller
             'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
+        $question->slug = self::buildQuestionSlug((int) $question->id, $data['title']);
+        $question->save();
 
         return response()->json([
             'id' => (int) $question->id,
@@ -407,22 +408,35 @@ class ForumController extends Controller
         ];
     }
 
-    private function uniqueQuestionSlug(string $title): string
+    /**
+     * تبدیل عنوان به slug با حفظ حروف فارسی (Persian-preserving).
+     * فقط letters/digits/فاصله/dash نگه‌داری می‌شوند؛ بقیه‌ی نقطه‌گذاری
+     * حذف، فاصله‌ها → dash، و حداکثر طول ۱۵۰ کاراکتر.
+     */
+    public static function persianSlug(string $title): string
     {
-        $base = Str::slug($title, '-', '');
-        // اگر transliteration ASCII تولید نکرد (مثلاً عنوان فقط فارسی است)
-        // از hex random برای داشتن lowercase pure استفاده می‌کنیم.
-        if (! preg_match('/^[a-z0-9\-]{2,}$/', $base)) {
-            $base = 'q-'.bin2hex(random_bytes(4));   // 8 hex chars [0-9a-f]
-        }
-        $base = Str::limit($base, 200, '');
-        $slug = $base;
-        $i = 2;
-        while (Question::where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$i++;
-        }
+        $title = strip_tags($title);
+        // ZWNJ (U+200C) و ZWJ (U+200D) → dash قبل از حذف non-letters
+        // تا مرز کلمات «لباسشویی‌ام» در slug حفظ شود.
+        $title = preg_replace('/[\x{200C}\x{200D}]/u', '-', $title);
+        // فقط Unicode letters, digits, whitespace و dash بمانند
+        $title = preg_replace('/[^\p{L}\p{N}\s\-]+/u', '', $title);
+        $title = preg_replace('/[\s_]+/u', '-', $title);
+        $title = preg_replace('/-+/u', '-', $title);
+        $title = trim((string) $title, '-');
 
-        return $slug;
+        return mb_substr($title, 0, 150);
+    }
+
+    /**
+     * ساخت slug نهایی به فرمت {id}-{persianSlug}. اگر عنوان slug-able تولید
+     * نکند، فقط `{id}` برمی‌گرداند (مثلاً عنوانی که فقط نقطه‌گذاری دارد).
+     */
+    public static function buildQuestionSlug(int $id, string $title): string
+    {
+        $slug = self::persianSlug($title);
+
+        return $slug === '' ? (string) $id : $id.'-'.$slug;
     }
 
     private function incrementUpvote(string $table, string $column, $owner, string $ip): void

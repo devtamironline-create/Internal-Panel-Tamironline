@@ -56,7 +56,7 @@ Route::prefix('v1')->group(function () {
         // ── Forum (انجمن پرسش و پاسخ) ──────────────────────────
         Route::get('/forum/questions', [ForumController::class, 'index'])->name('api.v1.forum.questions.index');
         Route::get('/forum/questions/{slug}', [ForumController::class, 'show'])
-            ->where('slug', '[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?')->name('api.v1.forum.questions.show');
+            ->where('slug', '[^/]+')->name('api.v1.forum.questions.show');
         Route::get('/forum/experts', [ForumController::class, 'experts'])->name('api.v1.forum.experts');
         Route::get('/forum/expert-answers', [ForumController::class, 'expertAnswers'])->name('api.v1.forum.expert-answers');
         Route::get('/forum/hot-problems', [ForumController::class, 'hotProblems'])->name('api.v1.forum.hot-problems');
@@ -96,7 +96,7 @@ Route::prefix('v1')->group(function () {
     });
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/forum/questions/{slug}/answers', [ForumController::class, 'storeAnswer'])
-            ->where('slug', '[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?')
+            ->where('slug', '[^/]+')
             ->name('api.v1.forum.answers.store');
     });
 
