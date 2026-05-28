@@ -630,6 +630,23 @@
                         </a>
                         @endcanany
 
+                        @canany(['view-forum', 'manage-forum-questions', 'manage-site'])
+                        <a href="{{ route('site.admin.forum.questions.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.questions.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            انجمن — سوالات
+                            @php $forumPending = \Modules\Site\Models\Forum\Question::where('status','pending')->count(); @endphp
+                            @if($forumPending > 0)
+                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPending }}</span>
+                            @endif
+                        </a>
+                        @endcanany
+                        @canany(['manage-forum-experts', 'manage-site'])
+                        <a href="{{ route('site.admin.forum.experts.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.experts.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            کارشناسان انجمن
+                        </a>
+                        @endcanany
+
                         @canany(['manage-site-pages', 'manage-site'])
                         <a href="{{ route('site.admin.blog.articles.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.articles.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

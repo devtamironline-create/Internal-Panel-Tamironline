@@ -131,6 +131,133 @@ return [
         ],
     ],
 
+    // ─── صفحه‌ی انجمن (/forum) ──────────────────────────────────────
+    'forum' => [
+        'title' => 'صفحه‌ی انجمن (/forum)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero بالای صفحه',
+                'fields' => [
+                    'badge' => ['label' => 'Badge', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'highlight' => ['label' => 'بخش گرادیانت تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'popular_searches' => [
+                        'label' => 'جستجوهای محبوب (هر آیتم یک pill)',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'text' => ['label' => 'متن', 'type' => 'string', 'rules' => 'required|string|max:100'],
+                            'url' => ['label' => 'لینک (اختیاری)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'sections_visibility' => [
+                'label' => 'فعال/غیرفعال‌سازی سکشن‌ها',
+                'fields' => [
+                    'show_device_picker' => ['label' => 'DevicePicker', 'type' => 'bool'],
+                    'show_questions_list' => ['label' => 'لیست سوالات', 'type' => 'bool'],
+                    'show_hot_problems' => ['label' => 'داغ‌ترین مشکلات', 'type' => 'bool'],
+                    'show_app_promo' => ['label' => 'بنر اپ', 'type' => 'bool'],
+                    'show_top_experts' => ['label' => 'کارشناسان برتر', 'type' => 'bool'],
+                    'show_category_shortcuts' => ['label' => 'دسته‌بندی موضوعی', 'type' => 'bool'],
+                    'show_expert_answers' => ['label' => 'پاسخ‌های کارشناسی', 'type' => 'bool'],
+                    'show_final_cta' => ['label' => 'CTA پایانی', 'type' => 'bool'],
+                ],
+            ],
+
+            'experts_section' => [
+                'label' => 'تیتر سکشن کارشناسان',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'expert_answers_section' => [
+                'label' => 'تیتر سکشن پاسخ‌های کارشناسی',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'category_shortcuts' => [
+                'label' => 'دسته‌بندی موضوعی (کارت‌های شورت‌کات)',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'آیتم‌ها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'slug' => ['label' => 'slug', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'tone' => ['label' => 'tone', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                            'href' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'final_cta' => [
+                'label' => 'CTA پایانی',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'primary' => [
+                        'label' => 'دکمه‌ی اصلی',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
+                    'secondary' => [
+                        'label' => 'دکمه‌ی دوم',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'متن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'sidebar_banners' => [
+                'label' => 'بنرهای ساید‌بار صفحه‌ی جزئیات',
+                'fields' => [
+                    'items' => [
+                        'label' => 'بنرها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'id' => ['label' => 'id', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'category' => ['label' => 'category', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:160'],
+                            'description' => ['label' => 'توضیح', 'type' => 'string', 'rules' => 'nullable|string|max:300'],
+                            'cta_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'cta_url' => ['label' => 'لینک دکمه', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'icon' => ['label' => 'آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'tone' => ['label' => 'tone', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
     // ─── صفحه‌ی بلاگ (/blog) ────────────────────────────────────────
     'blog' => [
         'title' => 'صفحه‌ی بلاگ (/blog)',

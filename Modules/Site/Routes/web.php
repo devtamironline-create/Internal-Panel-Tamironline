@@ -60,6 +60,33 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::delete('/{id}', [AdminCommentController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 
+    // انجمن — سوالات و کارشناسان
+    Route::prefix('forum')->name('forum.')->group(function () {
+        // سوالات
+        Route::prefix('questions')->name('questions.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'index'])->name('index');
+            Route::post('/bulk', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'bulk'])->name('bulk');
+            Route::get('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'show'])->whereNumber('id')->name('show');
+            Route::put('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'update'])->whereNumber('id')->name('update');
+            Route::put('/{id}/status', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'updateStatus'])->whereNumber('id')->name('update-status');
+            Route::put('/{id}/toggle/{flag}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'toggleFlag'])->whereNumber('id')->whereIn('flag', ['is_hot', 'is_featured'])->name('toggle-flag');
+            Route::post('/{id}/admin-reply', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'adminReply'])->whereNumber('id')->name('admin-reply');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            // پاسخ‌های nested
+            Route::put('/{id}/answers/{answerId}/status', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'answerUpdateStatus'])->whereNumber('id')->whereNumber('answerId')->name('answers.update-status');
+            Route::delete('/{id}/answers/{answerId}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'answerDestroy'])->whereNumber('id')->whereNumber('answerId')->name('answers.destroy');
+        });
+        // کارشناسان
+        Route::prefix('experts')->name('experts.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'index'])->name('index');
+            Route::get('/create', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'create'])->name('create');
+            Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'store'])->name('store');
+            Route::get('/{expert}/edit', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'edit'])->name('edit');
+            Route::put('/{expert}', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'update'])->name('update');
+            Route::delete('/{expert}', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'destroy'])->name('destroy');
+        });
+    });
+
     // مقالات بلاگ
     Route::prefix('blog')->name('blog.')->group(function () {
         // تاپیک‌ها

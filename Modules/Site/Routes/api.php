@@ -11,6 +11,7 @@ use Modules\Site\Http\Controllers\Api\V1\CommentController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
 use Modules\Site\Http\Controllers\Api\V1\DeviceReviewController;
+use Modules\Site\Http\Controllers\Api\V1\ForumController;
 use Modules\Site\Http\Controllers\Api\V1\HealthController;
 use Modules\Site\Http\Controllers\Api\V1\PageController;
 use Modules\Site\Http\Controllers\Api\V1\SettingsController;
@@ -52,6 +53,15 @@ Route::prefix('v1')->group(function () {
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.blog.articles.comments.index');
 
+        // ── Forum (انجمن پرسش و پاسخ) ──────────────────────────
+        Route::get('/forum/questions', [ForumController::class, 'index'])->name('api.v1.forum.questions.index');
+        Route::get('/forum/questions/{slug}', [ForumController::class, 'show'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')->name('api.v1.forum.questions.show');
+        Route::get('/forum/experts', [ForumController::class, 'experts'])->name('api.v1.forum.experts');
+        Route::get('/forum/expert-answers', [ForumController::class, 'expertAnswers'])->name('api.v1.forum.expert-answers');
+        Route::get('/forum/hot-problems', [ForumController::class, 'hotProblems'])->name('api.v1.forum.hot-problems');
+        Route::get('/forum/device-stats', [ForumController::class, 'deviceStats'])->name('api.v1.forum.device-stats');
+
         // pages + devices (public read)
         Route::get('/pages/{slug}', [PageController::class, 'show'])
             ->whereAlpha('slug')
@@ -71,6 +81,23 @@ Route::prefix('v1')->group(function () {
         Route::post('/comments/{id}/like', [CommentController::class, 'like'])
             ->whereNumber('id')
             ->name('api.v1.comments.like');
+        Route::post('/forum/answers/{id}/upvote', [ForumController::class, 'upvoteAnswer'])
+            ->whereNumber('id')->name('api.v1.forum.answers.upvote');
+        Route::post('/forum/questions/{id}/upvote', [ForumController::class, 'upvoteQuestion'])
+            ->whereNumber('id')->name('api.v1.forum.questions.upvote');
+        Route::post('/forum/answers/{id}/accept', [ForumController::class, 'acceptAnswer'])
+            ->whereNumber('id')->name('api.v1.forum.answers.accept');
+    });
+
+    // ── Forum writes (سوال جدید + پاسخ جدید) با throttle جدا ──
+    Route::middleware('throttle:3,10')->group(function () {  // 3 سوال در هر 10 دقیقه
+        Route::post('/forum/questions', [ForumController::class, 'store'])
+            ->name('api.v1.forum.questions.store');
+    });
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/forum/questions/{slug}/answers', [ForumController::class, 'storeAnswer'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.forum.answers.store');
     });
 
     // ── Internal-only writes (BFF → API) ──────────────────────────
