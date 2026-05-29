@@ -335,6 +335,19 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status')->whereNumber('ticket');
     });
 
+    // ─── چت اپراتور↔تکنسین (سمت ادمین) ─────────────────────────────
+    Route::prefix('tech-chats')->name('tech-chats.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\TechChatController::class, 'index'])->name('index');
+        Route::get('/unread-summary', [\Modules\CRM\Http\Controllers\TechChatController::class, 'unreadSummary'])->name('unread');
+        Route::middleware('can:manage-technicians')->group(function () {
+            Route::get('/assignments', [\Modules\CRM\Http\Controllers\TechChatController::class, 'assignments'])->name('assignments');
+            Route::patch('/{technician}/assign', [\Modules\CRM\Http\Controllers\TechChatController::class, 'updateAssignment'])->name('assign');
+        });
+        Route::get('/{technician}', [\Modules\CRM\Http\Controllers\TechChatController::class, 'show'])->name('show')->whereNumber('technician');
+        Route::post('/{technician}/send', [\Modules\CRM\Http\Controllers\TechChatController::class, 'send'])->name('send')->whereNumber('technician');
+        Route::get('/{technician}/poll', [\Modules\CRM\Http\Controllers\TechChatController::class, 'poll'])->name('poll')->whereNumber('technician');
+    });
+
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
         Route::get('/', [SyncSettingsController::class, 'index'])->name('settings');
         Route::post('regenerate', [SyncSettingsController::class, 'regenerate'])->name('regenerate');
