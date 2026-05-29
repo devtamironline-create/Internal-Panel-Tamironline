@@ -13,9 +13,12 @@ class Ticket extends Model
 
     protected $fillable = [
         'technician_id', 'order_id', 'category_id', 'subject', 'body',
-        'status', 'image_path',
+        'status', 'direction', 'created_by_admin_id', 'image_path',
         'assigned_to', 'last_reply_at', 'closed_at',
     ];
+
+    public const DIRECTION_TECH_TO_ADMIN = 'tech_to_admin';
+    public const DIRECTION_ADMIN_TO_TECH = 'admin_to_tech';
 
     protected $casts = [
         'last_reply_at' => 'datetime',
@@ -46,6 +49,11 @@ class Ticket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function creatorAdmin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_admin_id');
     }
 
     public function replies(): HasMany

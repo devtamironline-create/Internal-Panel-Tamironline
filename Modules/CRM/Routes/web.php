@@ -329,6 +329,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\TicketController::class, 'show'])->name('tickets.show')->whereNumber('ticket');
     });
     Route::middleware('can:reply-crm-tickets')->group(function () {
+        Route::get('tickets/create', [\Modules\CRM\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
+        Route::post('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply')->whereNumber('ticket');
         Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status')->whereNumber('ticket');
     });
