@@ -29,6 +29,7 @@ class Technician extends Authenticatable
     protected $fillable = [
         'wp_id',
         'user_id',
+        'assigned_operator_id',
 
         // مشخصات
         'first_name',
@@ -132,6 +133,17 @@ class Technician extends Authenticatable
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** اپراتورِ پشتیبانیِ تخصیص‌داده‌شده — مخاطب چت تکنسین. */
+    public function assignedOperator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_operator_id');
+    }
+
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(TechChatMessage::class)->orderBy('created_at');
     }
 
     public function orders(): HasMany
