@@ -4,7 +4,7 @@
         ['name' => 'tech.dashboard','label' => 'خانه',     'icon' => 'home'],
         ['name' => 'tech.wallet',   'label' => 'کیف‌پول',   'icon' => 'wallet'],
         ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list',   'fab' => true],
-        ['name' => 'tech.invoices', 'label' => 'فاکتورها', 'icon' => 'doc'],
+        ['name' => 'tech.messages', 'label' => 'پیام‌ها',   'icon' => 'chat',   'badge' => 'messages'],
         ['name' => 'tech.profile',  'label' => 'پروفایل',  'icon' => 'user'],
     ];
 @endphp
@@ -37,8 +37,8 @@
                 </a>
             @else
                 <a href="{{ route($item['name']) }}"
-                   class="flex flex-col items-center justify-center gap-1 transition group">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-2xl transition
+                   class="flex flex-col items-center justify-center gap-1 transition group relative">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-2xl transition relative
                                  {{ $isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-400 group-active:bg-gray-100' }}">
                         <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="{{ $isActive ? '2.4' : '1.8' }}" viewBox="0 0 24 24"
                              style="width:1.4rem;height:1.4rem;">
@@ -52,11 +52,20 @@
                                 @case('doc')
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     @break
+                                @case('chat')
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1-3.2A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    @break
                                 @case('user')
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                     @break
                             @endswitch
                         </svg>
+
+                        @if(!empty($item['badge']) && $item['badge'] === 'messages')
+                            <span x-cloak x-show="$store.techNav.unread > 0"
+                                  class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center"
+                                  x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
+                        @endif
                     </span>
                     <span class="text-[10.5px] {{ $isActive ? 'font-bold text-brand-700' : 'font-medium text-gray-500' }}">{{ $item['label'] }}</span>
                 </a>
@@ -64,3 +73,21 @@
         @endforeach
     </div>
 </nav>
+
+{{-- Polling کوتاه برای badge پیام‌های نخوانده — هر ۱۵ ثانیه. در صفحهٔ
+     /tech/messages هم چون خود صفحه پیام‌ها را می‌خواند، عدد به ۰ بازمی‌گردد. --}}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('techNav', { unread: 0 });
+
+    async function refreshUnread() {
+        try {
+            const res = await fetch('{{ route('tech.messages.unread') }}', { headers: { 'Accept': 'application/json' } });
+            const json = await res.json();
+            Alpine.store('techNav').unread = json.unread || 0;
+        } catch (e) {}
+    }
+    refreshUnread();
+    setInterval(refreshUnread, 15000);
+});
+</script>

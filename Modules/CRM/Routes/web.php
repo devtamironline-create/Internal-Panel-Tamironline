@@ -476,6 +476,12 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'store'])->name('tickets.store');
         Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'show'])->name('tickets.show');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'reply'])->name('tickets.reply');
+
+        // چت تکنسین با اپراتورِ تخصیص‌داده‌شده
+        Route::get('messages', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'index'])->name('messages');
+        Route::post('messages/send', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'send'])->name('messages.send');
+        Route::get('messages/poll', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'poll'])->name('messages.poll');
+        Route::get('messages/unread', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'unread'])->name('messages.unread');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
