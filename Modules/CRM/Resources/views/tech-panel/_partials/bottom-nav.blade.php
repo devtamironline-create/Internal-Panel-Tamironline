@@ -3,6 +3,7 @@
     $items = [
         ['name' => 'tech.dashboard','label' => 'خانه',     'icon' => 'home'],
         ['name' => 'tech.wallet',   'label' => 'کیف‌پول',   'icon' => 'wallet'],
+        ['name' => 'tech.invoices', 'label' => 'فاکتورها', 'icon' => 'doc'],
         ['name' => 'tech.orders',   'label' => 'سفارش‌ها', 'icon' => 'list',   'fab' => true],
         ['name' => 'tech.messages', 'label' => 'پیام‌ها',   'icon' => 'chat',   'badge' => 'messages'],
         ['name' => 'tech.profile',  'label' => 'پروفایل',  'icon' => 'user'],
@@ -13,7 +14,7 @@
             bg-white/70 backdrop-blur-xl backdrop-saturate-150
             border-t border-white/40 rounded-t-[28px]
             shadow-[0_-12px_32px_-8px_rgba(15,23,42,0.12)]">
-    <div class="grid grid-cols-5 h-[74px] relative px-2">
+    <div class="grid grid-cols-6 h-[74px] relative px-2">
         @foreach($items as $item)
             @php $isActive = $current === $item['name']; @endphp
 
