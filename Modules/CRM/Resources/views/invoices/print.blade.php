@@ -6,6 +6,10 @@
     $providerPostal  = CrmSetting::get('invoice_provider_postal_code', '');
     $providerAddress = CrmSetting::get('invoice_provider_address', '');
     $notes           = CrmSetting::get('invoice_print_notes', '');
+    $logoPath        = CrmSetting::get('invoice_provider_logo_path', '');
+    $stampPath       = CrmSetting::get('invoice_print_stamp_path', '');
+    $logoUrl         = $logoPath  ? asset('storage/' . $logoPath)  : null;
+    $stampUrl        = $stampPath ? asset('storage/' . $stampPath) : null;
 
     $customer = $invoice->customer;
     $order = $invoice->order;
@@ -124,6 +128,7 @@
             display: flex; align-items: center; justify-content: center;
             color: white; font-weight: bold; font-size: 22px;
         }
+        .brand-logo-img { height: 64px; max-width: 200px; object-fit: contain; }
         .brand-title { font-size: 22px; font-weight: bold; color: #0f172a; }
         .brand-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
 
@@ -170,10 +175,16 @@
             background: #f9fafb; font-weight: bold;
         }
 
-        /* ─── Notes ─── */
+        /* ─── Notes + stamp ─── */
+        .footer-wrap {
+            margin-top: 24px; display: flex; gap: 20px; align-items: flex-end;
+        }
         .notes {
-            margin-top: 24px; font-size: 11.5px; color: #475569;
+            flex: 1; font-size: 11.5px; color: #475569;
             line-height: 2; white-space: pre-line;
+        }
+        .stamp {
+            width: 140px; height: auto; opacity: 0.9; flex-shrink: 0;
         }
 
         @media print {
@@ -193,7 +204,11 @@
         {{-- Header — برند سمت راست، باکس شماره/تاریخ سمت چپ --}}
         <div class="header">
             <div class="brand">
-                <div class="brand-logo">ت</div>
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="logo" class="brand-logo-img">
+                @else
+                    <div class="brand-logo">ت</div>
+                @endif
                 <div>
                     <div class="brand-title">{{ $providerName }}</div>
                     <div class="brand-sub">مرکز تخصصی خدمات لوازم خانگی</div>
@@ -272,9 +287,16 @@
             </tbody>
         </table>
 
-        {{-- یادداشت‌ها --}}
-        @if($notes)
-            <div class="notes">{{ $notes }}</div>
+        {{-- یادداشت‌ها + مهر --}}
+        @if($notes || $stampUrl)
+            <div class="footer-wrap">
+                @if($stampUrl)
+                    <img src="{{ $stampUrl }}" alt="stamp" class="stamp">
+                @endif
+                @if($notes)
+                    <div class="notes">{{ $notes }}</div>
+                @endif
+            </div>
         @endif
     </div>
 </body>

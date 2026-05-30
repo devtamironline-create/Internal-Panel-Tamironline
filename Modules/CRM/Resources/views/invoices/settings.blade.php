@@ -16,8 +16,51 @@
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
     @endif
 
-    <form action="{{ route('crm.invoices.settings.update') }}" method="POST" class="space-y-5 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+    <form action="{{ route('crm.invoices.settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-5 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
         @csrf
+
+        @if($errors->any())
+            <div class="bg-rose-50 border border-rose-200 text-rose-700 rounded-lg p-3 text-sm">
+                <ul class="list-disc ps-5 space-y-1">
+                    @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- ── لوگو و مهر/امضا ── --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">لوگوی شرکت</label>
+                @if($logoPath)
+                    <div class="mb-3 flex items-center gap-3">
+                        <img src="{{ asset('storage/' . $logoPath) }}" alt="logo" class="h-16 w-16 object-contain bg-gray-50 rounded border">
+                        <label class="inline-flex items-center gap-2 text-xs text-rose-600">
+                            <input type="checkbox" name="remove_logo" value="1" class="rounded">
+                            حذف لوگوی فعلی
+                        </label>
+                    </div>
+                @endif
+                <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                       class="w-full text-xs text-gray-600 dark:text-gray-300">
+                <p class="text-[11px] text-gray-500 mt-1">PNG/JPG/WEBP/SVG — حداکثر ۲ مگابایت. اگر آپلود نکنید آیکن پیش‌فرض «ت» نمایش داده می‌شود.</p>
+            </div>
+
+            <div class="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">مهر و امضا</label>
+                @if($stampPath)
+                    <div class="mb-3 flex items-center gap-3">
+                        <img src="{{ asset('storage/' . $stampPath) }}" alt="stamp" class="h-20 w-20 object-contain bg-gray-50 rounded border">
+                        <label class="inline-flex items-center gap-2 text-xs text-rose-600">
+                            <input type="checkbox" name="remove_stamp" value="1" class="rounded">
+                            حذف مهر فعلی
+                        </label>
+                    </div>
+                @endif
+                <input type="file" name="stamp" accept="image/png,image/jpeg,image/webp"
+                       class="w-full text-xs text-gray-600 dark:text-gray-300">
+                <p class="text-[11px] text-gray-500 mt-1">ترجیحاً PNG با پس‌زمینهٔ شفاف — پایین صفحهٔ فاکتور چاپ می‌شود.</p>
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>

@@ -105,6 +105,8 @@ class InvoiceController extends Controller
             'providerPostal'  => CrmSetting::get('invoice_provider_postal_code', ''),
             'providerAddress' => CrmSetting::get('invoice_provider_address', ''),
             'printNotes'      => CrmSetting::get('invoice_print_notes', ''),
+            'logoPath'        => CrmSetting::get('invoice_provider_logo_path', ''),
+            'stampPath'       => CrmSetting::get('invoice_print_stamp_path', ''),
         ]);
     }
 
@@ -116,13 +118,51 @@ class InvoiceController extends Controller
             'invoice_provider_postal_code' => 'nullable|string|max:20',
             'invoice_provider_address'     => 'nullable|string|max:500',
             'invoice_print_notes'          => 'nullable|string|max:2000',
+            'logo'                         => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'stamp'                        => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'remove_logo'                  => 'nullable|boolean',
+            'remove_stamp'                 => 'nullable|boolean',
+        ], [
+            'logo.image'  => 'فایل لوگو باید تصویر باشد.',
+            'logo.max'    => 'حجم لوگو حداکثر ۲ مگابایت.',
+            'stamp.image' => 'فایل مهر/امضا باید تصویر باشد.',
+            'stamp.max'   => 'حجم مهر/امضا حداکثر ۲ مگابایت.',
         ]);
 
-        foreach ($validated as $key => $value) {
-            CrmSetting::set($key, $value ?? '');
+        foreach (['invoice_provider_name','invoice_provider_phone','invoice_provider_postal_code',
+                  'invoice_provider_address','invoice_print_notes'] as $key) {
+            CrmSetting::set($key, $validated[$key] ?? '');
+        }
+
+        // لوگو
+        if ($request->boolean('remove_logo')) {
+            $this->deleteAsset(CrmSetting::get('invoice_provider_logo_path'));
+            CrmSetting::set('invoice_provider_logo_path', '');
+        } elseif ($request->hasFile('logo')) {
+            $this->deleteAsset(CrmSetting::get('invoice_provider_logo_path'));
+            $path = $request->file('logo')->store('crm/invoice-assets', 'public');
+            CrmSetting::set('invoice_provider_logo_path', $path);
+        }
+
+        // مهر/امضا
+        if ($request->boolean('remove_stamp')) {
+            $this->deleteAsset(CrmSetting::get('invoice_print_stamp_path'));
+            CrmSetting::set('invoice_print_stamp_path', '');
+        } elseif ($request->hasFile('stamp')) {
+            $this->deleteAsset(CrmSetting::get('invoice_print_stamp_path'));
+            $path = $request->file('stamp')->store('crm/invoice-assets', 'public');
+            CrmSetting::set('invoice_print_stamp_path', $path);
         }
 
         return back()->with('success', 'تنظیمات صورتحساب ذخیره شد.');
+    }
+
+    /** حذف فایل قبلی از storage:public اگر وجود داشته باشد. */
+    protected function deleteAsset(?string $path): void
+    {
+        if ($path && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+        }
     }
 
     /**
