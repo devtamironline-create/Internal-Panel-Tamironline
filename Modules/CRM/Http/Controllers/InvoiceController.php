@@ -101,6 +101,7 @@ class InvoiceController extends Controller
     {
         return view('crm::invoices.settings', [
             'providerName'    => CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین'),
+            'providerTagline' => CrmSetting::get('invoice_provider_tagline', 'مرکز تخصصی خدمات لوازم خانگی'),
             'providerPhone'   => CrmSetting::get('invoice_provider_phone', ''),
             'providerPostal'  => CrmSetting::get('invoice_provider_postal_code', ''),
             'providerAddress' => CrmSetting::get('invoice_provider_address', ''),
@@ -114,6 +115,7 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'invoice_provider_name'        => 'nullable|string|max:120',
+            'invoice_provider_tagline'     => 'nullable|string|max:120',
             'invoice_provider_phone'       => 'nullable|string|max:30',
             'invoice_provider_postal_code' => 'nullable|string|max:20',
             'invoice_provider_address'     => 'nullable|string|max:500',
@@ -129,8 +131,8 @@ class InvoiceController extends Controller
             'stamp.max'   => 'حجم مهر/امضا حداکثر ۲ مگابایت.',
         ]);
 
-        foreach (['invoice_provider_name','invoice_provider_phone','invoice_provider_postal_code',
-                  'invoice_provider_address','invoice_print_notes'] as $key) {
+        foreach (['invoice_provider_name','invoice_provider_tagline','invoice_provider_phone',
+                  'invoice_provider_postal_code','invoice_provider_address','invoice_print_notes'] as $key) {
             CrmSetting::set($key, $validated[$key] ?? '');
         }
 

@@ -62,12 +62,20 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نام ارائه‌دهنده</label>
                 <input type="text" name="invoice_provider_name" value="{{ old('invoice_provider_name', $providerName) }}"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
             </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شعار / زیرعنوان (کنار لوگو)</label>
+                <input type="text" name="invoice_provider_tagline" value="{{ old('invoice_provider_tagline', $providerTagline) }}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شماره تلفن</label>
                 <input type="text" name="invoice_provider_phone" value="{{ old('invoice_provider_phone', $providerPhone) }}" dir="ltr"

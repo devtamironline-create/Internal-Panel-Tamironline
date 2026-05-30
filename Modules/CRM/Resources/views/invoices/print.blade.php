@@ -2,6 +2,7 @@
     use Modules\CRM\Models\CrmSetting;
 
     $providerName    = CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین');
+    $providerTagline = CrmSetting::get('invoice_provider_tagline', 'مرکز تخصصی خدمات لوازم خانگی');
     $providerPhone   = CrmSetting::get('invoice_provider_phone', '');
     $providerPostal  = CrmSetting::get('invoice_provider_postal_code', '');
     $providerAddress = CrmSetting::get('invoice_provider_address', '');
@@ -175,17 +176,19 @@
             background: #f9fafb; font-weight: bold;
         }
 
-        /* ─── Notes + stamp ─── */
-        .footer-wrap {
-            margin-top: 24px; display: flex; gap: 20px; align-items: flex-end;
+        /* ─── Notes + stamp — float-based for reliable layout ─── */
+        .footer-wrap { margin-top: 24px; overflow: hidden; }
+        .stamp {
+            float: left; width: 140px; height: auto;
+            opacity: 0.9; margin-inline-start: 16px;
         }
         .notes {
-            flex: 1; font-size: 11.5px; color: #475569;
+            float: right; width: calc(100% - 170px);
+            font-size: 11.5px; color: #475569;
             line-height: 2; white-space: pre-line;
         }
-        .stamp {
-            width: 140px; height: auto; opacity: 0.9; flex-shrink: 0;
-        }
+        /* اگر مهر نداشت، یادداشت‌ها تمام عرض را بگیرند */
+        .footer-wrap.no-stamp .notes { float: none; width: 100%; }
 
         @media print {
             body { background: white; padding: 0; }
@@ -211,7 +214,7 @@
                 @endif
                 <div>
                     <div class="brand-title">{{ $providerName }}</div>
-                    <div class="brand-sub">مرکز تخصصی خدمات لوازم خانگی</div>
+                    <div class="brand-sub">{{ $providerTagline }}</div>
                 </div>
             </div>
             <div class="meta-box">
@@ -287,9 +290,9 @@
             </tbody>
         </table>
 
-        {{-- یادداشت‌ها + مهر --}}
+        {{-- یادداشت‌ها + مهر — مهر چپ، یادداشت‌ها راست --}}
         @if($notes || $stampUrl)
-            <div class="footer-wrap">
+            <div class="footer-wrap @if(! $stampUrl) no-stamp @endif">
                 @if($stampUrl)
                     <img src="{{ $stampUrl }}" alt="stamp" class="stamp">
                 @endif
