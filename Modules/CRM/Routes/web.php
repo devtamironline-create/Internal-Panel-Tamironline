@@ -286,6 +286,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('invoices/export/{format}', [InvoiceController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('invoices.export');
         Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');

@@ -37,6 +37,10 @@
                     @endif
                 </form>
             @endcan
+            <a href="{{ route('crm.invoices.print', $invoice) }}" target="_blank"
+               class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
+                🖨 چاپ / دانلود فاکتور
+            </a>
             <a href="{{ route('crm.invoices.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">بازگشت</a>
         </div>
     </div>

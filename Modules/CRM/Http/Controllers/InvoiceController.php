@@ -87,6 +87,14 @@ class InvoiceController extends Controller
         return view('crm::invoices.show', compact('invoice'));
     }
 
+    /** نمای چاپی صورتحساب — برای مشتری. */
+    public function print(Invoice $invoice)
+    {
+        $invoice->load(['order.items', 'customer']);
+
+        return view('crm::invoices.print', compact('invoice'));
+    }
+
     /**
      * تولید (یا بازیابی) فاکتور برای یک سفارش.
      * معمولاً خودکار با تغییر وضعیت به Completed تولید می‌شود — این اندپوینت
