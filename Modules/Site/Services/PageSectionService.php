@@ -512,7 +512,7 @@ class PageSectionService
             'aspect_ratio' => $media->aspect_ratio,
             'variants' => $media->variants->mapWithKeys(fn ($v) => [
                 $v->variant => [
-                    'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($v->path),
+                    'url' => $media->variantUrl($v->variant),
                     'width' => (int) $v->width,
                     'height' => (int) $v->height,
                 ],

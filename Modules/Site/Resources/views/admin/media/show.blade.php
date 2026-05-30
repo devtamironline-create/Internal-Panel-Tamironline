@@ -29,7 +29,7 @@
                     <strong class="text-xs">Variants:</strong>
                     <div class="flex gap-2 mt-1 flex-wrap">
                         @foreach($media->variants as $v)
-                            <a href="{{ \Storage::disk('public')->url($v->path) }}" target="_blank" class="text-xs px-2 py-1 rounded bg-purple-50 text-purple-700">
+                            <a href="{{ $media->variantUrl($v->variant) }}" target="_blank" class="text-xs px-2 py-1 rounded bg-purple-50 text-purple-700">
                                 {{ $v->variant }} ({{ $v->width }}×{{ $v->height }})
                             </a>
                         @endforeach
