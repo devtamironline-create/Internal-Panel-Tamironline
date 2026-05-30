@@ -260,6 +260,34 @@ class SiteContentSeeder extends Seeder
                     'title' => 'پرسش‌های متداول',
                     'category_ids' => array_values(array_filter([$supportCatId, $warrantyCatId, $generalCatId])),
                 ],
+                'promo' => [
+                    'zone_slug' => 'about_promo',
+                ],
+            ],
+            'services' => [
+                'promo' => [
+                    'zone_slug' => 'services_promo',
+                ],
+            ],
+            'blog' => [
+                'banner' => [
+                    'zone_slug' => 'blog_hero',
+                ],
+            ],
+            'device' => [
+                'promo' => [
+                    'zone_slug' => 'device_promo',
+                ],
+            ],
+            'brand' => [
+                'promo' => [
+                    'zone_slug' => 'brand_promo',
+                ],
+            ],
+            'device_brand' => [
+                'promo' => [
+                    'zone_slug' => 'brand_device_promo',
+                ],
             ],
             'contact' => [
                 'channels' => [
