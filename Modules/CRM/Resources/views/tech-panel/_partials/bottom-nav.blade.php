@@ -10,7 +10,7 @@
 @endphp
 
 {{-- ─────── ویجت شناور چت کارشناس (روی همهٔ صفحات تکنسین) ─────── --}}
-<div class="fixed inset-x-0 max-w-[480px] mx-auto pointer-events-none z-40" style="bottom: 110px;">
+<div class="fixed inset-x-0 max-w-[480px] mx-auto pointer-events-none z-40" style="bottom: 210px;">
     <a href="{{ route('tech.messages') }}"
        class="absolute pointer-events-auto flex flex-col items-center transition active:scale-95"
        style="left: 14px;"
