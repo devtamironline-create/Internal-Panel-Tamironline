@@ -304,7 +304,10 @@ class FinancialReportController extends Controller
             $q->whereDate('issued_at', '<=', $f['to_g']);
         }
         if ($f['technician_id']) {
-            $q->where('technician_id', $f['technician_id']);
+            // صریح کردن نام جدول — این builder بعداً با crm_orders هم join می‌شود
+            // (مثلاً برای محاسبهٔ هزینه‌ها) و چون هر دو جدول ستون technician_id
+            // دارند، WHERE بدون پیشوند ابهام داشت.
+            $q->where('crm_invoices.technician_id', $f['technician_id']);
         }
         if ($f['doc_no']) {
             $q->where('invoice_code', 'like', '%' . $f['doc_no'] . '%');
