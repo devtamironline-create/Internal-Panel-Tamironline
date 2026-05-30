@@ -91,11 +91,11 @@
         body {
             font-family: 'Vazirmatn', Tahoma, sans-serif;
             margin: 0; padding: 24px;
-            background: #f3f4f6; color: #111;
+            background: #ffffff; color: #111;
             font-size: 13px;
         }
         .page {
-            background: white; max-width: 950px; margin: 0 auto;
+            background: white; max-width: 1180px; margin: 0 auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             padding: 32px 36px; border-radius: 6px;
             position: relative;
