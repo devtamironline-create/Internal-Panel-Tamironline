@@ -150,8 +150,14 @@ export async function POST(req: Request) {
 تگ‌های ارسال‌شده:
 - `banner:zone:{slug}` — یک زون خاص
 - `banner:all` — همه‌ی زون‌ها
+- `page:{slug}` — صفحه‌ای که آن زون را به‌صورت inline در پاسخ `/v1/pages/{slug}` دارد (جزئیات: `FRONTEND_BANNER_ZONES_IN_PAGES.md`)
 
 این endpoint رمز مشترک را با hash_equals چک می‌کند و فوراً ISR cache آن tag را invalidate می‌کند.
+
+> **توجه:** اگر بنر را از طریق فیلد `banner_zone` در یک سکشن صفحه نمایش
+> می‌دهید (نه از `/v1/banners/{slug}` مستقیم)، الگوی صحیح در فایل
+> `FRONTEND_BANNER_ZONES_IN_PAGES.md` توضیح داده شده — فرانت آنجا فقط یک
+> API call می‌زند و داده‌ی بنر inline برمی‌گردد.
 
 ---
 
