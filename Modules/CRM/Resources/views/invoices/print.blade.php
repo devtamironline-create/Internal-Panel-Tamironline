@@ -138,8 +138,9 @@
         .meta-row .meta-label {
             background: #f9fafb; border-inline-end: 1px solid #d1d5db;
             font-weight: bold; flex: 0 0 120px;
+            text-align: center;
         }
-        .meta-row .meta-value { flex: 1; min-width: 130px; }
+        .meta-row .meta-value { flex: 1; min-width: 130px; text-align: center; }
 
         h1.invoice-title {
             text-align: center; font-size: 18px; font-weight: bold;
