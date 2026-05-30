@@ -19,6 +19,9 @@ class SiteServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(module_path($this->name, 'Database/Migrations'));
         $this->loadViewsFrom(module_path($this->name, 'Resources/views'), 'site');
 
+        // Observers — auto-invalidate cache بنر
+        \Modules\Site\Models\Banner::observe(\Modules\Site\Observers\BannerObserver::class);
+
         $this->mergeConfigFrom(
             module_path($this->name, 'Config/page-sections.php'),
             'site.page-sections'
@@ -58,6 +61,7 @@ class SiteServiceProvider extends ServiceProvider
             if (str_starts_with($value, 'mailto:') || str_starts_with($value, 'tel:')) {
                 return true;
             }
+
             // URL کامل
             return filter_var($value, FILTER_VALIDATE_URL) !== false
                 && in_array(parse_url($value, PHP_URL_SCHEME), ['http', 'https'], true);

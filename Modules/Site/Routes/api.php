@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Api\V1\AboutStatController;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
+use Modules\Site\Http\Controllers\Api\V1\BannerController;
 use Modules\Site\Http\Controllers\Api\V1\BlogController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceBrandController;
@@ -53,6 +54,11 @@ Route::prefix('v1')->group(function () {
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.blog.articles.comments.index');
 
+        // ── Banners (per-zone با cache 60s و ETag) ───────────
+        Route::get('/banners/{zone}', [BannerController::class, 'byZone'])
+            ->where('zone', '[a-z0-9](?:[a-z0-9_\-]*[a-z0-9])?')
+            ->name('api.v1.banners.zone');
+
         // ── Forum (انجمن پرسش و پاسخ) ──────────────────────────
         Route::get('/forum/questions', [ForumController::class, 'index'])->name('api.v1.forum.questions.index');
         Route::get('/forum/questions/{slug}', [ForumController::class, 'show'])
@@ -78,6 +84,10 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.blog.articles.comments.store');
     });
     Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/banners/{id}/impression', [BannerController::class, 'impression'])
+            ->name('api.v1.banners.impression');
+        Route::post('/banners/{id}/click', [BannerController::class, 'click'])
+            ->name('api.v1.banners.click');
         Route::post('/comments/{id}/like', [CommentController::class, 'like'])
             ->whereNumber('id')
             ->name('api.v1.comments.like');

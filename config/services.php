@@ -17,9 +17,17 @@ return [
     'internal' => [
         // توکن ثابت برای احراز هویت سرور-به-سرور (Next BFF → Laravel API).
         // حداقل ۴۸ بایت رندوم. هرگز در ریپو commit نشود.
-        'token'     => env('INTERNAL_API_TOKEN'),
+        'token' => env('INTERNAL_API_TOKEN'),
         // برای rotation بدون downtime می‌توان توکن قدیمی را موقتاً نگه داشت.
         'token_old' => env('INTERNAL_API_TOKEN_OLD'),
+    ],
+
+    // Webhook به فرانت Next.js برای revalidateTag فوری پس از تغییر بنر/مقاله/...
+    // در فرانت endpoint مثل /api/revalidate تعریف کنید که tag را با
+    // header X-Revalidation-Secret تأیید کند و revalidateTag(tag) را صدا بزند.
+    'site_revalidation' => [
+        'url' => env('SITE_REVALIDATION_URL'),
+        'secret' => env('SITE_REVALIDATION_SECRET'),
     ],
 
 ];
