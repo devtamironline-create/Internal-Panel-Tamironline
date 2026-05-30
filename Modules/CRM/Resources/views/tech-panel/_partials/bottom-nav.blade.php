@@ -10,19 +10,25 @@
 @endphp
 
 {{-- ─────── ویجت شناور چت کارشناس (روی همهٔ صفحات تکنسین) ─────── --}}
-<div class="fixed inset-x-0 max-w-[480px] mx-auto pointer-events-none z-40" style="bottom: 92px;">
+<div class="fixed inset-x-0 max-w-[480px] mx-auto pointer-events-none z-40" style="bottom: 110px;">
     <a href="{{ route('tech.messages') }}"
-       class="absolute pointer-events-auto w-14 h-14 rounded-full flex items-center justify-center text-white
-              shadow-[0_10px_24px_-6px_rgba(16,185,129,0.55)] ring-4 ring-white/80 transition active:scale-95"
-       style="left: 14px; background: linear-gradient(135deg, #059669 0%, #0d9488 100%);"
-       aria-label="گفت‌وگو با کارشناس">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1-3.2A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-        </svg>
-        <span x-cloak x-show="$store.techNav.unread > 0"
-              class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white"
-              x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
+       class="absolute pointer-events-auto flex flex-col items-center transition active:scale-95"
+       style="left: 14px;"
+       aria-label="چت با کارشناس">
+        <div class="relative w-14 h-14 rounded-full flex items-center justify-center text-white
+                    shadow-[0_10px_24px_-6px_rgba(16,185,129,0.55)] ring-4 ring-white/80"
+             style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%);">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1-3.2A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <span x-cloak x-show="$store.techNav.unread > 0"
+                  class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white"
+                  x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
+        </div>
+        <span class="mt-1.5 text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+            چت با کارشناس
+        </span>
     </a>
 </div>
 
