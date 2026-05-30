@@ -165,7 +165,7 @@ class TechChatController extends Controller
     /** صفحهٔ تخصیص تکنسین‌ها به اپراتورها (فقط ادمین). */
     public function assignments()
     {
-        $this->authorize('manage-technicians');
+        abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $technicians = Technician::query()
             ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'assigned_operator_id')
@@ -186,7 +186,7 @@ class TechChatController extends Controller
     /** به‌روزرسانی اپراتور تخصیص‌داده‌شده برای یک تکنسین. */
     public function updateAssignment(Request $request, Technician $technician)
     {
-        $this->authorize('manage-technicians');
+        abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $validated = $request->validate([
             'assigned_operator_id' => 'nullable|exists:users,id',
