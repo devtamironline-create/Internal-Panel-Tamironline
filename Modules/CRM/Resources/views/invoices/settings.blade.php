@@ -19,7 +19,7 @@
     <form action="{{ route('crm.invoices.settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-5 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
         @csrf
 
-        @if($errors->any())
+        @if(isset($errors) && $errors->any())
             <div class="bg-rose-50 border border-rose-200 text-rose-700 rounded-lg p-3 text-sm">
                 <ul class="list-disc ps-5 space-y-1">
                     @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
