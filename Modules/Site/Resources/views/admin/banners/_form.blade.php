@@ -9,6 +9,8 @@
 
 <div x-data="bannerMediaPicker({
         pickerUrl: '{{ route('site.admin.media.picker') }}',
+        uploadUrl: '{{ route('site.admin.media.upload') }}',
+        csrfToken: '{{ csrf_token() }}',
         initialDesktop: @js(($b && $b->media) ? $b->media->toApiArray() : null),
         initialMobile:  @js(($b && $b->mediaMobile) ? $b->mediaMobile->toApiArray() : null),
         existingImageUrl: @js($b->image_url ?? null),
@@ -47,44 +49,80 @@
     </div>
 
     {{-- Images --}}
-    <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-6">
         <h3 class="text-sm font-bold">تصاویر بنر</h3>
 
+        {{-- Desktop slot --}}
         <div>
-            <label class="block text-sm font-medium mb-1">تصویر دسکتاپ</label>
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium">تصویر دسکتاپ</label>
+                <span class="text-xs text-gray-500">پیشنهادی: ۱۲۰۰×۳۰۰ یا متناسب با زون</span>
+            </div>
             <input type="hidden" name="media_id" :value="desktop.id ?? ''">
-            <div class="flex items-start gap-3">
+
+            {{-- Preview --}}
+            <div class="relative w-full bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6)] [background-size:16px_16px] [background-position:0_0,8px_8px] rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center"
+                 style="aspect-ratio: 4/1; max-height: 240px;">
                 <template x-if="desktop.url">
-                    <img :src="desktop.url" class="w-32 h-20 object-cover rounded border border-gray-200">
+                    <img :src="desktop.url" :alt="desktop.alt ?? ''" class="max-w-full max-h-full object-contain">
                 </template>
                 <template x-if="!desktop.url">
-                    <div class="w-32 h-20 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
+                    <div class="text-xs text-gray-400 py-10">پیش‌نمایش — تصویری انتخاب نشده</div>
                 </template>
-                <div class="flex flex-col gap-2">
-                    <button type="button" @click="openPicker('desktop')" class="px-3 py-1.5 bg-purple-600 text-white rounded text-sm">انتخاب از مخزن</button>
-                    <button type="button" @click="clearSlot('desktop')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm">پاک‌کردن</button>
+                <div x-show="uploading.desktop" x-cloak
+                     class="absolute inset-0 bg-white/80 flex items-center justify-center text-sm text-purple-700 font-semibold">
+                    در حال آپلود...
                 </div>
             </div>
-            <p class="text-xs text-gray-500 mt-2">یا URL مستقیم وارد کنید (اگر مخزن انتخاب شود اولویت دارد):</p>
+
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button type="button" @click="openPicker('desktop')"
+                        class="px-3 py-1.5 bg-purple-600 text-white rounded text-sm">انتخاب از مخزن</button>
+                <button type="button" @click="$refs.uploadDesktop.click()" :disabled="uploading.desktop"
+                        class="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm disabled:opacity-50">آپلود تصویر جدید</button>
+                <button type="button" @click="clearSlot('desktop')" x-show="desktop.url"
+                        class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm">پاک‌کردن</button>
+                <input type="file" x-ref="uploadDesktop" accept="image/*" class="hidden"
+                       @change="uploadFile('desktop', $event)">
+            </div>
+
+            <p class="text-xs text-gray-500 mt-3">یا URL مستقیم (اگر تصویری از مخزن انتخاب شود، URL نادیده گرفته می‌شود):</p>
             <input type="url" name="image_url" x-model="manualUrl" maxlength="500" dir="ltr"
                    class="w-full mt-1 px-3 py-2 border border-gray-300 rounded text-sm font-mono ltr"
                    placeholder="https://...">
         </div>
 
-        <div class="pt-3 border-t border-gray-100">
-            <label class="block text-sm font-medium mb-1">تصویر موبایل (اختیاری)</label>
+        {{-- Mobile slot --}}
+        <div class="pt-5 border-t border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium">تصویر موبایل (اختیاری)</label>
+                <span class="text-xs text-gray-500">عمودی یا مربع برای موبایل بهتر است</span>
+            </div>
             <input type="hidden" name="media_id_mobile" :value="mobile.id ?? ''">
-            <div class="flex items-start gap-3">
+
+            <div class="relative w-48 bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6)] [background-size:16px_16px] [background-position:0_0,8px_8px] rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center mx-auto sm:mx-0"
+                 style="aspect-ratio: 3/4; max-height: 280px;">
                 <template x-if="mobile.url">
-                    <img :src="mobile.url" class="w-20 h-28 object-cover rounded border border-gray-200">
+                    <img :src="mobile.url" :alt="mobile.alt ?? ''" class="max-w-full max-h-full object-contain">
                 </template>
                 <template x-if="!mobile.url">
-                    <div class="w-20 h-28 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">بدون</div>
+                    <div class="text-xs text-gray-400 px-2 text-center">پیش‌نمایش موبایل</div>
                 </template>
-                <div class="flex flex-col gap-2">
-                    <button type="button" @click="openPicker('mobile')" class="px-3 py-1.5 bg-purple-600 text-white rounded text-sm">انتخاب از مخزن</button>
-                    <button type="button" @click="clearSlot('mobile')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm">پاک‌کردن</button>
+                <div x-show="uploading.mobile" x-cloak
+                     class="absolute inset-0 bg-white/80 flex items-center justify-center text-sm text-purple-700 font-semibold">
+                    در حال آپلود...
                 </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button type="button" @click="openPicker('mobile')"
+                        class="px-3 py-1.5 bg-purple-600 text-white rounded text-sm">انتخاب از مخزن</button>
+                <button type="button" @click="$refs.uploadMobile.click()" :disabled="uploading.mobile"
+                        class="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm disabled:opacity-50">آپلود تصویر جدید</button>
+                <button type="button" @click="clearSlot('mobile')" x-show="mobile.url"
+                        class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm">پاک‌کردن</button>
+                <input type="file" x-ref="uploadMobile" accept="image/*" class="hidden"
+                       @change="uploadFile('mobile', $event)">
             </div>
         </div>
     </div>
@@ -101,17 +139,27 @@
             <input type="text" name="link_label" value="{{ old('link_label', $b?->link_label) }}" maxlength="80"
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
         </div>
+        @php
+            $startJalali = $b?->starts_at ? \Morilog\Jalali\Jalalian::fromCarbon($b->starts_at)->format('Y/m/d H:i') : null;
+            $endsJalali = $b?->ends_at ? \Morilog\Jalali\Jalalian::fromCarbon($b->ends_at)->format('Y/m/d H:i') : null;
+        @endphp
         <div>
-            <label class="block text-sm font-medium mb-1">شروع نمایش</label>
-            <input type="datetime-local" name="starts_at"
-                   value="{{ old('starts_at', $b?->starts_at?->format('Y-m-d\TH:i')) }}"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <label class="block text-sm font-medium mb-1">شروع نمایش (شمسی)</label>
+            <input type="text" name="starts_at"
+                   value="{{ old('starts_at', $startJalali) }}"
+                   placeholder="مثال: 1405/03/10 09:00"
+                   dir="ltr"
+                   class="jalali-datetimepicker w-full px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer bg-white ltr">
+            <p class="text-xs text-gray-500 mt-1">خالی = همین حالا شروع شود</p>
         </div>
         <div>
-            <label class="block text-sm font-medium mb-1">پایان نمایش</label>
-            <input type="datetime-local" name="ends_at"
-                   value="{{ old('ends_at', $b?->ends_at?->format('Y-m-d\TH:i')) }}"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <label class="block text-sm font-medium mb-1">پایان نمایش (شمسی)</label>
+            <input type="text" name="ends_at"
+                   value="{{ old('ends_at', $endsJalali) }}"
+                   placeholder="مثال: 1405/04/20 23:59"
+                   dir="ltr"
+                   class="jalali-datetimepicker w-full px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer bg-white ltr">
+            <p class="text-xs text-gray-500 mt-1">خالی = بدون انقضا</p>
         </div>
         <div class="sm:col-span-2 flex items-center">
             <label class="inline-flex items-center gap-2 p-3 rounded bg-emerald-50 border border-emerald-200 cursor-pointer w-full">
@@ -162,9 +210,10 @@
 <script>
 function bannerMediaPicker(config) {
     return {
-        desktop: config.initialDesktop ?? { id: null, url: null },
-        mobile:  config.initialMobile  ?? { id: null, url: null },
+        desktop: config.initialDesktop ?? { id: null, url: null, alt: null },
+        mobile:  config.initialMobile  ?? { id: null, url: null, alt: null },
         manualUrl: config.existingImageUrl ?? '',
+        uploading: { desktop: false, mobile: false },
         pickerOpen: false, pickerTarget: null,
         pickerItems: [], pickerPage: 1, pickerLastPage: 1, pickerLoading: false,
         search: '',
@@ -190,18 +239,88 @@ function bannerMediaPicker(config) {
             } finally { this.pickerLoading = false; }
         },
         pickItem(m) {
-            if (this.pickerTarget === 'desktop') {
-                this.desktop = { id: m.id, url: m.url };
-                this.manualUrl = m.url;
-            } else {
-                this.mobile = { id: m.id, url: m.url };
-            }
+            this.setSlot(this.pickerTarget, m);
             this.pickerOpen = false;
         },
+        setSlot(slot, media) {
+            const data = { id: media.id, url: media.url, alt: media.alt ?? null };
+            if (slot === 'desktop') {
+                this.desktop = data;
+                this.manualUrl = media.url;
+            } else {
+                this.mobile = data;
+            }
+        },
         clearSlot(slot) {
-            if (slot === 'desktop') { this.desktop = { id: null, url: null }; this.manualUrl = ''; }
-            else { this.mobile = { id: null, url: null }; }
-        }
+            if (slot === 'desktop') { this.desktop = { id: null, url: null, alt: null }; this.manualUrl = ''; }
+            else { this.mobile = { id: null, url: null, alt: null }; }
+        },
+        async uploadFile(slot, event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            this.uploading[slot] = true;
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('visibility', 'public');
+                const res = await fetch(config.uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': config.csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: fd,
+                });
+                const json = await res.json();
+                if (!res.ok || !json.ok || !json.media) {
+                    const msg = json?.message || 'آپلود ناموفق بود';
+                    alert(msg);
+                    return;
+                }
+                this.setSlot(slot, json.media);
+            } catch (err) {
+                alert('آپلود با خطا مواجه شد: ' + (err?.message || err));
+            } finally {
+                this.uploading[slot] = false;
+                event.target.value = '';
+            }
+        },
     };
 }
+
+// Persian (Jalali) datetime picker — استفاده از همان lib سراسری
+// تفاوت با .jalali-datepicker این است که timePicker فعال است.
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.$ === 'undefined' || typeof window.$.fn.persianDatepicker === 'undefined') {
+        return;
+    }
+    window.$('.jalali-datetimepicker').each(function () {
+        var $i = window.$(this);
+        if ($i.data('jdtp-init')) return;
+        $i.data('jdtp-init', true);
+        $i.persianDatepicker({
+            format: 'YYYY/MM/DD HH:mm',
+            initialValue: false,
+            autoClose: true,
+            responsive: true,
+            position: 'auto',
+            calendar: { persian: { locale: 'fa', showHint: true, leapYearMode: 'algorithmic' } },
+            timePicker: {
+                enabled: true,
+                meridiem: { enabled: false },
+                second: { enabled: false },
+            },
+            toolbox: {
+                enabled: true,
+                calendarSwitch: { enabled: false },
+                todayButton: { enabled: true, text: { fa: 'امروز' } },
+                submitButton: { enabled: true, text: { fa: 'تایید' } },
+            },
+            onSelect: function () {
+                $i.trigger('change');
+                $i[0].dispatchEvent(new Event('input', { bubbles: true }));
+            },
+        });
+    });
+});
 </script>
