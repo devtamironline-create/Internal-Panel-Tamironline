@@ -109,6 +109,41 @@
             </template>
         </div>
 
+    {{-- ─── Banner Zone (single-select) ─── --}}
+    @elseif($type === 'banner_zone')
+        @php
+            $zones = $references['banner_zones'] ?? collect();
+            $selectedZone = is_string($value) ? $value : null;
+        @endphp
+        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50/30 dark:bg-purple-900/10">
+            <label class="block text-sm font-semibold mb-1">{{ $fieldLabel }}</label>
+            <p class="text-xs text-gray-500 mb-2">
+                از <a href="{{ route('site.admin.banners.index') }}" target="_blank" class="text-purple-700 hover:underline">مخزن بنرها</a>
+                یکی از زون‌ها را انتخاب کنید. بنرهای داخل آن زون از همان پنل مدیریت می‌شوند و در این صفحه به‌صورت inline نمایش داده می‌شوند.
+            </p>
+            <select name="{{ $name }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="">— انتخاب نشده —</option>
+                @foreach($zones as $z)
+                    <option value="{{ $z->slug }}" @selected($selectedZone === $z->slug)>
+                        {{ $z->name }}
+                        @if($z->recommended_width && $z->recommended_height)
+                            ({{ $z->recommended_width }}×{{ $z->recommended_height }})
+                        @endif
+                        — {{ $z->slug }}
+                    </option>
+                @endforeach
+            </select>
+            @if($selectedZone)
+                <p class="text-xs text-purple-700 mt-2">
+                    <a href="{{ route('site.admin.banners.index', ['zone' => $selectedZone]) }}"
+                       target="_blank" class="hover:underline">
+                        مدیریت بنرهای زون «{{ $selectedZone }}» ↗
+                    </a>
+                </p>
+            @endif
+        </div>
+
     {{-- ─── Reference ─── --}}
     @elseif($type === 'reference')
         @php

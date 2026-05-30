@@ -385,13 +385,13 @@ return [
             ],
 
             'promo' => [
-                'label' => 'بنر تبلیغاتی (H7)',
+                'label' => 'بنر تبلیغاتی (H7) — از مخزن بنرها',
                 'fields' => [
-                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'link_url' => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
-                    'link_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'zone_slug' => [
+                        'label' => 'زون بنر',
+                        'type' => 'banner_zone',
+                        'rules' => 'nullable|string|max:120',
+                    ],
                 ],
             ],
 
@@ -531,13 +531,13 @@ return [
             ],
 
             'promo' => [
-                'label' => 'بنر تبلیغاتی (A8)',
+                'label' => 'بنر تبلیغاتی (A8) — از مخزن بنرها',
                 'fields' => [
-                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'image' => ['label' => 'تصویر (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
-                    'link_url' => ['label' => 'لینک هدف (مسیر داخلی یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
-                    'link_label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'zone_slug' => [
+                        'label' => 'زون بنر',
+                        'type' => 'banner_zone',
+                        'rules' => 'nullable|string|max:120',
+                    ],
                 ],
             ],
 

@@ -102,6 +102,11 @@ class PageContentController extends Controller
             'testimonial_categories' => Taxonomy::ofType(Taxonomy::TYPE_TESTIMONIAL)
                 ->ordered()
                 ->get(['id', 'slug', 'name', 'is_active']),
+            'banner_zones' => \Modules\Site\Models\BannerZone::query()
+                ->active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'slug', 'name', 'recommended_width', 'recommended_height']),
         ];
 
         return view('site::admin.page-content.edit', [

@@ -292,6 +292,15 @@ class PageSectionService
                 continue;
             }
 
+            if ($type === 'banner_zone') {
+                $value = Arr::get($payload, $key);
+                $slug = is_string($value) ? trim($value) : null;
+                $data[$key] = ($slug !== null && $slug !== '') ? $slug : null;
+                $rules[$fullKey] = 'nullable|string|max:120|exists:site_banner_zones,slug,is_active,1';
+
+                continue;
+            }
+
             if ($type === 'responsive_image') {
                 $value = Arr::get($payload, $key, []);
                 if (! is_array($value)) {
@@ -397,6 +406,15 @@ class PageSectionService
                 continue;
             }
 
+            if ($type === 'banner_zone') {
+                $slug = is_string($payload[$key] ?? null) ? trim($payload[$key]) : null;
+                $payload[$key.'_data'] = $slug !== null && $slug !== ''
+                    ? $this->resolveBannerZone($slug)
+                    : null;
+
+                continue;
+            }
+
             if ($type !== 'reference') {
                 continue;
             }
@@ -410,6 +428,149 @@ class PageSectionService
         }
 
         return $payload;
+    }
+
+    /**
+     * Inline hydration برای یک Banner Zone:
+     *  - از همان cache key استفاده می‌کنیم که BannerController public از آن استفاده می‌کند
+     *    (`banners:zone:{slug}`) → صفر duplication، invalidate یکپارچه از طریق observer بنر.
+     *  - شکل خروجی دقیقاً مثل /v1/banners/{slug} است.
+     *
+     * @return array<string, mixed>|null null اگر زون وجود نداشت یا غیرفعال بود.
+     */
+    private function resolveBannerZone(string $zoneSlug): ?array
+    {
+        $key = \Modules\Site\Support\BannerCache::keyForZone($zoneSlug);
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 60, function () use ($zoneSlug) {
+            $zone = \Modules\Site\Models\BannerZone::query()
+                ->active()
+                ->where('slug', $zoneSlug)
+                ->first();
+            if (! $zone) {
+                return null;
+            }
+            $banners = \Modules\Site\Models\Banner::query()
+                ->live()
+                ->where('zone_id', $zone->id)
+                ->with(['media.variants', 'mediaMobile.variants'])
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->get();
+
+            return [
+                'zone' => [
+                    'slug' => $zone->slug,
+                    'name' => $zone->name,
+                    'recommended' => $zone->recommended_width && $zone->recommended_height
+                        ? ['width' => $zone->recommended_width, 'height' => $zone->recommended_height]
+                        : null,
+                ],
+                'banners' => $banners->map(fn (\Modules\Site\Models\Banner $b) => $this->shapeBanner($b))->values()->all(),
+                'updated_at' => optional($banners->max('updated_at'))->toIso8601String(),
+            ];
+        });
+    }
+
+    /**
+     * شکل سبک یک Banner برای پاسخ public — مطابق BannerController.shape.
+     *
+     * @return array<string, mixed>
+     */
+    private function shapeBanner(\Modules\Site\Models\Banner $b): array
+    {
+        return [
+            'id' => $b->id,
+            'title' => $b->title,
+            'subtitle' => $b->subtitle,
+            'link' => [
+                'url' => $b->link_url,
+                'label' => $b->link_label,
+            ],
+            'image' => [
+                'desktop' => $this->shapeBannerMedia($b->media, $b->image_url),
+                'mobile' => $this->shapeBannerMedia($b->mediaMobile, null),
+            ],
+            'sort_order' => (int) $b->sort_order,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function shapeBannerMedia($media, ?string $fallbackUrl): ?array
+    {
+        if (! $media) {
+            return $fallbackUrl ? ['url' => $fallbackUrl, 'variants' => []] : null;
+        }
+
+        return [
+            'url' => $media->url(),
+            'alt' => $media->alt,
+            'width' => $media->width,
+            'height' => $media->height,
+            'aspect_ratio' => $media->aspect_ratio,
+            'variants' => $media->variants->mapWithKeys(fn ($v) => [
+                $v->variant => [
+                    'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($v->path),
+                    'width' => (int) $v->width,
+                    'height' => (int) $v->height,
+                ],
+            ])->all(),
+        ];
+    }
+
+    /**
+     * پیدا کردن صفحاتی که در سکشن‌هایشان به یک Banner Zone مشخص ارجاع داده‌اند.
+     * توسط BannerObserver فراخوانی می‌شود تا کش page-ها همراه با کش بنر invalidate شود.
+     *
+     * @return array<int, string> لیست slugهای منحصربه‌فرد صفحات.
+     */
+    public function pagesUsingBannerZone(string $zoneSlug): array
+    {
+        // ۱) از schema config، نقشه‌ی [pageSlug => [sectionKey => [bannerZoneFieldKeys]]] را می‌سازیم
+        $candidates = [];
+        foreach ($this->schema() as $pageSlug => $pageConfig) {
+            foreach (($pageConfig['sections'] ?? []) as $sectionKey => $sectionDef) {
+                foreach (($sectionDef['fields'] ?? []) as $fieldKey => $fieldDef) {
+                    if (($fieldDef['type'] ?? null) === 'banner_zone') {
+                        $candidates[$pageSlug][$sectionKey][] = $fieldKey;
+                    }
+                }
+            }
+        }
+
+        if ($candidates === []) {
+            return [];
+        }
+
+        // ۲) فقط ردیف‌های مرتبط را load می‌کنیم
+        $sectionKeys = collect($candidates)
+            ->flatMap(fn ($sections) => array_keys($sections))
+            ->unique()
+            ->values()
+            ->all();
+
+        $rows = PageSection::query()
+            ->whereIn('page_slug', array_keys($candidates))
+            ->whereIn('section_key', $sectionKeys)
+            ->get(['page_slug', 'section_key', 'payload']);
+
+        // ۳) هر ردیف را بر اساس schema بررسی می‌کنیم
+        $matchedPages = [];
+        foreach ($rows as $row) {
+            $fieldKeys = $candidates[$row->page_slug][$row->section_key] ?? [];
+            $payload = is_array($row->payload) ? $row->payload : (array) $row->payload;
+            foreach ($fieldKeys as $fk) {
+                $value = $payload[$fk] ?? null;
+                if (is_string($value) && $value === $zoneSlug) {
+                    $matchedPages[$row->page_slug] = true;
+                    break;
+                }
+            }
+        }
+
+        return array_keys($matchedPages);
     }
 
     /**

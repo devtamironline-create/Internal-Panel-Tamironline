@@ -59,6 +59,16 @@ final class BannerCache
     }
 
     /**
+     * اطلاع‌رسانی به فرانت Next.js برای revalidate یک صفحه‌ی خاص.
+     * زمانی استفاده می‌شود که داده‌ی صفحه‌ای inline-hydrate شده‌ی بنر را در خود دارد
+     * و باید همراه با تغییر بنر تازه شود.
+     */
+    public static function pingPage(string $pageSlug): void
+    {
+        self::pingFrontend("page:{$pageSlug}");
+    }
+
+    /**
      * POST به Next.js برای revalidateTag فوری (همراه با fallback TTL backend).
      * Config: services.site_revalidation.url + services.site_revalidation.secret
      */
