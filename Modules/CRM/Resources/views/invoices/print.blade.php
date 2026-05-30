@@ -134,13 +134,16 @@
 
         .meta-row { display: flex; border-bottom: 1px solid #e5e7eb; }
         .meta-row:last-child { border-bottom: none; }
-        .meta-row > div { padding: 8px 12px; text-align: center; }
+        .meta-row > div {
+            padding: 8px 12px;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center;
+        }
         .meta-row .meta-label {
             background: #f9fafb; border-inline-end: 1px solid #d1d5db;
             font-weight: bold; flex: 0 0 120px;
-            text-align: center;
         }
-        .meta-row .meta-value { flex: 1; min-width: 130px; text-align: center; }
+        .meta-row .meta-value { flex: 1; min-width: 130px; }
 
         h1.invoice-title {
             text-align: center; font-size: 18px; font-weight: bold;
