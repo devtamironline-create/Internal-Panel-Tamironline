@@ -17,8 +17,10 @@ final class MediaStorage
 {
     /**
      * upload یک فایل، اگر hash آن قبلاً موجود باشد همان رکورد را برمی‌گرداند (dedup).
+     *
+     * @param  string  $visibility  'public'|'private'
      */
-    public static function store(UploadedFile $file, ?int $userId = null): Media
+    public static function store(UploadedFile $file, ?int $userId = null, string $visibility = 'public'): Media
     {
         $hash = hash_file('sha256', $file->getRealPath());
 
@@ -35,6 +37,8 @@ final class MediaStorage
         $path = $dir.'/'.$filename;
 
         Storage::disk('public')->putFileAs($dir, $file, $filename);
+        // chmod 0644 تا سرور بتواند بخواند (UMASK پیش‌فرض ممکن است 0600 بدهد)
+        @chmod(Storage::disk('public')->path($path), 0644);
 
         $width = $height = null;
         $aspect = null;
@@ -60,6 +64,7 @@ final class MediaStorage
             'aspect_ratio' => $aspect,
             'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'kind' => $kind,
+            'visibility' => in_array($visibility, ['public', 'private'], true) ? $visibility : 'public',
             'uploaded_by_user_id' => $userId,
         ]);
 
@@ -86,7 +91,9 @@ final class MediaStorage
 
         // پاک‌سازی variants قبلی و ساخت دوباره
         MediaVariant::where('media_id', $media->id)->delete();
+        $disk = Storage::disk('public');
         foreach ($variants as $key => $info) {
+            @chmod($disk->path($info['path']), 0644);
             MediaVariant::create([
                 'media_id' => $media->id,
                 'variant' => $key,

@@ -81,9 +81,14 @@ class MediaController extends Controller
 
         $request->validate([
             'file' => 'required|file|max:20480',   // 20 MB
+            'visibility' => 'nullable|in:public,private',
         ]);
 
-        $media = MediaStorage::store($request->file('file'), auth()->id());
+        $media = MediaStorage::store(
+            $request->file('file'),
+            auth()->id(),
+            $request->input('visibility', 'public')
+        );
 
         return response()->json([
             'ok' => true,
@@ -108,6 +113,7 @@ class MediaController extends Controller
             'alt' => 'nullable|string|max:250',
             'caption' => 'nullable|string|max:2000',
             'description' => 'nullable|string|max:5000',
+            'visibility' => 'nullable|in:public,private',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:site_media_tags,id',
         ]);
@@ -118,6 +124,7 @@ class MediaController extends Controller
             'alt' => $data['alt'] ?? null,
             'caption' => $data['caption'] ?? null,
             'description' => $data['description'] ?? null,
+            'visibility' => $data['visibility'] ?? $media->visibility ?? 'public',
         ]);
         $media->tags()->sync($data['tag_ids'] ?? []);
 

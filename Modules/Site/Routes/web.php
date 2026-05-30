@@ -2,6 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Admin\AboutStatController;
+use Modules\Site\Http\Controllers\MediaServeController;
+
+// ─── Media serve (public route — مستقل از auth برای فایل‌های public) ──
+// خود کنترلر visibility=private را با auth/permission چک می‌کند.
+Route::get('/media/{id}/{name?}', [MediaServeController::class, 'serve'])
+    ->where('id', '[0-9]+')->name('site.media.serve');
+Route::get('/media/{id}/v/{variant}/{name?}', [MediaServeController::class, 'serveVariant'])
+    ->where('id', '[0-9]+')->where('variant', '[a-z]+')->name('site.media.serve-variant');
 use Modules\Site\Http\Controllers\Admin\ArticleController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\BlogTopicController;

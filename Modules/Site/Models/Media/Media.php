@@ -19,7 +19,7 @@ class Media extends Model
         'hash', 'path', 'filename', 'mime', 'extension', 'size_bytes',
         'width', 'height', 'aspect_ratio',
         'title', 'alt', 'caption', 'description',
-        'kind', 'uploaded_by_user_id',
+        'kind', 'visibility', 'uploaded_by_user_id',
     ];
 
     protected $casts = [
@@ -27,6 +27,15 @@ class Media extends Model
         'width' => 'integer',
         'height' => 'integer',
     ];
+
+    public const VIS_PUBLIC = 'public';
+
+    public const VIS_PRIVATE = 'private';
+
+    public function isPrivate(): bool
+    {
+        return $this->visibility === self::VIS_PRIVATE;
+    }
 
     public function variants(): HasMany
     {
@@ -44,11 +53,12 @@ class Media extends Model
     }
 
     /**
-     * URL کامل فایل اصلی روی public disk.
+     * URL کامل فایل اصلی — همیشه از طریق controller serve می‌شود
+     * (تا 403، symlink، و private mode بدون درگیری handle شوند).
      */
     public function url(): string
     {
-        return Storage::disk('public')->url($this->path);
+        return route('site.media.serve', ['id' => $this->id, 'name' => $this->hash.'.'.$this->extension]);
     }
 
     /**
@@ -57,8 +67,13 @@ class Media extends Model
     public function variantUrl(string $key): string
     {
         $v = $this->variants->firstWhere('variant', $key);
+        if (! $v) {
+            return $this->url();
+        }
 
-        return $v ? Storage::disk('public')->url($v->path) : $this->url();
+        return route('site.media.serve-variant', [
+            'id' => $this->id, 'variant' => $key, 'name' => $this->hash.'-'.$key.'.'.$this->extension,
+        ]);
     }
 
     /**
@@ -71,6 +86,7 @@ class Media extends Model
         return [
             'id' => (int) $this->id,
             'url' => $this->url(),
+            'visibility' => $this->visibility ?? 'public',
             'kind' => $this->kind,
             'mime' => $this->mime,
             'extension' => $this->extension,
@@ -83,7 +99,7 @@ class Media extends Model
             'caption' => $this->caption,
             'variants' => $this->variants->mapWithKeys(fn (MediaVariant $v) => [
                 $v->variant => [
-                    'url' => Storage::disk('public')->url($v->path),
+                    'url' => $this->variantUrl($v->variant),
                     'width' => (int) $v->width,
                     'height' => (int) $v->height,
                 ],

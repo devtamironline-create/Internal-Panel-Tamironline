@@ -70,6 +70,20 @@
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{{ old('description', $media->description) }}</textarea>
                 </div>
                 <div>
+                    <label class="block text-xs font-medium mb-1">دسترسی</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        @php $vis = old('visibility', $media->visibility ?? 'public'); @endphp
+                        <label class="inline-flex items-center gap-2 p-2 rounded border cursor-pointer {{ $vis === 'public' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200' }}">
+                            <input type="radio" name="visibility" value="public" @checked($vis === 'public')>
+                            <span class="text-xs">عمومی (همه)</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 p-2 rounded border cursor-pointer {{ $vis === 'private' ? 'border-amber-400 bg-amber-50' : 'border-gray-200' }}">
+                            <input type="radio" name="visibility" value="private" @checked($vis === 'private')>
+                            <span class="text-xs">خصوصی (فقط ادمین)</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
                     <label class="block text-xs font-medium mb-1">تگ‌ها</label>
                     @php $selectedTagIds = $media->tags->pluck('id')->all(); @endphp
                     <div class="border border-gray-200 rounded p-2 max-h-32 overflow-y-auto">
