@@ -96,7 +96,6 @@
         }
         .page {
             background: white; max-width: 1180px; margin: 0 auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             padding: 32px 36px; border-radius: 6px;
             position: relative;
         }
