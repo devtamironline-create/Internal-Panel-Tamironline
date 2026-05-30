@@ -150,8 +150,9 @@
         .party-label {
             writing-mode: vertical-rl; transform: rotate(180deg);
             background: #f9fafb; border-inline-start: 1px solid #d1d5db;
-            padding: 12px 8px; font-weight: bold; font-size: 12px;
-            min-width: 36px; text-align: center;
+            padding: 22px 14px; font-weight: bold; font-size: 15px;
+            min-width: 50px; text-align: center; letter-spacing: 2px;
+            color: #1f2937;
         }
         .party-body { flex: 1; padding: 12px 14px; line-height: 2; font-size: 12.5px; }
         .party-body .row { display: flex; gap: 32px; flex-wrap: wrap; }
@@ -219,8 +220,8 @@
             </div>
             <div class="meta-box">
                 <div class="meta-row">
-                    <div class="meta-label">شمارهٔ پیش‌فاکتور</div>
-                    <div dir="ltr">{{ $faNum($invoice->id) }}</div>
+                    <div class="meta-label">شماره فاکتور</div>
+                    <div dir="ltr">{{ $invoice->invoice_code }}</div>
                 </div>
                 <div class="meta-row">
                     <div class="meta-label">تاریخ</div>
