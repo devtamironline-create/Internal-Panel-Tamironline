@@ -107,12 +107,17 @@
         }
         .btn-print:hover { background: #15803d; }
 
-        /* ─── Header ─── */
+        /* ─── Header — float-based (bulletproof in RTL) ─── */
         .header {
-            display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;
+            overflow: hidden;
         }
-        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand    { float: right; display: flex; align-items: center; gap: 10px; }
+        .meta-box {
+            float: left;
+            border: 1px solid #d1d5db; border-radius: 4px;
+            display: flex; flex-direction: column; min-width: 220px; font-size: 12px;
+        }
         .brand-logo {
             width: 56px; height: 56px; border-radius: 12px;
             background: linear-gradient(135deg,#16a34a 0%,#0d9488 100%);
@@ -122,10 +127,6 @@
         .brand-title { font-size: 22px; font-weight: bold; color: #0f172a; }
         .brand-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
 
-        .meta-box {
-            border: 1px solid #d1d5db; border-radius: 4px;
-            display: flex; flex-direction: column; min-width: 220px; font-size: 12px;
-        }
         .meta-row { display: flex; border-bottom: 1px solid #e5e7eb; }
         .meta-row:last-child { border-bottom: none; }
         .meta-row > div { padding: 8px 12px; }
