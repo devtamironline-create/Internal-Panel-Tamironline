@@ -58,12 +58,34 @@ class MediaServeController extends Controller
             return;
         }
         $user = $request->user();
-        if (! $user) {
-            abort(403);
-        }
-        if ($user->can('view-site-media') || $user->can('manage-site-media') || $user->can('manage-site') || $user->can('manage-permissions')) {
+
+        // ۱) Signed URL — برای download یک‌بارمصرف ایمیل/SMS
+        if ($request->hasValidSignature(false)) {
             return;
         }
+
+        // ۲) چک per-entity: روی هر useable از media می‌رویم و اگر
+        //    آن مدل MediaAccessGate پیاده کرده باشد و اجازه دهد، عبور می‌کنیم
+        $uses = $media->uses()->with('useable')->get();
+        foreach ($uses as $use) {
+            $owner = $use->useable;
+            if ($owner instanceof \Modules\Site\Models\Contracts\MediaAccessGate) {
+                if ($owner->canUserAccessMedia($user, $media)) {
+                    return;
+                }
+            }
+        }
+
+        // ۳) Fallback به permission سراسری ادمین (محرمانه‌های داخلی)
+        if ($user && (
+            $user->can('view-site-media')
+            || $user->can('manage-site-media')
+            || $user->can('manage-site')
+            || $user->can('manage-permissions')
+        )) {
+            return;
+        }
+
         abort(403);
     }
 

@@ -62,6 +62,19 @@ class Media extends Model
     }
 
     /**
+     * Signed URL با expiration — برای فایل خصوصی که می‌خواهید لینک
+     * download یک‌بارمصرف برای ایمیل/SMS بفرستید.
+     */
+    public function signedUrl(int $minutes = 60): string
+    {
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'site.media.serve',
+            now()->addMinutes($minutes),
+            ['id' => $this->id, 'name' => $this->hash.'.'.$this->extension]
+        );
+    }
+
+    /**
      * URL یک variant خاص با fallback به اصلی.
      */
     public function variantUrl(string $key): string
