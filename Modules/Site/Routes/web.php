@@ -8,6 +8,7 @@ use Modules\Site\Http\Controllers\Admin\BlogTopicController;
 use Modules\Site\Http\Controllers\Admin\CommentController as AdminCommentController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
+use Modules\Site\Http\Controllers\Admin\MediaController;
 use Modules\Site\Http\Controllers\Admin\PageContentController;
 use Modules\Site\Http\Controllers\Admin\PageController;
 use Modules\Site\Http\Controllers\Admin\ReviewController as AdminReviewController;
@@ -125,6 +126,19 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/', [PageContentController::class, 'index'])->name('index');
         Route::get('/{slug}', [PageContentController::class, 'edit'])->whereAlpha('slug')->name('edit');
         Route::put('/{slug}', [PageContentController::class, 'update'])->whereAlpha('slug')->name('update');
+    });
+
+    // مخزن مدیا (مرکزی — مثل WordPress)
+    Route::prefix('media')->name('media.')->group(function () {
+        Route::get('/', [MediaController::class, 'index'])->name('index');
+        Route::post('/upload', [MediaController::class, 'upload'])->name('upload');
+        Route::get('/picker', [MediaController::class, 'picker'])->name('picker');
+        Route::get('/{id}', [MediaController::class, 'show'])->whereNumber('id')->name('show');
+        Route::put('/{id}', [MediaController::class, 'update'])->whereNumber('id')->name('update');
+        Route::post('/{id}/rebuild-variants', [MediaController::class, 'rebuildVariants'])->whereNumber('id')->name('rebuild-variants');
+        Route::delete('/{id}', [MediaController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::post('/tags', [MediaController::class, 'storeTag'])->name('tags.store');
+        Route::delete('/tags/{id}', [MediaController::class, 'destroyTag'])->whereNumber('id')->name('tags.destroy');
     });
 
     // بنرها و اسلایدر
