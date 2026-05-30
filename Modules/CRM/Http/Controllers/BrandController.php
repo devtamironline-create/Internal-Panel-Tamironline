@@ -63,6 +63,12 @@ class BrandController extends Controller
         $brand->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $brand->reviews()->sync($reviewIds);
 
+        // ثبت Media use برای reverse-lookup
+        $brand->detachAllMedia();
+        if (! empty($brand->logo_media_id)) {
+            $brand->attachMedia((int) $brand->logo_media_id, 'logo');
+        }
+
         // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
         foreach ($deviceIds as $deviceId) {
             DeviceBrandPage::ensureForPair((int) $deviceId, (int) $brand->id);
@@ -94,6 +100,12 @@ class BrandController extends Controller
         $brand->faqs()->sync($this->withSortOrder($faqIds));
         $brand->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $brand->reviews()->sync($reviewIds);
+
+        // ثبت Media use برای reverse-lookup
+        $brand->detachAllMedia();
+        if (! empty($brand->logo_media_id)) {
+            $brand->attachMedia((int) $brand->logo_media_id, 'logo');
+        }
 
         // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
         foreach ($deviceIds as $deviceId) {
@@ -177,6 +189,7 @@ class BrandController extends Controller
             'slug' => 'nullable|string|max:255|unique:crm_brands,slug'.($id ? ','.$id : ''),
             'logo' => 'nullable|string|max:500',
             'logo_file' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'logo_media_id' => 'nullable|integer|exists:site_media,id',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
@@ -306,6 +319,14 @@ class BrandController extends Controller
         $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['logo_file']);
+
+        // اگر media انتخاب شده، URL آن را در logo بگذار (سازگاری backward)
+        if (! empty($validated['logo_media_id'])) {
+            $m = \Modules\Site\Models\Media\Media::find($validated['logo_media_id']);
+            if ($m) {
+                $validated['logo'] = $m->url();
+            }
+        }
 
         // پاک‌سازی HTML خروجی TinyMCE قبل از ذخیره (allowlist tags + attrs)
         if (array_key_exists('description', $validated)) {

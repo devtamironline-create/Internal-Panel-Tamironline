@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\Site\Models\Concerns\HasComments;
+use Modules\Site\Models\Concerns\HasMedia;
 
 /**
  * مقاله‌ی بلاگ — می‌تواند به چند تاپیک، چند دستگاه و چند برند مرتبط باشد.
@@ -14,6 +15,7 @@ use Modules\Site\Models\Concerns\HasComments;
 class Article extends Model
 {
     use HasComments;
+    use HasMedia;
 
     protected $table = 'site_blog_articles';
 
@@ -23,6 +25,7 @@ class Article extends Model
         'excerpt',
         'content',
         'cover_image',
+        'cover_media_id',
         'cover_color',
         'read_time_minutes',
         'is_published',

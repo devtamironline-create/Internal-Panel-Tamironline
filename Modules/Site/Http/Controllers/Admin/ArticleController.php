@@ -73,6 +73,12 @@ class ArticleController extends Controller
         $article->devices()->sync($this->withOrder($deviceIds));
         $article->brands()->sync($this->withOrder($brandIds));
 
+        // ثبت Media use برای reverse-lookup
+        $article->detachAllMedia();
+        if (! empty($article->cover_media_id)) {
+            $article->attachMedia((int) $article->cover_media_id, 'cover');
+        }
+
         return redirect()->route('site.admin.blog.articles.edit', $article->id)
             ->with('success', 'مقاله ایجاد شد.');
     }
@@ -98,6 +104,12 @@ class ArticleController extends Controller
         $article->topics()->sync($this->withOrder($topicIds));
         $article->devices()->sync($this->withOrder($deviceIds));
         $article->brands()->sync($this->withOrder($brandIds));
+
+        // ثبت Media use برای reverse-lookup
+        $article->detachAllMedia();
+        if (! empty($article->cover_media_id)) {
+            $article->attachMedia((int) $article->cover_media_id, 'cover');
+        }
 
         return redirect()->route('site.admin.blog.articles.edit', $article->id)
             ->with('success', 'مقاله به‌روز شد.');
@@ -137,6 +149,7 @@ class ArticleController extends Controller
             'excerpt' => 'nullable|string|max:600',
             'content' => 'nullable|string|max:500000',
             'cover_image' => 'nullable|string|max:500',
+            'cover_media_id' => 'nullable|integer|exists:site_media,id',
             'cover_color' => 'nullable|string|max:9|regex:/^#[0-9a-fA-F]{3,8}$/',
             'read_time_minutes' => 'nullable|integer|min:1|max:600',
             'is_published' => 'nullable|boolean',
@@ -166,6 +179,14 @@ class ArticleController extends Controller
 
         if ($data['is_published'] && empty($data['published_at'])) {
             $data['published_at'] = now();
+        }
+
+        // اگر media انتخاب شده، URL آن را در cover_image بگذار
+        if (! empty($data['cover_media_id'])) {
+            $m = \Modules\Site\Models\Media\Media::find($data['cover_media_id']);
+            if ($m) {
+                $data['cover_image'] = $m->url();
+            }
         }
 
         if (array_key_exists('content', $data)) {

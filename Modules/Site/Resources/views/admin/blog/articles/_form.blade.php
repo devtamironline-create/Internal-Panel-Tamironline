@@ -48,9 +48,21 @@
 
     <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <h4 class="text-sm font-bold">تصویر کاور</h4>
+        @php
+            $currentCoverMedia = ! empty($a?->cover_media_id)
+                ? \Modules\Site\Models\Media\Media::with('variants')->find($a->cover_media_id)
+                : null;
+        @endphp
+        @include('site::admin.partials.media-picker', [
+            'name' => 'cover_media_id',
+            'current' => $currentCoverMedia,
+            'kind' => 'image',
+            'label' => 'انتخاب از مخزن مدیا',
+            'previewSize' => 'w-48 h-32',
+        ])
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-medium mb-1">URL تصویر کاور</label>
+                <label class="block text-xs font-medium mb-1">یا URL مستقیم (در صورت عدم انتخاب از مخزن)</label>
                 <input type="text" name="cover_image" value="{{ old('cover_image', $a?->cover_image) }}" maxlength="500" dir="ltr"
                        placeholder="https://..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">

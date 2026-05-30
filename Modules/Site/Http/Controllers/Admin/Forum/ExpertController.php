@@ -44,7 +44,13 @@ class ExpertController extends Controller
         $this->check();
         $data = $this->validateRequest($request);
         $this->applyDefaults($data, true);
-        Expert::create($data);
+        $expert = Expert::create($data);
+
+        // ثبت Media use برای reverse-lookup
+        $expert->detachAllMedia();
+        if (! empty($expert->avatar_media_id)) {
+            $expert->attachMedia((int) $expert->avatar_media_id, 'avatar');
+        }
 
         return redirect()->route('site.admin.forum.experts.index')->with('success', 'کارشناس افزوده شد.');
     }
@@ -62,6 +68,12 @@ class ExpertController extends Controller
         $data = $this->validateRequest($request, $expert->id);
         $this->applyDefaults($data, false);
         $expert->update($data);
+
+        // ثبت Media use برای reverse-lookup
+        $expert->detachAllMedia();
+        if (! empty($expert->avatar_media_id)) {
+            $expert->attachMedia((int) $expert->avatar_media_id, 'avatar');
+        }
 
         return redirect()->route('site.admin.forum.experts.index')->with('success', 'کارشناس به‌روز شد.');
     }
@@ -84,6 +96,7 @@ class ExpertController extends Controller
             'slug' => 'nullable|string|max:120|unique:site_forum_experts,slug'.($id ? ','.$id : ''),
             'title' => 'nullable|string|max:200',
             'avatar' => 'nullable|string|max:500',
+            'avatar_media_id' => 'nullable|integer|exists:site_media,id',
             'bio' => 'nullable|string|max:5000',
             'user_id' => 'nullable|integer|exists:users,id',
             'rating' => 'nullable|numeric|min:0|max:5',
@@ -101,5 +114,13 @@ class ExpertController extends Controller
         $data['rating'] = $data['rating'] ?? 0;
         $data['sort_order'] = $data['sort_order'] ?? 0;
         $data['is_active'] = (bool) ($data['is_active'] ?? ($isNew ? true : false));
+
+        // اگر media انتخاب شده، URL آن را در avatar بگذار
+        if (! empty($data['avatar_media_id'])) {
+            $m = \Modules\Site\Models\Media\Media::find($data['avatar_media_id']);
+            if ($m) {
+                $data['avatar'] = $m->url();
+            }
+        }
     }
 }

@@ -15,14 +15,21 @@
     </div>
 
     <div class="md:col-span-2">
-        @include('crm::partials.image-uploader', [
-            'name'        => 'logo',
-            'fileName'    => 'logo_file',
-            'label'       => 'لوگوی برند',
-            'value'       => old('logo', $brand->logo ?? null),
-            'placeholder' => 'https://cdn.example.com/brands/lg.png',
-            'help'        => 'لوگو را آپلود کنید یا URL آن را وارد کنید. ابعاد پیشنهادی ۴۰۰×۴۰۰ پیکسل، فرمت PNG شفاف یا SVG.',
+        @php
+            $currentLogoMedia = ! empty($brand->logo_media_id ?? null)
+                ? \Modules\Site\Models\Media\Media::with('variants')->find($brand->logo_media_id)
+                : null;
+        @endphp
+        @include('site::admin.partials.media-picker', [
+            'name' => 'logo_media_id',
+            'current' => $currentLogoMedia,
+            'kind' => 'image',
+            'label' => 'لوگوی برند (ابعاد ۴۰۰×۴۰۰، PNG شفاف یا SVG)',
+            'previewSize' => 'w-32 h-32',
         ])
+        <p class="text-xs text-gray-500 mt-1">یا URL مستقیم:</p>
+        <input type="text" name="logo" value="{{ old('logo', $brand->logo ?? '') }}" dir="ltr"
+               class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">
     </div>
 
     <div>

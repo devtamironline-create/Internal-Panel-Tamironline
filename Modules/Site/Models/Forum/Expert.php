@@ -4,13 +4,16 @@ namespace Modules\Site\Models\Forum;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Site\Models\Concerns\HasMedia;
 
 class Expert extends Model
 {
+    use HasMedia;
+
     protected $table = 'site_forum_experts';
 
     protected $fillable = [
-        'slug', 'name', 'title', 'avatar', 'bio',
+        'slug', 'name', 'title', 'avatar', 'avatar_media_id', 'bio',
         'user_id', 'rating', 'answers_count', 'sort_order', 'is_active',
     ];
 

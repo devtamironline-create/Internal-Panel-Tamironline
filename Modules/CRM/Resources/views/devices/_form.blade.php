@@ -62,14 +62,22 @@
     </div>
 
     <div class="md:col-span-2">
-        @include('crm::partials.image-uploader', [
-            'name'        => 'thumbnail',
-            'fileName'    => 'thumbnail_file',
-            'label'       => 'تصویر بندانگشتی دستگاه',
-            'value'       => old('thumbnail', $device->thumbnail ?? null),
-            'placeholder' => 'https://cdn.example.com/devices/washing-machine.png',
-            'help'        => 'یک تصویر کوچک از دستگاه. ابعاد پیشنهادی: ۴۰۰×۴۰۰ پیکسل (مربعی، PNG شفاف یا WebP).',
+        @php
+            $currentThumbMedia = ! empty($device->thumbnail_media_id ?? null)
+                ? \Modules\Site\Models\Media\Media::with('variants')->find($device->thumbnail_media_id)
+                : null;
+        @endphp
+        @include('site::admin.partials.media-picker', [
+            'name' => 'thumbnail_media_id',
+            'current' => $currentThumbMedia,
+            'kind' => 'image',
+            'label' => 'تصویر بندانگشتی دستگاه (ابعاد ۴۰۰×۴۰۰)',
+            'previewSize' => 'w-32 h-32',
         ])
+        <p class="text-xs text-gray-500 mt-1">یا URL مستقیم (در صورت عدم انتخاب از مخزن):</p>
+        <input type="text" name="thumbnail" value="{{ old('thumbnail', $device->thumbnail ?? '') }}" dir="ltr"
+               placeholder="https://..."
+               class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">
     </div>
 
     <div class="flex items-end gap-6">

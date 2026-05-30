@@ -5,14 +5,18 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Site\Models\Concerns\HasMedia;
 
 class Device extends Model
 {
+    use HasMedia;
+
     protected $table = 'crm_devices';
 
     protected $fillable = [
         'wp_id',
         'device_category_id',
+        'thumbnail_media_id',
         'name',
         'short_name',
         'slug',

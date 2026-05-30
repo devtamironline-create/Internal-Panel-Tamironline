@@ -4,9 +4,12 @@ namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Site\Models\Concerns\HasMedia;
 
 class Brand extends Model
 {
+    use HasMedia;
+
     protected $table = 'crm_brands';
 
     protected $fillable = [
@@ -14,6 +17,7 @@ class Brand extends Model
         'name',
         'slug',
         'logo',
+        'logo_media_id',
         'tagline',
         'eyebrow',
         'subtitle',

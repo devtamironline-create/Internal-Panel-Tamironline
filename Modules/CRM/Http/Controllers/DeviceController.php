@@ -67,6 +67,12 @@ class DeviceController extends Controller
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
 
+        // ثبت Media use برای reverse-lookup
+        $device->detachAllMedia();
+        if (! empty($device->thumbnail_media_id)) {
+            $device->attachMedia((int) $device->thumbnail_media_id, 'thumbnail');
+        }
+
         // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
         foreach ($brandIds as $brandId) {
             DeviceBrandPage::ensureForPair((int) $device->id, (int) $brandId);
@@ -97,6 +103,12 @@ class DeviceController extends Controller
         $device->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $device->reviews()->sync($reviewIds);
         $device->brands()->sync($this->withSortOrder($brandIds));
+
+        // ثبت Media use برای reverse-lookup
+        $device->detachAllMedia();
+        if (! empty($device->thumbnail_media_id)) {
+            $device->attachMedia((int) $device->thumbnail_media_id, 'thumbnail');
+        }
 
         // Auto-create صفحه‌ی ترکیبی برای هر pair جدید (device, brand)
         foreach ($brandIds as $brandId) {
@@ -177,6 +189,7 @@ class DeviceController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:crm_devices,slug'.($id ? ','.$id : ''),
             'device_category_id' => 'nullable|integer|exists:crm_device_categories,id',
+            'thumbnail_media_id' => 'nullable|integer|exists:site_media,id',
             'icon' => 'nullable|string|max:60',
             'tone' => 'nullable|string|max:30',
             'thumbnail' => 'nullable|string|max:500',
@@ -310,6 +323,14 @@ class DeviceController extends Controller
         $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['thumbnail_file']);
+
+        // اگر media انتخاب شده، URL آن را در thumbnail بگذار (سازگاری backward)
+        if (! empty($validated['thumbnail_media_id'])) {
+            $m = \Modules\Site\Models\Media\Media::find($validated['thumbnail_media_id']);
+            if ($m) {
+                $validated['thumbnail'] = $m->url();
+            }
+        }
 
         // پاک‌سازی HTML خروجی TinyMCE قبل از ذخیره (allowlist tags + attrs)
         if (array_key_exists('description', $validated)) {

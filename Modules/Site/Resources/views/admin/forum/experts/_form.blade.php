@@ -26,7 +26,20 @@
                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
     </div>
     <div class="sm:col-span-2">
-        <label class="block text-sm font-medium mb-1">URL آواتار</label>
+        <label class="block text-sm font-medium mb-1">آواتار کارشناس</label>
+        @php
+            $currentAvatarMedia = ! empty($e?->avatar_media_id)
+                ? \Modules\Site\Models\Media\Media::with('variants')->find($e->avatar_media_id)
+                : null;
+        @endphp
+        @include('site::admin.partials.media-picker', [
+            'name' => 'avatar_media_id',
+            'current' => $currentAvatarMedia,
+            'kind' => 'image',
+            'label' => 'انتخاب از مخزن مدیا',
+            'previewSize' => 'w-24 h-24',
+        ])
+        <label class="block text-xs font-medium mt-3 mb-1">یا URL مستقیم</label>
         <input type="text" name="avatar" value="{{ old('avatar', $e?->avatar) }}" maxlength="500" dir="ltr"
                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">
     </div>
