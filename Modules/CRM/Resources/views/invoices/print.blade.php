@@ -10,6 +10,16 @@
     $customer = $invoice->customer;
     $order = $invoice->order;
 
+    // اولویت با مقادیر روی خود سفارش — این‌ها snapshot زمان سفارش‌اند
+    $custName   = $order?->customer_name   ?: ($customer->display_name ?? '—');
+    $custMobile = $order?->customer_mobile ?: ($customer->mobile ?? '');
+    $custPhone  = $order?->customer_phone  ?: ($customer->phone ?? '');
+
+    $cityName     = optional($order?->city)->name ?? '';
+    $provinceName = optional($order?->province ?? null)->name ?? '';
+    $orderAddr    = $order?->address ?? '';
+    $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
+
     // اقلام — اول OrderItem، fallback به آرایه‌های موازی WP
     $rows = collect();
     if ($order && $order->items->isNotEmpty()) {
@@ -34,17 +44,29 @@
         }
     }
 
-    // اگر هیچ ردیفی نداریم، یک ردیف کلی از توضیحات/مبلغ کل فاکتور می‌سازیم
+    $grandTotal = (int) ($invoice->total_amount ?: $rows->sum('total'));
+
+    // اگر هیچ ردیفی نداریم، یک ردیف کلی از توضیحات/مبلغ کل می‌سازیم
     if ($rows->isEmpty()) {
         $desc = $order->invoice_descripotion ?? $order->order_description ?? 'انجام خدمات';
         $rows->push([
             'title' => trim((string) $desc) ?: 'انجام خدمات',
             'qty'   => 1,
-            'total' => (int) $invoice->total_amount,
+            'total' => $grandTotal,
         ]);
     }
 
-    $grandTotal = (int) ($invoice->total_amount ?: $rows->sum('total'));
+    // اقلام WP قدیمی اغلب عنوان دارند ولی قیمت ندارند؛ در این حالت
+    // مبلغ کل فاکتور را در یک ردیف ادغام‌شده نمایش می‌دهیم تا ستون
+    // «مبلغ کل» با «جمع کل» جور باشد.
+    if ($rows->sum('total') === 0 && $grandTotal > 0) {
+        $combinedTitle = $rows->pluck('title')->filter()->implode('، ');
+        $rows = collect([[
+            'title' => $combinedTitle !== '' ? $combinedTitle : 'انجام خدمات',
+            'qty'   => 1,
+            'total' => $grandTotal,
+        ]]);
+    }
 
     // فرمت عدد فارسی
     $faNum = fn($n) => str_replace(
@@ -102,12 +124,12 @@
 
         .meta-box {
             border: 1px solid #d1d5db; border-radius: 4px;
-            display: flex; min-width: 220px; font-size: 12px;
+            display: flex; flex-direction: column; min-width: 220px; font-size: 12px;
         }
-        .meta-box > div { padding: 8px 12px; }
-        .meta-box .meta-label { background: #f9fafb; border-inline-end: 1px solid #d1d5db; font-weight: bold; }
         .meta-row { display: flex; border-bottom: 1px solid #e5e7eb; }
         .meta-row:last-child { border-bottom: none; }
+        .meta-row > div { padding: 8px 12px; }
+        .meta-row .meta-label { background: #f9fafb; border-inline-end: 1px solid #d1d5db; font-weight: bold; }
 
         h1.invoice-title {
             text-align: center; font-size: 18px; font-weight: bold;
@@ -116,7 +138,7 @@
 
         /* ─── Party info ─── */
         .party {
-            display: flex; border: 1px solid #d1d5db; margin-bottom: 0;
+            display: flex; border: 1px solid #d1d5db;
         }
         .party + .party { border-top: none; }
         .party-label {
@@ -153,12 +175,6 @@
             line-height: 2; white-space: pre-line;
         }
 
-        /* ─── Stamp ─── */
-        .stamp {
-            position: absolute; left: 60px; bottom: 60px;
-            width: 130px; opacity: 0.85;
-        }
-
         @media print {
             body { background: white; padding: 0; }
             .page { box-shadow: none; max-width: none; padding: 16px 20px; }
@@ -173,8 +189,15 @@
     </div>
 
     <div class="page">
-        {{-- Header --}}
+        {{-- Header — برند سمت راست، باکس شماره/تاریخ سمت چپ --}}
         <div class="header">
+            <div class="brand">
+                <div class="brand-logo">ت</div>
+                <div>
+                    <div class="brand-title">{{ $providerName }}</div>
+                    <div class="brand-sub">مرکز تخصصی خدمات لوازم خانگی</div>
+                </div>
+            </div>
             <div class="meta-box">
                 <div class="meta-row">
                     <div class="meta-label">شمارهٔ پیش‌فاکتور</div>
@@ -184,13 +207,6 @@
                     <div class="meta-label">تاریخ</div>
                     <div dir="ltr">@jdate($invoice->issued_at ?? $invoice->created_at)</div>
                 </div>
-            </div>
-            <div class="brand">
-                <div>
-                    <div class="brand-title">{{ $providerName }}</div>
-                    <div class="brand-sub">مرکز تخصصی خدمات لوازم خانگی</div>
-                </div>
-                <div class="brand-logo">ت</div>
             </div>
         </div>
 
@@ -214,19 +230,14 @@
             <div class="party-label">مشتری</div>
             <div class="party-body">
                 <div class="row">
-                    <div><strong>نام شخص:</strong> {{ $customer->display_name ?? '—' }}</div>
-                    <div><strong>شماره موبایل:</strong> <span dir="ltr">{{ $customer->mobile ?? '—' }}</span></div>
-                    @if(! empty($customer->phone))
-                        <div><strong>شماره تلفن:</strong> <span dir="ltr">{{ $customer->phone }}</span></div>
+                    <div><strong>نام شخص:</strong> {{ $custName }}</div>
+                    @if($custMobile)
+                        <div><strong>شماره موبایل:</strong> <span dir="ltr">{{ $custMobile }}</span></div>
+                    @endif
+                    @if($custPhone)
+                        <div><strong>شماره تلفن:</strong> <span dir="ltr">{{ $custPhone }}</span></div>
                     @endif
                 </div>
-                @php
-                    $custAddr = trim(implode('، ', array_filter([
-                        $customer->state ?? null,
-                        $customer->city ?? null,
-                        $customer->address ?? null,
-                    ])));
-                @endphp
                 @if($custAddr !== '')
                     <div><strong>نشانی:</strong> {{ $custAddr }}</div>
                 @endif
