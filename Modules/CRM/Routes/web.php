@@ -285,8 +285,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('invoices/export/{format}', [InvoiceController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('invoices.export');
-        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
-        Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show')->whereNumber('invoice');
+        Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print')->whereNumber('invoice');
+    });
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');
+        Route::post('invoices/settings', [InvoiceController::class, 'updateSettings'])->name('invoices.settings.update');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');

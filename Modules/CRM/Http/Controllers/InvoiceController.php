@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Concerns\ExportsListToFile;
+use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Services\InvoiceService;
@@ -93,6 +94,35 @@ class InvoiceController extends Controller
         $invoice->load(['order.items', 'customer']);
 
         return view('crm::invoices.print', compact('invoice'));
+    }
+
+    /** صفحهٔ تنظیمات اطلاعات ارائه‌دهنده در صورتحساب چاپی. */
+    public function settings()
+    {
+        return view('crm::invoices.settings', [
+            'providerName'    => CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین'),
+            'providerPhone'   => CrmSetting::get('invoice_provider_phone', ''),
+            'providerPostal'  => CrmSetting::get('invoice_provider_postal_code', ''),
+            'providerAddress' => CrmSetting::get('invoice_provider_address', ''),
+            'printNotes'      => CrmSetting::get('invoice_print_notes', ''),
+        ]);
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'invoice_provider_name'        => 'nullable|string|max:120',
+            'invoice_provider_phone'       => 'nullable|string|max:30',
+            'invoice_provider_postal_code' => 'nullable|string|max:20',
+            'invoice_provider_address'     => 'nullable|string|max:500',
+            'invoice_print_notes'          => 'nullable|string|max:2000',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            CrmSetting::set($key, $value ?? '');
+        }
+
+        return back()->with('success', 'تنظیمات صورتحساب ذخیره شد.');
     }
 
     /**
