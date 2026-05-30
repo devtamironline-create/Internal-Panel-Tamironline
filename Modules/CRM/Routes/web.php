@@ -292,6 +292,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');
         Route::post('invoices/settings', [InvoiceController::class, 'updateSettings'])->name('invoices.settings.update');
     });
+    // سرو لوگو/مهر — بدون نیاز به symlink storage
+    Route::get('invoices/asset/{type}', [InvoiceController::class, 'serveAsset'])
+        ->where('type', 'logo|stamp')->name('invoices.asset');
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
         Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');

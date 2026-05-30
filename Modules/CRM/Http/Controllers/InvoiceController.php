@@ -168,6 +168,27 @@ class InvoiceController extends Controller
     }
 
     /**
+     * سرو مستقیم تصویر لوگو/مهر از storage. این مسیر مستقل از symlink
+     * یا APP_URL کار می‌کند و مشکل document-root با /public را دور می‌زند.
+     */
+    public function serveAsset(string $type)
+    {
+        $key = match ($type) {
+            'logo'  => 'invoice_provider_logo_path',
+            'stamp' => 'invoice_print_stamp_path',
+            default => abort(404),
+        };
+        $path = CrmSetting::get($key);
+        if (! $path || ! \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->response($path, basename($path), [
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+
+    /**
      * تولید (یا بازیابی) فاکتور برای یک سفارش.
      * معمولاً خودکار با تغییر وضعیت به Completed تولید می‌شود — این اندپوینت
      * برای مواردی است که سفارش قبل از معرفی این فاز تکمیل شده بود.

@@ -9,8 +9,8 @@
     $notes           = CrmSetting::get('invoice_print_notes', '');
     $logoPath        = CrmSetting::get('invoice_provider_logo_path', '');
     $stampPath       = CrmSetting::get('invoice_print_stamp_path', '');
-    $logoUrl         = $logoPath  ? asset('storage/' . $logoPath)  : null;
-    $stampUrl        = $stampPath ? asset('storage/' . $stampPath) : null;
+    $logoUrl         = $logoPath  ? route('crm.invoices.asset', 'logo')  : null;
+    $stampUrl        = $stampPath ? route('crm.invoices.asset', 'stamp') : null;
 
     $customer = $invoice->customer;
     $order = $invoice->order;
@@ -207,14 +207,15 @@
         <div class="header">
             <div class="brand">
                 @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="logo" class="brand-logo-img">
+                    {{-- وقتی لوگو ست شده، فقط تصویر — بدون متن کنارش --}}
+                    <img src="{{ $logoUrl }}" alt="" class="brand-logo-img">
                 @else
                     <div class="brand-logo">ت</div>
+                    <div>
+                        <div class="brand-title">{{ $providerName }}</div>
+                        <div class="brand-sub">{{ $providerTagline }}</div>
+                    </div>
                 @endif
-                <div>
-                    <div class="brand-title">{{ $providerName }}</div>
-                    <div class="brand-sub">{{ $providerTagline }}</div>
-                </div>
             </div>
             <div class="meta-box">
                 <div class="meta-row">
@@ -293,7 +294,7 @@
         @if($notes || $stampUrl)
             <div class="footer-wrap @if(! $stampUrl) no-stamp @endif">
                 @if($stampUrl)
-                    <img src="{{ $stampUrl }}" alt="stamp" class="stamp">
+                    <img src="{{ $stampUrl }}" alt="" class="stamp">
                 @endif
                 @if($notes)
                     <div class="notes">{{ $notes }}</div>
