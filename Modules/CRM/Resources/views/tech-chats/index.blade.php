@@ -3,7 +3,7 @@
 @section('page-title', 'گفت‌وگو با تکنسین‌ها')
 
 @section('main')
-<div class="p-4 md:p-6 max-w-5xl mx-auto">
+<div class="p-4 md:p-6 max-w-5xl mx-auto" x-data="{ q: '' }">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">گفت‌وگو با تکنسین‌ها</h1>
         <div class="flex items-center gap-2">
@@ -20,6 +20,13 @@
         </div>
     </div>
 
+    {{-- جست‌وجو در لیست تکنسین‌ها --}}
+    <div class="relative mb-4">
+        <svg class="w-4 h-4 absolute top-1/2 -translate-y-1/2 right-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="search" x-model="q" placeholder="جست‌وجو در نام یا موبایل تکنسین…"
+               class="w-full ps-9 pe-3 py-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl text-sm focus:outline-none focus:border-brand-400">
+    </div>
+
     @if(session('success'))
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm mb-4">{{ session('success') }}</div>
     @endif
@@ -29,8 +36,11 @@
             @php
                 $name = trim(($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))));
                 $name = $name !== '' ? $name : ('تکنسین #' . $tech->id);
+                $searchHaystack = mb_strtolower($name . ' ' . $tech->mobile);
             @endphp
-            <a href="{{ route('crm.tech-chats.show', $tech) }}" class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition">
+            <a href="{{ route('crm.tech-chats.show', $tech) }}"
+               class="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
+               x-show="q === '' || @js($searchHaystack).includes(q.toLowerCase())">
                 <div class="w-11 h-11 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold">
                     {{ mb_substr($name, 0, 1) }}
                 </div>
