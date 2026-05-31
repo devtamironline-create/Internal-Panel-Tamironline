@@ -54,11 +54,12 @@ class TechnicianSuggestionService
         return $scored->sortByDesc('score')->take($limit)->values();
     }
 
-    /** فیلتر اولیه: فعال + match تخصص + ظرفیت آزاد. */
+    /** فیلتر اولیه: فعال + آماده سفارش + match تخصص + ظرفیت آزاد. */
     protected function filterCandidates(Order $order): Collection
     {
         $query = Technician::query()
             ->where('status', 'active')
+            ->where('ready_for_delivery', true)
             ->with(['cities:id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
