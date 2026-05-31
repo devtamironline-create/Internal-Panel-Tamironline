@@ -168,6 +168,7 @@ class TechChatController extends Controller
         abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $technicians = Technician::query()
+            ->active()
             ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
             ->with('operators:id')
             ->orderBy('first_name')

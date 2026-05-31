@@ -14,27 +14,19 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/>
                 </svg>
             </a>
-            <div class="text-white font-bold text-base">گفت‌وگو با کارشناس</div>
+            <div class="text-white font-bold text-base">گفت‌وگو با پشتیبانی</div>
             <div class="w-10"></div>
         </div>
         @if($operators->isNotEmpty())
-            @php
-                $opCount = $operators->count();
-                $opNames = $operators->map(fn($o) => trim($o->first_name . ' ' . ($o->last_name ?? '')))->filter()->values();
-                $firstOp = $operators->first();
-            @endphp
+            {{-- نمایش هویت یکپارچهٔ «پشتیبانی» — نام واقعی اپراتورها از
+                 تکنسین مخفی می‌ماند تا تجربه‌اش تجاری/استاندارد باشد. --}}
             <div class="mt-3 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white font-bold">
-                    {{ mb_substr($firstOp->first_name ?? 'ک', 0, 1) }}
+                    پ
                 </div>
                 <div class="flex-1 min-w-0">
-                    @if($opCount === 1)
-                        <div class="text-white font-bold text-sm truncate">{{ $opNames->first() ?: 'کارشناس پشتیبانی' }}</div>
-                        <div class="text-[11px] text-white/70">کارشناس مخصوص شما</div>
-                    @else
-                        <div class="text-white font-bold text-sm truncate">تیم پشتیبانی — {{ $opCount }} کارشناس</div>
-                        <div class="text-[11px] text-white/70 truncate">{{ $opNames->implode('، ') }}</div>
-                    @endif
+                    <div class="text-white font-bold text-sm truncate">پشتیبانی تعمیرآنلاین</div>
+                    <div class="text-[11px] text-white/70">تیم کارشناسی</div>
                 </div>
             </div>
         @endif
