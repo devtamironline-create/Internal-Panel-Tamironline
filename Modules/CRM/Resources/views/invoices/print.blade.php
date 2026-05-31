@@ -9,8 +9,8 @@
     $notes           = CrmSetting::get('invoice_print_notes', '');
     $logoPath        = CrmSetting::get('invoice_provider_logo_path', '');
     $stampPath       = CrmSetting::get('invoice_print_stamp_path', '');
-    $logoUrl         = $logoPath  ? route('crm.invoices.asset', 'logo')  : null;
-    $stampUrl        = $stampPath ? route('crm.invoices.asset', 'stamp') : null;
+    $logoUrl         = $logoPath  ? route('crm.invoice.asset', 'logo')  : null;
+    $stampUrl        = $stampPath ? route('crm.invoice.asset', 'stamp') : null;
 
     $customer = $invoice->customer;
     $order = $invoice->order;
