@@ -25,20 +25,12 @@
     $orderAddr    = $order?->address ?? '';
     $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
 
-    // اقلام نمایشی به مشتری — اولویت با متنی که اپراتور به‌عنوان
-    // «شرح فاکتور برای مشتری» (`invoice_descripotion`) ثبت کرده. این
-    // متن شامل اجرت/خدمت + قطعات به زبان مشتری است. اقلام داخلی
-    // (OrderItem / piece_list) برای پیگیری مالی قطعات‌اند نه نمایش به مشتری.
-    $rows = collect();
+    // متن توضیح فاکتور — جداگانه از اقلام، در یک باکس زیر جدول نمایش داده می‌شود.
     $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
 
-    if ($customerDesc !== '') {
-        $rows->push([
-            'title' => $customerDesc,
-            'qty'   => 1,
-            'total' => (int) $invoice->total_amount,
-        ]);
-    } elseif ($order && $order->items->isNotEmpty()) {
+    // اقلام جدول — از OrderItem یا piece_list (سفارش‌های قدیمی WP).
+    $rows = collect();
+    if ($order && $order->items->isNotEmpty()) {
         foreach ($order->items as $item) {
             $rows->push([
                 'title' => $item->title,
@@ -62,23 +54,22 @@
 
     $grandTotal = (int) ($invoice->total_amount ?: $rows->sum('total'));
 
-    // اگر هیچ ردیفی نداریم، یک ردیف کلی از توضیحات/مبلغ کل می‌سازیم
+    // اگر هیچ ردیفی نداریم، یک ردیف کلی می‌سازیم — متن از توضیح فاکتور
     if ($rows->isEmpty()) {
-        $desc = $order->invoice_descripotion ?? $order->order_description ?? 'انجام خدمات';
         $rows->push([
-            'title' => trim((string) $desc) ?: 'انجام خدمات',
+            'title' => $customerDesc !== '' ? $customerDesc : 'انجام خدمات',
             'qty'   => 1,
             'total' => $grandTotal,
         ]);
     }
 
     // اقلام WP قدیمی اغلب عنوان دارند ولی قیمت ندارند؛ در این حالت
-    // مبلغ کل فاکتور را در یک ردیف ادغام‌شده نمایش می‌دهیم تا ستون
-    // «مبلغ کل» با «جمع کل» جور باشد.
+    // عنوان‌ها را در یک ردیف ادغام و مبلغ کل را روی همان می‌گذاریم
+    // تا ستون «مبلغ کل» با «جمع کل» جور باشد.
     if ($rows->sum('total') === 0 && $grandTotal > 0) {
         $combinedTitle = $rows->pluck('title')->filter()->implode('، ');
         $rows = collect([[
-            'title' => $combinedTitle !== '' ? $combinedTitle : 'انجام خدمات',
+            'title' => $combinedTitle !== '' ? $combinedTitle : ($customerDesc ?: 'انجام خدمات'),
             'qty'   => 1,
             'total' => $grandTotal,
         ]]);
@@ -198,6 +189,21 @@
             background: #f9fafb; font-weight: bold;
         }
 
+        /* ─── Invoice description box ─── */
+        .invoice-desc {
+            border: 1px solid #d1d5db; border-top: none;
+            display: flex;
+        }
+        .invoice-desc-label {
+            background: #f9fafb; border-inline-end: 1px solid #d1d5db;
+            padding: 12px 18px; font-weight: bold; font-size: 13px;
+            min-width: 130px; display: flex; align-items: center; justify-content: center;
+        }
+        .invoice-desc-body {
+            flex: 1; padding: 14px 18px; line-height: 2;
+            font-size: 12.5px; color: #374151; white-space: pre-line;
+        }
+
         /* ─── Notes + stamp — float-based for reliable layout ─── */
         .footer-wrap { margin-top: 24px; overflow: hidden; }
         .stamp {
@@ -312,6 +318,14 @@
                 </tr>
             </tbody>
         </table>
+
+        {{-- توضیحات فاکتور — متنی که تکنسین/اپراتور برای مشتری نوشته --}}
+        @if($customerDesc !== '')
+            <div class="invoice-desc">
+                <div class="invoice-desc-label">توضیحات فاکتور</div>
+                <div class="invoice-desc-body">{{ $customerDesc }}</div>
+            </div>
+        @endif
 
         {{-- یادداشت‌ها + مهر — مهر چپ، یادداشت‌ها راست --}}
         @if($notes || $stampUrl)
