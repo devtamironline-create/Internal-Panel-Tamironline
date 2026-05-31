@@ -25,9 +25,20 @@
     $orderAddr    = $order?->address ?? '';
     $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
 
-    // اقلام — اول OrderItem، fallback به آرایه‌های موازی WP
+    // اقلام نمایشی به مشتری — اولویت با متنی که اپراتور به‌عنوان
+    // «شرح فاکتور برای مشتری» (`invoice_descripotion`) ثبت کرده. این
+    // متن شامل اجرت/خدمت + قطعات به زبان مشتری است. اقلام داخلی
+    // (OrderItem / piece_list) برای پیگیری مالی قطعات‌اند نه نمایش به مشتری.
     $rows = collect();
-    if ($order && $order->items->isNotEmpty()) {
+    $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
+
+    if ($customerDesc !== '') {
+        $rows->push([
+            'title' => $customerDesc,
+            'qty'   => 1,
+            'total' => (int) $invoice->total_amount,
+        ]);
+    } elseif ($order && $order->items->isNotEmpty()) {
         foreach ($order->items as $item) {
             $rows->push([
                 'title' => $item->title,
