@@ -22,6 +22,16 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            {{-- ── دکمهٔ سوابق مشتری ── --}}
+            @if($order->customer_id)
+            <button type="button" @click="$dispatch('open-customer-history')"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg inline-flex items-center gap-2 text-sm font-bold"
+                    title="نمایش سفارش‌های قبلی این مشتری">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                سوابق مشتری ({{ $customerOrders->count() }})
+            </button>
+            @endif
+
             {{-- دکمه‌های فاکتور موجود — وقتی فاکتور فعال برای سفارش ساخته شده --}}
             @if($activeInvoice)
                 @can('view-crm-invoices')
@@ -968,4 +978,84 @@
         </div>
     </div>
 </div>
+
+{{-- ─────── Modal: سوابق سفارش‌های مشتری ─────── --}}
+@if($order->customer_id)
+<div x-data="{ open: false }"
+     @open-customer-history.window="open = true"
+     @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak x-transition.opacity
+         class="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-4 overflow-y-auto"
+         @click.self="open = false">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl mt-12 overflow-hidden"
+             x-show="open" x-cloak x-transition.scale.origin.top>
+
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div>
+                    <h3 class="font-bold text-gray-900 dark:text-gray-100">سوابق سفارش‌های مشتری</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        {{ $order->customer_name ?: $order->customer?->display_name }}
+                        — <span dir="ltr">{{ $order->customer_mobile ?: $order->customer?->mobile }}</span>
+                        — {{ $customerOrders->count() }} سفارش قبلی
+                    </p>
+                </div>
+                <button @click="open = false" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+            </div>
+
+            {{-- Body --}}
+            <div class="max-h-[70vh] overflow-y-auto">
+                @if($customerOrders->isEmpty())
+                    <div class="p-10 text-center text-sm text-gray-500">
+                        این مشتری سفارش قبلی دیگری ندارد.
+                    </div>
+                @else
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300 text-xs sticky top-0">
+                            <tr>
+                                <th class="p-3 text-start">کد سفارش</th>
+                                <th class="p-3 text-start">تاریخ</th>
+                                <th class="p-3 text-start">دستگاه / برند</th>
+                                <th class="p-3 text-start">تکنسین</th>
+                                <th class="p-3 text-start">وضعیت</th>
+                                <th class="p-3 text-start">مبلغ</th>
+                                <th class="p-3 w-16"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($customerOrders as $co)
+                                @php
+                                    $statusEnum = $co->status instanceof OrderStatus ? $co->status : OrderStatus::tryFrom((string) $co->status);
+                                    $techName = trim(($co->technician?->firstname_tech ?: (($co->technician?->first_name ?? '') . ' ' . ($co->technician?->last_name ?? ''))));
+                                @endphp
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                                    <td class="p-3 font-bold" dir="ltr">{{ $co->order_code }}</td>
+                                    <td class="p-3 text-gray-500">@jdate($co->created_at)</td>
+                                    <td class="p-3">
+                                        {{ $co->device?->name ?: '—' }}
+                                        @if($co->brand) <span class="text-gray-400 text-xs">/ {{ $co->brand->name }}</span> @endif
+                                    </td>
+                                    <td class="p-3 text-gray-600 text-xs">{{ $techName ?: '—' }}</td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-0.5 rounded-full text-[10.5px] {{ $statusEnum?->badgeClass() ?? 'bg-gray-100 text-gray-700' }}">
+                                            {{ $statusEnum?->label() ?? $co->status }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-gray-700 dark:text-gray-200 text-xs">
+                                        {{ $co->price_customer ? number_format((int) $co->price_customer) . ' ت' : '—' }}
+                                    </td>
+                                    <td class="p-3">
+                                        <a href="{{ route('crm.orders.show', $co) }}" target="_blank"
+                                           class="text-brand-700 hover:underline text-xs">جزئیات →</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endsection

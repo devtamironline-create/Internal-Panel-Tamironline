@@ -297,12 +297,26 @@ class OrderController extends Controller
         // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
         $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
 
+        // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
+        // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
+        $customerOrders = collect();
+        if ($order->customer_id) {
+            $customerOrders = Order::query()
+                ->with(['brand:id,name', 'device:id,name', 'technician:id,first_name,last_name,firstname_tech'])
+                ->where('customer_id', $order->customer_id)
+                ->whereKeyNot($order->id)
+                ->latest('created_at')
+                ->limit(30)
+                ->get(['id', 'order_code', 'status', 'brand_id', 'device_id', 'technician_id', 'created_at', 'price_customer', 'completed_at']);
+        }
+
         return view('crm::orders.show', [
             'order' => $order,
             'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
             'suggestions' => $suggestions,
             'activeInvoice' => $activeInvoice,
+            'customerOrders' => $customerOrders,
         ]);
     }
 
