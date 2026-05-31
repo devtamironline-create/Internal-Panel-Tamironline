@@ -100,7 +100,7 @@
 
     {{-- معرف --}}
     <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نحوه آشنایی (معرف)</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نحوه آشنایی (معرف) <span class="text-rose-600">*</span></label>
         @if(count($this->introductionList))
             <select wire:model="introduction" data-searchable class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">— انتخاب کنید —</option>

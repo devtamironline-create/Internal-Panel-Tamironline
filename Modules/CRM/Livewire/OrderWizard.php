@@ -423,17 +423,20 @@ class OrderWizard extends Component
                         'newName' => 'required|string|max:255',
                         'newMobile' => 'required|string|max:20',
                         'newPhone' => 'nullable|string|max:20',
-                        'introduction' => 'nullable|string|max:255',
+                        'introduction' => 'required|string|max:255',
                     ]
                     : [
                         'customerId' => 'required|integer|exists:crm_customers,id',
-                        'introduction' => 'nullable|string|max:255',
+                        'introduction' => 'required|string|max:255',
                     ],
                 attributes: [
                     'newName' => 'نام مشتری',
                     'newMobile' => 'موبایل',
                     'customerId' => 'مشتری',
-                    'introduction' => 'معرف',
+                    'introduction' => 'نحوه آشنایی',
+                ],
+                messages: [
+                    'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
                 ],
             ),
 
