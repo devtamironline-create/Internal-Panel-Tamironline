@@ -46,6 +46,10 @@ Route::middleware('web')->group(function () {
     Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
 
+    // ─── لینک عمومی صورتحساب — برای ارسال به مشتری از طریق پیامک ────
+    Route::get('/crm/receipt/{invoiceCode}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceipt'])
+        ->name('crm.invoice.public');
+
     // ─── فایل‌های آموزش (ویدیو + تامبنیل) — auth داخلی ─────────────
     Route::get('/crm/training/{video}/video', [TrainingFileController::class, 'streamVideo'])
         ->name('crm.training.file.video');
@@ -287,6 +291,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->where('format', 'csv|xlsx')->name('invoices.export');
         Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show')->whereNumber('invoice');
         Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print')->whereNumber('invoice');
+        Route::post('invoices/{invoice}/send-sms', [InvoiceController::class, 'sendSms'])->name('invoices.send-sms')->whereNumber('invoice');
     });
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');

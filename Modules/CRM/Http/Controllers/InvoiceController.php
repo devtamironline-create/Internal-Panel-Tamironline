@@ -96,6 +96,49 @@ class InvoiceController extends Controller
         return view('crm::invoices.print', compact('invoice'));
     }
 
+    /**
+     * صفحهٔ عمومی صورتحساب — بدون لاگین. کلید unique و غیرقابل‌حدس
+     * `invoice_code` (مثل INV-2605-41417) است. همان ویوی چاپی استفاده
+     * می‌شود تا تجربهٔ مشتری دقیقاً مثل پنل باشد.
+     */
+    public function publicReceipt(string $invoiceCode)
+    {
+        $invoice = Invoice::with(['order.items', 'customer'])
+            ->where('invoice_code', $invoiceCode)
+            ->firstOrFail();
+
+        return view('crm::invoices.print', compact('invoice'));
+    }
+
+    /**
+     * ارسال لینک عمومی صورتحساب به موبایل مشتری از طریق کاوه‌نگار.
+     */
+    public function sendSms(Invoice $invoice, \Modules\SMS\Services\KavenegarService $sms)
+    {
+        $invoice->loadMissing('customer', 'order');
+
+        $mobile = $invoice->order?->customer_mobile ?: $invoice->customer?->mobile;
+        if (! $mobile) {
+            return back()->with('error', 'شماره موبایل مشتری ثبت نشده است.');
+        }
+
+        $link = route('crm.invoice.public', $invoice->invoice_code);
+        $amount = number_format((int) $invoice->total_amount);
+        $providerName = CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین');
+
+        $message = "صورتحساب خدمات {$providerName}\n"
+            . "مبلغ: {$amount} تومان\n"
+            . "مشاهده: {$link}";
+
+        $result = $sms->send($mobile, $message);
+
+        if (! empty($result['success'])) {
+            return back()->with('success', 'پیامک به ' . $mobile . ' ارسال شد.');
+        }
+
+        return back()->with('error', 'ارسال پیامک ناموفق: ' . ($result['message'] ?? 'خطای ناشناخته'));
+    }
+
     /** صفحهٔ تنظیمات اطلاعات ارائه‌دهنده در صورتحساب چاپی. */
     public function settings()
     {
