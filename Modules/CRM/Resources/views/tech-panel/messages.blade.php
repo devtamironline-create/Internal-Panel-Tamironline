@@ -17,20 +17,30 @@
             <div class="text-white font-bold text-base">گفت‌وگو با کارشناس</div>
             <div class="w-10"></div>
         </div>
-        @if($operator)
+        @if($operators->isNotEmpty())
+            @php
+                $opCount = $operators->count();
+                $opNames = $operators->map(fn($o) => trim($o->first_name . ' ' . ($o->last_name ?? '')))->filter()->values();
+                $firstOp = $operators->first();
+            @endphp
             <div class="mt-3 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white font-bold">
-                    {{ mb_substr($operator->first_name ?? 'ک', 0, 1) }}
+                    {{ mb_substr($firstOp->first_name ?? 'ک', 0, 1) }}
                 </div>
-                <div>
-                    <div class="text-white font-bold text-sm">{{ trim($operator->first_name . ' ' . ($operator->last_name ?? '')) ?: 'کارشناس پشتیبانی' }}</div>
-                    <div class="text-[11px] text-white/70">کارشناس مخصوص شما</div>
+                <div class="flex-1 min-w-0">
+                    @if($opCount === 1)
+                        <div class="text-white font-bold text-sm truncate">{{ $opNames->first() ?: 'کارشناس پشتیبانی' }}</div>
+                        <div class="text-[11px] text-white/70">کارشناس مخصوص شما</div>
+                    @else
+                        <div class="text-white font-bold text-sm truncate">تیم پشتیبانی — {{ $opCount }} کارشناس</div>
+                        <div class="text-[11px] text-white/70 truncate">{{ $opNames->implode('، ') }}</div>
+                    @endif
                 </div>
             </div>
         @endif
     </div>
 
-    @if(! $operator)
+    @if($operators->isEmpty())
         <div class="mx-3 mt-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900 leading-7 text-center">
             هنوز کارشناسی برای شما تخصیص داده نشده است. لطفاً منتظر بمانید — به‌محض تخصیص، گفت‌وگو فعال می‌شود.
         </div>

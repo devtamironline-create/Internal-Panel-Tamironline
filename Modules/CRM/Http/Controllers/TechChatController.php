@@ -27,11 +27,11 @@ class TechChatController extends Controller
         $showAll = $request->boolean('all') && $user->can('manage-technicians');
 
         $query = Technician::query()
-            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'assigned_operator_id')
-            ->with('assignedOperator:id,first_name,last_name');
+            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
+            ->with('operators:id,first_name,last_name');
 
         if (! $showAll) {
-            $query->where('assigned_operator_id', $user->id);
+            $query->whereHas('operators', fn($q) => $q->where('users.id', $user->id));
         }
 
         $technicians = $query->orderBy('first_name')->get();
@@ -154,7 +154,7 @@ class TechChatController extends Controller
         $user = Auth::user();
 
         $count = TechChatMessage::query()
-            ->whereHas('technician', fn($q) => $q->where('assigned_operator_id', $user->id))
+            ->whereHas('technician.operators', fn($q) => $q->where('users.id', $user->id))
             ->where('sender_type', TechChatMessage::SENDER_TECH)
             ->whereNull('read_at')
             ->count();
@@ -162,13 +162,14 @@ class TechChatController extends Controller
         return response()->json(['unread' => $count]);
     }
 
-    /** صفحهٔ تخصیص تکنسین‌ها به اپراتورها (فقط ادمین). */
+    /** صفحهٔ تخصیص اپراتورها به تکنسین‌ها (چند اپراتور برای هر تکنسین). */
     public function assignments()
     {
         abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $technicians = Technician::query()
-            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'assigned_operator_id')
+            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
+            ->with('operators:id')
             ->orderBy('first_name')
             ->get();
 
@@ -183,31 +184,35 @@ class TechChatController extends Controller
         ]);
     }
 
-    /** به‌روزرسانی اپراتور تخصیص‌داده‌شده برای یک تکنسین. */
+    /** به‌روزرسانی لیست اپراتورهای تخصیص‌داده‌شده برای یک تکنسین. */
     public function updateAssignment(Request $request, Technician $technician)
     {
         abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $validated = $request->validate([
-            'assigned_operator_id' => 'nullable|exists:users,id',
+            'operator_ids'   => 'nullable|array',
+            'operator_ids.*' => 'integer|exists:users,id',
         ]);
 
-        $technician->update([
-            'assigned_operator_id' => $validated['assigned_operator_id'] ?? null,
-        ]);
+        $ids = collect($validated['operator_ids'] ?? [])->unique()->values()->all();
 
-        return back()->with('success', 'اپراتورِ تخصیص‌داده‌شده به‌روزرسانی شد.');
+        // sync با timestamp
+        $now = now();
+        $sync = collect($ids)->mapWithKeys(fn($id) => [$id => ['assigned_at' => $now]])->all();
+        $technician->operators()->sync($sync);
+
+        return back()->with('success', 'اپراتورهای پشتیبانیِ تکنسین به‌روزرسانی شد.');
     }
 
     /**
-     * چک می‌کند اپراتور فعلی به این تکنسین تخصیص داده شده یا دسترسی
-     * manage-technicians دارد.
+     * چک می‌کند اپراتور فعلی در فهرست اپراتورهای این تکنسین هست یا
+     * دسترسی manage-technicians دارد.
      */
     protected function authorizeAccess(Technician $technician): void
     {
         $user = Auth::user();
         if ($user->can('manage-technicians')) return;
-        if ((int) $technician->assigned_operator_id === (int) $user->id) return;
+        if ($technician->operators()->where('users.id', $user->id)->exists()) return;
         abort(403, 'این تکنسین به شما تخصیص داده نشده است.');
     }
 }

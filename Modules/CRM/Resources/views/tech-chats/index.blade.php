@@ -49,8 +49,10 @@
                             </span>
                         @endif
                     </div>
-                    @if($showAll && $tech->assignedOperator)
-                        <div class="text-[10.5px] text-gray-400 mt-0.5">اپراتور: {{ $tech->assignedOperator->first_name }} {{ $tech->assignedOperator->last_name }}</div>
+                    @if($showAll && $tech->operators->isNotEmpty())
+                        <div class="text-[10.5px] text-gray-400 mt-0.5">
+                            اپراتورها: {{ $tech->operators->map(fn($o) => trim($o->first_name . ' ' . $o->last_name))->implode('، ') }}
+                        </div>
                     @elseif($showAll)
                         <div class="text-[10.5px] text-amber-500 mt-0.5">اپراتور تخصیص داده نشده</div>
                     @endif

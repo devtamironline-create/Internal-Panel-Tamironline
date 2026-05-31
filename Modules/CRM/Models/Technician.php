@@ -29,7 +29,6 @@ class Technician extends Authenticatable
     protected $fillable = [
         'wp_id',
         'user_id',
-        'assigned_operator_id',
 
         // مشخصات
         'first_name',
@@ -135,10 +134,14 @@ class Technician extends Authenticatable
         return $this->belongsTo(User::class);
     }
 
-    /** اپراتورِ پشتیبانیِ تخصیص‌داده‌شده — مخاطب چت تکنسین. */
-    public function assignedOperator(): BelongsTo
+    /**
+     * اپراتورهای پشتیبانی تخصیص‌داده‌شده (چند-به-چند).
+     * همگی در thread چت تکنسین پیام می‌بینند و می‌فرستند.
+     */
+    public function operators(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsTo(User::class, 'assigned_operator_id');
+        return $this->belongsToMany(User::class, 'crm_technician_operators', 'technician_id', 'user_id')
+            ->withPivot('assigned_at');
     }
 
     public function chatMessages(): HasMany

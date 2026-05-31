@@ -15,7 +15,7 @@ class ChatController extends Controller
     public function index()
     {
         $tech = Auth::guard('tech')->user();
-        $tech->loadMissing('assignedOperator:id,first_name,last_name');
+        $tech->loadMissing('operators:id,first_name,last_name');
 
         $messages = TechChatMessage::where('technician_id', $tech->id)
             ->orderBy('created_at')
@@ -29,7 +29,7 @@ class ChatController extends Controller
 
         return view('crm::tech-panel.messages', [
             'technician' => $tech,
-            'operator' => $tech->assignedOperator,
+            'operators' => $tech->operators,
             'messages' => $messages,
         ]);
     }
@@ -38,7 +38,7 @@ class ChatController extends Controller
     {
         $tech = Auth::guard('tech')->user();
 
-        if (! $tech->assigned_operator_id) {
+        if ($tech->operators()->count() === 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'هنوز کارشناسی برای شما تخصیص داده نشده است.',
