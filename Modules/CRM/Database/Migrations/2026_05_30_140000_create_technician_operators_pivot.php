@@ -10,22 +10,25 @@ use Illuminate\Support\Facades\Schema;
  * یک تکنسین می‌تواند چند اپراتور پشتیبانی داشته باشد و هر کدام در
  * thread چت با تکنسین پیام ببینند و بفرستند.
  *
- * دادهٔ موجود (assigned_operator_id) به جدول pivot منتقل می‌شود، سپس
- * ستون قدیمی حذف می‌گردد.
+ * این migration کاملاً idempotent است — اگر بخشی از قبل اجرا شده
+ * (مثلاً در یک تلاش ناموفق قبلی) دوباره روی همان حالت اعمالش امن است.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('crm_technician_operators', function (Blueprint $table) {
-            $table->foreignId('technician_id')->constrained('crm_technicians')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamp('assigned_at')->nullable();
-            $table->primary(['technician_id', 'user_id']);
-            $table->index('user_id');
-        });
+        // ۱) جدول pivot — فقط اگر وجود ندارد
+        if (! Schema::hasTable('crm_technician_operators')) {
+            Schema::create('crm_technician_operators', function (Blueprint $table) {
+                $table->foreignId('technician_id')->constrained('crm_technicians')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->timestamp('assigned_at')->nullable();
+                $table->primary(['technician_id', 'user_id']);
+                $table->index('user_id');
+            });
+        }
 
-        // مهاجرت دادهٔ موجود
+        // ۲) مهاجرت دادهٔ موجود — فقط اگر ستون قدیمی هنوز هست
         if (Schema::hasColumn('crm_technicians', 'assigned_operator_id')) {
             DB::statement("
                 INSERT IGNORE INTO crm_technician_operators (technician_id, user_id, assigned_at)
@@ -34,9 +37,26 @@ return new class extends Migration
                 WHERE assigned_operator_id IS NOT NULL
             ");
 
+            // ۳) حذف FK + index + column — به ترتیبِ درست
+            //    (FK قبل از index، چون index توسط FK رفرنس می‌شود)
             Schema::table('crm_technicians', function (Blueprint $table) {
-                $table->dropIndex('tech_assigned_op_idx');
-                $table->dropConstrainedForeignId('assigned_operator_id');
+                $table->dropForeign(['assigned_operator_id']);
+            });
+
+            // index ممکن است هم به نام صریح ساخته شده باشد، هم نام پیش‌فرض Laravel
+            // (crm_technicians_assigned_operator_id_index). هر دو را امن پاک می‌کنیم.
+            $indexes = DB::select("SHOW INDEX FROM crm_technicians WHERE Column_name = 'assigned_operator_id'");
+            foreach ($indexes as $idx) {
+                if ($idx->Key_name === 'PRIMARY') continue;
+                try {
+                    DB::statement("ALTER TABLE crm_technicians DROP INDEX `{$idx->Key_name}`");
+                } catch (\Throwable $e) {
+                    // ignore — index probably already gone
+                }
+            }
+
+            Schema::table('crm_technicians', function (Blueprint $table) {
+                $table->dropColumn('assigned_operator_id');
             });
         }
     }
