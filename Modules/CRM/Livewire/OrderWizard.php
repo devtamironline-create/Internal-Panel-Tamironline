@@ -314,6 +314,20 @@ class OrderWizard extends Component
         $this->customerSearch = $customer->display_name . ' — ' . $customer->mobile;
         $this->subscription = (string) $customer->subscription;
         $this->showNewCustomerForm = false;
+
+        // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور در
+        // مرحلهٔ «محل مراجعه» می‌تواند تأیید یا تغییر دهد و وقتش هدر
+        // برای تایپ مجدد آدرس قبلی نمی‌رود.
+        $lastOrder = Order::where('customer_id', $customer->id)
+            ->whereNotNull('address')
+            ->where('address', '!=', '')
+            ->latest('created_at')
+            ->first(['province_id', 'city_id', 'address']);
+        if ($lastOrder) {
+            $this->provinceId = $lastOrder->province_id;
+            $this->cityId     = $lastOrder->city_id;
+            $this->address    = (string) $lastOrder->address;
+        }
     }
 
     public function clearCustomer(): void
