@@ -190,7 +190,10 @@
             border: 1px solid #d1d5db; padding: 10px 8px; text-align: center;
         }
         table.items th { background: #f9fafb; font-weight: bold; }
-        table.items td.desc { text-align: start; padding-inline-start: 16px; }
+        table.items td.desc {
+            text-align: start; padding-inline-start: 16px;
+            white-space: pre-line; line-height: 1.9;
+        }
         table.items tr.total td {
             background: #f9fafb; font-weight: bold;
         }
