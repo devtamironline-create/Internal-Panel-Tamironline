@@ -178,73 +178,172 @@
         {{-- ستون چپ: دو ستون وسیع --}}
         <div class="lg:col-span-2 space-y-6">
 
-            {{-- اطلاعات سفارش --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">اطلاعات سفارش</h2>
-                <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                    <dt class="text-gray-500 dark:text-gray-400">مشتری</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">
-                        <a href="{{ route('crm.customers.show', $order->customer) }}" class="text-brand-600 hover:underline">{{ $order->customer?->first_name ?: $order->customer_name }}</a>
-                        <span class="text-xs">(@tel($order->customer?->mobile ?: $order->customer_mobile))</span>
-                    </dd>
+            {{-- ─── اطلاعات سفارش — ۴ کارت دسته‌بندی‌شده با آیکن ─── --}}
+            @php
+                $customerName = $order->customer?->first_name ?: $order->customer_name;
+                $customerMobile = $order->customer?->mobile ?: $order->customer_mobile;
+                $customerPhone = $order->customer?->phone ?: $order->customer_phone;
 
-                    <dt class="text-gray-500 dark:text-gray-400">نحوه آشنایی</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->introduction ?: '—' }}</dd>
+                $deviceImg = $order->device_img1 ?: $order->device_image_input;
+                $deviceImgUrl = null;
+                if ($deviceImg) {
+                    $isAbsolute = preg_match('#^(https?:)?//#', $deviceImg) || str_starts_with($deviceImg, '/');
+                    $deviceImgUrl = $isAbsolute ? $deviceImg : storage_url(ltrim($deviceImg, '/'));
+                }
+            @endphp
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                    <dt class="text-gray-500 dark:text-gray-400">برند</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->brand?->name ?: '—' }}</dd>
+                {{-- ── کارت ۱: مشتری ── --}}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-t-4 border-brand-500">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-gray-100">مشتری</h3>
+                    </div>
+                    <div class="space-y-2.5 text-sm">
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">نام:</span>
+                            @if($order->customer)
+                                <a href="{{ route('crm.customers.show', $order->customer) }}" class="text-brand-700 hover:underline font-medium">{{ $customerName }}</a>
+                            @else
+                                <span class="text-gray-900 dark:text-gray-100 font-medium">{{ $customerName ?: '—' }}</span>
+                            @endif
+                        </div>
+                        @if($customerMobile)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">موبایل:</span>
+                            <a href="tel:{{ $customerMobile }}" class="text-gray-900 dark:text-gray-100 font-medium" dir="ltr">{{ $customerMobile }}</a>
+                        </div>
+                        @endif
+                        @if($customerPhone)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">تلفن:</span>
+                            <a href="tel:{{ $customerPhone }}" class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $customerPhone }}</a>
+                        </div>
+                        @endif
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">نحوه آشنایی:</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ $order->introduction ?: '—' }}</span>
+                        </div>
+                    </div>
+                </div>
 
-                    <dt class="text-gray-500 dark:text-gray-400">دستگاه</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->device?->name ?: '—' }}</dd>
+                {{-- ── کارت ۲: دستگاه ── --}}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-t-4 border-amber-500">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-gray-100">دستگاه</h3>
+                    </div>
+                    <div class="space-y-2.5 text-sm">
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">برند:</span>
+                            <span class="text-gray-900 dark:text-gray-100 font-medium">{{ $order->brand?->name ?: '—' }}</span>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">دستگاه:</span>
+                            <span class="text-gray-900 dark:text-gray-100 font-medium">{{ $order->device?->name ?: '—' }}</span>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">عنوان مشکل:</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</span>
+                        </div>
+                        @if($order->problem_description)
+                            <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
+                                <div class="text-xs text-gray-400 mb-1">شرح مشکل:</div>
+                                <div class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-7">{{ $order->problem_description }}</div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
 
-                    <dt class="text-gray-500 dark:text-gray-400">عنوان مشکل</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</dd>
+                {{-- ── کارت ۳: محل مراجعه ── --}}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-t-4 border-emerald-500">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-gray-100">محل مراجعه</h3>
+                    </div>
+                    <div class="space-y-2.5 text-sm">
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">استان / شهر:</span>
+                            <span class="text-gray-900 dark:text-gray-100 font-medium">
+                                {{ $order->province?->name ?: '—' }}
+                                @if($order->city) <span class="text-gray-400">/</span> {{ $order->city->name }} @endif
+                            </span>
+                        </div>
+                        @if($order->postal_code)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">کد پستی:</span>
+                            <span class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $order->postal_code }}</span>
+                        </div>
+                        @endif
+                        @if($order->address)
+                        <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
+                            <div class="text-xs text-gray-400 mb-1">نشانی کامل:</div>
+                            <div class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-7">{{ $order->address }}</div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
 
-                    <dt class="text-gray-500 dark:text-gray-400">زمان مراجعه</dt>
-                    <dd class="text-gray-900 dark:text-gray-100" dir="ltr">@jdatetime($order->visit_scheduled_at)</dd>
+                {{-- ── کارت ۴: زمان و وضعیت ── --}}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-t-4 border-sky-500">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-gray-100">زمان و ثبت</h3>
+                    </div>
+                    <div class="space-y-2.5 text-sm">
+                        @if($order->visit_scheduled_at)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">زمان مراجعه:</span>
+                            <span class="text-gray-900 dark:text-gray-100 font-bold" dir="ltr">@jdatetime($order->visit_scheduled_at)</span>
+                        </div>
+                        @endif
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">ثبت شده در:</span>
+                            <span class="text-gray-900 dark:text-gray-100" dir="ltr">@jdatetime($order->created_at)</span>
+                        </div>
+                        @if($order->completed_at)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">تکمیل شده:</span>
+                            <span class="text-gray-900 dark:text-gray-100" dir="ltr">@jdatetime($order->completed_at)</span>
+                        </div>
+                        @endif
+                        @if($order->creator)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">ثبت‌کننده:</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ trim(($order->creator->first_name ?? '') . ' ' . ($order->creator->last_name ?? '')) ?: '—' }}</span>
+                        </div>
+                        @endif
+                        @if($order->order_type)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">نوع سفارش:</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ $order->order_type }}</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
 
-                    <dt class="text-gray-500 dark:text-gray-400 col-span-2">شرح مشکل</dt>
-                    <dd class="text-gray-900 dark:text-gray-100 col-span-2 whitespace-pre-wrap">{{ $order->problem_description ?: '—' }}</dd>
+                {{-- ── تصویر دستگاه (full width) ── --}}
+                @if($deviceImg)
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-3">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm">تصویر دستگاه</h3>
+                    </div>
+                    <a href="{{ $deviceImgUrl }}" target="_blank" rel="noopener" class="inline-block">
+                        <img src="{{ $deviceImgUrl }}" alt="تصویر دستگاه" loading="lazy"
+                             class="max-h-48 rounded-lg border border-gray-200 dark:border-gray-700 object-cover hover:opacity-90 transition-opacity">
+                    </a>
+                </div>
+                @endif
 
-                    <dt class="text-gray-500 dark:text-gray-400">استان</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->province?->name ?: '—' }}</dd>
-
-                    <dt class="text-gray-500 dark:text-gray-400">شهر</dt>
-                    <dd class="text-gray-900 dark:text-gray-100">{{ $order->city?->name ?: '—' }}</dd>
-
-                    <dt class="text-gray-500 dark:text-gray-400">کد پستی</dt>
-                    <dd class="text-gray-900 dark:text-gray-100" dir="ltr">{{ $order->postal_code ?: '—' }}</dd>
-
-                    <dt class="text-gray-500 dark:text-gray-400 col-span-2">آدرس</dt>
-                    <dd class="text-gray-900 dark:text-gray-100 col-span-2 whitespace-pre-wrap">{{ $order->address ?: '—' }}</dd>
-
-                    @php
-                        $deviceImg = $order->device_img1 ?: $order->device_image_input;
-                        // مسیر ذخیره‌شده ممکن است نسبی (مثل crm/orders/.../x.jpg) یا
-                        // مطلق (با /storage/ یا http) باشد. اگر نسبی است، از پراکسی
-                        // /file/{path} استفاده می‌کنیم چون symlink storage روی
-                        // cPanel/LiteSpeed خراب است.
-                        $deviceImgUrl = null;
-                        if ($deviceImg) {
-                            $isAbsolute = preg_match('#^(https?:)?//#', $deviceImg)
-                                || str_starts_with($deviceImg, '/');
-                            $deviceImgUrl = $isAbsolute
-                                ? $deviceImg
-                                : storage_url(ltrim($deviceImg, '/'));
-                        }
-                    @endphp
-                    @if($deviceImg)
-                    <dt class="text-gray-500 dark:text-gray-400 col-span-2 pt-2 border-t border-gray-100 dark:border-gray-700">تصویر دستگاه</dt>
-                    <dd class="col-span-2">
-                        <a href="{{ $deviceImgUrl }}" target="_blank" rel="noopener" class="inline-block">
-                            <img src="{{ $deviceImgUrl }}" alt="تصویر دستگاه" loading="lazy"
-                                 class="max-h-40 rounded-lg border border-gray-200 dark:border-gray-700 object-cover hover:opacity-90 transition-opacity">
-                        </a>
-                        <a href="{{ $deviceImgUrl }}" target="_blank" rel="noopener"
-                           class="block mt-2 text-xs text-brand-600 hover:underline" dir="ltr">{{ $deviceImg }}</a>
-                    </dd>
-                    @endif
-                </dl>
             </div>
 
             {{-- آیتم‌ها --}}
