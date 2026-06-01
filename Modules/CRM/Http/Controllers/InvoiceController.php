@@ -111,39 +111,67 @@ class InvoiceController extends Controller
     }
 
     /**
-     * ارسال لینک عمومی صورتحساب به موبایل مشتری از طریق سرویس
-     * OrderSmsNotifier — این مسیر از تمپلیت `customer_invoice_issued`
-     * استفاده می‌کند (که kavenegar_template دارد و از verify-lookup
-     * + پراکسی پشتیبانی می‌کند). در صورت خالی بودن kavenegar_template،
-     * تمپلیت متنی fallback رندر و ارسال می‌شود.
+     * ارسال لینک عمومی صورتحساب به موبایل مشتری از طریق تمپلیت کاوه‌نگار
+     * (`customer_invoice_issued`). نتیجهٔ واقعی Kavenegar را به اپراتور
+     * برمی‌گرداند — اگر تمپلیت غیرفعال است یا API خطا داد، پیام دقیق
+     * در صفحه نمایش داده می‌شود.
      */
-    public function sendSms(Invoice $invoice, \Modules\CRM\Services\OrderSmsNotifier $notifier)
+    public function sendSms(Invoice $invoice, \Modules\SMS\Services\KavenegarService $sms)
     {
-        $invoice->loadMissing('customer', 'order');
-
-        if (! $invoice->order) {
+        $invoice->loadMissing('customer', 'order.customer', 'order.technician');
+        $order = $invoice->order;
+        if (! $order) {
             return back()->with('error', 'سفارش مرتبط با این فاکتور یافت نشد.');
         }
 
-        $mobile = $invoice->order->customer_mobile ?: $invoice->customer?->mobile;
+        $mobile = $order->customer_mobile ?: $invoice->customer?->mobile;
         if (! $mobile) {
             return back()->with('error', 'شماره موبایل مشتری ثبت نشده است.');
         }
 
-        // متغیرهای اضافی برای تمپلیت — اگر تمپلیت Kavenegar از این‌ها
-        // استفاده کند (در token1/2/3)، در پیامک ظاهر می‌شوند.
-        $notifier->notify(
-            $invoice->order,
-            \Modules\CRM\Enums\SmsTrigger::CustomerInvoiceIssued,
-            auth()->id(),
-            [
-                'invoice_code' => $invoice->invoice_code,
-                'amount' => (string) (int) $invoice->total_amount,
-                'receipt_url' => route('crm.invoice.public', $invoice->invoice_code),
-            ]
-        );
+        $trigger = \Modules\CRM\Enums\SmsTrigger::CustomerInvoiceIssued;
+        $template = \Modules\CRM\Models\SmsTemplate::where('trigger_key', $trigger->value)->first();
+        if (! $template) {
+            return back()->with('error', 'تمپلیت "customer_invoice_issued" در پنل ثبت نشده است.');
+        }
+        if (! $template->is_active) {
+            return back()->with('error', 'تمپلیت "customer_invoice_issued" غیرفعال است — از تنظیمات SMS فعالش کنید.');
+        }
+        if (empty($template->kavenegar_template)) {
+            return back()->with('error', 'فیلد kavenegar_template برای این تمپلیت خالی است — یک نام تمپلیت تأییدشده کاوه‌نگار وارد کنید.');
+        }
 
-        return back()->with('success', 'پیامک به مشتری ' . $mobile . ' ارسال شد.');
+        // متغیرها — همانی که OrderSmsNotifier::buildVariables می‌سازد
+        // به علاوهٔ invoice_code و receipt_url
+        $vars = [
+            'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
+            'order_code'    => (string) ($order->order_code ?? ''),
+            'amount'        => (string) (int) $invoice->total_amount,
+            'invoice_code'  => (string) $invoice->invoice_code,
+            'receipt_url'   => route('crm.invoice.public', $invoice->invoice_code),
+        ];
+        $tokens = $template->renderTokens($vars);
+
+        $result = $sms->sendTemplate($mobile, $template->kavenegar_template, $tokens);
+
+        // لاگ کامل
+        \Modules\CRM\Models\SmsLog::create([
+            'order_id'         => $order->id,
+            'trigger_key'      => $trigger->value,
+            'recipient_mobile' => $mobile,
+            'recipient_role'   => 'customer',
+            'body'             => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
+            'status'           => $result['success'] ? 'success' : 'failed',
+            'response'         => $result['success'] ? null : ($result['message'] ?? null),
+            'sent_by'          => auth()->id(),
+            'created_at'       => now(),
+        ]);
+
+        if (! empty($result['success'])) {
+            return back()->with('success', 'پیامک به ' . $mobile . ' ارسال شد.');
+        }
+
+        return back()->with('error', 'ارسال پیامک ناموفق: ' . ($result['message'] ?? 'خطای ناشناخته از کاوه‌نگار'));
     }
 
     /** صفحهٔ تنظیمات اطلاعات ارائه‌دهنده در صورتحساب چاپی. */
