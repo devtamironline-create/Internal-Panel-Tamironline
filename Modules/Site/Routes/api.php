@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.banners.zone');
 
         // ── Forum (انجمن پرسش و پاسخ) ──────────────────────────
+        Route::get('/forum/categories', [ForumController::class, 'categories'])->name('api.v1.forum.categories');
         Route::get('/forum/questions', [ForumController::class, 'index'])->name('api.v1.forum.questions.index');
         Route::get('/forum/questions/{slug}', [ForumController::class, 'show'])
             ->where('slug', '[^/]+')->name('api.v1.forum.questions.show');

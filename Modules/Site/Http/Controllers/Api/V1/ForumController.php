@@ -27,6 +27,119 @@ class ForumController extends Controller
     // ─── Questions ────────────────────────────────────────────────
 
     /**
+     * GET /v1/forum/categories
+     *
+     * دسته‌بندی صفحه‌ی انجمن — همگی auto-driven از CRM + شمارش انجمن.
+     * شامل سه گرید:
+     *   - devices: لیست دستگاه‌های فعال با questions_count و href
+     *   - brands : لیست برندهای فعال با questions_count و href
+     *   - combos : top N (device, brand) با بیشترین سوال
+     *
+     * فرانت تیتر هر گرید و show toggle را از /v1/pages/forum
+     * (سکشن categories) می‌خواند. این endpoint فقط داده‌ی خام را برمی‌گرداند.
+     */
+    public function categories(Request $request): JsonResponse
+    {
+        $combosLimit = max(1, min((int) $request->query('combos_limit', 6), 30));
+
+        // count سوالات منتشرشده گروه‌بندی شده بر اساس device_id و brand_id
+        $byDevice = DB::table('site_forum_questions')
+            ->selectRaw('device_id, COUNT(*) as c')
+            ->where('status', Question::STATUS_APPROVED)
+            ->whereNotNull('published_at')
+            ->whereNotNull('device_id')
+            ->groupBy('device_id')
+            ->pluck('c', 'device_id');
+
+        $byBrand = DB::table('site_forum_questions')
+            ->selectRaw('brand_id, COUNT(*) as c')
+            ->where('status', Question::STATUS_APPROVED)
+            ->whereNotNull('published_at')
+            ->whereNotNull('brand_id')
+            ->groupBy('brand_id')
+            ->pluck('c', 'brand_id');
+
+        $devices = Device::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'icon', 'tone', 'thumbnail'])
+            ->map(fn (Device $d) => [
+                'id' => (int) $d->id,
+                'name' => $d->name,
+                'slug' => $d->slug,
+                'icon' => $d->icon,
+                'tone' => $d->tone,
+                'thumbnail' => MediaUrl::resolve($d->thumbnail),
+                'questions_count' => (int) ($byDevice[$d->id] ?? 0),
+                'href' => '/forum?device='.$d->slug,
+            ])
+            ->values();
+
+        $brands = Brand::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'logo'])
+            ->map(fn (Brand $b) => [
+                'id' => (int) $b->id,
+                'name' => $b->name,
+                'slug' => $b->slug,
+                'logo' => MediaUrl::resolve($b->logo),
+                'questions_count' => (int) ($byBrand[$b->id] ?? 0),
+                'href' => '/forum?brand='.$b->slug,
+            ])
+            ->values();
+
+        // ترکیبی محبوب: top N (device_id, brand_id) با بیشترین سوال
+        $comboRows = DB::table('site_forum_questions')
+            ->selectRaw('device_id, brand_id, COUNT(*) as c')
+            ->where('status', Question::STATUS_APPROVED)
+            ->whereNotNull('published_at')
+            ->whereNotNull('device_id')
+            ->whereNotNull('brand_id')
+            ->groupBy('device_id', 'brand_id')
+            ->orderByDesc('c')
+            ->limit($combosLimit)
+            ->get();
+
+        $deviceLookup = Device::query()->whereIn('id', $comboRows->pluck('device_id')->unique())
+            ->get(['id', 'name', 'slug', 'icon', 'thumbnail'])->keyBy('id');
+        $brandLookup = Brand::query()->whereIn('id', $comboRows->pluck('brand_id')->unique())
+            ->get(['id', 'name', 'slug', 'logo'])->keyBy('id');
+
+        $combos = $comboRows->map(function ($row) use ($deviceLookup, $brandLookup) {
+            $d = $deviceLookup->get($row->device_id);
+            $b = $brandLookup->get($row->brand_id);
+            if (! $d || ! $b) {
+                return null;
+            }
+
+            return [
+                'device' => [
+                    'name' => $d->name, 'slug' => $d->slug,
+                    'icon' => $d->icon, 'thumbnail' => MediaUrl::resolve($d->thumbnail),
+                ],
+                'brand' => [
+                    'name' => $b->name, 'slug' => $b->slug,
+                    'logo' => MediaUrl::resolve($b->logo),
+                ],
+                'label' => $d->name.' '.$b->name,
+                'questions_count' => (int) $row->c,
+                'href' => '/forum?device='.$d->slug.'&brand='.$b->slug,
+            ];
+        })->filter()->values();
+
+        return response()
+            ->json([
+                'devices' => $devices,
+                'brands' => $brands,
+                'combos' => $combos,
+            ])
+            ->header('Cache-Control', 'public, max-age=300, s-maxage=300');
+    }
+
+    /**
      * GET /v1/forum/questions?tab=&device=&brand=&q=&page=&limit=&sort=
      */
     public function index(Request $request): JsonResponse

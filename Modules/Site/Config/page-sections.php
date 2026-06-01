@@ -175,7 +175,7 @@ return [
                     'show_hot_problems' => ['label' => 'داغ‌ترین مشکلات', 'type' => 'bool'],
                     'show_app_promo' => ['label' => 'بنر اپ', 'type' => 'bool'],
                     'show_top_experts' => ['label' => 'کارشناسان برتر', 'type' => 'bool'],
-                    'show_category_shortcuts' => ['label' => 'دسته‌بندی موضوعی', 'type' => 'bool'],
+                    'show_categories' => ['label' => 'دسته‌بندی خودکار (دستگاه/برند/ترکیبی)', 'type' => 'bool'],
                     'show_expert_answers' => ['label' => 'پاسخ‌های کارشناسی', 'type' => 'bool'],
                     'show_final_cta' => ['label' => 'CTA پایانی', 'type' => 'bool'],
                 ],
@@ -197,22 +197,17 @@ return [
                 ],
             ],
 
-            'category_shortcuts' => [
-                'label' => 'دسته‌بندی موضوعی (کارت‌های شورت‌کات)',
+            'categories' => [
+                'label' => 'دسته‌بندی خودکار (دستگاه‌ها / برندها / ترکیبی محبوب)',
+                'description' => 'این سکشن خودکار از CRM می‌خواند — لیست دستگاه‌های فعال، برندهای فعال، و ترکیبی‌های محبوب (top N با بیشترین سوال انجمن). تنها تنظیمات این سکشن، تیتر و فعال/غیرفعال‌بودن هر گرید است.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'items' => [
-                        'label' => 'آیتم‌ها',
-                        'type' => 'repeater',
-                        'item_fields' => [
-                            'slug' => ['label' => 'slug', 'type' => 'string', 'rules' => 'required|string|max:60'],
-                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'required|string|max:120'],
-                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
-                            'icon' => ['label' => 'آیکن Lucide', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                            'tone' => ['label' => 'tone', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
-                            'href' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
-                        ],
-                    ],
+                    'show_devices' => ['label' => 'نمایش گرید دستگاه‌ها', 'type' => 'bool'],
+                    'devices_title' => ['label' => 'تیتر گرید دستگاه‌ها', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'show_brands' => ['label' => 'نمایش گرید برندها', 'type' => 'bool'],
+                    'brands_title' => ['label' => 'تیتر گرید برندها', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'show_combos' => ['label' => 'نمایش گرید ترکیبی محبوب', 'type' => 'bool'],
+                    'combos_title' => ['label' => 'تیتر گرید ترکیبی', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'combos_limit' => ['label' => 'تعداد آیتم‌های ترکیبی (top N)', 'type' => 'int', 'rules' => 'nullable|integer|min:1|max:30'],
                 ],
             ],
 
