@@ -158,6 +158,106 @@ class WalletController extends Controller
         });
     }
 
+    /**
+     * ارسال OTP برای تأیید حذف کامل (hard delete) تراکنش — فقط به
+     * موبایل کاربر فعلی، با TTL کوتاه و گیت permission سخت‌گیر.
+     */
+    public function requestHardDeleteOtp()
+    {
+        abort_unless(auth()->user()?->can('hard-delete-wallet-transaction'), 403);
+
+        $user = auth()->user();
+        $mobile = (string) ($user->mobile ?? '');
+        if (! preg_match('/^09[0-9]{9}$/', $mobile)) {
+            return response()->json(['success' => false, 'message' => 'شماره موبایل معتبر روی حساب شما ثبت نشده.'], 422);
+        }
+
+        // محدودسازی نرخ — حداکثر هر ۶۰ ثانیه یک OTP
+        $rateKey = "admin_hard_delete_otp_last_{$user->id}";
+        if ($last = cache($rateKey)) {
+            $wait = 60 - (time() - (int) $last);
+            if ($wait > 0) {
+                return response()->json(['success' => false, 'message' => "لطفاً {$wait} ثانیه صبر کنید."], 429);
+            }
+        }
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        cache()->put("admin_hard_delete_otp_{$user->id}", [
+            'code' => $code,
+            'attempts' => 0,
+        ], now()->addMinutes(2));
+        cache()->put($rateKey, time(), 60);
+
+        $message = "کد تأیید حذف کامل تراکنش: {$code}\nاین کد ۲ دقیقه اعتبار دارد. اگر شما درخواست نداده‌اید، نادیده بگیرید.";
+        $result = $this->sms->send($mobile, $message);
+
+        if (empty($result['success'])) {
+            Log::warning('Hard-delete OTP SMS failed', ['user' => $user->id, 'result' => $result]);
+            return response()->json(['success' => false, 'message' => 'ارسال پیامک ناموفق: ' . ($result['message'] ?? 'خطای ناشناخته')], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کد تأیید به موبایل ' . substr($mobile, 0, 4) . '***' . substr($mobile, -3) . ' ارسال شد.',
+        ]);
+    }
+
+    /**
+     * حذف کامل تراکنش پس از تأیید OTP — هیچ ردیف audit ساخته نمی‌شود
+     * و رکورد دقیقاً از DB پاک می‌شود (برخلاف destroyTransaction).
+     */
+    public function hardDeleteTransaction(Request $request, Technician $technician, WalletTransaction $transaction)
+    {
+        abort_unless(auth()->user()?->can('hard-delete-wallet-transaction'), 403);
+
+        if ((int) $transaction->technician_id !== (int) $technician->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'otp' => 'required|string|regex:/^\d{6}$/',
+        ], ['otp.required' => 'کد تأیید الزامی است.', 'otp.regex' => 'کد باید ۶ رقم باشد.']);
+
+        $userId = auth()->id();
+        $cacheKey = "admin_hard_delete_otp_{$userId}";
+        $entry = cache()->get($cacheKey);
+        if (! is_array($entry) || empty($entry['code'])) {
+            return back()->with('error', 'کد تأیید منقضی شده. دوباره درخواست بدهید.');
+        }
+
+        $attempts = (int) ($entry['attempts'] ?? 0);
+        if ($attempts >= 5) {
+            cache()->forget($cacheKey);
+            return back()->with('error', 'تعداد تلاش بیش از حد. کد جدید درخواست کنید.');
+        }
+
+        if (! hash_equals((string) $entry['code'], (string) $validated['otp'])) {
+            cache()->put($cacheKey, ['code' => $entry['code'], 'attempts' => $attempts + 1], now()->addMinutes(2));
+            return back()->with('error', 'کد تأیید اشتباه است.');
+        }
+
+        // کد درست — مصرف کن
+        cache()->forget($cacheKey);
+
+        return DB::transaction(function () use ($technician, $transaction) {
+            $transaction->delete();
+
+            // بازمحاسبهٔ balance_after تمام ردیف‌های باقی‌مانده + wallet_balance
+            $running = 0;
+            $rows = WalletTransaction::where('technician_id', $technician->id)
+                ->orderBy('id')->get();
+            foreach ($rows as $tx) {
+                $running += (int) $tx->amount;
+                if ((int) $tx->balance_after !== $running) {
+                    $tx->forceFill(['balance_after' => $running])->saveQuietly();
+                }
+            }
+            $technician->forceFill(['wallet_balance' => $running])->saveQuietly();
+
+            return back()->with('success', 'تراکنش به‌صورت کامل و دائمی حذف شد.');
+        });
+    }
+
     public function show(Technician $technician, WalletArchiveService $archive)
     {
         $transactions = WalletTransaction::with(['order', 'invoice', 'creator'])

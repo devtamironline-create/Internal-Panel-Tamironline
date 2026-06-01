@@ -288,6 +288,13 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->name('wallet.transaction.destroy')
             ->whereNumber('transaction');
 
+        // حذف کامل با تأیید OTP — permission ویژهٔ `hard-delete-wallet-transaction`
+        Route::post('wallet/hard-delete/request-otp', [WalletController::class, 'requestHardDeleteOtp'])
+            ->name('wallet.transaction.hard-delete.otp');
+        Route::delete('wallet/technician/{technician}/transaction/{transaction}/hard-delete', [WalletController::class, 'hardDeleteTransaction'])
+            ->name('wallet.transaction.hard-delete')
+            ->whereNumber('transaction');
+
         // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
         Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');
         Route::post('wallet/reward', [WalletController::class, 'storeReward'])->name('wallet.reward.store');

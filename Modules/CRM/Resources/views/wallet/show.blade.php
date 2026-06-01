@@ -65,9 +65,9 @@
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">مبلغ</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">موجودی</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">مرجع / توضیح</th>
-                            @can('delete-wallet-transaction')
-                                <th class="px-4 py-2 text-right text-gray-500 uppercase w-16"></th>
-                            @endcan
+                            @canany(['delete-wallet-transaction', 'hard-delete-wallet-transaction'])
+                                <th class="px-4 py-2 text-right text-gray-500 uppercase w-20"></th>
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
@@ -82,18 +82,29 @@
                                 @if($tx->order && !$tx->invoice)<a href="{{ route('crm.orders.show', $tx->order) }}" class="text-brand-600" dir="ltr">{{ $tx->order->order_code }}</a>@endif
                                 {{ $tx->note ? '— ' . $tx->note : '' }}
                             </td>
-                            @can('delete-wallet-transaction')
+                            @canany(['delete-wallet-transaction', 'hard-delete-wallet-transaction'])
                                 <td class="px-2 py-2">
-                                    <form method="POST" action="{{ route('crm.wallet.transaction.destroy', [$technician, $tx]) }}" class="inline"
-                                          onsubmit="return confirm('این تراکنش {{ $tx->amount >= 0 ? '+' : '' }}{{ number_format($tx->amount) }} تومان حذف شود؟\n\nمانده تکنسین به اندازهٔ همین مقدار معکوس می‌شود (یعنی مانده {{ $tx->amount >= 0 ? 'کم' : 'اضافه' }} می‌شود).');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-rose-600 hover:text-rose-700 text-xs" title="حذف این تراکنش">
-                                            🗑
-                                        </button>
-                                    </form>
+                                    <div class="flex items-center gap-1">
+                                        @can('delete-wallet-transaction')
+                                            <form method="POST" action="{{ route('crm.wallet.transaction.destroy', [$technician, $tx]) }}" class="inline"
+                                                  onsubmit="return confirm('این تراکنش {{ $tx->amount >= 0 ? '+' : '' }}{{ number_format($tx->amount) }} تومان حذف شود؟\n\nیک ردیف audit ثبت می‌شود و مانده تکنسین بازمحاسبه می‌شود.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-rose-600 hover:text-rose-700 text-xs" title="حذف با ردیف audit">
+                                                    🗑
+                                                </button>
+                                            </form>
+                                        @endcan
+                                        @can('hard-delete-wallet-transaction')
+                                            <button type="button"
+                                                    @click="$dispatch('open-hard-delete', { txId: {{ $tx->id }}, amount: {{ $tx->amount }} })"
+                                                    class="text-rose-800 hover:text-rose-900 text-xs font-bold" title="حذف کامل با تأیید OTP (بدون audit، غیرقابل بازگشت)">
+                                                ⛔
+                                            </button>
+                                        @endcan
+                                    </div>
                                 </td>
-                            @endcan
+                            @endcanany
                         </tr>
                         @empty
                         <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">تراکنشی ثبت نشده.</td></tr>
@@ -221,4 +232,104 @@
     toggle();
 })();
 </script>
+
+{{-- ─────── مدال حذف کامل با تأیید OTP ─────── --}}
+@can('hard-delete-wallet-transaction')
+<div x-data="hardDeleteModal()" x-cloak
+     @open-hard-delete.window="open($event.detail.txId, $event.detail.amount)"
+     @keydown.escape.window="close()">
+    <div x-show="visible" x-transition.opacity
+         class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+         @click.self="close()">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-5"
+             x-show="visible" x-transition.scale>
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-gray-900 dark:text-gray-100">⛔ حذف کامل تراکنش</h3>
+                <button @click="close()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-4 text-xs text-rose-800 leading-6">
+                <strong>هشدار:</strong> این عملیات بدون audit و کاملاً غیرقابل بازگشت است. تراکنش از DB پاک می‌شود.
+                <br><span class="text-gray-700">مقدار: <b dir="ltr" x-text="amount.toLocaleString('fa-IR')"></b> تومان</span>
+            </div>
+
+            <form method="POST" :action="actionUrl" @submit="submitting = true">
+                @csrf
+                @method('DELETE')
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-700 dark:text-gray-200 mb-1">۱) ابتدا کد تأیید را به موبایلتان بفرستید:</label>
+                        <button type="button" @click="requestOtp()" :disabled="otpRequesting"
+                                class="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold disabled:opacity-50">
+                            <span x-show="!otpRequesting && !otpSent">📱 ارسال کد تأیید</span>
+                            <span x-show="otpRequesting">در حال ارسال…</span>
+                            <span x-show="otpSent && !otpRequesting" class="text-emerald-100" x-text="otpStatus"></span>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-700 dark:text-gray-200 mb-1">۲) کد ۶ رقمی دریافت‌شده:</label>
+                        <input type="text" name="otp" maxlength="6" inputmode="numeric" pattern="\d{6}" required
+                               x-model="otp" dir="ltr"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-center text-lg font-mono tracking-widest focus:outline-none focus:border-rose-400">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-5">
+                    <button type="submit" :disabled="!otp || otp.length !== 6 || submitting"
+                            class="flex-1 py-2 rounded-lg bg-rose-700 hover:bg-rose-800 text-white text-sm font-bold disabled:opacity-50">
+                        ⛔ تأیید و حذف کامل
+                    </button>
+                    <button type="button" @click="close()"
+                            class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function hardDeleteModal() {
+    return {
+        visible: false, txId: null, amount: 0,
+        otp: '', otpRequesting: false, otpSent: false, otpStatus: '', submitting: false,
+        get actionUrl() {
+            return this.txId
+                ? '{{ url('admin/crm/wallet/technician/' . $technician->id . '/transaction') }}/' + this.txId + '/hard-delete'
+                : '#';
+        },
+        open(txId, amount) {
+            this.txId = txId; this.amount = amount;
+            this.otp = ''; this.otpSent = false; this.otpStatus = '';
+            this.submitting = false;
+            this.visible = true;
+        },
+        close() { this.visible = false; },
+        async requestOtp() {
+            this.otpRequesting = true;
+            try {
+                const res = await fetch('{{ route('crm.wallet.transaction.hard-delete.otp') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                });
+                const json = await res.json();
+                this.otpSent = !!json.success;
+                this.otpStatus = json.message || (json.success ? 'کد ارسال شد' : 'خطا در ارسال');
+                if (!json.success) {
+                    setTimeout(() => { this.otpSent = false; this.otpStatus = ''; }, 4000);
+                }
+            } catch (e) {
+                this.otpStatus = 'خطا در اتصال';
+                setTimeout(() => { this.otpStatus = ''; }, 3000);
+            } finally {
+                this.otpRequesting = false;
+            }
+        },
+    };
+}
+</script>
+@endcan
 @endsection
