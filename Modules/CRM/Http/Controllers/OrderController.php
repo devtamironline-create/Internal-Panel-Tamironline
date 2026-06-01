@@ -316,6 +316,12 @@ class OrderController extends Controller
             $affectedInvoiceIds = $candidateIds->reject(fn($id) => $idsWithTxs->contains($id))->values();
         }
 
+        // ردیف‌های بازسازی‌شدهٔ قبلی (با مارکر [بازسازی] در note) — برای
+        // نمایش دکمهٔ «حذف بازسازی».
+        $restoredCount = \Modules\CRM\Models\WalletTransaction::where('order_id', $order->id)
+            ->where('note', 'like', '[بازسازی]%')
+            ->count();
+
         // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
         // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
         $customerOrders = collect();
@@ -338,15 +344,17 @@ class OrderController extends Controller
             'customerOrders' => $customerOrders,
             'supersededInvoices' => $supersededInvoices,
             'affectedInvoiceIds' => $affectedInvoiceIds,
+            'restoredCount' => $restoredCount,
         ]);
     }
 
     /**
      * بازسازی wallet transactions برای فاکتورهای superseded که در نسخهٔ
-     * قدیمیِ InvoiceService حذف شده بودند. برای هر فاکتور آسیب‌دیده:
-     *   ۱) یک tx commission اصلی (-company_share) دوباره ثبت می‌شود
-     *   ۲) بلافاصله یک reverse (+company_share) ثبت می‌شود
-     * نتیجه: balance تغییری نمی‌کند، فقط تاریخچهٔ مالی کامل می‌شود.
+     * قدیمیِ InvoiceService حذف شده بودند.
+     *
+     * فقط یک ردیف **مثبت** (+company_share) با مارکر `[بازسازی]` در
+     * توضیحات ثبت می‌شود تا اپراتور به‌راحتی بتواند بعداً اگر اشتباه
+     * بود، با دکمهٔ «حذف بازسازی» همان را پاک کند.
      */
     public function restoreWalletHistory(Order $order)
     {
@@ -368,23 +376,9 @@ class OrderController extends Controller
                     continue;
                 }
 
-                // اصلی
                 $last = (int) (\Modules\CRM\Models\WalletTransaction::where('technician_id', $techId)
                     ->orderByDesc('id')->value('balance_after') ?? 0);
-                \Modules\CRM\Models\WalletTransaction::create([
-                    'technician_id' => $techId,
-                    'order_id' => $order->id,
-                    'invoice_id' => $inv->id,
-                    'wp_id' => null,
-                    'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
-                    'amount' => -$companyShare,
-                    'balance_after' => $last - $companyShare,
-                    'note' => 'بازسازی سهم شرکت از فاکتور بایگانی‌شده ' . $inv->invoice_code,
-                    'created_by' => auth()->id(),
-                ]);
 
-                // reverse
-                $last2 = $last - $companyShare;
                 \Modules\CRM\Models\WalletTransaction::create([
                     'technician_id' => $techId,
                     'order_id' => $order->id,
@@ -392,10 +386,13 @@ class OrderController extends Controller
                     'wp_id' => null,
                     'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
                     'amount' => $companyShare,
-                    'balance_after' => $last2 + $companyShare,
-                    'note' => 'بازگشت سهم شرکت — تکمیل مجدد سفارش بعد از برگشت (بازسازی تاریخچه)',
+                    'balance_after' => $last + $companyShare,
+                    'note' => '[بازسازی] بازگشت سهم شرکت از فاکتور بایگانی‌شده ' . $inv->invoice_code,
                     'created_by' => auth()->id(),
                 ]);
+
+                \Modules\CRM\Models\Technician::where('id', $techId)
+                    ->update(['wallet_balance' => $last + $companyShare]);
 
                 $restored++;
             }
@@ -404,7 +401,39 @@ class OrderController extends Controller
                 return back()->with('error', 'هیچ فاکتور آسیب‌دیده‌ای برای بازسازی پیدا نشد.');
             }
 
-            return back()->with('success', "تاریخچهٔ wallet برای {$restored} فاکتور بایگانی‌شده بازسازی شد. مانده تکنسین تغییری نکرد.");
+            return back()->with('success', "تاریخچهٔ wallet برای {$restored} فاکتور بایگانی‌شده بازسازی شد (به‌صورت تراکنش مثبت).");
+        });
+    }
+
+    /**
+     * حذف ردیف‌های بازسازی‌شده — همان‌هایی که با `[بازسازی]` در note
+     * شناسایی می‌شوند. مانده تکنسین به‌صورت دقیق برمی‌گردد (با کم
+     * کردن مقدار تراکنش حذف‌شده).
+     */
+    public function removeRestoredHistory(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $rows = \Modules\CRM\Models\WalletTransaction::where('order_id', $order->id)
+                ->where('note', 'like', '[بازسازی]%')
+                ->orderByDesc('id')
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return back()->with('error', 'هیچ ردیف بازسازی‌شده‌ای برای حذف پیدا نشد.');
+            }
+
+            $removed = 0;
+            foreach ($rows as $tx) {
+                // مانده تکنسین را به‌صورت معکوس مقدار این تراکنش به‌روز کن
+                $current = (int) (\Modules\CRM\Models\Technician::where('id', $tx->technician_id)
+                    ->value('wallet_balance') ?? 0);
+                \Modules\CRM\Models\Technician::where('id', $tx->technician_id)
+                    ->update(['wallet_balance' => $current - (int) $tx->amount]);
+                $tx->delete();
+                $removed++;
+            }
+
+            return back()->with('success', "{$removed} ردیف بازسازی حذف شد و مانده تکنسین برگشت داده شد.");
         });
     }
 

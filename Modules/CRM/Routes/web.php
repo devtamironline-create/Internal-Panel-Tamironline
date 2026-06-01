@@ -305,6 +305,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
         Route::post('orders/{order}/restore-wallet-history', [OrderController::class, 'restoreWalletHistory'])->name('orders.restore-wallet');
+        Route::post('orders/{order}/remove-restored-wallet', [OrderController::class, 'removeRestoredHistory'])->name('orders.remove-restored-wallet');
         Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');
         Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
         Route::post('invoices/{invoice}/push-to-wp', [InvoiceController::class, 'pushToWp'])->name('invoices.push-to-wp');

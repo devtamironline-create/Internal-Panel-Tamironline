@@ -485,23 +485,37 @@
                 </div>
                 <p class="text-xs text-gray-500 mb-3">این سفارش حداقل یک بار «برگشت» داده شده و فاکتور جدیدی برایش صادر شده. فاکتورهای زیر دیگر فعال نیستند ولی برای تاریخچه نگه‌داری شده‌اند.</p>
 
-                @if($affectedInvoiceIds->isNotEmpty())
-                    @can('manage-crm-financial')
-                    <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
-                        <div class="text-xs text-rose-800 leading-6 max-w-3xl">
-                            <strong>⚠ {{ $affectedInvoiceIds->count() }} فاکتور آسیب‌دیده:</strong>
-                            wallet transactions این فاکتورها در یک باگ قدیمی حذف شده. می‌توانید با کلیک روی دکمهٔ مقابل، تاریخچهٔ wallet را بازسازی کنید — این کار مانده تکنسین را تغییر نمی‌دهد، فقط سابقهٔ مالی کامل می‌شود.
+                @can('manage-crm-financial')
+                    @if($restoredCount > 0)
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
+                            <div class="text-xs text-amber-800 leading-6 max-w-3xl">
+                                <strong>ℹ {{ $restoredCount }} ردیف بازسازی‌شده قبلاً ثبت شده.</strong>
+                                اگر اشتباه ست شده، با دکمهٔ مقابل کاملاً پاکش می‌شود و مانده تکنسین به حالت قبل برمی‌گردد.
+                            </div>
+                            <form method="POST" action="{{ route('crm.orders.remove-restored-wallet', $order) }}"
+                                  onsubmit="return confirm('حذف {{ $restoredCount }} ردیف بازسازی wallet؟ مانده تکنسین به حالت قبل از بازسازی برمی‌گردد.');">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold whitespace-nowrap">
+                                    🗑 حذف بازسازی
+                                </button>
+                            </form>
                         </div>
-                        <form method="POST" action="{{ route('crm.orders.restore-wallet', $order) }}"
-                              onsubmit="return confirm('بازسازی تاریخچهٔ wallet برای {{ $affectedInvoiceIds->count() }} فاکتور؟\n\nاین کار: ۱) commission اصلی را بازسازی می‌کند ۲) بلافاصله آن را reverse می‌کند → مانده ثابت می‌ماند ولی audit trail کامل می‌شود.');">
-                            @csrf
-                            <button type="submit" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold whitespace-nowrap">
-                                🔧 بازسازی wallet history
-                            </button>
-                        </form>
-                    </div>
-                    @endcan
-                @endif
+                    @elseif($affectedInvoiceIds->isNotEmpty())
+                        <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
+                            <div class="text-xs text-rose-800 leading-6 max-w-3xl">
+                                <strong>⚠ {{ $affectedInvoiceIds->count() }} فاکتور آسیب‌دیده:</strong>
+                                wallet transactions این فاکتورها در یک باگ قدیمی حذف شده. با کلیک روی دکمهٔ مقابل، یک تراکنش <b>مثبت</b> (به‌عنوان بازگشت سهم شرکت) برای هرکدام ثبت می‌شود. اگر اشتباه شد، با همان دکمه می‌توانید حذفش کنید.
+                            </div>
+                            <form method="POST" action="{{ route('crm.orders.restore-wallet', $order) }}"
+                                  onsubmit="return confirm('بازسازی wallet برای {{ $affectedInvoiceIds->count() }} فاکتور؟\n\nبرای هر فاکتور یک تراکنش +company_share با مارکر [بازسازی] ثبت می‌شود.');">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold whitespace-nowrap">
+                                    🔧 بازسازی wallet history
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+                @endcan
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
