@@ -43,7 +43,19 @@ class TechnicianController extends Controller
             ->orderBy('province')
             ->pluck('province');
 
-        return view('crm::technicians.index', compact('technicians', 'provinces', 'search', 'province', 'type', 'status'));
+        // OTP فعال هر تکنسین — فقط برای کاربر دارای دسترسی `view-tech-otp`.
+        // برای جلوگیری از N+1، یک‌بار از کش برای صفحهٔ فعلی pull می‌شود.
+        $otpMap = collect();
+        if (auth()->user()?->can('view-tech-otp')) {
+            foreach ($technicians as $t) {
+                $cached = \Illuminate\Support\Facades\Cache::get("tech_otp_{$t->mobile}");
+                if (is_array($cached) && ! empty($cached['code'])) {
+                    $otpMap[$t->mobile] = (string) $cached['code'];
+                }
+            }
+        }
+
+        return view('crm::technicians.index', compact('technicians', 'provinces', 'search', 'province', 'type', 'status', 'otpMap'));
     }
 
     public function export(Request $request, string $format)

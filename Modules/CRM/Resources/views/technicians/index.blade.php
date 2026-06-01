@@ -124,6 +124,9 @@
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">نام</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">کد</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">موبایل</th>
+                    @can('view-tech-otp')
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">OTP فعال</th>
+                    @endcan
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">سطح</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">استان</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">کمیسیون</th>
@@ -144,6 +147,20 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">{{ $tech->technician_id ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm">@tel($tech->mobile)</td>
+                    @can('view-tech-otp')
+                        <td class="px-6 py-4 text-sm">
+                            @if(! empty($otpMap[$tech->mobile]))
+                                <span x-data="{ copied: false }"
+                                      @click="navigator.clipboard.writeText('{{ $otpMap[$tech->mobile] }}'); copied = true; setTimeout(() => copied = false, 1500)"
+                                      class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 font-mono font-bold cursor-pointer hover:bg-emerald-100"
+                                      title="کلیک برای کپی" dir="ltr">
+                                    <span x-text="copied ? 'کپی شد ✓' : '{{ $otpMap[$tech->mobile] }}'"></span>
+                                </span>
+                            @else
+                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                            @endif
+                        </td>
+                    @endcan
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->type_tech ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->province ?: '—' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $tech->percent ?? 0 }}%</td>
@@ -182,7 +199,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">تکنسین‌ای یافت نشد.</td>
+                    <td colspan="{{ auth()->user()?->can('view-tech-otp') ? 9 : 8 }}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">تکنسین‌ای یافت نشد.</td>
                 </tr>
                 @endforelse
             </tbody>
