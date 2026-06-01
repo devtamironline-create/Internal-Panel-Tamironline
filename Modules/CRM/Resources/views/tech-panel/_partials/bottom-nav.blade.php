@@ -22,14 +22,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1-3.2A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
             </svg>
-            <span class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white transition"
-                  :class="$store.techNav.unread > 0 ? 'bg-rose-500' : 'bg-emerald-600'"
+            <span class="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 rounded-full text-[11px] font-bold flex items-center justify-center ring-2 ring-white shadow-sm transition"
+                  :class="$store.techNav.unread > 0 ? 'bg-rose-500 text-white' : 'bg-white text-gray-700'"
                   x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
         </div>
         <span class="mt-1.5 text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm flex items-center gap-1">
             چت با کارشناس
-            <span class="px-1.5 py-0.5 rounded-full text-white text-[9.5px] transition"
-                  :class="$store.techNav.unread > 0 ? 'bg-rose-500' : 'bg-emerald-600'"
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold transition"
+                  :class="$store.techNav.unread > 0 ? 'bg-rose-500 text-white' : 'bg-gray-200 text-gray-700'"
                   x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
         </span>
     </a>
