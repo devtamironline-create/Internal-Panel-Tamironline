@@ -116,6 +116,43 @@
                     if (m.id <= this.lastId) return;
                     this.lastId = m.id;
                     const mine = m.sender_type === 'tech';
+
+                    // اطلاع‌رسانی برای پیام‌های جدیدِ پشتیبانی — نوتیف
+                    // مرورگر (مخصوصاً وقتی تب در پس‌زمینه است)، تغییر
+                    // عنوان tab، و صدای زنگ. فقط روی پیام‌های واقعاً
+                    // جدید (که از poll می‌آیند، نه پیام‌های load اولیه).
+                    if (!mine) {
+                        // فلش عنوان tab
+                        const origTitle = document.title;
+                        document.title = '🔔 پیام جدید از پشتیبانی';
+                        setTimeout(() => { document.title = origTitle; }, 5000);
+
+                        // نوتیف مرورگر
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            try {
+                                const n = new Notification('پیام جدید از پشتیبانی', {
+                                    body: (m.body || '').substring(0, 120),
+                                    icon: '{{ asset('tech-pwa/icons/icon.svg') }}',
+                                    tag: 'tech-chat-message',
+                                    renotify: true,
+                                });
+                                n.onclick = () => { window.focus(); n.close(); };
+                                setTimeout(() => n.close(), 6000);
+                            } catch (e) {}
+                        }
+
+                        // صدا — beep کوتاه با Web Audio API
+                        try {
+                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain); gain.connect(ctx.destination);
+                            osc.frequency.value = 880;
+                            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                            osc.start(); osc.stop(ctx.currentTime + 0.3);
+                        } catch (e) {}
+                    }
                     const wrap = document.createElement('div');
                     wrap.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
                     wrap.innerHTML = `
