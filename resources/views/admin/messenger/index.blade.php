@@ -1364,7 +1364,10 @@ function messenger() {
             // Request notification permission
             this.requestNotificationPermission();
 
-            // Poll for updates every 2 seconds
+            // Poll for updates — کاهش از ۲ به ۱۰ ثانیه. در این مدت ۳
+            // endpoint (loadConversations + loadMessages + checkIncomingCalls)
+            // فراخوانی می‌شد که با چند اپراتور باز، بار سرور را به شدت
+            // بالا می‌برد.
             setInterval(async () => {
                 const oldUnread = this.getTotalUnread();
                 await this.loadConversations();
@@ -1380,7 +1383,7 @@ function messenger() {
                     this.loadMessages(this.currentConversation.id);
                 }
                 this.checkIncomingCalls();
-            }, 2000);
+            }, 10000);
 
             setInterval(() => {
                 this.heartbeat();

@@ -418,14 +418,16 @@ function chatWidget() {
             document.addEventListener('click', () => this.initAudio(), { once: true });
             document.addEventListener('keydown', () => this.initAudio(), { once: true });
 
-            // Poll for new messages every 3 seconds
+            // Poll for new messages — کاهش از ۳ به ۱۰ ثانیه تا بار سرور
+            // پایین بیاید (هر تب هر ۳ ثانیه دو request می‌فرستاد؛ با چند
+            // اپراتور و چند تب باز، در دقیقه صد‌ها درخواست می‌شد).
             setInterval(async () => {
                 await this.checkForNewMessages();
 
                 if (this.currentView === 'chat' && this.currentConversation) {
                     this.loadMessages(this.currentConversation.id);
                 }
-            }, 3000);
+            }, 10000);
 
             // Update presence every 30 seconds
             setInterval(() => {

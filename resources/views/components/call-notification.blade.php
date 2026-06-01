@@ -79,10 +79,12 @@ function callNotification() {
                 Notification.requestPermission();
             }
 
+            // کاهش polling از ۲ به ۷ ثانیه — برای تشخیص تماس ورودی
+            // ۷ ثانیه قابل قبول است و بار سرور بسیار کم‌تر می‌شود.
             setInterval(() => {
                 this.checkIncomingCalls();
                 this.checkUnreadMessages();
-            }, 2000);
+            }, 7000);
         },
 
         async checkIncomingCalls() {
