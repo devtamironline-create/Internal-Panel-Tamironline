@@ -321,16 +321,21 @@ class DashboardController extends Controller
             $hasNewImage = $request->hasFile('device_img1');
             $hasExistingImage = ! empty($order->device_img1);
             $isDraft = (bool) ($validated['save_as_draft'] ?? false);
+            // برای سفارش‌های برگشتی (return_type ست شده): اپراتور مالی
+            // قبلاً تأیید کرده که خدمات رایگان یا با شرایط خاص انجام شود؛
+            // پس عکس/توضیحات اجباری نیستند.
+            $isReturned = ! is_null($order->return_type);
             $errors = [];
 
-            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد یا پیش‌نویس).
-            if (! $isDraft && ! $hasNewImage && ! $hasExistingImage) {
+            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد، پیش‌نویس،
+            // یا سفارش برگشتی باشد).
+            if (! $isDraft && ! $isReturned && ! $hasNewImage && ! $hasExistingImage) {
                 $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
             }
 
-            // توضیحات فاکتور اجباری — به مشتری به‌عنوان فاکتور قانونی فرستاده می‌شود.
+            // توضیحات فاکتور اجباری — مگر در سفارش‌های برگشتی.
             $invDesc = trim((string) ($validated['invoice_descripotion'] ?? ''));
-            if (! $isDraft && $invDesc === '') {
+            if (! $isDraft && ! $isReturned && $invDesc === '') {
                 $errors['invoice_descripotion'] = 'توضیحات فاکتور اجباری است — این متن به‌صورت فاکتور به مشتری ارسال می‌شود.';
             }
 

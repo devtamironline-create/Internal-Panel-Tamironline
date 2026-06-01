@@ -548,14 +548,26 @@
                         </p>
                     </div>
 
-                    {{-- invoice_descripotion — اجباری برای بستن سفارش (مگر پیش‌نویس) --}}
+                    {{-- invoice_descripotion — اجباری برای بستن سفارش (مگر پیش‌نویس یا سفارش برگشتی) --}}
+                    @php $isReturned = ! is_null($order->return_type); @endphp
                     <div>
-                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">توضیحات فاکتور — اجباری *</label>
+                        <label class="text-[11px] {{ $isReturned ? 'text-gray-600' : 'text-rose-700' }} font-bold mb-1 block">
+                            توضیحات فاکتور
+                            @if($isReturned)
+                                <span class="text-emerald-600 mr-1">— اختیاری (سفارش برگشتی)</span>
+                            @else
+                                — اجباری *
+                            @endif
+                        </label>
                         <textarea name="invoice_descripotion" rows="3"
-                                  :required="selected === '{{ OrderStatus::Completed->value }}'"
+                                  @if(! $isReturned) :required="selected === '{{ OrderStatus::Completed->value }}'" @endif
                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('invoice_descripotion', $order->invoice_descripotion) }}</textarea>
-                        <div class="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-6">
-                            <strong>توجه:</strong> توضیحات وارد شده در کادر بالا به صورت فاکتور آنلاین برای مشتری ارسال می‌گردد و اعتبار قانونی دارد. خواهشمندیم در ثبت قطعات و توضیحات، دقت لازم را به عمل آورید. از همکاری شما سپاسگزاریم.
+                        <div class="mt-2 px-3 py-2 rounded-lg {{ $isReturned ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900' }} border text-[10px] leading-6">
+                            @if($isReturned)
+                                <strong>سفارش برگشتی:</strong> در سفارش‌های برگشتی می‌توانید بدون توضیحات و با مبلغ صفر سفارش را ببندید (خدمات رایگان). در صورتی که هزینه‌ای دریافت می‌کنید، توضیحات و مبلغ را وارد کنید.
+                            @else
+                                <strong>توجه:</strong> توضیحات وارد شده در کادر بالا به صورت فاکتور آنلاین برای مشتری ارسال می‌گردد و اعتبار قانونی دارد. خواهشمندیم در ثبت قطعات و توضیحات، دقت لازم را به عمل آورید. از همکاری شما سپاسگزاریم.
+                            @endif
                         </div>
                         @error('invoice_descripotion')
                             <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
