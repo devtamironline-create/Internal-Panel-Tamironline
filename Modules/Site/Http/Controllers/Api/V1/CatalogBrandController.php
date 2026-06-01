@@ -180,6 +180,7 @@ class CatalogBrandController extends Controller
             'subtitle' => CatalogMerger::pick($brand->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => CatalogMerger::pick($brand->caption, $heroTpl['caption'] ?? null),
             'tagline' => CatalogMerger::pick($brand->tagline, null),
+            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => CatalogMerger::pick($brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -196,15 +197,15 @@ class CatalogBrandController extends Controller
     private function buildSteps(Brand $brand, array $template, bool $enabled): array
     {
         $stepsTpl = $template['steps'] ?? [];
-        $tplImage = (array) ($stepsTpl['image'] ?? []);
+        $tplImage = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($stepsTpl['image'] ?? null);
 
         return [
             'enabled' => $enabled,
             'image_desktop' => MediaUrl::resolve(
-                CatalogMerger::pick($brand->steps_image_desktop, $tplImage['desktop'] ?? null)
+                CatalogMerger::pick($brand->steps_image_desktop, $tplImage['desktop']['url'])
             ),
             'image_mobile' => MediaUrl::resolve(
-                CatalogMerger::pick($brand->steps_image_mobile, $tplImage['mobile'] ?? null)
+                CatalogMerger::pick($brand->steps_image_mobile, $tplImage['mobile']['url'])
             ),
             'alt' => $stepsTpl['alt'] ?? null,
         ];

@@ -232,6 +232,7 @@ class CatalogDeviceController extends Controller
             'title' => CatalogMerger::pick($device->service_name, $heroTpl['title'] ?? $device->name),
             'subtitle' => CatalogMerger::pick($device->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => CatalogMerger::pick($device->caption, $heroTpl['caption'] ?? null),
+            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => CatalogMerger::pick($device->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($device->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -248,16 +249,15 @@ class CatalogDeviceController extends Controller
     private function buildSteps(Device $device, array $template, bool $enabled): array
     {
         $stepsTpl = $template['steps'] ?? [];
-        // responsive_image در template به صورت {desktop, mobile} ذخیره می‌شود
-        $tplImage = (array) ($stepsTpl['image'] ?? []);
+        $tplImage = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($stepsTpl['image'] ?? null);
 
         return [
             'enabled' => $enabled,
             'image_desktop' => MediaUrl::resolve(
-                CatalogMerger::pick($device->steps_image_desktop, $tplImage['desktop'] ?? null)
+                CatalogMerger::pick($device->steps_image_desktop, $tplImage['desktop']['url'])
             ),
             'image_mobile' => MediaUrl::resolve(
-                CatalogMerger::pick($device->steps_image_mobile, $tplImage['mobile'] ?? null)
+                CatalogMerger::pick($device->steps_image_mobile, $tplImage['mobile']['url'])
             ),
             'alt' => $stepsTpl['alt'] ?? null,
         ];

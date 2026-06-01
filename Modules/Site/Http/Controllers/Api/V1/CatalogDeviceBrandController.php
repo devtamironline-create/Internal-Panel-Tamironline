@@ -170,6 +170,7 @@ class CatalogDeviceBrandController extends Controller
             ),
             'subtitle' => $this->merge($page?->subtitle, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => $this->merge($page?->caption, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
+            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => $this->merge($page?->cta_primary_label, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => $this->merge($page?->cta_primary_url, $device->cta_primary_url, $brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -186,7 +187,7 @@ class CatalogDeviceBrandController extends Controller
     private function buildSteps(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled): array
     {
         $stepsTpl = $template['steps'] ?? [];
-        $tplImage = (array) ($stepsTpl['image'] ?? []);
+        $tplImage = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($stepsTpl['image'] ?? null);
 
         return [
             'enabled' => $enabled,
@@ -194,13 +195,13 @@ class CatalogDeviceBrandController extends Controller
                 $page?->steps_image_desktop,
                 $device->steps_image_desktop,
                 $brand->steps_image_desktop,
-                $tplImage['desktop'] ?? null
+                $tplImage['desktop']['url']
             )),
             'image_mobile' => MediaUrl::resolve($this->merge(
                 $page?->steps_image_mobile,
                 $device->steps_image_mobile,
                 $brand->steps_image_mobile,
-                $tplImage['mobile'] ?? null
+                $tplImage['mobile']['url']
             )),
             'alt' => $stepsTpl['alt'] ?? null,
         ];

@@ -38,6 +38,7 @@ return [
                     'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
                 ],
             ],
 
@@ -362,6 +363,7 @@ return [
                 'fields' => [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
                     'cta_label' => ['label' => 'متن دکمه CTA', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'cta_url' => ['label' => 'لینک دکمه (مسیر داخلی /order یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                     'services' => [
@@ -746,6 +748,16 @@ return [
         'title' => 'صفحه‌ی تماس با ما',
         'sections' => [
 
+            'hero' => [
+                'label' => 'Hero صفحه‌ی تماس',
+                'description' => 'تیتر، زیرتیتر و تصویر بالای صفحه (دسکتاپ + موبایل با alt مجزا).',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
+                ],
+            ],
+
             'channels' => [
                 'label' => 'کارت‌های راه ارتباطی (C1)',
                 'fields' => [
@@ -856,6 +868,7 @@ return [
                     'title' => ['label' => 'تیتر (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن (متن کوتاه زیر زیرتیتر)', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {device} پشتیبانی می‌شود)', 'type' => 'responsive_image'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
@@ -988,6 +1001,7 @@ return [
                     'title' => ['label' => 'تیتر (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {brand} پشتیبانی می‌شود)', 'type' => 'responsive_image'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
@@ -1111,6 +1125,7 @@ return [
                     'title' => ['label' => 'تیتر (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {device} و {brand} پشتیبانی می‌شوند)', 'type' => 'responsive_image'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
