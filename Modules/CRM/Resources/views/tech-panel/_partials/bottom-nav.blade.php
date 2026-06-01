@@ -28,6 +28,10 @@
         </div>
         <span class="mt-1.5 text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
             چت با کارشناس
+            <template x-if="$store.techNav.unread > 0">
+                <span class="ms-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9.5px]"
+                      x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
+            </template>
         </span>
     </a>
 </div>
@@ -89,16 +93,53 @@
 </nav>
 
 {{-- Polling برای badge ویجت چت — هر ۱۵ ثانیه. در صفحهٔ /tech/messages
-     خود کنترلر پیام‌ها را خوانده می‌کند، پس عدد به ۰ بازمی‌گردد. --}}
+     خود کنترلر پیام‌ها را خوانده می‌کند، پس عدد به ۰ بازمی‌گردد.
+     همچنین درخواست permission نوتیفیکیشن مرورگر و push notification
+     وقتی پیام جدید از پشتیبانی می‌رسد. --}}
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.store('techNav', { unread: 0 });
+    Alpine.store('techNav', { unread: 0, lastSeen: 0 });
+
+    // درخواست permission نوتیفیکیشن — با کمی تاخیر تا مزاحم لحظهٔ ورود نباشد
+    if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => {
+            try { Notification.requestPermission(); } catch (e) {}
+        }, 4000);
+    }
+
+    function notifyNewMessage(count) {
+        if (! ('Notification' in window) || Notification.permission !== 'granted') return;
+        try {
+            const n = new Notification('پیام جدید از پشتیبانی', {
+                body: count > 1
+                    ? 'شما ' + count + ' پیام جدید از پشتیبانی تعمیرآنلاین دارید.'
+                    : 'پشتیبانی تعمیرآنلاین برای شما پیام فرستاده — روی ویجت چت کلیک کنید.',
+                icon: '{{ asset('tech-pwa/icons/icon.svg') }}',
+                badge: '{{ asset('tech-pwa/icons/icon.svg') }}',
+                tag: 'tech-chat-message',
+                renotify: true,
+            });
+            n.onclick = () => {
+                window.focus();
+                window.location.href = '{{ route('tech.messages') }}';
+                n.close();
+            };
+        } catch (e) {}
+    }
 
     async function refreshUnread() {
         try {
             const res = await fetch('{{ route('tech.messages.unread') }}', { headers: { 'Accept': 'application/json' } });
             const json = await res.json();
-            Alpine.store('techNav').unread = json.unread || 0;
+            const newUnread = parseInt(json.unread || 0, 10);
+            const store = Alpine.store('techNav');
+
+            // فقط وقتی تعداد نخوانده‌ها افزایش یافته (پیام جدید آمده) نوتیف بزن
+            if (newUnread > store.lastSeen) {
+                notifyNewMessage(newUnread - store.lastSeen);
+            }
+            store.lastSeen = newUnread;
+            store.unread = newUnread;
         } catch (e) {}
     }
     refreshUnread();
