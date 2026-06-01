@@ -25,16 +25,24 @@
     $orderAddr    = $order?->address ?? '';
     $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
 
-    // متن توضیح فاکتور — جداگانه از اقلام، در یک باکس زیر جدول نمایش داده می‌شود.
+    // متن توضیح فاکتور (نوشتهٔ تکنسین/اپراتور برای مشتری) — این متن
+    // به‌عنوان عنوان اصلیِ خدمت در ردیف فاکتور استفاده می‌شود.
     $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
 
-    // اقلام جدول — از OrderItem یا piece_list (سفارش‌های قدیمی WP).
+    $grandTotal = (int) ($invoice->total_amount ?? 0);
+
+    // اگر `invoice_descripotion` ست شده، فقط یک ردیف با همان متن داریم.
+    // در غیر این‌صورت از OrderItem / piece_list به‌عنوان عنوان استفاده می‌شود.
     $rows = collect();
-    if ($order && $order->items->isNotEmpty()) {
+    if ($customerDesc !== '') {
+        $rows->push([
+            'title' => $customerDesc,
+            'total' => $grandTotal,
+        ]);
+    } elseif ($order && $order->items->isNotEmpty()) {
         foreach ($order->items as $item) {
             $rows->push([
                 'title' => $item->title,
-                'qty'   => (int) $item->quantity,
                 'total' => (int) $item->total_price,
             ]);
         }
@@ -46,33 +54,26 @@
             $unit = (int) ($sells[$i] ?? 0);
             $rows->push([
                 'title' => is_string($title) ? $title : (string) ($title['title'] ?? ''),
-                'qty'   => 1,
                 'total' => $unit,
             ]);
         }
     }
 
-    $grandTotal = (int) ($invoice->total_amount ?: $rows->sum('total'));
-
-    // اگر هیچ ردیفی نداریم، یک ردیف کلی می‌سازیم — متن از توضیح فاکتور
     if ($rows->isEmpty()) {
-        $rows->push([
-            'title' => $customerDesc !== '' ? $customerDesc : 'انجام خدمات',
-            'qty'   => 1,
-            'total' => $grandTotal,
-        ]);
+        $rows->push(['title' => 'انجام خدمات', 'total' => $grandTotal]);
     }
 
-    // اقلام WP قدیمی اغلب عنوان دارند ولی قیمت ندارند؛ در این حالت
-    // عنوان‌ها را در یک ردیف ادغام و مبلغ کل را روی همان می‌گذاریم
-    // تا ستون «مبلغ کل» با «جمع کل» جور باشد.
+    // اگر مجموع ردیف‌ها با مبلغ کل فاکتور نمی‌خواند، یک ردیف ادغام‌شده
+    // بساز که مبلغ کل را روی آن بگذارد.
     if ($rows->sum('total') === 0 && $grandTotal > 0) {
         $combinedTitle = $rows->pluck('title')->filter()->implode('، ');
         $rows = collect([[
-            'title' => $combinedTitle !== '' ? $combinedTitle : ($customerDesc ?: 'انجام خدمات'),
-            'qty'   => 1,
+            'title' => $combinedTitle !== '' ? $combinedTitle : 'انجام خدمات',
             'total' => $grandTotal,
         ]]);
+    }
+    if ($grandTotal === 0 && $rows->sum('total') > 0) {
+        $grandTotal = (int) $rows->sum('total');
     }
 
     // فرمت عدد فارسی
@@ -183,12 +184,6 @@
         table.items th { background: #f9fafb; font-weight: bold; }
         table.items td.desc {
             text-align: start; padding-inline-start: 16px;
-            line-height: 1.9;
-        }
-        table.items td.desc .desc-note {
-            margin-top: 6px; padding-top: 6px;
-            border-top: 1px dashed #d1d5db;
-            font-size: 11.5px; color: #475569;
             white-space: pre-line; line-height: 2;
         }
         table.items tr.total td {
@@ -313,12 +308,7 @@
                 @foreach($rows as $i => $row)
                     <tr>
                         <td>{{ $faNum($i + 1) }}</td>
-                        <td class="desc">
-                            <div>{{ $row['title'] }}</div>
-                            @if($i === 0 && $customerDesc !== '' && $customerDesc !== $row['title'])
-                                <div class="desc-note">{{ $customerDesc }}</div>
-                            @endif
-                        </td>
+                        <td class="desc">{{ $row['title'] }}</td>
                         <td>{{ $faNum($row['total']) }}</td>
                     </tr>
                 @endforeach
