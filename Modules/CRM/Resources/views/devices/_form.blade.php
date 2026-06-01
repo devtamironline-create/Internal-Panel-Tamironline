@@ -1,267 +1,228 @@
 @php
-    $allFaqs           = $allFaqs           ?? collect();
-    $selectedFaqIds    = $selectedFaqIds    ?? [];
-    $allReviews        = $allReviews        ?? collect();
+    $allFaqs = $allFaqs ?? collect();
+    $selectedFaqIds = $selectedFaqIds ?? [];
+    $allReviews = $allReviews ?? collect();
     $selectedReviewIds = $selectedReviewIds ?? [];
+    $secs = old('sections_enabled', $device->sections_enabled ?? []);
+    $secEnabled = fn (string $k, bool $default = true) => array_key_exists($k, (array) $secs)
+        ? (bool) $secs[$k] : $default;
+    $selectedBrandsCount = count($selectedBrandIds ?? []);
+    $selectedFaqCatCount = count($selectedFaqCategoryIds ?? []);
+    $selectedFaqCount = count($selectedFaqIds ?? []);
+    $selectedReviewsCount = count($selectedReviewIds ?? []);
+    $videosCount = count((array) old('videos', $device->videos ?? []));
 @endphp
 @csrf
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نام دستگاه <span class="text-red-500">*</span></label>
-        <input type="text" name="name" value="{{ old('name', $device->name ?? '') }}" required
-               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
-        @error('name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
 
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Slug (در صورت خالی، خودکار از نام ساخته می‌شود)</label>
-        <input type="text" name="slug" value="{{ old('slug', $device->slug ?? '') }}"
-               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500" dir="ltr">
-        @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
+<div class="space-y-5">
 
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">کلید آیکن (Lucide)</label>
-        <input type="text" name="icon" value="{{ old('icon', $device->icon ?? '') }}"
-               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500" dir="ltr"
-               placeholder="washing-machine">
-        <p class="text-xs text-gray-500 mt-1">نام آیکن Lucide به‌صورت kebab-case (مثال: washing-machine, refrigerator, snowflake).</p>
-        @error('icon')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تم رنگ (Tone)</label>
-        <select name="tone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
-            <option value="">—</option>
-            @foreach(['tone-blue','tone-green','tone-cyan','tone-sky','tone-orange','tone-amber','tone-rose','tone-violet','tone-emerald'] as $t)
-                <option value="{{ $t }}" @selected(old('tone', $device->tone ?? '') === $t)>{{ $t }}</option>
-            @endforeach
-        </select>
-        @error('tone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دسته‌بندی والد</label>
-        <select name="device_category_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
-            <option value="">— بدون دسته —</option>
-            @foreach(($deviceCategories ?? collect()) as $cat)
-                <option value="{{ $cat->id }}" @selected((int) old('device_category_id', $device->device_category_id ?? 0) === (int) $cat->id)>{{ $cat->name }}</option>
-            @endforeach
-        </select>
-        <p class="text-xs text-gray-500 mt-1">
-            گروه کلی مثل «لوازم آشپزخانه». <a href="{{ route('crm.device-categories.index') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها ↗</a>
-        </p>
-        @error('device_category_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">ترتیب نمایش</label>
-        <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $device->sort_order ?? 0) }}"
-               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500">
-        @error('sort_order')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
-
-    <div class="md:col-span-2">
-        @php
-            $currentThumbMedia = ! empty($device->thumbnail_media_id ?? null)
-                ? \Modules\Site\Models\Media\Media::with('variants')->find($device->thumbnail_media_id)
-                : null;
-        @endphp
-        @include('site::admin.partials.media-picker', [
-            'name' => 'thumbnail_media_id',
-            'current' => $currentThumbMedia,
-            'kind' => 'image',
-            'label' => 'تصویر بندانگشتی دستگاه (ابعاد ۴۰۰×۴۰۰)',
-            'previewSize' => 'w-32 h-32',
-        ])
-        <p class="text-xs text-gray-500 mt-1">یا URL مستقیم (در صورت عدم انتخاب از مخزن):</p>
-        <input type="text" name="thumbnail" value="{{ old('thumbnail', $device->thumbnail ?? '') }}" dir="ltr"
-               placeholder="https://..."
-               class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">
-    </div>
-
-    <div class="flex items-end gap-6">
-        <label class="inline-flex items-center gap-2">
-            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $device->is_active ?? true))
-                   class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
-            <span class="text-sm text-gray-700 dark:text-gray-200">فعال</span>
-        </label>
-        <label class="inline-flex items-center gap-2">
-            <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $device->is_featured ?? false))
-                   class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
-            <span class="text-sm text-gray-700 dark:text-gray-200">ویژه (نمایش پیش‌فرض در Hero)</span>
-        </label>
-    </div>
-</div>
-
-{{-- ───────────────────────── تصویر Hero اختصاصی این دستگاه ───────────────────────── --}}
-<div class="mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-    <h3 class="text-base font-bold mb-1">تصویر Hero اختصاصی این دستگاه</h3>
-    <p class="text-xs text-gray-500 mb-4">
-        دو تصویر برای دسکتاپ و موبایل، هرکدام با متن جایگزین (alt) مستقل. این تصاویر فقط در صفحه‌ی همین دستگاه نمایش داده می‌شوند و
-        پیش‌فرض الگوی <code>device</code> را override می‌کنند.
-    </p>
-    @include('crm::partials.hero-image-picker', [
-        'name' => 'hero_image',
-        'current' => old('hero_image', $device->hero_image ?? null),
-        'entityKind' => 'دستگاه',
-        'templateRoute' => route('site.admin.page-content.edit', 'device'),
-    ])
-</div>
-
-{{-- ───────────────────────── CMS Override Fields (Flat - single section) ───────────────────────── --}}
-<div class="mt-8 space-y-6">
-    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h3 class="text-base font-bold text-blue-900 dark:text-blue-200">محتوای CMS — صفحه‌ی detail دستگاه</h3>
-        <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
-            هر فیلدی که خالی بگذارید، فرانت از <strong>fixture پیش‌فرض</strong> خود استفاده می‌کند.
-        </p>
-    </div>
-
-    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
-
-        {{-- ─── Section toggles (فعال/غیرفعال کردن سکشن‌های صفحه) ─── --}}
-        @php
-            $secs = old('sections_enabled', $device->sections_enabled ?? []);
-            $secEnabled = fn(string $k, bool $default = true) => array_key_exists($k, (array) $secs)
-                ? (bool) $secs[$k] : $default;
-        @endphp
-        <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
-            <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-2">سکشن‌های فعال در این صفحه</h4>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                @foreach([
-                    'hero'          => 'Hero',
-                    'steps'         => 'مراحل خدمات',
-                    'live_activity' => 'Live Activity',
-                    'content'       => 'محتوای کامل',
-                    'faq'           => 'سوالات متداول',
-                    'brands'        => 'برندها',
-                    'testimonials'  => 'نظرات مشتریان',
-                    'videos'        => 'ویدیوها',
-                ] as $key => $label)
-                    <label class="inline-flex items-center gap-2">
-                        <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
-                        <input type="checkbox" name="sections_enabled[{{ $key }}]" value="1"
-                               @checked($secEnabled($key, true))>
-                        <span>{{ $label }}</span>
-                    </label>
-                @endforeach
+    {{-- ─── ۱) اطلاعات پایه ─── --}}
+    <x-crm::section-card sectionKey="basic" title="اطلاعات پایه" icon="📋"
+        description="نام، slug، آیکن، دسته، ترتیب و تصویر بندانگشتی">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">نام دستگاه <span class="text-red-500">*</span></label>
+                <input type="text" name="name" value="{{ old('name', $device->name ?? '') }}" required
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                @error('name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Slug</label>
+                <input type="text" name="slug" value="{{ old('slug', $device->slug ?? '') }}" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">کلید آیکن (Lucide)</label>
+                <input type="text" name="icon" value="{{ old('icon', $device->icon ?? '') }}" dir="ltr"
+                       placeholder="washing-machine"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                <p class="text-xs text-gray-500 mt-1">kebab-case (مثال: washing-machine، refrigerator، snowflake)</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">تم رنگ (Tone)</label>
+                <select name="tone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                    <option value="">—</option>
+                    @foreach(['tone-blue','tone-green','tone-cyan','tone-sky','tone-orange','tone-amber','tone-rose','tone-violet','tone-emerald'] as $t)
+                        <option value="{{ $t }}" @selected(old('tone', $device->tone ?? '') === $t)>{{ $t }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">دسته‌بندی والد</label>
+                <select name="device_category_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                    <option value="">— بدون دسته —</option>
+                    @foreach(($deviceCategories ?? collect()) as $cat)
+                        <option value="{{ $cat->id }}" @selected((int) old('device_category_id', $device->device_category_id ?? 0) === (int) $cat->id)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-gray-500 mt-1">
+                    <a href="{{ route('crm.device-categories.index') }}" target="_blank" class="text-blue-600 hover:underline">مدیریت دسته‌ها ↗</a>
+                </p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">ترتیب نمایش</label>
+                <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $device->sort_order ?? 0) }}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+            </div>
+            <div class="md:col-span-2">
+                @php
+                    $currentThumbMedia = ! empty($device->thumbnail_media_id ?? null)
+                        ? \Modules\Site\Models\Media\Media::with('variants')->find($device->thumbnail_media_id)
+                        : null;
+                @endphp
+                @include('site::admin.partials.media-picker', [
+                    'name' => 'thumbnail_media_id',
+                    'current' => $currentThumbMedia,
+                    'kind' => 'image',
+                    'label' => 'تصویر بندانگشتی دستگاه (۴۰۰×۴۰۰)',
+                    'previewSize' => 'w-32 h-32',
+                ])
+                <p class="text-xs text-gray-500 mt-1">یا URL مستقیم:</p>
+                <input type="text" name="thumbnail" value="{{ old('thumbnail', $device->thumbnail ?? '') }}" dir="ltr"
+                       placeholder="https://..." class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono ltr">
+            </div>
+            <div class="md:col-span-2 flex items-center gap-6">
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $device->is_active ?? true)) class="w-4 h-4">
+                    <span class="text-sm">فعال</span>
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $device->is_featured ?? false)) class="w-4 h-4">
+                    <span class="text-sm">ویژه (نمایش پیش‌فرض در Hero صفحه‌ی اصلی)</span>
+                </label>
             </div>
         </div>
+    </x-crm::section-card>
 
-        {{-- نام‌ها و توضیح --}}
+    {{-- ─── ۲) تصویر Hero ─── --}}
+    <x-crm::section-card sectionKey="hero-image" title="تصویر Hero اختصاصی این دستگاه" icon="🖼️"
+        description="دو slot (دسکتاپ + موبایل) با alt مجزا. خالی = template">
+        @include('crm::partials.hero-image-picker', [
+            'name' => 'hero_image',
+            'current' => old('hero_image', $device->hero_image ?? null),
+            'entityKind' => 'دستگاه',
+            'templateRoute' => route('site.admin.page-content.edit', 'device'),
+        ])
+    </x-crm::section-card>
+
+    {{-- ─── ۳) سکشن‌های فعال ─── --}}
+    <x-crm::section-card sectionKey="sections-enabled" title="سکشن‌های فعال در این صفحه" icon="🔘"
+        description="نمایش/مخفی‌سازی سکشن‌های صفحه‌ی دستگاه">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+            @foreach([
+                'hero' => 'Hero',
+                'steps' => 'مراحل خدمات',
+                'live_activity' => 'Live Activity',
+                'content' => 'محتوای کامل',
+                'faq' => 'سوالات متداول',
+                'brands' => 'برندها',
+                'testimonials' => 'نظرات مشتریان',
+                'videos' => 'ویدیوها',
+            ] as $key => $label)
+                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                    <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
+                    <input type="checkbox" name="sections_enabled[{{ $key }}]" value="1"
+                           @checked($secEnabled($key, true))
+                           class="w-4 h-4">
+                    <span>{{ $label }}</span>
+                </label>
+            @endforeach
+        </div>
+    </x-crm::section-card>
+
+    {{-- ─── ۴) متن‌های CMS ─── --}}
+    <x-crm::section-card sectionKey="cms-text" title="متن‌های صفحه (CMS override)" icon="✍️"
+        description="هر فیلد خالی → از الگوی سراسری device خوانده می‌شود">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium mb-1">نام کوتاه (short_name)</label>
                 <input type="text" name="short_name" value="{{ old('short_name', $device->short_name ?? '') }}" maxlength="80"
-                       placeholder="لباسشویی"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                       placeholder="لباسشویی" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">نام سرویس (service_name)</label>
                 <input type="text" name="service_name" value="{{ old('service_name', $device->service_name ?? '') }}" maxlength="160"
-                       placeholder="تعمیر لباسشویی"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                       placeholder="تعمیر لباسشویی" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
-
-            {{-- عنوان تکنسین — مخفی از دید ادمین (با CSS) ولی هنوز submit می‌شود --}}
-            <div class="sm:col-span-2" style="display:none">
-                <label class="block text-sm font-medium mb-1">عنوان تکنسین</label>
-                <input type="text" name="technician_name" value="{{ old('technician_name', $device->technician_name ?? '') }}" maxlength="160"
-                       placeholder="تکنسین لباسشویی"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-            </div>
-
             <div>
-                <label class="block text-sm font-medium mb-1">Badge / بالای تیتر (eyebrow)</label>
+                <label class="block text-sm font-medium mb-1">Badge / Eyebrow (بالای تیتر)</label>
                 <input type="text" name="eyebrow" value="{{ old('eyebrow', $device->eyebrow ?? '') }}" maxlength="120"
-                       placeholder="سرویس تخصصی"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                       placeholder="سرویس تخصصی" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div>
-                <label class="block text-sm font-medium mb-1">کپشن (متن کوتاه زیر زیرتیتر)</label>
+                <label class="block text-sm font-medium mb-1">کپشن (متن کوتاه)</label>
                 <input type="text" name="caption" value="{{ old('caption', $device->caption ?? '') }}" maxlength="500"
-                       placeholder="بیش از ۱۰ سال تجربه..."
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div class="sm:col-span-2">
                 <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
                 <input type="text" name="subtitle" value="{{ old('subtitle', $device->subtitle ?? '') }}" maxlength="500"
-                       placeholder="در محل، با گارانتی، بدون پیش‌پرداخت"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium mb-1">محتوای کامل صفحه (سکشن content)</label>
+                <label class="block text-sm font-medium mb-1">محتوای کامل (سکشن content)</label>
                 <textarea name="description" rows="10"
                           class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description', $device->description ?? '') }}</textarea>
-                <p class="text-xs text-gray-500 mt-1">محتوای متنی غنی برای سکشن «محتوای کامل». خروجی به‌صورت HTML در فرانت render می‌شود.</p>
+                <p class="text-xs text-gray-500 mt-1">محتوای متنی غنی — HTML در فرانت render می‌شود.</p>
+            </div>
+            {{-- hidden technician_name (legacy) --}}
+            <div style="display:none">
+                <input type="text" name="technician_name" value="{{ old('technician_name', $device->technician_name ?? '') }}">
             </div>
         </div>
+    </x-crm::section-card>
 
-        {{-- ─── دکمه‌های CTA (Hero) ─── --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <h4 class="text-sm font-bold mb-3">دکمه‌های اصلی Hero</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
-                    <p class="text-xs font-bold text-gray-600">دکمه ثبت سفارش (Primary)</p>
-                    <input type="text" name="cta_primary_label" value="{{ old('cta_primary_label', $device->cta_primary_label ?? '') }}" maxlength="60"
-                           placeholder="ثبت سفارش"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
-                    <input type="text" name="cta_primary_url" value="{{ old('cta_primary_url', $device->cta_primary_url ?? '') }}" maxlength="500" dir="ltr"
-                           placeholder="/order یا https://..."
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                    <input type="text" name="cta_primary_icon" value="{{ old('cta_primary_icon', $device->cta_primary_icon ?? '') }}" maxlength="60" dir="ltr"
-                           placeholder="shopping-cart"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                    <p class="text-xs text-gray-500">آیکن Lucide به kebab-case.</p>
-                </div>
-                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
-                    <p class="text-xs font-bold text-gray-600">دکمه تماس فوری (Secondary)</p>
-                    <input type="text" name="cta_secondary_label" value="{{ old('cta_secondary_label', $device->cta_secondary_label ?? '') }}" maxlength="60"
-                           placeholder="تماس فوری"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
-                    <input type="text" name="cta_secondary_url" value="{{ old('cta_secondary_url', $device->cta_secondary_url ?? '') }}" maxlength="500" dir="ltr"
-                           placeholder="tel:02112345678"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                    <input type="text" name="cta_secondary_icon" value="{{ old('cta_secondary_icon', $device->cta_secondary_icon ?? '') }}" maxlength="60" dir="ltr"
-                           placeholder="phone"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                    <p class="text-xs text-gray-500">اگر خالی بگذارید، از مقدار سراسری استفاده می‌شود.</p>
-                </div>
+    {{-- ─── ۵) CTA Buttons ─── --}}
+    <x-crm::section-card sectionKey="cta" title="دکمه‌های Hero" icon="🔗"
+        description="دو دکمه‌ی primary و secondary بالای صفحه‌ی دستگاه">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
+                <p class="text-xs font-bold text-gray-600 dark:text-gray-400">دکمه‌ی ثبت سفارش (Primary)</p>
+                <input type="text" name="cta_primary_label" value="{{ old('cta_primary_label', $device->cta_primary_label ?? '') }}" maxlength="60"
+                       placeholder="ثبت سفارش" class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
+                <input type="text" name="cta_primary_url" value="{{ old('cta_primary_url', $device->cta_primary_url ?? '') }}" maxlength="500" dir="ltr"
+                       placeholder="/order" class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                <input type="text" name="cta_primary_icon" value="{{ old('cta_primary_icon', $device->cta_primary_icon ?? '') }}" maxlength="60" dir="ltr"
+                       placeholder="shopping-cart" class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+            </div>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
+                <p class="text-xs font-bold text-gray-600 dark:text-gray-400">دکمه‌ی تماس فوری (Secondary)</p>
+                <input type="text" name="cta_secondary_label" value="{{ old('cta_secondary_label', $device->cta_secondary_label ?? '') }}" maxlength="60"
+                       placeholder="تماس فوری" class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
+                <input type="text" name="cta_secondary_url" value="{{ old('cta_secondary_url', $device->cta_secondary_url ?? '') }}" maxlength="500" dir="ltr"
+                       placeholder="tel:..." class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+                <input type="text" name="cta_secondary_icon" value="{{ old('cta_secondary_icon', $device->cta_secondary_icon ?? '') }}" maxlength="60" dir="ltr"
+                       placeholder="phone" class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
             </div>
         </div>
+    </x-crm::section-card>
 
-        {{-- ─── تصاویر مراحل خدمات (override on global) ─── --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <h4 class="text-sm font-bold mb-1">تصاویر سکشن مراحل دریافت خدمات</h4>
-            <p class="text-xs text-gray-500 mb-3">
-                مقدار پیش‌فرض سراسری از
-                <a href="{{ route('site.admin.page-content.edit', 'device') }}" target="_blank" class="text-blue-600 hover:underline">صفحه‌ی الگوی device</a>
-                خوانده می‌شود. اگر این فیلدها را پر کنید، در صفحه‌ی این دستگاه override می‌شود.
-            </p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-medium mb-1">URL تصویر دسکتاپ</label>
-                    <input type="text" name="steps_image_desktop" value="{{ old('steps_image_desktop', $device->steps_image_desktop ?? '') }}" maxlength="500" dir="ltr"
-                           placeholder="https://...desktop.png"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium mb-1">URL تصویر موبایل</label>
-                    <input type="text" name="steps_image_mobile" value="{{ old('steps_image_mobile', $device->steps_image_mobile ?? '') }}" maxlength="500" dir="ltr"
-                           placeholder="https://...mobile.png"
-                           class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
-                </div>
+    {{-- ─── ۶) تصاویر مراحل ─── --}}
+    <x-crm::section-card sectionKey="steps-images" title="تصاویر سکشن مراحل خدمات" icon="🪜"
+        description="override تصاویر steps برای این دستگاه (خالی = template)">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium mb-1">URL تصویر دسکتاپ</label>
+                <input type="text" name="steps_image_desktop" value="{{ old('steps_image_desktop', $device->steps_image_desktop ?? '') }}" maxlength="500" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1">URL تصویر موبایل</label>
+                <input type="text" name="steps_image_mobile" value="{{ old('steps_image_mobile', $device->steps_image_mobile ?? '') }}" maxlength="500" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm font-mono ltr">
             </div>
         </div>
+    </x-crm::section-card>
 
-        {{-- قیمت و رنگ‌ها --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+    {{-- ─── ۷) قیمت و رنگ ─── --}}
+    <x-crm::section-card sectionKey="pricing" title="قیمت و رنگ‌بندی" icon="💰"
+        description="قیمت شروع و رنگ accent/پس‌زمینه برای این دستگاه">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium mb-1">قیمت شروع (ریال)</label>
                 <input type="number" name="starting_price" value="{{ old('starting_price', $device->starting_price ?? '') }}" min="0"
-                       placeholder="1500000"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                       placeholder="1500000" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">رنگ accent (hex)</label>
@@ -276,171 +237,126 @@
                 @error('bg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
+    </x-crm::section-card>
 
-        {{-- برندهای پشتیبانی‌شده توسط این دستگاه --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            @include('crm::partials.multi-picker', [
-                'name'        => 'brand_ids',
-                'items'       => $allBrands ?? collect(),
-                'selectedIds' => $selectedBrandIds ?? [],
-                'label'       => 'برندهای پشتیبانی‌شده توسط این دستگاه',
-                'help'        => 'برندهایی را که برای این دستگاه تعمیر می‌کنید انتخاب کنید. اگر هیچ‌کدام را انتخاب نکنید، در API همه‌ی برندهای فعال نمایش داده می‌شوند.',
-                'emptyText'   => 'برند فعالی موجود نیست.',
-            ])
-        </div>
+    {{-- ─── ۸) برندهای پشتیبانی ─── --}}
+    <x-crm::section-card sectionKey="brands" title="برندهای پشتیبانی" icon="🏢"
+        description="برندهایی که برای این دستگاه تعمیر می‌کنید"
+        count="{{ $selectedBrandsCount }}">
+        @include('crm::partials.multi-picker', [
+            'name' => 'brand_ids',
+            'items' => $allBrands ?? collect(),
+            'selectedIds' => $selectedBrandIds ?? [],
+            'label' => 'برندها',
+            'help' => 'خالی = همه‌ی برندهای فعال نمایش داده می‌شوند.',
+            'emptyText' => 'برند فعالی موجود نیست.',
+        ])
+    </x-crm::section-card>
 
-        {{-- دسته‌بندی FAQ — کل سوالات یک دسته به‌صورت یکجا --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            @php
-                $faqCatItems = ($allFaqCategories ?? collect())->map(fn ($c) => (object) [
-                    'id' => (int) $c->id,
-                    'label' => $c->name,
-                    'slug' => $c->slug,
-                    'description_text' => 'شامل ' . ($c->faqs_count ?? 0) . ' سوال منتشرشده.',
-                    'badge' => 'دسته‌بندی',
-                    'badge_color' => 'emerald',
-                ]);
-            @endphp
-            @include('crm::partials.multi-picker', [
-                'name'        => 'faq_category_ids',
-                'items'       => $faqCatItems,
-                'selectedIds' => $selectedFaqCategoryIds ?? [],
-                'columns'     => 'wide',
-                'label'       => 'دسته‌بندی سوالات متداول',
-                'help'        => 'با انتخاب هر دسته‌بندی، تمام سوالات منتشرشده‌ی آن به‌صورت خودکار در صفحه‌ی این دستگاه نمایش داده می‌شوند. ' .
-                                 'می‌توانید علاوه بر آن سوالات منفرد هم در باکس پایین انتخاب کنید. ' .
-                                 'مدیریت دسته‌ها: ' .
-                                 '<a href="' . route('site.admin.taxonomies.index', 'faq') . '" target="_blank">/admin/site/taxonomies/faq</a>',
-                'emptyText'   => 'دسته‌بندی فعالی برای FAQ تعریف نشده.',
-            ])
-        </div>
+    {{-- ─── ۹) دسته‌بندی FAQ ─── --}}
+    <x-crm::section-card sectionKey="faq-categories" title="دسته‌بندی سوالات متداول" icon="🏷️"
+        description="با انتخاب دسته، تمام سوالات منتشرشده خودکار نمایش داده می‌شوند"
+        count="{{ $selectedFaqCatCount }}">
+        @php
+            $faqCatItems = ($allFaqCategories ?? collect())->map(fn ($c) => (object) [
+                'id' => (int) $c->id,
+                'label' => $c->name,
+                'slug' => $c->slug,
+                'description_text' => 'شامل '.($c->faqs_count ?? 0).' سوال منتشرشده.',
+                'badge' => 'دسته‌بندی',
+                'badge_color' => 'emerald',
+            ]);
+        @endphp
+        @include('crm::partials.multi-picker', [
+            'name' => 'faq_category_ids',
+            'items' => $faqCatItems,
+            'selectedIds' => $selectedFaqCategoryIds ?? [],
+            'columns' => 'wide',
+            'label' => 'دسته‌های FAQ',
+            'help' => 'مدیریت دسته‌ها: <a href="'.route('site.admin.taxonomies.index', 'faq').'" target="_blank">/admin/site/taxonomies/faq</a>',
+            'emptyText' => 'دسته‌بندی فعالی برای FAQ تعریف نشده.',
+        ])
+    </x-crm::section-card>
 
-        {{-- FAQ از بانک — انتخاب چندتایی از /admin/site/faqs --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            @php
-                $faqItems = ($allFaqs ?? collect())->map(fn ($f) => (object) [
-                    'id' => $f->id,
-                    'label' => $f->question,
-                    'description_text' => \Illuminate\Support\Str::limit(strip_tags((string) ($f->answer ?? '')), 180),
-                    'badge' => 'FAQ',
-                    'badge_color' => 'indigo',
-                ]);
-            @endphp
-            @include('crm::partials.multi-picker', [
-                'name'        => 'faq_ids',
-                'items'       => $faqItems,
-                'selectedIds' => $selectedFaqIds ?? [],
-                'columns'     => 'wide',
-                'label'       => 'سوالات متداول این دستگاه',
-                'help'        => 'از بانک FAQ سوالاتی که می‌خواهید روی صفحه‌ی این دستگاه نشان داده شوند انتخاب کنید. ترتیب انتخاب = ترتیب نمایش. ' .
-                                 'مدیریت بانک: ' .
-                                 '<a href="' . route('site.admin.faqs.index') . '" target="_blank">/admin/site/faqs</a>',
-                'emptyText'   => 'هنوز سوال منتشرشده‌ای در بانک FAQ نیست.',
-            ])
-        </div>
+    {{-- ─── ۱۰) سوالات منفرد ─── --}}
+    <x-crm::section-card sectionKey="faqs" title="سوالات متداول این دستگاه" icon="❓"
+        description="سوالات منفرد از بانک FAQ — ترتیب انتخاب = ترتیب نمایش"
+        count="{{ $selectedFaqCount }}">
+        @php
+            $faqItems = $allFaqs->map(fn ($f) => (object) [
+                'id' => $f->id,
+                'label' => $f->question,
+                'description_text' => \Illuminate\Support\Str::limit(strip_tags((string) ($f->answer ?? '')), 180),
+                'badge' => 'FAQ',
+                'badge_color' => 'indigo',
+            ]);
+        @endphp
+        @include('crm::partials.multi-picker', [
+            'name' => 'faq_ids',
+            'items' => $faqItems,
+            'selectedIds' => $selectedFaqIds,
+            'columns' => 'wide',
+            'label' => 'سوالات اختصاصی',
+            'help' => 'مدیریت بانک: <a href="'.route('site.admin.faqs.index').'" target="_blank">/admin/site/faqs</a>',
+            'emptyText' => 'بانک FAQ خالی است.',
+        ])
+    </x-crm::section-card>
 
-        {{-- Reviews از بانک — انتخاب چندتایی از /admin/site/reviews --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            @php
-                $reviewItems = ($allReviews ?? collect())->map(function ($r) {
-                    $isAudio = $r->type === \Modules\Site\Models\Review::TYPE_AUDIO;
-                    $stars = str_repeat('★', (int) $r->rating) . str_repeat('☆', max(0, 5 - (int) $r->rating));
-                    $body = $isAudio
-                        ? ($r->topic ? $r->topic . ' (' . $stars . ')' : $stars)
-                        : ($r->content ? $stars . ' — ' . \Illuminate\Support\Str::limit(strip_tags((string) $r->content), 180) : $stars);
+    {{-- ─── ۱۱) دیدگاه‌ها ─── --}}
+    <x-crm::section-card sectionKey="reviews" title="دیدگاه‌های نمایش‌داده‌شده" icon="💬"
+        description="نظرات صوتی/متنی انتخاب‌شده از بانک نظرات"
+        count="{{ $selectedReviewsCount }}">
+        @php
+            $reviewItems = $allReviews->map(function ($r) {
+                $isAudio = $r->type === \Modules\Site\Models\Review::TYPE_AUDIO;
+                $stars = str_repeat('★', (int) $r->rating).str_repeat('☆', max(0, 5 - (int) $r->rating));
+                $body = $isAudio
+                    ? ($r->topic ? $r->topic.' ('.$stars.')' : $stars)
+                    : ($r->content ? $stars.' — '.\Illuminate\Support\Str::limit(strip_tags((string) $r->content), 180) : $stars);
 
-                    return (object) [
-                        'id' => $r->id,
-                        'label' => $r->author_name,
-                        'description_text' => $body,
-                        'badge' => $isAudio ? 'صوتی' : 'متنی',
-                        'badge_color' => $isAudio ? 'purple' : 'sky',
-                    ];
-                });
-            @endphp
-            @include('crm::partials.multi-picker', [
-                'name'        => 'review_ids',
-                'items'       => $reviewItems,
-                'selectedIds' => $selectedReviewIds ?? [],
-                'columns'     => 'wide',
-                'label'       => 'دیدگاه‌های نمایش‌داده‌شده در این دستگاه',
-                'help'        => 'از بانک نظرات (شامل توصیه‌نامه‌های صوتی و نظرات متنی تأییدشده) انتخاب کنید. ' .
-                                 'مدیریت بانک: ' .
-                                 '<a href="' . route('site.admin.reviews.index') . '" target="_blank">/admin/site/reviews</a>',
-                'emptyText'   => 'دیدگاه تأییدشده‌ای در بانک نیست.',
-            ])
-        </div>
+                return (object) [
+                    'id' => $r->id,
+                    'label' => $r->author_name,
+                    'description_text' => $body,
+                    'badge' => $isAudio ? 'صوتی' : 'متنی',
+                    'badge_color' => $isAudio ? 'purple' : 'sky',
+                ];
+            });
+        @endphp
+        @include('crm::partials.multi-picker', [
+            'name' => 'review_ids',
+            'items' => $reviewItems,
+            'selectedIds' => $selectedReviewIds,
+            'columns' => 'wide',
+            'label' => 'انتخاب از بانک نظرات',
+            'help' => 'مدیریت بانک: <a href="'.route('site.admin.reviews.index').'" target="_blank">/admin/site/reviews</a>',
+            'emptyText' => 'دیدگاه تأییدشده‌ای در بانک نیست.',
+        ])
+    </x-crm::section-card>
 
-        {{-- مشکلات رایج — مخفی از دید ادمین (با CSS) --}}
-        <div style="display:none">
-            @include('crm::partials.json-repeater', [
-                'name'  => 'issues',
-                'label' => 'مشکلات رایج این دستگاه',
-                'items' => old('issues', $device->issues ?? []),
-                'item_fields' => [
-                    'title'       => ['label' => 'عنوان مشکل', 'type' => 'string'],
-                    'description' => ['label' => 'توضیح', 'type' => 'textarea'],
-                ],
-            ])
-        </div>
+    {{-- ─── ۱۲) ویدیوها ─── --}}
+    <x-crm::section-card sectionKey="videos" title="ویدیوهای اختصاصی این دستگاه" icon="🎬"
+        description="aparat_id / youtube_id / mp4 مستقیم (اولویت با aparat). خالی = template"
+        count="{{ $videosCount }}">
+        @include('crm::partials.json-repeater', [
+            'name' => 'videos',
+            'label' => 'لیست ویدیوها',
+            'items' => old('videos', $device->videos ?? []),
+            'item_fields' => [
+                'title' => ['label' => 'عنوان ویدیو', 'type' => 'string'],
+                'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string'],
+                'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
+                'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
+                'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
+                'poster_url' => ['label' => 'تصویر cover (URL)', 'type' => 'string'],
+            ],
+        ])
+    </x-crm::section-card>
 
-        {{-- مراحل سرویس — مخفی از دید ادمین (با CSS) --}}
-        <div style="display:none">
-            @include('crm::partials.json-repeater', [
-                'name'  => 'service_steps',
-                'label' => 'مراحل کاری سفارش تا تحویل',
-                'items' => old('service_steps', $device->service_steps ?? []),
-                'item_fields' => [
-                    'title'       => ['label' => 'عنوان', 'type' => 'string'],
-                    'description' => ['label' => 'توضیح', 'type' => 'textarea'],
-                    'icon'        => ['label' => 'آیکون (lucide name)', 'type' => 'string'],
-                ],
-            ])
-        </div>
-
-        {{-- ───────── ویدیوهای اختصاصی این دستگاه (override template) ───────── --}}
-        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <div class="flex items-start justify-between gap-3 mb-2">
-                <div>
-                    <h4 class="text-sm font-semibold">ویدیوهای اختصاصی این دستگاه</h4>
-                    <p class="text-xs text-gray-500 mt-1">
-                        اگر خالی بگذارید، ویدیوهای پیش‌فرض تعریف‌شده در
-                        <a href="{{ route('site.admin.page-content.edit', 'device') }}" target="_blank" class="text-blue-600 hover:underline">الگوی device</a>
-                        نمایش داده می‌شوند. آپلود ویدیو: aparat_id یا youtube_id یا URL مستقیم mp4.
-                    </p>
-                </div>
-            </div>
-            @include('crm::partials.json-repeater', [
-                'name' => 'videos',
-                'label' => 'لیست ویدیوها',
-                'items' => old('videos', $device->videos ?? []),
-                'item_fields' => [
-                    'title' => ['label' => 'عنوان ویدیو', 'type' => 'string'],
-                    'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string'],
-                    'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
-                    'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
-                    'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
-                    'poster_url' => ['label' => 'تصویر cover (URL)', 'type' => 'string'],
-                ],
-            ])
-        </div>
-
-        {{-- گارانتی و پشتیبانی — مخفی از دید ادمین (با CSS) --}}
-        <div class="space-y-4" style="display:none">
-            <div>
-                <label class="block text-sm font-medium mb-1">متن گارانتی</label>
-                <textarea name="warranty_text" rows="3" maxlength="3000"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('warranty_text', $device->warranty_text ?? '') }}</textarea>
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">اطلاعات پشتیبانی</label>
-                <textarea name="support_info" rows="3" maxlength="3000"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('support_info', $device->support_info ?? '') }}</textarea>
-            </div>
-        </div>
-
-        {{-- سئو --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+    {{-- ─── ۱۳) سئو ─── --}}
+    <x-crm::section-card sectionKey="seo" title="سئو (Meta)" icon="🔍"
+        description="Meta Title و Meta Description مخصوص این دستگاه">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Meta Title</label>
                 <input type="text" name="meta_title" value="{{ old('meta_title', $device->meta_title ?? '') }}" maxlength="200"
@@ -452,6 +368,31 @@
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('meta_description', $device->meta_description ?? '') }}</textarea>
             </div>
         </div>
-    </div>
-</div>
+    </x-crm::section-card>
 
+    {{-- ─── فیلدهای legacy مخفی (هنوز submit می‌شوند) ─── --}}
+    <div style="display:none">
+        @include('crm::partials.json-repeater', [
+            'name' => 'issues',
+            'label' => 'مشکلات (legacy)',
+            'items' => old('issues', $device->issues ?? []),
+            'item_fields' => [
+                'title' => ['label' => 'عنوان', 'type' => 'string'],
+                'description' => ['label' => 'توضیح', 'type' => 'textarea'],
+            ],
+        ])
+        @include('crm::partials.json-repeater', [
+            'name' => 'service_steps',
+            'label' => 'مراحل (legacy)',
+            'items' => old('service_steps', $device->service_steps ?? []),
+            'item_fields' => [
+                'title' => ['label' => 'عنوان', 'type' => 'string'],
+                'description' => ['label' => 'توضیح', 'type' => 'textarea'],
+                'icon' => ['label' => 'آیکن', 'type' => 'string'],
+            ],
+        ])
+        <textarea name="warranty_text" rows="3">{{ old('warranty_text', $device->warranty_text ?? '') }}</textarea>
+        <textarea name="support_info" rows="3">{{ old('support_info', $device->support_info ?? '') }}</textarea>
+    </div>
+
+</div>

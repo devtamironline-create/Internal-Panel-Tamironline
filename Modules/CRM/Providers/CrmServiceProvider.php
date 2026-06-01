@@ -24,13 +24,15 @@ class CrmServiceProvider extends ServiceProvider
     {
         $this->app->register(RouteServiceProvider::class);
 
-        $this->mergeConfigFrom(__DIR__ . '/../config/config.php', 'crm');
+        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'crm');
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'crm');
+        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'crm');
+        \Illuminate\Support\Facades\Blade::componentNamespace('Modules\\CRM\\View\\Components', 'crm');
+        \Illuminate\Support\Facades\Blade::anonymousComponentNamespace('crm::components', 'crm');
 
         Livewire::component('crm.order-wizard', OrderWizard::class);
 
@@ -39,12 +41,12 @@ class CrmServiceProvider extends ServiceProvider
         // آن به child sections (@section) منتقل نمی‌شود.
         View::composer('crm::tech-panel.*', function ($view) {
             $view->with([
-                'brandLogo'          => Setting::get('tech_panel_logo'),
-                'brandBanner'        => Setting::get('tech_panel_banner'),
-                'brandHero'          => Setting::get('tech_panel_hero'),
+                'brandLogo' => Setting::get('tech_panel_logo'),
+                'brandBanner' => Setting::get('tech_panel_banner'),
+                'brandHero' => Setting::get('tech_panel_hero'),
                 'brandDefaultAvatar' => Setting::get('tech_panel_default_avatar'),
-                'appName'            => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
-                'supportPhone'       => Setting::get('tech_panel_support_phone'),
+                'appName' => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
+                'supportPhone' => Setting::get('tech_panel_support_phone'),
             ]);
         });
 
