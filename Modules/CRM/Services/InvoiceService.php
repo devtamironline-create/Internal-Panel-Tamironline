@@ -40,7 +40,7 @@ class InvoiceService
             return $existing;
         }
 
-        return DB::transaction(function () use ($order, $createdBy, $existing) {
+        $invoice = DB::transaction(function () use ($order, $createdBy, $existing) {
             if ($existing) {
                 // فقط فاکتور قبلی را superseded می‌کنیم تا از لیست
                 // فعال خارج شود. **wallet tx آن را دست نمی‌زنیم** —
@@ -109,5 +109,69 @@ class InvoiceService
 
             return $invoice;
         });
+
+        // ─── ارسال خودکار پیامک «صدور فاکتور» به مشتری ──────────────
+        // فقط بعد از موفقیت transaction، و فقط برای فاکتورهای اولِ یک
+        // سفارش (یعنی existing=null) — برای تکمیل مجدد سفارش بازگشتی
+        // پیامک دوباره ارسال نمی‌شود (مشتری قبلاً اطلاع داشته).
+        if ($invoice && ! $existing) {
+            $this->fireInvoiceSms($invoice);
+        }
+
+        return $invoice;
+    }
+
+    /**
+     * ارسال پیامک «customer_invoice_issued» با لینک عمومی فاکتور.
+     * در صورت غیرفعال بودن تمپلیت یا خطای کاوه‌نگار، سایلنت رد می‌شود
+     * (لاگ ولی فاکتور بدون مشکل ساخته شده).
+     */
+    protected function fireInvoiceSms(Invoice $invoice): void
+    {
+        try {
+            $order = $invoice->order;
+            if (! $order) return;
+
+            $mobile = $order->customer_mobile ?: $order->customer?->mobile;
+            if (! $mobile) return;
+
+            $trigger = \Modules\CRM\Enums\SmsTrigger::CustomerInvoiceIssued;
+            $template = \Modules\CRM\Models\SmsTemplate::where('trigger_key', $trigger->value)
+                ->where('is_active', true)
+                ->first();
+            if (! $template || empty($template->kavenegar_template)) {
+                return; // تمپلیت فعال نیست → سایلنت
+            }
+
+            $order->loadMissing('customer');
+            $vars = [
+                'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
+                'order_code'    => (string) ($order->order_code ?? ''),
+                'amount'        => (string) (int) $invoice->total_amount,
+                'invoice_code'  => (string) $invoice->invoice_code,
+                'receipt_url'   => route('crm.invoice.public', $invoice->invoice_code),
+            ];
+            $tokens = $template->renderTokens($vars);
+
+            $sms = app(\Modules\SMS\Services\KavenegarService::class);
+            $result = $sms->sendTemplate($mobile, $template->kavenegar_template, $tokens);
+
+            \Modules\CRM\Models\SmsLog::create([
+                'order_id'         => $order->id,
+                'trigger_key'      => $trigger->value,
+                'recipient_mobile' => $mobile,
+                'recipient_role'   => 'customer',
+                'body'             => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
+                'status'           => $result['success'] ? 'success' : 'failed',
+                'response'         => $result['success'] ? null : ($result['message'] ?? null),
+                'sent_by'          => null,
+                'created_at'       => now(),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Auto invoice SMS failed', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
