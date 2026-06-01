@@ -415,8 +415,14 @@ class DashboardController extends Controller
         }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
+        // در تکمیل مجدد سفارش‌های بازگشتی (return_type != null) پیامک
+        // اطلاع‌رسانی به مشتری ارسال نمی‌شود؛ مشتری قبلاً موقع تکمیل اول
+        // اطلاع گرفته بود و این مرحله ادامه/تصحیح همان کار است.
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
-            $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+            $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+            if (! $skipForReturned) {
+                $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+            }
         }
 
         return redirect()

@@ -802,8 +802,11 @@ class OrderController extends Controller
             $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
         }
 
-        // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن
-        if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
+        // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن — مگر
+        // تکمیل مجدد سفارش بازگشتی (return_type != null)؛ در این حالت
+        // مشتری قبلاً اطلاع داشته و نباید دوباره پیامک فاکتور بگیرد.
+        $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+        if (! $skipForReturned && $trigger = SmsTrigger::fromOrderStatus($newStatus)) {
             $this->smsNotifier->notify($order->refresh(), $trigger);
         }
 
