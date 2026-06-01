@@ -138,12 +138,19 @@ class QuestionController extends Controller
         $data = $request->validate(['status' => 'required|in:pending,approved,rejected,spam']);
 
         $question = Question::findOrFail($id);
+        $oldStatus = $question->status;
         $question->update([
             'status' => $data['status'],
             'approved_at' => $data['status'] === Question::STATUS_APPROVED ? now() : null,
             'approved_by_user_id' => $data['status'] === Question::STATUS_APPROVED ? auth()->id() : null,
             'published_at' => $data['status'] === Question::STATUS_APPROVED ? ($question->published_at ?? now()) : null,
         ]);
+
+        \Modules\Site\Support\ForumActivityLogger::log(
+            "status:{$data['status']}",
+            questionId: $question->id,
+            meta: ['from' => $oldStatus, 'to' => $data['status']],
+        );
 
         return back()->with('success', 'وضعیت سوال به‌روز شد.');
     }
@@ -155,7 +162,14 @@ class QuestionController extends Controller
             abort(404);
         }
         $q = Question::findOrFail($id);
-        $q->update([$flag => ! $q->{$flag}]);
+        $newValue = ! $q->{$flag};
+        $q->update([$flag => $newValue]);
+
+        \Modules\Site\Support\ForumActivityLogger::log(
+            "flag:{$flag}",
+            questionId: $q->id,
+            meta: ['value' => $newValue],
+        );
 
         return back()->with('success', 'به‌روز شد.');
     }
@@ -182,6 +196,8 @@ class QuestionController extends Controller
             'brand_id' => $data['brand_id'] ?? null,
             'tags' => $tags ?: null,
         ]);
+
+        \Modules\Site\Support\ForumActivityLogger::log('edit', questionId: $q->id);
 
         return back()->with('success', 'سوال ویرایش شد.');
     }
@@ -238,13 +254,24 @@ class QuestionController extends Controller
                 break;
         }
 
+        \Modules\Site\Support\ForumActivityLogger::log(
+            "bulk:{$data['action']}",
+            meta: ['ids' => $data['ids'], 'count' => $count],
+        );
+
         return back()->with('success', "اقدام «{$data['action']}» روی {$count} سوال اعمال شد.");
     }
 
     public function destroy(int $id): RedirectResponse
     {
         $this->checkDelete();
-        Question::findOrFail($id)->delete();
+        $q = Question::findOrFail($id);
+        \Modules\Site\Support\ForumActivityLogger::log(
+            'delete',
+            questionId: $q->id,
+            meta: ['title' => $q->title, 'slug' => $q->slug],
+        );
+        $q->delete();
 
         return redirect()->route('site.admin.forum.questions.index')->with('success', 'سوال حذف شد.');
     }
@@ -256,6 +283,7 @@ class QuestionController extends Controller
         $this->checkAnswers();
         $data = $request->validate(['status' => 'required|in:pending,approved,rejected,spam']);
         $answer = Answer::where('question_id', $id)->findOrFail($answerId);
+        $oldStatus = $answer->status;
 
         $answer->update([
             'status' => $data['status'],
@@ -265,6 +293,13 @@ class QuestionController extends Controller
 
         $answer->question->recomputeResolution();
 
+        \Modules\Site\Support\ForumActivityLogger::log(
+            "answer-status:{$data['status']}",
+            questionId: $id,
+            answerId: $answerId,
+            meta: ['from' => $oldStatus, 'to' => $data['status']],
+        );
+
         return back()->with('success', 'وضعیت پاسخ به‌روز شد.');
     }
 
@@ -273,6 +308,12 @@ class QuestionController extends Controller
         $this->checkAnswers();
         $answer = Answer::where('question_id', $id)->findOrFail($answerId);
         $question = $answer->question;
+        \Modules\Site\Support\ForumActivityLogger::log(
+            'answer-delete',
+            questionId: $id,
+            answerId: $answerId,
+            meta: ['author' => $answer->author_name],
+        );
         $answer->delete();
         $question?->recomputeResolution();
 
@@ -309,6 +350,13 @@ class QuestionController extends Controller
             $expert->increment('answers_count');
         }
         $question->recomputeResolution();
+
+        \Modules\Site\Support\ForumActivityLogger::log(
+            'admin-reply',
+            questionId: $question->id,
+            answerId: $answer->id,
+            meta: ['expert_id' => $expert?->id, 'expert_name' => $expert?->name],
+        );
 
         return back()->with('success', 'پاسخ کارشناسی ثبت و منتشر شد.');
     }

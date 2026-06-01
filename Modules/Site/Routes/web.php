@@ -71,6 +71,10 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
 
     // انجمن — سوالات و کارشناسان
     Route::prefix('forum')->name('forum.')->group(function () {
+        // داشبورد و audit log
+        Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/activity', [\Modules\Site\Http\Controllers\Admin\Forum\DashboardController::class, 'activity'])->name('activity');
+
         // سوالات
         Route::prefix('questions')->name('questions.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'index'])->name('index');
