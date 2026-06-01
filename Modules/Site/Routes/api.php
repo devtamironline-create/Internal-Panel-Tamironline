@@ -105,6 +105,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/forum/questions', [ForumController::class, 'store'])
             ->name('api.v1.forum.questions.store');
     });
+    // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/forum/report', [ForumController::class, 'storeReport'])
+            ->name('api.v1.forum.report');
+    });
+
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/forum/questions/{slug}/answers', [ForumController::class, 'storeAnswer'])
             ->where('slug', '[^/]+')

@@ -13,6 +13,7 @@ use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Forum\Answer;
 use Modules\Site\Models\Forum\Expert;
 use Modules\Site\Models\Forum\Question;
+use Modules\Site\Models\Forum\Report;
 use Modules\Site\Support\MediaUrl;
 
 /**
@@ -617,5 +618,63 @@ class ForumController extends Controller
             'is_accepted' => (bool) $a->is_accepted,
             'published_at' => ($a->approved_at ?? $a->created_at)?->utc()->toIso8601ZuluString(),
         ];
+    }
+
+    /**
+     * POST /v1/forum/report — ثبت گزارش روی یک سوال یا پاسخ.
+     *
+     * Body:
+     *   target_type: 'question' | 'answer'
+     *   target_id:   int
+     *   reason:      spam | inappropriate | wrong-info | duplicate | other
+     *   notes:       string|null (اختیاری)
+     *   reporter_name / reporter_email: اختیاری
+     *
+     * Rate-limit: ۵ گزارش از یک IP در دقیقه (در routes.php).
+     */
+    public function storeReport(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'target_type' => 'required|in:question,answer',
+            'target_id' => 'required|integer|min:1',
+            'reason' => 'required|in:'.implode(',', array_keys(Report::REASONS)),
+            'notes' => 'nullable|string|max:1000',
+            'reporter_name' => 'nullable|string|max:80',
+            'reporter_email' => 'nullable|email|max:150',
+        ]);
+
+        // اطمینان از وجود target
+        $exists = $data['target_type'] === 'question'
+            ? Question::where('id', $data['target_id'])->exists()
+            : Answer::where('id', $data['target_id'])->exists();
+
+        if (! $exists) {
+            return response()->json(['ok' => false, 'message' => 'Target not found'], 404);
+        }
+
+        // جلوگیری از duplicate همان IP روی همان target در ۲۴ ساعت
+        $duplicate = Report::query()
+            ->where('reportable_type', $data['target_type'])
+            ->where('reportable_id', $data['target_id'])
+            ->where('reporter_ip', $request->ip())
+            ->where('created_at', '>=', now()->subDay())
+            ->exists();
+
+        if ($duplicate) {
+            return response()->json(['ok' => true, 'message' => 'Already reported'], 200);
+        }
+
+        Report::create([
+            'reportable_type' => $data['target_type'],
+            'reportable_id' => $data['target_id'],
+            'reason' => $data['reason'],
+            'notes' => $data['notes'] ?? null,
+            'reporter_name' => $data['reporter_name'] ?? null,
+            'reporter_email' => $data['reporter_email'] ?? null,
+            'reporter_ip' => $request->ip(),
+            'user_agent' => Str::limit((string) $request->userAgent(), 250, ''),
+        ]);
+
+        return response()->json(['ok' => true, 'message' => 'گزارش شما ثبت شد. تیم مدیریت بررسی می‌کند.']);
     }
 }

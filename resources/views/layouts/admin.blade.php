@@ -650,6 +650,14 @@
                                 <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPending }}</span>
                             @endif
                         </a>
+                        <a href="{{ route('site.admin.forum.reports.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.reports.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
+                            گزارش‌های انجمن
+                            @php $forumPendingReports = \Modules\Site\Models\Forum\Report::where('status','pending')->count(); @endphp
+                            @if($forumPendingReports > 0)
+                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPendingReports }}</span>
+                            @endif
+                        </a>
                         <a href="{{ route('site.admin.forum.activity') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.activity') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                             تاریخچه عملیات

@@ -358,6 +358,9 @@ class QuestionController extends Controller
             meta: ['expert_id' => $expert?->id, 'expert_name' => $expert?->name],
         );
 
+        // اطلاع‌رسانی ایمیلی به نویسنده (در صورت داشتن ایمیل و فعال‌بودن setting)
+        \Modules\Site\Support\ForumNotifier::notifyAuthorOfAnswer($question, $answer);
+
         return back()->with('success', 'پاسخ کارشناسی ثبت و منتشر شد.');
     }
 }

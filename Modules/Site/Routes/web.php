@@ -75,6 +75,13 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/activity', [\Modules\Site\Http\Controllers\Admin\Forum\DashboardController::class, 'activity'])->name('activity');
 
+        // گزارش‌های کاربران
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'index'])->name('index');
+            Route::put('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'update'])->whereNumber('id')->name('update');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        });
+
         // سوالات
         Route::prefix('questions')->name('questions.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'index'])->name('index');
