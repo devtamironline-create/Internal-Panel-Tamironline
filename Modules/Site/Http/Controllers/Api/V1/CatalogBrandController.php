@@ -124,9 +124,47 @@ class CatalogBrandController extends Controller
                         'enabled' => $enabled('testimonials', true),
                         'items' => $this->buildTestimonials($brand, $template),
                     ],
+                    'videos' => [
+                        'enabled' => $enabled('videos', true),
+                        'title' => $template['videos']['title'] ?? null,
+                        'subtitle' => $template['videos']['subtitle'] ?? null,
+                        'items' => $this->buildVideos($brand, $template),
+                    ],
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * منطق: ابتدا videos اختصاصی برند (JSON روی entity)، در صورت خالی → template.videos.items.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildVideos(Brand $brand, array $template): array
+    {
+        $entity = is_array($brand->videos) ? array_values(array_filter($brand->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
+        if ($entity !== []) {
+            return $this->shapeVideos($entity);
+        }
+        $tpl = (array) ($template['videos']['items'] ?? []);
+
+        return $this->shapeVideos($tpl);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function shapeVideos(array $rows): array
+    {
+        return array_values(array_map(fn (array $r) => [
+            'title' => $r['title'] ?? null,
+            'aparat_id' => $r['aparat_id'] ?? null,
+            'youtube_id' => $r['youtube_id'] ?? null,
+            'video_url' => $r['video_url'] ?? null,
+            'description' => $r['description'] ?? null,
+            'poster_url' => $r['poster_url'] ?? null,
+        ], $rows));
     }
 
     private function buildHero(Brand $brand, array $template, bool $enabled): array

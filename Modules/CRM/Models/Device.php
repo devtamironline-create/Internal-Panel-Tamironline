@@ -34,6 +34,7 @@ class Device extends Model
         'bg',
         'issues',
         'faq',
+        'videos',
         'meta_title',
         'meta_description',
         'warranty_text',
@@ -62,6 +63,7 @@ class Device extends Model
         'starting_price' => 'integer',
         'issues' => 'array',
         'faq' => 'array',
+        'videos' => 'array',
         'service_steps' => 'array',
         'sections_enabled' => 'array',
     ];

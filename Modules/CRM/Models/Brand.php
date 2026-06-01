@@ -29,6 +29,7 @@ class Brand extends Model
         'issues',
         'why_us',
         'faq',
+        'videos',
         'meta_title',
         'meta_description',
         'warranty_text',
@@ -56,6 +57,7 @@ class Brand extends Model
         'issues' => 'array',
         'why_us' => 'array',
         'faq' => 'array',
+        'videos' => 'array',
         'sections_enabled' => 'array',
     ];
 

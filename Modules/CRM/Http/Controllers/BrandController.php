@@ -235,6 +235,14 @@ class BrandController extends Controller
             'faq.*.question' => 'nullable|string|max:300',
             'faq.*.answer' => 'nullable|string|max:5000',
 
+            'videos' => 'nullable|array',
+            'videos.*.title' => 'nullable|string|max:200',
+            'videos.*.aparat_id' => 'nullable|string|max:60',
+            'videos.*.youtube_id' => 'nullable|string|max:60',
+            'videos.*.video_url' => 'nullable|string|max:500',
+            'videos.*.description' => 'nullable|string|max:600',
+            'videos.*.poster_url' => 'nullable|string|max:500',
+
             'device_ids' => 'nullable|array',
             'device_ids.*' => 'integer|exists:crm_devices,id',
 
@@ -334,7 +342,7 @@ class BrandController extends Controller
         }
 
         // پاکسازی ردیف‌های خالی repeater (هر آرایه که هیچ مقدار غیرخالی ندارد حذف می‌شود)
-        foreach (['stats', 'issues', 'why_us', 'faq'] as $key) {
+        foreach (['stats', 'issues', 'why_us', 'faq', 'videos'] as $key) {
             if (isset($validated[$key]) && is_array($validated[$key])) {
                 $validated[$key] = $this->cleanRepeater($validated[$key]);
                 if (empty($validated[$key])) {

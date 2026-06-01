@@ -927,6 +927,28 @@ return [
                 ],
             ],
 
+            // ─── 7b. Videos (پیش‌فرض همه‌ی صفحات دستگاه) ────────────
+            'videos' => [
+                'label' => 'ویدیوها (پیش‌فرض همه‌ی صفحات دستگاه)',
+                'description' => 'ویدیوهای آموزشی/معرفی. هر دستگاه می‌تواند لیست اختصاصی خود را در فرم ویرایش دستگاه ست کند تا این پیش‌فرض را override کند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'لیست ویدیوها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان ویدیو', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'aparat_id' => ['label' => 'Aparat ID (اولویت ۱)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'youtube_id' => ['label' => 'YouTube ID (اولویت ۲)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'video_url' => ['label' => 'URL مستقیم mp4 (اولویت ۳)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
+                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                            'poster_url' => ['label' => 'تصویر cover (اختیاری)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
             // ─── 8. Promo Banner (مشترک همه‌ی صفحات دستگاه) ────────
             'promo' => [
                 'label' => 'بنر تبلیغاتی (پیش‌فرض همه‌ی صفحات دستگاه) — از مخزن بنرها',
@@ -1025,6 +1047,28 @@ return [
                         'label' => 'انتخاب از بانک نظرات',
                         'type' => 'reference',
                         'source' => 'testimonials',
+                    ],
+                ],
+            ],
+
+            // ─── 7b. Videos (پیش‌فرض همه‌ی صفحات برند) ──────────────
+            'videos' => [
+                'label' => 'ویدیوها (پیش‌فرض همه‌ی صفحات برند)',
+                'description' => 'ویدیوهای آموزشی/معرفی. هر برند می‌تواند لیست اختصاصی خود را در فرم ویرایش برند ست کند تا این پیش‌فرض را override کند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'لیست ویدیوها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان ویدیو', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'aparat_id' => ['label' => 'Aparat ID (اولویت ۱)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'youtube_id' => ['label' => 'YouTube ID (اولویت ۲)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'video_url' => ['label' => 'URL مستقیم mp4 (اولویت ۳)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
+                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                            'poster_url' => ['label' => 'تصویر cover (اختیاری)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
+                        ],
                     ],
                 ],
             ],

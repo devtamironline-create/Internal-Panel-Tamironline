@@ -237,6 +237,14 @@ class DeviceController extends Controller
             'service_steps.*.description' => 'nullable|string|max:1000',
             'service_steps.*.icon' => 'nullable|string|max:60',
 
+            'videos' => 'nullable|array',
+            'videos.*.title' => 'nullable|string|max:200',
+            'videos.*.aparat_id' => 'nullable|string|max:60',
+            'videos.*.youtube_id' => 'nullable|string|max:60',
+            'videos.*.video_url' => 'nullable|string|max:500',
+            'videos.*.description' => 'nullable|string|max:600',
+            'videos.*.poster_url' => 'nullable|string|max:500',
+
             'faq_ids' => 'nullable|array',
             'faq_ids.*' => 'string|exists:faqs,id',
 
@@ -338,7 +346,7 @@ class DeviceController extends Controller
         }
 
         // پاکسازی ردیف‌های خالی repeater
-        foreach (['issues', 'faq', 'service_steps'] as $key) {
+        foreach (['issues', 'faq', 'service_steps', 'videos'] as $key) {
             if (isset($validated[$key]) && is_array($validated[$key])) {
                 $validated[$key] = $this->cleanRepeater($validated[$key]);
                 if (empty($validated[$key])) {

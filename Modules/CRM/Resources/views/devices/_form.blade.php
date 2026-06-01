@@ -122,6 +122,7 @@
                     'faq'           => 'سوالات متداول',
                     'brands'        => 'برندها',
                     'testimonials'  => 'نظرات مشتریان',
+                    'videos'        => 'ویدیوها',
                 ] as $key => $label)
                     <label class="inline-flex items-center gap-2">
                         <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
@@ -378,6 +379,33 @@
                     'title'       => ['label' => 'عنوان', 'type' => 'string'],
                     'description' => ['label' => 'توضیح', 'type' => 'textarea'],
                     'icon'        => ['label' => 'آیکون (lucide name)', 'type' => 'string'],
+                ],
+            ])
+        </div>
+
+        {{-- ───────── ویدیوهای اختصاصی این دستگاه (override template) ───────── --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                    <h4 class="text-sm font-semibold">ویدیوهای اختصاصی این دستگاه</h4>
+                    <p class="text-xs text-gray-500 mt-1">
+                        اگر خالی بگذارید، ویدیوهای پیش‌فرض تعریف‌شده در
+                        <a href="{{ route('site.admin.page-content.edit', 'device') }}" target="_blank" class="text-blue-600 hover:underline">الگوی device</a>
+                        نمایش داده می‌شوند. آپلود ویدیو: aparat_id یا youtube_id یا URL مستقیم mp4.
+                    </p>
+                </div>
+            </div>
+            @include('crm::partials.json-repeater', [
+                'name' => 'videos',
+                'label' => 'لیست ویدیوها',
+                'items' => old('videos', $device->videos ?? []),
+                'item_fields' => [
+                    'title' => ['label' => 'عنوان ویدیو', 'type' => 'string'],
+                    'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string'],
+                    'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
+                    'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
+                    'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
+                    'poster_url' => ['label' => 'تصویر cover (URL)', 'type' => 'string'],
                 ],
             ])
         </div>

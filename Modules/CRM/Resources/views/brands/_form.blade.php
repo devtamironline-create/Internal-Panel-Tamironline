@@ -152,6 +152,7 @@
                     'faq'           => 'سوالات متداول',
                     'devices'       => 'دستگاه‌ها',
                     'testimonials'  => 'نظرات مشتریان',
+                    'videos'        => 'ویدیوها',
                 ] as $key => $label)
                     <label class="inline-flex items-center gap-2">
                         <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
@@ -384,6 +385,31 @@
             ])
             <textarea name="warranty_text" rows="3">{{ old('warranty_text', $brand->warranty_text ?? '') }}</textarea>
             <textarea name="support_info" rows="3">{{ old('support_info', $brand->support_info ?? '') }}</textarea>
+        </div>
+
+        {{-- ───────── ویدیوهای اختصاصی این برند (override template) ───────── --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div class="mb-2">
+                <h4 class="text-sm font-semibold">ویدیوهای اختصاصی این برند</h4>
+                <p class="text-xs text-gray-500 mt-1">
+                    اگر خالی بگذارید، ویدیوهای پیش‌فرض تعریف‌شده در
+                    <a href="{{ route('site.admin.page-content.edit', 'brand') }}" target="_blank" class="text-blue-600 hover:underline">الگوی brand</a>
+                    نمایش داده می‌شوند. هر آیتم می‌تواند aparat_id یا youtube_id یا URL مستقیم mp4 داشته باشد (اولویت با aparat).
+                </p>
+            </div>
+            @include('crm::partials.json-repeater', [
+                'name' => 'videos',
+                'label' => 'لیست ویدیوها',
+                'items' => old('videos', $brand->videos ?? []),
+                'item_fields' => [
+                    'title' => ['label' => 'عنوان ویدیو', 'type' => 'string'],
+                    'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string'],
+                    'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
+                    'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
+                    'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
+                    'poster_url' => ['label' => 'تصویر cover (URL)', 'type' => 'string'],
+                ],
+            ])
         </div>
 
         {{-- سئو --}}
