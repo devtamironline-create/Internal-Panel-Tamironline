@@ -180,19 +180,72 @@
             </div>
         </div>
 
-        {{-- رنگ‌ها --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <div>
-                <label class="block text-sm font-medium mb-1">رنگ accent (hex)</label>
-                <input type="text" name="tone" value="{{ old('tone', $brand->tone ?? '') }}" placeholder="#1428A0" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
-                @error('tone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">رنگ پس‌زمینه (hex)</label>
-                <input type="text" name="bg" value="{{ old('bg', $brand->bg ?? '') }}" placeholder="#EEF2FF" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
-                @error('bg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+        {{-- رنگ‌های برند --}}
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <h4 class="text-sm font-semibold mb-3">رنگ‌های هویت برند</h4>
+            <p class="text-xs text-gray-500 mb-4">
+                این رنگ‌ها در فرانت برای پس‌زمینه‌ی Hero، دکمه‌ها و عناصر تأکیدی استفاده می‌شوند.
+                اگر خالی بگذارید، رنگ پیش‌فرض قالب اعمال می‌شود.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                 x-data="{
+                    tone: @js(old('tone', $brand->tone ?? '')),
+                    bg:   @js(old('bg', $brand->bg ?? '')),
+                    normalize(v) {
+                        if (!v) return '';
+                        v = v.trim();
+                        if (v[0] !== '#') v = '#' + v;
+                        return v;
+                    },
+                 }">
+                <div>
+                    <label class="block text-sm font-medium mb-1">رنگ اصلی برند (accent)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="color"
+                               :value="(tone && /^#[0-9a-fA-F]{6}$/.test(tone)) ? tone : '#1428A0'"
+                               @input="tone = $event.target.value"
+                               class="h-10 w-14 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-transparent">
+                        <input type="text" name="tone" x-model="tone" :value="tone"
+                               placeholder="#1428A0" dir="ltr" maxlength="9"
+                               @blur="tone = normalize(tone)"
+                               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">رنگ غالب — مثال سامسونگ <span dir="ltr">#1428A0</span></p>
+                    @error('tone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">رنگ پس‌زمینه ملایم</label>
+                    <div class="flex items-center gap-2">
+                        <input type="color"
+                               :value="(bg && /^#[0-9a-fA-F]{6}$/.test(bg)) ? bg : '#EEF2FF'"
+                               @input="bg = $event.target.value"
+                               class="h-10 w-14 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-transparent">
+                        <input type="text" name="bg" x-model="bg" :value="bg"
+                               placeholder="#EEF2FF" dir="ltr" maxlength="9"
+                               @blur="bg = normalize(bg)"
+                               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">پس‌زمینه‌ی کارت‌ها و سکشن‌های فرعی</p>
+                    @error('bg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- پیش‌نمایش زنده --}}
+                <div class="sm:col-span-2">
+                    <p class="text-xs text-gray-500 mb-2">پیش‌نمایش زنده:</p>
+                    <div class="rounded-xl p-6 border border-gray-200 dark:border-gray-700 transition-colors"
+                         :style="{ backgroundColor: (bg && /^#[0-9a-fA-F]{6}$/.test(bg)) ? bg : '#f9fafb' }">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="px-4 py-2 rounded-lg text-white font-bold text-sm"
+                                  :style="{ backgroundColor: (tone && /^#[0-9a-fA-F]{6}$/.test(tone)) ? tone : '#374151' }">
+                                {{ $brand->name ?? 'نام برند' }}
+                            </span>
+                            <span class="text-sm font-medium"
+                                  :style="{ color: (tone && /^#[0-9a-fA-F]{6}$/.test(tone)) ? tone : '#374151' }">
+                                پیش‌نمایش متن تأکیدی
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
