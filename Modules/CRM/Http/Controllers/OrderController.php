@@ -305,6 +305,17 @@ class OrderController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        // فاکتورهای آسیب‌دیده (in_wallet=true ولی wallet_tx ندارند) —
+        // نتیجهٔ باگ قدیمی که wallet transactions را حذف می‌کرد.
+        // اگر چنین مواردی پیدا شد، دکمهٔ بازسازی روی صفحه ظاهر می‌شود.
+        $affectedInvoiceIds = collect();
+        if ($supersededInvoices->isNotEmpty()) {
+            $candidateIds = $supersededInvoices->where('in_wallet', true)->pluck('id');
+            $idsWithTxs = \Modules\CRM\Models\WalletTransaction::whereIn('invoice_id', $candidateIds)
+                ->pluck('invoice_id')->unique();
+            $affectedInvoiceIds = $candidateIds->reject(fn($id) => $idsWithTxs->contains($id))->values();
+        }
+
         // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
         // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
         $customerOrders = collect();
@@ -326,7 +337,75 @@ class OrderController extends Controller
             'activeInvoice' => $activeInvoice,
             'customerOrders' => $customerOrders,
             'supersededInvoices' => $supersededInvoices,
+            'affectedInvoiceIds' => $affectedInvoiceIds,
         ]);
+    }
+
+    /**
+     * بازسازی wallet transactions برای فاکتورهای superseded که در نسخهٔ
+     * قدیمیِ InvoiceService حذف شده بودند. برای هر فاکتور آسیب‌دیده:
+     *   ۱) یک tx commission اصلی (-company_share) دوباره ثبت می‌شود
+     *   ۲) بلافاصله یک reverse (+company_share) ثبت می‌شود
+     * نتیجه: balance تغییری نمی‌کند، فقط تاریخچهٔ مالی کامل می‌شود.
+     */
+    public function restoreWalletHistory(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $supersededInvoices = \Modules\CRM\Models\Invoice::withoutGlobalScope('active')
+                ->where('order_id', $order->id)
+                ->whereNotNull('superseded_at')
+                ->where('in_wallet', true)
+                ->get();
+
+            $restored = 0;
+            foreach ($supersededInvoices as $inv) {
+                if (\Modules\CRM\Models\WalletTransaction::where('invoice_id', $inv->id)->exists()) {
+                    continue;
+                }
+                $techId = (int) $inv->technician_id;
+                $companyShare = (int) $inv->company_share;
+                if ($techId <= 0 || $companyShare <= 0) {
+                    continue;
+                }
+
+                // اصلی
+                $last = (int) (\Modules\CRM\Models\WalletTransaction::where('technician_id', $techId)
+                    ->orderByDesc('id')->value('balance_after') ?? 0);
+                \Modules\CRM\Models\WalletTransaction::create([
+                    'technician_id' => $techId,
+                    'order_id' => $order->id,
+                    'invoice_id' => $inv->id,
+                    'wp_id' => null,
+                    'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
+                    'amount' => -$companyShare,
+                    'balance_after' => $last - $companyShare,
+                    'note' => 'بازسازی سهم شرکت از فاکتور بایگانی‌شده ' . $inv->invoice_code,
+                    'created_by' => auth()->id(),
+                ]);
+
+                // reverse
+                $last2 = $last - $companyShare;
+                \Modules\CRM\Models\WalletTransaction::create([
+                    'technician_id' => $techId,
+                    'order_id' => $order->id,
+                    'invoice_id' => $inv->id,
+                    'wp_id' => null,
+                    'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
+                    'amount' => $companyShare,
+                    'balance_after' => $last2 + $companyShare,
+                    'note' => 'بازگشت سهم شرکت — تکمیل مجدد سفارش بعد از برگشت (بازسازی تاریخچه)',
+                    'created_by' => auth()->id(),
+                ]);
+
+                $restored++;
+            }
+
+            if ($restored === 0) {
+                return back()->with('error', 'هیچ فاکتور آسیب‌دیده‌ای برای بازسازی پیدا نشد.');
+            }
+
+            return back()->with('success', "تاریخچهٔ wallet برای {$restored} فاکتور بایگانی‌شده بازسازی شد. مانده تکنسین تغییری نکرد.");
+        });
     }
 
     /**

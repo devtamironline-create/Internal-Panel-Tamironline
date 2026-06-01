@@ -484,6 +484,24 @@
                     <span class="text-xs text-gray-500">{{ $supersededInvoices->count() }} فاکتور بایگانی شده</span>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">این سفارش حداقل یک بار «برگشت» داده شده و فاکتور جدیدی برایش صادر شده. فاکتورهای زیر دیگر فعال نیستند ولی برای تاریخچه نگه‌داری شده‌اند.</p>
+
+                @if($affectedInvoiceIds->isNotEmpty())
+                    @can('manage-crm-financial')
+                    <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
+                        <div class="text-xs text-rose-800 leading-6 max-w-3xl">
+                            <strong>⚠ {{ $affectedInvoiceIds->count() }} فاکتور آسیب‌دیده:</strong>
+                            wallet transactions این فاکتورها در یک باگ قدیمی حذف شده. می‌توانید با کلیک روی دکمهٔ مقابل، تاریخچهٔ wallet را بازسازی کنید — این کار مانده تکنسین را تغییر نمی‌دهد، فقط سابقهٔ مالی کامل می‌شود.
+                        </div>
+                        <form method="POST" action="{{ route('crm.orders.restore-wallet', $order) }}"
+                              onsubmit="return confirm('بازسازی تاریخچهٔ wallet برای {{ $affectedInvoiceIds->count() }} فاکتور؟\n\nاین کار: ۱) commission اصلی را بازسازی می‌کند ۲) بلافاصله آن را reverse می‌کند → مانده ثابت می‌ماند ولی audit trail کامل می‌شود.');">
+                            @csrf
+                            <button type="submit" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold whitespace-nowrap">
+                                🔧 بازسازی wallet history
+                            </button>
+                        </form>
+                    </div>
+                    @endcan
+                @endif
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
