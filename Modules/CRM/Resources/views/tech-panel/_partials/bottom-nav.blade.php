@@ -22,16 +22,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1-3.2A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
             </svg>
-            <span x-cloak x-show="$store.techNav.unread > 0"
-                  class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white"
+            <span class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white transition"
+                  :class="$store.techNav.unread > 0 ? 'bg-rose-500' : 'bg-emerald-600'"
                   x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
         </div>
-        <span class="mt-1.5 text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+        <span class="mt-1.5 text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm flex items-center gap-1">
             چت با کارشناس
-            <template x-if="$store.techNav.unread > 0">
-                <span class="ms-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9.5px]"
-                      x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
-            </template>
+            <span class="px-1.5 py-0.5 rounded-full text-white text-[9.5px] transition"
+                  :class="$store.techNav.unread > 0 ? 'bg-rose-500' : 'bg-emerald-600'"
+                  x-text="$store.techNav.unread > 99 ? '99+' : $store.techNav.unread"></span>
         </span>
     </a>
 </div>
