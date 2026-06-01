@@ -629,7 +629,12 @@ class DashboardController extends Controller
 
         $typeFilter = $request->query('type');
 
-        $base = WalletTransaction::query()->where('technician_id', $tech->id);
+        // بدنهٔ پایه: حذف کامل ردیف‌های adjustment (که audit حذف یا تعدیل
+        // دستی ادمین‌اند) از دید تکنسین. این‌ها فقط در پنل ادمین قابل
+        // مشاهده‌اند.
+        $base = WalletTransaction::query()
+            ->where('technician_id', $tech->id)
+            ->where('type', '!=', WalletTxType::Adjustment->value);
 
         // مجموع‌های دسته‌بندی‌شده روی کل تاریخچه — مستقل از فیلتر فعلی.
         $stats = [
