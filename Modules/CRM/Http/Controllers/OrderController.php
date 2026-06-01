@@ -858,6 +858,21 @@ class OrderController extends Controller
             'status' => OrderStatus::New->value,
             'status_internal_order' => null,
             'qc_status' => null,
+            // ── پاک کردن قیمت‌ها و توضیحات فاکتور قبلی ──
+            // مقادیر قبلی در `wp_return_logs` ذخیره شده و قابل بازیابی است.
+            // با خالی شدن این فیلدها، تکنسین در «تکمیل مجدد» مجبور می‌شود
+            // عددهای واقعی این مرحله را وارد کند، نه عددهای قبلی را.
+            'price_customer' => 0,
+            'cost_price' => 0,
+            'hire' => 0,
+            'transportation' => 0,
+            'discount' => 0,
+            'total_invoice' => 0,
+            'invoice_descripotion' => null,
+            'piece_list' => null,
+            'customer_price_list' => null,
+            'buy_price_list' => null,
+            'negative_invoice' => 0,
         ]);
 
         // ── snapshot به log_return (هم‌ارز CreateLogReturnOrder در WP)

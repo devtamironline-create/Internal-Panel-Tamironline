@@ -75,6 +75,13 @@ class WalletController extends Controller
      * حذف یک تراکنش کیف‌پول و بازگرداندن مانده تکنسین. عمدی محدود به
      * permission ویژه `delete-wallet-transaction` چون مستقیماً
      * تاریخچهٔ مالی را عوض می‌کند.
+     *
+     * منطق:
+     *   ۱) تراکنش حذف می‌شود
+     *   ۲) wallet_balance تکنسین از روی **مجموع همهٔ تراکنش‌های باقی‌مانده**
+     *      دوباره محاسبه می‌شود (نه delta) تا dirft انباشته نشود
+     *   ۳) یک ردیف audit با amount=0 و یادداشت توضیحی ثبت می‌شود تا
+     *      تاریخچهٔ حذف برای همیشه باقی بماند
      */
     public function destroyTransaction(Technician $technician, WalletTransaction $transaction)
     {
@@ -85,15 +92,51 @@ class WalletController extends Controller
         }
 
         return DB::transaction(function () use ($technician, $transaction) {
-            $current = (int) ($technician->wallet_balance ?? 0);
-            $technician->forceFill(['wallet_balance' => $current - (int) $transaction->amount])->saveQuietly();
+            // snapshot قبل از حذف برای audit log
+            $deletedAmount = (int) $transaction->amount;
+            $deletedType = $transaction->type instanceof WalletTxType
+                ? $transaction->type->value
+                : (string) $transaction->type;
+            $deletedTypeLabel = $transaction->type instanceof WalletTxType
+                ? $transaction->type->label()
+                : $deletedType;
+            $deletedNote = trim((string) $transaction->note);
+            $deletedId = $transaction->id;
+            $deletedInvoiceId = $transaction->invoice_id;
+            $deletedOrderId = $transaction->order_id;
+            $deletedAt = \Morilog\Jalali\Jalalian::now()->format('Y/m/d H:i');
+            $whoUser = auth()->user();
+            $whoName = trim(($whoUser->first_name ?? '') . ' ' . ($whoUser->last_name ?? '')) ?: ('user#' . auth()->id());
 
-            $note = trim((string) $transaction->note);
+            // ۱) حذف
             $transaction->delete();
+
+            // ۲) محاسبه‌ٔ مجدد wallet_balance از روی مجموع تراکنش‌های باقی‌مانده
+            $newBalance = (int) WalletTransaction::where('technician_id', $technician->id)->sum('amount');
+            $technician->forceFill(['wallet_balance' => $newBalance])->saveQuietly();
+
+            // ۳) ردیف audit (amount=0 تا balance تغییر نکند)
+            WalletTransaction::create([
+                'technician_id' => $technician->id,
+                'order_id' => $deletedOrderId,
+                'invoice_id' => $deletedInvoiceId,
+                'wp_id' => null,
+                'type' => WalletTxType::Adjustment->value,
+                'amount' => 0,
+                'balance_after' => $newBalance,
+                'note' => sprintf(
+                    '[حذف توسط %s در %s] تراکنش #%d حذف شد — مبلغ: %s، نوع: %s%s',
+                    $whoName, $deletedAt, $deletedId,
+                    number_format($deletedAmount),
+                    $deletedTypeLabel,
+                    $deletedNote !== '' ? ' — یادداشت قبلی: ' . $deletedNote : ''
+                ),
+                'created_by' => auth()->id(),
+            ]);
 
             return back()->with(
                 'success',
-                'تراکنش حذف شد و مانده تکنسین به‌روزرسانی شد.' . ($note !== '' ? ' (یادداشت قبلی: ' . mb_strimwidth($note, 0, 60, '…') . ')' : '')
+                'تراکنش حذف شد و مانده تکنسین به‌روزرسانی شد. ردیف audit ثبت شد تا تاریخچه حفظ شود.'
             );
         });
     }
