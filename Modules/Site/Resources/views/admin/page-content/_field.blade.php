@@ -36,32 +36,53 @@
 
 @elseif($type === 'responsive_image')
     @php
-        $valArr = is_array($value) ? $value : [];
-        $desktop = $valArr['desktop'] ?? null;
-        $mobile  = $valArr['mobile']  ?? null;
+        // پشتیبانی از هر دو شکل قدیمی و جدید — همیشه به شکل {url, alt} نرمالایز
+        $normalized = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($value);
+        $desktopUrl = $normalized['desktop']['url'];
+        $desktopAlt = $normalized['desktop']['alt'];
+        $mobileUrl = $normalized['mobile']['url'];
+        $mobileAlt = $normalized['mobile']['alt'];
     @endphp
     <div class="border border-gray-200 rounded p-3">
         <label class="block text-sm font-semibold mb-2">{{ $label }}</label>
+        <p class="text-xs text-gray-500 mb-3">
+            برای هر اسلات می‌توانید متن جایگزین (alt) متفاوت تنظیم کنید — حتی اگر URL یکسان باشد.
+            این برای SEO و دسترسی‌پذیری مفید است (مثلاً نسخه‌ی موبایل یک crop متفاوت دارد).
+        </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div x-data="{ url: @js(old($name . '.desktop', $desktop)) }">
-                <label class="block text-xs mb-1">دسکتاپ</label>
-                <input type="url" name="{{ $name }}[desktop]" x-model="url" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr"
+            {{-- Desktop slot --}}
+            <div class="space-y-2 border border-gray-100 rounded p-3 bg-gray-50/40"
+                 x-data="{ url: @js(old($name . '.desktop.url', $desktopUrl)) }">
+                <label class="block text-xs font-semibold">دسکتاپ</label>
+                <input type="url" name="{{ $name }}[desktop][url]" x-model="url" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr bg-white"
                        placeholder="https://...">
+                <input type="text" name="{{ $name }}[desktop][alt]"
+                       value="{{ old($name . '.desktop.alt', $desktopAlt) }}"
+                       maxlength="200"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-white"
+                       placeholder="متن جایگزین برای نسخه‌ی دسکتاپ">
                 <template x-if="url">
-                    <div class="mt-2">
+                    <div class="mt-1">
                         <img :src="url" class="h-24 w-full object-contain rounded border border-gray-200 bg-gray-50" alt="desktop preview"
                              @@error="$el.style.display='none'" @@load="$el.style.display='block'">
                     </div>
                 </template>
             </div>
-            <div x-data="{ url: @js(old($name . '.mobile', $mobile)) }">
-                <label class="block text-xs mb-1">موبایل</label>
-                <input type="url" name="{{ $name }}[mobile]" x-model="url" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr"
+            {{-- Mobile slot --}}
+            <div class="space-y-2 border border-gray-100 rounded p-3 bg-gray-50/40"
+                 x-data="{ url: @js(old($name . '.mobile.url', $mobileUrl)) }">
+                <label class="block text-xs font-semibold">موبایل</label>
+                <input type="url" name="{{ $name }}[mobile][url]" x-model="url" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm ltr bg-white"
                        placeholder="https://...">
+                <input type="text" name="{{ $name }}[mobile][alt]"
+                       value="{{ old($name . '.mobile.alt', $mobileAlt) }}"
+                       maxlength="200"
+                       class="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-white"
+                       placeholder="متن جایگزین برای نسخه‌ی موبایل">
                 <template x-if="url">
-                    <div class="mt-2">
+                    <div class="mt-1">
                         <img :src="url" class="h-24 w-auto rounded border border-gray-200 bg-gray-50" alt="mobile preview"
                              @@error="$el.style.display='none'" @@load="$el.style.display='block'">
                     </div>

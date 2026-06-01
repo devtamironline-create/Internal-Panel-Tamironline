@@ -303,17 +303,12 @@ class PageSectionService
 
             if ($type === 'responsive_image') {
                 $value = Arr::get($payload, $key, []);
-                if (! is_array($value)) {
-                    $value = [];
-                }
-                $desktop = isset($value['desktop']) && is_string($value['desktop']) ? trim($value['desktop']) : null;
-                $mobile = isset($value['mobile']) && is_string($value['mobile']) ? trim($value['mobile']) : null;
-                $data[$key] = [
-                    'desktop' => $desktop !== '' ? $desktop : null,
-                    'mobile' => $mobile !== '' ? $mobile : null,
-                ];
-                $rules["{$fullKey}.desktop"] = 'nullable|site_url|max:500';
-                $rules["{$fullKey}.mobile"] = 'nullable|site_url|max:500';
+                $normalized = self::normalizeResponsiveImage($value);
+                $data[$key] = $normalized;
+                $rules["{$fullKey}.desktop.url"] = 'nullable|site_url|max:500';
+                $rules["{$fullKey}.desktop.alt"] = 'nullable|string|max:200';
+                $rules["{$fullKey}.mobile.url"] = 'nullable|site_url|max:500';
+                $rules["{$fullKey}.mobile.alt"] = 'nullable|string|max:200';
 
                 continue;
             }
@@ -415,6 +410,14 @@ class PageSectionService
                 continue;
             }
 
+            // داده‌ی قدیمی responsive_image در DB ممکن است هنوز {desktop: "url"} باشد —
+            // در پاسخ public همیشه شکل جدید را برمی‌گردانیم.
+            if ($type === 'responsive_image') {
+                $payload[$key] = self::normalizeResponsiveImage($payload[$key] ?? null);
+
+                continue;
+            }
+
             if ($type !== 'reference') {
                 continue;
             }
@@ -428,6 +431,56 @@ class PageSectionService
         }
 
         return $payload;
+    }
+
+    /**
+     * نرمالایز فیلد responsive_image به شکل جدید:
+     *   { desktop: { url, alt }, mobile: { url, alt } }
+     *
+     * هر دو شکل قدیمی پشتیبانی می‌شود:
+     *   - {desktop: "url-string", mobile: "url-string"}            (نسخه‌ی قدیمی)
+     *   - {desktop: {url, alt}, mobile: {url, alt}}                (نسخه‌ی جدید)
+     *
+     * اگر url خالی باشد، slot به‌صورت {url: null, alt: null} برمی‌گردد.
+     *
+     * @param  mixed  $value
+     * @return array{desktop: array{url: string|null, alt: string|null}, mobile: array{url: string|null, alt: string|null}}
+     */
+    public static function normalizeResponsiveImage($value): array
+    {
+        if (! is_array($value)) {
+            $value = [];
+        }
+
+        return [
+            'desktop' => self::normalizeResponsiveSlot($value['desktop'] ?? null),
+            'mobile' => self::normalizeResponsiveSlot($value['mobile'] ?? null),
+        ];
+    }
+
+    /**
+     * @param  mixed  $slot
+     * @return array{url: string|null, alt: string|null}
+     */
+    private static function normalizeResponsiveSlot($slot): array
+    {
+        // string قدیمی → فقط url
+        if (is_string($slot)) {
+            $url = trim($slot);
+
+            return ['url' => $url !== '' ? $url : null, 'alt' => null];
+        }
+        if (! is_array($slot)) {
+            return ['url' => null, 'alt' => null];
+        }
+
+        $url = isset($slot['url']) && is_string($slot['url']) ? trim($slot['url']) : null;
+        $alt = isset($slot['alt']) && is_string($slot['alt']) ? trim($slot['alt']) : null;
+
+        return [
+            'url' => ($url !== null && $url !== '') ? $url : null,
+            'alt' => ($alt !== null && $alt !== '') ? $alt : null,
+        ];
     }
 
     /**
