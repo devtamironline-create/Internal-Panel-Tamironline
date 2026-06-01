@@ -283,6 +283,11 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
 
+        // حذف تراکنش — permission ویژه (`delete-wallet-transaction`) داخل کنترلر چک می‌شود
+        Route::delete('wallet/technician/{technician}/transaction/{transaction}', [WalletController::class, 'destroyTransaction'])
+            ->name('wallet.transaction.destroy')
+            ->whereNumber('transaction');
+
         // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
         Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');
         Route::post('wallet/reward', [WalletController::class, 'storeReward'])->name('wallet.reward.store');

@@ -4,6 +4,7 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Technician;
@@ -68,6 +69,33 @@ class WalletController extends Controller
             'type' => $type,
             'types' => WalletTxType::options(),
         ]);
+    }
+
+    /**
+     * حذف یک تراکنش کیف‌پول و بازگرداندن مانده تکنسین. عمدی محدود به
+     * permission ویژه `delete-wallet-transaction` چون مستقیماً
+     * تاریخچهٔ مالی را عوض می‌کند.
+     */
+    public function destroyTransaction(Technician $technician, WalletTransaction $transaction)
+    {
+        abort_unless(auth()->user()?->can('delete-wallet-transaction'), 403);
+
+        if ((int) $transaction->technician_id !== (int) $technician->id) {
+            abort(404);
+        }
+
+        return DB::transaction(function () use ($technician, $transaction) {
+            $current = (int) ($technician->wallet_balance ?? 0);
+            $technician->forceFill(['wallet_balance' => $current - (int) $transaction->amount])->saveQuietly();
+
+            $note = trim((string) $transaction->note);
+            $transaction->delete();
+
+            return back()->with(
+                'success',
+                'تراکنش حذف شد و مانده تکنسین به‌روزرسانی شد.' . ($note !== '' ? ' (یادداشت قبلی: ' . mb_strimwidth($note, 0, 60, '…') . ')' : '')
+            );
+        });
     }
 
     public function show(Technician $technician, WalletArchiveService $archive)

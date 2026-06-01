@@ -65,6 +65,9 @@
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">مبلغ</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">موجودی</th>
                             <th class="px-4 py-2 text-right text-gray-500 uppercase">مرجع / توضیح</th>
+                            @can('delete-wallet-transaction')
+                                <th class="px-4 py-2 text-right text-gray-500 uppercase w-16"></th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
@@ -79,9 +82,21 @@
                                 @if($tx->order && !$tx->invoice)<a href="{{ route('crm.orders.show', $tx->order) }}" class="text-brand-600" dir="ltr">{{ $tx->order->order_code }}</a>@endif
                                 {{ $tx->note ? '— ' . $tx->note : '' }}
                             </td>
+                            @can('delete-wallet-transaction')
+                                <td class="px-2 py-2">
+                                    <form method="POST" action="{{ route('crm.wallet.transaction.destroy', [$technician, $tx]) }}" class="inline"
+                                          onsubmit="return confirm('این تراکنش {{ $tx->amount >= 0 ? '+' : '' }}{{ number_format($tx->amount) }} تومان حذف شود؟\n\nمانده تکنسین به اندازهٔ همین مقدار معکوس می‌شود (یعنی مانده {{ $tx->amount >= 0 ? 'کم' : 'اضافه' }} می‌شود).');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-rose-600 hover:text-rose-700 text-xs" title="حذف این تراکنش">
+                                            🗑
+                                        </button>
+                                    </form>
+                                </td>
+                            @endcan
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">تراکنشی ثبت نشده.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">تراکنشی ثبت نشده.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

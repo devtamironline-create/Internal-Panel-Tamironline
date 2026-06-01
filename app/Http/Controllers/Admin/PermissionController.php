@@ -168,6 +168,7 @@ class PermissionController extends Controller
             'view-crm-financial' => 'مشاهده مالی و کیف‌پول تکنسین',
             'manage-crm-financial' => 'مدیریت مالی (صدور فاکتور، کنسلی، علامت‌گذاری پرداخت)',
             'manage-crm-wallet' => 'مدیریت کیف‌پول تکنسین (شارژ/پاداش/جریمه)',
+            'delete-wallet-transaction' => 'حذف تراکنش کیف‌پول تکنسین (فقط ادمین ارشد — تغییر مستقیم تاریخچهٔ مالی)',
             'view-crm-invoices' => 'مشاهده فاکتورها',
             'create-invoices' => 'ایجاد فاکتور',
             'edit-invoices' => 'ویرایش فاکتور',
