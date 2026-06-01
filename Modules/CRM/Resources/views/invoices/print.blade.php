@@ -183,7 +183,13 @@
         table.items th { background: #f9fafb; font-weight: bold; }
         table.items td.desc {
             text-align: start; padding-inline-start: 16px;
-            white-space: pre-line; line-height: 1.9;
+            line-height: 1.9;
+        }
+        table.items td.desc .desc-note {
+            margin-top: 6px; padding-top: 6px;
+            border-top: 1px dashed #d1d5db;
+            font-size: 11.5px; color: #475569;
+            white-space: pre-line; line-height: 2;
         }
         table.items tr.total td {
             background: #f9fafb; font-weight: bold;
@@ -292,40 +298,39 @@
             </div>
         </div>
 
-        {{-- جدول اقلام --}}
+        {{-- جدول اقلام — بدون ستون تعداد، توضیحات فاکتور به‌عنوان زیرعنوان
+             ردیف اول نمایش داده می‌شود --}}
         <div class="section-title">مشخصات کالا یا خدمات مورد معامله</div>
         <table class="items">
             <thead>
                 <tr>
                     <th style="width: 48px;">ردیف</th>
                     <th>شرح کالا/خدمت</th>
-                    <th style="width: 110px;">تعداد/مقدار</th>
-                    <th style="width: 160px;">مبلغ کل (تومان)</th>
+                    <th style="width: 180px;">مبلغ کل (تومان)</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($rows as $i => $row)
                     <tr>
                         <td>{{ $faNum($i + 1) }}</td>
-                        <td class="desc">{{ $row['title'] }}</td>
-                        <td>{{ $faNum($row['qty']) }}</td>
+                        <td class="desc">
+                            <div>{{ $row['title'] }}</div>
+                            @if($i === 0 && $customerDesc !== '' && $customerDesc !== $row['title'])
+                                <div class="desc-note">{{ $customerDesc }}</div>
+                            @endif
+                        </td>
                         <td>{{ $faNum($row['total']) }}</td>
                     </tr>
                 @endforeach
                 <tr class="total">
-                    <td colspan="3">جمع کل</td>
+                    <td colspan="2">جمع کل</td>
                     <td>{{ $faNum($grandTotal) }} تومان</td>
                 </tr>
             </tbody>
         </table>
 
-        {{-- توضیحات فاکتور — متنی که تکنسین/اپراتور برای مشتری نوشته --}}
-        @if($customerDesc !== '')
-            <div class="invoice-desc">
-                <div class="invoice-desc-label">توضیحات فاکتور</div>
-                <div class="invoice-desc-body">{{ $customerDesc }}</div>
-            </div>
-        @endif
+        {{-- توضیحات فاکتور حالا داخل ردیف اول جدول نمایش داده می‌شود؛
+             این بخش جدا حذف شد. --}}
 
         {{-- یادداشت‌ها + مهر — مهر چپ، یادداشت‌ها راست --}}
         @if($notes || $stampUrl)
