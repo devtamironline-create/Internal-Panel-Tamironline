@@ -188,8 +188,17 @@ class WalletController extends Controller
         ], now()->addMinutes(2));
         cache()->put($rateKey, time(), 60);
 
-        $message = "کد تأیید حذف کامل تراکنش: {$code}\nاین کد ۲ دقیقه اعتبار دارد. اگر شما درخواست نداده‌اید، نادیده بگیرید.";
-        $result = $this->sms->send($mobile, $message);
+        // از همان تمپلیتِ تأییدشدهٔ Kavenegar (`verify`) استفاده می‌شود —
+        // دقیقاً همان الگوی OTP لاگین اپراتور و تکنسین. این روش از
+        // verify-lookup با sender معتبر استفاده می‌کند و proxy SMS را
+        // هم خودش بر اساس تنظیمات اعمال می‌کند.
+        $template = config('sms.templates.otp', 'verify');
+        try {
+            $result = $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
+        } catch (\Throwable $e) {
+            Log::warning('Hard-delete OTP SMS exception', ['user' => $user->id, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطای ارسال پیامک: ' . $e->getMessage()], 502);
+        }
 
         if (empty($result['success'])) {
             Log::warning('Hard-delete OTP SMS failed', ['user' => $user->id, 'result' => $result]);
