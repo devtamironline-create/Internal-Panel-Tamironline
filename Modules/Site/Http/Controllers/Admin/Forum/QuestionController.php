@@ -36,6 +36,42 @@ class QuestionController extends Controller
         }
     }
 
+    /**
+     * Moderation actions: تأیید/رد/spam/hot/featured.
+     * مجاز با moderate-forum-questions یا manage-forum-questions.
+     */
+    private function checkModerate(): void
+    {
+        $u = auth()->user();
+        if (! $u || (! $u->can('moderate-forum-questions') && ! $u->can('manage-forum-questions') && ! $u->can('manage-site') && ! $u->can('manage-permissions'))) {
+            abort(403);
+        }
+    }
+
+    /**
+     * Destructive: حذف سوال.
+     * مجاز با delete-forum-questions یا manage-forum-questions.
+     */
+    private function checkDelete(): void
+    {
+        $u = auth()->user();
+        if (! $u || (! $u->can('delete-forum-questions') && ! $u->can('manage-forum-questions') && ! $u->can('manage-site') && ! $u->can('manage-permissions'))) {
+            abort(403);
+        }
+    }
+
+    /**
+     * Answer management: پاسخ ادمین / accept / expert reply.
+     * مجاز با manage-forum-answers یا manage-forum-questions.
+     */
+    private function checkAnswers(): void
+    {
+        $u = auth()->user();
+        if (! $u || (! $u->can('manage-forum-answers') && ! $u->can('manage-forum-questions') && ! $u->can('manage-site') && ! $u->can('manage-permissions'))) {
+            abort(403);
+        }
+    }
+
     public function index(Request $request): View
     {
         $this->checkView();
@@ -98,7 +134,7 @@ class QuestionController extends Controller
 
     public function updateStatus(Request $request, int $id): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkModerate();
         $data = $request->validate(['status' => 'required|in:pending,approved,rejected,spam']);
 
         $question = Question::findOrFail($id);
@@ -114,7 +150,7 @@ class QuestionController extends Controller
 
     public function toggleFlag(int $id, string $flag): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkModerate();
         if (! in_array($flag, ['is_hot', 'is_featured'], true)) {
             abort(404);
         }
@@ -152,12 +188,20 @@ class QuestionController extends Controller
 
     public function bulk(Request $request): RedirectResponse
     {
-        $this->checkManage();
+        // ابتدا فقط چک باز (view-forum) — gate سختگیرانه بسته به action انتخاب می‌شود
+        $this->checkView();
+
         $data = $request->validate([
             'action' => 'required|in:approve,reject,spam,delete,mark_hot,unmark_hot,mark_featured,unmark_featured',
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:site_forum_questions,id',
         ]);
+
+        // per-action permission check
+        match ($data['action']) {
+            'delete' => $this->checkDelete(),
+            'approve', 'reject', 'spam', 'mark_hot', 'unmark_hot', 'mark_featured', 'unmark_featured' => $this->checkModerate(),
+        };
 
         $count = 0;
         $base = Question::whereIn('id', $data['ids']);
@@ -199,7 +243,7 @@ class QuestionController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkDelete();
         Question::findOrFail($id)->delete();
 
         return redirect()->route('site.admin.forum.questions.index')->with('success', 'سوال حذف شد.');
@@ -209,7 +253,7 @@ class QuestionController extends Controller
 
     public function answerUpdateStatus(Request $request, int $id, int $answerId): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkAnswers();
         $data = $request->validate(['status' => 'required|in:pending,approved,rejected,spam']);
         $answer = Answer::where('question_id', $id)->findOrFail($answerId);
 
@@ -226,7 +270,7 @@ class QuestionController extends Controller
 
     public function answerDestroy(int $id, int $answerId): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkAnswers();
         $answer = Answer::where('question_id', $id)->findOrFail($answerId);
         $question = $answer->question;
         $answer->delete();
@@ -240,7 +284,7 @@ class QuestionController extends Controller
      */
     public function adminReply(Request $request, int $id): RedirectResponse
     {
-        $this->checkManage();
+        $this->checkAnswers();
         $data = $request->validate([
             'body' => 'required|string|min:10|max:50000',
             'expert_id' => 'nullable|integer|exists:site_forum_experts,id',

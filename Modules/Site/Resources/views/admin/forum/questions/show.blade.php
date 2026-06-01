@@ -40,7 +40,7 @@
     </div>
 
     {{-- Moderation actions --}}
-    @can('manage-forum-questions')
+    @canany(['manage-forum-questions', 'moderate-forum-questions'])
     <div class="mt-3 bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-2 flex-wrap">
         <span class="text-xs text-gray-600">تغییر وضعیت:</span>
         @foreach(['approved' => ['تأیید','emerald'], 'rejected' => ['رد','gray'], 'spam' => ['اسپم','red'], 'pending' => ['در انتظار','amber']] as $st => [$lbl,$color])
@@ -61,7 +61,7 @@
             @csrf @method('DELETE')<button class="px-3 py-1.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700">حذف سوال</button>
         </form>
     </div>
-    @endcan
+    @endcanany
 
     {{-- Answers --}}
     <h2 class="text-base font-bold mt-6 mb-3">پاسخ‌ها ({{ $question->answers->count() }})</h2>
@@ -88,7 +88,7 @@
                 <div class="mt-3 flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                     <span>👍 {{ $a->upvotes_count }}</span>
                     @if($a->ip)<span class="ltr font-mono" dir="ltr">{{ $a->ip }}</span>@endif
-                    @can('manage-forum-questions')
+                    @canany(['manage-forum-answers', 'manage-forum-questions'])
                     <span class="ml-auto flex gap-2">
                         @if($a->status !== 'approved')
                             <form method="POST" action="{{ route('site.admin.forum.questions.answers.update-status', [$question->id, $a->id]) }}">
@@ -112,7 +112,7 @@
                             @csrf @method('DELETE')<button class="text-red-700 hover:underline">حذف</button>
                         </form>
                     </span>
-                    @endcan
+                    @endcanany
                 </div>
             </div>
         @empty
@@ -121,7 +121,7 @@
     </div>
 
     {{-- Admin reply (expert) --}}
-    @can('manage-forum-questions')
+    @canany(['manage-forum-answers', 'manage-forum-questions'])
     <div class="mt-6 bg-white border border-gray-200 rounded-xl p-5">
         <h3 class="text-sm font-bold mb-3">ارسال پاسخ کارشناسی (تأیید خودکار)</h3>
         <form method="POST" action="{{ route('site.admin.forum.questions.admin-reply', $question->id) }}">
@@ -136,7 +136,7 @@
             <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">ارسال پاسخ کارشناسی</button>
         </form>
     </div>
-    @endcan
+    @endcanany
 
 </div>
 @endsection

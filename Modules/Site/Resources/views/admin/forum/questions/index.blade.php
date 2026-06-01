@@ -143,14 +143,14 @@
                                 <span class="font-mono ltr" dir="ltr">/forum/{{ $q->slug }}</span>
                                 <span class="ml-auto flex gap-2">
                                     <a href="{{ route('site.admin.forum.questions.show', $q->id) }}" class="text-blue-600 hover:underline">مشاهده + پاسخ</a>
-                                    @can('manage-forum-questions')
+                                    @canany(['manage-forum-questions', 'moderate-forum-questions'])
                                         <form method="POST" action="{{ route('site.admin.forum.questions.toggle-flag', [$q->id, 'is_hot']) }}" class="inline">
                                             @csrf @method('PUT')<button class="text-rose-600 hover:underline">{{ $q->is_hot ? 'حذف داغ' : 'داغ' }}</button>
                                         </form>
                                         <form method="POST" action="{{ route('site.admin.forum.questions.toggle-flag', [$q->id, 'is_featured']) }}" class="inline">
                                             @csrf @method('PUT')<button class="text-violet-600 hover:underline">{{ $q->is_featured ? 'حذف ویژه' : 'ویژه' }}</button>
                                         </form>
-                                    @endcan
+                                    @endcanany
                                 </span>
                             </div>
                         </div>
