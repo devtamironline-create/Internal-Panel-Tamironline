@@ -297,6 +297,14 @@ class OrderController extends Controller
         // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
         $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
 
+        // فاکتورهای قبلی (superseded) برای تاریخچه — این‌ها به‌خاطر برگشت
+        // سفارش و تکمیل مجدد به‌وجود آمده‌اند و در DB موجودند.
+        $supersededInvoices = \Modules\CRM\Models\Invoice::withoutGlobalScope('active')
+            ->where('order_id', $order->id)
+            ->whereNotNull('superseded_at')
+            ->orderByDesc('id')
+            ->get();
+
         // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
         // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
         $customerOrders = collect();
@@ -317,6 +325,7 @@ class OrderController extends Controller
             'suggestions' => $suggestions,
             'activeInvoice' => $activeInvoice,
             'customerOrders' => $customerOrders,
+            'supersededInvoices' => $supersededInvoices,
         ]);
     }
 

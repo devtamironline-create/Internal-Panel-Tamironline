@@ -473,6 +473,95 @@
                 @endcan
             </div>
 
+            {{-- ─── فاکتورهای قبلی (superseded) — تاریخچه برگشت و تکمیل مجدد ─── --}}
+            @if($supersededInvoices->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-rose-400">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        فاکتورهای قبلی این سفارش
+                    </h2>
+                    <span class="text-xs text-gray-500">{{ $supersededInvoices->count() }} فاکتور بایگانی شده</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">این سفارش حداقل یک بار «برگشت» داده شده و فاکتور جدیدی برایش صادر شده. فاکتورهای زیر دیگر فعال نیستند ولی برای تاریخچه نگه‌داری شده‌اند.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
+                                <th class="py-2 px-3 text-right">کد فاکتور</th>
+                                <th class="py-2 px-3 text-right">صدور</th>
+                                <th class="py-2 px-3 text-right">بایگانی</th>
+                                <th class="py-2 px-3 text-right">مبلغ کل</th>
+                                <th class="py-2 px-3 text-right">سهم تکنسین</th>
+                                <th class="py-2 px-3 text-right">سهم شرکت</th>
+                                <th class="py-2 px-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($supersededInvoices as $oldInv)
+                                <tr class="text-xs">
+                                    <td class="py-2 px-3 font-mono" dir="ltr">{{ $oldInv->invoice_code }}</td>
+                                    <td class="py-2 px-3 text-gray-500" dir="ltr">@jdatetime($oldInv->issued_at ?? $oldInv->created_at)</td>
+                                    <td class="py-2 px-3 text-rose-600" dir="ltr">@jdatetime($oldInv->superseded_at)</td>
+                                    <td class="py-2 px-3 font-bold">{{ number_format((int) $oldInv->total_amount) }}</td>
+                                    <td class="py-2 px-3">{{ number_format((int) $oldInv->tech_share) }}</td>
+                                    <td class="py-2 px-3">{{ number_format((int) $oldInv->company_share) }}</td>
+                                    <td class="py-2 px-3">
+                                        <a href="{{ route('crm.invoices.print', $oldInv->id) }}" target="_blank"
+                                           class="text-brand-700 hover:underline">مشاهده →</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
+            {{-- ─── Snapshot برگشت‌ها از log_return ─── --}}
+            @php $returnLogs = $order->wp_return_logs ?: []; @endphp
+            @if(! empty($returnLogs))
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-amber-400">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    رویدادهای بازگشت سفارش
+                </h2>
+                <div class="space-y-3">
+                    @foreach(array_reverse($returnLogs) as $rl)
+                        <div class="border border-amber-200 dark:border-amber-700/40 bg-amber-50/40 dark:bg-amber-900/10 rounded-lg p-3 text-xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-amber-800 dark:text-amber-300">{{ $rl['return_type_message'] ?? 'بازگشت سفارش' }}</span>
+                                <span class="text-gray-500" dir="ltr">{{ $rl['date'] ?? '—' }}</span>
+                            </div>
+                            @if(! empty($rl['return_description']))
+                                <div class="text-gray-700 dark:text-gray-200 leading-7 whitespace-pre-wrap">{{ $rl['return_description'] }}</div>
+                            @endif
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 pt-2 border-t border-amber-200/60 text-[11px]">
+                                @if(isset($rl['price_customer']))
+                                    <div><span class="text-gray-400">قیمت مشتری:</span> {{ number_format((int) $rl['price_customer']) }}</div>
+                                @endif
+                                @if(isset($rl['cost_price']))
+                                    <div><span class="text-gray-400">قیمت خرید:</span> {{ number_format((int) $rl['cost_price']) }}</div>
+                                @endif
+                                @if(isset($rl['hire']))
+                                    <div><span class="text-gray-400">اجرت:</span> {{ number_format((int) $rl['hire']) }}</div>
+                                @endif
+                                @if(isset($rl['total_invoice']))
+                                    <div><span class="text-gray-400">جمع فاکتور:</span> {{ number_format((int) $rl['total_invoice']) }}</div>
+                                @endif
+                            </div>
+                            @if(! empty($rl['invoice_descripotion']))
+                                <div class="mt-2 pt-2 border-t border-amber-200/60">
+                                    <span class="text-[10px] text-gray-500">توضیحات فاکتور آن زمان:</span>
+                                    <div class="text-gray-700 dark:text-gray-200 leading-7 whitespace-pre-wrap">{{ $rl['invoice_descripotion'] }}</div>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
             {{-- تاریخچه و رویدادها --}}
             @php
                 $wpEvents = $order->wp_events;
