@@ -180,7 +180,7 @@ class CatalogBrandController extends Controller
             'subtitle' => CatalogMerger::pick($brand->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => CatalogMerger::pick($brand->caption, $heroTpl['caption'] ?? null),
             'tagline' => CatalogMerger::pick($brand->tagline, null),
-            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
+            'image' => $this->mergeHeroImage($brand->hero_image ?? null, $heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => CatalogMerger::pick($brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -190,6 +190,32 @@ class CatalogBrandController extends Controller
                 'label' => CatalogMerger::pick($brand->cta_secondary_label, $ctaSecondaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($brand->cta_secondary_url, $ctaSecondaryTpl['url'] ?? null),
                 'icon' => CatalogMerger::pick($brand->cta_secondary_icon, $ctaSecondaryTpl['icon'] ?? null),
+            ],
+        ];
+    }
+
+    /**
+     * Hero image — entity hero_image اولویت بالاتر دارد؛
+     * هر slot به‌صورت مستقل merge می‌شود (مثلاً اگر برند فقط desktop داشته باشد،
+     * mobile از template می‌آید).
+     *
+     * @param  mixed  $entity  مقدار hero_image از crm_brands/crm_devices (array | null)
+     * @param  mixed  $template  مقدار image از hero template (array | null)
+     */
+    private function mergeHeroImage($entity, $template): array
+    {
+        $svc = \Modules\Site\Services\PageSectionService::class;
+        $e = $svc::normalizeResponsiveImage($entity);
+        $t = $svc::normalizeResponsiveImage($template);
+
+        return [
+            'desktop' => [
+                'url' => $e['desktop']['url'] ?: $t['desktop']['url'],
+                'alt' => $e['desktop']['alt'] ?: $t['desktop']['alt'],
+            ],
+            'mobile' => [
+                'url' => $e['mobile']['url'] ?: $t['mobile']['url'],
+                'alt' => $e['mobile']['alt'] ?: $t['mobile']['alt'],
             ],
         ];
     }

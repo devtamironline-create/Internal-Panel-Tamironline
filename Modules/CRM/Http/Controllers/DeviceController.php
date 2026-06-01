@@ -245,6 +245,12 @@ class DeviceController extends Controller
             'videos.*.description' => 'nullable|string|max:600',
             'videos.*.poster_url' => 'nullable|string|max:500',
 
+            'hero_image' => 'nullable|array',
+            'hero_image.desktop.url' => 'nullable|string|max:500',
+            'hero_image.desktop.alt' => 'nullable|string|max:200',
+            'hero_image.mobile.url' => 'nullable|string|max:500',
+            'hero_image.mobile.alt' => 'nullable|string|max:200',
+
             'faq_ids' => 'nullable|array',
             'faq_ids.*' => 'string|exists:faqs,id',
 
@@ -338,6 +344,14 @@ class DeviceController extends Controller
             if ($m) {
                 $validated['thumbnail'] = $m->url();
             }
+        }
+
+        // نرمالایز hero_image — اگر هر دو slot خالی است، null ذخیره می‌شود تا از template fallback شود
+        if (array_key_exists('hero_image', $validated)) {
+            $hi = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($validated['hero_image']);
+            $isEmpty = empty($hi['desktop']['url']) && empty($hi['mobile']['url'])
+                && empty($hi['desktop']['alt']) && empty($hi['mobile']['alt']);
+            $validated['hero_image'] = $isEmpty ? null : $hi;
         }
 
         // پاک‌سازی HTML خروجی TinyMCE قبل از ذخیره (allowlist tags + attrs)

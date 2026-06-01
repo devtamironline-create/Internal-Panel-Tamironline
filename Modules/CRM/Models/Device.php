@@ -35,6 +35,7 @@ class Device extends Model
         'issues',
         'faq',
         'videos',
+        'hero_image',
         'meta_title',
         'meta_description',
         'warranty_text',
@@ -64,6 +65,7 @@ class Device extends Model
         'issues' => 'array',
         'faq' => 'array',
         'videos' => 'array',
+        'hero_image' => 'array',
         'service_steps' => 'array',
         'sections_enabled' => 'array',
     ];

@@ -232,7 +232,7 @@ class CatalogDeviceController extends Controller
             'title' => CatalogMerger::pick($device->service_name, $heroTpl['title'] ?? $device->name),
             'subtitle' => CatalogMerger::pick($device->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => CatalogMerger::pick($device->caption, $heroTpl['caption'] ?? null),
-            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
+            'image' => $this->mergeHeroImage($device->hero_image ?? null, $heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => CatalogMerger::pick($device->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($device->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -242,6 +242,30 @@ class CatalogDeviceController extends Controller
                 'label' => CatalogMerger::pick($device->cta_secondary_label, $ctaSecondaryTpl['label'] ?? null),
                 'url' => CatalogMerger::pick($device->cta_secondary_url, $ctaSecondaryTpl['url'] ?? null),
                 'icon' => CatalogMerger::pick($device->cta_secondary_icon, $ctaSecondaryTpl['icon'] ?? null),
+            ],
+        ];
+    }
+
+    /**
+     * Hero image — entity.hero_image > template; هر slot مستقل merge می‌شود.
+     *
+     * @param  mixed  $entity
+     * @param  mixed  $template
+     */
+    private function mergeHeroImage($entity, $template): array
+    {
+        $svc = \Modules\Site\Services\PageSectionService::class;
+        $e = $svc::normalizeResponsiveImage($entity);
+        $t = $svc::normalizeResponsiveImage($template);
+
+        return [
+            'desktop' => [
+                'url' => $e['desktop']['url'] ?: $t['desktop']['url'],
+                'alt' => $e['desktop']['alt'] ?: $t['desktop']['alt'],
+            ],
+            'mobile' => [
+                'url' => $e['mobile']['url'] ?: $t['mobile']['url'],
+                'alt' => $e['mobile']['alt'] ?: $t['mobile']['alt'],
             ],
         ];
     }

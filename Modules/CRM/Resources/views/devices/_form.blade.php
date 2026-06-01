@@ -94,6 +94,21 @@
     </div>
 </div>
 
+{{-- ───────────────────────── تصویر Hero اختصاصی این دستگاه ───────────────────────── --}}
+<div class="mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+    <h3 class="text-base font-bold mb-1">تصویر Hero اختصاصی این دستگاه</h3>
+    <p class="text-xs text-gray-500 mb-4">
+        دو تصویر برای دسکتاپ و موبایل، هرکدام با متن جایگزین (alt) مستقل. این تصاویر فقط در صفحه‌ی همین دستگاه نمایش داده می‌شوند و
+        پیش‌فرض الگوی <code>device</code> را override می‌کنند.
+    </p>
+    @include('crm::partials.hero-image-picker', [
+        'name' => 'hero_image',
+        'current' => old('hero_image', $device->hero_image ?? null),
+        'entityKind' => 'دستگاه',
+        'templateRoute' => route('site.admin.page-content.edit', 'device'),
+    ])
+</div>
+
 {{-- ───────────────────────── CMS Override Fields (Flat - single section) ───────────────────────── --}}
 <div class="mt-8 space-y-6">
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -440,7 +455,3 @@
     </div>
 </div>
 
-<div class="flex items-center gap-3 mt-6 sticky bottom-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur p-3 -mx-3">
-    <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ذخیره</button>
-    <a href="{{ route('crm.devices.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">انصراف</a>
-</div>

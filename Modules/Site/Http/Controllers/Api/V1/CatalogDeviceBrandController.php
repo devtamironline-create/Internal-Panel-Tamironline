@@ -170,7 +170,7 @@ class CatalogDeviceBrandController extends Controller
             ),
             'subtitle' => $this->merge($page?->subtitle, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => $this->merge($page?->caption, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
-            'image' => \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($heroTpl['image'] ?? null),
+            'image' => $this->mergeHeroImage($device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => $this->merge($page?->cta_primary_label, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => $this->merge($page?->cta_primary_url, $device->cta_primary_url, $brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -180,6 +180,33 @@ class CatalogDeviceBrandController extends Controller
                 'label' => $this->merge($page?->cta_secondary_label, $device->cta_secondary_label, $brand->cta_secondary_label, $ctaSecondaryTpl['label'] ?? null),
                 'url' => $this->merge($page?->cta_secondary_url, $device->cta_secondary_url, $brand->cta_secondary_url, $ctaSecondaryTpl['url'] ?? null),
                 'icon' => $this->merge($page?->cta_secondary_icon, $device->cta_secondary_icon, $brand->cta_secondary_icon, $ctaSecondaryTpl['icon'] ?? null),
+            ],
+        ];
+    }
+
+    /**
+     * Hero image — اولویت: device.hero_image > brand.hero_image > template.hero.image
+     * هر slot به‌صورت مستقل merge می‌شود.
+     *
+     * @param  mixed  $deviceImg
+     * @param  mixed  $brandImg
+     * @param  mixed  $template
+     */
+    private function mergeHeroImage($deviceImg, $brandImg, $template): array
+    {
+        $svc = \Modules\Site\Services\PageSectionService::class;
+        $d = $svc::normalizeResponsiveImage($deviceImg);
+        $b = $svc::normalizeResponsiveImage($brandImg);
+        $t = $svc::normalizeResponsiveImage($template);
+
+        return [
+            'desktop' => [
+                'url' => $d['desktop']['url'] ?: ($b['desktop']['url'] ?: $t['desktop']['url']),
+                'alt' => $d['desktop']['alt'] ?: ($b['desktop']['alt'] ?: $t['desktop']['alt']),
+            ],
+            'mobile' => [
+                'url' => $d['mobile']['url'] ?: ($b['mobile']['url'] ?: $t['mobile']['url']),
+                'alt' => $d['mobile']['alt'] ?: ($b['mobile']['alt'] ?: $t['mobile']['alt']),
             ],
         ];
     }
