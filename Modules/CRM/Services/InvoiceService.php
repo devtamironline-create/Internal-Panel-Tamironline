@@ -42,10 +42,30 @@ class InvoiceService
 
         return DB::transaction(function () use ($order, $createdBy, $existing) {
             if ($existing) {
-                // اگر فاکتور قبلی wallet tx همراه داشت، آن را پاک کن
-                // (بعد از create فاکتور جدید، wallet tx جدید ساخته می‌شود).
+                // به‌جای حذف wallet transactions فاکتور قبلی، یک «reverse»
+                // برای هرکدام ثبت می‌کنیم تا تاریخچهٔ مالی کامل باقی بماند
+                // و balance با commission جدید درست محاسبه شود.
+                // (قبلاً delete می‌شدند → data loss در سفارش‌های برگشتی.)
                 if ($existing->in_wallet) {
-                    WalletTransaction::where('invoice_id', $existing->id)->delete();
+                    $oldTxs = WalletTransaction::where('invoice_id', $existing->id)->get();
+                    foreach ($oldTxs as $tx) {
+                        $last = (int) (WalletTransaction::where('technician_id', $tx->technician_id)
+                            ->orderByDesc('id')->value('balance_after') ?? 0);
+                        $reverseAmount = -1 * (int) $tx->amount;
+                        WalletTransaction::create([
+                            'technician_id' => $tx->technician_id,
+                            'order_id' => $tx->order_id,
+                            'invoice_id' => $tx->invoice_id,
+                            'wp_id' => null,
+                            'type' => $tx->type,
+                            'amount' => $reverseAmount,
+                            'balance_after' => $last + $reverseAmount,
+                            'note' => 'بازگشت « ' . ($tx->note ?: 'commission') . ' » — تکمیل مجدد سفارش بعد از برگشت',
+                            'created_by' => $createdBy,
+                        ]);
+                        \Modules\CRM\Models\Technician::where('id', $tx->technician_id)
+                            ->update(['wallet_balance' => $last + $reverseAmount]);
+                    }
                 }
                 Invoice::withoutGlobalScope('active')
                     ->where('order_id', $order->id)
