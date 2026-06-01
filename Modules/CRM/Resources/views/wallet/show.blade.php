@@ -262,10 +262,16 @@
                         <label class="block text-xs text-gray-700 dark:text-gray-200 mb-1">۱) ابتدا کد تأیید را به موبایلتان بفرستید:</label>
                         <button type="button" @click="requestOtp()" :disabled="otpRequesting"
                                 class="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold disabled:opacity-50">
-                            <span x-show="!otpRequesting && !otpSent">📱 ارسال کد تأیید</span>
                             <span x-show="otpRequesting">در حال ارسال…</span>
-                            <span x-show="otpSent && !otpRequesting" class="text-emerald-100" x-text="otpStatus"></span>
+                            <span x-show="!otpRequesting && !otpSent">📱 ارسال کد تأیید</span>
+                            <span x-show="!otpRequesting && otpSent">✓ کد ارسال شد — دوباره</span>
                         </button>
+                        {{-- پیام وضعیت (موفق یا خطا) — همیشه قابل دیدن --}}
+                        <div x-show="otpStatus" x-cloak
+                             :class="otpSent ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-700'"
+                             class="mt-2 p-2 rounded-lg border text-xs leading-6">
+                            <span x-text="otpStatus"></span>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-700 dark:text-gray-200 mb-1">۲) کد ۶ رقمی دریافت‌شده:</label>
@@ -307,6 +313,7 @@ function hardDeleteModal() {
         close() { this.visible = false; },
         async requestOtp() {
             this.otpRequesting = true;
+            this.otpStatus = '';
             try {
                 const res = await fetch('{{ route('crm.wallet.transaction.hard-delete.otp') }}', {
                     method: 'POST',
@@ -315,15 +322,27 @@ function hardDeleteModal() {
                         'Accept': 'application/json',
                     },
                 });
-                const json = await res.json();
-                this.otpSent = !!json.success;
-                this.otpStatus = json.message || (json.success ? 'کد ارسال شد' : 'خطا در ارسال');
-                if (!json.success) {
-                    setTimeout(() => { this.otpSent = false; this.otpStatus = ''; }, 4000);
+                // اگر پاسخ JSON نیست (مثلاً 419 با HTML)، خطا را پیداکنیم
+                let json = null;
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    json = await res.json();
                 }
+                if (!res.ok) {
+                    this.otpSent = false;
+                    this.otpStatus = (json && json.message) ? json.message
+                        : ('خطای سرور: ' + res.status + ' ' + res.statusText);
+                    console.error('OTP request failed', res.status, json);
+                    return;
+                }
+                this.otpSent = !!(json && json.success);
+                this.otpStatus = (json && json.message)
+                    ? json.message
+                    : (this.otpSent ? 'کد ارسال شد' : 'خطای ناشناخته در ارسال');
             } catch (e) {
-                this.otpStatus = 'خطا در اتصال';
-                setTimeout(() => { this.otpStatus = ''; }, 3000);
+                this.otpSent = false;
+                this.otpStatus = 'خطا در اتصال: ' + (e.message || e);
+                console.error(e);
             } finally {
                 this.otpRequesting = false;
             }
