@@ -962,6 +962,17 @@ return [
                 ],
             ],
 
+            // ─── 7c. Forum Questions (۵ سوال آخر این دستگاه) ────────
+            'forum_questions' => [
+                'label' => 'سوالات اخیر انجمن (فقط مرتبط با این دستگاه)',
+                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس device_id خودکار از /v1/forum/questions می‌آیند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                ],
+            ],
+
             // ─── 8. Promo Banner (مشترک همه‌ی صفحات دستگاه) ────────
             'promo' => [
                 'label' => 'بنر تبلیغاتی (پیش‌فرض همه‌ی صفحات دستگاه) — از مخزن بنرها',
@@ -1087,6 +1098,17 @@ return [
                 ],
             ],
 
+            // ─── 7c. Forum Questions (۵ سوال آخر این برند) ──────────
+            'forum_questions' => [
+                'label' => 'سوالات اخیر انجمن (فقط مرتبط با این برند)',
+                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس brand_id خودکار از انجمن می‌آیند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                ],
+            ],
+
             // ─── Promo Banner (مشترک همه‌ی صفحات برند) ─────────────
             'promo' => [
                 'label' => 'بنر تبلیغاتی (پیش‌فرض همه‌ی صفحات برند) — از مخزن بنرها',
@@ -1186,6 +1208,16 @@ return [
                         'type' => 'banner_zone',
                         'rules' => 'nullable|string|max:120',
                     ],
+                ],
+            ],
+
+            'forum_questions' => [
+                'label' => 'سوالات اخیر انجمن (فقط مرتبط با این ترکیب)',
+                'description' => '۵ سوال آخر که هم device_id و هم brand_id آن‌ها مطابقت دارد. اگر چیزی نباشد، فرانت می‌تواند fallback به فقط device_id یا brand_id بزند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
 

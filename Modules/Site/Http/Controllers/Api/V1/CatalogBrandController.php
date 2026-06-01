@@ -130,6 +130,14 @@ class CatalogBrandController extends Controller
                         'subtitle' => $template['videos']['subtitle'] ?? null,
                         'items' => $this->buildVideos($brand, $template),
                     ],
+                    'forum_questions' => [
+                        'enabled' => $enabled('forum_questions', true),
+                        'title' => $template['forum_questions']['title'] ?? null,
+                        'subtitle' => $template['forum_questions']['subtitle'] ?? null,
+                        'see_all_label' => $template['forum_questions']['see_all_label'] ?? null,
+                        'see_all_url' => '/forum?brand='.$brand->slug,
+                        'items' => \Modules\Site\Support\ForumQuestionFeed::forBrand((int) $brand->id, 5),
+                    ],
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');

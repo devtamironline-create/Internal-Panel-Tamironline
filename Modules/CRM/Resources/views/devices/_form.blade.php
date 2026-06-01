@@ -119,6 +119,7 @@
                 'brands' => 'برندها',
                 'testimonials' => 'نظرات مشتریان',
                 'videos' => 'ویدیوها',
+                'forum_questions' => 'سوالات انجمن',
             ] as $key => $label)
                 <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                     <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
