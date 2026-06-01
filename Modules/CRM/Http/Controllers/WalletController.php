@@ -111,11 +111,28 @@ class WalletController extends Controller
             // ۱) حذف
             $transaction->delete();
 
-            // ۲) محاسبه‌ٔ مجدد wallet_balance از روی مجموع تراکنش‌های باقی‌مانده
-            $newBalance = (int) WalletTransaction::where('technician_id', $technician->id)->sum('amount');
+            // ۲) بازمحاسبهٔ ستون «موجودی» (balance_after) برای *تمام*
+            //    تراکنش‌های باقی‌ماندهٔ این تکنسین به ترتیب id (یعنی
+            //    ترتیب ساخت). این کار مقادیر قدیمیِ stale را که از
+            //    باگ‌های قدیمی مانده بود همگام می‌کند، طوری که هر ردیف
+            //    دقیقاً مجموع تراکنش‌های قبل از خودش + amount خودش را
+            //    نشان دهد.
+            $running = 0;
+            $rows = WalletTransaction::where('technician_id', $technician->id)
+                ->orderBy('id')
+                ->get();
+            foreach ($rows as $tx) {
+                $running += (int) $tx->amount;
+                if ((int) $tx->balance_after !== $running) {
+                    $tx->forceFill(['balance_after' => $running])->saveQuietly();
+                }
+            }
+            $newBalance = $running;
+
+            // ۳) به‌روزرسانی wallet_balance تکنسین
             $technician->forceFill(['wallet_balance' => $newBalance])->saveQuietly();
 
-            // ۳) ردیف audit (amount=0 تا balance تغییر نکند)
+            // ۴) ردیف audit (amount=0 تا balance تغییر نکند)
             WalletTransaction::create([
                 'technician_id' => $technician->id,
                 'order_id' => $deletedOrderId,
@@ -136,7 +153,7 @@ class WalletController extends Controller
 
             return back()->with(
                 'success',
-                'تراکنش حذف شد و مانده تکنسین به‌روزرسانی شد. ردیف audit ثبت شد تا تاریخچه حفظ شود.'
+                'تراکنش حذف شد، ستون «موجودی» همهٔ ردیف‌ها بازمحاسبه شد و ردیف audit ثبت شد.'
             );
         });
     }
