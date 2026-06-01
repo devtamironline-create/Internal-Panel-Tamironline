@@ -42,31 +42,12 @@ class InvoiceService
 
         return DB::transaction(function () use ($order, $createdBy, $existing) {
             if ($existing) {
-                // به‌جای حذف wallet transactions فاکتور قبلی، یک «reverse»
-                // برای هرکدام ثبت می‌کنیم تا تاریخچهٔ مالی کامل باقی بماند
-                // و balance با commission جدید درست محاسبه شود.
-                // (قبلاً delete می‌شدند → data loss در سفارش‌های برگشتی.)
-                if ($existing->in_wallet) {
-                    $oldTxs = WalletTransaction::where('invoice_id', $existing->id)->get();
-                    foreach ($oldTxs as $tx) {
-                        $last = (int) (WalletTransaction::where('technician_id', $tx->technician_id)
-                            ->orderByDesc('id')->value('balance_after') ?? 0);
-                        $reverseAmount = -1 * (int) $tx->amount;
-                        WalletTransaction::create([
-                            'technician_id' => $tx->technician_id,
-                            'order_id' => $tx->order_id,
-                            'invoice_id' => $tx->invoice_id,
-                            'wp_id' => null,
-                            'type' => $tx->type,
-                            'amount' => $reverseAmount,
-                            'balance_after' => $last + $reverseAmount,
-                            'note' => 'بازگشت « ' . ($tx->note ?: 'commission') . ' » — تکمیل مجدد سفارش بعد از برگشت',
-                            'created_by' => $createdBy,
-                        ]);
-                        \Modules\CRM\Models\Technician::where('id', $tx->technician_id)
-                            ->update(['wallet_balance' => $last + $reverseAmount]);
-                    }
-                }
+                // فقط فاکتور قبلی را superseded می‌کنیم تا از لیست
+                // فعال خارج شود. **wallet tx آن را دست نمی‌زنیم** —
+                // طبق درخواست، فاکتور جدید کاملاً مجزا ثبت می‌شود و
+                // commission قبلی روی بدهی تکنسین باقی می‌ماند.
+                // تاریخچهٔ کامل (فاکتور قدیمی + tx قدیمی + فاکتور جدید
+                // + tx جدید) همگی در DB می‌مانند و قابل مشاهده‌اند.
                 Invoice::withoutGlobalScope('active')
                     ->where('order_id', $order->id)
                     ->whereNull('superseded_at')
