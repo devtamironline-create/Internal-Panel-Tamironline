@@ -128,19 +128,33 @@ class InvoiceService
      */
     protected function fireInvoiceSms(Invoice $invoice): void
     {
+        $log = \Illuminate\Support\Facades\Log::channel(config('logging.default'));
         try {
             $order = $invoice->order;
-            if (! $order) return;
+            if (! $order) {
+                $log->warning('Auto invoice SMS skipped: order not found', ['invoice_id' => $invoice->id]);
+                return;
+            }
 
             $mobile = $order->customer_mobile ?: $order->customer?->mobile;
-            if (! $mobile) return;
+            if (! $mobile) {
+                $log->warning('Auto invoice SMS skipped: customer has no mobile', ['order_id' => $order->id, 'invoice_id' => $invoice->id]);
+                return;
+            }
 
             $trigger = \Modules\CRM\Enums\SmsTrigger::CustomerInvoiceIssued;
-            $template = \Modules\CRM\Models\SmsTemplate::where('trigger_key', $trigger->value)
-                ->where('is_active', true)
-                ->first();
-            if (! $template || empty($template->kavenegar_template)) {
-                return; // تمپلیت فعال نیست → سایلنت
+            $template = \Modules\CRM\Models\SmsTemplate::where('trigger_key', $trigger->value)->first();
+            if (! $template) {
+                $log->warning('Auto invoice SMS skipped: template row missing', ['trigger' => $trigger->value]);
+                return;
+            }
+            if (! $template->is_active) {
+                $log->warning('Auto invoice SMS skipped: template is inactive', ['trigger' => $trigger->value]);
+                return;
+            }
+            if (empty($template->kavenegar_template)) {
+                $log->warning('Auto invoice SMS skipped: kavenegar_template empty', ['trigger' => $trigger->value]);
+                return;
             }
 
             $order->loadMissing('customer');

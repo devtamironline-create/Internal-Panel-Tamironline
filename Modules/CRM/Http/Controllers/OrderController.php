@@ -280,6 +280,53 @@ class OrderController extends Controller
             ->with('success', 'سفارش ثبت شد: ' . $order->order_code);
     }
 
+    /**
+     * لیست سفارش‌های تکمیل‌شده در ۲ هفتهٔ گذشته که فاکتور فعال ندارند.
+     * برای جبران سفارش‌هایی که به هر دلیل خودکار فاکتور برایشان ساخته
+     * نشده — اپراتور می‌تواند با یک کلیک فاکتور را صادر کند.
+     */
+    public function missingInvoices(Request $request)
+    {
+        $sinceDays = (int) $request->query('days', 14);
+        if ($sinceDays <= 0 || $sinceDays > 90) $sinceDays = 14;
+        $since = now()->subDays($sinceDays);
+
+        // ID همهٔ سفارش‌هایی که فاکتور فعال (superseded نباشد) دارند —
+        // اینها از لیست خارج می‌شوند.
+        $orderIdsWithActiveInvoice = \Modules\CRM\Models\Invoice::query()
+            ->whereNotNull('order_id')
+            ->pluck('order_id')
+            ->unique();
+
+        $orders = Order::query()
+            ->with([
+                'customer:id,first_name,last_name,mobile',
+                'technician:id,first_name,last_name,firstname_tech,mobile',
+                'brand:id,name', 'device:id,name',
+            ])
+            ->where('status', OrderStatus::Completed->value)
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
+            ->where(function ($q) {
+                $q->where('is_legacy_closed', false)
+                    ->orWhereNull('is_legacy_closed');
+            })
+            ->whereNotIn('id', $orderIdsWithActiveInvoice)
+            ->where(function ($q) {
+                $q->where('save_as_draft', false)
+                    ->orWhereNull('save_as_draft');
+            })
+            ->orderByDesc('completed_at')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('crm::orders.missing-invoices', [
+            'orders' => $orders,
+            'sinceDays' => $sinceDays,
+            'since' => $since,
+        ]);
+    }
+
     public function show(Order $order)
     {
         $order->load([

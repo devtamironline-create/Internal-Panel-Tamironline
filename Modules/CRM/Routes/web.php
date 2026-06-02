@@ -204,6 +204,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:create-crm-order')->group(function () {
         Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
+        Route::get('orders/missing-invoices', [OrderController::class, 'missingInvoices'])->name('orders.missing-invoices');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     });
     Route::middleware('can:edit-crm-order')->group(function () {
