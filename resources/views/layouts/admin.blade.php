@@ -114,6 +114,21 @@
             padding: 0.5rem 0.75rem;
             font-size: 0.8125rem;
         }
+        .sidebar-section-header {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 0.75rem 0.25rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .sidebar-section-header:first-child {
+            margin-top: 0;
+            border-top: none;
+            padding-top: 0.25rem;
+        }
         .sidebar-menu-item svg {
             color: rgba(255, 255, 255, 0.85);
             flex-shrink: 0;
@@ -594,6 +609,11 @@
                         </a>
                         @endcanany
 
+                        {{-- ─── محتوای صفحات ─── --}}
+                        @canany(['manage-site-pages', 'view-site-media', 'upload-site-media', 'manage-site-media', 'manage-site-banners', 'manage-site-settings', 'manage-site'])
+                        <div class="sidebar-section-header">محتوا و رسانه</div>
+                        @endcanany
+
                         @canany(['manage-site-pages', 'manage-site'])
                         <a href="{{ route('site.admin.page-content.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.page-content.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -613,6 +633,24 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             بنرها و اسلایدر
                         </a>
+                        @endcanany
+
+                        {{-- ─── بلاگ ─── --}}
+                        @canany(['manage-site-pages', 'manage-site'])
+                        <div class="sidebar-section-header">بلاگ</div>
+                        <a href="{{ route('site.admin.blog.articles.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.articles.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            مقالات بلاگ
+                        </a>
+                        <a href="{{ route('site.admin.blog.topics.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.topics.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            تاپیک‌های بلاگ
+                        </a>
+                        @endcanany
+
+                        {{-- ─── نظرات و کامنت‌ها ─── --}}
+                        @canany(['manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'view-site-comments', 'manage-site-comments', 'manage-site'])
+                        <div class="sidebar-section-header">نظرات و کامنت‌ها</div>
                         @endcanany
 
                         @canany(['manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'manage-site'])
@@ -637,75 +675,6 @@
                         </a>
                         @endcanany
 
-                        @canany(['view-forum', 'manage-forum-questions', 'manage-site'])
-                        <a href="{{ route('site.admin.forum.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.dashboard') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                            داشبورد انجمن
-                        </a>
-                        <a href="{{ route('site.admin.forum.questions.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.questions.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            انجمن — سوالات
-                            @php $forumPending = \Modules\Site\Models\Forum\Question::where('status','pending')->count(); @endphp
-                            @if($forumPending > 0)
-                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPending }}</span>
-                            @endif
-                        </a>
-                        <a href="{{ route('site.admin.forum.reports.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.reports.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
-                            گزارش‌های انجمن
-                            @php $forumPendingReports = \Modules\Site\Models\Forum\Report::where('status','pending')->count(); @endphp
-                            @if($forumPendingReports > 0)
-                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPendingReports }}</span>
-                            @endif
-                        </a>
-                        <a href="{{ route('site.admin.forum.tags.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.tags.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                            برچسب‌های انجمن
-                        </a>
-                        <a href="{{ route('site.admin.forum.banlist.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.banlist.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                            لیست بن انجمن
-                        </a>
-                        <a href="{{ route('site.admin.forum.activity') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.activity') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                            تاریخچه عملیات
-                        </a>
-                        @endcanany
-                        @canany(['manage-forum-questions', 'manage-site'])
-                        <a href="{{ route('site.admin.forum.settings') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.settings*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            تنظیمات انجمن
-                        </a>
-                        @endcanany
-                        @canany(['manage-forum-experts', 'manage-site'])
-                        <a href="{{ route('site.admin.forum.experts.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.experts.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            کارشناسان انجمن
-                        </a>
-                        @endcanany
-
-                        @canany(['manage-site-pages', 'manage-site'])
-                        <a href="{{ route('site.admin.blog.articles.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.articles.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            مقالات بلاگ
-                        </a>
-                        <a href="{{ route('site.admin.blog.topics.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.blog.topics.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                            تاپیک‌های بلاگ
-                        </a>
-                        @endcanany
-
-                        @canany(['manage-site-faqs', 'manage-site'])
-                        <a href="{{ route('site.admin.faqs.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.faqs.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            سوالات متداول
-                        </a>
-                        <a href="{{ route('site.admin.taxonomies.index', 'faq') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.taxonomies.*') && request()->route('type') === 'faq' ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                            دسته‌بندی FAQ
-                        </a>
-                        @endcanany
-
                         @canany(['manage-site-reviews', 'manage-site-testimonials', 'manage-site'])
                         <a href="{{ route('site.admin.taxonomies.index', 'testimonial') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.taxonomies.*') && request()->route('type') === 'testimonial' ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
@@ -713,8 +682,39 @@
                         </a>
                         @endcanany
 
+                        {{-- ─── سوالات متداول ─── --}}
+                        @canany(['manage-site-faqs', 'manage-site'])
+                        <div class="sidebar-section-header">سوالات متداول</div>
+                        <a href="{{ route('site.admin.faqs.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.faqs.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            بانک سوالات
+                        </a>
+                        <a href="{{ route('site.admin.taxonomies.index', 'faq') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.taxonomies.*') && request()->route('type') === 'faq' ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            دسته‌بندی FAQ
+                        </a>
+                        @endcanany
+
+                        {{-- ─── کاتالوگ (CRM): دستگاه/برند/ترکیبی ─── --}}
                         @if(Route::has('crm.devices.index'))
                         @can('view-crm-taxonomies')
+                        <div class="sidebar-section-header">کاتالوگ (دستگاه/برند)</div>
+                        <a href="{{ route('crm.devices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.devices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                            دستگاه‌ها
+                        </a>
+                        <a href="{{ route('crm.device-categories.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-categories.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            دسته‌بندی دستگاه‌ها
+                        </a>
+                        <a href="{{ route('crm.brands.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.brands.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            برندها
+                        </a>
+                        <a href="{{ route('crm.device-brand-pages.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-brand-pages.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                            صفحات ترکیبی
+                        </a>
                         <a href="{{ route('site.admin.device-content') }}" class="sidebar-menu-item">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             محتوای صفحات دستگاه
@@ -722,43 +722,9 @@
                         @endcan
                         @endif
 
-                        @if(Route::has('crm.brands.index'))
-                        @can('view-crm-taxonomies')
-                        <a href="{{ route('crm.brands.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.brands.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                            برندها (CRM)
-                        </a>
-                        @endcan
-                        @endif
-
-                        @if(Route::has('crm.device-categories.index'))
-                        @can('view-crm-taxonomies')
-                        <a href="{{ route('crm.device-categories.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-categories.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                            دسته‌بندی دستگاه‌ها
-                        </a>
-                        @endcan
-                        @endif
-
-                        @if(Route::has('crm.devices.index'))
-                        @can('view-crm-taxonomies')
-                        <a href="{{ route('crm.devices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.devices.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                            دستگاه‌ها (CRM)
-                        </a>
-                        @endcan
-                        @endif
-
-                        @if(Route::has('crm.device-brand-pages.index'))
-                        @can('view-crm-taxonomies')
-                        <a href="{{ route('crm.device-brand-pages.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-brand-pages.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
-                            صفحات ترکیبی (device × brand)
-                        </a>
-                        @endcan
-                        @endif
-
+                        {{-- ─── تنظیمات سایت ─── --}}
                         @canany(['manage-site-settings', 'manage-site'])
+                        <div class="sidebar-section-header">تنظیمات</div>
                         <a href="{{ route('site.admin.about-stats.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.about-stats.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                             آمار صفحه‌ی About
@@ -772,6 +738,83 @@
                 </div>
                 @endcanany
                 @endif
+
+                {{-- ═══════════════════════════════════════════════════════ --}}
+                {{-- مدیریت انجمن — سیستم مستقل از سایت --}}
+                {{-- ═══════════════════════════════════════════════════════ --}}
+                @canany(['view-forum', 'manage-forum-questions', 'moderate-forum-questions', 'delete-forum-questions', 'manage-forum-answers', 'manage-forum-experts', 'manage-site'])
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('site.admin.forum.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            مدیریت انجمن
+                            @php
+                                $forumPendingTotal = \Modules\Site\Models\Forum\Question::where('status','pending')->count()
+                                    + \Modules\Site\Models\Forum\Report::where('status','pending')->count();
+                            @endphp
+                            @if($forumPendingTotal > 0)
+                                <span style="background: #f59e0b; color: white; font-size: 10px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPendingTotal }}</span>
+                            @endif
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <div x-show="open" x-collapse class="sidebar-submenu">
+                        @canany(['view-forum', 'manage-forum-questions', 'manage-site'])
+                        <a href="{{ route('site.admin.forum.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد
+                        </a>
+
+                        <div class="sidebar-section-header">محتوا</div>
+                        <a href="{{ route('site.admin.forum.questions.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.questions.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            سوالات
+                            @php $forumPending = \Modules\Site\Models\Forum\Question::where('status','pending')->count(); @endphp
+                            @if($forumPending > 0)
+                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPending }}</span>
+                            @endif
+                        </a>
+                        <a href="{{ route('site.admin.forum.tags.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.tags.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            برچسب‌ها
+                        </a>
+
+                        <div class="sidebar-section-header">moderation</div>
+                        <a href="{{ route('site.admin.forum.reports.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.reports.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
+                            گزارش‌های کاربران
+                            @php $forumPendingReports = \Modules\Site\Models\Forum\Report::where('status','pending')->count(); @endphp
+                            @if($forumPendingReports > 0)
+                                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $forumPendingReports }}</span>
+                            @endif
+                        </a>
+                        <a href="{{ route('site.admin.forum.banlist.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.banlist.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            لیست بن
+                        </a>
+                        <a href="{{ route('site.admin.forum.activity') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.activity') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            Activity log
+                        </a>
+                        @endcanany
+
+                        <div class="sidebar-section-header">پیکربندی</div>
+                        @canany(['manage-forum-experts', 'manage-site'])
+                        <a href="{{ route('site.admin.forum.experts.index') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.experts.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            کارشناسان
+                        </a>
+                        @endcanany
+                        @canany(['manage-forum-questions', 'manage-site'])
+                        <a href="{{ route('site.admin.forum.settings') }}" class="sidebar-menu-item {{ request()->routeIs('site.admin.forum.settings*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            تنظیمات انجمن
+                        </a>
+                        @endcanany
+                    </div>
+                </div>
+                @endcanany
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
