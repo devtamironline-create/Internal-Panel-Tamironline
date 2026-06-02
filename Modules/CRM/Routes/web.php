@@ -195,7 +195,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/export/{format}', [OrderController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('orders.export');
-        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        // مسیر static باید قبل از orders/{order} باشد تا پارامتر اشتباه نشود
+        Route::get('orders/missing-invoices', [OrderController::class, 'missingInvoices'])->name('orders.missing-invoices');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show')->whereNumber('order');
 
         // یادداشت‌های اپراتور — هر کاربری که می‌تواند سفارش را ببیند،
         // می‌تواند یادداشت اضافه/حذف کند (حذف فقط یادداشت خودش).
@@ -204,7 +206,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:create-crm-order')->group(function () {
         Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
-        Route::get('orders/missing-invoices', [OrderController::class, 'missingInvoices'])->name('orders.missing-invoices');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     });
     Route::middleware('can:edit-crm-order')->group(function () {
