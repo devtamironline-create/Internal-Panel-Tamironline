@@ -300,7 +300,7 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->with([
-                'customer:id,first_name,last_name,mobile',
+                'customer:id,first_name,mobile',
                 'technician:id,first_name,last_name,firstname_tech,mobile',
                 'brand:id,name', 'device:id,name',
             ])

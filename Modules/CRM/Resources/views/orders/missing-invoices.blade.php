@@ -58,7 +58,7 @@
                     @foreach($orders as $o)
                         @php
                             $techName = trim(($o->technician?->firstname_tech ?: (($o->technician?->first_name ?? '') . ' ' . ($o->technician?->last_name ?? ''))));
-                            $custName = $o->customer_name ?: trim(($o->customer?->first_name ?? '') . ' ' . ($o->customer?->last_name ?? ''));
+                            $custName = $o->customer_name ?: ($o->customer?->first_name ?? '');
                             $custMobile = $o->customer_mobile ?: $o->customer?->mobile;
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
