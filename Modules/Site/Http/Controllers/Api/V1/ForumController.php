@@ -217,8 +217,13 @@ class ForumController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // banlist check قبل از validation تا هر گونه error محتوا پنهان بماند
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'))) {
+        // اگر کاربر وارد شده، موبایل از حساب گرفته می‌شود؛ وگرنه از فرم
+        $authPhone = $request->user()?->mobile;
+        $reqPhone = (string) $request->input('author_phone', '');
+        $phone = $authPhone ?: $reqPhone;
+
+        // banlist check قبل از validation
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'), $phone)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -232,6 +237,7 @@ class ForumController extends Controller
             'tags.*' => 'string|max:30',
             'author_name' => 'required|string|max:80',
             'author_email' => 'nullable|email|max:120',
+            'author_phone' => 'nullable|string|max:20',
         ]);
 
         $device = Device::where('slug', $data['device_slug'])->first(['id']);
@@ -249,6 +255,7 @@ class ForumController extends Controller
             'brand_id' => $brand?->id,
             'author_name' => trim($data['author_name']),
             'author_email' => isset($data['author_email']) ? strtolower(trim($data['author_email'])) : null,
+            'author_phone' => \Modules\Site\Models\Forum\BanlistEntry::normalizePhone($phone),
             'author_token' => $token,
             'status' => Question::STATUS_PENDING,
             'ip' => $request->ip(),
@@ -273,7 +280,11 @@ class ForumController extends Controller
      */
     public function storeAnswer(Request $request, string $slug): JsonResponse
     {
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'))) {
+        $authPhone = $request->user()?->mobile;
+        $reqPhone = (string) $request->input('author_phone', '');
+        $phone = $authPhone ?: $reqPhone;
+
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'), $phone)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -286,6 +297,7 @@ class ForumController extends Controller
             'body' => 'required|string|min:30|max:50000',
             'author_name' => 'required|string|max:120',
             'author_email' => 'nullable|email|max:120',
+            'author_phone' => 'nullable|string|max:20',
         ]);
 
         $answer = Answer::create([
@@ -293,6 +305,7 @@ class ForumController extends Controller
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
             'author_name' => trim($data['author_name']),
             'author_email' => isset($data['author_email']) ? strtolower(trim($data['author_email'])) : null,
+            'author_phone' => \Modules\Site\Models\Forum\BanlistEntry::normalizePhone($phone),
             'status' => Answer::STATUS_PENDING,
             'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),

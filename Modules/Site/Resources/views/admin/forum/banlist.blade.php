@@ -14,7 +14,7 @@
                 <h1 class="text-lg font-bold flex items-center gap-2">
                     <span>🚫</span>
                     <span>لیست بن کاربران انجمن</span>
-                    <span class="text-xs text-gray-500 font-mono">({{ $counts['ip'] }} IP · {{ $counts['email'] }} ایمیل)</span>
+                    <span class="text-xs text-gray-500 font-mono">({{ $counts['phone'] ?? 0 }} موبایل · {{ $counts['email'] ?? 0 }} ایمیل · {{ $counts['ip'] ?? 0 }} IP)</span>
                 </h1>
             </div>
         </div>
@@ -36,20 +36,27 @@
             @canany(['moderate-forum-questions', 'manage-forum-questions', 'manage-site'])
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 h-fit lg:sticky lg:top-24">
                 <h2 class="text-sm font-bold mb-3 flex items-center gap-2">➕ افزودن مورد به لیست بن</h2>
-                <form method="POST" action="{{ route('site.admin.forum.banlist.store') }}" class="space-y-3">
+                <form method="POST" action="{{ route('site.admin.forum.banlist.store') }}" class="space-y-3"
+                      x-data="{ type: 'phone' }">
                     @csrf
                     <div>
                         <label class="block text-xs font-medium mb-1">نوع</label>
-                        <select name="type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                            <option value="ip">IP</option>
+                        <select name="type" x-model="type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <option value="phone">موبایل (کاربر لاگین‌شده)</option>
                             <option value="email">ایمیل</option>
+                            <option value="ip">IP</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium mb-1">مقدار</label>
+                        <label class="block text-xs font-medium mb-1">
+                            <span x-show="type === 'phone'">شماره موبایل</span>
+                            <span x-show="type === 'email'">ایمیل</span>
+                            <span x-show="type === 'ip'">IP</span>
+                        </label>
                         <input type="text" name="value" required maxlength="250" dir="ltr"
-                               placeholder="192.168.1.1 یا user@example.com"
+                               :placeholder="type === 'phone' ? '09123456789' : (type === 'email' ? 'user@example.com' : '192.168.1.1')"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
+                        <p x-show="type === 'phone'" class="text-[10px] text-gray-500 mt-1">فرمت‌های 09xxxxxxxxx، +989xxxxxxxxx، 989xxxxxxxxx همگی پذیرفته می‌شوند.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-medium mb-1">دلیل (اختیاری)</label>
@@ -58,14 +65,34 @@
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium mb-1">انقضا (اختیاری — خالی = دائمی)</label>
-                        <input type="datetime-local" name="expires_at"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                        <label class="block text-xs font-medium mb-1">انقضا (شمسی — خالی = دائمی)</label>
+                        <input type="text" name="expires_at_jalali" dir="ltr"
+                               placeholder="مثال: 1405/03/15 14:30"
+                               class="jalali-datetimepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm cursor-pointer bg-white ltr">
                     </div>
                     <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">
                         افزودن به لیست بن
                     </button>
                 </form>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (typeof window.$ === 'undefined' || typeof window.$.fn.persianDatepicker === 'undefined') return;
+                    window.$('.jalali-datetimepicker').each(function () {
+                        var $i = window.$(this);
+                        if ($i.data('jdtp-init')) return;
+                        $i.data('jdtp-init', true);
+                        $i.persianDatepicker({
+                            format: 'YYYY/MM/DD HH:mm',
+                            initialValue: false,
+                            autoClose: true,
+                            calendar: { persian: { locale: 'fa', showHint: true } },
+                            timePicker: { enabled: true, meridiem: { enabled: false }, second: { enabled: false } },
+                            toolbox: { enabled: true, todayButton: { enabled: true, text: { fa: 'امروز' } }, submitButton: { enabled: true, text: { fa: 'تایید' } } },
+                        });
+                    });
+                });
+                </script>
             </div>
             @endcanany
 
@@ -74,8 +101,9 @@
                 <form method="GET" class="mb-3 grid grid-cols-3 gap-2">
                     <select name="type" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                         <option value="">— همه نوع‌ها —</option>
-                        <option value="ip" @selected(request('type') === 'ip')>IP</option>
+                        <option value="phone" @selected(request('type') === 'phone')>موبایل</option>
                         <option value="email" @selected(request('type') === 'email')>ایمیل</option>
+                        <option value="ip" @selected(request('type') === 'ip')>IP</option>
                     </select>
                     <input type="text" name="q" value="{{ request('q') }}" placeholder="جستجو..." dir="ltr"
                            class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm ltr">
@@ -103,7 +131,15 @@
                                 @foreach($entries as $entry)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                                         <td class="px-4 py-3">
-                                            <span class="text-[10px] px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold uppercase">{{ $entry->type }}</span>
+                                            @php
+                                                $typeLabel = \Modules\Site\Models\Forum\BanlistEntry::TYPES[$entry->type] ?? $entry->type;
+                                                $typeColor = match ($entry->type) {
+                                                    'phone' => 'bg-blue-50 text-blue-700',
+                                                    'email' => 'bg-purple-50 text-purple-700',
+                                                    default => 'bg-rose-50 text-rose-700',
+                                                };
+                                            @endphp
+                                            <span class="text-[10px] px-2 py-0.5 rounded {{ $typeColor }} font-bold">{{ $typeLabel }}</span>
                                         </td>
                                         <td class="px-4 py-3 font-mono ltr text-xs" dir="ltr">{{ $entry->value }}</td>
                                         <td class="px-4 py-3 text-xs text-gray-600">{{ $entry->reason ?? '—' }}</td>

@@ -45,8 +45,9 @@ class BanlistController extends Controller
 
         $entries = $query->paginate(50)->withQueryString();
         $counts = [
-            'ip' => BanlistEntry::where('type', 'ip')->count(),
-            'email' => BanlistEntry::where('type', 'email')->count(),
+            'phone' => BanlistEntry::where('type', BanlistEntry::TYPE_PHONE)->count(),
+            'email' => BanlistEntry::where('type', BanlistEntry::TYPE_EMAIL)->count(),
+            'ip' => BanlistEntry::where('type', BanlistEntry::TYPE_IP)->count(),
         ];
 
         return view('site::admin.forum.banlist', compact('entries', 'counts'));
@@ -56,30 +57,42 @@ class BanlistController extends Controller
     {
         $this->checkManage();
         $data = $request->validate([
-            'type' => 'required|in:ip,email',
+            'type' => 'required|in:ip,email,phone',
             'value' => 'required|string|max:250',
             'reason' => 'nullable|string|max:250',
-            'expires_at' => 'nullable|date|after:now',
+            'expires_at_jalali' => 'nullable|string|max:25',
         ]);
 
-        $value = $data['type'] === 'email'
-            ? mb_strtolower(trim($data['value']))
-            : trim($data['value']);
+        // نرمالایز مقدار بر اساس نوع
+        $value = match ($data['type']) {
+            BanlistEntry::TYPE_EMAIL => mb_strtolower(trim($data['value'])),
+            BanlistEntry::TYPE_PHONE => BanlistEntry::normalizePhone($data['value']) ?? '',
+            default => trim($data['value']),
+        };
 
-        // اعتبارسنجی ساده‌ی IP/email
-        if ($data['type'] === 'email' && ! filter_var($value, FILTER_VALIDATE_EMAIL)) {
+        if ($value === '') {
+            return back()->withErrors(['value' => 'مقدار نامعتبر است.'])->withInput();
+        }
+
+        if ($data['type'] === BanlistEntry::TYPE_EMAIL && ! filter_var($value, FILTER_VALIDATE_EMAIL)) {
             return back()->withErrors(['value' => 'ایمیل نامعتبر است.'])->withInput();
         }
-        if ($data['type'] === 'ip' && ! filter_var($value, FILTER_VALIDATE_IP)) {
+        if ($data['type'] === BanlistEntry::TYPE_IP && ! filter_var($value, FILTER_VALIDATE_IP)) {
             return back()->withErrors(['value' => 'IP نامعتبر است.'])->withInput();
         }
+        if ($data['type'] === BanlistEntry::TYPE_PHONE && ! preg_match('/^09\d{9}$/', $value)) {
+            return back()->withErrors(['value' => 'شماره‌ی موبایل نامعتبر است (فرمت 09xxxxxxxxx).'])->withInput();
+        }
+
+        // تبدیل تاریخ شمسی → Carbon
+        $expiresAt = $this->jalaliToCarbon($data['expires_at_jalali'] ?? null);
 
         $entry = BanlistEntry::updateOrCreate(
             ['type' => $data['type'], 'value' => $value],
             [
                 'reason' => $data['reason'] ?? null,
                 'banned_by_user_id' => auth()->id(),
-                'expires_at' => $data['expires_at'] ?? null,
+                'expires_at' => $expiresAt,
             ]
         );
 
@@ -99,5 +112,33 @@ class BanlistController extends Controller
         $entry->delete();
 
         return back()->with('success', 'مورد از لیست بن حذف شد.');
+    }
+
+    /**
+     * تبدیل تاریخ شمسی (مثلاً 1405/03/15 14:30) به Carbon. ارقام فارسی/عربی پشتیبانی می‌شوند.
+     * بازگشت null اگر ورودی خالی یا غیرقابل parse باشد.
+     */
+    private function jalaliToCarbon(?string $jalali): ?\Carbon\Carbon
+    {
+        if (! is_string($jalali) || trim($jalali) === '') {
+            return null;
+        }
+        $fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        $en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        $val = trim(str_replace($fa, $en, str_replace($ar, $en, $jalali)));
+
+        try {
+            if (preg_match('/^\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}$/', $val)) {
+                return \Morilog\Jalali\Jalalian::fromFormat('Y/m/d H:i', $val)->toCarbon();
+            }
+            if (preg_match('/^\d{4}\/\d{1,2}\/\d{1,2}$/', $val)) {
+                return \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $val)->toCarbon();
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
     }
 }
