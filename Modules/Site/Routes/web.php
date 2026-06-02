@@ -82,6 +82,13 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'destroy'])->whereNumber('id')->name('destroy');
         });
 
+        // لیست بن
+        Route::prefix('banlist')->name('banlist.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'index'])->name('index');
+            Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'store'])->name('store');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        });
+
         // مدیریت برچسب‌ها
         Route::prefix('tags')->name('tags.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'index'])->name('index');

@@ -217,6 +217,11 @@ class ForumController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // banlist check قبل از validation تا هر گونه error محتوا پنهان بماند
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'))) {
+            return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
+        }
+
         $data = $request->validate([
             'title' => 'required|string|min:10|max:250',
             'body' => 'required|string|min:30|max:50000',
@@ -268,6 +273,10 @@ class ForumController extends Controller
      */
     public function storeAnswer(Request $request, string $slug): JsonResponse
     {
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'))) {
+            return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
+        }
+
         $question = Question::query()->approved()->where('slug', $slug)->first(['id']);
         if (! $question) {
             return response()->json(['message' => 'Not Found'], 404);

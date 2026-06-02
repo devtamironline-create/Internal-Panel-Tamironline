@@ -208,14 +208,17 @@ class QuestionController extends Controller
         $this->checkView();
 
         $data = $request->validate([
-            'action' => 'required|in:approve,reject,spam,delete,mark_hot,unmark_hot,mark_featured,unmark_featured',
+            'action' => 'required|in:approve,reject,spam,delete,mark_hot,unmark_hot,mark_featured,unmark_featured,assign_category',
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:site_forum_questions,id',
+            'device_id' => 'nullable|integer|exists:crm_devices,id',
+            'brand_id' => 'nullable|integer|exists:crm_brands,id',
         ]);
 
         // per-action permission check
         match ($data['action']) {
             'delete' => $this->checkDelete(),
+            'assign_category' => $this->checkManage(),
             'approve', 'reject', 'spam', 'mark_hot', 'unmark_hot', 'mark_featured', 'unmark_featured' => $this->checkModerate(),
         };
 
@@ -251,6 +254,18 @@ class QuestionController extends Controller
                 break;
             case 'unmark_featured':
                 $count = (clone $base)->update(['is_featured' => false]);
+                break;
+            case 'assign_category':
+                $update = [];
+                if (! empty($data['device_id'])) {
+                    $update['device_id'] = (int) $data['device_id'];
+                }
+                if (! empty($data['brand_id'])) {
+                    $update['brand_id'] = (int) $data['brand_id'];
+                }
+                if ($update !== []) {
+                    $count = (clone $base)->update($update);
+                }
                 break;
         }
 

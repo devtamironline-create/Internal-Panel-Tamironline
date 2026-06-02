@@ -70,6 +70,9 @@
     {{-- Bulk + list --}}
     <div x-data="{
             ids: [],
+            showAssign: false,
+            assignDeviceId: '',
+            assignBrandId: '',
             get picked(){ return this.ids.length; },
             toggle(id){ const i = this.ids.indexOf(id); i===-1 ? this.ids.push(id) : this.ids.splice(i,1); },
             isPicked(id){ return this.ids.includes(id); },
@@ -78,6 +81,17 @@
                 if (!confirm('این اقدام روی '+this.picked+' سوال اعمال می‌شود. ادامه؟')) return;
                 document.getElementById('forum-bulk-action').value = action;
                 document.getElementById('forum-bulk-form').submit();
+            },
+            submitAssign(){
+                if (!this.picked) return;
+                if (!this.assignDeviceId && !this.assignBrandId) {
+                    alert('دستگاه یا برند را انتخاب کنید.');
+                    return;
+                }
+                document.getElementById('forum-bulk-action').value = 'assign_category';
+                document.getElementById('forum-bulk-device').value = this.assignDeviceId || '';
+                document.getElementById('forum-bulk-brand').value = this.assignBrandId || '';
+                document.getElementById('forum-bulk-form').submit();
             }
          }">
 
@@ -85,8 +99,42 @@
         <form id="forum-bulk-form" method="POST" action="{{ route('site.admin.forum.questions.bulk') }}" class="hidden">
             @csrf
             <input type="hidden" name="action" id="forum-bulk-action" value="">
+            <input type="hidden" name="device_id" id="forum-bulk-device" value="">
+            <input type="hidden" name="brand_id" id="forum-bulk-brand" value="">
             <template x-for="id in ids" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
         </form>
+
+        {{-- Assign category modal --}}
+        <div x-show="showAssign" x-cloak @click.self="showAssign = false"
+             class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+                <h3 class="text-lg font-bold mb-3">دسته‌بندی گروهی</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    تخصیص دستگاه و/یا برند به <span x-text="picked"></span> سوال انتخاب‌شده.
+                    حداقل یکی از فیلدها را انتخاب کنید — خالی‌گذاشتن یعنی مقدار قبلی حفظ می‌شود.
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">دستگاه</label>
+                        <select x-model="assignDeviceId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <option value="">— بدون تغییر —</option>
+                            @foreach($devices as $d)<option value="{{ $d->id }}">{{ $d->name }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">برند</label>
+                        <select x-model="assignBrandId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <option value="">— بدون تغییر —</option>
+                            @foreach($brands as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end mt-5">
+                    <button type="button" @click="showAssign = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">انصراف</button>
+                    <button type="button" @click="submitAssign()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">اعمال</button>
+                </div>
+            </div>
+        </div>
 
         <div class="sticky top-0 z-10 mb-3 bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-2 flex-wrap" x-show="picked > 0" x-cloak>
             <span class="text-sm text-gray-700"><span x-text="picked"></span> سوال انتخاب شده</span>
@@ -96,6 +144,7 @@
             <button type="button" @click="submitBulk('spam')" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm">اسپم</button>
             <button type="button" @click="submitBulk('mark_hot')" class="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-sm">داغ</button>
             <button type="button" @click="submitBulk('mark_featured')" class="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm">ویژه</button>
+            <button type="button" @click="showAssign = true; assignDeviceId=''; assignBrandId='';" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm">🏷️ دسته‌بندی</button>
             <button type="button" @click="submitBulk('delete')" class="px-3 py-1.5 rounded-lg bg-red-900 text-white text-sm ml-auto">حذف</button>
             <button type="button" @click="ids = []" class="text-sm text-gray-500 hover:underline">لغو</button>
         </div>
