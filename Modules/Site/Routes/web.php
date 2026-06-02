@@ -82,6 +82,18 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'destroy'])->whereNumber('id')->name('destroy');
         });
 
+        // مدیریت برچسب‌ها
+        Route::prefix('tags')->name('tags.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'index'])->name('index');
+            Route::put('/rename', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'rename'])->name('rename');
+            Route::put('/merge', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'merge'])->name('merge');
+            Route::delete('/destroy', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'destroy'])->name('destroy');
+        });
+
+        // تنظیمات سراسری انجمن
+        Route::get('/settings', [\Modules\Site\Http\Controllers\Admin\Forum\SettingsController::class, 'index'])->name('settings');
+        Route::put('/settings', [\Modules\Site\Http\Controllers\Admin\Forum\SettingsController::class, 'update'])->name('settings.update');
+
         // سوالات
         Route::prefix('questions')->name('questions.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'index'])->name('index');
