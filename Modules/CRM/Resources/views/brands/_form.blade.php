@@ -126,13 +126,23 @@
     </x-crm::section-card>
 
     {{-- ─── ۳) تصویر Hero ─── --}}
-    <x-crm::section-card sectionKey="hero-image" title="تصویر Hero اختصاصی این برند" icon="🖼️"
-        description="دو slot (دسکتاپ + موبایل) با alt مجزا. خالی = template">
-        @include('crm::partials.hero-image-picker', [
+    <x-crm::section-card sectionKey="hero-image" title="تصاویر Hero اختصاصی این برند" icon="🖼️"
+        description="۲ تصویر دسکتاپ (چپ/راست) + ۱ تصویر موبایل، هرکدام با alt مجزا. هر slot خالی → از template برند">
+        @php
+            $brandHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $brand->hero_image ?? null));
+        @endphp
+        <p class="text-xs text-gray-500 mb-3">
+            اگر هر slot را پر کنید، در صفحه‌ی همین برند override می‌شود (به‌صورت per-slot — نیازی نیست همه‌ی سه را پر کنید).
+            خالی بگذارید تا از <a href="{{ route('site.admin.page-content.edit', 'brand') }}" target="_blank" class="text-blue-600 hover:underline">الگوی brand</a> استفاده شود.
+        </p>
+        @include('site::admin.partials.hero-visual-picker', [
             'name' => 'hero_image',
-            'current' => old('hero_image', $brand->hero_image ?? null),
-            'entityKind' => 'برند',
-            'templateRoute' => route('site.admin.page-content.edit', 'brand'),
+            'desktopLeftUrl' => $brandHero['desktop_left']['url'],
+            'desktopLeftAlt' => $brandHero['desktop_left']['alt'],
+            'desktopRightUrl' => $brandHero['desktop_right']['url'],
+            'desktopRightAlt' => $brandHero['desktop_right']['alt'],
+            'mobileUrl' => $brandHero['mobile']['url'],
+            'mobileAlt' => $brandHero['mobile']['alt'],
         ])
     </x-crm::section-card>
 

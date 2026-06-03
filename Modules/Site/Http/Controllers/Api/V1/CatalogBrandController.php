@@ -213,19 +213,17 @@ class CatalogBrandController extends Controller
     private function mergeHeroImage($entity, $template): array
     {
         $svc = \Modules\Site\Services\PageSectionService::class;
-        $e = $svc::normalizeResponsiveImage($entity);
-        $t = $svc::normalizeResponsiveImage($template);
+        $e = $svc::normalizeHeroVisual($entity);
+        $t = $svc::normalizeHeroVisual($template);
+        $out = [];
+        foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
+            $out[$slot] = [
+                'url' => $e[$slot]['url'] ?: $t[$slot]['url'],
+                'alt' => $e[$slot]['alt'] ?: $t[$slot]['alt'],
+            ];
+        }
 
-        return [
-            'desktop' => [
-                'url' => $e['desktop']['url'] ?: $t['desktop']['url'],
-                'alt' => $e['desktop']['alt'] ?: $t['desktop']['alt'],
-            ],
-            'mobile' => [
-                'url' => $e['mobile']['url'] ?: $t['mobile']['url'],
-                'alt' => $e['mobile']['alt'] ?: $t['mobile']['alt'],
-            ],
-        ];
+        return $out;
     }
 
     private function buildSteps(Brand $brand, array $template, bool $enabled): array

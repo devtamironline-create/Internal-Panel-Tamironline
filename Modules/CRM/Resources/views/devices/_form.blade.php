@@ -96,13 +96,23 @@
     </x-crm::section-card>
 
     {{-- ─── ۲) تصویر Hero ─── --}}
-    <x-crm::section-card sectionKey="hero-image" title="تصویر Hero اختصاصی این دستگاه" icon="🖼️"
-        description="دو slot (دسکتاپ + موبایل) با alt مجزا. خالی = template">
-        @include('crm::partials.hero-image-picker', [
+    <x-crm::section-card sectionKey="hero-image" title="تصاویر Hero اختصاصی این دستگاه" icon="🖼️"
+        description="۲ تصویر دسکتاپ (چپ/راست) + ۱ تصویر موبایل، هرکدام با alt مجزا. هر slot خالی → از template دستگاه">
+        @php
+            $deviceHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $device->hero_image ?? null));
+        @endphp
+        <p class="text-xs text-gray-500 mb-3">
+            اگر هر slot را پر کنید، در صفحه‌ی همین دستگاه override می‌شود (به‌صورت per-slot — نیازی نیست همه‌ی سه را پر کنید).
+            خالی بگذارید تا از <a href="{{ route('site.admin.page-content.edit', 'device') }}" target="_blank" class="text-blue-600 hover:underline">الگوی device</a> استفاده شود.
+        </p>
+        @include('site::admin.partials.hero-visual-picker', [
             'name' => 'hero_image',
-            'current' => old('hero_image', $device->hero_image ?? null),
-            'entityKind' => 'دستگاه',
-            'templateRoute' => route('site.admin.page-content.edit', 'device'),
+            'desktopLeftUrl' => $deviceHero['desktop_left']['url'],
+            'desktopLeftAlt' => $deviceHero['desktop_left']['alt'],
+            'desktopRightUrl' => $deviceHero['desktop_right']['url'],
+            'desktopRightAlt' => $deviceHero['desktop_right']['alt'],
+            'mobileUrl' => $deviceHero['mobile']['url'],
+            'mobileAlt' => $deviceHero['mobile']['alt'],
         ])
     </x-crm::section-card>
 

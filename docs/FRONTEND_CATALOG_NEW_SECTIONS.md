@@ -16,9 +16,11 @@
 ## ۱) تصویر Hero (`sections.hero.image`)
 
 ### چه چیزی تغییر کرد؟
-- فیلد `image` به سکشن `hero` در تمام template ها اضافه شد (`device`, `brand`, `device_brand`, `home`, `services`, `about`, `contact`)
-- شکل قبلی `responsive_image` که فقط `{desktop: "url", mobile: "url"}` بود، حالا برای **هر slot یک alt مجزا** دارد
-- در سطح entity: ستون‌های جدید `crm_devices.hero_image` و `crm_brands.hero_image` (JSON) — هر دستگاه/برند می‌تواند تصویر اختصاصی override کند
+- فیلد `image` در `hero` به نوع جدید `hero_visual` ارتقا یافت — **۳ slot مستقل** به‌جای ۲:
+  - `desktop_left` — تصویر چپ Hero در دسکتاپ (دکوراتیو)
+  - `desktop_right` — تصویر راست Hero در دسکتاپ (دکوراتیو)
+  - `mobile` — تصویر اختصاصی نسخه‌ی موبایل (مثل banner)
+- در سطح entity: ستون‌های `crm_devices.hero_image` و `crm_brands.hero_image` (JSON) — هر دستگاه/برند می‌تواند هر slot را مستقل override کند
 
 ### شکل پاسخ
 
@@ -31,13 +33,17 @@
     "subtitle": "...",
     "caption": "...",
     "image": {
-      "desktop": {
-        "url": "https://.../desktop.webp",
-        "alt": "تکنسین در حال تعمیر ماشین لباس‌شویی در آشپزخانه"
+      "desktop_left": {
+        "url": "https://.../hero-desktop-left.webp",
+        "alt": "تکنسین در حال تعمیر در سمت چپ"
+      },
+      "desktop_right": {
+        "url": "https://.../hero-desktop-right.webp",
+        "alt": "ابزارهای تعمیر در سمت راست"
       },
       "mobile": {
-        "url": "https://.../mobile.webp",
-        "alt": "دست‌های تکنسین روی پنل ماشین لباس‌شویی"
+        "url": "https://.../hero-mobile.png",
+        "alt": "بنر ثبت سفارش سریع"
       }
     },
     "cta_primary": { "label": "...", "url": "...", "icon": "..." },
@@ -47,8 +53,8 @@
 ```
 
 - هم `url` و هم `alt` می‌توانند `null` باشند
-- اگر هیچ تصویری ست نشده باشد: `{desktop: {url: null, alt: null}, mobile: {url: null, alt: null}}`
-- بک‌اند **همیشه** این شکل را برمی‌گرداند — حتی برای داده‌ی قدیمی DB
+- اگر هیچ تصویری ست نشده باشد: هر سه slot به‌صورت `{url: null, alt: null}`
+- بک‌اند **همیشه** شکل ۳-اسلاتی برمی‌گرداند — حتی اگر DB قدیمی شکل ۲-اسلاتی `{desktop, mobile}` داشته باشد، خودکار `desktop → desktop_left` تبدیل می‌شود
 
 ### منطق merge per-slot
 
@@ -58,56 +64,58 @@
 | `/v1/catalog/brands/{slug}` | `brand.hero_image[slot]` > `template.brand.hero.image[slot]` |
 | `/v1/catalog/devices/{d}/{b}` | `device.hero_image[slot]` > `brand.hero_image[slot]` > `template.device_brand.hero.image[slot]` |
 
-هر `url` و `alt` به‌صورت **مستقل** merge می‌شود — مثلاً اگر دستگاه فقط desktop ست کرده باشد، mobile از brand یا template می‌آید.
+هر slot **مستقل** merge می‌شود. مثال: اگر برند فقط `desktop_left` ست کرده باشد، `desktop_right` و `mobile` از template می‌آیند.
 
-### الگوی render امن
+### الگوی render
 
 ```tsx
-type ResponsiveSlot = { url: string | null; alt: string | null };
-type ResponsiveImage = { desktop: ResponsiveSlot; mobile: ResponsiveSlot };
+type HeroSlot = { url: string | null; alt: string | null };
+type HeroVisual = {
+  desktop_left: HeroSlot;
+  desktop_right: HeroSlot;
+  mobile: HeroSlot;
+};
 
-function pickHeroImage(img: ResponsiveImage | undefined | null) {
-  const desktop = img?.desktop?.url;
-  const mobile = img?.mobile?.url;
-  if (!desktop && !mobile) return null;
-  return {
-    desktopUrl: desktop ?? mobile!,
-    desktopAlt: img?.desktop?.alt ?? "",
-    mobileUrl: mobile ?? desktop!,
-    mobileAlt: img?.mobile?.alt ?? img?.desktop?.alt ?? "",
-  };
+function HeroVisuals({ image }: { image: HeroVisual | null | undefined }) {
+  if (!image) return null;
+  const dl = image.desktop_left;
+  const dr = image.desktop_right;
+  const m  = image.mobile;
+
+  return (
+    <>
+      {dl.url && (
+        <div aria-hidden={!dl.alt} className="hidden lg:flex absolute inset-y-0 right-0 ...">
+          <Image src={dl.url} alt={dl.alt ?? ""} width={400} height={500} />
+        </div>
+      )}
+      {dr.url && (
+        <div aria-hidden={!dr.alt} className="hidden lg:flex absolute inset-y-0 left-0 ...">
+          <Image src={dr.url} alt={dr.alt ?? ""} width={400} height={500} />
+        </div>
+      )}
+      {m.url && (
+        <div className="flex justify-center md:hidden">
+          <Image src={m.url} alt={m.alt ?? ""} width={300} height={100} priority />
+        </div>
+      )}
+    </>
+  );
 }
-
-// رندر استاندارد — alt دسکتاپ به assistive tech می‌رود
-const hero = pickHeroImage(content.sections.hero.image);
-if (!hero) return null;
-
-return (
-  <picture>
-    <source media="(max-width: 767px)" srcSet={hero.mobileUrl} />
-    <img
-      src={hero.desktopUrl}
-      alt={hero.desktopAlt}
-      width={1200}
-      height={500}
-      loading="eager"
-      fetchPriority="high"
-    />
-  </picture>
-);
 ```
 
-> **هشدار:** یک المنت `<img>` فقط یک `alt` دارد — مرورگر بسته به viewport عوض نمی‌کند.
-> اگر می‌خواهید alt موبایل واقعاً به screen reader برسد، الگوی **دو `<img>` با CSS hidden/visible** را استفاده کنید (`hidden md:block` و `block md:hidden`).
+نکته‌ها:
+- اگر `alt` خالی است (`null`) و تصویر صرفاً دکوراتیو است، `alt=""` + `aria-hidden="true"` بزنید.
+- اگر تصویر معنادار است (مثل mobile banner که CTA دارد)، حتماً alt واقعی بنویسید.
 
 ### Checklist
 
-- [ ] Type `ResponsiveImage` به schema device/brand/device_brand اضافه شود.
-- [ ] جای `image.desktop` (string) → `image.desktop.url`.
-- [ ] alt دسکتاپ به‌عنوان attribute `alt` المنت `<img>` — نه رشته‌ی ثابت.
-- [ ] گارد برای حالت هر دو slot خالی.
+- [ ] Type `HeroVisual` (با ۳ slot) به schema device/brand/device_brand اضافه شود.
+- [ ] جای `image.desktop.url` (دو-اسلاتی قدیمی) → `image.desktop_left.url` / `image.desktop_right.url`.
+- [ ] گارد per-slot قبل از render هر تصویر (`if (slot.url)`).
+- [ ] برای دکوراتیو: `aria-hidden="true"` + `alt=""`.
 
-جزئیات کامل: `docs/FRONTEND_RESPONSIVE_IMAGE_ALT.md`
+جزئیات کامل: `docs/FRONTEND_HERO_VISUAL.md`
 
 ---
 
@@ -320,7 +328,7 @@ return (
     "hero": {
       "enabled": true,
       // فیلدهای قبلی +
-      "image": { "desktop": {url, alt}, "mobile": {url, alt} }  // ✨ جدید
+      "image": { "desktop_left": {url, alt}, "desktop_right": {url, alt}, "mobile": {url, alt} }  // ✨ جدید (hero_visual)
     },
     "steps": { /* بدون تغییر */ },
     "live_activity": { /* بدون تغییر */ },
@@ -346,7 +354,7 @@ return (
     "hero": {
       "enabled": true,
       // ...
-      "image": { "desktop": {url, alt}, "mobile": {url, alt} }  // ✨ جدید
+      "image": { "desktop_left": {url, alt}, "desktop_right": {url, alt}, "mobile": {url, alt} }  // ✨ جدید (hero_visual)
     },
     "steps": { /* بدون تغییر */ },
     "live_activity": { /* بدون تغییر */ },
@@ -370,7 +378,7 @@ return (
     "hero": {
       "enabled": true,
       // ...
-      "image": { "desktop": {url, alt}, "mobile": {url, alt} }  // ✨ جدید — اولویت device > brand > template
+      "image": { "desktop_left": {url, alt}, "desktop_right": {url, alt}, "mobile": {url, alt} }  // ✨ hero_visual — اولویت device > brand > template (per-slot)
     },
     "steps": { /* بدون تغییر */ },
     "content": { /* بدون تغییر */ },
@@ -405,8 +413,8 @@ return (
 
 ## ۶) Checklist کلی مهاجرت فرانت
 
-- [ ] Type های `ResponsiveImage`، `VideosSection`، `ForumQuestionsSection` به schema هر سه endpoint اضافه شوند.
-- [ ] `sections.hero.image` → استفاده از `pickHeroImage` helper.
+- [ ] Type های `HeroVisual` (۳-اسلاتی)، `VideosSection`، `ForumQuestionsSection` به schema هر سه endpoint اضافه شوند.
+- [ ] `sections.hero.image` → کامپوننت `<HeroVisuals>` با ۳ slot جدا (`desktop_left`/`desktop_right`/`mobile`).
 - [ ] `sections.videos.items` → کامپوننت `<VideoPlayer>` با سه provider (aparat/youtube/direct).
 - [ ] `sections.forum_questions.items` → لیست با badge resolution status.
 - [ ] مصرف هرگونه `category_shortcuts` در صفحه‌ی فروم (اگر هست) حذف شود — جایگزین: `/v1/forum/categories` (ر.ک: `FRONTEND_FORUM_CATEGORIES.md`).

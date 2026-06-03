@@ -244,8 +244,10 @@ class BrandController extends Controller
             'videos.*.poster_url' => 'nullable|string|max:500',
 
             'hero_image' => 'nullable|array',
-            'hero_image.desktop.url' => 'nullable|string|max:500',
-            'hero_image.desktop.alt' => 'nullable|string|max:200',
+            'hero_image.desktop_left.url' => 'nullable|string|max:500',
+            'hero_image.desktop_left.alt' => 'nullable|string|max:200',
+            'hero_image.desktop_right.url' => 'nullable|string|max:500',
+            'hero_image.desktop_right.alt' => 'nullable|string|max:200',
             'hero_image.mobile.url' => 'nullable|string|max:500',
             'hero_image.mobile.alt' => 'nullable|string|max:200',
 
@@ -342,11 +344,16 @@ class BrandController extends Controller
             }
         }
 
-        // نرمالایز hero_image — اگر هر دو slot خالی است، null ذخیره می‌شود تا از template fallback شود
+        // نرمالایز hero_image (شکل ۳-اسلاتی) — اگر همه‌ی فیلدها خالی است، null ذخیره می‌شود تا از template fallback شود
         if (array_key_exists('hero_image', $validated)) {
-            $hi = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($validated['hero_image']);
-            $isEmpty = empty($hi['desktop']['url']) && empty($hi['mobile']['url'])
-                && empty($hi['desktop']['alt']) && empty($hi['mobile']['alt']);
+            $hi = \Modules\Site\Services\PageSectionService::normalizeHeroVisual($validated['hero_image']);
+            $isEmpty = true;
+            foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
+                if (! empty($hi[$slot]['url']) || ! empty($hi[$slot]['alt'])) {
+                    $isEmpty = false;
+                    break;
+                }
+            }
             $validated['hero_image'] = $isEmpty ? null : $hi;
         }
 

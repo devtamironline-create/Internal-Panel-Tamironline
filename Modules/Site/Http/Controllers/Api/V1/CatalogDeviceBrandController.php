@@ -203,20 +203,18 @@ class CatalogDeviceBrandController extends Controller
     private function mergeHeroImage($deviceImg, $brandImg, $template): array
     {
         $svc = \Modules\Site\Services\PageSectionService::class;
-        $d = $svc::normalizeResponsiveImage($deviceImg);
-        $b = $svc::normalizeResponsiveImage($brandImg);
-        $t = $svc::normalizeResponsiveImage($template);
+        $d = $svc::normalizeHeroVisual($deviceImg);
+        $b = $svc::normalizeHeroVisual($brandImg);
+        $t = $svc::normalizeHeroVisual($template);
+        $out = [];
+        foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
+            $out[$slot] = [
+                'url' => $d[$slot]['url'] ?: ($b[$slot]['url'] ?: $t[$slot]['url']),
+                'alt' => $d[$slot]['alt'] ?: ($b[$slot]['alt'] ?: $t[$slot]['alt']),
+            ];
+        }
 
-        return [
-            'desktop' => [
-                'url' => $d['desktop']['url'] ?: ($b['desktop']['url'] ?: $t['desktop']['url']),
-                'alt' => $d['desktop']['alt'] ?: ($b['desktop']['alt'] ?: $t['desktop']['alt']),
-            ],
-            'mobile' => [
-                'url' => $d['mobile']['url'] ?: ($b['mobile']['url'] ?: $t['mobile']['url']),
-                'alt' => $d['mobile']['alt'] ?: ($b['mobile']['alt'] ?: $t['mobile']['alt']),
-            ],
-        ];
+        return $out;
     }
 
     private function buildSteps(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled): array
