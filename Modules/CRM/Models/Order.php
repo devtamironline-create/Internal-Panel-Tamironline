@@ -28,6 +28,7 @@ class Order extends Model
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
         'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
         'is_legacy_closed', 'legacy_tech_share', 'legacy_company_share',
+        'is_lead', 'lead_reason_id', 'lead_notes',
 
         // مالی
         'estimated_price', 'final_price', 'deposit',
@@ -81,6 +82,7 @@ class Order extends Model
         'send_sms_customer' => 'boolean',
         'save_as_draft' => 'boolean',
         'is_legacy_closed' => 'boolean',
+        'is_lead' => 'boolean',
         'legacy_tech_share' => 'integer',
         'legacy_company_share' => 'integer',
         'happy_call' => 'boolean',
@@ -268,6 +270,23 @@ class Order extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function leadReason(): BelongsTo
+    {
+        return $this->belongsTo(LeadReason::class, 'lead_reason_id');
+    }
+
+    public function scopeLeads($query)
+    {
+        return $query->where('is_lead', true);
+    }
+
+    public function scopeRealOrders($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_lead', false)->orWhereNull('is_lead');
+        });
     }
 
     public function device(): BelongsTo

@@ -653,6 +653,12 @@
                             تیکت‌های پشتیبانی
                         </a>
                         @endcan
+                        @can('manage-crm-settings')
+                        <a href="{{ route('crm.lead-reasons.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.lead-reasons.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            دلایل عدم سفارش (لید)
+                        </a>
+                        @endcan
                         @auth
                         <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"
                            x-data="{ unread: 0 }"

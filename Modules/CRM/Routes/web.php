@@ -348,6 +348,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── سینک با CRM وردپرسی ─────────────────────────────────────
     // ─── مدیریت دسته‌بندی تیکت‌ها (قبل از tickets/{ticket} باشد!) ──
+    // ─── دلایل عدم امکان سفارش (مدیریت لیدها) ─────────────────────
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'index'])->name('lead-reasons.index');
+        Route::post('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'store'])->name('lead-reasons.store');
+        Route::put('lead-reasons/{leadReason}', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'update'])->name('lead-reasons.update')->whereNumber('leadReason');
+        Route::delete('lead-reasons/{leadReason}', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'destroy'])->name('lead-reasons.destroy')->whereNumber('leadReason');
+    });
+
     Route::middleware('can:manage-crm-settings')->prefix('tickets/categories')->name('tickets.categories.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'index'])->name('index');
         Route::post('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'store'])->name('store');
