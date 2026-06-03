@@ -457,33 +457,44 @@ class OrderWizard extends Component
             // ── مرحله ۱: محل + دستگاه اصلی ──
             1 => $this->validateStep1Devices(),
 
-            // ── مرحله ۲: مشتری ──
-            2 => $this->validate(
-                $this->showNewCustomerForm
-                    ? [
-                        'newName' => 'required|string|max:255',
-                        'newMobile' => 'required|string|max:20',
-                        'newPhone' => 'nullable|string|max:20',
-                        'introduction' => 'required|string|max:255',
-                    ]
-                    : [
-                        'customerId' => 'required|integer|exists:crm_customers,id',
-                        'introduction' => 'required|string|max:255',
-                    ],
-                attributes: [
-                    'newName' => 'نام مشتری',
-                    'newMobile' => 'موبایل',
-                    'customerId' => 'مشتری',
-                    'introduction' => 'نحوه آشنایی',
-                ],
-                messages: [
-                    'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
-                ],
-            ),
+            // ── مرحله ۲: مشتری (+ آدرس وقتی قابل سفارش است) ──
+            2 => $this->validateStep2Customer(),
 
             3 => null, // بررسی — اعتبارسنجی در submit
             default => null,
         };
+    }
+
+    /**
+     * اعتبارسنجی مرحله ۲: مشتری + آدرس.
+     * آدرس فقط برای سفارش‌های قابل ثبت اجباری است؛ برای لیدها شهر کافی
+     * است و آدرس را اپراتور وارد نمی‌کند.
+     */
+    protected function validateStep2Customer(): void
+    {
+        $rules = $this->showNewCustomerForm
+            ? [
+                'newName'      => 'required|string|max:255',
+                'newMobile'    => 'required|string|max:20',
+                'newPhone'     => 'nullable|string|max:20',
+                'introduction' => 'required|string|max:255',
+            ]
+            : [
+                'customerId'   => 'required|integer|exists:crm_customers,id',
+                'introduction' => 'required|string|max:255',
+            ];
+        if ($this->isOrderable) {
+            $rules['address'] = 'required|string|max:2000';
+        }
+        $this->validate($rules, attributes: [
+            'newName'      => 'نام مشتری',
+            'newMobile'    => 'موبایل',
+            'customerId'   => 'مشتری',
+            'introduction' => 'نحوه آشنایی',
+            'address'      => 'آدرس',
+        ], messages: [
+            'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
+        ]);
     }
 
     /**
@@ -492,10 +503,11 @@ class OrderWizard extends Component
      */
     protected function validateStep1Devices(): void
     {
+        // آدرس از این مرحله حذف شده (به مرحلهٔ مشتری منتقل شده تا با
+        // انتخاب مشتری قدیمی، آدرس آخرین سفارش به‌صورت خودکار پر شود).
         $rules = [
             'provinceId' => 'required|integer|exists:crm_provinces,id',
             'cityId'     => 'required|integer|exists:crm_cities,id',
-            'address'    => 'required|string|max:2000',
             'brandId'    => 'required|integer|exists:crm_brands,id',
             'deviceId'   => 'required|integer|exists:crm_devices,id',
             'objections' => 'nullable|array',
@@ -520,7 +532,6 @@ class OrderWizard extends Component
         $this->validate($rules, attributes: [
             'provinceId'   => 'استان',
             'cityId'       => 'شهر',
-            'address'      => 'آدرس',
             'brandId'      => 'برند',
             'deviceId'     => 'نوع دستگاه',
             'orderType'    => 'نوع سفارش',

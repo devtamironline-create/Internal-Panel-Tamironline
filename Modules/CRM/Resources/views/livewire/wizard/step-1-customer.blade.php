@@ -98,6 +98,24 @@
         </div>
     @endif
 
+    {{-- آدرس — فقط برای سفارش‌های قابل ثبت اجباری است؛ برای لیدها حذف
+         می‌شود (شهر کافی است). اگر مشتری قدیمی انتخاب شود، این فیلد
+         از آخرین سفارشش به‌صورت خودکار پر می‌شود. --}}
+    @if($isOrderable)
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                آدرس کامل <span class="text-rose-600">*</span>
+            </label>
+            <textarea wire:model="address" rows="3"
+                      placeholder="خیابان، پلاک، واحد..."
+                      class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
+            @if($this->selectedCustomer && $address)
+                <p class="text-xs text-emerald-600 mt-1">✓ آدرس آخرین سفارش این مشتری به‌صورت خودکار پر شد — در صورت نیاز ویرایش کنید.</p>
+            @endif
+            @error('address')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+        </div>
+    @endif
+
     {{-- معرف --}}
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نحوه آشنایی (معرف) <span class="text-rose-600">*</span></label>
