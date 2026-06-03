@@ -1,0 +1,33 @@
+# این فایل برای deploymentهایی است که DocumentRoot وب‌سرور روی ریشهٔ
+# پروژه Laravel قرار دارد (نه روی پوشهٔ public/). در این حالت بدون این
+# فایل، Apache فهرست فایل‌های ریشه (app/، bootstrap/، ...) را نمایش
+# می‌دهد یا 404 می‌دهد، چون مسیریابی Laravel فعال نمی‌شود.
+#
+# قانون: همهٔ ریکوئست‌ها به فولدر public/ هدایت می‌شوند تا index.php
+# Laravel آن‌ها را پردازش کند.
+#
+# اگر DocumentRoot سرور شما مستقیماً روی public/ است (روش پیشنهادی
+# Laravel)، این فایل مفید نیست ولی مضر هم نیست.
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # جلوگیری از دسترسی مستقیم به فایل‌های حساس
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^artisan - [F,L]
+    RewriteRule ^composer\.(json|lock)$ - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|Modules|resources|routes|storage|tests|vendor|docker|supervisor)(/|$) - [F,L]
+
+    # هدایت همهٔ ریکوئست‌ها به public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# جلوگیری از لیست شدن فایل‌ها اگر mod_rewrite غیرفعال بود
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
