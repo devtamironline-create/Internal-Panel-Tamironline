@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\LeadReason;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Customer;
@@ -31,9 +32,9 @@ use Modules\CRM\Services\OrderSmsNotifier;
 class OrderWizard extends Component
 {
     public int $currentStep = 1;
-    public const TOTAL_STEPS = 5;
+    public const TOTAL_STEPS = 3;
 
-    // ─── Step 1: Customer ────────────────────────────────────────
+    // ─── Step 2: Customer ────────────────────────────────────────
     public ?int $customerId = null;
     public string $customerSearch = '';
     public bool $showNewCustomerForm = false;
@@ -43,18 +44,24 @@ class OrderWizard extends Component
     public string $subscription = '';
     public string $introduction = '';
 
-    // ─── Step 2: Location ────────────────────────────────────────
+    // ─── Step 1: Location ────────────────────────────────────────
     public ?int $provinceId = null;
     public ?int $cityId = null;
     public string $address = '';
 
-    // ─── Step 3: Device & Problem ────────────────────────────────
+    // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
     public string $orderType = 'repair';
     public ?int $brandId = null;
     public ?int $deviceId = null;
     /** @var array<int,string> */
     public array $objections = [];
     public string $objectionDescription = '';
+
+    // قابل سفارش بودن دستگاه اصلی. اگر false شود، به‌جای سفارش، یک
+    // رکورد لید (is_lead=true) ساخته می‌شود.
+    public bool $isOrderable = true;
+    public ?int $leadReasonId = null;
+    public string $leadNotes = '';
 
     /**
      * دستگاه‌های اضافه — هر بار submit، یک Order جداگانه ساخته می‌شود
@@ -177,6 +184,13 @@ class OrderWizard extends Component
     {
         $list = CrmSetting::getJson('wp.introductionList', []);
         return is_array($list) ? array_values(array_filter(array_map('strval', $list))) : [];
+    }
+
+    /** لیست دلایل عدم سفارش — برای تَوگل قابل سفارش روی هر دستگاه. */
+    #[Computed]
+    public function leadReasons()
+    {
+        return LeadReason::active()->ordered()->get(['id', 'name']);
     }
 
     /** لیست ایرادهای رایج (objectionsList) از تنظیمات WP. */
@@ -381,6 +395,10 @@ class OrderWizard extends Component
             'device_id' => null,
             'objections' => [],
             'objection_description' => '',
+            'is_orderable' => true,
+            'lead_reason_id' => null,
+            'lead_notes' => '',
+            'order_type' => 'repair',
         ];
     }
 
@@ -427,11 +445,20 @@ class OrderWizard extends Component
         }
     }
 
-    /** اعتبارسنجی هر مرحله — فقط فیلدهای آن مرحله. */
+    /** اعتبارسنجی هر مرحله — فقط فیلدهای آن مرحله.
+     *  ترتیب مراحل پس از بازطراحی:
+     *    ۱) محل سرویس + دستگاه اصلی (با تَوگل قابل سفارش)
+     *    ۲) مشتری
+     *    ۳) بررسی (در submit)
+     */
     protected function validateStep(int $step): void
     {
         match ($step) {
-            1 => $this->validate(
+            // ── مرحله ۱: محل + دستگاه اصلی ──
+            1 => $this->validateStep1Devices(),
+
+            // ── مرحله ۲: مشتری ──
+            2 => $this->validate(
                 $this->showNewCustomerForm
                     ? [
                         'newName' => 'required|string|max:255',
@@ -454,41 +481,51 @@ class OrderWizard extends Component
                 ],
             ),
 
-            2 => $this->validate([
-                'provinceId' => 'required|integer|exists:crm_provinces,id',
-                'cityId' => 'required|integer|exists:crm_cities,id',
-                'address' => 'required|string|max:2000',
-            ], attributes: [
-                'provinceId' => 'استان',
-                'cityId' => 'شهر',
-                'address' => 'آدرس',
-            ]),
-
-            3 => $this->validate([
-                'orderType' => 'required|string|in:repair,service',
-                'brandId' => 'required|integer|exists:crm_brands,id',
-                'deviceId' => 'required|integer|exists:crm_devices,id',
-                'objections' => 'nullable|array',
-                'objections.*' => 'string|max:255',
-                'objectionDescription' => 'nullable|string|max:5000',
-            ], attributes: [
-                'orderType' => 'نوع سفارش',
-                'brandId' => 'برند',
-                'deviceId' => 'نوع دستگاه',
-            ]),
-
-            4 => $this->validate([
-                'technicianId' => 'nullable|integer|exists:crm_technicians,id',
-                'visitDate' => 'nullable|date_format:Y-m-d',
-                'visitSlot' => 'nullable|integer|in:1,2,3,4',
-            ], attributes: [
-                'visitDate' => 'روز مراجعه',
-                'visitSlot' => 'بازه ساعت',
-            ]),
-
-            5 => null, // مرور — اعتبارسنجی در submit
+            3 => null, // بررسی — اعتبارسنجی در submit
             default => null,
         };
+    }
+
+    /**
+     * اعتبارسنجی مرحله ۱: محل + دستگاه اصلی + دستگاه‌های اضافه.
+     * برای هر دستگاهِ غیرقابل سفارش، lead_reason_id الزامی است.
+     */
+    protected function validateStep1Devices(): void
+    {
+        $rules = [
+            'provinceId' => 'required|integer|exists:crm_provinces,id',
+            'cityId'     => 'required|integer|exists:crm_cities,id',
+            'address'    => 'required|string|max:2000',
+            'brandId'    => 'required|integer|exists:crm_brands,id',
+            'deviceId'   => 'required|integer|exists:crm_devices,id',
+            'objections' => 'nullable|array',
+            'objections.*' => 'string|max:255',
+            'objectionDescription' => 'nullable|string|max:5000',
+            'isOrderable' => 'boolean',
+            'leadNotes'   => 'nullable|string|max:2000',
+        ];
+        if (! $this->isOrderable) {
+            $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
+        } else {
+            $rules['orderType'] = 'required|string|in:repair,service';
+        }
+        // اعتبارسنجی دستگاه‌های اضافه
+        foreach ($this->extraDevices as $i => $d) {
+            $rules["extraDevices.$i.brand_id"]  = 'required|integer|exists:crm_brands,id';
+            $rules["extraDevices.$i.device_id"] = 'required|integer|exists:crm_devices,id';
+            if (! ($d['is_orderable'] ?? true)) {
+                $rules["extraDevices.$i.lead_reason_id"] = 'required|integer|exists:crm_lead_reasons,id';
+            }
+        }
+        $this->validate($rules, attributes: [
+            'provinceId'   => 'استان',
+            'cityId'       => 'شهر',
+            'address'      => 'آدرس',
+            'brandId'      => 'برند',
+            'deviceId'     => 'نوع دستگاه',
+            'orderType'    => 'نوع سفارش',
+            'leadReasonId' => 'دلیل عدم سفارش',
+        ]);
     }
 
     public function submit(): void
@@ -505,8 +542,8 @@ class OrderWizard extends Component
                 $this->visitSlot = null;
             }
 
-            // اعتبارسنجی نهایی همهٔ مراحل
-            for ($s = 1; $s <= 4; $s++) {
+            // اعتبارسنجی نهایی همهٔ مراحل (۳ مرحله در فلوی جدید)
+            for ($s = 1; $s <= 2; $s++) {
                 $this->validateStep($s);
             }
 
@@ -539,67 +576,80 @@ class OrderWizard extends Component
                     $customer = Customer::findOrFail($this->customerId);
                 }
 
-                // لیست همهٔ دستگاه‌ها: دستگاه اصلی + extraDevices.
-                // برای هر دستگاه یک Order جداگانه ساخته می‌شود (مشتری/
-                // آدرس/تکنسین/زمان مراجعه مشترک، دستگاه و ایرادها متفاوت).
+                // لیست همهٔ دستگاه‌ها — هر کدام با تَوگل قابل سفارش.
+                // قابل سفارش=true → یک Order واقعی ساخته می‌شود.
+                // قابل سفارش=false → یک رکورد لید (is_lead=true) با
+                // دلیل عدم سفارش ذخیره می‌شود.
                 $allDevices = [[
-                    'brand_id' => $this->brandId,
-                    'device_id' => $this->deviceId,
-                    'objections' => $this->objections,
+                    'brand_id'              => $this->brandId,
+                    'device_id'             => $this->deviceId,
+                    'objections'            => $this->objections,
                     'objection_description' => $this->objectionDescription,
+                    'is_orderable'          => $this->isOrderable,
+                    'lead_reason_id'        => $this->leadReasonId,
+                    'lead_notes'            => $this->leadNotes,
+                    'order_type'            => $this->orderType,
                 ]];
                 foreach ($this->extraDevices as $extra) {
-                    // فقط دستگاه‌هایی که حداقل brand+device دارند
                     if (! empty($extra['brand_id']) && ! empty($extra['device_id'])) {
                         $allDevices[] = [
-                            'brand_id' => (int) $extra['brand_id'],
-                            'device_id' => (int) $extra['device_id'],
-                            'objections' => $extra['objections'] ?? [],
+                            'brand_id'              => (int) $extra['brand_id'],
+                            'device_id'             => (int) $extra['device_id'],
+                            'objections'            => $extra['objections'] ?? [],
                             'objection_description' => $extra['objection_description'] ?? '',
+                            'is_orderable'          => (bool) ($extra['is_orderable'] ?? true),
+                            'lead_reason_id'        => $extra['lead_reason_id'] ?? null,
+                            'lead_notes'            => $extra['lead_notes'] ?? '',
+                            'order_type'            => $extra['order_type'] ?? 'repair',
                         ];
                     }
                 }
 
                 $orders = [];
                 foreach ($allDevices as $dev) {
+                    $isOrderable = (bool) ($dev['is_orderable'] ?? true);
                     $problemTitle = ! empty($dev['objections'])
                         ? implode('، ', $dev['objections'])
                         : null;
 
                     $o = Order::create([
-                        'order_code' => Order::generateOrderCode(),
-                        'customer_id' => $customer->id,
-                        'subscription' => $this->subscription !== '' ? (int) $this->subscription : null,
-                        'introduction' => $this->introduction ?: null,
-                        'order_type' => $this->orderType,
-                        'brand_id' => $dev['brand_id'],
-                        'device_id' => $dev['device_id'],
-                        'technician_id' => $this->technicianId,
-                        'customer_name' => $customer->display_name,
-                        'customer_mobile' => $customer->mobile,
-                        'customer_phone' => $customer->phone,
-                        'province_id' => $this->provinceId,
-                        'city_id' => $this->cityId,
-                        'address' => $this->address,
-                        'problem_title' => $problemTitle,
+                        'order_code'          => Order::generateOrderCode(),
+                        'customer_id'         => $customer->id,
+                        'subscription'        => $this->subscription !== '' ? (int) $this->subscription : null,
+                        'introduction'        => $this->introduction ?: null,
+                        'order_type'          => $dev['order_type'] ?? $this->orderType,
+                        'brand_id'            => $dev['brand_id'],
+                        'device_id'           => $dev['device_id'],
+                        'technician_id'       => null,
+                        'customer_name'       => $customer->display_name,
+                        'customer_mobile'     => $customer->mobile,
+                        'customer_phone'      => $customer->phone,
+                        'province_id'         => $this->provinceId,
+                        'city_id'             => $this->cityId,
+                        'address'             => $this->address,
+                        'problem_title'       => $problemTitle,
                         'problem_description' => $dev['objection_description'] ?: null,
-                        'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
-                            ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
-                            : null,
-                        'status' => OrderStatus::New->value,
-                        'assigned_at' => $this->technicianId ? now() : null,
-                        'created_by' => auth()->id(),
+                        'visit_scheduled_at'  => null,
+                        'status'              => OrderStatus::New->value,
+                        'assigned_at'         => null,
+                        'created_by'          => auth()->id(),
+                        // فیلدهای لید — فقط اگر غیرقابل سفارش بود فعال‌اند
+                        'is_lead'             => ! $isOrderable,
+                        'lead_reason_id'      => ! $isOrderable ? ($dev['lead_reason_id'] ?? null) : null,
+                        'lead_notes'          => ! $isOrderable ? ($dev['lead_notes'] ?? null) : null,
                     ]);
 
                     OrderStatusLog::create([
-                        'order_id' => $o->id,
+                        'order_id'    => $o->id,
                         'from_status' => null,
-                        'to_status' => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
-                        'note' => count($allDevices) > 1
-                            ? 'ثبت اولیه سفارش از ویزارد (یکی از ' . count($allDevices) . ' دستگاه ثبت‌شده)'
-                            : 'ثبت اولیه سفارش از ویزارد',
-                        'changed_by' => auth()->id(),
-                        'created_at' => now(),
+                        'to_status'   => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
+                        'note'        => $isOrderable
+                            ? (count($allDevices) > 1
+                                ? 'ثبت اولیه سفارش از ویزارد (یکی از ' . count($allDevices) . ' دستگاه)'
+                                : 'ثبت اولیه سفارش از ویزارد')
+                            : 'ثبت لید (تماس غیرقابل سفارش) از ویزارد',
+                        'changed_by'  => auth()->id(),
+                        'created_at'  => now(),
                     ]);
 
                     $orders[] = $o;
@@ -608,8 +658,10 @@ class OrderWizard extends Component
                 return $orders;
             });
 
-            // SMS برای هر سفارش
+            // SMS فقط برای سفارش‌های واقعی — لیدها (is_lead=true) پیامک
+            // OrderCreated نمی‌گیرند چون منجر به سفارش نشده‌اند.
             foreach ($createdOrders as $o) {
+                if ($o->is_lead) continue;
                 $smsNotifier->notify($o, SmsTrigger::OrderCreated);
                 if ($o->technician_id) {
                     $smsNotifier->notify($o->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);

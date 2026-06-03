@@ -1,9 +1,48 @@
 <div class="space-y-6">
     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">دستگاه و ایراد</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">نوع سفارش، دستگاه و مشکل را مشخص کنید.</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">نوع سفارش، دستگاه و مشکل را مشخص کنید. اگر تماس منجر به سفارش نمی‌شود، تَوگل «قابل سفارش» را خاموش کنید.</p>
 
-    {{-- نوع سفارش (تعمیر / سرویس) --}}
-    <div>
+    {{-- تَوگل قابل سفارش (روی دستگاه اصلی) --}}
+    <div class="flex items-center justify-between p-3 rounded-xl border-2 {{ $isOrderable ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40' }}">
+        <div>
+            <div class="font-bold {{ $isOrderable ? 'text-emerald-800' : 'text-rose-800' }}">
+                {{ $isOrderable ? '✓ قابل سفارش' : '✗ غیرقابل سفارش — به‌عنوان لید ثبت می‌شود' }}
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5">
+                {{ $isOrderable ? 'این تماس تبدیل به سفارش می‌شود.' : 'فقط اطلاعات تماس برای گزارش‌گیری ذخیره می‌شود.' }}
+            </div>
+        </div>
+        <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" wire:model.live="isOrderable" class="sr-only peer">
+            <div class="relative w-12 h-6 bg-gray-300 peer-checked:bg-emerald-500 rounded-full transition-colors">
+                <div class="absolute top-0.5 start-0.5 bg-white w-5 h-5 rounded-full transition-transform peer-checked:translate-x-6 rtl:peer-checked:-translate-x-6"></div>
+            </div>
+        </label>
+    </div>
+
+    {{-- بخش لید — وقتی غیرقابل سفارش است --}}
+    @if(! $isOrderable)
+        <div class="space-y-3 p-4 rounded-xl bg-rose-50/30 border border-rose-200">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">دلیل عدم امکان سفارش <span class="text-rose-600">*</span></label>
+                <select wire:model="leadReasonId" class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <option value="">— یک گزینه را انتخاب کنید —</option>
+                    @foreach($this->leadReasons as $lr)
+                        <option value="{{ $lr->id }}">{{ $lr->name }}</option>
+                    @endforeach
+                </select>
+                @error('leadReasonId')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">یادداشت‌ها</label>
+                <textarea wire:model="leadNotes" rows="2" placeholder="هرگونه توضیح اضافی…"
+                          class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"></textarea>
+            </div>
+        </div>
+    @endif
+
+    {{-- نوع سفارش (تعمیر / سرویس) — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">نوع سفارش *</label>
         <div class="grid grid-cols-2 gap-3">
             @foreach([
