@@ -133,7 +133,21 @@ class OrderWizard extends Component
         if (! $this->provinceId) {
             return collect();
         }
-        return City::where('province_id', $this->provinceId)->ordered()->get(['id', 'name']);
+        $cities = City::where('province_id', $this->provinceId)->ordered()->get(['id', 'name']);
+        // اگر استان شهر تعریف‌شده ندارد، یک شهر پیش‌فرض با نام خود استان
+        // ساخته می‌شود تا اپراتور بتواند مرحله را رد کند. منطق در
+        // CustomerController::citiesOfProvince هم هست (مسیر AJAX).
+        if ($cities->isEmpty()) {
+            $province = Province::find($this->provinceId);
+            if ($province) {
+                $default = City::firstOrCreate(
+                    ['province_id' => $province->id, 'name' => $province->name],
+                    ['sort_order' => 0]
+                );
+                $cities = collect([(object) ['id' => $default->id, 'name' => $default->name]]);
+            }
+        }
+        return $cities;
     }
 
     #[Computed]
