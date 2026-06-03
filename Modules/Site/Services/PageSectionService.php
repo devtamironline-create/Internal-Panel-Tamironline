@@ -313,6 +313,18 @@ class PageSectionService
                 continue;
             }
 
+            if ($type === 'hero_visual') {
+                $value = Arr::get($payload, $key, []);
+                $normalized = self::normalizeHeroVisual($value);
+                $data[$key] = $normalized;
+                foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
+                    $rules["{$fullKey}.{$slot}.url"] = 'nullable|site_url|max:500';
+                    $rules["{$fullKey}.{$slot}.alt"] = 'nullable|string|max:200';
+                }
+
+                continue;
+            }
+
             if ($type === 'bool') {
                 $data[$key] = (bool) Arr::get($payload, $key, false);
                 $rules[$fullKey] = 'nullable|boolean';
@@ -418,6 +430,12 @@ class PageSectionService
                 continue;
             }
 
+            if ($type === 'hero_visual') {
+                $payload[$key] = self::normalizeHeroVisual($payload[$key] ?? null);
+
+                continue;
+            }
+
             if ($type !== 'reference') {
                 continue;
             }
@@ -480,6 +498,43 @@ class PageSectionService
         return [
             'url' => ($url !== null && $url !== '') ? $url : null,
             'alt' => ($alt !== null && $alt !== '') ? $alt : null,
+        ];
+    }
+
+    /**
+     * نرمالایز فیلد hero_visual به شکل سه‌اسلاتی:
+     *   {
+     *     desktop_left:  { url, alt },
+     *     desktop_right: { url, alt },
+     *     mobile:        { url, alt }
+     *   }
+     *
+     * Backward compat: اگر داده‌ی قدیمی شکل responsive_image داشت
+     * ({desktop, mobile}), همان مقادیر در desktop_left و mobile قرار می‌گیرند
+     * و desktop_right خالی باز می‌گردد.
+     *
+     * @param  mixed  $value
+     * @return array{desktop_left: array{url: string|null, alt: string|null}, desktop_right: array{url: string|null, alt: string|null}, mobile: array{url: string|null, alt: string|null}}
+     */
+    public static function normalizeHeroVisual($value): array
+    {
+        if (! is_array($value)) {
+            $value = [];
+        }
+
+        // اگر data legacy responsive_image است (فقط desktop+mobile)، تبدیل کن
+        if (! isset($value['desktop_left']) && ! isset($value['desktop_right']) && (isset($value['desktop']) || isset($value['mobile']))) {
+            return [
+                'desktop_left' => self::normalizeResponsiveSlot($value['desktop'] ?? null),
+                'desktop_right' => ['url' => null, 'alt' => null],
+                'mobile' => self::normalizeResponsiveSlot($value['mobile'] ?? null),
+            ];
+        }
+
+        return [
+            'desktop_left' => self::normalizeResponsiveSlot($value['desktop_left'] ?? null),
+            'desktop_right' => self::normalizeResponsiveSlot($value['desktop_right'] ?? null),
+            'mobile' => self::normalizeResponsiveSlot($value['mobile'] ?? null),
         ];
     }
 

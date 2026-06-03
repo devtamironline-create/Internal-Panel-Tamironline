@@ -34,6 +34,29 @@
         </template>
     </div>
 
+@elseif($type === 'hero_visual')
+    @php
+        $normalized = \Modules\Site\Services\PageSectionService::normalizeHeroVisual($value);
+        $desktopLeftUrl = $normalized['desktop_left']['url'];
+        $desktopLeftAlt = $normalized['desktop_left']['alt'];
+        $desktopRightUrl = $normalized['desktop_right']['url'];
+        $desktopRightAlt = $normalized['desktop_right']['alt'];
+        $mobileUrl = $normalized['mobile']['url'];
+        $mobileAlt = $normalized['mobile']['alt'];
+    @endphp
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
+        <label class="block text-sm font-semibold mb-3">{{ $label }}</label>
+        @include('site::admin.partials.hero-visual-picker', [
+            'name' => $name,
+            'desktopLeftUrl' => $desktopLeftUrl,
+            'desktopLeftAlt' => $desktopLeftAlt,
+            'desktopRightUrl' => $desktopRightUrl,
+            'desktopRightAlt' => $desktopRightAlt,
+            'mobileUrl' => $mobileUrl,
+            'mobileAlt' => $mobileAlt,
+        ])
+    </div>
+
 @elseif($type === 'responsive_image')
     @php
         // پشتیبانی از هر دو شکل قدیمی و جدید — همیشه به شکل {url, alt} نرمالایز

@@ -38,7 +38,7 @@ return [
                     'badge' => ['label' => 'Badge (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل، هر کدام با alt مجزا)', 'type' => 'hero_visual'],
                 ],
             ],
 
@@ -358,7 +358,7 @@ return [
                 'fields' => [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل، هر کدام با alt مجزا)', 'type' => 'hero_visual'],
                     'cta_label' => ['label' => 'متن دکمه CTA', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'cta_url' => ['label' => 'لینک دکمه (مسیر داخلی /order یا URL کامل)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
                     'services' => [
@@ -438,7 +438,7 @@ return [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:120'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
-                    'poster' => ['label' => 'تصویر poster (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                    'poster' => ['label' => 'تصاویر poster (۲ تصویر دسکتاپ + ۱ تصویر موبایل، هر کدام با alt مجزا)', 'type' => 'hero_visual'],
                     'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
                     'highlights' => [
                         'label' => 'لیست بولت‌های Hero (تیک‌دار)',
@@ -749,7 +749,7 @@ return [
                 'fields' => [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل، هر کدام با alt مجزا)', 'type' => 'hero_visual'],
                 ],
             ],
 
@@ -863,7 +863,7 @@ return [
                     'title' => ['label' => 'تیتر (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن (متن کوتاه زیر زیرتیتر)', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {device} پشتیبانی می‌شود)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل با alt مجزا — {device} پشتیبانی می‌شود)', 'type' => 'hero_visual'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
@@ -1007,7 +1007,7 @@ return [
                     'title' => ['label' => 'تیتر (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {brand} پشتیبانی می‌شود)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل با alt مجزا — {brand} پشتیبانی می‌شود)', 'type' => 'hero_visual'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
@@ -1142,7 +1142,7 @@ return [
                     'title' => ['label' => 'تیتر (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                     'caption' => ['label' => 'کپشن', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'image' => ['label' => 'تصویر Hero (دسکتاپ + موبایل با alt مجزا — {device} و {brand} پشتیبانی می‌شوند)', 'type' => 'responsive_image'],
+                    'image' => ['label' => 'تصاویر Hero (۲ تصویر دسکتاپ + ۱ تصویر موبایل با alt مجزا — {device} و {brand} پشتیبانی می‌شوند)', 'type' => 'hero_visual'],
                     'cta_primary' => [
                         'label' => 'دکمه‌ی ثبت سفارش',
                         'type' => 'group',
