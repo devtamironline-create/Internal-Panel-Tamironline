@@ -142,7 +142,11 @@ class OrderWizard extends Component
             if ($province) {
                 $default = City::firstOrCreate(
                     ['province_id' => $province->id, 'name' => $province->name],
-                    ['sort_order' => 0]
+                    [
+                        // slug NOT NULL است؛ unique بر اساس (province_id, slug).
+                        'slug' => 'province-' . $province->id,
+                        'sort_order' => 0,
+                    ]
                 );
                 $cities = collect([(object) ['id' => $default->id, 'name' => $default->name]]);
             }

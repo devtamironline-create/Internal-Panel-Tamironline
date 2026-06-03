@@ -139,7 +139,13 @@ class CustomerController extends Controller
         if ($cities->isEmpty()) {
             $default = \Modules\CRM\Models\City::firstOrCreate(
                 ['province_id' => $province->id, 'name' => $province->name],
-                ['sort_order' => 0]
+                [
+                    // slug در DB nullable نیست و یونیک بر اساس (province_id, slug)
+                    // است. برای نام فارسی Str::slug رشتهٔ خالی برمی‌گرداند، پس
+                    // به‌جایش از یک slug قطعی بر اساس ID استان استفاده می‌کنیم.
+                    'slug' => 'province-' . $province->id,
+                    'sort_order' => 0,
+                ]
             );
             $cities = collect([['id' => $default->id, 'name' => $default->name]]);
         }
