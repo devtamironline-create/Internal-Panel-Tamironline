@@ -255,7 +255,7 @@ class OrderWizard extends Component
 
         $activeStatuses = [OrderStatus::Coordinated->value, OrderStatus::Open->value];
 
-        $activeOrderCounts = Order::query()
+        $activeOrderCounts = Order::query()->realOrders()
             ->whereIn('status', $activeStatuses)
             ->whereIn('technician_id', $techs->pluck('id'))
             ->groupBy('technician_id')

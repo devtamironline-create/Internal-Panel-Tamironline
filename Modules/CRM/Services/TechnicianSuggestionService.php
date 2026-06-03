@@ -71,7 +71,7 @@ class TechnicianSuggestionService
             OrderStatus::New->value,
             OrderStatus::Suspended->value,
         ];
-        $openCounts = Order::query()
+        $openCounts = Order::query()->realOrders()
             ->whereIn('status', $activeStatuses)
             ->whereIn('technician_id', $techs->pluck('id'))
             ->groupBy('technician_id')
@@ -219,7 +219,7 @@ class TechnicianSuggestionService
     /** آمار سفارش‌های تکنسین — total, cancelled, last_assigned_at. */
     protected function orderStats(int $techId): array
     {
-        $row = Order::query()
+        $row = Order::query()->realOrders()
             ->where('technician_id', $techId)
             ->selectRaw("
                 COUNT(*) as total,

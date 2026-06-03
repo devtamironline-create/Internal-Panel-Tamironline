@@ -26,9 +26,12 @@ class OrphanOrdersController extends Controller
     public function index()
     {
         // ─── گروه‌بندی orphanهای دارای technician_wp_id ─────────────
+        // لیدها از این صفحه و آمار آن خارج می‌شوند — تا تبدیل به سفارش
+        // نشده‌اند نباید به‌عنوان «بدون تکنسین» شمرده شوند.
         $groups = DB::table('crm_orders')
             ->whereNull('technician_id')
             ->whereNotNull('technician_wp_id')
+            ->where('is_lead', false)
             ->selectRaw('technician_wp_id, COUNT(*) as cnt')
             ->groupBy('technician_wp_id')
             ->orderByDesc('cnt')
@@ -45,14 +48,14 @@ class OrphanOrdersController extends Controller
             ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'wp_id']);
 
         // orphanهای بدون technician_wp_id
-        $totalNoWpId = Order::query()
+        $totalNoWpId = Order::query()->realOrders()
             ->whereNull('technician_id')
             ->whereNull('technician_wp_id')
             ->count();
 
         // ─── سفارش‌های حل‌نشده — لیست با همه‌ی candidate authors از لاگ ──
         // برای نمایش، فقط ۱۰۰ مورد اول که لاگ دارند.
-        $unresolvedOrders = Order::query()
+        $unresolvedOrders = Order::query()->realOrders()
             ->whereNull('technician_id')
             ->whereNull('technician_wp_id')
             ->whereNotNull('order_description_content')
@@ -98,7 +101,7 @@ class OrphanOrdersController extends Controller
             ->get(['id', 'wp_id', 'first_name', 'last_name', 'firstname_tech'])
             ->keyBy('wp_id');
 
-        $totalOrphan = Order::query()->whereNull('technician_id')->count();
+        $totalOrphan = Order::query()->realOrders()->whereNull('technician_id')->count();
 
         return view('crm::orphan-orders.index', [
             'groups' => $groups,
@@ -129,6 +132,7 @@ class OrphanOrdersController extends Controller
         $updated = DB::table('crm_orders')
             ->whereNull('technician_id')
             ->where('technician_wp_id', (int) $validated['technician_wp_id'])
+            ->where('is_lead', false)
             ->update([
                 'technician_id' => (int) $validated['technician_id'],
                 'updated_at' => now(),
@@ -156,7 +160,7 @@ class OrphanOrdersController extends Controller
     {
         app()->instance('crm.suppress_outbound_push', true);
 
-        $orders = Order::query()
+        $orders = Order::query()->realOrders()
             ->whereNull('technician_id')
             ->whereNull('technician_wp_id')
             ->whereNotNull('order_description_content')

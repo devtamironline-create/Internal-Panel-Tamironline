@@ -113,7 +113,10 @@ class OrderController extends Controller
         $orders = $query->latest()->paginate($perPage)->withQueryString();
 
         // ─── شمارش تب‌های وضعیت با اعمال بقیهٔ فیلترها ───────────────
-        $countQuery = Order::query();
+        // لیدها از شمارش تب‌های وضعیت (همه/جدید/.../بدون تکنسین) خارج
+        // می‌شوند — تا تبدیل به سفارش انجام نشود، نباید روی آمار سفارش‌ها
+        // (به‌خصوص «بدون تکنسین») اثر بگذارند.
+        $countQuery = Order::query()->realOrders();
         $applyNonStatusFilters($countQuery);
         $rawCounts = (clone $countQuery)
             ->selectRaw('status, COUNT(*) as cnt')
@@ -131,7 +134,9 @@ class OrderController extends Controller
             (clone $countQuery)->whereNotNull('return_type')->count();
 
         // شمارش تب «بدون تکنسین» — همان فیلترها به‌جز technician_id
-        $noTechCountQuery = Order::query();
+        // (و باز هم لیدها مستثنی هستند تا آمار سفارش‌های واقعی بدون
+        // تکنسین خراب نشود.)
+        $noTechCountQuery = Order::query()->realOrders();
         $applyNonStatusFilters($noTechCountQuery, false);
         $statusCounts['no_tech'] = $noTechCountQuery->whereNull('technician_id')->count();
 
@@ -311,7 +316,7 @@ class OrderController extends Controller
             ->pluck('order_id')
             ->unique();
 
-        $orders = Order::query()
+        $orders = Order::query()->realOrders()
             ->with([
                 'customer:id,first_name,mobile',
                 'technician:id,first_name,last_name,firstname_tech,mobile',
@@ -386,7 +391,7 @@ class OrderController extends Controller
         // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
         $customerOrders = collect();
         if ($order->customer_id) {
-            $customerOrders = Order::query()
+            $customerOrders = Order::query()->realOrders()
                 ->with(['brand:id,name', 'device:id,name', 'technician:id,first_name,last_name,firstname_tech'])
                 ->where('customer_id', $order->customer_id)
                 ->whereKeyNot($order->id)

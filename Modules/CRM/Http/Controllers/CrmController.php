@@ -41,7 +41,9 @@ class CrmController extends Controller
 
         // ─── 1) سفارش‌های روزانه به تفکیک نحوه آشنایی (کاشی) ─────
         // امروز را اولویت می‌دهیم، اگر بازه انتخاب شده، کل بازه را
-        $introBreakdown = Order::query()
+        // (همهٔ آمار داشبورد لیدها را مستثنی می‌کند تا تا تبدیل به
+        //  سفارش انجام نشده، آمار سفارش‌ها را گمراه نکنند.)
+        $introBreakdown = Order::query()->realOrders()
             ->whereBetween('created_at', [$fromCarbon, $toCarbon])
             ->whereNotNull('introduction')
             ->where('introduction', '!=', '')
@@ -52,13 +54,13 @@ class CrmController extends Controller
 
         $introTotal = $introBreakdown->sum('cnt');
         // سفارش‌های بدون introduction
-        $introNullCount = Order::query()
+        $introNullCount = Order::query()->realOrders()
             ->whereBetween('created_at', [$fromCarbon, $toCarbon])
             ->where(function ($q) { $q->whereNull('introduction')->orWhere('introduction', ''); })
             ->count();
 
         // ─── 2) پرتکرارترین خدمات (دستگاه‌ها) ─────────────────────
-        $topDevices = Order::query()
+        $topDevices = Order::query()->realOrders()
             ->whereBetween('created_at', [$fromCarbon, $toCarbon])
             ->whereNotNull('device_id')
             ->with('device:id,name')
@@ -78,12 +80,12 @@ class CrmController extends Controller
             ->get();
 
         // ─── 3) کارت‌های خلاصه ────────────────────────────────────
-        $ordersInRange = Order::whereBetween('created_at', [$fromCarbon, $toCarbon])->count();
-        $ordersCompletedInRange = Order::whereBetween('created_at', [$fromCarbon, $toCarbon])
+        $ordersInRange = Order::realOrders()->whereBetween('created_at', [$fromCarbon, $toCarbon])->count();
+        $ordersCompletedInRange = Order::realOrders()->whereBetween('created_at', [$fromCarbon, $toCarbon])
             ->where('status', OrderStatus::Completed->value)->count();
-        $ordersCancelledInRange = Order::whereBetween('created_at', [$fromCarbon, $toCarbon])
+        $ordersCancelledInRange = Order::realOrders()->whereBetween('created_at', [$fromCarbon, $toCarbon])
             ->whereIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])->count();
-        $ordersOpenAll = Order::whereIn('status', [
+        $ordersOpenAll = Order::realOrders()->whereIn('status', [
             OrderStatus::New->value,
             OrderStatus::Coordinated->value,
             OrderStatus::Open->value,
@@ -98,7 +100,7 @@ class CrmController extends Controller
 
         // ─── 6) سفارش‌های باز با تأخیر بیشتر از ۳ روز ──────────────
         $threeDaysAgo = now()->subDays(3);
-        $delayedOpenOrders = Order::query()
+        $delayedOpenOrders = Order::query()->realOrders()
             ->with(['customer:id,first_name,mobile', 'technician:id,first_name,last_name,firstname_tech,mobile', 'device:id,name', 'brand:id,name'])
             ->whereIn('status', [
                 OrderStatus::Coordinated->value,
@@ -111,7 +113,7 @@ class CrmController extends Controller
             ->orderBy('assigned_at') // قدیمی‌ترین اول
             ->limit(50)
             ->get();
-        $delayedOpenCount = Order::query()
+        $delayedOpenCount = Order::query()->realOrders()
             ->whereIn('status', [
                 OrderStatus::Coordinated->value,
                 OrderStatus::Open->value,
@@ -165,10 +167,10 @@ class CrmController extends Controller
                 $start = now()->subMonths($i)->startOfMonth();
                 $end = now()->subMonths($i)->endOfMonth();
                 $labels[] = Jalalian::fromCarbon($start)->format('Y/m');
-                $totals[] = Order::whereBetween('created_at', [$start, $end])->count();
-                $completed[] = Order::whereBetween('created_at', [$start, $end])
+                $totals[] = Order::realOrders()->whereBetween('created_at', [$start, $end])->count();
+                $completed[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
                     ->where('status', OrderStatus::Completed->value)->count();
-                $cancelled[] = Order::whereBetween('created_at', [$start, $end])
+                $cancelled[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
                     ->whereIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])->count();
             }
         } else {
@@ -177,10 +179,10 @@ class CrmController extends Controller
                 $start = now()->subWeeks($i)->startOfWeek(Carbon::SATURDAY);
                 $end = (clone $start)->endOfWeek(Carbon::FRIDAY);
                 $labels[] = Jalalian::fromCarbon($start)->format('m/d');
-                $totals[] = Order::whereBetween('created_at', [$start, $end])->count();
-                $completed[] = Order::whereBetween('created_at', [$start, $end])
+                $totals[] = Order::realOrders()->whereBetween('created_at', [$start, $end])->count();
+                $completed[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
                     ->where('status', OrderStatus::Completed->value)->count();
-                $cancelled[] = Order::whereBetween('created_at', [$start, $end])
+                $cancelled[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
                     ->whereIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])->count();
             }
         }
