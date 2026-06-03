@@ -20,12 +20,23 @@
     if ($loc) $rows[] = ['استان / شهر', $loc];
     if ($address)    $rows[] = ['آدرس', $address];
 
-    // دستگاه
-    $rows[] = ['نوع سفارش', $orderType === 'service' ? 'نصب' : 'تعمیر'];
+    // دستگاه — برای لید، نوع سفارش و ایرادها معنی ندارند؛ به‌جایش
+    // دلیل عدم سفارش و یادداشت اپراتور نمایش داده می‌شود.
+    if ($isOrderable) {
+        $rows[] = ['نوع سفارش', $orderType === 'service' ? 'نصب' : 'تعمیر'];
+    } else {
+        $rows[] = ['وضعیت تماس', 'لید (غیرقابل سفارش)'];
+    }
     if ($this->selectedDevice) $rows[] = ['دستگاه', $this->selectedDevice->name];
     if ($this->selectedBrand)  $rows[] = ['برند', $this->selectedBrand->name];
-    if (count($objections))    $rows[] = ['ایرادها', implode('، ', $objections)];
-    if ($objectionDescription) $rows[] = ['شرح', $objectionDescription];
+    if ($isOrderable) {
+        if (count($objections))    $rows[] = ['ایرادها', implode('، ', $objections)];
+        if ($objectionDescription) $rows[] = ['شرح', $objectionDescription];
+    } else {
+        $lr = $leadReasonId ? \Modules\CRM\Models\LeadReason::find($leadReasonId) : null;
+        if ($lr) $rows[] = ['دلیل عدم سفارش', $lr->name];
+        if ($leadNotes) $rows[] = ['یادداشت', $leadNotes];
+    }
 
     // تکنسین و زمان
     if ($this->selectedTechnician) {
@@ -63,10 +74,17 @@
         @endforeach
     </div>
 
-    @if(! $this->selectedTechnician)
+    @if(! $this->selectedTechnician && $isOrderable)
         <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-sm flex items-center gap-2">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span>تکنسینی تخصیص داده نشده — سفارش با وضعیت «جدید» ثبت می‌شود و بعداً قابل تخصیص است.</span>
+        </div>
+    @endif
+
+    @if(! $isOrderable)
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-lg p-3 text-sm flex items-center gap-2">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>این تماس به‌عنوان <b>لید</b> ثبت می‌شود — تکنسین تخصیص نمی‌گیرد و پیامک ارسال نمی‌شود.</span>
         </div>
     @endif
 </div>

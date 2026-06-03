@@ -682,6 +682,54 @@ class OrderController extends Controller
         return back()->with('success', 'تکنسین تخصیص داده شد. منتظر تماس تکنسین با مشتری بمانید.');
     }
 
+    /**
+     * تبدیل یک لید به سفارش واقعی.
+     *
+     * فلگ is_lead پاک می‌شود، dlیل/یادداشت لید حذف می‌شود، order_code
+     * جدیدی صادر می‌شود تا با سفارش‌های موجود قابل تفکیک باشد، و در
+     * تاریخچهٔ سفارش یک لاگ ثبت می‌شود. وضعیت به «جدید» می‌رود تا
+     * مثل سفارش تازه‌ای رفتار شود (تخصیص تکنسین بعداً انجام می‌شود).
+     */
+    public function convertFromLead(Order $order)
+    {
+        if (! $order->is_lead) {
+            return back()->with('error', 'این سفارش از قبل لید نیست.');
+        }
+
+        $oldCode = $order->order_code;
+        $newCode = Order::generateOrderCode();
+
+        DB::transaction(function () use ($order, $newCode) {
+            $order->update([
+                'is_lead'        => false,
+                'lead_reason_id' => null,
+                'lead_notes'     => null,
+                'order_code'     => $newCode,
+                'status'         => \Modules\CRM\Enums\OrderStatus::New->value,
+            ]);
+
+            \Modules\CRM\Models\OrderStatusLog::create([
+                'order_id'    => $order->id,
+                'from_status' => null,
+                'to_status'   => \Modules\CRM\Enums\OrderStatus::New->value,
+                'note'        => 'تبدیل لید به سفارش — کد قبلی: ' . $order->getOriginal('order_code'),
+                'changed_by'  => auth()->id(),
+                'created_at'  => now(),
+            ]);
+        });
+
+        // SMS «سفارش ایجاد شد» — حالا که از لید به سفارش تبدیل شده،
+        // مشتری اطلاع پیامکی می‌گیرد.
+        try {
+            app(\Modules\CRM\Services\OrderSmsNotifier::class)
+                ->notify($order->refresh(), \Modules\CRM\Enums\SmsTrigger::OrderCreated);
+        } catch (\Throwable $e) {
+            Log::warning('convertFromLead SMS failed', ['order' => $order->id, 'err' => $e->getMessage()]);
+        }
+
+        return back()->with('success', "لید با موفقیت به سفارش تبدیل شد. کد جدید: {$newCode} (قبلی: {$oldCode})");
+    }
+
     public function unassign(Order $order)
     {
         if (! $order->technician_id) {

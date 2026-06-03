@@ -87,8 +87,8 @@
         </div>
     </div>
 
-    {{-- ایرادات (multi-select با سرچ) --}}
-    <div>
+    {{-- ایرادات (multi-select با سرچ) — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید)</label>
         @if(count($this->objectionsList))
             <div x-data="{
@@ -140,7 +140,8 @@
         @endif
     </div>
 
-    <div>
+    {{-- شرح ایراد — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شرح ایراد / توضیحات اضافی</label>
         <textarea wire:model="objectionDescription" rows="3"
                   placeholder="جزئیات بیشتر مشکل دستگاه..."

@@ -220,6 +220,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
     });
 
+    // تبدیل لید به سفارش — دسترسی برای همه‌ی کاربران احراز شده.
+    // (نیازی به permission مجزا نیست؛ هرکس صفحهٔ لید را ببیند می‌تواند
+    // تبدیل کند.)
+    Route::post('orders/{order}/convert-from-lead', [OrderController::class, 'convertFromLead'])
+        ->name('orders.convert-from-lead');
+
     Route::middleware('can:assign-crm-technician')->group(function () {
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');

@@ -192,15 +192,28 @@
                 }
             @endphp
             @if($order->is_lead)
-                {{-- بنر و کارت لید — اطلاعات قابل سفارش نبودن تماس --}}
+                {{-- بنر و کارت لید — اطلاعات قابل سفارش نبودن تماس + دکمه تبدیل به سفارش --}}
                 <div class="bg-rose-50 border-2 border-rose-200 rounded-xl p-5 mb-2">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xl">⚠</div>
                         <div class="flex-1">
-                            <h3 class="font-bold text-rose-900 mb-1">لید — تماس غیرقابل سفارش</h3>
-                            <p class="text-xs text-rose-700 leading-6">
-                                این رکورد یک تماس است که به سفارش تبدیل نشده. هیچ تکنسینی اساین نشده و فاکتوری صادر نمی‌شود.
-                            </p>
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div>
+                                    <h3 class="font-bold text-rose-900 mb-1">لید — تماس غیرقابل سفارش</h3>
+                                    <p class="text-xs text-rose-700 leading-6">
+                                        این رکورد یک تماس است که به سفارش تبدیل نشده. اگر باید تبدیل به سفارش شود، از دکمهٔ کنار استفاده کنید.
+                                    </p>
+                                </div>
+                                <form action="{{ route('crm.orders.convert-from-lead', $order) }}" method="POST"
+                                      onsubmit="return confirm('این لید را به سفارش واقعی تبدیل می‌کنید. آیا مطمئنید؟');">
+                                    @csrf
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm whitespace-nowrap">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        تبدیل به سفارش
+                                    </button>
+                                </form>
+                            </div>
                             <div class="mt-3 space-y-2 text-sm">
                                 @if($order->leadReason)
                                     <div><span class="text-gray-500">دلیل عدم سفارش:</span>
@@ -942,8 +955,8 @@
             </div>
             @endcan
 
-            {{-- تخصیص تکنسین --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            {{-- تخصیص تکنسین — برای لیدها مخفی است، چون باید اول «تبدیل به سفارش» شوند --}}
+            <div @class(['bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6', 'hidden' => $order->is_lead])>
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تکنسین</h2>
                 @if($order->technician)
                 <div class="mb-3">
