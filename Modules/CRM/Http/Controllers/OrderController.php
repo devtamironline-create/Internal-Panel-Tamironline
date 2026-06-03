@@ -94,6 +94,15 @@ class OrderController extends Controller
             $query->where('status', $status);
         }
 
+        // فیلتر لید/سفارش — پیش‌فرض: فقط سفارش‌های واقعی نشان داده
+        // می‌شوند. با kind=lead فقط لیدها، با kind=all هر دو.
+        $kind = $request->string('kind')->toString();
+        if ($kind === 'lead') {
+            $query->leads();
+        } elseif ($kind !== 'all') {
+            $query->realOrders();
+        }
+
         // تعداد در صفحه — قابل تنظیم با ?per_page=. مقادیر مجاز محدود
         // می‌شوند تا کاربر نتواند با عدد خیلی بزرگ سرور را overload کند.
         $perPage = (int) $request->query('per_page', 50);
@@ -140,11 +149,15 @@ class OrderController extends Controller
             $introductionList = [];
         }
 
+        // شمارش لیدها و سفارش‌ها برای نمایش روی تب‌های kind
+        $leadCount  = (clone $query->getModel()->newQuery())->leads()->count();
+        $orderCount = (clone $query->getModel()->newQuery())->realOrders()->count();
+
         return view('crm::orders.index', compact(
             'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
             'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
             'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
-            'statusCounts', 'perPage'
+            'statusCounts', 'perPage', 'kind', 'leadCount', 'orderCount'
         ));
     }
 

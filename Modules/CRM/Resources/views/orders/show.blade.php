@@ -191,6 +191,34 @@
                     $deviceImgUrl = $isAbsolute ? $deviceImg : storage_url(ltrim($deviceImg, '/'));
                 }
             @endphp
+            @if($order->is_lead)
+                {{-- بنر و کارت لید — اطلاعات قابل سفارش نبودن تماس --}}
+                <div class="bg-rose-50 border-2 border-rose-200 rounded-xl p-5 mb-2">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xl">⚠</div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-rose-900 mb-1">لید — تماس غیرقابل سفارش</h3>
+                            <p class="text-xs text-rose-700 leading-6">
+                                این رکورد یک تماس است که به سفارش تبدیل نشده. هیچ تکنسینی اساین نشده و فاکتوری صادر نمی‌شود.
+                            </p>
+                            <div class="mt-3 space-y-2 text-sm">
+                                @if($order->leadReason)
+                                    <div><span class="text-gray-500">دلیل عدم سفارش:</span>
+                                        <span class="font-bold text-rose-800">{{ $order->leadReason->name }}</span>
+                                    </div>
+                                @endif
+                                @if($order->lead_notes)
+                                    <div class="pt-2 border-t border-rose-200">
+                                        <div class="text-xs text-gray-500 mb-1">یادداشت اپراتور:</div>
+                                        <div class="text-gray-700 whitespace-pre-wrap leading-7">{{ $order->lead_notes }}</div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {{-- ── کارت ۱: مشتری ── --}}
