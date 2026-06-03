@@ -357,7 +357,7 @@
                 'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
                 'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
                 'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
-                'poster_url' => ['label' => 'تصویر cover (URL)', 'type' => 'string'],
+                'poster_url' => ['label' => 'تصویر cover — انتخاب از مخزن مدیا', 'type' => 'image'],
             ],
         ])
     </x-crm::section-card>
