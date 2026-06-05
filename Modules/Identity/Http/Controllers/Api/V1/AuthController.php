@@ -33,12 +33,18 @@ class AuthController extends Controller
     {
         $result = $this->identity->sendOtp((string) $request->input('mobile'));
 
-        return response()->json([
+        $payload = [
             'ok' => true,
             'message' => 'کد تأیید ارسال شد.',
             'expires_in' => $result['expires_in'],
             'can_resend_in' => $result['can_resend_in'],
-        ]);
+        ];
+
+        if (! empty($result['debug_code'])) {
+            $payload['debug_code'] = $result['debug_code'];
+        }
+
+        return response()->json($payload);
     }
 
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse

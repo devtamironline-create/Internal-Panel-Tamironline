@@ -3,6 +3,7 @@
 namespace Modules\Identity\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 use Modules\CRM\Models\Customer;
@@ -40,7 +41,7 @@ final class IdentityService
     /**
      * ارسال OTP به شماره موبایل.
      *
-     * @return array{ok: bool, expires_in: int, can_resend_in: int}
+     * @return array{ok: bool, expires_in: int, can_resend_in: int, debug_code?: string}
      *
      * @throws ValidationException
      */
@@ -59,21 +60,31 @@ final class IdentityService
             ]);
         }
 
-        $result = $this->otp->sendOTP($normalized);
+        $result = $this->otp->send($normalized);
 
         if (! ($result['success'] ?? false)) {
-            throw ValidationException::withMessages([
-                'mobile' => $result['message'] ?? 'ارسال OTP ناموفق بود.',
-            ]);
+            // اگر throttle داخلی OTPService بود، wait_time را surface کن
+            $errors = ['mobile' => $result['message'] ?? 'ارسال OTP ناموفق بود.'];
+            if (! empty($result['wait_time'])) {
+                $errors['wait_time'] = (string) (int) $result['wait_time'];
+            }
+            throw ValidationException::withMessages($errors);
         }
 
         Cache::put($hourKey, $hourCount + 1, now()->addHour());
 
-        return [
+        $response = [
             'ok' => true,
-            'expires_in' => (int) config('sms.otp.expires', 120),
+            'expires_in' => (int) ($result['expires_in'] ?? config('sms.otp.expires_in', 120)),
             'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
         ];
+
+        // در محیط local کد را پاس بده تا تست و debug راحت باشد
+        if (! empty($result['debug_code'])) {
+            $response['debug_code'] = (string) $result['debug_code'];
+        }
+
+        return $response;
     }
 
     /**
@@ -90,26 +101,33 @@ final class IdentityService
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
-        $verification = $this->otp->verifyOTP($normalized, trim($code));
+        $verification = $this->otp->verify($normalized, trim($code));
         if (! ($verification['success'] ?? false)) {
             throw ValidationException::withMessages([
                 'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
             ]);
         }
 
-        $customer = Customer::query()->byMobile($normalized)->first();
-        $isNew = false;
+        // race-safe upsert — unique(mobile) + transaction جلوی duplicate در
+        // درخواست‌های همزمان را می‌گیرد.
+        [$customer, $isNew] = DB::transaction(function () use ($normalized): array {
+            $existing = Customer::query()->byMobile($normalized)->lockForUpdate()->first();
+            if ($existing) {
+                if (! $existing->mobile_verified_at) {
+                    $existing->forceFill(['mobile_verified_at' => now()])->save();
+                }
 
-        if (! $customer) {
-            $customer = Customer::query()->create([
+                return [$existing, false];
+            }
+
+            $created = Customer::query()->create([
                 'mobile' => $normalized,
                 'mobile_verified_at' => now(),
                 'is_active' => true,
             ]);
-            $isNew = true;
-        } elseif (! $customer->mobile_verified_at) {
-            $customer->forceFill(['mobile_verified_at' => now()])->save();
-        }
+
+            return [$created, true];
+        });
 
         if (! $customer->isActive()) {
             throw ValidationException::withMessages([
