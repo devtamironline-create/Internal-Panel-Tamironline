@@ -41,7 +41,12 @@ final class IdentityService
     /**
      * ارسال OTP به شماره موبایل.
      *
-     * @return array{ok: bool, expires_in: int, can_resend_in: int, debug_code?: string}
+     * توجه امنیتی: کد OTP هرگز در response برنمی‌گردد — حتی در local. برای
+     * dev/test از storage/logs/laravel.log استفاده کنید (OTPService در local
+     * هر کد را با Log::info می‌نویسد). این جلوگیری از حادثه‌ی APP_ENV اشتباه
+     * در deploy تولید است.
+     *
+     * @return array{ok: bool, expires_in: int, can_resend_in: int}
      *
      * @throws ValidationException
      */
@@ -73,18 +78,11 @@ final class IdentityService
 
         Cache::put($hourKey, $hourCount + 1, now()->addHour());
 
-        $response = [
+        return [
             'ok' => true,
             'expires_in' => (int) ($result['expires_in'] ?? config('sms.otp.expires_in', 120)),
             'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
         ];
-
-        // در محیط local کد را پاس بده تا تست و debug راحت باشد
-        if (! empty($result['debug_code'])) {
-            $response['debug_code'] = (string) $result['debug_code'];
-        }
-
-        return $response;
     }
 
     /**
