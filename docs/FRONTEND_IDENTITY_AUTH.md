@@ -16,14 +16,14 @@
 
 ```
 کاربر شماره موبایل وارد می‌کند
-  └─→ POST /api/v1/auth/send-otp { mobile }                   (public)
+  └─→ POST /v1/auth/send-otp { mobile }                   (public)
         ← { ok, expires_in: 120, can_resend_in: 60 }
 کاربر کد ۶ رقمی دریافتی از SMS را وارد می‌کند
-  └─→ POST /api/v1/auth/verify-otp { mobile, code }           (public)
+  └─→ POST /v1/auth/verify-otp { mobile, code }           (public)
         ← { token, customer, is_new, needs_profile }
         💾 توکن را در storage ذخیره کنید (httpOnly cookie یا secure storage)
 اگر needs_profile === true:
-  └─→ POST /api/v1/auth/complete-profile { first_name, last_name? }   (Bearer)
+  └─→ POST /v1/auth/complete-profile { first_name, last_name? }   (Bearer)
         ← { customer }
 کاربر حالا کاملاً وارد شده — همه‌ی request های بعدی با Authorization: Bearer {token}
 ```
@@ -34,12 +34,12 @@
 
 | Endpoint | Method | Auth | Throttle | کاربرد |
 |---|---|---|---|---|
-| `/api/v1/auth/send-otp` | POST | عمومی | 10/min IP + 5/hour per phone | ارسال کد به موبایل |
-| `/api/v1/auth/verify-otp` | POST | عمومی | 10/min IP | تأیید کد، گرفتن token |
-| `/api/v1/auth/complete-profile` | POST | Bearer | — | ست کردن نام (یک‌بار یا تغییر) |
-| `/api/v1/auth/me` | GET | Bearer | — | اطلاعات کاربر فعلی |
-| `/api/v1/auth/logout` | POST | Bearer | — | خروج از این دستگاه |
-| `/api/v1/auth/logout-all` | POST | Bearer | — | خروج از همه دستگاه‌ها |
+| `/v1/auth/send-otp` | POST | عمومی | 10/min IP + 5/hour per phone | ارسال کد به موبایل |
+| `/v1/auth/verify-otp` | POST | عمومی | 10/min IP | تأیید کد، گرفتن token |
+| `/v1/auth/complete-profile` | POST | Bearer | — | ست کردن نام (یک‌بار یا تغییر) |
+| `/v1/auth/me` | GET | Bearer | — | اطلاعات کاربر فعلی |
+| `/v1/auth/logout` | POST | Bearer | — | خروج از این دستگاه |
+| `/v1/auth/logout-all` | POST | Bearer | — | خروج از همه دستگاه‌ها |
 
 ---
 
@@ -142,7 +142,7 @@ const API = process.env.NEXT_PUBLIC_API_URL!;
 const TOKEN_KEY = 'identity_token';
 
 export async function sendOtp(mobile: string) {
-  const res = await fetch(`${API}/api/v1/auth/send-otp`, {
+  const res = await fetch(`${API}/v1/auth/send-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ mobile }),
@@ -152,7 +152,7 @@ export async function sendOtp(mobile: string) {
 }
 
 export async function verifyOtp(mobile: string, code: string) {
-  const res = await fetch(`${API}/api/v1/auth/verify-otp`, {
+  const res = await fetch(`${API}/v1/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ mobile, code }),
@@ -181,7 +181,7 @@ export async function api(path: string, init: RequestInit = {}) {
 }
 
 export async function completeProfile(first: string, last?: string) {
-  const res = await api('/api/v1/auth/complete-profile', {
+  const res = await api('/v1/auth/complete-profile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ first_name: first, last_name: last }),
@@ -191,7 +191,7 @@ export async function completeProfile(first: string, last?: string) {
 }
 
 export async function logout() {
-  await api('/api/v1/auth/logout', { method: 'POST' });
+  await api('/v1/auth/logout', { method: 'POST' });
   localStorage.removeItem(TOKEN_KEY);
 }
 ```

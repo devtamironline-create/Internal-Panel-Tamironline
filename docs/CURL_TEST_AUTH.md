@@ -13,8 +13,15 @@
 > APP_ENV=local
 > ```
 >
-> در `APP_ENV=local`، endpoint مقدار `debug_code` را در response برمی‌گرداند تا
-> بدون نیاز به دیدن SMS بتوانید تست کنید.
+> **برای دیدن کد OTP در dev بدون نیاز به SMS واقعی:**
+> در `APP_ENV=local` کد OTP در `storage/logs/laravel.log` نوشته می‌شود
+> (`Log::info("OTP Code for ...")`). کد **هرگز** در HTTP response برنمی‌گردد —
+> این محافظت در برابر افشاء اتفاقی در صورت اشتباه‌سازی env در deploy است.
+>
+> سریع‌ترین راه دیدن کد آخر:
+> ```bash
+> grep "OTP Code" storage/logs/laravel.log | tail -1
+> ```
 
 اگر local سرور را بالا نیاوردی:
 ```bash
@@ -32,7 +39,7 @@ export MOBILE=09918911126
 ## ۱) ارسال OTP
 
 ```bash
-curl -s -X POST "$BASE/api/v1/auth/send-otp" \
+curl -s -X POST "$BASE/v1/auth/send-otp" \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
   -d "{\"mobile\":\"$MOBILE\"}" | jq
@@ -44,12 +51,15 @@ curl -s -X POST "$BASE/api/v1/auth/send-otp" \
   "ok": true,
   "message": "کد تأیید ارسال شد.",
   "expires_in": 120,
-  "can_resend_in": 60,
-  "debug_code": "453219"
+  "can_resend_in": 60
 }
 ```
 
-> `debug_code` فقط در `APP_ENV=local` برمی‌گردد. در production نخواهد بود — کاربر کد را از SMS دریافت می‌کند.
+> برای گرفتن کد در dev:
+> ```bash
+> grep "OTP Code" storage/logs/laravel.log | tail -1
+> # → [...] OTP Code for 09918911126: 453219
+> ```
 
 اگر زود دوباره بزنی (مثلاً ۱۰ ثانیه بعد) باید 422 برگردد:
 ```json
@@ -66,11 +76,12 @@ curl -s -X POST "$BASE/api/v1/auth/send-otp" \
 
 ## ۲) تأیید OTP
 
-از `debug_code` بالا یا کد دریافتی از SMS استفاده کن:
+کد را از log یا SMS بگیر:
 ```bash
-export CODE=453219    # کد دریافتی
+export CODE=$(grep "OTP Code for $MOBILE" storage/logs/laravel.log | tail -1 | awk '{print $NF}')
+# یا دستی: export CODE=453219
 
-curl -s -X POST "$BASE/api/v1/auth/verify-otp" \
+curl -s -X POST "$BASE/v1/auth/verify-otp" \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
   -d "{\"mobile\":\"$MOBILE\",\"code\":\"$CODE\"}" | jq
@@ -118,7 +129,7 @@ export TOKEN="1|abc...XYZ"
 ## ۳) تکمیل پروفایل (Bearer)
 
 ```bash
-curl -s -X POST "$BASE/api/v1/auth/complete-profile" \
+curl -s -X POST "$BASE/v1/auth/complete-profile" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -146,7 +157,7 @@ curl -s -X POST "$BASE/api/v1/auth/complete-profile" \
 ## ۴) پروفایل فعلی (`/me`)
 
 ```bash
-curl -s "$BASE/api/v1/auth/me" \
+curl -s "$BASE/v1/auth/me" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Accept: application/json' | jq
 ```
@@ -160,7 +171,7 @@ curl -s "$BASE/api/v1/auth/me" \
 ## ۵) Logout (این دستگاه)
 
 ```bash
-curl -s -X POST "$BASE/api/v1/auth/logout" \
+curl -s -X POST "$BASE/v1/auth/logout" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Accept: application/json' | jq
 ```
@@ -174,7 +185,7 @@ curl -s -X POST "$BASE/api/v1/auth/logout" \
 ## ۶) Logout از همه دستگاه‌ها
 
 ```bash
-curl -s -X POST "$BASE/api/v1/auth/logout-all" \
+curl -s -X POST "$BASE/v1/auth/logout-all" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Accept: application/json' | jq
 ```
@@ -192,34 +203,36 @@ BASE=${BASE:-http://127.0.0.1:8000}
 MOBILE=${MOBILE:-09918911126}
 
 echo "→ send-otp"
-SEND=$(curl -s -X POST "$BASE/api/v1/auth/send-otp" \
+SEND=$(curl -s -X POST "$BASE/v1/auth/send-otp" \
   -H 'Accept: application/json' -H 'Content-Type: application/json' \
   -d "{\"mobile\":\"$MOBILE\"}")
 echo "$SEND" | jq
-CODE=$(echo "$SEND" | jq -r '.debug_code // empty')
+
+# در dev از log بخوان، در staging/prod باید SMS را دستی وارد کنی
+CODE=$(grep "OTP Code for $MOBILE" storage/logs/laravel.log 2>/dev/null | tail -1 | awk '{print $NF}')
 if [ -z "$CODE" ]; then
-  echo "debug_code نیست — کد را از SMS وارد کن:" && read CODE
+  echo "کد را وارد کن:" && read CODE
 fi
 
 echo "→ verify-otp (code=$CODE)"
-VER=$(curl -s -X POST "$BASE/api/v1/auth/verify-otp" \
+VER=$(curl -s -X POST "$BASE/v1/auth/verify-otp" \
   -H 'Accept: application/json' -H 'Content-Type: application/json' \
   -d "{\"mobile\":\"$MOBILE\",\"code\":\"$CODE\"}")
 echo "$VER" | jq
 TOKEN=$(echo "$VER" | jq -r '.token')
 
 echo "→ complete-profile"
-curl -s -X POST "$BASE/api/v1/auth/complete-profile" \
+curl -s -X POST "$BASE/v1/auth/complete-profile" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Accept: application/json' -H 'Content-Type: application/json' \
   -d '{"first_name":"علی","last_name":"محمدی"}' | jq
 
 echo "→ me"
-curl -s "$BASE/api/v1/auth/me" \
+curl -s "$BASE/v1/auth/me" \
   -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' | jq
 
 echo "→ logout"
-curl -s -X POST "$BASE/api/v1/auth/logout" \
+curl -s -X POST "$BASE/v1/auth/logout" \
   -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' | jq
 ```
 
