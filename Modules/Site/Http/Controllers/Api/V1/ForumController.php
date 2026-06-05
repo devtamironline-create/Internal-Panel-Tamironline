@@ -239,14 +239,14 @@ class ForumController extends Controller
         $data = $request->validate([
             'title' => 'required|string|min:10|max:250',
             'body' => 'required|string|min:30|max:50000',
-            'device_slug' => 'required|string|exists:crm_devices,slug',
+            'device_slug' => 'nullable|string|exists:crm_devices,slug',
             'brand_slug' => 'nullable|string|exists:crm_brands,slug',
             'model' => 'nullable|string|max:80',
             'tags' => 'nullable|array|max:6',
             'tags.*' => 'string|max:30',
         ]);
 
-        $device = Device::where('slug', $data['device_slug'])->first(['id']);
+        $device = ! empty($data['device_slug']) ? Device::where('slug', $data['device_slug'])->first(['id']) : null;
         $brand = ! empty($data['brand_slug']) ? Brand::where('slug', $data['brand_slug'])->first(['id']) : null;
         $token = Str::random(40);
 

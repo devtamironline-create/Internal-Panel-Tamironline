@@ -78,8 +78,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.devices.show');
     });
 
-    // ── Public writes با throttle محدودتر ────────────────────────
-    Route::middleware('throttle:5,1')->group(function () {
+    // ── کامنت‌ها — auth الزامی + throttle ────────────────────────
+    Route::middleware(['auth:sanctum', 'throttle:5,1'])->group(function () {
         Route::post('/blog/articles/{slug}/comments', [CommentController::class, 'storeForArticle'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.blog.articles.comments.store');

@@ -200,27 +200,56 @@ export async function logout() {
 
 ---
 
-## ۵) Forum: حالا auth الزامی است
+## ۵) Forum + کامنت‌ها: حالا auth الزامی است
 
 **تغییر مهم — breaking change:**
-- `POST /v1/forum/questions` و `POST /v1/forum/questions/{slug}/answers` از این پس **Bearer token** می‌خواهند
-- اگر بدون token درخواست شود → `401`
-- اگر کاربر هنوز نام تکمیل نکرده باشد → `422` با `needs_profile: true`
-- author_phone / author_email / author_name از فرم **حذف شد** — همه از حساب کاربر می‌آیند
+
+این endpoint ها از این پس **Bearer token** می‌خواهند:
+- `POST /v1/forum/questions`
+- `POST /v1/forum/questions/{slug}/answers`
+- `POST /v1/blog/articles/{slug}/comments`
+
+رفتار:
+- بدون token → `401`
+- کاربر بدون `first_name` → `422` با `needs_profile: true`
+- فیلدهای `author_phone` / `author_email` / `author_name` از body **حذف شدند** — همه از حساب کاربر می‌آیند
+
+### Forum question
 
 ```jsonc
 // POST /v1/forum/questions    Authorization: Bearer ...
 {
-  "title": "...",
-  "body": "...",
-  "device_slug": "washing-machine",
-  "brand_slug": "samsung",          // optional
-  "model": "WW80...",                // optional
-  "tags": ["leak", "water"]          // optional
+  "title": "...",                    // required
+  "body": "...",                     // required
+  "device_slug": "washing-machine",  // ← اختیاری
+  "brand_slug": "samsung",           // ← اختیاری
+  "model": "WW80...",                // اختیاری
+  "tags": ["leak", "water"]          // اختیاری
 }
 ```
 
-422 با `needs_profile`:
+> **تغییر اخیر:** `device_slug` و `brand_slug` هر دو **اختیاری** شدند تا کاربر بتواند سوال عمومی هم بپرسد. اگر admin لازم بداند، می‌تواند بعداً سوال را به برند/دستگاه assign کند (bulk categorize).
+
+### Forum answer
+
+```jsonc
+// POST /v1/forum/questions/{slug}/answers    Authorization: Bearer ...
+{
+  "body": "..."   // required (min 30 char)
+}
+```
+
+### Comments (مقالات بلاگ)
+
+```jsonc
+// POST /v1/blog/articles/{slug}/comments    Authorization: Bearer ...
+{
+  "content": "...",         // required (min 5 char)
+  "parent_id": 123          // اختیاری — برای reply به کامنت approved موجود
+}
+```
+
+پاسخ 422 با `needs_profile`:
 ```jsonc
 { "ok": false, "message": "ابتدا نام خود را در پروفایل تکمیل کنید.", "needs_profile": true }
 ```
@@ -255,7 +284,8 @@ export async function logout() {
 - [ ] تمام درخواست‌های احتیاج به auth → `Authorization: Bearer {token}`.
 - [ ] مدیریت 401 → پاکسازی token و redirect به login.
 - [ ] مدیریت 422 `needs_profile` → redirect به فرم تکمیل نام.
-- [ ] forum: حذف `author_*` از فرم سوال/پاسخ. فقط title/body/device_slug/brand_slug فرستاده شود.
+- [ ] forum: حذف `author_*` از فرم سوال/پاسخ. فقط title/body فرستاده شود (device_slug/brand_slug اختیاری).
+- [ ] comments: حذف `author_name` و `author_email` از فرم. فقط content + parent_id فرستاده شود.
 - [ ] دکمه‌ی logout (در پروفایل کاربر).
 - [ ] صفحه‌ی «دستگاه‌های فعال من» با لیست توکن‌ها (اختیاری، فاز بعد).
 

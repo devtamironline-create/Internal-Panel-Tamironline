@@ -136,9 +136,20 @@ class CommentController extends Controller
 
     private function createComment(Request $request, string $ownerType, int $ownerId): JsonResponse
     {
+        // ثبت کامنت فقط با لاگین — هویت از حساب کاربر گرفته می‌شود.
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['ok' => false, 'message' => 'برای ثبت نظر باید وارد شوید.'], 401);
+        }
+        if (empty($user->first_name)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
+                'needs_profile' => true,
+            ], 422);
+        }
+
         $data = $request->validate([
-            'author_name' => 'required|string|max:80',
-            'author_email' => 'nullable|email|max:120',
             'content' => 'required|string|min:5|max:3000',
             'parent_id' => ['nullable', 'integer', Rule::exists('site_comments', 'id')->where(fn ($q) => $q
                 ->where('commentable_type', $ownerType)
@@ -158,8 +169,9 @@ class CommentController extends Controller
             'commentable_id' => $ownerId,
             'parent_id' => $data['parent_id'] ?? null,
             'root_id' => $rootId,
-            'author_name' => trim($data['author_name']),
-            'author_email' => isset($data['author_email']) ? strtolower(trim($data['author_email'])) : null,
+            'user_id' => $user->id,
+            'author_name' => $user->full_name,
+            'author_email' => $user->email,
             'content' => trim($data['content']),
             'status' => Comment::STATUS_PENDING,
             'ip' => $request->ip(),
