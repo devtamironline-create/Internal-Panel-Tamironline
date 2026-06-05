@@ -2,34 +2,34 @@
 
 namespace Modules\Identity\Services;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
+use Modules\CRM\Models\Customer;
 use Modules\Identity\Support\PhoneNormalizer;
 use Modules\SMS\Services\KavenegarService;
 use Modules\SMS\Services\OTPService;
 
 /**
- * Single source of truth for unified phone+OTP authentication.
+ * Single source of truth for unified phone+OTP authentication of customers.
  *
- * Flow (web/app):
- *   1. sendOtp($mobile)              → کاربر را پیدا/ایجاد، OTP ارسال
- *   2. verifyOtp($mobile, $code)     → User + token جدید
- *   3. completeProfile($u, names)    → اولین بار نام را ست می‌کند
- *   4. logout($token)                → توکن را revoke می‌کند
+ * Auth subject: Modules\CRM\Models\Customer (crm_customers جدول)
+ * Admin/staff: همچنان از App\Models\User
+ * تکنسین: همچنان از Modules\CRM\Models\Technician
+ *
+ * Flow:
+ *   1. sendOtp($mobile)              → OTP ارسال + cache rate limit
+ *   2. verifyOtp($mobile, $code)     → Customer + Sanctum token جدید
+ *   3. completeProfile($c, $first, $last) → ست کردن نام و نام خانوادگی
+ *   4. logout($token)                → revoke توکن
  *
  * تمام شماره‌ها قبل از هر کاری از PhoneNormalizer می‌گذرند.
- * OTPService موجود (Modules/SMS) برای generation/validation استفاده می‌شود.
  */
 final class IdentityService
 {
-    public const TOKEN_NAME = 'identity-token';
+    public const TOKEN_NAME = 'customer-token';
 
-    /**
-     * Rate-limit per phone — حداکثر در ساعت چند OTP می‌توان فرستاد.
-     * مکمل rate-limit IP-based در routes.
-     */
+    /** Rate-limit per phone — حداکثر در ساعت چند OTP می‌توان فرستاد. */
     public const MAX_OTP_PER_HOUR_PER_PHONE = 5;
 
     public function __construct(
@@ -40,10 +40,9 @@ final class IdentityService
     /**
      * ارسال OTP به شماره موبایل.
      *
-     *
      * @return array{ok: bool, expires_in: int, can_resend_in: int}
      *
-     * @throws ValidationException اگر شماره نامعتبر باشد یا rate limit رد شده باشد
+     * @throws ValidationException
      */
     public function sendOtp(string $mobile): array
     {
@@ -78,10 +77,9 @@ final class IdentityService
     }
 
     /**
-     * تأیید OTP — اگر کاربر نباشد ساخته می‌شود، توکن Sanctum برمی‌گرداند.
+     * تأیید OTP — اگر مشتری نباشد ساخته می‌شود، توکن Sanctum برمی‌گرداند.
      *
-     *
-     * @return array{user: User, token: NewAccessToken, is_new: bool}
+     * @return array{customer: Customer, token: NewAccessToken, is_new: bool}
      *
      * @throws ValidationException
      */
@@ -99,29 +97,32 @@ final class IdentityService
             ]);
         }
 
-        $user = User::query()->byMobile($normalized)->first();
+        $customer = Customer::query()->byMobile($normalized)->first();
         $isNew = false;
 
-        if (! $user) {
-            $user = User::query()->create([
+        if (! $customer) {
+            $customer = Customer::query()->create([
                 'mobile' => $normalized,
                 'mobile_verified_at' => now(),
                 'is_active' => true,
-                'is_staff' => false,
             ]);
             $isNew = true;
-
-            $this->assignDefaultCustomerRole($user);
-        } elseif (! $user->mobile_verified_at) {
-            $user->forceFill(['mobile_verified_at' => now()])->save();
+        } elseif (! $customer->mobile_verified_at) {
+            $customer->forceFill(['mobile_verified_at' => now()])->save();
         }
 
-        $user->recordLogin(request()?->ip());
+        if (! $customer->isActive()) {
+            throw ValidationException::withMessages([
+                'mobile' => 'حساب شما غیرفعال است. با پشتیبانی تماس بگیرید.',
+            ]);
+        }
 
-        $token = $user->createToken(self::TOKEN_NAME, ['*']);
+        $customer->recordLogin(request()?->ip());
+
+        $token = $customer->createToken(self::TOKEN_NAME, ['*']);
 
         return [
-            'user' => $user->fresh(),
+            'customer' => $customer->fresh(),
             'token' => $token,
             'is_new' => $isNew,
         ];
@@ -130,36 +131,21 @@ final class IdentityService
     /**
      * ست کردن first_name / last_name (اولین بار یا تغییر).
      */
-    public function completeProfile(User $user, string $firstName, ?string $lastName = null): User
+    public function completeProfile(Customer $customer, string $firstName, ?string $lastName = null): Customer
     {
-        $user->forceFill([
+        $customer->forceFill([
             'first_name' => trim($firstName),
             'last_name' => $lastName ? trim($lastName) : null,
         ])->save();
 
-        return $user->fresh();
+        return $customer->fresh();
     }
 
     /**
-     * آیا پروفایل کاربر کامل است؟ (حداقل first_name)
+     * آیا پروفایل مشتری کامل است؟ (حداقل first_name)
      */
-    public function isProfileComplete(User $user): bool
+    public function isProfileComplete(Customer $customer): bool
     {
-        return ! empty($user->first_name);
-    }
-
-    /**
-     * نقش پیش‌فرض customer را به کاربر می‌دهد (در صورت وجود).
-     * این به‌صورت silent fail است تا اگر spatie permission setup نباشد، ثبت‌نام نشکند.
-     */
-    private function assignDefaultCustomerRole(User $user): void
-    {
-        try {
-            if (\Spatie\Permission\Models\Role::query()->where('name', 'customer')->exists()) {
-                $user->assignRole('customer');
-            }
-        } catch (\Throwable $e) {
-            // ignore — role optional
-        }
+        return ! empty($customer->first_name);
     }
 }

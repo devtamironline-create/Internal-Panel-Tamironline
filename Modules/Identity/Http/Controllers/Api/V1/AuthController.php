@@ -8,11 +8,14 @@ use Illuminate\Http\Request;
 use Modules\Identity\Http\Requests\CompleteProfileRequest;
 use Modules\Identity\Http\Requests\SendOtpRequest;
 use Modules\Identity\Http\Requests\VerifyOtpRequest;
-use Modules\Identity\Http\Resources\UserResource;
+use Modules\Identity\Http\Resources\CustomerResource;
 use Modules\Identity\Services\IdentityService;
 
 /**
- * Unified phone + OTP authentication for site / mobile app / 3rd-party clients.
+ * Unified phone + OTP authentication for customers (site / mobile app).
+ *
+ * Subject: Modules\CRM\Models\Customer (crm_customers جدول)
+ * Admin/staff/tech همچنان از سیستم لاگین فعلی خود استفاده می‌کنند.
  *
  * Endpoints (prefix /api/v1/auth):
  *   POST /send-otp         — public
@@ -45,21 +48,21 @@ class AuthController extends Controller
             (string) $request->input('code'),
         );
 
-        $user = $result['user'];
+        $customer = $result['customer'];
 
         return response()->json([
             'ok' => true,
             'token' => $result['token']->plainTextToken,
             'token_type' => 'Bearer',
-            'user' => new UserResource($user),
+            'customer' => new CustomerResource($customer),
             'is_new' => $result['is_new'],
-            'needs_profile' => ! $this->identity->isProfileComplete($user),
+            'needs_profile' => ! $this->identity->isProfileComplete($customer),
         ]);
     }
 
     public function completeProfile(CompleteProfileRequest $request): JsonResponse
     {
-        $user = $this->identity->completeProfile(
+        $customer = $this->identity->completeProfile(
             $request->user(),
             (string) $request->input('first_name'),
             $request->input('last_name'),
@@ -67,7 +70,7 @@ class AuthController extends Controller
 
         return response()->json([
             'ok' => true,
-            'user' => new UserResource($user),
+            'customer' => new CustomerResource($customer),
         ]);
     }
 
@@ -75,13 +78,12 @@ class AuthController extends Controller
     {
         return response()->json([
             'ok' => true,
-            'user' => new UserResource($request->user()),
+            'customer' => new CustomerResource($request->user()),
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        // فقط توکن فعلی را revoke می‌کنیم
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['ok' => true, 'message' => 'با موفقیت خارج شدید.']);
@@ -89,7 +91,6 @@ class AuthController extends Controller
 
     public function logoutAll(Request $request): JsonResponse
     {
-        // تمام توکن‌های این کاربر را revoke می‌کند (همه دستگاه‌ها)
         $request->user()->tokens()->delete();
 
         return response()->json(['ok' => true, 'message' => 'از همه دستگاه‌ها خارج شدید.']);
