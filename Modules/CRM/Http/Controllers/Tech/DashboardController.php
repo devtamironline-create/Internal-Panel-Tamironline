@@ -42,7 +42,7 @@ class DashboardController extends Controller
 
         // برای دکوریشن مالی هدر/باکس‌ها لازم است sum سهم شرکت روی technician
         // cache شود تا accessor invoice_debt یک query اضافه نزند.
-        $tech->loadSum('invoices', 'company_share');
+        $tech->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         // تقویم داشبورد — ۷ روز آینده با تفکیک سفارش‌ها بر اساس بازهٔ
         // ساعتی (۹–۱۲، ۱۲–۱۵، ۱۵–۱۸، ۱۸–۲۱). همان VISIT_SLOTS که در
@@ -283,7 +283,7 @@ class DashboardController extends Controller
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
-            'device_img1' => 'nullable|image|max:5120',
+            'device_img1' => 'nullable|image|max:10240',
         ], [
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',
@@ -321,16 +321,21 @@ class DashboardController extends Controller
             $hasNewImage = $request->hasFile('device_img1');
             $hasExistingImage = ! empty($order->device_img1);
             $isDraft = (bool) ($validated['save_as_draft'] ?? false);
+            // برای سفارش‌های برگشتی (return_type ست شده): اپراتور مالی
+            // قبلاً تأیید کرده که خدمات رایگان یا با شرایط خاص انجام شود؛
+            // پس عکس/توضیحات اجباری نیستند.
+            $isReturned = ! is_null($order->return_type);
             $errors = [];
 
-            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد یا پیش‌نویس).
-            if (! $isDraft && ! $hasNewImage && ! $hasExistingImage) {
+            // عکس دستگاه اجباری است (مگر قبلاً آپلود شده باشد، پیش‌نویس،
+            // یا سفارش برگشتی باشد).
+            if (! $isDraft && ! $isReturned && ! $hasNewImage && ! $hasExistingImage) {
                 $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
             }
 
-            // توضیحات فاکتور اجباری — به مشتری به‌عنوان فاکتور قانونی فرستاده می‌شود.
+            // توضیحات فاکتور اجباری — مگر در سفارش‌های برگشتی.
             $invDesc = trim((string) ($validated['invoice_descripotion'] ?? ''));
-            if (! $isDraft && $invDesc === '') {
+            if (! $isDraft && ! $isReturned && $invDesc === '') {
                 $errors['invoice_descripotion'] = 'توضیحات فاکتور اجباری است — این متن به‌صورت فاکتور به مشتری ارسال می‌شود.';
             }
 
@@ -404,12 +409,20 @@ class DashboardController extends Controller
         // پیش‌نویس‌ها فاکتور صادر نمی‌کنند — تکنسین می‌تواند بعداً دوباره ثبت
         // کند بدون save_as_draft تا فاکتور نهایی بخورد.
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id);
+            // forceRegenerate=true → اگر فاکتور قبلی برای این سفارش هست،
+            // superseded شود و فاکتور جدید با قیمت/قطعات فعلی ساخته شود.
+            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
         }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
+        // در تکمیل مجدد سفارش‌های بازگشتی (return_type != null) پیامک
+        // اطلاع‌رسانی به مشتری ارسال نمی‌شود؛ مشتری قبلاً موقع تکمیل اول
+        // اطلاع گرفته بود و این مرحله ادامه/تصحیح همان کار است.
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
-            $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+            $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+            if (! $skipForReturned) {
+                $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
+            }
         }
 
         return redirect()
@@ -599,6 +612,13 @@ class DashboardController extends Controller
             OrderStatus::Transit,
         ];
 
+        // در حالت freeze، وضعیت‌های نهایی (نهایی‌سازی سفارش) از لیست
+        // حذف می‌شوند تا تکنسین حتی رادیو را نبیند. middleware هم
+        // اگر کسی از API مستقیم زد، آن را بلاک می‌کند.
+        if (\Modules\CRM\Models\CrmSetting::get('tech_panel_readonly') === '1') {
+            $base = array_filter($base, fn(OrderStatus $s) => ! $s->isFinal());
+        }
+
         return array_values(array_filter($base, fn(OrderStatus $s) => $s !== $order->status));
     }
 
@@ -615,7 +635,12 @@ class DashboardController extends Controller
 
         $typeFilter = $request->query('type');
 
-        $base = WalletTransaction::query()->where('technician_id', $tech->id);
+        // بدنهٔ پایه: حذف کامل ردیف‌های adjustment (که audit حذف یا تعدیل
+        // دستی ادمین‌اند) از دید تکنسین. این‌ها فقط در پنل ادمین قابل
+        // مشاهده‌اند.
+        $base = WalletTransaction::query()
+            ->where('technician_id', $tech->id)
+            ->where('type', '!=', WalletTxType::Adjustment->value);
 
         // مجموع‌های دسته‌بندی‌شده روی کل تاریخچه — مستقل از فیلتر فعلی.
         $stats = [
@@ -633,7 +658,7 @@ class DashboardController extends Controller
         $transactions = $query->latest()->paginate(15)->withQueryString();
 
         // refresh accessor با لود withSum فاکتورها — جلوگیری از N+1.
-        $tech->loadSum('invoices', 'company_share');
+        $tech->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         return view('crm::tech-panel.wallet', [
             'technician' => $tech,
@@ -676,42 +701,86 @@ class DashboardController extends Controller
     }
 
     // ─── شارژ کیف‌پول از درگاه (هم‌ارز Tech_Payment پنل WP) ────────
-    public function walletRecharge(ZibalService $zibal)
+    public function walletRecharge(ZibalService $zibal, \Modules\CRM\Services\MellatService $mellat)
     {
         $tech = Auth::guard('tech')->user();
+        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
+        $configured = $gateway === 'mellat' ? $mellat->isConfigured() : $zibal->isConfigured();
 
         return view('crm::tech-panel.wallet_recharge', [
             'technician' => $tech,
-            'gatewayConfigured' => $zibal->isConfigured(),
+            'gatewayConfigured' => $configured,
+            'activeGateway' => $gateway,
         ]);
     }
 
-    public function walletRechargeInitiate(Request $request, ZibalService $zibal)
+    public function walletRechargeInitiate(Request $request, ZibalService $zibal, \Modules\CRM\Services\MellatService $mellat)
     {
         $tech = Auth::guard('tech')->user();
 
+        // حالت تست موقت: با test_mode حداقل مبلغ به ۱۰٬۰۰۰ تومان کاهش می‌یابد
+        // تا بتوان کل چرخهٔ درگاه را با مبلغ کم آزمایش کرد. بعد از تست حذف شود.
+        $isTest = $request->boolean('test_mode');
+        $minAmount = $isTest ? 10000 : 500000;
+
         $validated = $request->validate([
-            'amount' => ['required', 'integer', 'min:500000', 'max:50000000'],
+            'amount' => ['required', 'integer', 'min:' . $minAmount, 'max:50000000'],
         ], [
             'amount.required' => 'مبلغ الزامی است.',
-            'amount.min' => 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
+            'amount.min' => $isTest ? 'حداقل مبلغ تست ۱۰٬۰۰۰ تومان است.' : 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 
+        $amount = (int) $validated['amount'];
+        $callbackUrl = route('crm.payment.callback');
+        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
+        $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
+
+        // ─── درگاه ملت ─────────────────────────────────────────────
+        if ($gateway === 'mellat') {
+            if (! $mellat->isConfigured()) {
+                return back()->with('error', 'درگاه ملت توسط ادمین تنظیم نشده است.');
+            }
+            // orderId عددی یکتا برای ملت (saleOrderId)
+            $orderId = (int) (now()->format('ymdHis') . random_int(10, 99));
+
+            $response = $mellat->request(amount: $amount, callbackUrl: $callbackUrl, orderId: $orderId);
+
+            $payment = Payment::create([
+                'technician_id' => $tech->id,
+                'gateway' => 'mellat',
+                'purpose' => 'wallet_charge',
+                'amount' => $amount,
+                'track_id' => (string) $orderId, // saleOrderId — کلید تطبیق در callback
+                'status' => $response['success'] ? 'pending' : 'failed',
+                'result_message' => $response['message'] ?? null,
+                'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
+                'requested_at' => now(),
+            ]);
+
+            if (! $response['success']) {
+                return back()->with('error', $response['message'] ?? 'خطا در شروع پرداخت ملت.');
+            }
+
+            // ملت نیاز به redirect با POST دارد — صفحهٔ auto-submit
+            return view('crm::payment.mellat-redirect', [
+                'startPayUrl' => $response['startPayUrl'],
+                'refId' => $response['refId'],
+            ]);
+        }
+
+        // ─── درگاه Zibal (پیش‌فرض) ─────────────────────────────────
         if (! $zibal->isConfigured()) {
             return back()->with('error', 'درگاه پرداخت توسط ادمین تنظیم نشده است.');
         }
 
-        $amount = (int) $validated['amount'];
-        $callbackUrl = route('crm.payment.callback');
         $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
-
         $response = $zibal->request(
             amount: $amount,
             callbackUrl: $callbackUrl,
             orderId: $orderId,
             mobile: $tech->mobile,
-            description: 'شارژ کیف‌پول تکنسین #' . $tech->id,
+            description: 'شارژ کیف‌پول — ' . $techName,
         );
 
         $payment = Payment::create([
@@ -764,6 +833,7 @@ class DashboardController extends Controller
             'technician'        => $tech,
             'categories'        => $categories,
             'uncategorizedCount' => $uncategorizedCount,
+            'progress'          => $tech->trainingProgress(),
         ]);
     }
 
@@ -809,10 +879,38 @@ class DashboardController extends Controller
         }
         $video->load('category');
 
+        $tech = Auth::guard('tech')->user();
+        $alreadyWatched = $tech->watchedVideos()->where('video_id', $video->id)->exists();
+
         return view('crm::tech-panel.training-show', [
-            'technician' => Auth::guard('tech')->user(),
-            'video'      => $video,
+            'technician'     => $tech,
+            'video'          => $video,
+            'alreadyWatched' => $alreadyWatched,
+            'progress'       => $tech->trainingProgress(),
         ]);
+    }
+
+    /**
+     * علامت‌گذاری ویدیو به‌عنوان دیده‌شده — وقتی همه دیده شدند،
+     * training_completed_at ست می‌شود و پنل برای تکنسین فعال می‌شود.
+     */
+    public function markVideoWatched(TrainingVideo $video)
+    {
+        if (! $video->is_active) {
+            abort(404);
+        }
+        $tech = Auth::guard('tech')->user();
+        $tech->markVideoWatched($video);
+
+        $progress = $tech->refresh()->trainingProgress();
+
+        if ($progress['remaining'] === 0) {
+            return redirect()->route('tech.dashboard')
+                ->with('success', '🎉 تبریک! تمام ویدیوهای آموزشی را مشاهده کردید. پنل برای شما فعال شد.');
+        }
+
+        return redirect()->route('tech.training')
+            ->with('success', 'ویدیو ثبت شد — ' . $progress['remaining'] . ' ویدیو باقی مانده.');
     }
 
     /**

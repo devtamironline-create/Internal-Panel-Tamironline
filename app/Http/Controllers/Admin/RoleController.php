@@ -121,6 +121,20 @@ class RoleController extends Controller
     {
         return Permission::all()->groupBy(function ($permission) {
             $name = $permission->name;
+
+            // CRM — همه permissionهای شامل crm را در گروه‌های فرعی CRM
+            if (str_contains($name, 'crm-reports') || str_contains($name, 'crm-orphan') || str_contains($name, 'crm-legacy')) return 'CRM — گزارش‌ها و ابزارها';
+            if (str_contains($name, 'crm-financial') || str_contains($name, 'crm-wallet') || str_contains($name, 'crm-invoice') || str_contains($name, 'crm-payment')) return 'CRM — مالی و فاکتور';
+            if (str_contains($name, 'crm-tickets') || str_contains($name, 'reply-crm')) return 'CRM — تیکت‌های تکنسین';
+            if (str_contains($name, 'tech-dashboard') || str_contains($name, 'own-orders') || str_contains($name, 'own-order') || str_contains($name, 'own-wallet') || str_contains($name, 'own-invoices') || str_contains($name, 'tech-suggestion')) return 'CRM — پنل تکنسین';
+            if (str_contains($name, 'crm-taxonomies') || str_contains($name, 'crm-brands') || str_contains($name, 'crm-devices') || str_contains($name, 'crm-provinces') || str_contains($name, 'crm-cities') || str_contains($name, 'crm-settings') || str_contains($name, 'crm-sms-templates') || str_contains($name, 'crm-sync')) return 'CRM — پیکربندی';
+            if (str_contains($name, 'crm-internal')) return 'CRM — سفارش‌های داخلی';
+            if (str_contains($name, 'crm-customers')) return 'CRM — مشتری‌ها';
+            if (str_contains($name, 'crm-technicians')) return 'CRM — تکنسین‌ها';
+            if (str_contains($name, 'crm-costs')) return 'CRM — هزینه‌ها';
+            if (str_contains($name, 'crm-happycall')) return 'CRM — HappyCall';
+            if (str_contains($name, 'crm-dashboard') || str_contains($name, 'crm-orders')) return 'CRM — سفارش‌ها و داشبورد';
+
             if (str_contains($name, 'staff')) return 'پرسنل';
             if (str_contains($name, 'attendance')) return 'حضور و غیاب';
             if (str_contains($name, 'leave')) return 'مرخصی';

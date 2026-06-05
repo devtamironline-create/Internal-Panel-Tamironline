@@ -43,7 +43,19 @@ class TechnicianController extends Controller
             ->orderBy('province')
             ->pluck('province');
 
-        return view('crm::technicians.index', compact('technicians', 'provinces', 'search', 'province', 'type', 'status'));
+        // OTP فعال هر تکنسین — فقط برای کاربر دارای دسترسی `view-tech-otp`.
+        // برای جلوگیری از N+1، یک‌بار از کش برای صفحهٔ فعلی pull می‌شود.
+        $otpMap = collect();
+        if (auth()->user()?->can('view-tech-otp')) {
+            foreach ($technicians as $t) {
+                $cached = \Illuminate\Support\Facades\Cache::get("tech_otp_{$t->mobile}");
+                if (is_array($cached) && ! empty($cached['code'])) {
+                    $otpMap[$t->mobile] = (string) $cached['code'];
+                }
+            }
+        }
+
+        return view('crm::technicians.index', compact('technicians', 'provinces', 'search', 'province', 'type', 'status', 'otpMap'));
     }
 
     public function export(Request $request, string $format)
@@ -114,7 +126,7 @@ class TechnicianController extends Controller
         $technician->load(['user']);
         // برای نمایش مانده دقیق در کارت کیف‌پول، sum سهم شرکت را cache می‌کنیم
         // تا accessor invoice_debt در view یک query اضافه نزند.
-        $technician->loadSum('invoices', 'company_share');
+        $technician->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
 
         return view('crm::technicians.show', compact('technician'));
     }
@@ -157,7 +169,7 @@ class TechnicianController extends Controller
         }
 
         // ۲) لود invoice_debt
-        $technician->loadSum('invoices', 'company_share');
+        $technician->loadSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share');
         $invoiceDebt = (int) $technician->invoice_debt;
 
         // ۳) و ۴) محاسبه delta
@@ -220,6 +232,11 @@ class TechnicianController extends Controller
             ? null
             : max(0, min(5, (float) $satisfaction));
 
+        // service_types وقتی هیچ checkbox تیک نخورده، در request نمی‌آید —
+        // برای پشتیبانی از «uncheck all» در فرم ویرایش، ضریحاً empty array
+        // می‌گذاریم (form همیشه این فیلد را در page دارد).
+        $validated['service_types'] = $request->input('service_types', []);
+
         $technician->update($validated);
 
         // sync pivot ها — شامل خالی‌سازی هم می‌شود
@@ -237,6 +254,36 @@ class TechnicianController extends Controller
 
         return redirect()->route('crm.technicians.index')
             ->with('success', 'تکنسین حذف شد.');
+    }
+
+    /**
+     * Toggle قفل آموزش روی یک تکنسین — ادمین می‌تواند تکنسین را
+     * مجبور به مشاهده ویدیوها کند (lock=1: ست کردن training_completed_at
+     * به null + پاک کردن watched_videos) یا قفل را برداشت (lock=0:
+     * training_completed_at = NOW()).
+     *
+     * این برای حالتی است که تکنسین باید دوباره آموزش ببیند، یا برعکس،
+     * تکنسین جدیدی که هنوز آموزش نگرفته ولی ادمین می‌خواهد بدون آموزش
+     * دسترسی بدهد.
+     */
+    public function toggleTrainingGate(Request $request, Technician $technician)
+    {
+        $request->validate([
+            'lock' => 'required|in:0,1',
+        ]);
+
+        if ($request->input('lock') === '1') {
+            // مجبور به آموزش — پاک کردن وضعیت تکمیل و رد دیدن‌های قبلی
+            $technician->forceFill(['training_completed_at' => null])->saveQuietly();
+            $technician->watchedVideos()->detach();
+            $msg = 'تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» مجبور به مشاهده ویدیوها شد.';
+        } else {
+            // برداشتن قفل — علامت‌گذاری به‌عنوان آموزش‌دیده
+            $technician->forceFill(['training_completed_at' => now()])->saveQuietly();
+            $msg = 'قفل آموزش برای تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» برداشته شد.';
+        }
+
+        return back()->with('success', $msg);
     }
 
     /**
@@ -325,6 +372,8 @@ class TechnicianController extends Controller
             // تخصص
             'specialty' => 'nullable|string|max:255',
             'type_tech' => 'nullable|string|max:30',
+            'service_types' => 'nullable|array',
+            'service_types.*' => 'in:repair,service,install',
             'description' => 'nullable|string|max:5000',
 
             // تصاویر

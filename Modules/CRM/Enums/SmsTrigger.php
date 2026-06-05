@@ -4,6 +4,7 @@ namespace Modules\CRM\Enums;
 
 enum SmsTrigger: string
 {
+    // ── سفارش (مشتری/تکنسین) ─────────────────────────────────
     case OrderCreated = 'order_created';
     case OrderAssigned = 'order_assigned';           // به مشتری
     case OrderAssignedTech = 'order_assigned_tech';  // به تکنسین
@@ -11,6 +12,18 @@ enum SmsTrigger: string
     case OrderCompleted = 'order_completed';
     case OrderDelivered = 'order_delivered';
     case OrderCancelled = 'order_cancelled';
+
+    // ── تکنسین (مالی/کنسل/فاکتور) ────────────────────────────
+    case TechWalletCharged = 'tech_wallet_charged';
+    case TechPaymentReceived = 'tech_payment_received';
+    case TechPenaltyApplied = 'tech_penalty_applied';
+    case TechOrderCancelled = 'tech_order_cancelled';
+    case TechInvoiceIssued = 'tech_invoice_issued';
+
+    // ── مشتری (فاکتور/Happy Call) ────────────────────────────
+    case CustomerInvoiceIssued = 'customer_invoice_issued';
+    case CustomerHappyCall = 'customer_happy_call';
+    case CustomerInvoicePayLink = 'customer_invoice_pay_link';
 
     public function label(): string
     {
@@ -22,6 +35,14 @@ enum SmsTrigger: string
             self::OrderCompleted => 'تکمیل سفارش',
             self::OrderDelivered => 'تحویل',
             self::OrderCancelled => 'لغو سفارش',
+            self::TechWalletCharged => 'شارژ کیف‌پول (تکنسین)',
+            self::TechPaymentReceived => 'پرداخت/حقوق (تکنسین)',
+            self::TechPenaltyApplied => 'جریمه (تکنسین)',
+            self::TechOrderCancelled => 'کنسل سفارش (تکنسین)',
+            self::TechInvoiceIssued => 'صدور فاکتور (تأیید تکنسین)',
+            self::CustomerInvoiceIssued => 'صدور فاکتور (مشتری)',
+            self::CustomerHappyCall => 'رضایت‌سنجی (مشتری)',
+            self::CustomerInvoicePayLink => 'لینک پرداخت فاکتور (مشتری)',
         };
     }
 

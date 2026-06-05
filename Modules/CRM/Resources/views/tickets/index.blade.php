@@ -6,12 +6,20 @@
 <div class="p-4 md:p-6 max-w-6xl mx-auto">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">تیکت‌های پشتیبانی تکنسین</h1>
-        @can('manage-crm-settings')
-            <a href="{{ route('crm.tickets.categories.index') }}"
-               class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
-                مدیریت دسته‌بندی
-            </a>
-        @endcan
+        <div class="flex items-center gap-2">
+            @can('reply-crm-tickets')
+                <a href="{{ route('crm.tickets.create') }}"
+                   class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold">
+                    + ایجاد تیکت برای تکنسین
+                </a>
+            @endcan
+            @can('manage-crm-settings')
+                <a href="{{ route('crm.tickets.categories.index') }}"
+                   class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
+                    مدیریت دسته‌بندی
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{-- Stats --}}

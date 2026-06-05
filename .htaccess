@@ -1,0 +1,22 @@
+# این فایل برای deploymentهایی است که DocumentRoot وب‌سرور روی ریشهٔ
+# پروژه Laravel قرار دارد (نه روی پوشهٔ public/). بدون آن، Apache
+# فهرست ریشه (app/، bootstrap/، ...) را نشان می‌دهد یا 404 می‌دهد.
+#
+# عمداً از Options directive استفاده نشده — در cPanel/EasyApache
+# مقدار AllowOverride پیش‌فرض معمولاً Options را مجاز نمی‌کند و کل
+# htaccess با Options reject می‌شود. حفاظت با RewriteRule [F] انجام
+# می‌شود که نیازمند Options نیست.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # جلوگیری از دسترسی مستقیم به فایل‌های حساس
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^artisan - [F,L]
+    RewriteRule ^composer\.(json|lock)$ - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|Modules|resources|routes|storage|tests|vendor|docker|supervisor)(/|$) - [F,L]
+
+    # هدایت همهٔ ریکوئست‌ها به public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

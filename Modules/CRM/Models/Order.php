@@ -27,6 +27,8 @@ class Order extends Model
         'status', 'cancel_reason',
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
         'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
+        'is_legacy_closed', 'legacy_tech_share', 'legacy_company_share',
+        'is_lead', 'lead_reason_id', 'lead_notes',
 
         // مالی
         'estimated_price', 'final_price', 'deposit',
@@ -79,6 +81,10 @@ class Order extends Model
         'send_sms_tec' => 'boolean',
         'send_sms_customer' => 'boolean',
         'save_as_draft' => 'boolean',
+        'is_legacy_closed' => 'boolean',
+        'is_lead' => 'boolean',
+        'legacy_tech_share' => 'integer',
+        'legacy_company_share' => 'integer',
         'happy_call' => 'boolean',
         'hc_customer' => 'boolean',
         'hc_tech' => 'boolean',
@@ -202,6 +208,8 @@ class Order extends Model
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 return; // در artisan/seedها push اتوماتیک نمی‌خواهیم
             }
+            // در طول inbound sync پاسخ ندهیم تا حلقه نشود
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushOrderCreate($order);
             } catch (\Throwable $e) {
@@ -224,6 +232,8 @@ class Order extends Model
                 // و ResolveOrphanTechnicians باعث push انبوه نشوند.
                 return;
             }
+            // در طول inbound sync پاسخ ندهیم تا حلقه نشود
+            if (app()->bound('crm.suppress_outbound_push')) return;
             // فیلدهایی که اگر تغییر کنند پوش لازم است. بقیه فیلدها
             // (مثل تنظیمات داخلی) ربطی به WP ندارند.
             $relevant = [
@@ -262,6 +272,23 @@ class Order extends Model
         return $this->belongsTo(Brand::class);
     }
 
+    public function leadReason(): BelongsTo
+    {
+        return $this->belongsTo(LeadReason::class, 'lead_reason_id');
+    }
+
+    public function scopeLeads($query)
+    {
+        return $query->where('is_lead', true);
+    }
+
+    public function scopeRealOrders($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_lead', false)->orWhereNull('is_lead');
+        });
+    }
+
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
@@ -295,6 +322,11 @@ class Order extends Model
     public function statusLogs(): HasMany
     {
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');
+    }
+
+    public function adminNotes(): HasMany
+    {
+        return $this->hasMany(OrderAdminNote::class)->latest('created_at');
     }
 
     // ─────────────────── Scopes ───────────────────────────────────
@@ -476,6 +508,27 @@ class Order extends Model
         $statusValue = $this->status instanceof OrderStatus
             ? $this->status->value
             : (string) $this->status;
+
+        // ─── سفارش‌های legacy_closed: اعداد دقیقاً از لاگ WP خوانده‌شده‌اند ─
+        // CommissionCalculator اجرا نمی‌شود چون فرمول WP می‌تواند متفاوت
+        // باشد (مثلاً WP × total_invoice، پنل × price_customer).
+        if ($this->is_legacy_closed && $this->legacy_tech_share !== null) {
+            $legacyTech = (int) $this->legacy_tech_share;
+            $legacyCompany = (int) ($this->legacy_company_share ?? 0);
+            $base = $legacyTech + $legacyCompany;
+            $legacyPercent = $base > 0 ? (int) round(($legacyCompany / $base) * 100) : 0;
+
+            return [
+                'has_data'       => $hasData,
+                'customer_total' => $customerTotal,
+                'cost_total'     => $costTotal,
+                'remaining'      => $remaining,
+                'tech_share'     => $legacyTech,
+                'company_share'  => $legacyCompany,
+                'percent'        => $legacyPercent,
+                'calc_type'      => 'legacy_wp',
+            ];
+        }
 
         $techShare = 0;
         $companyShare = 0;

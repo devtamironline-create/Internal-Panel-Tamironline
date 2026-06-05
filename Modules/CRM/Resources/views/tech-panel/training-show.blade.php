@@ -162,6 +162,30 @@
         @endif
     </div>
 
+    {{-- دکمهٔ «دیدم» — برای training gate. اگر آموزش قبلاً تمام شده،
+         این دکمه فقط شمارش بالا را به‌روز می‌کند ولی تأثیر دیگری ندارد. --}}
+    <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+        @if($alreadyWatched ?? false)
+            <div class="flex items-center justify-center gap-2 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                این ویدیو قبلاً دیده شده
+            </div>
+        @else
+            <form method="POST" action="{{ route('tech.training.video-watched', $video) }}">
+                @csrf
+                <button type="submit"
+                        class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition">
+                    ✓ این ویدیو را دیدم
+                </button>
+            </form>
+            @if(! ($technician->isTrainingCompleted() ?? false) && isset($progress))
+                <p class="text-[11px] text-gray-500 text-center mt-2">
+                    {{ $progress['watched'] }} از {{ $progress['total'] }} ویدیو دیده شده — {{ $progress['remaining'] }} ویدیو باقی مانده
+                </p>
+            @endif
+        @endif
+    </div>
+
     <div class="h-4"></div>
 </div>
 

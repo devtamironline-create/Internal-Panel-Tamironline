@@ -84,6 +84,18 @@ class RegistrationController extends Controller
         $otpService = app(OTPService::class);
         $result = $otpService->verify($request->mobile, $request->code);
 
+        // قفل امنیتی: بعد از OTP موفق، یک نشانه در cache می‌گذاریم تا
+        // storeStep1 مطمئن شود درخواست‌دهنده واقعاً موبایل را تأیید کرده.
+        // TTL 20 دقیقه — کافی برای پر کردن فرم. بدون این نشانه، نمی‌توان
+        // مستقیم به step1 POST کرد و دور زد.
+        if ($result['success'] ?? false) {
+            \Illuminate\Support\Facades\Cache::put(
+                'tech_reg_otp_verified_' . $request->mobile,
+                ['at' => time(), 'ip' => $request->ip()],
+                now()->addMinutes(20)
+            );
+        }
+
         // اگر OTP تایید شد، بررسی ثبت‌نام قبلی برای ادامه از مرحله مناسب
         if ($result['success'] ?? false) {
             $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
@@ -135,6 +147,17 @@ class RegistrationController extends Controller
             'birth_date.required'    => 'تاریخ تولد الزامی است.',
             'birth_date.regex'       => 'فرمت تاریخ تولد معتبر نیست.',
         ]);
+
+        // قفل امنیتی: نشانهٔ OTP تأییدشدهٔ این موبایل باید در کش باشد.
+        // بدون این، حتی اگر مهاجم Shahkar را با کد ملی صاحب موبایل بدهد،
+        // نمی‌تواند بدون داشتن گوشی واقعی، ثبت‌نام را شروع کند.
+        if (! \Illuminate\Support\Facades\Cache::has('tech_reg_otp_verified_' . $request->mobile)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ابتدا کد تأیید (OTP) ارسالی به موبایل را وارد کنید.',
+                'field'   => 'mobile',
+            ], 403);
+        }
 
         // اعتبارسنجی کد ملی
         if (!$this->validateNationalCode($request->national_code)) {

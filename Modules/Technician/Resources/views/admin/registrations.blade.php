@@ -157,14 +157,23 @@
                         </td>
                         <td class="px-4 py-3">
                             @php
+                                // ترتیب مهم است: حالت‌های بزرگ‌تر اول
+                                // (match با شرط‌های boolean به‌ترتیب چک می‌کند)
                                 $stepLabel = match(true) {
-                                    $reg->current_step >= 9 => 'ویدیو',
-                                    $reg->current_step >= 8 => 'قرارداد',
-                                    $reg->current_step >= 7 => 'مدارک',
-                                    $reg->current_step >= 6 => 'تکمیل',
-                                    default => 'مرحله ' . $reg->current_step . ' از ۵',
+                                    $reg->status === 'approved' && $reg->promissory_note_status === 'approved' => 'تأیید نهایی',
+                                    $reg->current_step >= 10 => 'سفته',
+                                    $reg->current_step >= 9  => 'ویدیو',
+                                    $reg->current_step >= 8  => 'قرارداد',
+                                    $reg->current_step >= 7  => 'مدارک',
+                                    $reg->current_step >= 6  => 'تکمیل',
+                                    default                  => 'مرحله ' . $reg->current_step . ' از ۵',
                                 };
-                                $stepColor = $reg->current_step >= 6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
+                                $stepColor = match(true) {
+                                    $reg->status === 'approved' && $reg->promissory_note_status === 'approved' => 'bg-emerald-100 text-emerald-700 font-bold',
+                                    $reg->current_step >= 10 => 'bg-blue-100 text-blue-700',
+                                    $reg->current_step >= 6  => 'bg-green-100 text-green-700',
+                                    default                  => 'bg-gray-100 text-gray-600',
+                                };
                             @endphp
                             <span class="text-xs px-2 py-0.5 rounded-full {{ $stepColor }}">
                                 {{ $stepLabel }}

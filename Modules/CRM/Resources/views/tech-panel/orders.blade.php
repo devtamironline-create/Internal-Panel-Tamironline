@@ -112,11 +112,16 @@
             <a href="{{ route('tech.orders.show', $order) }}"
                class="block bg-white rounded-2xl p-4 shadow-sm active:bg-gray-50 transition">
                 <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div class="flex items-center gap-2 min-w-0 flex-wrap">
                         <span class="font-bold text-gray-900 text-sm" dir="ltr">{{ $order->order_code }}</span>
                         <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $order->status->badgeClass() }}">
                             {{ $order->status->label() }}
                         </span>
+                        @if($order->return_type)
+                            <span class="px-2 py-0.5 text-[10.5px] font-bold rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                                ↩ برگشتی
+                            </span>
+                        @endif
                     </div>
                     @if($order->visit_scheduled_at)
                         <div class="text-[11px] text-gray-500 whitespace-nowrap" dir="ltr">

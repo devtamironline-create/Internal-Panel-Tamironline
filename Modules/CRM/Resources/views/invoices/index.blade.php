@@ -10,6 +10,12 @@
             <p class="text-gray-600 dark:text-gray-400 mt-1">فاکتورهای صادر شده از سفارش‌های تکمیل‌شده</p>
         </div>
         <div class="flex items-center gap-2">
+            @can('manage-crm-settings')
+                <a href="{{ route('crm.invoices.settings') }}"
+                   class="inline-flex items-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm">
+                    تنظیمات صورتحساب
+                </a>
+            @endcan
             <a href="{{ route('crm.invoices.export', ['format' => 'xlsx'] + request()->query()) }}"
                class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>

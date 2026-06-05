@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -21,7 +22,7 @@ use Illuminate\Notifications\Notifiable;
  */
 class Technician extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, SoftDeletes;
 
     protected $table = 'crm_technicians';
 
@@ -46,6 +47,7 @@ class Technician extends Authenticatable
         // تخصص و توضیحات
         'specialty',
         'type_tech',
+        'service_types',
         'description',
 
         // تصاویر
@@ -67,6 +69,8 @@ class Technician extends Authenticatable
         // جهت سینک (per-technician) — برای جلوگیری از overwrite ناخواسته بین WP↔Laravel
         'order_sync_direction',
         'wallet_sync_direction',
+
+        'training_completed_at',
     ];
 
     /**
@@ -116,6 +120,8 @@ class Technician extends Authenticatable
         'ready_for_delivery' => 'boolean',
         'password' => 'hashed',
         'last_login_at' => 'datetime',
+        'training_completed_at' => 'datetime',
+        'service_types' => 'array',
     ];
 
     protected $hidden = [
@@ -126,6 +132,21 @@ class Technician extends Authenticatable
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * اپراتورهای پشتیبانی تخصیص‌داده‌شده (چند-به-چند).
+     * همگی در thread چت تکنسین پیام می‌بینند و می‌فرستند.
+     */
+    public function operators(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'crm_technician_operators', 'technician_id', 'user_id')
+            ->withPivot('assigned_at');
+    }
+
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(TechChatMessage::class)->orderBy('created_at');
     }
 
     public function orders(): HasMany
@@ -162,19 +183,79 @@ class Technician extends Authenticatable
     }
 
     /**
+     * ویدیوهایی که این تکنسین مشاهده کرده — برای training gate.
+     */
+    public function watchedVideos(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingVideo::class, 'crm_technician_video_views', 'technician_id', 'video_id')
+            ->withPivot('watched_at');
+    }
+
+    /** آیا آموزش این تکنسین تمام شده؟ */
+    public function isTrainingCompleted(): bool
+    {
+        return $this->training_completed_at !== null;
+    }
+
+    /**
+     * گزارش پیشرفت آموزش — تعداد دیده‌شده/کل، درصد، باقی‌مانده.
+     *
+     * @return array{watched:int, total:int, remaining:int, percent:int}
+     */
+    public function trainingProgress(): array
+    {
+        $total = TrainingVideo::active()->count();
+        if ($total === 0) {
+            // اگر هیچ ویدیویی فعال نیست، آموزش به‌صورت پیش‌فرض «تمام» است
+            return ['watched' => 0, 'total' => 0, 'remaining' => 0, 'percent' => 100];
+        }
+        $watched = $this->watchedVideos()
+            ->wherePivotNotNull('watched_at')
+            ->where('crm_training_videos.is_active', true)
+            ->count();
+        $remaining = max(0, $total - $watched);
+
+        return [
+            'watched'   => $watched,
+            'total'     => $total,
+            'remaining' => $remaining,
+            'percent'   => (int) round($watched / $total * 100),
+        ];
+    }
+
+    /** علامت‌گذاری یک ویدیو به‌عنوان دیده‌شده + بستن گیت اگر همه دیده شد. */
+    public function markVideoWatched(TrainingVideo $video): void
+    {
+        $this->watchedVideos()->syncWithoutDetaching([
+            $video->id => ['watched_at' => now()],
+        ]);
+
+        $progress = $this->refresh()->trainingProgress();
+        if ($progress['remaining'] === 0 && $this->training_completed_at === null) {
+            $this->forceFill(['training_completed_at' => now()])->saveQuietly();
+        }
+    }
+
+    /**
      * مجموع سهم شرکت از فاکتورهای این تکنسین — بدهی تکنسین به شرکت.
      * این عدد مستقل از تراکنش‌های wallet ذخیره می‌شود (در crm_invoices).
      *
-     * اگر مدل با ->withSum('invoices', 'company_share') بارگذاری شده
-     * باشد (برای جلوگیری از N+1 در لیست‌ها)، از همان attribute استفاده
-     * می‌کنیم؛ وگرنه یک query جداگانه می‌زنیم.
+     * ⚠ فاکتورهایی که in_wallet=true دارند، کمیسیون‌شان قبلاً در
+     * wallet_transactions ثبت شده — اگر اینجا هم شمرده شوند double-count
+     * می‌شود و true_balance اشتباه (بیشتر منفی از واقع) برمی‌گردد.
+     *
+     * بنابراین:
+     *   - fallback (شاخه دوم) on-demand فقط in_wallet=false را می‌شمرد.
+     *   - اگر preloaded است (شاخه اول)، caller باید withSum/loadSum را با
+     *     constraint `->where('in_wallet', false)` صدا زده باشد، یعنی:
+     *     ->withSum(['invoices' => fn ($q) => $q->where('in_wallet', false)], 'company_share')
      */
     public function getInvoiceDebtAttribute(): int
     {
         if (array_key_exists('invoices_sum_company_share', $this->attributes)) {
             return (int) ($this->attributes['invoices_sum_company_share'] ?? 0);
         }
-        return (int) $this->invoices()->sum('company_share');
+        return (int) $this->invoices()->where('in_wallet', false)->sum('company_share');
     }
 
     /**
@@ -242,6 +323,7 @@ class Technician extends Authenticatable
     {
         $push = function (self $t) {
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushTechnician($t);
             } catch (\Throwable $e) {

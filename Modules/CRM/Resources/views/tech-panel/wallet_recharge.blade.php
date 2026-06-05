@@ -165,6 +165,24 @@
         </p>
     </form>
 
+    {{-- ─────── دکمهٔ تست موقت (فقط با ?test=1) — بعد از تست حذف شود ─────── --}}
+    @if(request()->boolean('test') && $gatewayConfigured)
+    <form method="POST" action="{{ route('tech.wallet.recharge.initiate') }}"
+          class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 border-2 border-dashed border-rose-300">
+        @csrf
+        <input type="hidden" name="amount" value="10000">
+        <input type="hidden" name="test_mode" value="1">
+        <div class="text-[11px] text-rose-600 font-bold mb-2 text-center">حالت تست درگاه</div>
+        <button type="submit"
+                class="w-full py-3 rounded-xl bg-rose-600 text-white font-bold text-sm">
+            🧪 پرداخت تستی — ۱۰٬۰۰۰ تومان
+        </button>
+        <p class="text-[10px] text-gray-400 mt-2 leading-6 text-center">
+            این دکمه فقط برای آزمایش درگاه است و یک پرداخت واقعی ۱۰٬۰۰۰ تومانی انجام می‌دهد.
+        </p>
+    </form>
+    @endif
+
     <div class="h-4"></div>
 </div>
 

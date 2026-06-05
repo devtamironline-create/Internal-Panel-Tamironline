@@ -385,7 +385,10 @@ class WpPushService
             'percent'           => $tech->percent,
             'max_order'         => $tech->max_order,
             'max_price'         => $tech->max_price,
-            'status'            => $tech->status,
+            // WP CRM وضعیت تکنسین را با meta_value='1' / '0' فیلتر می‌کند
+            // (نه active/inactive). مثلاً لیست بدهی فقط status='1' را
+            // می‌گیرد. پس نگاشت Laravel → WP لازم است.
+            'status'            => $tech->status === 'active' ? '1' : '0',
             'type_tech'         => $this->mapTypeTechForWp($tech->type_tech),
             'province'          => $tech->province,
             'specialty'         => $tech->specialty,

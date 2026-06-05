@@ -5,6 +5,7 @@
     'searchPlaceholder' => 'جستجو...',
     'disabled' => false,
     'live' => false,
+    'value' => null,
 ])
 
 @php
@@ -16,6 +17,7 @@
     })->values()->toArray();
     $isLive = filter_var($live, FILTER_VALIDATE_BOOLEAN);
     $isDisabled = filter_var($disabled, FILTER_VALIDATE_BOOLEAN);
+    $initialValue = $value === null ? '' : (string) $value;
 
     // Encode payload for Alpine via base64 — completely avoids any HTML
     // attribute quoting issues with Persian text + special chars.
@@ -25,12 +27,16 @@
         'placeholder' => (string) $placeholder,
         'searchPlaceholder' => (string) $searchPlaceholder,
         'live' => $isLive,
+        'initial' => $initialValue,
     ], JSON_UNESCAPED_UNICODE));
 @endphp
 
 <div x-data="searchableSelectComponent('{{ $b64 }}')"
      @click.outside="open = false"
      {{ $attributes->merge(['class' => 'relative']) }}>
+
+    {{-- Hidden input — برای فرم‌های HTML معمولی (در Livewire بی‌اثر است). --}}
+    <input type="hidden" name="{{ $name }}" value="{{ $initialValue }}" :value="currentValue">
 
     <button type="button"
             @click="toggle()"
@@ -78,12 +84,20 @@ window.searchableSelectComponent = function (b64) {
         currentValue: '',
         init() {
             var self = this;
+            var hasWire = false;
             try {
                 if (this.$wire && typeof this.$wire.get === 'function') {
                     var v = this.$wire.get(this.cfg.name);
-                    if (v != null) self.currentValue = String(v);
+                    if (v != null) {
+                        self.currentValue = String(v);
+                        hasWire = true;
+                    }
                 }
             } catch (e) {}
+            // اگر Livewire نبود، از مقدار initial (prop value) استفاده کن.
+            if (!hasWire && this.cfg.initial != null && this.cfg.initial !== '') {
+                self.currentValue = String(this.cfg.initial);
+            }
             this.$watch('open', function (v) {
                 if (v) {
                     setTimeout(function () { self.$refs.searchBox && self.$refs.searchBox.focus(); }, 30);

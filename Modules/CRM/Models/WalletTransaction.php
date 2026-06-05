@@ -55,6 +55,7 @@ class WalletTransaction extends Model
     {
         static::created(function (self $tx) {
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushWalletTransaction($tx);
             } catch (\Throwable $e) {

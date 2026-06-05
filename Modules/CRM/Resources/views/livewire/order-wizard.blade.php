@@ -1,10 +1,8 @@
 @php
     $steps = [
-        1 => ['title' => 'مشتری',         'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
-        2 => ['title' => 'محل مراجعه',    'icon' => 'M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
-        3 => ['title' => 'دستگاه و ایراد', 'icon' => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
-        4 => ['title' => 'تکنسین و زمان', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-        5 => ['title' => 'مرور و ثبت',     'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+        1 => ['title' => 'محل سرویس و دستگاه‌ها', 'icon' => 'M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
+        2 => ['title' => 'مشتری و آدرس',          'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+        3 => ['title' => 'بررسی و ثبت',          'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
     ];
 @endphp
 
@@ -64,14 +62,10 @@
              به مرحله بعد می‌ماند). --}}
         <div wire:key="wiz-step-{{ $currentStep }}">
             @if($currentStep === 1)
-                @include('crm::livewire.wizard.step-1-customer')
+                @include('crm::livewire.wizard.step-1-location-devices')
             @elseif($currentStep === 2)
-                @include('crm::livewire.wizard.step-2-location')
+                @include('crm::livewire.wizard.step-1-customer')
             @elseif($currentStep === 3)
-                @include('crm::livewire.wizard.step-3-device')
-            @elseif($currentStep === 4)
-                @include('crm::livewire.wizard.step-4-technician')
-            @elseif($currentStep === 5)
                 @include('crm::livewire.wizard.step-5-review')
             @endif
         </div>
@@ -87,7 +81,7 @@
             ← مرحله قبل
         </button>
 
-        @if($currentStep < 5)
+        @if($currentStep < 3)
             <button
                 wire:key="wizard-nav-next"
                 type="button"

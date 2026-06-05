@@ -1,3 +1,62 @@
+{{-- اطلاعات سفارش — نحوه آشنایی، نوع، تکنسین، کد اشتراک --}}
+<div class="mb-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">اطلاعات سفارش</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نحوه آشنایی (معرف)</label>
+            @if(! empty($introductionList))
+                @php
+                    $introOpts = ['' => '— انتخاب —'];
+                    foreach ($introductionList as $opt) { $introOpts[(string) $opt] = (string) $opt; }
+                @endphp
+                <x-searchable-select
+                    name="introduction"
+                    :options="$introOpts"
+                    :value="old('introduction', $order->introduction ?? '')"
+                    placeholder="— انتخاب —"
+                    searchPlaceholder="جستجو..." />
+            @else
+                <input type="text" name="introduction" value="{{ old('introduction', $order->introduction ?? '') }}"
+                       placeholder="مثلاً اینستاگرام، اپلیکیشن، سایت"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+            @endif
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع سفارش</label>
+            <select name="order_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— انتخاب —</option>
+                <option value="repair"  @selected(old('order_type', $order->order_type ?? '') === 'repair')>تعمیر</option>
+                <option value="service" @selected(old('order_type', $order->order_type ?? '') === 'service')>سرویس</option>
+                <option value="install" @selected(old('order_type', $order->order_type ?? '') === 'install')>نصب</option>
+            </select>
+        </div>
+        @if(isset($technicians))
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تکنسین</label>
+            @php
+                $techOpts = ['' => '— بدون تکنسین —'];
+                foreach ($technicians as $t) {
+                    $name = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? '')));
+                    $techOpts[(string) $t->id] = $name ?: ('#' . $t->id);
+                }
+            @endphp
+            <x-searchable-select
+                name="technician_id"
+                :options="$techOpts"
+                :value="old('technician_id', $order->technician_id ?? '')"
+                placeholder="— بدون تکنسین —"
+                searchPlaceholder="جستجوی تکنسین..." />
+        </div>
+        @endif
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">کد اشتراک</label>
+            <input type="number" name="subscription" min="0" dir="ltr"
+                   value="{{ old('subscription', $order->subscription ?? '') }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        </div>
+    </div>
+</div>
+
 {{-- دستگاه --}}
 <div class="mb-6">
     <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">دستگاه و ایراد</h3>

@@ -54,11 +54,12 @@ class TechnicianSuggestionService
         return $scored->sortByDesc('score')->take($limit)->values();
     }
 
-    /** فیلتر اولیه: فعال + match تخصص + ظرفیت آزاد. */
+    /** فیلتر اولیه: فعال + آماده سفارش + match تخصص + ظرفیت آزاد. */
     protected function filterCandidates(Order $order): Collection
     {
         $query = Technician::query()
             ->where('status', 'active')
+            ->where('ready_for_delivery', true)
             ->with(['cities:id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
@@ -70,7 +71,7 @@ class TechnicianSuggestionService
             OrderStatus::New->value,
             OrderStatus::Suspended->value,
         ];
-        $openCounts = Order::query()
+        $openCounts = Order::query()->realOrders()
             ->whereIn('status', $activeStatuses)
             ->whereIn('technician_id', $techs->pluck('id'))
             ->groupBy('technician_id')
@@ -95,6 +96,19 @@ class TechnicianSuggestionService
             if ($order->device_id) {
                 $deviceIds = $t->devices->pluck('id');
                 if ($deviceIds->isEmpty() || ! $deviceIds->contains($order->device_id)) return false;
+            }
+
+            // تطبیق نوع خدمت — اگر سفارش order_type دارد و تکنسین
+            // service_types ست کرده، باید match شود. اگر تکنسین
+            // service_types خالی/null دارد، رفتار قبلی حفظ می‌شود
+            // (همه نوع را قبول می‌کند) — backward compatible.
+            if ($order->order_type) {
+                $techTypes = $t->service_types;
+                if (is_array($techTypes) && ! empty($techTypes)) {
+                    if (! in_array($order->order_type, $techTypes, true)) {
+                        return false;
+                    }
+                }
             }
 
             // ذخیره برای استفاده در امتیازدهی
@@ -205,7 +219,7 @@ class TechnicianSuggestionService
     /** آمار سفارش‌های تکنسین — total, cancelled, last_assigned_at. */
     protected function orderStats(int $techId): array
     {
-        $row = Order::query()
+        $row = Order::query()->realOrders()
             ->where('technician_id', $techId)
             ->selectRaw("
                 COUNT(*) as total,

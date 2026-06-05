@@ -130,9 +130,27 @@ class CustomerController extends Controller
      */
     public function citiesOfProvince(Province $province)
     {
-        return response()->json(
-            $province->cities()->ordered()->get(['id', 'name'])
-        );
+        $cities = $province->cities()->ordered()->get(['id', 'name']);
+
+        // اگر برای این استان هیچ شهری در دیتابیس نیست، یک ردیف
+        // پیش‌فرض با نام خود استان می‌سازیم تا اپراتور بتواند سفارش
+        // ثبت کند. این رخداد معمولاً برای استان‌های کم‌جمعیت یا
+        // داده‌های ناقص پیش می‌آید.
+        if ($cities->isEmpty()) {
+            $default = \Modules\CRM\Models\City::firstOrCreate(
+                ['province_id' => $province->id, 'name' => $province->name],
+                [
+                    // slug در DB nullable نیست و یونیک بر اساس (province_id, slug)
+                    // است. برای نام فارسی Str::slug رشتهٔ خالی برمی‌گرداند، پس
+                    // به‌جایش از یک slug قطعی بر اساس ID استان استفاده می‌کنیم.
+                    'slug' => 'province-' . $province->id,
+                    'sort_order' => 0,
+                ]
+            );
+            $cities = collect([['id' => $default->id, 'name' => $default->name]]);
+        }
+
+        return response()->json($cities);
     }
 
     protected function validateCustomer(Request $request, ?int $ignoreId = null): array

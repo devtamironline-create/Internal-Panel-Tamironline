@@ -23,6 +23,7 @@ class Invoice extends Model
         'company_share',
         'calc_type',
         'commission_percent',
+        'in_wallet',
         'status',
         'issued_at',
         'paid_at',
@@ -36,6 +37,7 @@ class Invoice extends Model
         'tech_share' => 'integer',
         'company_share' => 'integer',
         'commission_percent' => 'integer',
+        'in_wallet' => 'boolean',
         'issued_at' => 'datetime',
         'paid_at' => 'datetime',
         'superseded_at' => 'datetime',
@@ -60,6 +62,10 @@ class Invoice extends Model
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 return;
             }
+            // در طول inbound sync پاسخ ندهیم — pushInvoice که داخلش
+            // pushOrder صدا می‌زند، می‌توانست status قدیمی Laravel را
+            // به WP برگرداند و باعث «بسته نشدن سفارش از سمت WP» شود.
+            if (app()->bound('crm.suppress_outbound_push')) return;
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushInvoice($invoice);
             } catch (\Throwable $e) {
@@ -137,7 +143,12 @@ class Invoice extends Model
     public static function generateInvoiceCode(): string
     {
         $prefix = 'INV-' . date('ym') . '-';
-        $last = static::where('invoice_code', 'like', $prefix . '%')->orderByDesc('id')->value('invoice_code');
+        // withoutGlobalScope تا فاکتورهای superseded هم شمرده شوند —
+        // وگرنه ممکن است کد قبلی (که superseded شده) تکرار شود.
+        $last = static::withoutGlobalScope('active')
+            ->where('invoice_code', 'like', $prefix . '%')
+            ->orderByDesc('id')
+            ->value('invoice_code');
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
         return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);

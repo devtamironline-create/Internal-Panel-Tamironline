@@ -17,6 +17,7 @@ use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\InvoiceService;
+use Modules\CRM\Services\LegacyCloseService;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 class OrderController extends Controller
@@ -33,7 +34,9 @@ class OrderController extends Controller
     {
         $search = $request->string('q')->toString();
         $status = $request->string('status')->toString();
-        $technicianId = $request->integer('technician_id');
+        // technician_id می‌تواند ID عددی یا sentinel «none» برای فیلتر «بدون تکنسین» باشد.
+        $techParam = $request->string('technician_id')->toString();
+        $technicianId = $techParam === 'none' ? 'none' : ((int) $techParam ?: null);
         $provinceId = $request->integer('province_id');
         $cityId = $request->integer('city_id');
         $brandId = $request->integer('brand_id');
@@ -48,14 +51,17 @@ class OrderController extends Controller
 
         // closure برای اعمال همهٔ فیلترهای غیر-status — هم در query اصلی
         // و هم در شمارش تب‌های وضعیت استفاده می‌شود.
-        $applyNonStatusFilters = function ($q) use (
+        $applyNonStatusFilters = function ($q, bool $includeTech = true) use (
             $search, $technicianId, $provinceId, $cityId, $brandId, $deviceId,
             $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo
         ) {
             if ($search !== '') {
                 $q->search($search);
             }
-            if ($technicianId)        $q->where('technician_id', $technicianId);
+            if ($includeTech) {
+                if ($technicianId === 'none') $q->whereNull('technician_id');
+                elseif ($technicianId)        $q->where('technician_id', $technicianId);
+            }
             if ($provinceId)          $q->where('province_id', $provinceId);
             if ($cityId)              $q->where('city_id', $cityId);
             if ($brandId)             $q->where('brand_id', $brandId);
@@ -88,10 +94,29 @@ class OrderController extends Controller
             $query->where('status', $status);
         }
 
-        $orders = $query->latest()->paginate(25)->withQueryString();
+        // فیلتر لید/سفارش — پیش‌فرض: فقط سفارش‌های واقعی نشان داده
+        // می‌شوند. با kind=lead فقط لیدها، با kind=all هر دو.
+        $kind = $request->string('kind')->toString();
+        if ($kind === 'lead') {
+            $query->leads();
+        } elseif ($kind !== 'all') {
+            $query->realOrders();
+        }
+
+        // تعداد در صفحه — قابل تنظیم با ?per_page=. مقادیر مجاز محدود
+        // می‌شوند تا کاربر نتواند با عدد خیلی بزرگ سرور را overload کند.
+        $perPage = (int) $request->query('per_page', 50);
+        if (! in_array($perPage, [25, 50, 100, 200], true)) {
+            $perPage = 50;
+        }
+
+        $orders = $query->latest()->paginate($perPage)->withQueryString();
 
         // ─── شمارش تب‌های وضعیت با اعمال بقیهٔ فیلترها ───────────────
-        $countQuery = Order::query();
+        // لیدها از شمارش تب‌های وضعیت (همه/جدید/.../بدون تکنسین) خارج
+        // می‌شوند — تا تبدیل به سفارش انجام نشود، نباید روی آمار سفارش‌ها
+        // (به‌خصوص «بدون تکنسین») اثر بگذارند.
+        $countQuery = Order::query()->realOrders();
         $applyNonStatusFilters($countQuery);
         $rawCounts = (clone $countQuery)
             ->selectRaw('status, COUNT(*) as cnt')
@@ -108,6 +133,13 @@ class OrderController extends Controller
         $statusCounts[\Modules\CRM\Enums\OrderStatus::Returned->value] =
             (clone $countQuery)->whereNotNull('return_type')->count();
 
+        // شمارش تب «بدون تکنسین» — همان فیلترها به‌جز technician_id
+        // (و باز هم لیدها مستثنی هستند تا آمار سفارش‌های واقعی بدون
+        // تکنسین خراب نشود.)
+        $noTechCountQuery = Order::query()->realOrders();
+        $applyNonStatusFilters($noTechCountQuery, false);
+        $statusCounts['no_tech'] = $noTechCountQuery->whereNull('technician_id')->count();
+
         // داده‌های کمکی برای dropdown ها
         $technicians = Technician::active()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech']);
         $provinces = Province::ordered()->get(['id', 'name']);
@@ -122,11 +154,15 @@ class OrderController extends Controller
             $introductionList = [];
         }
 
+        // شمارش لیدها و سفارش‌ها برای نمایش روی تب‌های kind
+        $leadCount  = (clone $query->getModel()->newQuery())->leads()->count();
+        $orderCount = (clone $query->getModel()->newQuery())->realOrders()->count();
+
         return view('crm::orders.index', compact(
             'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
             'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
             'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
-            'statusCounts'
+            'statusCounts', 'perPage', 'kind', 'leadCount', 'orderCount'
         ));
     }
 
@@ -136,7 +172,7 @@ class OrderController extends Controller
         $query = $this->buildIndexQuery($request);
 
         $headers = [
-            'کد سفارش', 'نوع', 'مشتری', 'موبایل', 'دستگاه', 'برند',
+            'کد سفارش', 'نوع', 'نحوه آشنایی', 'مشتری', 'موبایل', 'دستگاه', 'برند',
             'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
@@ -144,6 +180,7 @@ class OrderController extends Controller
                 yield [
                     $o->order_code,
                     $o->order_type === 'service' ? 'نصب' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
+                    $o->introduction ?: '—',
                     $o->customer_name ?: $o->customer?->display_name,
                     $o->customer_mobile,
                     $o->device?->name,
@@ -169,7 +206,9 @@ class OrderController extends Controller
         $query = Order::query()->latest();
 
         if ($s = trim((string) $request->string('q'))) $query->search($s);
-        if ($v = $request->integer('technician_id')) $query->where('technician_id', $v);
+        $techParam = $request->string('technician_id')->toString();
+        if ($techParam === 'none')              $query->whereNull('technician_id');
+        elseif ($v = (int) $techParam)          $query->where('technician_id', $v);
         if ($v = $request->integer('province_id'))   $query->where('province_id', $v);
         if ($v = $request->integer('city_id'))       $query->where('city_id', $v);
         if ($v = $request->integer('brand_id'))      $query->where('brand_id', $v);
@@ -259,6 +298,53 @@ class OrderController extends Controller
             ->with('success', 'سفارش ثبت شد: ' . $order->order_code);
     }
 
+    /**
+     * لیست سفارش‌های تکمیل‌شده در ۲ هفتهٔ گذشته که فاکتور فعال ندارند.
+     * برای جبران سفارش‌هایی که به هر دلیل خودکار فاکتور برایشان ساخته
+     * نشده — اپراتور می‌تواند با یک کلیک فاکتور را صادر کند.
+     */
+    public function missingInvoices(Request $request)
+    {
+        $sinceDays = (int) $request->query('days', 14);
+        if ($sinceDays <= 0 || $sinceDays > 90) $sinceDays = 14;
+        $since = now()->subDays($sinceDays);
+
+        // ID همهٔ سفارش‌هایی که فاکتور فعال (superseded نباشد) دارند —
+        // اینها از لیست خارج می‌شوند.
+        $orderIdsWithActiveInvoice = \Modules\CRM\Models\Invoice::query()
+            ->whereNotNull('order_id')
+            ->pluck('order_id')
+            ->unique();
+
+        $orders = Order::query()->realOrders()
+            ->with([
+                'customer:id,first_name,mobile',
+                'technician:id,first_name,last_name,firstname_tech,mobile',
+                'brand:id,name', 'device:id,name',
+            ])
+            ->where('status', OrderStatus::Completed->value)
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
+            ->where(function ($q) {
+                $q->where('is_legacy_closed', false)
+                    ->orWhereNull('is_legacy_closed');
+            })
+            ->whereNotIn('id', $orderIdsWithActiveInvoice)
+            ->where(function ($q) {
+                $q->where('save_as_draft', false)
+                    ->orWhereNull('save_as_draft');
+            })
+            ->orderByDesc('completed_at')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('crm::orders.missing-invoices', [
+            'orders' => $orders,
+            'sinceDays' => $sinceDays,
+            'since' => $since,
+        ]);
+    }
+
     public function show(Order $order)
     {
         $order->load([
@@ -272,17 +358,185 @@ class OrderController extends Controller
                 ->suggestForOrder($order, 5);
         }
 
+        // فاکتور فعال این سفارش (اگر وجود دارد) — برای نمایش دکمه «صدور فاکتور»
+        // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
+        $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+
+        // فاکتورهای قبلی (superseded) برای تاریخچه — این‌ها به‌خاطر برگشت
+        // سفارش و تکمیل مجدد به‌وجود آمده‌اند و در DB موجودند.
+        $supersededInvoices = \Modules\CRM\Models\Invoice::withoutGlobalScope('active')
+            ->where('order_id', $order->id)
+            ->whereNotNull('superseded_at')
+            ->orderByDesc('id')
+            ->get();
+
+        // فاکتورهای آسیب‌دیده (in_wallet=true ولی wallet_tx ندارند) —
+        // نتیجهٔ باگ قدیمی که wallet transactions را حذف می‌کرد.
+        // اگر چنین مواردی پیدا شد، دکمهٔ بازسازی روی صفحه ظاهر می‌شود.
+        $affectedInvoiceIds = collect();
+        if ($supersededInvoices->isNotEmpty()) {
+            $candidateIds = $supersededInvoices->where('in_wallet', true)->pluck('id');
+            $idsWithTxs = \Modules\CRM\Models\WalletTransaction::whereIn('invoice_id', $candidateIds)
+                ->pluck('invoice_id')->unique();
+            $affectedInvoiceIds = $candidateIds->reject(fn($id) => $idsWithTxs->contains($id))->values();
+        }
+
+        // ردیف‌های بازسازی‌شدهٔ قبلی (با مارکر [بازسازی] در note) — برای
+        // نمایش دکمهٔ «حذف بازسازی».
+        $restoredCount = \Modules\CRM\Models\WalletTransaction::where('order_id', $order->id)
+            ->where('note', 'like', '[بازسازی]%')
+            ->count();
+
+        // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
+        // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
+        $customerOrders = collect();
+        if ($order->customer_id) {
+            $customerOrders = Order::query()->realOrders()
+                ->with(['brand:id,name', 'device:id,name', 'technician:id,first_name,last_name,firstname_tech'])
+                ->where('customer_id', $order->customer_id)
+                ->whereKeyNot($order->id)
+                ->latest('created_at')
+                ->limit(30)
+                ->get(['id', 'order_code', 'status', 'brand_id', 'device_id', 'technician_id', 'created_at', 'price_customer', 'completed_at']);
+        }
+
         return view('crm::orders.show', [
             'order' => $order,
             'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
             'suggestions' => $suggestions,
+            'activeInvoice' => $activeInvoice,
+            'customerOrders' => $customerOrders,
+            'supersededInvoices' => $supersededInvoices,
+            'affectedInvoiceIds' => $affectedInvoiceIds,
+            'restoredCount' => $restoredCount,
         ]);
+    }
+
+    /**
+     * بازسازی wallet transactions برای فاکتورهای superseded که در نسخهٔ
+     * قدیمیِ InvoiceService حذف شده بودند.
+     *
+     * فقط یک ردیف **مثبت** (+company_share) با مارکر `[بازسازی]` در
+     * توضیحات ثبت می‌شود تا اپراتور به‌راحتی بتواند بعداً اگر اشتباه
+     * بود، با دکمهٔ «حذف بازسازی» همان را پاک کند.
+     */
+    public function restoreWalletHistory(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $supersededInvoices = \Modules\CRM\Models\Invoice::withoutGlobalScope('active')
+                ->where('order_id', $order->id)
+                ->whereNotNull('superseded_at')
+                ->where('in_wallet', true)
+                ->get();
+
+            $restored = 0;
+            foreach ($supersededInvoices as $inv) {
+                if (\Modules\CRM\Models\WalletTransaction::where('invoice_id', $inv->id)->exists()) {
+                    continue;
+                }
+                $techId = (int) $inv->technician_id;
+                $companyShare = (int) $inv->company_share;
+                if ($techId <= 0 || $companyShare <= 0) {
+                    continue;
+                }
+
+                $last = (int) (\Modules\CRM\Models\WalletTransaction::where('technician_id', $techId)
+                    ->orderByDesc('id')->value('balance_after') ?? 0);
+
+                \Modules\CRM\Models\WalletTransaction::create([
+                    'technician_id' => $techId,
+                    'order_id' => $order->id,
+                    'invoice_id' => $inv->id,
+                    'wp_id' => null,
+                    'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
+                    'amount' => $companyShare,
+                    'balance_after' => $last + $companyShare,
+                    'note' => '[بازسازی] بازگشت سهم شرکت از فاکتور بایگانی‌شده ' . $inv->invoice_code,
+                    'created_by' => auth()->id(),
+                ]);
+
+                \Modules\CRM\Models\Technician::where('id', $techId)
+                    ->update(['wallet_balance' => $last + $companyShare]);
+
+                $restored++;
+            }
+
+            if ($restored === 0) {
+                return back()->with('error', 'هیچ فاکتور آسیب‌دیده‌ای برای بازسازی پیدا نشد.');
+            }
+
+            return back()->with('success', "تاریخچهٔ wallet برای {$restored} فاکتور بایگانی‌شده بازسازی شد (به‌صورت تراکنش مثبت).");
+        });
+    }
+
+    /**
+     * حذف ردیف‌های بازسازی‌شده — همان‌هایی که با `[بازسازی]` در note
+     * شناسایی می‌شوند. مانده تکنسین به‌صورت دقیق برمی‌گردد (با کم
+     * کردن مقدار تراکنش حذف‌شده).
+     */
+    public function removeRestoredHistory(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $rows = \Modules\CRM\Models\WalletTransaction::where('order_id', $order->id)
+                ->where('note', 'like', '[بازسازی]%')
+                ->orderByDesc('id')
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return back()->with('error', 'هیچ ردیف بازسازی‌شده‌ای برای حذف پیدا نشد.');
+            }
+
+            $removed = 0;
+            foreach ($rows as $tx) {
+                // مانده تکنسین را به‌صورت معکوس مقدار این تراکنش به‌روز کن
+                $current = (int) (\Modules\CRM\Models\Technician::where('id', $tx->technician_id)
+                    ->value('wallet_balance') ?? 0);
+                \Modules\CRM\Models\Technician::where('id', $tx->technician_id)
+                    ->update(['wallet_balance' => $current - (int) $tx->amount]);
+                $tx->delete();
+                $removed++;
+            }
+
+            return back()->with('success', "{$removed} ردیف بازسازی حذف شد و مانده تکنسین برگشت داده شد.");
+        });
+    }
+
+    /**
+     * بستن دستی سفارش بر اساس لاگ پنل WP (Legacy Close).
+     *
+     * این متد دکمهٔ «بستن از روی لاگ قدیمی» را در صفحهٔ سفارش پشتیبانی
+     * می‌کند. هیچ Invoice یا WalletTransaction ساخته نمی‌شود — فقط
+     * status=Completed + فیلدهای مالی از لاگ.
+     *
+     * شرایط نمایش دکمه (در view): status != Completed && !is_legacy_closed.
+     * controller هم همان شرایط را double-check می‌کند.
+     */
+    public function retroClose(Order $order, LegacyCloseService $legacy)
+    {
+        if ($order->status === OrderStatus::Completed && ! $order->is_legacy_closed) {
+            return back()->with('error', 'این سفارش از قبل به‌صورت عادی Completed شده — این مسیر فقط برای سفارش‌های بدون فاکتور است.');
+        }
+
+        $extracted = $legacy->extractFromOrder($order);
+        if (! $extracted) {
+            return back()->with('error', 'لاگ «انجام کار» با اعداد مالی در این سفارش پیدا نشد.');
+        }
+
+        $legacy->applyToOrder($order, $extracted);
+
+        return back()->with('success',
+            'سفارش بسته شد (legacy). سهم تکنسین: ' . number_format($extracted['tech_share']) .
+            ' / سهم شرکت: ' . number_format($extracted['company_share']) .
+            ' — هیچ فاکتور یا تراکنش کیف‌پولی ساخته نشد.'
+        );
     }
 
     public function edit(Order $order)
     {
         $order->load(['customer']);
+
+        $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []);
 
         return view('crm::orders.edit', [
             'order' => $order,
@@ -292,12 +546,31 @@ class OrderController extends Controller
             'cities' => $order->province_id
                 ? City::where('province_id', $order->province_id)->ordered()->get(['id', 'name'])
                 : collect(),
+            'technicians' => Technician::orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),
+            'introductionList' => is_array($introductionList) ? array_values(array_filter(array_map('strval', $introductionList))) : [],
         ]);
     }
 
     public function update(Request $request, Order $order)
     {
         $validated = $this->validateOrder($request, updating: true);
+
+        // ── ویرایش اطلاعات مشتری (روی پروفایل Customer هم اعمال می‌شود).
+        // اگر شماره موبایل جدید با مشتری دیگری تداخل دارد، خطا برگردان.
+        $newCustomerName   = $validated['customer_name']   ?? null;
+        $newCustomerMobile = $validated['customer_mobile'] ?? null;
+
+        $customer = $order->customer;
+        if ($customer && $newCustomerMobile && $newCustomerMobile !== $customer->mobile) {
+            $existing = \Modules\CRM\Models\Customer::where('mobile', $newCustomerMobile)
+                ->where('id', '!=', $customer->id)->first();
+            if ($existing) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['customer_mobile' => 'این شماره موبایل قبلاً برای مشتری دیگری ثبت شده. برای ادغام مشتری‌ها به‌صورت دستی اقدام کنید.']);
+            }
+        }
 
         $order->update([
             'brand_id' => $validated['brand_id'] ?? null,
@@ -313,7 +586,38 @@ class OrderController extends Controller
             'final_price' => $validated['final_price'] ?? null,
             'deposit' => $validated['deposit'] ?? 0,
             'notes' => $validated['notes'] ?? null,
+            'customer_name' => $newCustomerName ?? $order->customer_name,
+            'customer_mobile' => $newCustomerMobile ?? $order->customer_mobile,
+            // فیلدهای اضافه‌شده — هم‌سو با OrderWizard هنگام ثبت
+            'introduction' => $validated['introduction'] ?? $order->introduction,
+            'order_type' => $validated['order_type'] ?? $order->order_type,
+            'technician_id' => array_key_exists('technician_id', $validated)
+                ? ($validated['technician_id'] ?: null)
+                : $order->technician_id,
+            'subscription' => array_key_exists('subscription', $validated)
+                ? ($validated['subscription'] ?: null)
+                : $order->subscription,
         ]);
+
+        // ── اعمال تغییر روی Customer (observer در Customer::booted خودکار
+        //    به WP push می‌کند). فقط اگر مقدار فرق داشت بزن تا event بی‌دلیل
+        //    شلیک نشود.
+        if ($customer) {
+            $dirty = [];
+            if ($newCustomerName !== null && $newCustomerName !== $customer->first_name) {
+                $dirty['first_name'] = $newCustomerName;
+            }
+            if ($newCustomerMobile !== null && $newCustomerMobile !== $customer->mobile) {
+                $dirty['mobile'] = $newCustomerMobile;
+            }
+            $newCustomerPhone = $validated['customer_phone'] ?? null;
+            if ($newCustomerPhone !== null && $newCustomerPhone !== $customer->phone) {
+                $dirty['phone'] = $newCustomerPhone;
+            }
+            if ($dirty) {
+                $customer->update($dirty);
+            }
+        }
 
         return redirect()->route('crm.orders.show', $order)->with('success', 'سفارش ویرایش شد.');
     }
@@ -383,6 +687,54 @@ class OrderController extends Controller
         return back()->with('success', 'تکنسین تخصیص داده شد. منتظر تماس تکنسین با مشتری بمانید.');
     }
 
+    /**
+     * تبدیل یک لید به سفارش واقعی.
+     *
+     * فلگ is_lead پاک می‌شود، dlیل/یادداشت لید حذف می‌شود، order_code
+     * جدیدی صادر می‌شود تا با سفارش‌های موجود قابل تفکیک باشد، و در
+     * تاریخچهٔ سفارش یک لاگ ثبت می‌شود. وضعیت به «جدید» می‌رود تا
+     * مثل سفارش تازه‌ای رفتار شود (تخصیص تکنسین بعداً انجام می‌شود).
+     */
+    public function convertFromLead(Order $order)
+    {
+        if (! $order->is_lead) {
+            return back()->with('error', 'این سفارش از قبل لید نیست.');
+        }
+
+        $oldCode = $order->order_code;
+        $newCode = Order::generateOrderCode();
+
+        DB::transaction(function () use ($order, $newCode) {
+            $order->update([
+                'is_lead'        => false,
+                'lead_reason_id' => null,
+                'lead_notes'     => null,
+                'order_code'     => $newCode,
+                'status'         => \Modules\CRM\Enums\OrderStatus::New->value,
+            ]);
+
+            \Modules\CRM\Models\OrderStatusLog::create([
+                'order_id'    => $order->id,
+                'from_status' => null,
+                'to_status'   => \Modules\CRM\Enums\OrderStatus::New->value,
+                'note'        => 'تبدیل لید به سفارش — کد قبلی: ' . $order->getOriginal('order_code'),
+                'changed_by'  => auth()->id(),
+                'created_at'  => now(),
+            ]);
+        });
+
+        // SMS «سفارش ایجاد شد» — حالا که از لید به سفارش تبدیل شده،
+        // مشتری اطلاع پیامکی می‌گیرد.
+        try {
+            app(\Modules\CRM\Services\OrderSmsNotifier::class)
+                ->notify($order->refresh(), \Modules\CRM\Enums\SmsTrigger::OrderCreated);
+        } catch (\Throwable $e) {
+            Log::warning('convertFromLead SMS failed', ['order' => $order->id, 'err' => $e->getMessage()]);
+        }
+
+        return back()->with('success', "لید با موفقیت به سفارش تبدیل شد. کد جدید: {$newCode} (قبلی: {$oldCode})");
+    }
+
     public function unassign(Order $order)
     {
         if (! $order->technician_id) {
@@ -422,12 +774,76 @@ class OrderController extends Controller
         return back()->with('success', 'منبع داده سفارش تغییر کرد: ' . $label);
     }
 
+    // ───────────── یادداشت‌های اپراتور ──────────────────────────
+    public function storeNote(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'content.required' => 'متن یادداشت الزامی است.',
+            'content.min' => 'یادداشت باید حداقل ۳ کاراکتر باشد.',
+            'content.max' => 'یادداشت حداکثر ۲۰۰۰ کاراکتر.',
+        ]);
+
+        $order->adminNotes()->create([
+            'user_id' => auth()->id(),
+            'content' => trim($validated['content']),
+        ]);
+
+        return back()->with('success', 'یادداشت ثبت شد.');
+    }
+
+    public function destroyNote(Order $order, int $note)
+    {
+        $note = \Modules\CRM\Models\OrderAdminNote::where('order_id', $order->id)
+            ->where('id', $note)
+            ->firstOrFail();
+
+        // فقط نویسنده یا ادمین کامل می‌تواند حذف کند
+        if ($note->user_id !== auth()->id() && ! auth()->user()->can('manage-permissions')) {
+            abort(403, 'فقط نویسنده یا ادمین می‌تواند یادداشت را حذف کند.');
+        }
+
+        $note->delete();
+        return back()->with('success', 'یادداشت حذف شد.');
+    }
+
     // ───────────── تغییر وضعیت ─────────────────────────────────
     public function changeStatus(Request $request, Order $order)
     {
-        $validated = $request->validate([
+        $rules = [
             'status' => ['required', 'string'],
-            'note' => 'nullable|string|max:1000',
+            'note' => 'nullable|string|max:2000',
+        ];
+
+        $statusValue = (string) $request->input('status');
+        $isCompleting = $statusValue === OrderStatus::Completed->value;
+        $isCancelling = in_array($statusValue, [OrderStatus::Cancelled->value, OrderStatus::Declined->value], true);
+
+        // برای کنسل/رد، دلیل اجباری
+        if ($isCancelling) {
+            $rules['note'] = 'required|string|min:5|max:2000';
+        }
+
+        // برای تکمیل، فیلدهای فاکتور — هم‌سو با Tech/DashboardController
+        if ($isCompleting) {
+            $rules += [
+                'price_customer' => 'nullable|integer|min:0',
+                'cost_price' => 'nullable|integer|min:0',
+                'hire' => 'nullable|integer|min:0',
+                'transportation' => 'nullable|integer|min:0',
+                'discount' => 'nullable|integer|min:0',
+                'invoice_descripotion' => 'required|string|min:5|max:2000',
+                'save_as_draft' => 'nullable|boolean',
+                'device_img1' => 'nullable|image|max:10240',
+            ];
+        }
+
+        $validated = $request->validate($rules, [
+            'note.required' => 'برای کنسل/رد سفارش، دلیل الزامی است.',
+            'note.min' => 'دلیل باید حداقل ۵ کاراکتر باشد.',
+            'invoice_descripotion.required' => 'توضیحات فاکتور (متن قابل ارسال به مشتری) اجباری است.',
+            'invoice_descripotion.min' => 'توضیحات فاکتور حداقل ۵ کاراکتر.',
         ]);
 
         $newStatus = OrderStatus::tryFrom($validated['status']);
@@ -458,8 +874,28 @@ class OrderController extends Controller
 
         if ($newStatus === OrderStatus::Completed) {
             $updates['completed_at'] = now();
+
+            // فیلدهای فاکتور — مثل تکنسین
+            foreach (['price_customer', 'cost_price', 'hire', 'transportation', 'discount'] as $field) {
+                if (array_key_exists($field, $validated) && $validated[$field] !== null) {
+                    $updates[$field] = (int) $validated[$field];
+                }
+            }
+            if (filled($validated['invoice_descripotion'] ?? null)) {
+                $updates['invoice_descripotion'] = $validated['invoice_descripotion'];
+            }
+            // total_invoice = max(0, price_customer - cost_price) — هم‌سو با tech
+            $effPC = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
+            $effCP = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+            $updates['total_invoice'] = max(0, $effPC - $effCP);
+            $updates['save_as_draft'] = (bool) ($validated['save_as_draft'] ?? false);
+
+            if ($request->hasFile('device_img1')) {
+                $path = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');
+                $updates['device_img1'] = $path;
+            }
         }
-        if (in_array($newStatus, [OrderStatus::Cancelled, OrderStatus::Declined])) {
+        if ($isCancelling) {
             $updates['cancel_reason'] = $validated['note'] ?? null;
         }
 
@@ -474,13 +910,16 @@ class OrderController extends Controller
             'created_at' => now(),
         ]);
 
-        // تولید خودکار فاکتور در تکمیل سفارش (idempotent)
-        if ($newStatus === OrderStatus::Completed) {
-            $this->invoiceService->generateForOrder($order->refresh(), auth()->id());
+        // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
+        if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
+            $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
         }
 
-        // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن
-        if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
+        // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن — مگر
+        // تکمیل مجدد سفارش بازگشتی (return_type != null)؛ در این حالت
+        // مشتری قبلاً اطلاع داشته و نباید دوباره پیامک فاکتور بگیرد.
+        $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+        if (! $skipForReturned && $trigger = SmsTrigger::fromOrderStatus($newStatus)) {
             $this->smsNotifier->notify($order->refresh(), $trigger);
         }
 
@@ -535,6 +974,21 @@ class OrderController extends Controller
             'status' => OrderStatus::New->value,
             'status_internal_order' => null,
             'qc_status' => null,
+            // ── پاک کردن قیمت‌ها و توضیحات فاکتور قبلی ──
+            // مقادیر قبلی در `wp_return_logs` ذخیره شده و قابل بازیابی است.
+            // با خالی شدن این فیلدها، تکنسین در «تکمیل مجدد» مجبور می‌شود
+            // عددهای واقعی این مرحله را وارد کند، نه عددهای قبلی را.
+            'price_customer' => 0,
+            'cost_price' => 0,
+            'hire' => 0,
+            'transportation' => 0,
+            'discount' => 0,
+            'total_invoice' => 0,
+            'invoice_descripotion' => null,
+            'piece_list' => null,
+            'customer_price_list' => null,
+            'buy_price_list' => null,
+            'negative_invoice' => 0,
         ]);
 
         // ── snapshot به log_return (هم‌ارز CreateLogReturnOrder در WP)
@@ -708,10 +1162,19 @@ class OrderController extends Controller
 
         if ($updating) {
             $rules['final_price'] = 'nullable|integer|min:0';
+            $rules['customer_name'] = 'nullable|string|max:255';
+            $rules['customer_mobile'] = 'nullable|string|max:20|regex:/^09\d{9}$/';
+            $rules['customer_phone'] = 'nullable|string|max:20';
         } else {
             $rules['customer_id'] = 'required|exists:crm_customers,id';
             $rules['status'] = 'nullable|string|in:' . implode(',', array_keys(OrderStatus::options()));
         }
+
+        // فیلدهای مشترک edit + create که از فرم می‌آیند
+        $rules['introduction'] = 'nullable|string|max:255';
+        $rules['order_type'] = 'nullable|string|in:repair,service,install';
+        $rules['technician_id'] = 'nullable|integer|exists:crm_technicians,id';
+        $rules['subscription'] = 'nullable|integer|min:0';
 
         return $request->validate($rules);
     }

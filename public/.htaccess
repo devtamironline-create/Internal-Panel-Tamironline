@@ -9,6 +9,12 @@
     RewriteCond %{HTTPS} off
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+    # Strip legacy /public/ prefix from old bookmarks. Before the
+    # DocumentRoot was moved to public/, URLs needed /public/ to
+    # reach Laravel. Anyone hitting /public/foo gets redirected to
+    # /foo so bookmarks and outbound links keep working.
+    RewriteRule ^public/(.*)$ /$1 [R=301,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

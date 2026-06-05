@@ -24,6 +24,29 @@
                 دسته‌بندی مورد نظرتان را انتخاب کنید تا ویدیوهای آن را ببینید.
             </p>
         </div>
+
+        {{-- بنر پیشرفت آموزش — فقط برای تکنسین‌هایی که آموزش هنوز
+             تمام نشده. وقتی کامل شود، پنل برایشان فعال می‌شود. --}}
+        @if(! ($technician->isTrainingCompleted() ?? true) && ! empty($progress))
+            <div class="mx-4 mt-4 bg-white/15 backdrop-blur border border-white/30 rounded-2xl p-4">
+                <div class="flex items-center justify-between text-white text-xs font-bold mb-2">
+                    <span>پیشرفت آموزش</span>
+                    <span dir="ltr">{{ $progress['watched'] }} / {{ $progress['total'] }}</span>
+                </div>
+                <div class="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                    <div class="bg-emerald-400 h-full transition-all"
+                         style="width: {{ $progress['percent'] }}%"></div>
+                </div>
+                <p class="text-white/85 text-[11px] mt-3 leading-6 text-center">
+                    🔒 برای فعال‌سازی کامل پنل، تمام {{ $progress['total'] }} ویدیو را ببینید و دکمهٔ «دیدم» را بزنید.
+                    {{ $progress['remaining'] }} ویدیو باقی مانده.
+                </p>
+            </div>
+        @elseif(! empty($progress) && ($technician->isTrainingCompleted() ?? false) && $progress['total'] > 0)
+            <div class="mx-4 mt-4 bg-emerald-500/30 backdrop-blur border border-emerald-300/50 rounded-2xl p-3 text-center">
+                <p class="text-white text-xs font-bold">✓ آموزش شما تمام شده — پنل فعال است</p>
+            </div>
+        @endif
     </div>
 
     {{-- لیست دسته‌بندی‌ها --}}

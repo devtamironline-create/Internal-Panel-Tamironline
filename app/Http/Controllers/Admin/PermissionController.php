@@ -100,6 +100,7 @@ class PermissionController extends Controller
     public static function getPermissionLabel(string $name): string
     {
         $labels = [
+            // پرسنل / حضور / مرخصی
             'view-staff' => 'مشاهده پرسنل',
             'manage-staff' => 'مدیریت پرسنل',
             'view-attendance' => 'مشاهده حضور و غیاب',
@@ -107,24 +108,113 @@ class PermissionController extends Controller
             'view-leave' => 'مشاهده مرخصی',
             'request-leave' => 'درخواست مرخصی',
             'manage-leave' => 'مدیریت مرخصی',
+
+            // تسک / تیم
             'view-tasks' => 'مشاهده تسک‌ها',
+            'view-all-tasks' => 'مشاهده تسک همه تیم‌ها',
             'create-tasks' => 'ایجاد تسک',
             'manage-tasks' => 'مدیریت تسک‌ها',
             'view-teams' => 'مشاهده تیم‌ها',
             'manage-teams' => 'مدیریت تیم‌ها',
+
+            // گزارش / OKR / حقوق
             'view-reports' => 'مشاهده گزارش‌ها',
             'view-okr' => 'مشاهده OKR',
             'manage-okr' => 'مدیریت OKR',
             'view-salary' => 'مشاهده حقوق',
             'manage-salary' => 'مدیریت حقوق',
+
+            // پیام‌رسان / مکالمات
             'use-messenger' => 'پیام‌رسان',
+            'view-conversations' => 'مشاهده مکالمات',
+            'manage-conversations' => 'مدیریت مکالمات',
+
+            // انبار
             'view-warehouse' => 'مشاهده انبار',
             'manage-warehouse' => 'مدیریت انبار',
-            'manage-technicians' => 'مدیریت تکنسین‌ها',
-            'approve-technician' => 'تایید/رد درخواست تکنسین',
+
+            // تکنسین (ماژول Technician)
+            'manage-technicians' => 'مدیریت کامل درخواست‌های تکنسین (مشاهده + همه عملیات)',
+            'approve-technician' => 'تغییر وضعیت ثبت‌نام تکنسین (تایید / رد / آرشیو)',
             'delete-technician' => 'حذف درخواست تکنسین',
+            'edit-technician-registration' => 'ویرایش اطلاعات ثبت‌نام تکنسین',
+
+            // CRM - داشبورد / سفارش
+            'view-crm-dashboard' => 'مشاهده داشبورد CRM',
+            'view-crm-orders' => 'مشاهده لیست سفارش‌ها',
+            'create-crm-order' => 'ایجاد سفارش جدید',
+            'edit-crm-order' => 'ویرایش سفارش',
+            'delete-crm-order' => 'حذف سفارش',
+            'change-crm-order-status' => 'تغییر وضعیت سفارش',
+            'assign-crm-technician' => 'تخصیص تکنسین به سفارش',
+            'qc-approve-internal-order' => 'تایید کیفیت سفارش داخلی (QC)',
+            'view-crm-internal-orders' => 'مشاهده سفارش‌های داخلی',
+            'manage-crm-internal-orders' => 'مدیریت سفارش‌های داخلی',
+            'view-tech-suggestions' => 'مشاهده پیشنهاد تکنسین برای سفارش',
+
+            // CRM - مشتری
+            'view-crm-customers' => 'مشاهده مشتری‌ها',
+            'create-crm-customer' => 'ایجاد مشتری جدید',
+            'edit-crm-customer' => 'ویرایش مشتری',
+            'delete-crm-customer' => 'حذف مشتری',
+
+            // CRM - تکنسین (لیست داخل CRM)
+            'view-crm-technicians' => 'مشاهده تکنسین‌های CRM',
+            'create-crm-technician' => 'ایجاد تکنسین CRM',
+            'edit-crm-technician' => 'ویرایش تکنسین CRM',
+            'delete-crm-technician' => 'حذف تکنسین CRM',
+
+            // CRM - مالی / فاکتور / کیف‌پول / پرداخت
+            'view-crm-financial' => 'مشاهده مالی و کیف‌پول تکنسین',
+            'manage-crm-financial' => 'مدیریت مالی (صدور فاکتور، کنسلی، علامت‌گذاری پرداخت)',
+            'manage-crm-wallet' => 'مدیریت کیف‌پول تکنسین (شارژ/پاداش/جریمه)',
+            'delete-wallet-transaction' => 'حذف تراکنش کیف‌پول تکنسین (فقط ادمین ارشد — تغییر مستقیم تاریخچهٔ مالی)',
+            'hard-delete-wallet-transaction' => 'حذف کامل تراکنش کیف‌پول (با تأیید OTP — بدون ردیف audit، غیرقابل بازگشت)',
+            'view-tech-otp' => 'مشاهدهٔ کد OTP فعال تکنسین در لیست (برای ورود تستی)',
+            'view-crm-invoices' => 'مشاهده فاکتورها',
+            'create-invoices' => 'ایجاد فاکتور',
+            'edit-invoices' => 'ویرایش فاکتور',
+            'delete-invoices' => 'حذف فاکتور',
+            'mark-invoices-paid' => 'علامت‌گذاری فاکتور به‌عنوان پرداخت‌شده',
+            'manage-crm-payment-gateway' => 'مدیریت درگاه پرداخت (زیبال)',
+
+            // CRM - گزارش‌ها و ابزارهای جدید
+            'view-crm-reports' => 'مشاهده گزارش‌های مدیریتی (مالی + فعالیت روزانه)',
+            'manage-crm-orphan-orders' => 'مدیریت سفارش‌های یتیم (تخصیص bulk تکنسین)',
+            'manage-crm-legacy-close' => 'بستن سفارش از لاگ قدیمی (بدون فاکتور)',
+
+            // CRM - هزینه‌ها
+            'view-crm-costs' => 'مشاهده هزینه‌ها',
+            'manage-crm-costs' => 'مدیریت هزینه‌ها',
+
+            // CRM - HappyCall
+            'view-crm-happycall' => 'مشاهده پاسخ‌های HappyCall',
+            'manage-crm-happycall' => 'مدیریت HappyCall',
+
+            // CRM - تاکسونومی / پیکربندی
+            'view-crm-taxonomies' => 'مشاهده داده‌های پایه (برند، دستگاه، استان، شهر)',
+            'manage-crm-brands' => 'مدیریت برندها',
+            'manage-crm-devices' => 'مدیریت دستگاه‌ها',
+            'manage-crm-provinces' => 'مدیریت استان‌ها',
+            'manage-crm-cities' => 'مدیریت شهرها',
+            'manage-crm-settings' => 'مدیریت تنظیمات CRM',
+            'manage-crm-sms-templates' => 'مدیریت قالب‌های پیامک',
+            'manage-crm-sync' => 'مدیریت سینک با WP CRM',
+
+            // CRM - تیکت‌های پشتیبانی تکنسین
+            'view-crm-tickets' => 'مشاهده تیکت‌های پشتیبانی تکنسین',
+            'reply-crm-tickets' => 'پاسخ به تیکت‌های پشتیبانی',
+
+            // CRM - پنل تکنسین (PWA)
+            'view-tech-dashboard' => 'مشاهده داشبورد پنل تکنسین',
+            'view-own-orders' => 'مشاهده سفارش‌های خودِ تکنسین',
+            'update-own-order-status' => 'تغییر وضعیت سفارش خودِ تکنسین',
+            'view-own-wallet' => 'مشاهده کیف‌پول خودِ تکنسین',
+            'view-own-invoices' => 'مشاهده فاکتورهای خودِ تکنسین',
+
+            // تنظیمات کلی
             'manage-settings' => 'مدیریت تنظیمات',
-            'manage-permissions' => 'مدیریت دسترسی‌ها',
+            'manage-permissions' => 'مدیریت دسترسی‌ها و نقش‌ها (سوپر-ادمین)',
         ];
 
         return $labels[$name] ?? $name;

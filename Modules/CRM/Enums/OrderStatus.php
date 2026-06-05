@@ -134,17 +134,28 @@ enum OrderStatus: string
                 self::Completed,
             ],
 
-            // وضعیت‌های نهایی — فقط با returnOrder قابل خروج
+            // Declined عملاً final است، ولی ادمین می‌تواند آن را به
+            // Cancelled تبدیل کند (هر دو از خانوادهٔ «رد شده» هستند).
+            self::Declined => [self::Cancelled],
+
+            // وضعیت‌های نهایی محض — فقط با returnOrder قابل خروج
             self::Cancelled,
             self::Completed,
-            self::Transit,
-            self::Declined => [],
+            self::Transit => [],
         };
     }
 
-    /** آیا این وضعیت نهایی است؟ (هیچ گذار مجاز ندارد) */
+    /**
+     * آیا این وضعیت نهایی است؟ explicitly از allowedTransitions جدا
+     * می‌کنیم — Declined با وجود داشتن transition به Cancelled، همچنان
+     * «نهایی» محسوب می‌شود (یعنی در UI به‌عنوان قفل/return-target ظاهر
+     * می‌شود).
+     */
     public function isFinal(): bool
     {
-        return empty($this->allowedTransitions());
+        return match ($this) {
+            self::Cancelled, self::Completed, self::Transit, self::Declined => true,
+            default => false,
+        };
     }
 }

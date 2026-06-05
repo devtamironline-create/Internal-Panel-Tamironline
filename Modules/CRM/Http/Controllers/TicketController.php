@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Modules\CRM\Models\Technician;
 use Modules\CRM\Models\Ticket;
 use Modules\CRM\Models\TicketCategory;
 use Modules\CRM\Models\TicketReply;
@@ -55,9 +56,68 @@ class TicketController extends Controller
             'category:id,name',
             'replies',
             'assignee:id,first_name,last_name',
+            'creatorAdmin:id,first_name,last_name',
         ]);
 
         return view('crm::tickets.show', compact('ticket'));
+    }
+
+    /**
+     * فرم ساخت تیکت از سمت ادمین برای یک تکنسین مشخص.
+     */
+    public function create(Request $request)
+    {
+        $technicians = Technician::query()
+            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
+            ->orderBy('first_name')
+            ->get();
+
+        $categories = TicketCategory::active()->ordered()->get(['id', 'name']);
+
+        return view('crm::tickets.create', [
+            'technicians' => $technicians,
+            'categories' => $categories,
+            'preselectedTech' => $request->query('technician_id'),
+        ]);
+    }
+
+    /**
+     * ذخیرهٔ تیکت ساخته‌شده توسط ادمین برای تکنسین.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'technician_id' => 'required|exists:crm_technicians,id',
+            'category_id'   => 'required|exists:crm_ticket_categories,id',
+            'subject'       => 'nullable|string|max:200',
+            'body'          => 'required|string|max:5000',
+            'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+        ], [
+            'technician_id.required' => 'انتخاب تکنسین الزامی است.',
+            'category_id.required'   => 'دسته‌بندی الزامی است.',
+            'body.required'          => 'متن تیکت الزامی است.',
+        ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('crm/tickets', 'public');
+        }
+
+        $ticket = Ticket::create([
+            'technician_id'       => $validated['technician_id'],
+            'category_id'         => $validated['category_id'],
+            'subject'             => $validated['subject'] ?? null,
+            'body'                => $validated['body'],
+            'status'              => 'replied', // ادمین خودش شروع‌کننده است → برای تکنسین «جدید»
+            'direction'           => Ticket::DIRECTION_ADMIN_TO_TECH,
+            'created_by_admin_id' => auth()->id(),
+            'assigned_to'         => auth()->id(),
+            'image_path'          => $imagePath,
+            'last_reply_at'       => now(),
+        ]);
+
+        return redirect()->route('crm.tickets.show', $ticket)
+            ->with('success', 'تیکت برای تکنسین ارسال شد.');
     }
 
     public function reply(Request $request, Ticket $ticket)

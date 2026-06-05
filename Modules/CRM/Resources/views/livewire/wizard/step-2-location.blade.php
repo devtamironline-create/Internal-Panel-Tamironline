@@ -1,6 +1,6 @@
 <div class="space-y-6">
-    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">محل مراجعه</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">آدرسی که تکنسین برای انجام تعمیر مراجعه می‌کند.</p>
+    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">استان و شهر</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">آدرس دقیق در مرحلهٔ بعد همراه با اطلاعات مشتری وارد می‌شود.</p>
 
     {{-- flex با w-1/2 به‌جای grid برای جلوگیری از فشرده شدن .ts-wrapper
          که display:inline-block است و گاهی grid item را به یک ردیف
@@ -31,12 +31,10 @@
         </div>
     </div>
 
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل *</label>
-        <textarea wire:model="address" rows="3"
-                  placeholder="خیابان، پلاک، واحد..."
-                  class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
-    </div>
+    {{-- آدرس به مرحلهٔ بعد (مشتری) منتقل شده تا با انتخاب مشتری قدیمی،
+         آدرس آخرین سفارش او به‌صورت خودکار از قبل پر شود. در این مرحله
+         فقط استان و شهر مهم است (به‌خصوص برای لیدها که آدرس دقیق
+         اهمیتی ندارد). --}}
 
     {{-- بلاک script-endscript پایین یک دایرکتیو Livewire 3 است. تگ
          script ساده در ویوهای کامپوننت توسط Livewire حذف می‌شوند،

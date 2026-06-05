@@ -48,6 +48,15 @@ Route::middleware('web')->group(function () {
     Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
 
+    // ─── لینک عمومی صورتحساب — برای ارسال به مشتری از طریق پیامک ────
+    Route::get('/crm/receipt/{invoiceCode}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceipt'])
+        ->name('crm.invoice.public');
+
+    // سرو لوگو/مهر فاکتور — public چون داخل لینک عمومی فاکتور هم لازم
+    // می‌شود. دارایی‌های حساس نیستند (فقط برند شرکت‌اند).
+    Route::get('/crm/invoice-asset/{type}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'serveAsset'])
+        ->where('type', 'logo|stamp')->name('crm.invoice.asset');
+
     // ─── فایل‌های آموزش (ویدیو + تامبنیل) — auth داخلی ─────────────
     Route::get('/crm/training/{video}/video', [TrainingFileController::class, 'streamVideo'])
         ->name('crm.training.file.video');
@@ -186,6 +195,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-technician')->group(function () {
         Route::get('technicians/{technician}/edit', [TechnicianController::class, 'edit'])->name('technicians.edit');
         Route::put('technicians/{technician}', [TechnicianController::class, 'update'])->name('technicians.update');
+        Route::post('technicians/{technician}/training-gate', [TechnicianController::class, 'toggleTrainingGate'])->name('technicians.training-gate');
     });
     Route::middleware('can:delete-crm-technician')->group(function () {
         Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');
@@ -214,7 +224,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/export/{format}', [OrderController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('orders.export');
-        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        // مسیر static باید قبل از orders/{order} باشد تا پارامتر اشتباه نشود
+        Route::get('orders/missing-invoices', [OrderController::class, 'missingInvoices'])->name('orders.missing-invoices');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show')->whereNumber('order');
+
+        // یادداشت‌های اپراتور — هر کاربری که می‌تواند سفارش را ببیند،
+        // می‌تواند یادداشت اضافه/حذف کند (حذف فقط یادداشت خودش).
+        Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
+        Route::delete('orders/{order}/notes/{note}', [OrderController::class, 'destroyNote'])->name('orders.notes.destroy')->whereNumber('note');
     });
     Route::middleware('can:create-crm-order')->group(function () {
         Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
@@ -232,6 +249,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
     });
 
+    // تبدیل لید به سفارش — دسترسی برای همه‌ی کاربران احراز شده.
+    // (نیازی به permission مجزا نیست؛ هرکس صفحهٔ لید را ببیند می‌تواند
+    // تبدیل کند.)
+    Route::post('orders/{order}/convert-from-lead', [OrderController::class, 'convertFromLead'])
+        ->name('orders.convert-from-lead');
+
     Route::middleware('can:assign-crm-technician')->group(function () {
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
@@ -245,6 +268,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────
     Route::middleware('can:manage-crm-sms-templates')->group(function () {
+        // ─── صفحه یکپارچه مدیریت پیامک (تنظیمات + قالب‌ها + تست) ───
+        Route::get('sms-management', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'index'])->name('sms-management.index');
+        Route::post('sms-management/settings', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'updateSettings'])->name('sms-management.settings.update');
+        Route::post('sms-management/template/{template}', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'updateTemplate'])->name('sms-management.template.update');
+        Route::post('sms-management/template/{template}/toggle', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'toggle'])->name('sms-management.template.toggle');
+        Route::post('sms-management/test', [\Modules\CRM\Http\Controllers\SmsManagementController::class, 'test'])->name('sms-management.test');
+
+        // ─── route های قدیمی برای backward-compat ───
         Route::get('sms/templates', [SmsTemplateController::class, 'index'])->name('sms.templates.index');
         Route::get('sms/templates/{template}/edit', [SmsTemplateController::class, 'edit'])->name('sms.templates.edit');
         Route::put('sms/templates/{template}', [SmsTemplateController::class, 'update'])->name('sms.templates.update');
@@ -258,8 +289,42 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
         Route::get('wallet/technician/{technician}', [WalletController::class, 'show'])->name('wallet.show');
     });
+
+    // ─── گزارش‌های CRM (مالی، فعالیت روزانه) — permission مجزا ────
+    Route::middleware('can:view-crm-reports')->group(function () {
+        Route::get('reports/financial', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'index'])
+            ->name('reports.financial');
+        Route::get('reports/financial/export', [\Modules\CRM\Http\Controllers\Reports\FinancialReportController::class, 'export'])
+            ->name('reports.financial.export');
+        Route::get('reports/daily-activity', [\Modules\CRM\Http\Controllers\Reports\DailyActivityController::class, 'index'])
+            ->name('reports.daily-activity');
+    });
+
+    // ─── سفارش‌های یتیم (bulk assign تکنسین) — permission مجزا ───
+    Route::middleware('can:manage-crm-orphan-orders')->group(function () {
+        Route::get('orphan-orders', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'index'])
+            ->name('orphan-orders.index');
+        Route::post('orphan-orders/assign', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'assign'])
+            ->name('orphan-orders.assign');
+        Route::post('orphan-orders/auto-assign', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'autoAssignMatched'])
+            ->name('orphan-orders.auto-assign');
+        Route::post('orphan-orders/backfill-from-log', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'backfillFromLog'])
+            ->name('orphan-orders.backfill-from-log');
+        Route::post('orphan-orders/set-wp-id', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'setWpIdForOrder'])
+            ->name('orphan-orders.set-wp-id');
+        Route::post('orphan-orders/rebackfill-prefer-panel', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'rebackfillPreferPanelMatch'])
+            ->name('orphan-orders.rebackfill-prefer-panel');
+        Route::post('orphan-orders/backfill-from-wp-postmeta', [\Modules\CRM\Http\Controllers\OrphanOrdersController::class, 'backfillFromWpPostmeta'])
+            ->name('orphan-orders.backfill-from-wp-postmeta');
+    });
     Route::middleware('can:manage-crm-wallet')->group(function () {
         Route::post('wallet/technician/{technician}/transaction', [WalletController::class, 'storeTransaction'])->name('wallet.transaction.store');
+
+        // حذف تراکنش — permission ویژه (`delete-wallet-transaction`) داخل کنترلر چک می‌شود
+        Route::delete('wallet/technician/{technician}/transaction/{transaction}', [WalletController::class, 'destroyTransaction'])
+            ->name('wallet.transaction.destroy')
+            ->whereNumber('transaction');
+
 
         // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
         Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');
@@ -267,18 +332,39 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('wallet/charge', [WalletController::class, 'storeCharge'])->name('wallet.charge.store');
     });
 
+    // حذف کامل با OTP — خارج از گروه manage-crm-wallet چون permission
+    // مستقل خودش (hard-delete-wallet-transaction) را داخل کنترلر چک می‌کند
+    Route::post('wallet/hard-delete/request-otp', [WalletController::class, 'requestHardDeleteOtp'])
+        ->name('wallet.transaction.hard-delete.otp');
+    Route::delete('wallet/technician/{technician}/transaction/{transaction}/hard-delete', [WalletController::class, 'hardDeleteTransaction'])
+        ->name('wallet.transaction.hard-delete')
+        ->whereNumber('transaction');
+
     // ─── فاکتورها ──────────────────────────────────────────────
     Route::middleware('can:view-crm-invoices')->group(function () {
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('invoices/export/{format}', [InvoiceController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('invoices.export');
-        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show')->whereNumber('invoice');
+        Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print')->whereNumber('invoice');
+        Route::post('invoices/{invoice}/send-sms', [InvoiceController::class, 'sendSms'])->name('invoices.send-sms')->whereNumber('invoice');
+    });
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');
+        Route::post('invoices/settings', [InvoiceController::class, 'updateSettings'])->name('invoices.settings.update');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
+        Route::post('orders/{order}/restore-wallet-history', [OrderController::class, 'restoreWalletHistory'])->name('orders.restore-wallet');
+        Route::post('orders/{order}/remove-restored-wallet', [OrderController::class, 'removeRestoredHistory'])->name('orders.remove-restored-wallet');
         Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid'])->name('invoices.paid');
         Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
         Route::post('invoices/{invoice}/push-to-wp', [InvoiceController::class, 'pushToWp'])->name('invoices.push-to-wp');
+    });
+
+    // ─── retro-close (بستن از لاگ قدیمی بدون فاکتور) — permission مجزا ───
+    Route::middleware('can:manage-crm-legacy-close')->group(function () {
+        Route::post('orders/{order}/retro-close', [OrderController::class, 'retroClose'])->name('orders.retro-close');
     });
 
     // ─── درگاه پرداخت (ادمین) ─────────────────────────────────────
@@ -297,6 +383,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── سینک با CRM وردپرسی ─────────────────────────────────────
     // ─── مدیریت دسته‌بندی تیکت‌ها (قبل از tickets/{ticket} باشد!) ──
+    // ─── دلایل عدم امکان سفارش (مدیریت لیدها) ─────────────────────
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'index'])->name('lead-reasons.index');
+        Route::post('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'store'])->name('lead-reasons.store');
+        Route::put('lead-reasons/{leadReason}', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'update'])->name('lead-reasons.update')->whereNumber('leadReason');
+        Route::delete('lead-reasons/{leadReason}', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'destroy'])->name('lead-reasons.destroy')->whereNumber('leadReason');
+    });
+
     Route::middleware('can:manage-crm-settings')->prefix('tickets/categories')->name('tickets.categories.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'index'])->name('index');
         Route::post('/', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'store'])->name('store');
@@ -311,8 +405,23 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\TicketController::class, 'show'])->name('tickets.show')->whereNumber('ticket');
     });
     Route::middleware('can:reply-crm-tickets')->group(function () {
+        Route::get('tickets/create', [\Modules\CRM\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
+        Route::post('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply')->whereNumber('ticket');
         Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status')->whereNumber('ticket');
+    });
+
+    // ─── چت اپراتور↔تکنسین (سمت ادمین) ─────────────────────────────
+    Route::prefix('tech-chats')->name('tech-chats.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\TechChatController::class, 'index'])->name('index');
+        Route::get('/unread-summary', [\Modules\CRM\Http\Controllers\TechChatController::class, 'unreadSummary'])->name('unread');
+        Route::middleware('can:manage-technicians')->group(function () {
+            Route::get('/assignments', [\Modules\CRM\Http\Controllers\TechChatController::class, 'assignments'])->name('assignments');
+            Route::patch('/{technician}/assign', [\Modules\CRM\Http\Controllers\TechChatController::class, 'updateAssignment'])->name('assign');
+        });
+        Route::get('/{technician}', [\Modules\CRM\Http\Controllers\TechChatController::class, 'show'])->name('show')->whereNumber('technician');
+        Route::post('/{technician}/send', [\Modules\CRM\Http\Controllers\TechChatController::class, 'send'])->name('send')->whereNumber('technician');
+        Route::get('/{technician}/poll', [\Modules\CRM\Http\Controllers\TechChatController::class, 'poll'])->name('poll')->whereNumber('technician');
     });
 
     Route::middleware('can:manage-crm-sync')->prefix('sync')->name('sync.')->group(function () {
@@ -322,6 +431,39 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // تنظیمات سینک معکوس Laravel → WP
         Route::post('wp-push', [SyncSettingsController::class, 'updateWpPush'])->name('wp-push.update');
         Route::post('resync-technicians', [SyncSettingsController::class, 'resyncTechnicians'])->name('resync-technicians');
+        // قفل/بازکردن داده تکنسین در Laravel
+        Route::post('tech-lock', [SyncSettingsController::class, 'updateTechLock'])->name('tech-lock.update');
+        Route::get('tech-snapshot/download', [SyncSettingsController::class, 'downloadTechSnapshot'])->name('tech-snapshot.download');
+    });
+
+    // ─── ابزارهای داده (import / resync / recompute) — برای مسئول داده ───
+    Route::middleware('can:manage-crm-sync')->prefix('data-tools')->name('data-tools.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'index'])->name('index');
+        Route::post('import-tech-from-wp', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'importTechFromWp'])->name('import-tech-from-wp');
+        Route::post('rebuild-tech-wallet', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'rebuildTechWallet'])->name('rebuild-tech-wallet');
+        Route::post('resync-technicians', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncTechnicians'])->name('resync-technicians');
+        Route::post('resync-invoices', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncInvoices'])->name('resync-invoices');
+        Route::post('resync-wallet-transactions', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncWalletTransactions'])->name('resync-wallet-transactions');
+        Route::post('recompute-balances', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'recomputeBalances'])->name('recompute-balances');
+        Route::post('activate-by-name', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'activateTechniciansByName'])->name('activate-by-name');
+        Route::post('resync-order-statuses', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncOrderStatuses'])->name('resync-order-statuses');
+        Route::post('toggle-tech-readonly', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTechPanelReadonly'])->name('toggle-tech-readonly');
+        Route::post('set-sync-mode', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'setSyncMode'])->name('set-sync-mode');
+        Route::post('wallet-audit', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'walletAudit'])->name('wallet-audit');
+        Route::get('bulk-percent', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkPercentForm'])->name('bulk-percent');
+        Route::post('bulk-percent', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkPercentApply'])->name('bulk-percent.apply');
+        Route::get('bulk-balance', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkBalanceForm'])->name('bulk-balance');
+        Route::post('bulk-balance', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkBalanceApply'])->name('bulk-balance.apply');
+    });
+
+    // ─── مدیریت گروهی تکنسین‌ها — ادیت inline + soft delete ─────
+    Route::middleware('can:manage-crm-sync')->prefix('tech-manage')->name('tech-manage.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'index'])->name('index');
+        Route::get('trash', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'trash'])->name('trash');
+        Route::post('zero-all-wallets', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'zeroAllWallets'])->name('zero-all-wallets');
+        Route::post('{technician}', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'update'])->name('update')->whereNumber('technician');
+        Route::delete('{technician}', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'destroy'])->name('destroy')->whereNumber('technician');
+        Route::post('{id}/restore', [\Modules\CRM\Http\Controllers\TechManagementController::class, 'restore'])->name('restore')->whereNumber('id');
     });
 
     // ─── لاگ سینک (دیباگ پلاگین/سرویس) ─────────────────────────────
@@ -367,8 +509,11 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('auth/login-password', [TechAuthController::class, 'loginWithPassword'])->name('auth.login-password');
     });
 
-    // Authenticated
-    Route::middleware('auth:tech')->group(function () {
+    // Authenticated — با training gate middleware + freeze read-only mode
+    Route::middleware(['auth:tech',
+        \Modules\CRM\Http\Middleware\TechPanelReadOnly::class,
+        \Modules\CRM\Http\Middleware\RequireTrainingCompleted::class,
+    ])->group(function () {
         Route::post('logout', [TechAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [TechPanelDashboardController::class, 'index'])->name('dashboard');
         Route::get('calendar', [TechPanelDashboardController::class, 'calendar'])->name('calendar');
@@ -397,6 +542,9 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('training/{video}', [TechPanelDashboardController::class, 'trainingShow'])
             ->name('training.show')
             ->whereNumber('video');
+        Route::post('training/{video}/watched', [TechPanelDashboardController::class, 'markVideoWatched'])
+            ->name('training.video-watched')
+            ->whereNumber('video');
 
         // ── تیکت‌های پشتیبانی ───────────────────────────────────
         Route::get('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'index'])->name('tickets.index');
@@ -404,6 +552,12 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('tickets', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'store'])->name('tickets.store');
         Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'show'])->name('tickets.show');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'reply'])->name('tickets.reply');
+
+        // چت تکنسین با اپراتورِ تخصیص‌داده‌شده
+        Route::get('messages', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'index'])->name('messages');
+        Route::post('messages/send', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'send'])->name('messages.send');
+        Route::get('messages/poll', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'poll'])->name('messages.poll');
+        Route::get('messages/unread', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'unread'])->name('messages.unread');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس

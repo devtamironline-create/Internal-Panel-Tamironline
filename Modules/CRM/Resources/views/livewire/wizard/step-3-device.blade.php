@@ -1,9 +1,48 @@
 <div class="space-y-6">
     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">دستگاه و ایراد</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">نوع سفارش، دستگاه و مشکل را مشخص کنید.</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">نوع سفارش، دستگاه و مشکل را مشخص کنید. اگر تماس منجر به سفارش نمی‌شود، تَوگل «قابل سفارش» را خاموش کنید.</p>
 
-    {{-- نوع سفارش (تعمیر / سرویس) --}}
-    <div>
+    {{-- تَوگل قابل سفارش (روی دستگاه اصلی) --}}
+    <div class="flex items-center justify-between p-3 rounded-xl border-2 {{ $isOrderable ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40' }}">
+        <div>
+            <div class="font-bold {{ $isOrderable ? 'text-emerald-800' : 'text-rose-800' }}">
+                {{ $isOrderable ? '✓ قابل سفارش' : '✗ غیرقابل سفارش — به‌عنوان لید ثبت می‌شود' }}
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5">
+                {{ $isOrderable ? 'این تماس تبدیل به سفارش می‌شود.' : 'فقط اطلاعات تماس برای گزارش‌گیری ذخیره می‌شود.' }}
+            </div>
+        </div>
+        <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" wire:model.live="isOrderable" class="sr-only peer">
+            <div class="relative w-12 h-6 bg-gray-300 peer-checked:bg-emerald-500 rounded-full transition-colors">
+                <div class="absolute top-0.5 start-0.5 bg-white w-5 h-5 rounded-full transition-transform peer-checked:translate-x-6 rtl:peer-checked:-translate-x-6"></div>
+            </div>
+        </label>
+    </div>
+
+    {{-- بخش لید — وقتی غیرقابل سفارش است --}}
+    @if(! $isOrderable)
+        <div class="space-y-3 p-4 rounded-xl bg-rose-50/30 border border-rose-200">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">دلیل عدم امکان سفارش <span class="text-rose-600">*</span></label>
+                <select wire:model="leadReasonId" class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <option value="">— یک گزینه را انتخاب کنید —</option>
+                    @foreach($this->leadReasons as $lr)
+                        <option value="{{ $lr->id }}">{{ $lr->name }}</option>
+                    @endforeach
+                </select>
+                @error('leadReasonId')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">یادداشت‌ها</label>
+                <textarea wire:model="leadNotes" rows="2" placeholder="هرگونه توضیح اضافی…"
+                          class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"></textarea>
+            </div>
+        </div>
+    @endif
+
+    {{-- نوع سفارش (تعمیر / سرویس) — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">نوع سفارش *</label>
         <div class="grid grid-cols-2 gap-3">
             @foreach([
@@ -48,8 +87,8 @@
         </div>
     </div>
 
-    {{-- ایرادات (multi-select با سرچ) --}}
-    <div>
+    {{-- ایرادات (multi-select با سرچ) — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید)</label>
         @if(count($this->objectionsList))
             <div x-data="{
@@ -101,10 +140,101 @@
         @endif
     </div>
 
-    <div>
+    {{-- شرح ایراد — فقط در حالت قابل سفارش --}}
+    <div @class(['hidden' => ! $isOrderable])>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شرح ایراد / توضیحات اضافی</label>
         <textarea wire:model="objectionDescription" rows="3"
                   placeholder="جزئیات بیشتر مشکل دستگاه..."
                   class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
+    </div>
+
+    {{-- ─── دستگاه‌های اضافه ─── --}}
+    @foreach($extraDevices as $i => $ed)
+        <div wire:key="extra-device-{{ $i }}"
+             class="bg-indigo-50/40 dark:bg-indigo-900/10 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl p-4 space-y-4 relative">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-indigo-700 dark:text-indigo-300">📱 دستگاه اضافه #{{ $i + 1 }}</h3>
+                <button type="button" wire:click="removeExtraDevice({{ $i }})"
+                        class="text-xs text-rose-600 hover:text-rose-800 px-2 py-1 rounded hover:bg-rose-50">
+                    × حذف این دستگاه
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">نوع دستگاه *</label>
+                    <select wire:model="extraDevices.{{ $i }}.device_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                        <option value="">— انتخاب —</option>
+                        @foreach($this->devices as $d)
+                            <option value="{{ $d->id }}">{{ $d->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">برند *</label>
+                    <select wire:model="extraDevices.{{ $i }}.brand_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                        <option value="">— انتخاب —</option>
+                        @foreach($this->brands as $b)
+                            <option value="{{ $b->id }}">{{ $b->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            {{-- ایرادات این دستگاه --}}
+            @if(count($this->objectionsList))
+            <div x-data="{ q: '', norm(s) { return String(s ?? '').replace(/[يﻱ]/g,'ی').replace(/[كﻙ]/g,'ک').toLowerCase().trim(); }, m(l) { return this.norm(l).includes(this.norm(this.q)); } }">
+                <label class="block text-xs font-medium text-gray-700 mb-1">ایراد دستگاه</label>
+                @php $selObjections = $ed['objections'] ?? []; @endphp
+                @if(count($selObjections))
+                    <div class="flex flex-wrap gap-1.5 mb-2">
+                        @foreach($selObjections as $sel)
+                            <button type="button" wire:click="toggleExtraObjection({{ $i }}, @js($sel))"
+                                    wire:key="extra-{{ $i }}-sel-{{ md5($sel) }}"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs hover:bg-indigo-200">
+                                {{ $sel }} <span class="text-[10px]">✕</span>
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+                <input type="text" x-model="q" placeholder="جستجوی ایراد..."
+                       class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-xs">
+                <div x-show="q.length > 0" x-cloak class="mt-1 grid grid-cols-2 md:grid-cols-3 gap-1">
+                    @foreach($this->objectionsList as $j => $opt)
+                        @if(! in_array($opt, $selObjections, true))
+                        <button x-show="m(@js($opt))" x-cloak type="button"
+                                wire:click="toggleExtraObjection({{ $i }}, @js($opt))"
+                                wire:key="extra-{{ $i }}-opt-{{ $j }}"
+                                class="px-2 py-1 rounded border text-xs text-right border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700">
+                            {{ $opt }}
+                        </button>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">شرح ایراد</label>
+                <textarea wire:model="extraDevices.{{ $i }}.objection_description" rows="2"
+                          placeholder="جزئیات بیشتر..."
+                          class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm"></textarea>
+            </div>
+        </div>
+    @endforeach
+
+    {{-- دکمه افزودن دستگاه دیگر --}}
+    <div class="pt-2">
+        <button type="button" wire:click="addExtraDevice"
+                class="w-full px-4 py-3 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm font-bold transition-colors">
+            + افزودن دستگاه دیگر (سفارش جداگانه ساخته می‌شود)
+        </button>
+        @if(! empty($extraDevices))
+            <p class="text-[10px] text-gray-500 text-center mt-2">
+                با ثبت نهایی، <b>{{ count($extraDevices) + 1 }} سفارش جداگانه</b> با اطلاعات مشترک مشتری/آدرس/تکنسین ساخته می‌شود.
+            </p>
+        @endif
     </div>
 </div>

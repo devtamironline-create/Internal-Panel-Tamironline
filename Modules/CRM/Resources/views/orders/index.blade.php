@@ -9,6 +9,22 @@
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش‌های تعمیر</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">لیست و مدیریت سفارش‌های خدمات تعمیرات</p>
+
+            {{-- تب‌های لید/سفارش/همه --}}
+            <div class="inline-flex items-center gap-1 mt-3 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <a href="{{ route('crm.orders.index', request()->except('kind')) }}"
+                   class="px-3 py-1 rounded text-xs font-medium {{ ! ($kind ?? '') || ($kind === '') ? 'bg-white shadow text-brand-700' : 'text-gray-600 hover:text-gray-900' }}">
+                    سفارش‌ها <span class="text-gray-400">({{ number_format($orderCount) }})</span>
+                </a>
+                <a href="{{ route('crm.orders.index', ['kind' => 'lead'] + request()->except('kind')) }}"
+                   class="px-3 py-1 rounded text-xs font-medium {{ ($kind ?? '') === 'lead' ? 'bg-white shadow text-rose-700' : 'text-gray-600 hover:text-gray-900' }}">
+                    لیدها <span class="text-gray-400">({{ number_format($leadCount) }})</span>
+                </a>
+                <a href="{{ route('crm.orders.index', ['kind' => 'all'] + request()->except('kind')) }}"
+                   class="px-3 py-1 rounded text-xs font-medium {{ ($kind ?? '') === 'all' ? 'bg-white shadow text-gray-800' : 'text-gray-600 hover:text-gray-900' }}">
+                    همه <span class="text-gray-400">({{ number_format($orderCount + $leadCount) }})</span>
+                </a>
+            </div>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('crm.orders.export', ['format' => 'xlsx'] + request()->query()) }}"
@@ -83,13 +99,20 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تکنسین</label>
-                <select name="technician_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    @foreach($technicians as $t)
-                        @php $tname = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))); @endphp
-                        <option value="{{ $t->id }}" @selected($technicianId === $t->id)>{{ $tname ?: '—' }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $techOptions = ['' => '— همه —', 'none' => '— بدون تکنسین —'];
+                    foreach ($technicians as $t) {
+                        $tname = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? '')));
+                        $techOptions[(string) $t->id] = $tname ?: '—';
+                    }
+                    $techValue = $technicianId === null ? '' : (string) $technicianId;
+                @endphp
+                <x-searchable-select
+                    name="technician_id"
+                    :options="$techOptions"
+                    :value="$techValue"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی تکنسین..." />
             </div>
         </div>
 
@@ -107,21 +130,29 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">برند</label>
-                <select name="brand_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    @foreach($brands as $b)
-                        <option value="{{ $b->id }}" @selected($brandId === $b->id)>{{ $b->name }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $brandOptions = ['' => '— همه —'];
+                    foreach ($brands as $b) { $brandOptions[(string) $b->id] = $b->name; }
+                @endphp
+                <x-searchable-select
+                    name="brand_id"
+                    :options="$brandOptions"
+                    :value="$brandId"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی برند..." />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دستگاه</label>
-                <select name="device_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                    <option value="">— همه —</option>
-                    @foreach($devices as $d)
-                        <option value="{{ $d->id }}" @selected($deviceId === $d->id)>{{ $d->name }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $deviceOptions = ['' => '— همه —'];
+                    foreach ($devices as $d) { $deviceOptions[(string) $d->id] = $d->name; }
+                @endphp
+                <x-searchable-select
+                    name="device_id"
+                    :options="$deviceOptions"
+                    :value="$deviceId"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی دستگاه..." />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع سفارش</label>
@@ -135,12 +166,16 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">معرف</label>
                 @if(count($introductionList))
-                    <select name="introduction" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                        <option value="">— همه —</option>
-                        @foreach($introductionList as $opt)
-                            <option value="{{ $opt }}" @selected($introduction === $opt)>{{ $opt }}</option>
-                        @endforeach
-                    </select>
+                    @php
+                        $introOptions = ['' => '— همه —'];
+                        foreach ($introductionList as $opt) { $introOptions[(string) $opt] = (string) $opt; }
+                    @endphp
+                    <x-searchable-select
+                        name="introduction"
+                        :options="$introOptions"
+                        :value="$introduction"
+                        placeholder="— همه —"
+                        searchPlaceholder="جستجو..." />
                 @else
                     <input type="text" name="introduction" value="{{ $introduction }}" placeholder="مثلاً اینستاگرام"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
@@ -216,7 +251,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-2 overflow-x-auto">
         <div class="flex items-center gap-1 min-w-max">
             {{-- تب همه --}}
-            @php $isAll = $status === ''; @endphp
+            @php $isAll = $status === '' && $technicianId !== 'none'; @endphp
             <a href="{{ route('crm.orders.index', $baseQuery) }}"
                class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
                       {{ $isAll ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
@@ -224,6 +259,22 @@
                 <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
                             {{ $isAll ? 'bg-brand-100 text-brand-700' : ($statusCounts['all'] > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
                     {{ number_format($statusCounts['all']) }}
+                </span>
+            </a>
+
+            {{-- تب بدون تکنسین --}}
+            @php
+                $isNoTech = $technicianId === 'none';
+                $noTechCount = (int) ($statusCounts['no_tech'] ?? 0);
+                $noTechUrl = route('crm.orders.index', array_merge($baseQuery, ['technician_id' => 'none']));
+            @endphp
+            <a href="{{ $noTechUrl }}"
+               class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                      {{ $isNoTech ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                بدون تکنسین
+                <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                            {{ $isNoTech ? 'bg-rose-100 text-rose-700' : ($noTechCount > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                    {{ number_format($noTechCount) }}
                 </span>
             </a>
             @foreach(OrderStatus::cases() as $case)
@@ -264,10 +315,15 @@
                 @forelse($orders as $order)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="px-6 py-4">
-                        <a href="{{ route('crm.orders.show', $order) }}" class="font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600" dir="ltr">
-                            {{ $order->order_code }}
-                        </a>
-                        @if($order->order_type)
+                        <div class="flex items-center gap-1.5">
+                            <a href="{{ route('crm.orders.show', $order) }}" class="font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600" dir="ltr">
+                                {{ $order->order_code }}
+                            </a>
+                            @if($order->is_lead)
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200" title="این تماس به‌عنوان لید ثبت شده">لید</span>
+                            @endif
+                        </div>
+                        @if($order->order_type && ! $order->is_lead)
                             <div class="text-xs text-gray-400 mt-0.5">{{ $order->order_type === 'service' ? 'نصب' : 'تعمیر' }}</div>
                         @endif
                     </td>
@@ -323,6 +379,18 @@
         </table>
     </div>
 
-    <div>{{ $orders->links() }}</div>
+    <div class="flex items-center justify-between flex-wrap gap-3 px-2">
+        <div>{{ $orders->links() }}</div>
+        <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <label for="per-page-select">تعداد در صفحه:</label>
+            <select id="per-page-select"
+                    onchange="(()=>{ const u=new URL(window.location); u.searchParams.set('per_page', this.value); u.searchParams.delete('page'); window.location=u; }).call(this)"
+                    class="px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-xs">
+                @foreach([25, 50, 100, 200] as $opt)
+                    <option value="{{ $opt }}" @selected(($perPage ?? 50) === $opt)>{{ $opt }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
 </div>
 @endsection

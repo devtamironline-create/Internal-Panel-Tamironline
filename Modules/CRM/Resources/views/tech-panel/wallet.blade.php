@@ -46,14 +46,20 @@
         <div class="text-xs text-gray-500 mt-2">{{ $balanceLabel }}</div>
 
         {{-- شارژ کیف‌پول از درگاه — هم‌ارز Tech_Payment پنل WP --}}
-        <a href="{{ route('tech.wallet.recharge') }}"
-           class="mt-4 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold text-sm"
-           style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            شارژ کیف‌پول
-        </a>
+        @if(! ($isFrozen ?? false))
+            <a href="{{ route('tech.wallet.recharge') }}"
+               class="mt-4 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold text-sm"
+               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                شارژ کیف‌پول
+            </a>
+        @else
+            <div class="mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-6">
+                ⏳ پنل در حال به‌روزرسانی است — شارژ کیف‌پول موقتاً غیرفعال است. لطفاً چند دقیقه دیگر مراجعه کنید.
+            </div>
+        @endif
     </div>
 
     {{-- ─────── Stats grid ─────── --}}
@@ -114,11 +120,20 @@
                 $signLabel = $sign > 0 ? '+' : ($sign < 0 ? '−' : '');
                 $signClass = $sign > 0 ? 'text-emerald-700' : ($sign < 0 ? 'text-rose-600' : 'text-gray-700');
             @endphp
+            @php
+                // برای تراکنش‌های تعدیل (Adjustment) — label و note برای
+                // تکنسین نمایش داده نمی‌شود. فقط مبلغ و مانده پس از تراکنش.
+                $isAdjustment = $tx->type === WalletTxType::Adjustment;
+            @endphp
             <div class="bg-white rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2">
-                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $tx->type->badgeClass() }}">
-                        {{ $tx->type->label() }}
-                    </span>
+                    @if(! $isAdjustment)
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $tx->type->badgeClass() }}">
+                            {{ $tx->type->label() }}
+                        </span>
+                    @else
+                        <span></span>
+                    @endif
                     <span class="font-bold text-base {{ $signClass }}">
                         {{ $signLabel }}{{ number_format(abs((int) $tx->amount)) }}
                         <span class="text-[10px] font-normal text-gray-400">تومان</span>
@@ -131,7 +146,7 @@
                     // فقط بخش refid را پاک می‌کنیم، descriptions را نگه می‌داریم.
                     $cleanNote = $tx->note ? trim(preg_replace('/(?:\s*—\s*)?refid:\s*\S+/u', '', $tx->note)) : null;
                 @endphp
-                @if($cleanNote)
+                @if($cleanNote && ! $isAdjustment)
                     <div class="mt-2 text-xs text-gray-700 leading-7">{{ $cleanNote }}</div>
                 @endif
 

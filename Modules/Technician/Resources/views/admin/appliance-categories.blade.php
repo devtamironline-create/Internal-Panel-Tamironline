@@ -76,12 +76,17 @@
                 هنوز دسته‌ای اضافه نشده است.
             </div>
         @else
-            <div class="divide-y divide-gray-100">
+            <div class="px-5 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
+                💡 برای تغییر ترتیب، روی آیکن ⋮⋮ سمت راست هر دسته بکشید و رها کنید.
+                <span id="reorder-status" class="ms-2 font-medium"></span>
+            </div>
+            <div class="divide-y divide-gray-100" id="roots-sortable" data-reorder-url="{{ route('technician.admin.appliance-categories.reorder') }}">
                 @foreach($roots as $root)
                     {{-- ریشه --}}
-                    <div>
+                    <div data-id="{{ $root->id }}">
                         <div class="px-5 py-3 flex items-center justify-between bg-blue-50/40 hover:bg-blue-50 transition-colors">
                             <div class="flex items-center gap-3 min-w-0">
+                                <span class="drag-handle cursor-move text-gray-400 hover:text-gray-700 select-none" title="کشیدن برای جابجایی">⋮⋮</span>
                                 <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2"/>
                                 </svg>
@@ -103,10 +108,11 @@
 
                         {{-- زیرمجموعه‌ها --}}
                         @if($root->children->count())
-                            <div class="bg-gray-50/50 border-t border-gray-100">
+                            <div class="bg-gray-50/50 border-t border-gray-100 children-sortable" data-parent-id="{{ $root->id }}">
                                 @foreach($root->children as $child)
-                                    <div class="ps-12 pe-5 py-2.5 flex items-center justify-between hover:bg-white transition-colors border-b border-gray-100 last:border-b-0">
+                                    <div data-id="{{ $child->id }}" class="ps-12 pe-5 py-2.5 flex items-center justify-between hover:bg-white transition-colors border-b border-gray-100 last:border-b-0">
                                         <div class="flex items-center gap-3 min-w-0">
+                                            <span class="drag-handle cursor-move text-gray-300 hover:text-gray-600 select-none" title="کشیدن برای جابجایی">⋮⋮</span>
                                             <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                             </svg>
@@ -211,5 +217,90 @@ function applianceCategoryEditor() {
         },
     };
 }
+
+// ─── Drag & Drop reordering ─────────────────────────────────────
+// SortableJS از CDN — اگر قبلاً bundle نشده، lazy load می‌کنیم.
+(function () {
+    function init() {
+        if (typeof Sortable === 'undefined') return;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+        const statusEl = document.getElementById('reorder-status');
+
+        function showStatus(msg, isError) {
+            if (!statusEl) return;
+            statusEl.textContent = msg;
+            statusEl.style.color = isError ? '#b91c1c' : '#15803d';
+            setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        }
+
+        function send(container) {
+            const url = document.getElementById('roots-sortable').dataset.reorderUrl;
+            const ids = Array.from(container.children)
+                .map(el => el.dataset.id)
+                .filter(Boolean);
+            if (ids.length === 0) return;
+
+            showStatus('در حال ذخیره...', false);
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ ids }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    showStatus('✓ ترتیب جدید ذخیره شد', false);
+                } else {
+                    showStatus('✗ خطا در ذخیره', true);
+                }
+            })
+            .catch(() => showStatus('✗ خطا در اتصال', true));
+        }
+
+        // ریشه‌ها
+        const rootsEl = document.getElementById('roots-sortable');
+        if (rootsEl) {
+            Sortable.create(rootsEl, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'opacity-50',
+                onEnd: () => send(rootsEl),
+            });
+        }
+
+        // زیرمجموعه‌ها (یکی به ازای هر parent)
+        document.querySelectorAll('.children-sortable').forEach(el => {
+            Sortable.create(el, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'opacity-50',
+                onEnd: () => send(el),
+            });
+        });
+    }
+
+    // SortableJS از asset محلی لود می‌شود — CDN خارجی (jsdelivr و غیره)
+    // در ایران اغلب فیلتر/کند است و در مرورگرهای ویندوزی fail می‌کرد.
+    if (typeof Sortable === 'undefined') {
+        const s = document.createElement('script');
+        s.src = '/vendor/js/Sortable.min.js';
+        s.onload = init;
+        s.onerror = function () {
+            const el = document.getElementById('reorder-status');
+            if (el) {
+                el.textContent = '✗ بارگذاری SortableJS ناموفق — صفحه را refresh کنید';
+                el.style.color = '#b91c1c';
+            }
+        };
+        document.head.appendChild(s);
+    } else {
+        init();
+    }
+})();
 </script>
 @endsection

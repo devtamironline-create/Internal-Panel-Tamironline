@@ -37,6 +37,31 @@
                     @endif
                 </form>
             @endcan
+            <a href="{{ route('crm.invoices.print', $invoice) }}" target="_blank"
+               class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
+                🖨 چاپ / دانلود فاکتور
+            </a>
+
+            {{-- ── لینک عمومی + ارسال SMS ── --}}
+            @php $publicUrl = route('crm.invoice.public', $invoice->invoice_code); @endphp
+            <div class="inline-flex items-center gap-2"
+                 x-data="{ copied: false, copy() { navigator.clipboard.writeText('{{ $publicUrl }}').then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000); }); } }">
+                <button type="button" @click="copy()"
+                        class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm inline-flex items-center gap-1.5"
+                        :title="copied ? 'کپی شد' : 'کپی لینک عمومی'">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    <span x-text="copied ? 'کپی شد ✓' : 'کپی لینک'"></span>
+                </button>
+            </div>
+
+            <form action="{{ route('crm.invoices.send-sms', $invoice) }}" method="POST" class="inline"
+                  onsubmit="return confirm('لینک فاکتور با پیامک به موبایل مشتری ارسال شود؟');">
+                @csrf
+                <button class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm inline-flex items-center gap-1.5">
+                    📱 ارسال پیامک به مشتری
+                </button>
+            </form>
+
             <a href="{{ route('crm.invoices.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">بازگشت</a>
         </div>
     </div>

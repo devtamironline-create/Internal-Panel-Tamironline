@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\LeadReason;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Customer;
@@ -31,9 +32,9 @@ use Modules\CRM\Services\OrderSmsNotifier;
 class OrderWizard extends Component
 {
     public int $currentStep = 1;
-    public const TOTAL_STEPS = 5;
+    public const TOTAL_STEPS = 3;
 
-    // ─── Step 1: Customer ────────────────────────────────────────
+    // ─── Step 2: Customer ────────────────────────────────────────
     public ?int $customerId = null;
     public string $customerSearch = '';
     public bool $showNewCustomerForm = false;
@@ -43,18 +44,31 @@ class OrderWizard extends Component
     public string $subscription = '';
     public string $introduction = '';
 
-    // ─── Step 2: Location ────────────────────────────────────────
+    // ─── Step 1: Location ────────────────────────────────────────
     public ?int $provinceId = null;
     public ?int $cityId = null;
     public string $address = '';
 
-    // ─── Step 3: Device & Problem ────────────────────────────────
+    // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
     public string $orderType = 'repair';
     public ?int $brandId = null;
     public ?int $deviceId = null;
     /** @var array<int,string> */
     public array $objections = [];
     public string $objectionDescription = '';
+
+    // قابل سفارش بودن دستگاه اصلی. اگر false شود، به‌جای سفارش، یک
+    // رکورد لید (is_lead=true) ساخته می‌شود.
+    public bool $isOrderable = true;
+    public ?int $leadReasonId = null;
+    public string $leadNotes = '';
+
+    /**
+     * دستگاه‌های اضافه — هر بار submit، یک Order جداگانه ساخته می‌شود
+     * برای هر دستگاه (مشتری/آدرس/تکنسین/زمان مراجعه مشترک).
+     * شکل: [['brand_id'=>?, 'device_id'=>?, 'objections'=>[], 'objection_description'=>'']]
+     */
+    public array $extraDevices = [];
 
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
@@ -119,7 +133,25 @@ class OrderWizard extends Component
         if (! $this->provinceId) {
             return collect();
         }
-        return City::where('province_id', $this->provinceId)->ordered()->get(['id', 'name']);
+        $cities = City::where('province_id', $this->provinceId)->ordered()->get(['id', 'name']);
+        // اگر استان شهر تعریف‌شده ندارد، یک شهر پیش‌فرض با نام خود استان
+        // ساخته می‌شود تا اپراتور بتواند مرحله را رد کند. منطق در
+        // CustomerController::citiesOfProvince هم هست (مسیر AJAX).
+        if ($cities->isEmpty()) {
+            $province = Province::find($this->provinceId);
+            if ($province) {
+                $default = City::firstOrCreate(
+                    ['province_id' => $province->id, 'name' => $province->name],
+                    [
+                        // slug NOT NULL است؛ unique بر اساس (province_id, slug).
+                        'slug' => 'province-' . $province->id,
+                        'sort_order' => 0,
+                    ]
+                );
+                $cities = collect([(object) ['id' => $default->id, 'name' => $default->name]]);
+            }
+        }
+        return $cities;
     }
 
     #[Computed]
@@ -170,6 +202,13 @@ class OrderWizard extends Component
     {
         $list = CrmSetting::getJson('wp.introductionList', []);
         return is_array($list) ? array_values(array_filter(array_map('strval', $list))) : [];
+    }
+
+    /** لیست دلایل عدم سفارش — برای تَوگل قابل سفارش روی هر دستگاه. */
+    #[Computed]
+    public function leadReasons()
+    {
+        return LeadReason::active()->ordered()->get(['id', 'name']);
     }
 
     /** لیست ایرادهای رایج (objectionsList) از تنظیمات WP. */
@@ -234,7 +273,7 @@ class OrderWizard extends Component
 
         $activeStatuses = [OrderStatus::Coordinated->value, OrderStatus::Open->value];
 
-        $activeOrderCounts = Order::query()
+        $activeOrderCounts = Order::query()->realOrders()
             ->whereIn('status', $activeStatuses)
             ->whereIn('technician_id', $techs->pluck('id'))
             ->groupBy('technician_id')
@@ -307,6 +346,20 @@ class OrderWizard extends Component
         $this->customerSearch = $customer->display_name . ' — ' . $customer->mobile;
         $this->subscription = (string) $customer->subscription;
         $this->showNewCustomerForm = false;
+
+        // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور در
+        // مرحلهٔ «محل مراجعه» می‌تواند تأیید یا تغییر دهد و وقتش هدر
+        // برای تایپ مجدد آدرس قبلی نمی‌رود.
+        $lastOrder = Order::where('customer_id', $customer->id)
+            ->whereNotNull('address')
+            ->where('address', '!=', '')
+            ->latest('created_at')
+            ->first(['province_id', 'city_id', 'address']);
+        if ($lastOrder) {
+            $this->provinceId = $lastOrder->province_id;
+            $this->cityId     = $lastOrder->city_id;
+            $this->address    = (string) $lastOrder->address;
+        }
     }
 
     public function clearCustomer(): void
@@ -351,6 +404,42 @@ class OrderWizard extends Component
         }
     }
 
+    // ─── چند دستگاه در یک ثبت ────────────────────────────────────
+
+    public function addExtraDevice(): void
+    {
+        $this->extraDevices[] = [
+            'brand_id' => null,
+            'device_id' => null,
+            'objections' => [],
+            'objection_description' => '',
+            'is_orderable' => true,
+            'lead_reason_id' => null,
+            'lead_notes' => '',
+            'order_type' => 'repair',
+        ];
+    }
+
+    public function removeExtraDevice(int $index): void
+    {
+        unset($this->extraDevices[$index]);
+        $this->extraDevices = array_values($this->extraDevices);
+    }
+
+    public function toggleExtraObjection(int $index, string $value): void
+    {
+        if (! isset($this->extraDevices[$index])) return;
+        $current = $this->extraDevices[$index]['objections'] ?? [];
+        $idx = array_search($value, $current, true);
+        if ($idx === false) {
+            $current[] = $value;
+        } else {
+            unset($current[$idx]);
+            $current = array_values($current);
+        }
+        $this->extraDevices[$index]['objections'] = $current;
+    }
+
     public function next(): void
     {
         $this->validateStep($this->currentStep);
@@ -374,65 +463,98 @@ class OrderWizard extends Component
         }
     }
 
-    /** اعتبارسنجی هر مرحله — فقط فیلدهای آن مرحله. */
+    /** اعتبارسنجی هر مرحله — فقط فیلدهای آن مرحله.
+     *  ترتیب مراحل پس از بازطراحی:
+     *    ۱) محل سرویس + دستگاه اصلی (با تَوگل قابل سفارش)
+     *    ۲) مشتری
+     *    ۳) بررسی (در submit)
+     */
     protected function validateStep(int $step): void
     {
         match ($step) {
-            1 => $this->validate(
-                $this->showNewCustomerForm
-                    ? [
-                        'newName' => 'required|string|max:255',
-                        'newMobile' => 'required|string|max:20',
-                        'newPhone' => 'nullable|string|max:20',
-                        'introduction' => 'nullable|string|max:255',
-                    ]
-                    : [
-                        'customerId' => 'required|integer|exists:crm_customers,id',
-                        'introduction' => 'nullable|string|max:255',
-                    ],
-                attributes: [
-                    'newName' => 'نام مشتری',
-                    'newMobile' => 'موبایل',
-                    'customerId' => 'مشتری',
-                    'introduction' => 'معرف',
-                ],
-            ),
+            // ── مرحله ۱: محل + دستگاه اصلی ──
+            1 => $this->validateStep1Devices(),
 
-            2 => $this->validate([
-                'provinceId' => 'required|integer|exists:crm_provinces,id',
-                'cityId' => 'required|integer|exists:crm_cities,id',
-                'address' => 'required|string|max:2000',
-            ], attributes: [
-                'provinceId' => 'استان',
-                'cityId' => 'شهر',
-                'address' => 'آدرس',
-            ]),
+            // ── مرحله ۲: مشتری (+ آدرس وقتی قابل سفارش است) ──
+            2 => $this->validateStep2Customer(),
 
-            3 => $this->validate([
-                'orderType' => 'required|string|in:repair,service',
-                'brandId' => 'required|integer|exists:crm_brands,id',
-                'deviceId' => 'required|integer|exists:crm_devices,id',
-                'objections' => 'nullable|array',
-                'objections.*' => 'string|max:255',
-                'objectionDescription' => 'nullable|string|max:5000',
-            ], attributes: [
-                'orderType' => 'نوع سفارش',
-                'brandId' => 'برند',
-                'deviceId' => 'نوع دستگاه',
-            ]),
-
-            4 => $this->validate([
-                'technicianId' => 'nullable|integer|exists:crm_technicians,id',
-                'visitDate' => 'nullable|date_format:Y-m-d',
-                'visitSlot' => 'nullable|integer|in:1,2,3,4',
-            ], attributes: [
-                'visitDate' => 'روز مراجعه',
-                'visitSlot' => 'بازه ساعت',
-            ]),
-
-            5 => null, // مرور — اعتبارسنجی در submit
+            3 => null, // بررسی — اعتبارسنجی در submit
             default => null,
         };
+    }
+
+    /**
+     * اعتبارسنجی مرحله ۲: مشتری + آدرس.
+     * آدرس فقط برای سفارش‌های قابل ثبت اجباری است؛ برای لیدها شهر کافی
+     * است و آدرس را اپراتور وارد نمی‌کند.
+     */
+    protected function validateStep2Customer(): void
+    {
+        $rules = $this->showNewCustomerForm
+            ? [
+                'newName'      => 'required|string|max:255',
+                'newMobile'    => 'required|string|max:20',
+                'newPhone'     => 'nullable|string|max:20',
+                'introduction' => 'required|string|max:255',
+            ]
+            : [
+                'customerId'   => 'required|integer|exists:crm_customers,id',
+                'introduction' => 'required|string|max:255',
+            ];
+        if ($this->isOrderable) {
+            $rules['address'] = 'required|string|max:2000';
+        }
+        $this->validate($rules, attributes: [
+            'newName'      => 'نام مشتری',
+            'newMobile'    => 'موبایل',
+            'customerId'   => 'مشتری',
+            'introduction' => 'نحوه آشنایی',
+            'address'      => 'آدرس',
+        ], messages: [
+            'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
+        ]);
+    }
+
+    /**
+     * اعتبارسنجی مرحله ۱: محل + دستگاه اصلی + دستگاه‌های اضافه.
+     * برای هر دستگاهِ غیرقابل سفارش، lead_reason_id الزامی است.
+     */
+    protected function validateStep1Devices(): void
+    {
+        // آدرس از این مرحله حذف شده (به مرحلهٔ مشتری منتقل شده تا با
+        // انتخاب مشتری قدیمی، آدرس آخرین سفارش به‌صورت خودکار پر شود).
+        $rules = [
+            'provinceId' => 'required|integer|exists:crm_provinces,id',
+            'cityId'     => 'required|integer|exists:crm_cities,id',
+            'brandId'    => 'required|integer|exists:crm_brands,id',
+            'deviceId'   => 'required|integer|exists:crm_devices,id',
+            'objections' => 'nullable|array',
+            'objections.*' => 'string|max:255',
+            'objectionDescription' => 'nullable|string|max:5000',
+            'isOrderable' => 'boolean',
+            'leadNotes'   => 'nullable|string|max:2000',
+        ];
+        if (! $this->isOrderable) {
+            $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
+        } else {
+            $rules['orderType'] = 'required|string|in:repair,service';
+        }
+        // اعتبارسنجی دستگاه‌های اضافه
+        foreach ($this->extraDevices as $i => $d) {
+            $rules["extraDevices.$i.brand_id"]  = 'required|integer|exists:crm_brands,id';
+            $rules["extraDevices.$i.device_id"] = 'required|integer|exists:crm_devices,id';
+            if (! ($d['is_orderable'] ?? true)) {
+                $rules["extraDevices.$i.lead_reason_id"] = 'required|integer|exists:crm_lead_reasons,id';
+            }
+        }
+        $this->validate($rules, attributes: [
+            'provinceId'   => 'استان',
+            'cityId'       => 'شهر',
+            'brandId'      => 'برند',
+            'deviceId'     => 'نوع دستگاه',
+            'orderType'    => 'نوع سفارش',
+            'leadReasonId' => 'دلیل عدم سفارش',
+        ]);
     }
 
     public function submit(): void
@@ -449,72 +571,139 @@ class OrderWizard extends Component
                 $this->visitSlot = null;
             }
 
-            // اعتبارسنجی نهایی همهٔ مراحل
-            for ($s = 1; $s <= 4; $s++) {
+            // اعتبارسنجی نهایی همهٔ مراحل (۳ مرحله در فلوی جدید)
+            for ($s = 1; $s <= 2; $s++) {
                 $this->validateStep($s);
             }
 
-            $order = DB::transaction(function () {
-            // ۱) مشتری
-            $customer = $this->showNewCustomerForm
-                ? Customer::create([
-                    'first_name' => $this->newName,
-                    'mobile' => $this->newMobile,
-                    'phone' => $this->newPhone ?: null,
-                ])
-                : Customer::findOrFail($this->customerId);
+            $createdOrders = DB::transaction(function () {
+                // ۱) مشتری — اگر فرم مشتری جدید پر شده، ولی شماره موبایل
+                //    تکراری است (مشتری از قبل وجود دارد)، همان را استفاده کن.
+                if ($this->showNewCustomerForm) {
+                    $existing = Customer::where('mobile', $this->newMobile)->first();
+                    if ($existing) {
+                        // مشتری موجود — فیلدهای خالی را با ورودی پر کن
+                        $updates = [];
+                        if (! $existing->first_name && $this->newName) {
+                            $updates['first_name'] = $this->newName;
+                        }
+                        if (! $existing->phone && $this->newPhone) {
+                            $updates['phone'] = $this->newPhone;
+                        }
+                        if (! empty($updates)) {
+                            $existing->update($updates);
+                        }
+                        $customer = $existing;
+                    } else {
+                        $customer = Customer::create([
+                            'first_name' => $this->newName,
+                            'mobile' => $this->newMobile,
+                            'phone' => $this->newPhone ?: null,
+                        ]);
+                    }
+                } else {
+                    $customer = Customer::findOrFail($this->customerId);
+                }
 
-            // ۲) ایرادها → string با کاما (مطابق WP)
-            $problemTitle = ! empty($this->objections)
-                ? implode('، ', $this->objections)
-                : null;
+                // لیست همهٔ دستگاه‌ها — هر کدام با تَوگل قابل سفارش.
+                // قابل سفارش=true → یک Order واقعی ساخته می‌شود.
+                // قابل سفارش=false → یک رکورد لید (is_lead=true) با
+                // دلیل عدم سفارش ذخیره می‌شود.
+                $allDevices = [[
+                    'brand_id'              => $this->brandId,
+                    'device_id'             => $this->deviceId,
+                    'objections'            => $this->objections,
+                    'objection_description' => $this->objectionDescription,
+                    'is_orderable'          => $this->isOrderable,
+                    'lead_reason_id'        => $this->leadReasonId,
+                    'lead_notes'            => $this->leadNotes,
+                    'order_type'            => $this->orderType,
+                ]];
+                foreach ($this->extraDevices as $extra) {
+                    if (! empty($extra['brand_id']) && ! empty($extra['device_id'])) {
+                        $allDevices[] = [
+                            'brand_id'              => (int) $extra['brand_id'],
+                            'device_id'             => (int) $extra['device_id'],
+                            'objections'            => $extra['objections'] ?? [],
+                            'objection_description' => $extra['objection_description'] ?? '',
+                            'is_orderable'          => (bool) ($extra['is_orderable'] ?? true),
+                            'lead_reason_id'        => $extra['lead_reason_id'] ?? null,
+                            'lead_notes'            => $extra['lead_notes'] ?? '',
+                            'order_type'            => $extra['order_type'] ?? 'repair',
+                        ];
+                    }
+                }
 
-            $order = Order::create([
-                'order_code' => Order::generateOrderCode(),
-                'customer_id' => $customer->id,
-                'subscription' => $this->subscription !== '' ? (int) $this->subscription : null,
-                'introduction' => $this->introduction ?: null,
-                'order_type' => $this->orderType,
-                'brand_id' => $this->brandId,
-                'device_id' => $this->deviceId,
-                'technician_id' => $this->technicianId,
-                'customer_name' => $customer->display_name,
-                'customer_mobile' => $customer->mobile,
-                'customer_phone' => $customer->phone,
-                'province_id' => $this->provinceId,
-                'city_id' => $this->cityId,
-                'address' => $this->address,
-                'problem_title' => $problemTitle,
-                'problem_description' => $this->objectionDescription ?: null,
-                'visit_scheduled_at' => ($this->visitDate && $this->visitSlot)
-                    ? $this->visitDate . ' ' . self::VISIT_SLOTS[$this->visitSlot]['start']
-                    : null,
-                // هم‌ارز WP CRM: حتی با تخصیص تکنسین، وضعیت روی «جدید»
-                // می‌ماند. تکنسین باید با مشتری تماس بگیرد و سپس خودش به
-                // «هماهنگ شده» تغییر دهد.
-                'status' => OrderStatus::New->value,
-                'assigned_at' => $this->technicianId ? now() : null,
-                'created_by' => auth()->id(),
-            ]);
+                $orders = [];
+                foreach ($allDevices as $dev) {
+                    $isOrderable = (bool) ($dev['is_orderable'] ?? true);
+                    $problemTitle = ! empty($dev['objections'])
+                        ? implode('، ', $dev['objections'])
+                        : null;
 
-            OrderStatusLog::create([
-                'order_id' => $order->id,
-                'from_status' => null,
-                'to_status' => $order->status instanceof OrderStatus ? $order->status->value : $order->status,
-                'note' => 'ثبت اولیه سفارش از ویزارد',
-                'changed_by' => auth()->id(),
-                'created_at' => now(),
-            ]);
+                    $o = Order::create([
+                        'order_code'          => Order::generateOrderCode(),
+                        'customer_id'         => $customer->id,
+                        'subscription'        => $this->subscription !== '' ? (int) $this->subscription : null,
+                        'introduction'        => $this->introduction ?: null,
+                        'order_type'          => $dev['order_type'] ?? $this->orderType,
+                        'brand_id'            => $dev['brand_id'],
+                        'device_id'           => $dev['device_id'],
+                        'technician_id'       => null,
+                        'customer_name'       => $customer->display_name,
+                        'customer_mobile'     => $customer->mobile,
+                        'customer_phone'      => $customer->phone,
+                        'province_id'         => $this->provinceId,
+                        'city_id'             => $this->cityId,
+                        'address'             => $this->address,
+                        'problem_title'       => $problemTitle,
+                        'problem_description' => $dev['objection_description'] ?: null,
+                        'visit_scheduled_at'  => null,
+                        'status'              => OrderStatus::New->value,
+                        'assigned_at'         => null,
+                        'created_by'          => auth()->id(),
+                        // فیلدهای لید — فقط اگر غیرقابل سفارش بود فعال‌اند
+                        'is_lead'             => ! $isOrderable,
+                        'lead_reason_id'      => ! $isOrderable ? ($dev['lead_reason_id'] ?? null) : null,
+                        'lead_notes'          => ! $isOrderable ? ($dev['lead_notes'] ?? null) : null,
+                    ]);
 
-            return $order;
+                    OrderStatusLog::create([
+                        'order_id'    => $o->id,
+                        'from_status' => null,
+                        'to_status'   => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
+                        'note'        => $isOrderable
+                            ? (count($allDevices) > 1
+                                ? 'ثبت اولیه سفارش از ویزارد (یکی از ' . count($allDevices) . ' دستگاه)'
+                                : 'ثبت اولیه سفارش از ویزارد')
+                            : 'ثبت لید (تماس غیرقابل سفارش) از ویزارد',
+                        'changed_by'  => auth()->id(),
+                        'created_at'  => now(),
+                    ]);
+
+                    $orders[] = $o;
+                }
+
+                return $orders;
             });
 
-            $smsNotifier->notify($order, SmsTrigger::OrderCreated);
-            if ($order->technician_id) {
-                $smsNotifier->notify($order->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+            // SMS فقط برای سفارش‌های واقعی — لیدها (is_lead=true) پیامک
+            // OrderCreated نمی‌گیرند چون منجر به سفارش نشده‌اند.
+            foreach ($createdOrders as $o) {
+                if ($o->is_lead) continue;
+                $smsNotifier->notify($o, SmsTrigger::OrderCreated);
+                if ($o->technician_id) {
+                    $smsNotifier->notify($o->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
+                }
             }
 
-            session()->flash('success', 'سفارش ثبت شد: ' . $order->order_code);
+            $order = $createdOrders[0]; // برای redirect به اولین سفارش
+            $count = count($createdOrders);
+            session()->flash('success',
+                $count === 1
+                    ? 'سفارش ثبت شد: ' . $order->order_code
+                    : "{$count} سفارش ثبت شد: " . collect($createdOrders)->pluck('order_code')->implode('، ')
+            );
 
             // اجازهٔ خروج از wizard را به JS بده تا beforeunload prompt
             // هنگام redirect نهایی نشان داده نشود.

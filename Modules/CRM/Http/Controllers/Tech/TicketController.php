@@ -59,11 +59,11 @@ class TicketController extends Controller
             'category_id' => 'required|exists:crm_ticket_categories,id',
             'subject' => 'nullable|string|max:200',
             'body' => 'required|string|max:5000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ], [
             'body.required' => 'متن تیکت الزامی است.',
             'category_id.required' => 'دسته‌بندی را انتخاب کنید.',
-            'image.max' => 'حجم تصویر حداکثر ۵ مگابایت.',
+            'image.max' => 'حجم تصویر حداکثر ۱۰ مگابایت.',
         ]);
 
         // اگر سفارشی انتخاب شده، باید متعلق به همین تکنسین باشد
@@ -121,9 +121,10 @@ class TicketController extends Controller
 
         $validated = $request->validate([
             'body' => 'required|string|max:5000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ], [
             'body.required' => 'متن پاسخ الزامی است.',
+            'image.max' => 'حجم تصویر حداکثر ۱۰ مگابایت.',
         ]);
 
         $imagePath = null;
