@@ -1,0 +1,11 @@
+{
+    "name": "tamironline/identity",
+    "description": "Unified phone + OTP identity system for site, mobile app and admin clients.",
+    "type": "laravel-module",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Identity\\": ""
+        }
+    }
+}

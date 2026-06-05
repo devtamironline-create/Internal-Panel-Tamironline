@@ -3,7 +3,7 @@
         'name' => 'laravel/hosting-crm',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'bb75893a825d7b2ee0ac945a49833eb357eef0a3',
+        'reference' => '5fe0bd88d3d7f16f8b8cc841b01ba1cec7d11558',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -445,7 +445,7 @@
         'laravel/hosting-crm' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'bb75893a825d7b2ee0ac945a49833eb357eef0a3',
+            'reference' => '5fe0bd88d3d7f16f8b8cc841b01ba1cec7d11558',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -495,6 +495,15 @@
             'install_path' => __DIR__ . '/../laravel/sail',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'laravel/sanctum' => array(
+            'pretty_version' => 'v4.3.2',
+            'version' => '4.3.2.0',
+            'reference' => '2a9bccc18e9907808e0018dd15fa643937886b1e',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../laravel/sanctum',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'laravel/serializable-closure' => array(
             'pretty_version' => 'v2.0.7',

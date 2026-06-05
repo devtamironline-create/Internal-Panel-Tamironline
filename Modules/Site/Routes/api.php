@@ -100,18 +100,18 @@ Route::prefix('v1')->group(function () {
             ->whereNumber('id')->name('api.v1.forum.answers.accept');
     });
 
-    // ── Forum writes (سوال جدید + پاسخ جدید) با throttle جدا ──
-    Route::middleware('throttle:3,10')->group(function () {  // 3 سوال در هر 10 دقیقه
+    // ── Forum writes (سوال جدید + پاسخ جدید) — auth الزامی + throttle ──
+    Route::middleware(['auth:sanctum', 'throttle:3,10'])->group(function () {  // 3 سوال در هر 10 دقیقه
         Route::post('/forum/questions', [ForumController::class, 'store'])
             ->name('api.v1.forum.questions.store');
     });
-    // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه
+    // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه (بدون login برای anonymous reporting)
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/forum/report', [ForumController::class, 'storeReport'])
             ->name('api.v1.forum.report');
     });
 
-    Route::middleware('throttle:5,1')->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:5,1'])->group(function () {
         Route::post('/forum/questions/{slug}/answers', [ForumController::class, 'storeAnswer'])
             ->where('slug', '[^/]+')
             ->name('api.v1.forum.answers.store');

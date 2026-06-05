@@ -3,5 +3,6 @@
     "OKR": true,
     "Salary": true,
     "Warehouse": true,
-    "Site": true
+    "Site": true,
+    "Identity": true
 }

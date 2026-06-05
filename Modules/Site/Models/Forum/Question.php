@@ -15,7 +15,7 @@ class Question extends Model
     protected $fillable = [
         'slug', 'title', 'body', 'model', 'tags',
         'device_id', 'brand_id',
-        'author_name', 'author_email', 'author_phone', 'author_token',
+        'author_name', 'author_email', 'author_phone', 'author_token', 'user_id',
         'status', 'approved_at', 'approved_by_user_id',
         'resolution_status',
         'view_count', 'upvotes_count', 'answers_count',
@@ -50,6 +50,11 @@ class Question extends Model
     public const RES_EXPERT_ANSWERED = 'expert-answered';
 
     public const RES_SOLVED = 'solved';
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
 
     public function device(): BelongsTo
     {

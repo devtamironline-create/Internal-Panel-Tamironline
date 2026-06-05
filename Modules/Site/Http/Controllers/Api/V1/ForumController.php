@@ -217,13 +217,22 @@ class ForumController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // اگر کاربر وارد شده، موبایل از حساب گرفته می‌شود؛ وگرنه از فرم
-        $authPhone = $request->user()?->mobile;
-        $reqPhone = (string) $request->input('author_phone', '');
-        $phone = $authPhone ?: $reqPhone;
+        // از این پس فقط کاربر authenticated می‌تواند سوال ثبت کند.
+        // (Sanctum middleware در routes جداگانه auth الزامی می‌کند.)
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['ok' => false, 'message' => 'برای ثبت سوال باید وارد شوید.'], 401);
+        }
+        if (empty($user->first_name)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
+                'needs_profile' => true,
+            ], 422);
+        }
 
-        // banlist check قبل از validation
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'), $phone)) {
+        // banlist check
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $user->email, $user->mobile)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -235,9 +244,6 @@ class ForumController extends Controller
             'model' => 'nullable|string|max:80',
             'tags' => 'nullable|array|max:6',
             'tags.*' => 'string|max:30',
-            'author_name' => 'required|string|max:80',
-            'author_email' => 'nullable|email|max:120',
-            'author_phone' => 'nullable|string|max:20',
         ]);
 
         $device = Device::where('slug', $data['device_slug'])->first(['id']);
@@ -253,9 +259,10 @@ class ForumController extends Controller
             'tags' => $data['tags'] ?? null,
             'device_id' => $device?->id,
             'brand_id' => $brand?->id,
-            'author_name' => trim($data['author_name']),
-            'author_email' => isset($data['author_email']) ? strtolower(trim($data['author_email'])) : null,
-            'author_phone' => \Modules\Site\Models\Forum\BanlistEntry::normalizePhone($phone),
+            'user_id' => $user->id,
+            'author_name' => $user->full_name,
+            'author_email' => $user->email,
+            'author_phone' => $user->mobile,
             'author_token' => $token,
             'status' => Question::STATUS_PENDING,
             'ip' => $request->ip(),
@@ -280,11 +287,19 @@ class ForumController extends Controller
      */
     public function storeAnswer(Request $request, string $slug): JsonResponse
     {
-        $authPhone = $request->user()?->mobile;
-        $reqPhone = (string) $request->input('author_phone', '');
-        $phone = $authPhone ?: $reqPhone;
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['ok' => false, 'message' => 'برای ثبت پاسخ باید وارد شوید.'], 401);
+        }
+        if (empty($user->first_name)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
+                'needs_profile' => true,
+            ], 422);
+        }
 
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), (string) $request->input('author_email'), $phone)) {
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $user->email, $user->mobile)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -295,17 +310,15 @@ class ForumController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|min:30|max:50000',
-            'author_name' => 'required|string|max:120',
-            'author_email' => 'nullable|email|max:120',
-            'author_phone' => 'nullable|string|max:20',
         ]);
 
         $answer = Answer::create([
             'question_id' => $question->id,
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
-            'author_name' => trim($data['author_name']),
-            'author_email' => isset($data['author_email']) ? strtolower(trim($data['author_email'])) : null,
-            'author_phone' => \Modules\Site\Models\Forum\BanlistEntry::normalizePhone($phone),
+            'user_id' => $user->id,
+            'author_name' => $user->full_name,
+            'author_email' => $user->email,
+            'author_phone' => $user->mobile,
             'status' => Answer::STATUS_PENDING,
             'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
