@@ -1,12 +1,14 @@
 # مستند فرانت — سیستم یکپارچه‌ی ورود (Identity / Phone + OTP + Sanctum)
 
-> نسخه ۱ | تاریخ ۱۴۰۵/۰۳/۱۲
-> سیستم احراز هویت یکپارچه برای سایت Next.js، اپلیکیشن موبایل، و هر client دیگر.
-> همه‌ی کاربران از این endpoint وارد می‌شوند — مشتری، تکنسین، اپلیکیشن.
+> نسخه ۲ | تاریخ ۱۴۰۵/۰۳/۱۵
+> سیستم احراز هویت **مشتری‌ها** برای سایت Next.js، اپلیکیشن موبایل، و هر client دیگر.
+> Subject: `Modules\CRM\Models\Customer` (جدول `crm_customers`).
 > Token از نوع Sanctum (Bearer)، اعتبار **۳۰ روز** از آخرین استفاده.
 
-> **توجه:** پنل ادمین Blade و پنل تکنسین Blade فعلی **بدون تغییر** ادامه دارند
-> (همان session-based). این سیستم برای کلاینت‌های API است.
+> **توجه:** پنل ادمین Blade (App\Models\User) و پنل تکنسین Blade
+> (Modules\CRM\Models\Technician) **بدون تغییر** ادامه دارند — هر سه گروه از
+> Sanctum پشتیبانی می‌کنند (polymorphic tokens) ولی این endpointها فقط برای
+> **مشتری‌ها** (crm_customers) است.
 
 ---
 
@@ -18,11 +20,11 @@
         ← { ok, expires_in: 120, can_resend_in: 60 }
 کاربر کد ۶ رقمی دریافتی از SMS را وارد می‌کند
   └─→ POST /api/v1/auth/verify-otp { mobile, code }           (public)
-        ← { token, user, is_new, needs_profile }
+        ← { token, customer, is_new, needs_profile }
         💾 توکن را در storage ذخیره کنید (httpOnly cookie یا secure storage)
 اگر needs_profile === true:
   └─→ POST /api/v1/auth/complete-profile { first_name, last_name? }   (Bearer)
-        ← { user }
+        ← { customer }
 کاربر حالا کاملاً وارد شده — همه‌ی request های بعدی با Authorization: Bearer {token}
 ```
 
@@ -82,17 +84,17 @@
   "ok": true,
   "token": "1|abcdef0123456789...",
   "token_type": "Bearer",
-  "user": {
+  "customer": {
     "id": 42,
     "mobile": "09123456789",
     "first_name": null,             // null = هنوز نام ست نشده
     "last_name": null,
-    "full_name": "کاربر",            // یا "نام نام‌خانوادگی" اگر پر شده
+    "full_name": null,               // یا "نام نام‌خانوادگی" اگر پر شده
     "email": null,
     "avatar_url": null,
     "is_profile_complete": false,
     "mobile_verified_at": "2026-06-05T13:00:00+00:00",
-    "roles": ["customer"],
+    "subscription": "10042",         // wp_id + 10000 — شماره‌ی اشتراک
     "created_at": "2026-06-05T13:00:00+00:00"
   },
   "is_new": true,                   // اولین بار وارد می‌شود؟
@@ -116,13 +118,13 @@
 ```jsonc
 {
   "ok": true,
-  "user": { ... }   // همان شکل user که `is_profile_complete: true` دارد
+  "customer": { ... }   // همان شکل customer که `is_profile_complete: true` دارد
 }
 ```
 
 ### `GET /me` (Bearer)
 
-پاسخ 200: `{ "ok": true, "user": { ... } }`
+پاسخ 200: `{ "ok": true, "customer": { ... } }`
 
 ### `POST /logout` (Bearer)
 فقط توکن این دستگاه را revoke می‌کند. → `{ "ok": true }`
@@ -264,14 +266,27 @@ export async function logout() {
 
 ---
 
-## ۷) Migration برای کاربران موجود
+## ۷) Migration برای مشتری‌های موجود
 
-اگر کاربر قبلاً به‌صورت admin/staff/technician در `users` رکورد داشت، می‌تواند با همان شماره موبایل از این سیستم هم وارد شود — هیچ duplicate ساخته نمی‌شود (در `verifyOtp` بر اساس `mobile` query می‌کنیم).
+این سیستم روی جدول `crm_customers` کار می‌کند. مشتری‌های موجود (که از WordPress migrate شده‌اند یا از پنل CRM دستی ساخته شده‌اند) با همان شماره موبایل خود می‌توانند وارد شوند — هیچ duplicate ساخته نمی‌شود (در `verifyOtp` بر اساس `mobile` query می‌کنیم).
+
+**ستون‌های auth که به `crm_customers` اضافه شده:**
+`last_name`, `email`, `email_verified_at`, `mobile_verified_at`, `password`, `remember_token`, `avatar`, `is_active`, `last_login_at`, `last_login_ip`. اگر مشتری deactive باشد (`is_active=false`)، endpoint با خطای 422 جلوی ورود را می‌گیرد.
 
 **سناریوها:**
-- کاربر جدید: ثبت‌نام خودکار، `is_new: true`، `needs_profile: true`
-- کاربر existing بدون نام: `is_new: false`، `needs_profile: true`
-- کاربر existing با نام: `is_new: false`، `needs_profile: false`
+- مشتری جدید: ثبت‌نام خودکار، `is_new: true`، `needs_profile: true`
+- مشتری existing بدون `first_name`: `is_new: false`، `needs_profile: true`
+- مشتری existing با نام: `is_new: false`، `needs_profile: false`
+- مشتری deactive: `422` با پیام «حساب شما غیرفعال است.»
+
+### ستون‌های جدید روی content tables
+
+برای ربط هر سوال/پاسخ/کامنت به مشتری ثبت‌کننده، ستون `customer_id` (FK to `crm_customers`, `nullOnDelete`) به این جداول اضافه شده:
+- `site_forum_questions`
+- `site_forum_answers`
+- `site_comments`
+
+ستون قدیمی `user_id` برای سازگاری عقب (backward compatibility) همچنان باقی است اما در ثبت‌های جدید استفاده نمی‌شود.
 
 ---
 
