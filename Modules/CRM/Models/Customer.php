@@ -2,17 +2,25 @@
 
 namespace Modules\CRM\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
- * مشتری CRM — هم‌سو با مدل WP که فقط mobile/first_name/phone را نگه می‌دارد.
+ * مشتری CRM + هویت لاگین سایت/اپ.
  *
- * شماره اشتراک (subscription) در WP محاسبه‌شده است: user_id + 10000.
- * در اینجا همان قاعده با accessor پیاده‌سازی شده تا نیاز به ستون اضافی نباشد.
+ * این جدول هم محل ذخیره‌ی داده‌های CRM مشتری است (سفارش، فاکتور، یادداشت)
+ * و هم مدل Authenticatable برای ورود از طریق OTP. ادمین/staff همچنان از
+ * App\Models\User استفاده می‌کنند؛ تکنسین‌ها از Modules\CRM\Models\Technician.
+ *
+ * شماره اشتراک (subscription) همان فرمول قدیمی: wp_id + 10000 (یا id + 10000).
  */
-class Customer extends Model
+class Customer extends Authenticatable
 {
+    use HasApiTokens;
+    use Notifiable;
+
     protected $table = 'crm_customers';
 
     /** آفست شماره اشتراک نمایشی نسبت به id (مثل WP). */
@@ -21,22 +29,84 @@ class Customer extends Model
     protected $fillable = [
         'wp_id',
         'mobile',
+        'mobile_verified_at',
+        'email',
+        'email_verified_at',
         'first_name',
+        'last_name',
         'phone',
+        'password',
+        'avatar',
+        'is_active',
+        'last_login_at',
+        'last_login_ip',
         'notes',
     ];
 
-    protected $casts = [
-        'wp_id' => 'integer',
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
-    /**
-     * شماره اشتراک = (wp_id ?? id) + 10000.
-     *
-     * برای مشتریان سینک‌شده از WP، wp_id مرجع است تا شمارهٔ اشتراکشان
-     * با همان مقدار تاریخی WP ثابت بماند. برای مشتریان جدیدِ لاراولی
-     * که wp_id ندارند، از id لاراول استفاده می‌شود.
-     */
+    protected function casts(): array
+    {
+        return [
+            'wp_id' => 'integer',
+            'mobile_verified_at' => 'datetime',
+            'email_verified_at' => 'datetime',
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    // ─── Auth helpers ──────────────────────────────────────────────
+
+    public function isMobileVerified(): bool
+    {
+        return ! is_null($this->mobile_verified_at);
+    }
+
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true);
+    }
+
+    public function recordLogin(?string $ip = null): void
+    {
+        $this->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $ip,
+        ])->save();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeByMobile($query, string $mobile)
+    {
+        return $query->where('mobile', $mobile);
+    }
+
+    // ─── Display ─────────────────────────────────────────────────
+
+    public function getFullNameAttribute(): string
+    {
+        $full = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+
+        return $full !== '' ? $full : ($this->mobile ?? 'مشتری');
+    }
+
+    /** نام نمایشی legacy — هم‌خوان با کد قدیمی که این accessor را صدا می‌زد. */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->full_name;
+    }
+
+    // ─── Subscription number (legacy formula) ─────────────────────
+
     public function getSubscriptionAttribute(): int
     {
         $base = $this->wp_id ?? $this->id;
@@ -44,7 +114,6 @@ class Customer extends Model
         return (int) $base + self::SUBSCRIPTION_OFFSET;
     }
 
-    /** مشتری از روی شماره اشتراک — اول wp_id را امتحان می‌کند، سپس id لاراول. */
     public static function findBySubscription(int|string $subscription): ?self
     {
         $sub = (int) $subscription;
@@ -58,17 +127,12 @@ class Customer extends Model
             ?? static::find($candidate);
     }
 
-    /** مشتری از روی موبایل (دقیق، مثل WP). */
     public static function findByMobile(string $mobile): ?self
     {
         return static::where('mobile', $mobile)->first();
     }
 
-    /** نام نمایشی — فقط first_name (WP اصلاً last_name ندارد). */
-    public function getDisplayNameAttribute(): string
-    {
-        return trim($this->first_name ?? '') !== '' ? $this->first_name : $this->mobile;
-    }
+    // ─── Relations ───────────────────────────────────────────────
 
     public function orders(): HasMany
     {
@@ -80,19 +144,33 @@ class Customer extends Model
         return $this->hasMany(Invoice::class);
     }
 
-    /** Push تغییرات به WP. */
+    // ─── WP push observer — async via afterResponse, env-toggleable ─
+
     protected static function booted(): void
     {
         $push = function (self $c) {
-            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
-            try {
-                app(\Modules\CRM\Services\WpPushService::class)->pushCustomer($c);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('crm.wp_push.customer_failed', [
-                    'id' => $c->id, 'error' => $e->getMessage(),
-                ]);
+            // در CLI فقط در صورتی push شود که صراحتاً force شده باشد (seeders/commands)
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
+                return;
             }
+            // kill switch سراسری — اگر WP خاموش است، در .env بگذارید: CRM_WP_PUSH_ENABLED=false
+            if (! config('crm.wp_push.enabled', true)) {
+                return;
+            }
+
+            // HTTP push بعد از ارسال response اجرا می‌شود تا کاربر منتظر نماند
+            dispatch(function () use ($c) {
+                try {
+                    app(\Modules\CRM\Services\WpPushService::class)->pushCustomer($c);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('crm.wp_push.customer_failed', [
+                        'id' => $c->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
         };
+
         static::created($push);
         static::updated($push);
     }
