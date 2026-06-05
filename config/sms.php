@@ -10,8 +10,8 @@ return [
     'default' => env('SMS_DRIVER', 'kavenegar'),
 
     'kavenegar' => [
-        'api_key' => env('KAVENEGAR_API_KEY'),
-        'sender' => env('KAVENEGAR_SENDER'),
+        'api_key' => env('SMS_KAVENEGAR_API_KEY'),
+        'sender' => env('SMS_KAVENEGAR_SENDER'),
     ],
 
     // پروکسی برای ارسال پیامک (وقتی IP سرور بلاک شده)
@@ -33,8 +33,9 @@ return [
 
     'otp' => [
         'length' => 6,
-        'expires_in' => 120,
-        'max_attempts' => 5,
-        'resend_delay' => 60,
+        // اعتبار کد به ثانیه — از SMS_OTP_EXPIRE_MINUTES (پیش‌فرض ۲ دقیقه) محاسبه می‌شود
+        'expires_in' => (int) env('SMS_OTP_EXPIRE_MINUTES', 2) * 60,
+        'max_attempts' => (int) env('SMS_OTP_MAX_ATTEMPTS', 5),
+        'resend_delay' => (int) env('SMS_OTP_RESEND_SECONDS', 60),
     ],
 ];
