@@ -136,12 +136,12 @@ class CommentController extends Controller
 
     private function createComment(Request $request, string $ownerType, int $ownerId): JsonResponse
     {
-        // ثبت کامنت فقط با لاگین — هویت از حساب کاربر گرفته می‌شود.
-        $user = $request->user();
-        if (! $user) {
+        // ثبت کامنت فقط با لاگین مشتری — هویت از حساب گرفته می‌شود.
+        $customer = $request->user();
+        if (! $customer instanceof \Modules\CRM\Models\Customer) {
             return response()->json(['ok' => false, 'message' => 'برای ثبت نظر باید وارد شوید.'], 401);
         }
-        if (empty($user->first_name)) {
+        if (empty($customer->first_name)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
@@ -169,9 +169,9 @@ class CommentController extends Controller
             'commentable_id' => $ownerId,
             'parent_id' => $data['parent_id'] ?? null,
             'root_id' => $rootId,
-            'user_id' => $user->id,
-            'author_name' => $user->full_name,
-            'author_email' => $user->email,
+            'customer_id' => $customer->id,
+            'author_name' => $customer->full_name,
+            'author_email' => $customer->email,
             'content' => trim($data['content']),
             'status' => Comment::STATUS_PENDING,
             'ip' => $request->ip(),

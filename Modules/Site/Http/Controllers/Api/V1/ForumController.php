@@ -217,13 +217,13 @@ class ForumController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // از این پس فقط کاربر authenticated می‌تواند سوال ثبت کند.
+        // از این پس فقط مشتری authenticated می‌تواند سوال ثبت کند.
         // (Sanctum middleware در routes جداگانه auth الزامی می‌کند.)
-        $user = $request->user();
-        if (! $user) {
+        $customer = $request->user();
+        if (! $customer instanceof \Modules\CRM\Models\Customer) {
             return response()->json(['ok' => false, 'message' => 'برای ثبت سوال باید وارد شوید.'], 401);
         }
-        if (empty($user->first_name)) {
+        if (empty($customer->first_name)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
@@ -232,7 +232,7 @@ class ForumController extends Controller
         }
 
         // banlist check
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $user->email, $user->mobile)) {
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $customer->email, $customer->mobile)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -259,10 +259,10 @@ class ForumController extends Controller
             'tags' => $data['tags'] ?? null,
             'device_id' => $device?->id,
             'brand_id' => $brand?->id,
-            'user_id' => $user->id,
-            'author_name' => $user->full_name,
-            'author_email' => $user->email,
-            'author_phone' => $user->mobile,
+            'customer_id' => $customer->id,
+            'author_name' => $customer->full_name,
+            'author_email' => $customer->email,
+            'author_phone' => $customer->mobile,
             'author_token' => $token,
             'status' => Question::STATUS_PENDING,
             'ip' => $request->ip(),
@@ -287,11 +287,11 @@ class ForumController extends Controller
      */
     public function storeAnswer(Request $request, string $slug): JsonResponse
     {
-        $user = $request->user();
-        if (! $user) {
+        $customer = $request->user();
+        if (! $customer instanceof \Modules\CRM\Models\Customer) {
             return response()->json(['ok' => false, 'message' => 'برای ثبت پاسخ باید وارد شوید.'], 401);
         }
-        if (empty($user->first_name)) {
+        if (empty($customer->first_name)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
@@ -299,7 +299,7 @@ class ForumController extends Controller
             ], 422);
         }
 
-        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $user->email, $user->mobile)) {
+        if (\Modules\Site\Models\Forum\BanlistEntry::isBanned($request->ip(), $customer->email, $customer->mobile)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی شما مسدود شده است.'], 403);
         }
 
@@ -315,10 +315,10 @@ class ForumController extends Controller
         $answer = Answer::create([
             'question_id' => $question->id,
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
-            'user_id' => $user->id,
-            'author_name' => $user->full_name,
-            'author_email' => $user->email,
-            'author_phone' => $user->mobile,
+            'customer_id' => $customer->id,
+            'author_name' => $customer->full_name,
+            'author_email' => $customer->email,
+            'author_phone' => $customer->mobile,
             'status' => Answer::STATUS_PENDING,
             'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
