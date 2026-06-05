@@ -3,7 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Identity\Http\Controllers\Api\V1\AuthController;
 
-Route::prefix('api/v1/auth')->group(function () {
+// prefix v1/* — هم‌خوان با باقی API های پروژه (Site, Catalog, ...). به‌علاوه
+// bootstrap/app.php با $request->is('v1/*') اطمینان می‌دهد که exceptionها به
+// JSON رندر شوند (به‌جای redirect HTML).
+Route::prefix('v1/auth')->group(function () {
     // Public — rate-limited
     Route::middleware('throttle:10,1')->group(function () {
         Route::post('/send-otp', [AuthController::class, 'sendOtp'])->name('identity.send-otp');
