@@ -614,7 +614,15 @@
             @foreach($documents as $doc)
                 <div class="text-center">
                     <p class="text-xs font-semibold text-gray-600 mb-1.5">{{ $doc['label'] }}</p>
-                    @if($registration->{$doc['field']})
+                    @php
+                        $docPath = $registration->{$doc['field']};
+                        // path در DB هست ولی فایل فیزیکی روی storage موجوده؟
+                        // (پس از حادثهٔ pull اشتباه برانچ deploy/ganje، فایل‌های
+                        //  storage/app/public پاک شدند ولی رفرنس‌های DB حفظ شدن
+                        //  تا اطلاع‌رسانی و آپلود مجدد ممکن باشد.)
+                        $docExists = $docPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($docPath);
+                    @endphp
+                    @if($docExists)
                         @php $docUrl = route('technician.admin.registrations.document', ['id' => $registration->id, 'field' => $doc['field']]); @endphp
                         <a href="{{ $docUrl }}" target="_blank" class="block group">
                             <div class="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group-hover:border-blue-400 transition-colors">
@@ -622,6 +630,15 @@
                             </div>
                             <span class="text-xs text-blue-500 mt-1 inline-block group-hover:underline">مشاهده</span>
                         </a>
+                    @elseif($docPath)
+                        {{-- DB رفرنس داره ولی فایل فیزیکی نیست — placeholder هشدار --}}
+                        <div class="aspect-[3/4] bg-amber-50 rounded-lg border border-amber-300 flex flex-col items-center justify-center p-2 text-center">
+                            <svg class="w-7 h-7 text-amber-500 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span class="text-[10px] font-bold text-amber-700 leading-tight">فایل از دست رفته</span>
+                            <span class="text-[10px] text-amber-600 mt-0.5 leading-tight">نیاز به آپلود مجدد</span>
+                        </div>
                     @else
                         <div class="aspect-[3/4] bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
                             <span class="text-xs text-gray-300">آپلود نشده</span>
