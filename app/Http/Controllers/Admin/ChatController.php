@@ -299,8 +299,6 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        \Log::info('Chat messages request', ['auth_user_id' => $userId, 'conversation_id' => $conversation->id]);
-
         // Check if user is participant
         if (!$conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
