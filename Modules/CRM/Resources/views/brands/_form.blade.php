@@ -345,18 +345,18 @@
 
     {{-- ─── ۱۲) ویدیوها ─── --}}
     <x-crm::section-card sectionKey="videos" title="ویدیوهای اختصاصی این برند" icon="🎬"
-        description="aparat_id / youtube_id / mp4 مستقیم (اولویت با aparat). خالی = template"
+        description="aparat_id / youtube_id / mp4 مستقیم (اولویت با aparat). خالی = template. در عنوان/توضیح می‌توانید از {brand} استفاده کنید — هنگام نمایش با نام برند جایگزین می‌شود."
         count="{{ $videosCount }}">
         @include('crm::partials.json-repeater', [
             'name' => 'videos',
             'label' => 'لیست ویدیوها',
             'items' => old('videos', $brand->videos ?? []),
             'item_fields' => [
-                'title' => ['label' => 'عنوان ویدیو', 'type' => 'string'],
+                'title' => ['label' => 'عنوان ویدیو (با {brand})', 'type' => 'string'],
                 'aparat_id' => ['label' => 'Aparat ID', 'type' => 'string'],
                 'youtube_id' => ['label' => 'YouTube ID', 'type' => 'string'],
                 'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
-                'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea'],
+                'description' => ['label' => 'توضیح کوتاه (با {brand})', 'type' => 'textarea'],
                 'poster_url' => ['label' => 'تصویر cover — انتخاب از مخزن مدیا', 'type' => 'image'],
             ],
         ])
