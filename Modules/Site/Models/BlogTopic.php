@@ -13,6 +13,7 @@ class BlogTopic extends Model
     protected $table = 'site_blog_topics';
 
     protected $fillable = [
+        'wp_term_id',
         'slug',
         'name',
         'icon',
@@ -27,6 +28,7 @@ class BlogTopic extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'wp_term_id' => 'integer',
     ];
 
     public function articles(): BelongsToMany
