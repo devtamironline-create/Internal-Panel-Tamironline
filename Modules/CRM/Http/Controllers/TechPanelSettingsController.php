@@ -124,7 +124,11 @@ class TechPanelSettingsController extends Controller
 
         $path = Setting::get($key);
         if (! $path || ! Storage::disk('public')->exists($path)) {
-            abort(404);
+            // تصویر فیزیکی موجود نیست (یا تنظیمات خالی است، یا فایل
+            // در حادثهٔ pull برانچ deploy/ganje پاک شده). به‌جای 404،
+            // یک SVG خنثی برمی‌گردانیم تا UI شکسته نباشد. ادمین می‌تواند
+            // از صفحهٔ تنظیمات پنل تکنسین تصویر را دوباره آپلود کند.
+            return self::placeholderResponse($key);
         }
 
         return Storage::disk('public')->response(
@@ -135,5 +139,33 @@ class TechPanelSettingsController extends Controller
                 'Cache-Control' => 'public, max-age=3600',
             ]
         );
+    }
+
+    /**
+     * SVG placeholder که جای تصویر گم‌شده نمایش داده می‌شود.
+     * بسته به نوع کلید (hero/banner/logo/avatar) رنگ و آیکن متناسب.
+     */
+    public static function placeholderResponse(string $key)
+    {
+        $isAvatar = str_contains($key, 'avatar');
+        $bg = $isAvatar ? '#e0e7ff' : '#dbeafe';
+        $fg = $isAvatar ? '#6366f1' : '#3b82f6';
+        $iconPath = $isAvatar
+            ? 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
+            : 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z';
+
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
+    <rect width="200" height="200" fill="{$bg}"/>
+    <g transform="translate(76 76) scale(2)" fill="none" stroke="{$fg}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="{$iconPath}"/>
+    </g>
+</svg>
+SVG;
+
+        return response($svg, 200, [
+            'Content-Type'  => 'image/svg+xml; charset=utf-8',
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
     }
 }

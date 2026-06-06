@@ -349,7 +349,10 @@ class TechnicianAdminController extends Controller
         $relativePath = $registration->{$field} ?? null;
 
         if (empty($relativePath) || ! Storage::disk('public')->exists($relativePath)) {
-            abort(404);
+            // فایل گم شده — placeholder SVG برمی‌گردانیم تا اگر URL
+            // مستقیماً باز شد، تب خالی نباشد. در صفحهٔ فهرست مدارک،
+            // view از قبل کادر زرد «فایل از دست رفته» را نشان می‌دهد.
+            return \Modules\CRM\Http\Controllers\TechPanelSettingsController::placeholderResponse('document');
         }
 
         // inline preview (تصویر/PDF/ویدیو در تب باز شود) — نه دانلود اجباری.

@@ -183,7 +183,12 @@ class TicketController extends Controller
             $path = $reply->image_path;
         }
 
-        if (! Storage::disk('public')->exists($path)) abort(404);
+        if (! Storage::disk('public')->exists($path)) {
+            // فایل ضمیمه روی disk موجود نیست (نتیجهٔ pull اشتباه برانچ
+            // deploy/ganje). به‌جای 404 یک SVG placeholder برمی‌گردانیم
+            // تا UI آیکن شکسته نشان ندهد.
+            return TechPanelSettingsController::placeholderResponse('attachment');
+        }
 
         return Storage::disk('public')->response($path, basename($path), [
             'Cache-Control' => 'private, max-age=3600',
