@@ -33,6 +33,12 @@ class SiteServiceProvider extends ServiceProvider
         );
 
         $this->registerValidators();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Modules\Site\Console\Commands\ImportArticlesFromWp::class,
+            ]);
+        }
     }
 
     /**
