@@ -128,7 +128,7 @@ class CatalogBrandController extends Controller
                         'enabled' => $enabled('videos', true),
                         'title' => $template['videos']['title'] ?? null,
                         'subtitle' => $template['videos']['subtitle'] ?? null,
-                        'items' => $this->buildVideos($brand, $template),
+                        'items' => $this->buildVideos($brand, $template, $context),
                     ],
                     'forum_questions' => [
                         'enabled' => $enabled('forum_questions', true),
@@ -145,15 +145,20 @@ class CatalogBrandController extends Controller
 
     /**
      * منطق: ابتدا videos اختصاصی برند (JSON روی entity)، در صورت خالی → template.videos.items.
+     * در هر دو حالت `{brand}` و دیگر placeholderها روی متن‌ها اعمال می‌شوند.
      *
+     * @param  array<string, string>  $context
      * @return array<int, array<string, mixed>>
      */
-    private function buildVideos(Brand $brand, array $template): array
+    private function buildVideos(Brand $brand, array $template, array $context = []): array
     {
         $entity = is_array($brand->videos) ? array_values(array_filter($brand->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
         if ($entity !== []) {
-            return $this->shapeVideos($entity);
+            $hydrated = $context === [] ? $entity : $this->sections->applyPlaceholders($entity, $context);
+
+            return $this->shapeVideos($hydrated);
         }
+        // template.videos.items از قبل توسط loadForPublic placeholder خورده — دوباره نخور
         $tpl = (array) ($template['videos']['items'] ?? []);
 
         return $this->shapeVideos($tpl);
