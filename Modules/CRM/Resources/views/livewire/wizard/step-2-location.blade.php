@@ -31,9 +31,12 @@
         </div>
     </div>
 
-    {{-- منطقه — اختیاری، فقط اگر شهر منطقه داشته باشد. dropdown با
-         hasRegions=false مخفی می‌ماند. --}}
-    <div wire:ignore id="orderwiz-region-wrap" style="display: {{ $this->regions->count() ? 'block' : 'none' }};">
+    {{-- منطقه — اختیاری، فقط اگر شهر منطقه داشته باشد. wrap همیشه در
+         DOM رندر می‌شود تا Tom Select بتواند روی select داخلش init شود
+         (روی عنصر display:none گاهی init نمی‌شود). JS بعد از init و
+         با تغییر شهر، wrap را نشان/پنهان می‌کند. data-has-regions
+         پرچم وضعیت اولیه است: 0 = پنهان شو، 1 = با لیست موجود نمایان. --}}
+    <div wire:ignore id="orderwiz-region-wrap" data-has-regions="{{ $this->regions->count() ? '1' : '0' }}">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">منطقه</label>
         <select id="orderwiz-region"
                 data-tom-select data-placeholder="منطقه (اختیاری)..."
@@ -130,6 +133,13 @@
             if (regionEl && !regionEl.tomselect) return false;
             if (provinceEl.dataset.wizBound === '1') return true;
             provinceEl.dataset.wizBound = '1';
+
+            // وضعیت اولیهٔ wrap منطقه: اگر در رندر اولیه منطقه‌ای وجود
+            // نداشت (data-has-regions="0")، wrap را پنهان کن. Tom Select
+            // قبلاً init شده، پس مخفی کردن بعدش بی‌خطر است.
+            if (regionWrap && regionWrap.dataset.hasRegions === '0') {
+                regionWrap.style.display = 'none';
+            }
 
             // بسته شدن اولیه شهر اگر استانی انتخاب نشده
             if (!provinceEl.value) cityEl.tomselect.disable();
