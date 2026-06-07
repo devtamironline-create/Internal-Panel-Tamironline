@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\ServiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\StatusController;
 use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
 use Modules\CustomerApp\Http\Middleware\IdempotencyKey;
@@ -34,6 +35,12 @@ Route::prefix('v1/customer')
             ->name('api.customer.locations.states');
         Route::get('/locations/cities', [LocationController::class, 'cities'])
             ->name('api.customer.locations.cities');
+
+        // Services picker — انواع خدمات و ایرادات per-device
+        Route::get('/services/types', [ServiceController::class, 'types'])
+            ->name('api.customer.services.types');
+        Route::get('/services/objections', [ServiceController::class, 'objections'])
+            ->name('api.customer.services.objections');
 
         // ─── Private — auth:sanctum + rolling token ──────────────
         Route::middleware(['auth:sanctum', RollingToken::class])->group(function () {
