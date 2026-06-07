@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\BootstrapController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\HolidayController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\InvoiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\NotificationController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\OrderController;
@@ -79,6 +80,12 @@ Route::prefix('v1/customer')
                 ->whereNumber('id')->name('api.customer.orders.version');
             Route::post('/orders/{id}/review', [ReviewController::class, 'store'])
                 ->whereNumber('id')->name('api.customer.orders.review');
+
+            // Invoice — JSON و HTML (قابل تبدیل به PDF)
+            Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])
+                ->whereNumber('id')->name('api.customer.orders.invoice');
+            Route::get('/orders/{id}/invoice.pdf', [InvoiceController::class, 'pdf'])
+                ->whereNumber('id')->name('api.customer.orders.invoice.pdf');
 
             // Profile (full — جداگانه از /auth/me و /auth/complete-profile)
             Route::get('/profile', [ProfileController::class, 'show'])
