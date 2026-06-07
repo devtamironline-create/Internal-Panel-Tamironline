@@ -226,6 +226,18 @@
                                         <div class="text-gray-700 whitespace-pre-wrap leading-7">{{ $order->lead_notes }}</div>
                                     </div>
                                 @endif
+                                @if($order->problem_title)
+                                    <div class="pt-2 border-t border-rose-200">
+                                        <div class="text-xs text-gray-500 mb-1">ایرادهای ذکر شده:</div>
+                                        <div class="text-gray-700">{{ $order->problem_title }}</div>
+                                    </div>
+                                @endif
+                                @if($order->problem_description)
+                                    <div class="pt-2 border-t border-rose-200">
+                                        <div class="text-xs text-gray-500 mb-1">شرح ایراد:</div>
+                                        <div class="text-gray-700 whitespace-pre-wrap leading-7">{{ $order->problem_description }}</div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>

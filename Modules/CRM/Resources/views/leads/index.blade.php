@@ -165,9 +165,17 @@
                             {{ $loc !== '' ? $loc : '—' }}
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                            {{ $lead->leadReason?->name ?: '—' }}
+                            <div class="font-medium">{{ $lead->leadReason?->name ?: '—' }}</div>
                             @if($lead->lead_notes)
-                                <div class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ $lead->lead_notes }}</div>
+                                <div class="text-xs text-gray-500 mt-1 whitespace-pre-wrap leading-5">{{ $lead->lead_notes }}</div>
+                            @endif
+                            @if($lead->problem_description)
+                                <div class="text-xs text-gray-500 mt-1 whitespace-pre-wrap leading-5 border-t border-gray-100 pt-1">
+                                    <span class="text-gray-400">شرح:</span> {{ $lead->problem_description }}
+                                </div>
+                            @endif
+                            @if($lead->problem_title)
+                                <div class="text-xs text-amber-700 mt-1">⚠ {{ $lead->problem_title }}</div>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($lead->created_at)</td>
