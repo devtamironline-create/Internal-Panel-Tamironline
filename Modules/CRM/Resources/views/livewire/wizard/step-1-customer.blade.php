@@ -102,11 +102,11 @@
          دقیق نیاز دارند و نه منطقه. اگر شهر منطقه نداشته باشد
          (کوچک‌تر است)، dropdown منطقه نمایش داده نمی‌شود. --}}
     @if($isOrderable && $this->regions->count())
-        <div>
+        <div wire:key="region-select-{{ $cityId }}">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 منطقه {{ $this->selectedCity ? '— ' . $this->selectedCity->name : '' }}
             </label>
-            <select wire:model="regionId"
+            <select wire:model="regionId" data-searchable
                     class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
                 <option value="">— بدون منطقه —</option>
                 @foreach($this->regions as $r)

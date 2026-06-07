@@ -71,12 +71,22 @@ class CityConverterController extends Controller
             // 1) ساخت منطقه ذیل شهر مقصد (idempotent)
             $slug = Str::slug($validated['region_name']) ?: ('region-' . Str::random(8));
 
-            // اگر منطقه‌ای با همین نام/slug در شهر مقصد هست، همان را استفاده کن
+            // اگر منطقه‌ای با همین نام/slug در شهر مقصد هست، همان را استفاده کن.
+            // sort_order ترجیحاً از عدد داخل نام («منطقه ۱۲» → ۱۲) استخراج
+            // می‌شود تا dropdown به‌جای الفبایی (1، 10، 11، ...) به‌صورت
+            // عددی (1، 2، 3، ...) مرتب شود.
+            $sortOrder = 0;
+            if (preg_match('/(\d+)/u', $validated['region_name'], $m)) {
+                $sortOrder = (int) $m[1];
+            } elseif ($city->sort_order) {
+                $sortOrder = (int) $city->sort_order;
+            }
+
             $region = Region::firstOrCreate(
                 ['city_id' => $target->id, 'slug' => $slug],
                 [
                     'name'       => $validated['region_name'],
-                    'sort_order' => (int) ($city->sort_order ?? 0),
+                    'sort_order' => $sortOrder,
                     'is_active'  => true,
                 ]
             );
