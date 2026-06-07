@@ -16,13 +16,20 @@ class City extends Model
         'name',
         'slug',
         'sort_order',
+        'is_active',
     ];
 
     protected $casts = [
         'wp_id' => 'integer',
         'province_id' => 'integer',
         'sort_order' => 'integer',
+        'is_active' => 'boolean',
     ];
+
+    public function scopeActive($q)
+    {
+        return $q->where('is_active', true);
+    }
 
     public function province(): BelongsTo
     {

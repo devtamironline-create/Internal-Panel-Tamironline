@@ -128,6 +128,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
         Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
         Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
+        // تبدیل یک شهر به منطقهٔ ذیل شهر دیگر — برای رفع داده‌های قدیمی
+        // که «منطقه N» به‌اشتباه به‌عنوان شهر ثبت شده بودند.
+        Route::get('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'form'])->name('cities.convert.form');
+        Route::post('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'store'])->name('cities.convert.store');
     });
 
     // ─── مشتری‌ها ──────────────────────────────────────────────────

@@ -52,14 +52,22 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($cities as $city)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $city->name }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                        {{ $city->name }}
+                        @if(isset($city->is_active) && ! $city->is_active)
+                            <span class="ms-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-600">غیرفعال</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->province?->name }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->slug }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->sort_order }}</td>
                     <td class="px-6 py-4">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             @can('manage-crm-cities')
                             <a href="{{ route('crm.cities.edit', $city) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
+                            <a href="{{ route('crm.cities.convert.form', $city) }}" class="text-emerald-600 hover:text-emerald-800 text-sm" title="تبدیل این شهر به منطقهٔ ذیل شهر دیگر">
+                                تبدیل به منطقه
+                            </a>
                             <form action="{{ route('crm.cities.destroy', $city) }}" method="POST" class="inline" onsubmit="return confirm('حذف این شهر انجام شود؟');">
                                 @csrf
                                 @method('DELETE')

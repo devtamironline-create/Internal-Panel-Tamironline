@@ -130,7 +130,7 @@ class CustomerController extends Controller
      */
     public function citiesOfProvince(Province $province)
     {
-        $cities = $province->cities()->ordered()->get(['id', 'name']);
+        $cities = $province->cities()->active()->ordered()->get(['id', 'name']);
 
         // اگر برای این استان هیچ شهری در دیتابیس نیست، یک ردیف
         // پیش‌فرض با نام خود استان می‌سازیم تا اپراتور بتواند سفارش
