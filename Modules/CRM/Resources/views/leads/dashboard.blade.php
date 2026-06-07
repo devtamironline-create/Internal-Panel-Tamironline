@@ -73,7 +73,8 @@
                 <div class="space-y-2">
                     @php $maxR = $reasonBreakdown->max('count'); @endphp
                     @foreach($reasonBreakdown as $row)
-                        <div>
+                        <a href="{{ route('crm.leads.index', ['lead_reason_id' => $row['id']]) }}"
+                           class="block hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1 -mx-2 transition">
                             <div class="flex items-center justify-between text-xs mb-1">
                                 <span class="text-gray-700 dark:text-gray-300">{{ $row['name'] }}</span>
                                 <span class="font-bold text-rose-700">{{ number_format($row['count']) }}</span>
@@ -81,7 +82,7 @@
                             <div class="bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                 <div class="bg-rose-500 h-full" style="width: {{ $maxR > 0 ? round($row['count'] / $maxR * 100) : 0 }}%;"></div>
                             </div>
-                        </div>
+                        </a>
                     @endforeach
                     @if($reasonNullCount > 0)
                         <div class="text-xs text-gray-500 mt-3 pt-2 border-t border-gray-100">
@@ -101,7 +102,8 @@
                 <div class="space-y-2">
                     @php $maxI = $introBreakdown->max('cnt'); @endphp
                     @foreach($introBreakdown as $row)
-                        <div>
+                        <a href="{{ route('crm.leads.index', ['introduction' => $row->introduction]) }}"
+                           class="block hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1 -mx-2 transition">
                             <div class="flex items-center justify-between text-xs mb-1">
                                 <span class="text-gray-700 dark:text-gray-300">{{ $row->introduction }}</span>
                                 <span class="font-bold text-blue-700">{{ number_format($row->cnt) }}</span>
@@ -109,7 +111,7 @@
                             <div class="bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                 <div class="bg-blue-500 h-full" style="width: {{ $maxI > 0 ? round($row->cnt / $maxI * 100) : 0 }}%;"></div>
                             </div>
-                        </div>
+                        </a>
                     @endforeach
                 </div>
             @else
@@ -123,11 +125,14 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">پرتکرارترین دستگاه‌ها</h2>
             @if($topDevices->isNotEmpty())
-                <ul class="text-sm space-y-1.5">
+                <ul class="text-sm divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach($topDevices as $d)
-                        <li class="flex items-center justify-between">
-                            <span class="text-gray-700 dark:text-gray-300">{{ $d->device?->name ?? '—' }}</span>
-                            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($d->cnt) }}</span>
+                        <li>
+                            <a href="{{ route('crm.leads.index', ['device_id' => $d->device_id]) }}"
+                               class="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1.5 -mx-2 transition">
+                                <span class="text-gray-700 dark:text-gray-300">{{ $d->device?->name ?? '—' }}</span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($d->cnt) }}</span>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -139,11 +144,14 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">پرتکرارترین برندها</h2>
             @if($topBrands->isNotEmpty())
-                <ul class="text-sm space-y-1.5">
+                <ul class="text-sm divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach($topBrands as $b)
-                        <li class="flex items-center justify-between">
-                            <span class="text-gray-700 dark:text-gray-300">{{ $b->brand?->name ?? '—' }}</span>
-                            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($b->cnt) }}</span>
+                        <li>
+                            <a href="{{ route('crm.leads.index', ['brand_id' => $b->brand_id]) }}"
+                               class="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1.5 -mx-2 transition">
+                                <span class="text-gray-700 dark:text-gray-300">{{ $b->brand?->name ?? '—' }}</span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($b->cnt) }}</span>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -158,11 +166,14 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">پرتکرارترین شهرها</h2>
             @if($topCities->isNotEmpty())
-                <ul class="text-sm space-y-1.5">
+                <ul class="text-sm divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach($topCities as $c)
-                        <li class="flex items-center justify-between">
-                            <span class="text-gray-700 dark:text-gray-300">{{ $c->city?->name ?? '—' }}</span>
-                            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($c->cnt) }}</span>
+                        <li>
+                            <a href="{{ route('crm.leads.index', ['city_id' => $c->city_id]) }}"
+                               class="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1.5 -mx-2 transition">
+                                <span class="text-gray-700 dark:text-gray-300">{{ $c->city?->name ?? '—' }}</span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($c->cnt) }}</span>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -174,14 +185,17 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">پرتکرارترین مناطق</h2>
             @if($topRegions->isNotEmpty())
-                <ul class="text-sm space-y-1.5">
+                <ul class="text-sm divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach($topRegions as $r)
-                        <li class="flex items-center justify-between">
-                            <span class="text-gray-700 dark:text-gray-300">
-                                {{ $r->region?->name ?? '—' }}
-                                <span class="text-xs text-gray-400">({{ $r->region?->city?->name }})</span>
-                            </span>
-                            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($r->cnt) }}</span>
+                        <li>
+                            <a href="{{ route('crm.leads.index', ['region_id' => $r->region_id]) }}"
+                               class="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1.5 -mx-2 transition">
+                                <span class="text-gray-700 dark:text-gray-300">
+                                    {{ $r->region?->name ?? '—' }}
+                                    <span class="text-xs text-gray-400">({{ $r->region?->city?->name }})</span>
+                                </span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($r->cnt) }}</span>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -191,22 +205,6 @@
         </div>
     </div>
 
-    {{-- ایرادها --}}
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-        <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">پرتکرارترین ایرادهای مطرح‌شده</h2>
-        @if($topProblems->isNotEmpty())
-            <ul class="text-sm space-y-1.5">
-                @foreach($topProblems as $p)
-                    <li class="flex items-center justify-between">
-                        <span class="text-gray-700 dark:text-gray-300 truncate" title="{{ $p->problem_title }}">{{ \Illuminate\Support\Str::limit($p->problem_title, 80) }}</span>
-                        <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded ms-2 shrink-0">{{ number_format($p->cnt) }}</span>
-                    </li>
-                @endforeach
-            </ul>
-        @else
-            <p class="text-xs text-gray-400 text-center py-8">داده‌ای پیدا نشد.</p>
-        @endif
-    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>

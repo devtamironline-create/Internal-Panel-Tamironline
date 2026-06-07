@@ -28,6 +28,7 @@ class LeadController extends Controller
         $search       = $request->string('search')->toString();
         $provinceId   = $request->integer('province_id');
         $cityId       = $request->integer('city_id');
+        $regionId     = $request->integer('region_id');
         $brandId      = $request->integer('brand_id');
         $deviceId     = $request->integer('device_id');
         $leadReasonId = $request->integer('lead_reason_id');
@@ -40,6 +41,7 @@ class LeadController extends Controller
 
         $this->applyFilters($query, [
             'search' => $search, 'province_id' => $provinceId, 'city_id' => $cityId,
+            'region_id' => $regionId,
             'brand_id' => $brandId, 'device_id' => $deviceId,
             'lead_reason_id' => $leadReasonId, 'introduction' => $introduction,
             'from_date' => $fromDate, 'to_date' => $toDate,
@@ -69,7 +71,7 @@ class LeadController extends Controller
 
         return view('crm::leads.index', compact(
             'leads', 'provinces', 'cities', 'brands', 'devices', 'leadReasons', 'introductionList',
-            'search', 'provinceId', 'cityId', 'brandId', 'deviceId', 'leadReasonId',
+            'search', 'provinceId', 'cityId', 'regionId', 'brandId', 'deviceId', 'leadReasonId',
             'introduction', 'fromDate', 'toDate', 'perPage'
         ));
     }
@@ -130,6 +132,7 @@ class LeadController extends Controller
         }
         if (! empty($f['province_id']))    $query->where('province_id', (int) $f['province_id']);
         if (! empty($f['city_id']))        $query->where('city_id', (int) $f['city_id']);
+        if (! empty($f['region_id']))      $query->where('region_id', (int) $f['region_id']);
         if (! empty($f['brand_id']))       $query->where('brand_id', (int) $f['brand_id']);
         if (! empty($f['device_id']))      $query->where('device_id', (int) $f['device_id']);
         if (! empty($f['lead_reason_id'])) $query->where('lead_reason_id', (int) $f['lead_reason_id']);

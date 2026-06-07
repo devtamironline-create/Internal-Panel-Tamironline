@@ -63,7 +63,8 @@ class LeadDashboardController extends Controller
             ->with('leadReason:id,name')
             ->get()
             ->map(fn ($r) => [
-                'name' => $r->leadReason?->name ?? '—',
+                'id'    => (int) $r->lead_reason_id,
+                'name'  => $r->leadReason?->name ?? '—',
                 'count' => (int) $r->cnt,
             ]);
 
@@ -109,16 +110,6 @@ class LeadDashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // ─── پرتکرارترین ایرادها ──────────────────────────────
-        $topProblems = (clone $baseQuery())
-            ->whereNotNull('problem_title')
-            ->where('problem_title', '!=', '')
-            ->selectRaw('problem_title, COUNT(*) as cnt')
-            ->groupBy('problem_title')
-            ->orderByDesc('cnt')
-            ->limit(10)
-            ->get();
-
         // ─── نمودار روند زمانی ────────────────────────────────
         $chartData = $this->buildChartData($chartPeriod);
 
@@ -136,7 +127,7 @@ class LeadDashboardController extends Controller
             'fromJ', 'toJ', 'chartPeriod',
             'totalLeads', 'convertedInRange',
             'reasonBreakdown', 'reasonNullCount',
-            'topDevices', 'topBrands', 'topCities', 'topRegions', 'topProblems',
+            'topDevices', 'topBrands', 'topCities', 'topRegions',
             'introBreakdown',
             'chartData',
         ));
