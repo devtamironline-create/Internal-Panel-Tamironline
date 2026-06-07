@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Admin\AppSettingsController;
 use Modules\CustomerApp\Http\Controllers\Admin\DashboardController;
+use Modules\CustomerApp\Http\Controllers\Admin\HolidayController;
 use Modules\CustomerApp\Http\Controllers\Admin\ReviewController;
 
 /*
@@ -37,5 +38,16 @@ Route::middleware(['auth'])
             Route::get('/reviews/{review}', [ReviewController::class, 'show'])->name('reviews.show');
             Route::put('/reviews/{review}/moderate', [ReviewController::class, 'moderate'])->name('reviews.moderate');
             Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+        });
+
+        // Holidays management (Block 5c)
+        Route::middleware('can:manage-permissions')->group(function () {
+            Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
+            Route::get('/holidays/create', [HolidayController::class, 'create'])->name('holidays.create');
+            Route::post('/holidays', [HolidayController::class, 'store'])->name('holidays.store');
+            Route::get('/holidays/{holiday}/edit', [HolidayController::class, 'edit'])->name('holidays.edit');
+            Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name('holidays.update');
+            Route::put('/holidays/{holiday}/toggle-active', [HolidayController::class, 'toggleActive'])->name('holidays.toggle-active');
+            Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
         });
     });

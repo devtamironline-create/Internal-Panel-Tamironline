@@ -103,6 +103,14 @@
                 </div>
             </a>
 
+            <a href="{{ route('customer-app.holidays.index') }}" class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition">
+                <span class="text-2xl">📅</span>
+                <div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">تعطیلات</div>
+                    <div class="text-[10px] text-gray-500">picker تاریخ</div>
+                </div>
+            </a>
+
             <a href="{{ route('customer-app.settings.index') }}" class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition">
                 <span class="text-2xl">⚙️</span>
                 <div>
