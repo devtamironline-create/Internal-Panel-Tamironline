@@ -180,13 +180,20 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($lead->created_at)</td>
                         <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <a href="{{ route('crm.orders.show', $lead) }}" class="text-gray-600 hover:text-gray-900 text-sm">جزئیات</a>
                                 <form action="{{ route('crm.orders.convert-from-lead', $lead) }}" method="POST" class="inline"
                                       onsubmit="return confirm('این لید به سفارش واقعی تبدیل می‌شود. ادامه؟');">
                                     @csrf
                                     <button type="submit" class="text-emerald-600 hover:text-emerald-800 text-sm">تبدیل به سفارش</button>
                                 </form>
+                                @can('delete-crm-order')
+                                <form action="{{ route('crm.orders.destroy', $lead) }}" method="POST" class="inline"
+                                      onsubmit="return confirm('این لید برای همیشه حذف می‌شود — قابل بازگشت نیست. مطمئنی؟');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-rose-600 hover:text-rose-800 text-sm">حذف</button>
+                                </form>
+                                @endcan
                             </div>
                         </td>
                     </tr>

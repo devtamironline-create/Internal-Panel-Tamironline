@@ -626,9 +626,15 @@ class OrderController extends Controller
 
     public function destroy(Order $order)
     {
+        $wasLead = (bool) $order->is_lead;
         $order->delete();
 
-        return redirect()->route('crm.orders.index')->with('success', 'سفارش حذف شد.');
+        // برای لیدها به فهرست لیدها برگردیم تا تجربهٔ کاربری منسجم
+        // باشد؛ سفارش‌های واقعی به لیست سفارش‌ها.
+        $route = $wasLead ? 'crm.leads.index' : 'crm.orders.index';
+        $message = $wasLead ? 'لید حذف شد.' : 'سفارش حذف شد.';
+
+        return redirect()->route($route)->with('success', $message);
     }
 
     // ───────────── تخصیص تکنسین ─────────────────────────────────
