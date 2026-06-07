@@ -161,6 +161,32 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
     });
 
+    // ─── تاکسونومی ── انواع خدمات ──────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'index'])->name('service-types.index');
+    });
+    Route::middleware('can:manage-crm-taxonomies')->group(function () {
+        Route::get('service-types/create', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'create'])->name('service-types.create');
+        Route::post('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'store'])->name('service-types.store');
+        Route::get('service-types/{serviceType}/edit', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'edit'])->name('service-types.edit');
+        Route::put('service-types/{serviceType}', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'update'])->name('service-types.update');
+        Route::put('service-types/{serviceType}/toggle-active', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'toggleActive'])->name('service-types.toggle-active');
+        Route::delete('service-types/{serviceType}', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'destroy'])->name('service-types.destroy');
+    });
+
+    // ─── تاکسونومی ── ایرادات ──────────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('objections', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'index'])->name('objections.index');
+    });
+    Route::middleware('can:manage-crm-taxonomies')->group(function () {
+        Route::get('objections/create', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'create'])->name('objections.create');
+        Route::post('objections', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'store'])->name('objections.store');
+        Route::get('objections/{objection}/edit', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'edit'])->name('objections.edit');
+        Route::put('objections/{objection}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'update'])->name('objections.update');
+        Route::put('objections/{objection}/toggle-active', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'toggleActive'])->name('objections.toggle-active');
+        Route::delete('objections/{objection}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'destroy'])->name('objections.destroy');
+    });
+
     // ─── مشتری‌ها ──────────────────────────────────────────────────
     Route::middleware('can:view-crm-customers')->group(function () {
         Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
