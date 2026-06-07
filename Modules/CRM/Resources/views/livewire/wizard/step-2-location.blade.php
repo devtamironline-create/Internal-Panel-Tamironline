@@ -31,28 +31,10 @@
         </div>
     </div>
 
-    {{-- منطقه — اختیاری، فقط اگر شهر منطقه داشته باشد. wrap همیشه در
-         DOM رندر می‌شود تا Tom Select بتواند روی select داخلش init شود
-         (روی عنصر display:none گاهی init نمی‌شود). JS بعد از init و
-         با تغییر شهر، wrap را نشان/پنهان می‌کند. data-has-regions
-         پرچم وضعیت اولیه است: 0 = پنهان شو، 1 = با لیست موجود نمایان. --}}
-    <div wire:ignore id="orderwiz-region-wrap" data-has-regions="{{ $this->regions->count() ? '1' : '0' }}">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">منطقه</label>
-        <select id="orderwiz-region"
-                data-tom-select data-placeholder="منطقه (اختیاری)..."
-                class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-            <option value="">— بدون منطقه —</option>
-            @foreach($this->regions as $r)
-                <option value="{{ $r->id }}" @selected($regionId == $r->id)>{{ $r->name }}</option>
-            @endforeach
-        </select>
-        <p class="text-xs text-gray-500 mt-1">اگر شهر بزرگ است و منطقه‌اش را می‌دانید، انتخاب کنید — اختیاری است.</p>
-    </div>
-
-    {{-- آدرس به مرحلهٔ بعد (مشتری) منتقل شده تا با انتخاب مشتری قدیمی،
-         آدرس آخرین سفارش او به‌صورت خودکار از قبل پر شود. در این مرحله
-         فقط استان و شهر مهم است (به‌خصوص برای لیدها که آدرس دقیق
-         اهمیتی ندارد). --}}
+    {{-- آدرس و منطقه به مرحلهٔ بعد (مشتری) منتقل شده‌اند: آدرس برای
+         اینکه با انتخاب مشتری قدیمی از سفارش قبلی پر شود، و منطقه
+         چون فقط برای سفارش‌های قابل ثبت معنا دارد (در حالت لید نیازی
+         نیست) — اینجا فقط استان و شهر بررسی می‌شود. --}}
 
     {{-- بلاک script-endscript پایین یک دایرکتیو Livewire 3 است. تگ
          script ساده در ویوهای کامپوننت توسط Livewire حذف می‌شوند،
@@ -66,7 +48,6 @@
         window.__orderWizLocationInit = true;
 
         const CITIES_URL = "{{ url('/admin/crm/provinces') }}/__ID__/cities";
-        const REGIONS_URL = "{{ url('/admin/crm/cities') }}/__ID__/regions";
 
         const wireSet = function (key, value) {
             // داخل script directive، $wire به کامپوننت Livewire این view اشاره می‌کند.
@@ -90,56 +71,14 @@
             if (hasProvince) ts.enable(); else ts.disable();
         };
 
-        // dropdown منطقه — اگر شهر منطقه ندارد، wrapper مخفی می‌شود.
-        const setupRegion = function (regionEl, wrapEl, regions) {
-            const ts = regionEl.tomselect;
-            if (!ts) return;
-            ts.clear(true);
-            ts.clearOptions();
-            if (! regions.length) {
-                if (wrapEl) wrapEl.style.display = 'none';
-                return;
-            }
-            if (wrapEl) wrapEl.style.display = 'block';
-            ts.addOption([
-                { value: '', text: '— بدون منطقه —' },
-                ...regions.map(r => ({ value: String(r.id), text: r.name })),
-            ]);
-            ts.refreshOptions(false);
-            ts.enable();
-        };
-
-        const fetchRegions = async function (cityId, regionEl, wrapEl) {
-            try {
-                const url = REGIONS_URL.replace('__ID__', cityId);
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                const data = await res.json();
-                setupRegion(regionEl, wrapEl, Array.isArray(data) ? data : []);
-            } catch (e) {
-                setupRegion(regionEl, wrapEl, []);
-            }
-        };
-
         const tryAttach = function () {
             const provinceEl = document.getElementById('orderwiz-province');
             const cityEl = document.getElementById('orderwiz-city');
-            const regionEl = document.getElementById('orderwiz-region');
-            const regionWrap = document.getElementById('orderwiz-region-wrap');
             if (!provinceEl || !cityEl) return false;
             // صبر تا Tom Select روی هر دو init شود
             if (!provinceEl.tomselect || !cityEl.tomselect) return false;
-            // region اختیاری است — اگر هنوز init نشده، خود tryAttach باز
-            // اجرا می‌شود توسط polling.
-            if (regionEl && !regionEl.tomselect) return false;
             if (provinceEl.dataset.wizBound === '1') return true;
             provinceEl.dataset.wizBound = '1';
-
-            // وضعیت اولیهٔ wrap منطقه: اگر در رندر اولیه منطقه‌ای وجود
-            // نداشت (data-has-regions="0")، wrap را پنهان کن. Tom Select
-            // قبلاً init شده، پس مخفی کردن بعدش بی‌خطر است.
-            if (regionWrap && regionWrap.dataset.hasRegions === '0') {
-                regionWrap.style.display = 'none';
-            }
 
             // بسته شدن اولیه شهر اگر استانی انتخاب نشده
             if (!provinceEl.value) cityEl.tomselect.disable();
@@ -147,11 +86,10 @@
             // تغییر استان: مقدار را در Livewire ست و شهرها را fetch کن
             provinceEl.tomselect.on('change', async function (value) {
                 wireSet('provinceId', value === '' ? null : Number(value));
-                // پاک کردن شهر و منطقه
+                // پاک کردن شهر و منطقه (در مرحلهٔ بعد دوباره بارگذاری می‌شود)
                 wireSet('cityId', null);
                 wireSet('regionId', null);
                 cityEl.tomselect.clear(true);
-                if (regionEl) setupRegion(regionEl, regionWrap, []);
 
                 if (!value) {
                     setupCity(cityEl, [], '— ابتدا استان را انتخاب کنید —', false);
@@ -171,25 +109,12 @@
                 }
             });
 
-            // تغییر شهر: مقدار را در Livewire ست + مناطق این شهر را fetch کن
+            // تغییر شهر: مقدار را در Livewire ست + پاک‌سازی منطقه (انتخابش
+            // در مرحلهٔ بعد، فقط برای سفارش‌های قابل ثبت، انجام می‌شود).
             cityEl.tomselect.on('change', function (value) {
                 wireSet('cityId', value === '' ? null : Number(value));
                 wireSet('regionId', null);
-                if (regionEl) {
-                    if (value) {
-                        fetchRegions(value, regionEl, regionWrap);
-                    } else {
-                        setupRegion(regionEl, regionWrap, []);
-                    }
-                }
             });
-
-            // تغییر منطقه: مقدار را در Livewire ست
-            if (regionEl) {
-                regionEl.tomselect.on('change', function (value) {
-                    wireSet('regionId', value === '' ? null : Number(value));
-                });
-            }
 
             return true;
         };

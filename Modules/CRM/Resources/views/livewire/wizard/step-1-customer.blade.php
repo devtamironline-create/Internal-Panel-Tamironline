@@ -98,9 +98,25 @@
         </div>
     @endif
 
-    {{-- آدرس — فقط برای سفارش‌های قابل ثبت اجباری است؛ برای لیدها حذف
-         می‌شود (شهر کافی است). اگر مشتری قدیمی انتخاب شود، این فیلد
-         از آخرین سفارشش به‌صورت خودکار پر می‌شود. --}}
+    {{-- منطقه و آدرس — فقط برای سفارش‌های قابل ثبت. لیدها نه آدرس
+         دقیق نیاز دارند و نه منطقه. اگر شهر منطقه نداشته باشد
+         (کوچک‌تر است)، dropdown منطقه نمایش داده نمی‌شود. --}}
+    @if($isOrderable && $this->regions->count())
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                منطقه {{ $this->selectedCity ? '— ' . $this->selectedCity->name : '' }}
+            </label>
+            <select wire:model="regionId"
+                    class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                <option value="">— بدون منطقه —</option>
+                @foreach($this->regions as $r)
+                    <option value="{{ $r->id }}">{{ $r->name }}</option>
+                @endforeach
+            </select>
+            <p class="text-xs text-gray-500 mt-1">اگر منطقه را می‌دانید انتخاب کنید — اختیاری است.</p>
+        </div>
+    @endif
+
     @if($isOrderable)
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
