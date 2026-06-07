@@ -88,11 +88,16 @@ final class IdentityService
     /**
      * تأیید OTP — اگر مشتری نباشد ساخته می‌شود، توکن Sanctum برمی‌گرداند.
      *
+     * $deviceId اختیاری: مقدار X-Device-ID که فرانت اپ موبایل می‌فرستد.
+     * در ستون device_id روی personal_access_tokens ذخیره می‌شود تا بشود لیست
+     * دستگاه‌ها را نمایش داد یا فقط یکی را revoke کرد. اگر null باشد، توکن
+     * بدون device_id ذخیره می‌شود (web/Next BFF/فعلاً غیرضروری).
+     *
      * @return array{customer: Customer, token: NewAccessToken, is_new: bool}
      *
      * @throws ValidationException
      */
-    public function verifyOtp(string $mobile, string $code): array
+    public function verifyOtp(string $mobile, string $code, ?string $deviceId = null): array
     {
         $normalized = PhoneNormalizer::normalize($mobile);
         if ($normalized === null) {
@@ -137,11 +142,33 @@ final class IdentityService
 
         $token = $customer->createToken(self::TOKEN_NAME, ['*']);
 
+        // ذخیره‌ی device_id روی Sanctum PAT — Sanctum API مستقیماً این فیلد را
+        // نمی‌سازد، پس بعد از createToken روی همان رکورد update می‌کنیم.
+        // دسترسی به ip مستقیماً از request() گرفته می‌شود.
+        if ($deviceId !== null && $deviceId !== '' && $this->isValidDeviceId($deviceId)) {
+            $token->accessToken->forceFill([
+                'device_id' => substr($deviceId, 0, 64),
+                'last_used_ip' => request()?->ip(),
+            ])->save();
+        }
+
         return [
             'customer' => $customer->fresh(),
             'token' => $token,
             'is_new' => $isNew,
         ];
+    }
+
+    /**
+     * اعتبارسنجی X-Device-ID — UUID v4 یا alpha-num محدود طول‌دار.
+     */
+    private function isValidDeviceId(string $id): bool
+    {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return true;
+        }
+
+        return (bool) preg_match('/^[A-Za-z0-9_-]{8,64}$/', $id);
     }
 
     /**
