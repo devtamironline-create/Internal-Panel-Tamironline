@@ -144,6 +144,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('provinces', [ProvinceController::class, 'store'])->name('provinces.store');
         Route::get('provinces/{province}/edit', [ProvinceController::class, 'edit'])->name('provinces.edit');
         Route::put('provinces/{province}', [ProvinceController::class, 'update'])->name('provinces.update');
+        Route::put('provinces/{province}/toggle-active', [ProvinceController::class, 'toggleActive'])->name('provinces.toggle-active');
         Route::delete('provinces/{province}', [ProvinceController::class, 'destroy'])->name('provinces.destroy');
     });
 
@@ -156,6 +157,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('cities', [CityController::class, 'store'])->name('cities.store');
         Route::get('cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
         Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
+        Route::put('cities/{city}/toggle-active', [CityController::class, 'toggleActive'])->name('cities.toggle-active');
         Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
     });
 
@@ -324,7 +326,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('wallet/technician/{technician}/transaction/{transaction}', [WalletController::class, 'destroyTransaction'])
             ->name('wallet.transaction.destroy')
             ->whereNumber('transaction');
-
 
         // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
         Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');

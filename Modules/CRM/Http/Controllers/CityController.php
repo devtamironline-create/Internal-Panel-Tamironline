@@ -39,10 +39,12 @@ class CityController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255',
             'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $exists = City::where('province_id', $validated['province_id'])
             ->where('slug', $validated['slug'])
@@ -72,10 +74,12 @@ class CityController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255',
             'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $exists = City::where('province_id', $validated['province_id'])
             ->where('slug', $validated['slug'])
@@ -98,5 +102,12 @@ class CityController extends Controller
 
         return redirect()->route('crm.cities.index')
             ->with('success', 'شهر حذف شد.');
+    }
+
+    public function toggleActive(City $city)
+    {
+        $city->forceFill(['is_active' => ! $city->is_active])->save();
+
+        return back()->with('success', $city->is_active ? 'شهر فعال شد.' : 'شهر غیرفعال شد.');
     }
 }
