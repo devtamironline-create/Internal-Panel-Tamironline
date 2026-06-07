@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\StatusController;
 use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
 use Modules\CustomerApp\Http\Middleware\IdempotencyKey;
@@ -27,9 +29,30 @@ Route::prefix('v1/customer')
         // ─── Public — هیچ auth لازم نیست ─────────────────────────
         Route::get('/status', StatusController::class)->name('api.customer.status');
 
+        // Locations برای picker — public با cache بلندمدت
+        Route::get('/locations/states', [LocationController::class, 'states'])
+            ->name('api.customer.locations.states');
+        Route::get('/locations/cities', [LocationController::class, 'cities'])
+            ->name('api.customer.locations.cities');
+
         // ─── Private — auth:sanctum + rolling token ──────────────
         Route::middleware(['auth:sanctum', RollingToken::class])->group(function () {
-            // در turn های بعدی Block 1..N (orders, addresses, reviews,
-            // invoices, notifications, profile, ...) اینجا اضافه می‌شود
+
+            // Addresses — multi-address per customer
+            Route::get('/addresses', [AddressController::class, 'index'])
+                ->name('api.customer.addresses.index');
+            Route::post('/addresses', [AddressController::class, 'store'])
+                ->name('api.customer.addresses.store');
+            Route::get('/addresses/{id}', [AddressController::class, 'show'])
+                ->whereNumber('id')
+                ->name('api.customer.addresses.show');
+            Route::put('/addresses/{id}', [AddressController::class, 'update'])
+                ->whereNumber('id')
+                ->name('api.customer.addresses.update');
+            Route::delete('/addresses/{id}', [AddressController::class, 'destroy'])
+                ->whereNumber('id')
+                ->name('api.customer.addresses.destroy');
+
+            // در بلوک‌های بعدی orders/reviews/notifications/... اضافه می‌شوند
         });
     });
