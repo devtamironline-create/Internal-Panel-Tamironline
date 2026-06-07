@@ -365,6 +365,15 @@ class Order extends Model
         return $this->hasOne(OrderReview::class);
     }
 
+    /**
+     * فاکتورهای این سفارش (معمولاً یک، ولی در بازنویسی/cancel چند فاکتور
+     * ممکن است). Global scope روی Invoice فاکتورهای superseded را حذف می‌کند.
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function statusLogs(): HasMany
     {
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');

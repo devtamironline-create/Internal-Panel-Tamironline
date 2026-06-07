@@ -17,12 +17,14 @@ class OrderItem extends Model
         'quantity',
         'unit_price',
         'total_price',
+        'warranty_months',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'integer',
         'total_price' => 'integer',
+        'warranty_months' => 'integer',
     ];
 
     protected static function booted(): void
