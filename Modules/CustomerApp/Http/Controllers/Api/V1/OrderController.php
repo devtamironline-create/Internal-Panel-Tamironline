@@ -81,6 +81,7 @@ class OrderController extends Controller
             'province:id,name',
             'city:id,name',
             'technician:id,bio,mobile,satisfaction_score',
+            'review',
         ]);
 
         return response()->json([

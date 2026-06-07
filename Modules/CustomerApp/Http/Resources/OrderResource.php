@@ -86,16 +86,32 @@ class OrderResource extends JsonResource
                 'reason' => $this->cancel_reason,
             ] : null,
 
-            // نظر — placeholder تا Block 3 (Reviews) فعال شود
-            'review' => [
-                'required' => $status === OrderStatus::Completed,
-                'submitted' => false,
-                'submitted_at' => null,
-                'rating' => null,
-            ],
+            // نظر — وضعیت واقعی review
+            'review' => $this->reviewPayload($status),
 
             'created_at' => $this->created_at?->utc()->toIso8601String(),
             'updated_at' => $this->updated_at?->utc()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reviewPayload(?OrderStatus $status): array
+    {
+        $isCompleted = $status === OrderStatus::Completed;
+        $review = $this->relationLoaded('review') ? $this->review : null;
+        if ($review === null && method_exists($this->resource, 'review')) {
+            // fallback اگر eager load نشده بود
+            $review = $this->resource->review()->first();
+        }
+
+        return [
+            'required' => $isCompleted && ! $review,
+            'submitted' => (bool) $review,
+            'submitted_at' => $review?->created_at?->utc()->toIso8601String(),
+            'rating' => $review ? (int) $review->rating : null,
+            'status' => $review?->status,
         ];
     }
 

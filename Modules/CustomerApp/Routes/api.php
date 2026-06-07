@@ -4,9 +4,11 @@ use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\OrderController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\ReviewController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\ServiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\StatusController;
 use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
+use Modules\CustomerApp\Http\Middleware\EnsureNoPendingReview;
 use Modules\CustomerApp\Http\Middleware\IdempotencyKey;
 use Modules\CustomerApp\Http\Middleware\RollingToken;
 
@@ -47,12 +49,15 @@ Route::prefix('v1/customer')
         Route::middleware(['auth:sanctum', RollingToken::class])->group(function () {
 
             // Orders — customer-facing
-            // cancel-reasons قبل از {id} تا روت‌گذاری اشتباه نکند
+            // cancel-reasons و pending-reviews قبل از {id} تا روت‌گذاری اشتباه نکند
             Route::get('/orders/cancel-reasons', [OrderController::class, 'cancelReasons'])
                 ->name('api.customer.orders.cancel-reasons');
+            Route::get('/orders/pending-reviews', [ReviewController::class, 'pending'])
+                ->name('api.customer.orders.pending-reviews');
             Route::get('/orders', [OrderController::class, 'index'])
                 ->name('api.customer.orders.index');
             Route::post('/orders', [OrderController::class, 'store'])
+                ->middleware(EnsureNoPendingReview::class)
                 ->name('api.customer.orders.store');
             Route::get('/orders/{id}', [OrderController::class, 'show'])
                 ->whereNumber('id')->name('api.customer.orders.show');
@@ -60,6 +65,8 @@ Route::prefix('v1/customer')
                 ->whereNumber('id')->name('api.customer.orders.cancel');
             Route::get('/orders/{id}/version', [OrderController::class, 'version'])
                 ->whereNumber('id')->name('api.customer.orders.version');
+            Route::post('/orders/{id}/review', [ReviewController::class, 'store'])
+                ->whereNumber('id')->name('api.customer.orders.review');
 
             // Addresses — multi-address per customer
             Route::get('/addresses', [AddressController::class, 'index'])
