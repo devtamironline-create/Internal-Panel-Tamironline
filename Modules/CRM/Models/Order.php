@@ -357,6 +357,14 @@ class Order extends Model
             ->orderBy('crm_order_objection.sort_order');
     }
 
+    /**
+     * نظرسنجی مشتری روی این سفارش (اگر ثبت شده باشد).
+     */
+    public function review(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(OrderReview::class);
+    }
+
     public function statusLogs(): HasMany
     {
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');
