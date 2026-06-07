@@ -365,10 +365,9 @@ class OrderWizard extends Component
         $this->subscription = (string) $customer->subscription;
         $this->showNewCustomerForm = false;
 
-        // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور در
-        // مرحلهٔ «محل مراجعه» می‌تواند تأیید یا تغییر دهد و وقتش هدر
-        // برای تایپ مجدد آدرس قبلی نمی‌رود. region_id هم همراه می‌آید
-        // اگر سفارش قبلی منطقه داشته باشد.
+        // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور می‌تواند
+        // تأیید یا تغییر دهد و وقتش هدر برای تایپ مجدد آدرس قبلی نمی‌رود.
+        // region_id هم همراه می‌آید اگر سفارش قبلی منطقه داشته باشد.
         $lastOrder = Order::where('customer_id', $customer->id)
             ->whereNotNull('address')
             ->where('address', '!=', '')
@@ -379,6 +378,10 @@ class OrderWizard extends Component
             $this->cityId     = $lastOrder->city_id;
             $this->regionId   = $lastOrder->region_id;
             $this->address    = (string) $lastOrder->address;
+
+            // dispatch مستقیم به JS تا اگر morph روی textarea مقدار را
+            // نگرفت، Alpine.js به‌صورت دستی set کند (defense in depth).
+            $this->dispatch('customer-prefilled', address: (string) $lastOrder->address);
         }
     }
 

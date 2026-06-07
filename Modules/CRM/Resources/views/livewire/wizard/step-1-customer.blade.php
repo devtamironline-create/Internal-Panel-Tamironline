@@ -118,12 +118,16 @@
     @endif
 
     @if($isOrderable)
-        <div>
+        <div wire:key="address-wrap-{{ $customerId ?? 'new' }}">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 آدرس کامل <span class="text-rose-600">*</span>
             </label>
+            {{-- Alpine listener برای customer-prefilled — اگر Livewire
+                 textarea را morph نکرد، اینجا دستی مقدار را می‌گذاریم. --}}
             <textarea wire:model="address" rows="3"
                       placeholder="خیابان، پلاک، واحد..."
+                      x-data
+                      @customer-prefilled.window="$el.value = $event.detail.address; $el.dispatchEvent(new Event('input'))"
                       class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"></textarea>
             @if($this->selectedCustomer && $address)
                 <p class="text-xs text-emerald-600 mt-1">✓ آدرس آخرین سفارش این مشتری به‌صورت خودکار پر شد — در صورت نیاز ویرایش کنید.</p>
