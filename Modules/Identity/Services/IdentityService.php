@@ -57,6 +57,23 @@ final class IdentityService
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
+        // ─── حالت تست — Kavenegar صدا نمی‌خورد، فقط success برمی‌گردد ──
+        // فقط زمانی فعال که env CUSTOMER_APP_TEST_MODE=true و شماره در
+        // allowlist (در صورت تعریف) باشد. در production همیشه false.
+        if ($this->isTestModeFor($normalized)) {
+            \Illuminate\Support\Facades\Log::warning('identity.test_mode_send_otp', [
+                'mobile' => $normalized,
+                'master_otp' => config('customerapp.test-mode.master_otp'),
+            ]);
+
+            return [
+                'ok' => true,
+                'expires_in' => (int) config('sms.otp.expires_in', 120),
+                'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
+                'test_mode' => true,
+            ];
+        }
+
         $hourKey = 'identity:otp_hourly:'.$normalized;
         $hourCount = (int) Cache::get($hourKey, 0);
         if ($hourCount >= self::MAX_OTP_PER_HOUR_PER_PHONE) {
@@ -104,11 +121,24 @@ final class IdentityService
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
-        $verification = $this->otp->verify($normalized, trim($code));
-        if (! ($verification['success'] ?? false)) {
-            throw ValidationException::withMessages([
-                'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
+        $trimmedCode = trim($code);
+
+        // ─── حالت تست — اگر کد === master_otp باشد، تأیید واقعی skip می‌شود ──
+        $isTestBypass = $this->isTestModeFor($normalized)
+            && $trimmedCode !== ''
+            && hash_equals((string) config('customerapp.test-mode.master_otp'), $trimmedCode);
+
+        if ($isTestBypass) {
+            \Illuminate\Support\Facades\Log::warning('identity.test_mode_verify_otp', [
+                'mobile' => $normalized,
             ]);
+        } else {
+            $verification = $this->otp->verify($normalized, $trimmedCode);
+            if (! ($verification['success'] ?? false)) {
+                throw ValidationException::withMessages([
+                    'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
+                ]);
+            }
         }
 
         // race-safe upsert — unique(mobile) + transaction جلوی duplicate در
@@ -157,6 +187,27 @@ final class IdentityService
             'token' => $token,
             'is_new' => $isNew,
         ];
+    }
+
+    /**
+     * آیا حالت تست برای این شماره فعال است؟
+     *
+     * شرایط:
+     *   - env CUSTOMER_APP_TEST_MODE=true
+     *   - شماره در allowed_mobiles (در صورت تعریف) باشد، یا allowlist خالی باشد
+     */
+    private function isTestModeFor(string $normalizedMobile): bool
+    {
+        if (! config('customerapp.test-mode.enabled', false)) {
+            return false;
+        }
+
+        $allowed = (array) config('customerapp.test-mode.allowed_mobiles', []);
+        if (empty($allowed)) {
+            return true; // allowlist خالی → همه شماره‌ها در حالت تست قبول
+        }
+
+        return in_array($normalizedMobile, $allowed, true);
     }
 
     /**

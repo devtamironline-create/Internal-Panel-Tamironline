@@ -40,5 +40,10 @@ class CustomerAppServiceProvider extends ServiceProvider
             __DIR__.'/../config/time-slots.php',
             'customerapp.time-slots'
         );
+
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/test-mode.php',
+            'customerapp.test-mode'
+        );
     }
 }

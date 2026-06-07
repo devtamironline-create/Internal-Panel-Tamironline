@@ -60,6 +60,8 @@ class StatusController extends Controller
                     'active' => $maintenanceActive,
                     'message' => $maintenanceMsg ?: null,
                 ],
+                // فرانت بر اساس این فلگ overlay زرد «حالت تست» را نمایش دهد
+                'test_mode_active' => (bool) config('customerapp.test-mode.enabled', false),
                 'server_time' => now()->utc()->toIso8601String(),
                 'db' => $dbOk ? 'ok' : 'down',
             ],

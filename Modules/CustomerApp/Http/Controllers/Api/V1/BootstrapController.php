@@ -76,6 +76,7 @@ class BootstrapController extends Controller
                 'active' => (bool) Setting::get('app_maintenance_active', config('app_status.maintenance.active', false)),
                 'message' => Setting::get('app_maintenance_message', config('app_status.maintenance.message')) ?: null,
             ],
+            'test_mode_active' => (bool) config('customerapp.test-mode.enabled', false),
         ];
     }
 
