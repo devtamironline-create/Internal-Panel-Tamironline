@@ -469,7 +469,109 @@ Cache: 1h.
 
 **slug این مقادیر را در POST /orders به‌عنوان `order_type` بفرستید.**
 
-### 8.3 Objections (ایرادات)
+### 8.3 Categories (دسته‌بندی / دستگاه‌ها)
+
+> **یادداشت اصطلاح:** فرانت به این «categories» می‌گوید، در بک «device» می‌نامیم. URL مطابق ادبیات فرانت است.
+
+```jsonc
+// GET /v1/customer/services/categories
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "name": "ماشین لباسشویی",
+      "slug": "washing-machine",
+      "icon": "washing-machine",
+      "image": "https://panel.tamironline.com/.../thumb.jpg",
+      "description": "تعمیر و سرویس انواع ماشین لباسشویی",
+      "badge": null
+    }
+  ]
+}
+```
+
+ترتیب: ابتدا `is_featured`، بعد `sort_order`، بعد `name`. Cache: 1h.
+
+### 8.4 Brands (برندها)
+
+```jsonc
+// GET /v1/customer/services/brands
+// GET /v1/customer/services/brands?category_id=5
+{
+  "success": true,
+  "data": [
+    {
+      "id": 10,
+      "name": "سامسونگ",
+      "slug": "samsung",
+      "logo": "https://panel.tamironline.com/.../samsung.png",
+      "icon": null,
+      "badge": null
+    }
+  ],
+  "meta": {
+    "category_id": 5,
+    "total": 12
+  }
+}
+```
+
+با `category_id` فقط برندهایی که آن دستگاه را پشتیبانی می‌کنند برمی‌گردند (از pivot `crm_device_brands`). Cache: 1h.
+
+### 8.5 Banners (بنرها)
+
+`placement` به zone slug در بک‌اند map می‌شود. ادمین می‌تواند zoneهای جدید مثل `mobile_home_top` بسازد و فرانت همان slug را در placement بفرستد.
+
+**بدون placement — همه‌ی بنرهای فعال گروه‌بندی‌شده:**
+
+```jsonc
+// GET /v1/customer/services/banners
+{
+  "success": true,
+  "data": {
+    "home_top": [
+      {
+        "id": "01ABC...",
+        "title": "تابستان با تامیر",
+        "image_url": "https://panel.tamironline.com/.../banner.jpg",
+        "link_url": "https://...",
+        "placement": "home_top",
+        "active": true,
+        "order": 1
+      }
+    ],
+    "home_promotions": [...],
+    "splash": [...]
+  }
+}
+```
+
+**با placement — فقط آرایه‌ی همان zone:**
+
+```jsonc
+// GET /v1/customer/services/banners?placement=home_top
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01ABC...",
+      "title": "تابستان با تامیر",
+      "image_url": "https://...",
+      "link_url": "https://...",
+      "placement": "home_top",
+      "active": true,
+      "order": 1
+    }
+  ]
+}
+```
+
+`active` فقط بنرهای منتشرشده‌ی در بازه‌ی زمان‌بندی برمی‌گرداند. Cache: 5min (چون promo ها زود تغییر می‌کنند).
+
+> **توجه ادمین:** برای کارکرد این endpoint روی mobile، ادمین باید zoneهای مخصوص اپ را در `/admin/site/banner-zones` تعریف کند (مثلاً slug=`home_top`، `home_promotions`، `splash`) و بنر آپلود کند. بدون zone، آرایه خالی برمی‌گردد.
+
+### 8.6 Objections (ایرادات)
 
 ```jsonc
 // GET /v1/customer/services/objections?device_id=5
@@ -1223,6 +1325,38 @@ export interface Notification {
   read_at: string | null;
   created_at: string;
 }
+
+export interface ServiceCategory {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string | null;
+  image: string | null;
+  description: string | null;
+  badge: { text: string; bg: string; color: string } | null;
+}
+
+export interface BrandItem {
+  id: number;
+  name: string;
+  slug: string;
+  logo: string | null;
+  icon: string | null;
+  badge: { text: string; bg: string; color: string } | null;
+}
+
+export interface AppBanner {
+  id: string;
+  title: string | null;
+  image_url: string | null;
+  link_url: string | null;
+  placement: string;        // 'home_top' | 'home_promotions' | 'splash' | other zone slug
+  active: boolean;
+  order: number;
+}
+
+// /banners بدون placement
+export type BannersGrouped = Record<string, AppBanner[]>;
 ```
 
 ---

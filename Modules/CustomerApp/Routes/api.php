@@ -46,11 +46,17 @@ Route::prefix('v1/customer')
         Route::get('/locations/cities', [LocationController::class, 'cities'])
             ->name('api.customer.locations.cities');
 
-        // Services picker — انواع خدمات و ایرادات per-device
+        // Services picker — انواع خدمات، ایرادات، دسته‌بندی، برند، بنر
         Route::get('/services/types', [ServiceController::class, 'types'])
             ->name('api.customer.services.types');
         Route::get('/services/objections', [ServiceController::class, 'objections'])
             ->name('api.customer.services.objections');
+        Route::get('/services/categories', [ServiceController::class, 'categories'])
+            ->name('api.customer.services.categories');
+        Route::get('/services/brands', [ServiceController::class, 'brands'])
+            ->name('api.customer.services.brands');
+        Route::get('/services/banners', [ServiceController::class, 'banners'])
+            ->name('api.customer.services.banners');
 
         // Holidays picker — public
         Route::get('/holidays', [HolidayController::class, 'index'])
