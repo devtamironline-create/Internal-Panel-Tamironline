@@ -658,6 +658,10 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                             دلایل عدم سفارش (لید)
                         </a>
+                        <a href="{{ route('crm.regions.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.regions.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            مدیریت مناطق
+                        </a>
                         @endcan
                         @auth
                         <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"

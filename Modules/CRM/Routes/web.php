@@ -358,6 +358,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── سینک با CRM وردپرسی ─────────────────────────────────────
     // ─── مدیریت دسته‌بندی تیکت‌ها (قبل از tickets/{ticket} باشد!) ──
+    // ─── مدیریت مناطق (Region/District) — اختیاری زیر هر شهر ─────
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('regions', [\Modules\CRM\Http\Controllers\RegionController::class, 'index'])->name('regions.index');
+        Route::post('regions', [\Modules\CRM\Http\Controllers\RegionController::class, 'store'])->name('regions.store');
+        Route::put('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'update'])->name('regions.update')->whereNumber('region');
+        Route::delete('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'destroy'])->name('regions.destroy')->whereNumber('region');
+    });
+
     // ─── دلایل عدم امکان سفارش (مدیریت لیدها) ─────────────────────
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'index'])->name('lead-reasons.index');
