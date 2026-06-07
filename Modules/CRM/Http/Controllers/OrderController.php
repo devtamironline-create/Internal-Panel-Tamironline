@@ -142,7 +142,7 @@ class OrderController extends Controller
         // همهٔ شهرها را با province_id می‌فرستیم تا JS بتواند بدون reload
         // فیلتر کند. اگر تعداد شهرها خیلی زیاد شد، می‌توان به AJAX
         // تنزل داد، ولی فعلاً مجموع چند صد شهر ایران مشکلی ندارد.
-        $cities = \Modules\CRM\Models\City::ordered()->get(['id', 'name', 'province_id']);
+        $cities = \Modules\CRM\Models\City::active()->ordered()->get(['id', 'name', 'province_id']);
         $brands = \Modules\CRM\Models\Brand::ordered()->get(['id', 'name']);
         $devices = \Modules\CRM\Models\Device::ordered()->get(['id', 'name']);
         $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []) ?: [];
@@ -536,7 +536,7 @@ class OrderController extends Controller
             'devices' => Device::active()->ordered()->get(['id', 'name']),
             'provinces' => Province::ordered()->get(['id', 'name']),
             'cities' => $order->province_id
-                ? City::where('province_id', $order->province_id)->ordered()->get(['id', 'name'])
+                ? City::where('province_id', $order->province_id)->active()->ordered()->get(['id', 'name'])
                 : collect(),
             'technicians' => Technician::orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),

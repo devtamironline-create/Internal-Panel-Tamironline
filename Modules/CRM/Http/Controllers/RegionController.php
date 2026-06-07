@@ -24,8 +24,10 @@ class RegionController extends Controller
         $provinceId = $request->integer('province_id');
         $cityId = $request->integer('city_id');
 
+        // فقط شهرهای فعال — شهرهای غیرفعال (که قبلاً به منطقه تبدیل
+        // شده‌اند) دیگر نباید منطقهٔ جدیدی بپذیرند.
         $cities = $provinceId
-            ? City::where('province_id', $provinceId)->ordered()->get(['id', 'name'])
+            ? City::where('province_id', $provinceId)->active()->ordered()->get(['id', 'name'])
             : collect();
 
         $regions = $cityId

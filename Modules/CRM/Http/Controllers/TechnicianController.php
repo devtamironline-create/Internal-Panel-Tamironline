@@ -207,7 +207,7 @@ class TechnicianController extends Controller
         $technician->load('cities:id', 'regions:id', 'brands:id', 'devices:id');
         return view('crm::technicians.edit', [
             'technician' => $technician,
-            'allCities'  => \Modules\CRM\Models\City::orderBy('name')->get(['id', 'name', 'province_id']),
+            'allCities'  => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
             'allBrands'  => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
             'allDevices' => \Modules\CRM\Models\Device::active()->ordered()->get(['id', 'name']),
             // مناطق گروه‌بندی‌شده بر اساس شهر — فقط مناطقی که شهرشان
