@@ -9,22 +9,6 @@
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش‌های تعمیر</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">لیست و مدیریت سفارش‌های خدمات تعمیرات</p>
-
-            {{-- تب‌های لید/سفارش/همه --}}
-            <div class="inline-flex items-center gap-1 mt-3 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <a href="{{ route('crm.orders.index', request()->except('kind')) }}"
-                   class="px-3 py-1 rounded text-xs font-medium {{ ! ($kind ?? '') || ($kind === '') ? 'bg-white shadow text-brand-700' : 'text-gray-600 hover:text-gray-900' }}">
-                    سفارش‌ها <span class="text-gray-400">({{ number_format($orderCount) }})</span>
-                </a>
-                <a href="{{ route('crm.orders.index', ['kind' => 'lead'] + request()->except('kind')) }}"
-                   class="px-3 py-1 rounded text-xs font-medium {{ ($kind ?? '') === 'lead' ? 'bg-white shadow text-rose-700' : 'text-gray-600 hover:text-gray-900' }}">
-                    لیدها <span class="text-gray-400">({{ number_format($leadCount) }})</span>
-                </a>
-                <a href="{{ route('crm.orders.index', ['kind' => 'all'] + request()->except('kind')) }}"
-                   class="px-3 py-1 rounded text-xs font-medium {{ ($kind ?? '') === 'all' ? 'bg-white shadow text-gray-800' : 'text-gray-600 hover:text-gray-900' }}">
-                    همه <span class="text-gray-400">({{ number_format($orderCount + $leadCount) }})</span>
-                </a>
-            </div>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('crm.orders.export', ['format' => 'xlsx'] + request()->query()) }}"

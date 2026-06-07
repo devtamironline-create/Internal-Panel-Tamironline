@@ -203,6 +203,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/export/{format}', [OrderController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('orders.export');
+        // ─── لیدها — بخش مستقل از سفارشات با فیلتر/خروجی جدا ─────
+        Route::get('leads', [\Modules\CRM\Http\Controllers\LeadController::class, 'index'])->name('leads.index');
+        Route::get('leads/export/{format}', [\Modules\CRM\Http\Controllers\LeadController::class, 'export'])
+            ->where('format', 'csv|xlsx')->name('leads.export');
         // مسیر static باید قبل از orders/{order} باشد تا پارامتر اشتباه نشود
         Route::get('orders/missing-invoices', [OrderController::class, 'missingInvoices'])->name('orders.missing-invoices');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show')->whereNumber('order');
