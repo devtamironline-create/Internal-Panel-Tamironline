@@ -160,6 +160,15 @@ class Technician extends Authenticatable
         return $this->belongsToMany(City::class, 'crm_technician_cities');
     }
 
+    /**
+     * مناطق پوشش — اختیاری. اگر برای یک شهر تکنسین هیچ منطقه‌ای
+     * انتخاب نکرده، پیش‌فرض «همه مناطق آن شهر را می‌پوشاند».
+     */
+    public function regions(): BelongsToMany
+    {
+        return $this->belongsToMany(Region::class, 'crm_technician_regions');
+    }
+
     /** برندهای تخصصی. */
     public function brands(): BelongsToMany
     {

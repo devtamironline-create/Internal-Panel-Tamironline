@@ -204,14 +204,21 @@ class TechnicianController extends Controller
 
     public function edit(Technician $technician)
     {
-        $technician->load('cities:id', 'brands:id', 'devices:id');
+        $technician->load('cities:id', 'regions:id', 'brands:id', 'devices:id');
         return view('crm::technicians.edit', [
             'technician' => $technician,
             'allCities'  => \Modules\CRM\Models\City::orderBy('name')->get(['id', 'name', 'province_id']),
             'allBrands'  => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
             'allDevices' => \Modules\CRM\Models\Device::active()->ordered()->get(['id', 'name']),
-            'selectedCityIds' => $technician->cities->pluck('id')->all(),
-            'selectedBrandIds' => $technician->brands->pluck('id')->all(),
+            // مناطق گروه‌بندی‌شده بر اساس شهر — فقط مناطقی که شهرشان
+            // هم در فهرست انتخاب‌های تکنسین هست عملاً پوشش می‌دهد.
+            'allRegions' => \Modules\CRM\Models\Region::active()->ordered()
+                                ->with('city:id,name')
+                                ->get(['id', 'name', 'city_id'])
+                                ->groupBy('city_id'),
+            'selectedCityIds'   => $technician->cities->pluck('id')->all(),
+            'selectedRegionIds' => $technician->regions->pluck('id')->all(),
+            'selectedBrandIds'  => $technician->brands->pluck('id')->all(),
             'selectedDeviceIds' => $technician->devices->pluck('id')->all(),
         ]);
     }
@@ -222,8 +229,9 @@ class TechnicianController extends Controller
 
         $validated['ready_for_delivery'] = (bool) ($validated['ready_for_delivery'] ?? false);
 
-        // تخصص: شهر/برند/دستگاه — برای سیستم پیشنهاد هوشمند
+        // تخصص: شهر/منطقه/برند/دستگاه — برای سیستم پیشنهاد هوشمند
         $cityIds   = (array) $request->input('city_ids', []);
+        $regionIds = (array) $request->input('region_ids', []);
         $brandIds  = (array) $request->input('brand_ids', []);
         $deviceIds = (array) $request->input('device_ids', []);
         $satisfaction = $request->input('satisfaction_score');
@@ -241,6 +249,7 @@ class TechnicianController extends Controller
 
         // sync pivot ها — شامل خالی‌سازی هم می‌شود
         $technician->cities()->sync(array_filter(array_map('intval', $cityIds)));
+        $technician->regions()->sync(array_filter(array_map('intval', $regionIds)));
         $technician->brands()->sync(array_filter(array_map('intval', $brandIds)));
         $technician->devices()->sync(array_filter(array_map('intval', $deviceIds)));
 

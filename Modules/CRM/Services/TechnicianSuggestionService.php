@@ -60,7 +60,7 @@ class TechnicianSuggestionService
         $query = Technician::query()
             ->where('status', 'active')
             ->where('ready_for_delivery', true)
-            ->with(['cities:id', 'brands:id', 'devices:id']);
+            ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
         // محدود کنیم. شمارش سفارش‌های فعال در همان loop انجام می‌شود.
@@ -88,6 +88,27 @@ class TechnicianSuggestionService
             if ($order->city_id) {
                 $cityIds = $t->cities->pluck('id');
                 if ($cityIds->isEmpty() || ! $cityIds->contains($order->city_id)) return false;
+            }
+            // تطبیق منطقه — منطق سازگار با عقب:
+            //   اگر سفارش منطقه دارد:
+            //     - اگر تکنسین برای این شهر هیچ منطقه‌ای انتخاب نکرده،
+            //       فرض می‌کنیم همه را پوشش می‌دهد (قبول)
+            //     - اگر منطقه‌ای انتخاب کرده، باید منطقهٔ سفارش جزو
+            //       انتخاب‌هایش باشد
+            //   اگر سفارش منطقه ندارد، چک نمی‌کنیم.
+            if ($order->region_id && $order->city_id) {
+                $regionIds = $t->regions->pluck('id');
+                if ($regionIds->isNotEmpty()) {
+                    // تکنسین مناطق انتخابی دارد — حداقل یکی از مناطقش
+                    // باید در شهر سفارش باشد، و منطقهٔ سفارش جزو آن‌ها.
+                    $regionsInOrderCity = $t->regions
+                        ->where('city_id', $order->city_id)
+                        ->pluck('id');
+                    if ($regionsInOrderCity->isNotEmpty()
+                        && ! $regionsInOrderCity->contains($order->region_id)) {
+                        return false;
+                    }
+                }
             }
             if ($order->brand_id) {
                 $brandIds = $t->brands->pluck('id');

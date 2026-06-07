@@ -293,6 +293,48 @@
         </div>
     </div>
 
+    {{-- مناطق پوشش — اختیاری. اگر برای شهری منطقه‌ای انتخاب نشد،
+         فرض می‌شود تمام مناطق آن شهر پوشش داده می‌شود (سازگاری به
+         عقب برای تکنسین‌های فعلی که فقط شهر را انتخاب کرده‌اند). --}}
+    @if(isset($allRegions) && $allRegions->isNotEmpty())
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">مناطق پوشش (اختیاری)</label>
+                <div class="flex gap-2">
+                    <button type="button" data-toggle-all="select" data-group="regions"
+                            class="text-xs px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        انتخاب همه
+                    </button>
+                    <button type="button" data-toggle-all="clear" data-group="regions"
+                            class="text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200">
+                        حذف همه
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mb-2">اگر برای یک شهر هیچ منطقه‌ای تیک نزنید، تکنسین <b>تمام مناطق</b> آن شهر را پوشش می‌دهد. تنها وقتی منطقه‌ای انتخاب کنید تکنسین به آن مناطق محدود می‌شود.</p>
+            <input type="search" data-filter-group="regions" placeholder="جستجو در مناطق…"
+                   class="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus:border-brand-400">
+            <div data-group="regions" class="space-y-3 max-h-80 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                @foreach($allRegions as $cityId => $regions)
+                    @php $cityName = $regions->first()->city?->name ?? '—'; @endphp
+                    <div>
+                        <div class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">{{ $cityName }}</div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 ps-2">
+                            @foreach($regions as $r)
+                                <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                                    <input type="checkbox" name="region_ids[]" value="{{ $r->id }}"
+                                           @checked(in_array($r->id, $selectedRegionIds ?? []))
+                                           class="w-4 h-4 accent-brand-600">
+                                    <span>{{ $r->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <div class="flex items-center justify-between mb-2">
