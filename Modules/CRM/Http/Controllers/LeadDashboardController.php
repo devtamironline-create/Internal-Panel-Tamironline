@@ -22,18 +22,13 @@ class LeadDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // بازهٔ تاریخ — مثل داشبورد سفارش‌ها قابل تنظیم
-        $fromJ = $request->string('from')->toString() ?: Jalalian::now()->subDays(30)->format('Y/m/d');
-        $toJ   = $request->string('to')->toString()   ?: Jalalian::now()->format('Y/m/d');
-        $fromG = $this->jalaliToGregorian($fromJ);
-        $toG   = $this->jalaliToGregorian($toJ);
-        if (! $fromG || ! $toG) {
-            $fromCarbon = now()->subDays(30)->startOfDay();
-            $toCarbon   = now()->endOfDay();
-        } else {
-            $fromCarbon = Carbon::parse($fromG)->startOfDay();
-            $toCarbon   = Carbon::parse($toG)->endOfDay();
-        }
+        // پیش‌تنظیم‌های سریع — وقتی preset ست شده، تاریخ‌های from/to
+        // را override می‌کند تا اپراتور تاریخ دستی وارد نکند.
+        $preset = $request->string('preset')->toString();
+        [$fromCarbon, $toCarbon] = $this->resolveDateRange($preset, $request);
+
+        $fromJ = Jalalian::fromCarbon($fromCarbon)->format('Y/m/d');
+        $toJ   = Jalalian::fromCarbon($toCarbon)->format('Y/m/d');
 
         $chartPeriod = $request->query('chart_period', 'week');
         if (! in_array($chartPeriod, ['day', 'week', 'month'], true)) {
@@ -131,6 +126,35 @@ class LeadDashboardController extends Controller
             'introBreakdown',
             'chartData',
         ));
+    }
+
+    /**
+     * بازهٔ تاریخ از روی preset سریع (today/yesterday/last_week/last_month)
+     * یا تاریخ‌های دستی from/to. اگر preset غیرمجاز/خالی بود و از/تا هم
+     * نبود، ۳۰ روز اخیر را برمی‌گرداند.
+     */
+    protected function resolveDateRange(string $preset, Request $request): array
+    {
+        switch ($preset) {
+            case 'today':
+                return [now()->startOfDay(), now()->endOfDay()];
+            case 'yesterday':
+                return [now()->subDay()->startOfDay(), now()->subDay()->endOfDay()];
+            case 'last_week':
+                return [now()->subDays(7)->startOfDay(), now()->endOfDay()];
+            case 'last_month':
+                return [now()->subMonth()->startOfDay(), now()->endOfDay()];
+        }
+
+        // تاریخ دستی شمسی از فرم
+        $fromJ = $request->string('from')->toString() ?: Jalalian::now()->subDays(30)->format('Y/m/d');
+        $toJ   = $request->string('to')->toString()   ?: Jalalian::now()->format('Y/m/d');
+        $fromG = $this->jalaliToGregorian($fromJ);
+        $toG   = $this->jalaliToGregorian($toJ);
+        if (! $fromG || ! $toG) {
+            return [now()->subDays(30)->startOfDay(), now()->endOfDay()];
+        }
+        return [Carbon::parse($fromG)->startOfDay(), Carbon::parse($toG)->endOfDay()];
     }
 
     /**

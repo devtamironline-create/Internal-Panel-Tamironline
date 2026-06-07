@@ -15,17 +15,46 @@
     </div>
 
     {{-- فیلتر تاریخ + بازهٔ نمودار --}}
-    <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+    @php
+        $activePreset = request()->query('preset', '');
+    @endphp
+    <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4" id="lead-dashboard-filter">
+        {{-- دکمه‌های پیش‌تنظیم سریع --}}
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span class="text-xs text-gray-500 ms-1">بازهٔ سریع:</span>
+            @php
+                $presets = [
+                    'today'       => 'امروز',
+                    'yesterday'   => 'دیروز',
+                    'last_week'   => 'یک هفتهٔ گذشته',
+                    'last_month'  => 'یک ماه گذشته',
+                ];
+            @endphp
+            @foreach($presets as $key => $label)
+                <a href="{{ route('crm.leads.dashboard', ['preset' => $key, 'chart_period' => $chartPeriod]) }}"
+                   class="px-3 py-1.5 text-xs rounded-full border transition
+                          {{ $activePreset === $key
+                              ? 'bg-brand-600 text-white border-brand-600'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600' }}">
+                    {{ $label }}
+                </a>
+            @endforeach
+            @if($activePreset)
+                <a href="{{ route('crm.leads.dashboard', ['chart_period' => $chartPeriod]) }}"
+                   class="text-xs text-rose-600 hover:text-rose-800 ms-2">× پاک کردن</a>
+            @endif
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
             <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">از تاریخ</label>
                 <input type="text" name="from" value="{{ $fromJ }}" placeholder="1405/03/01" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                       class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">تا تاریخ</label>
                 <input type="text" name="to" value="{{ $toJ }}" placeholder="1405/03/30" dir="ltr"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                       class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">بازهٔ نمودار</label>
@@ -36,7 +65,7 @@
                 </select>
             </div>
             <div>
-                <button type="submit" class="w-full px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg">اعمال</button>
+                <button type="submit" class="w-full px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg">اعمال تاریخ انتخابی</button>
             </div>
         </div>
     </form>
