@@ -103,7 +103,14 @@ class InvoiceController extends Controller
      */
     public function publicReceipt(string $invoiceCode)
     {
-        $invoice = Invoice::with(['order.items', 'customer'])
+        // withoutGlobalScope('active') اضافه شده تا فاکتورهای superseded
+        // (بسته‌شدهٔ قبلی روی سفارش بازگشتی) هم با لینک عمومی قابل دیدن
+        // باشند. در غیر این صورت مشتری که لینک پیامک قبلی را باز می‌کند،
+        // ۴۰۴ می‌گیرد — حتی اگر فاکتور هنوز در DB موجود است. منطق
+        // superseded فقط برای مخفی کردن این فاکتورها از لیست فعال است،
+        // نه برای حذف شدن از تاریخچه.
+        $invoice = Invoice::withoutGlobalScope('active')
+            ->with(['order.items', 'customer'])
             ->where('invoice_code', $invoiceCode)
             ->firstOrFail();
 
