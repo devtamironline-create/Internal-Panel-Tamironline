@@ -88,14 +88,43 @@ class HolidayController extends Controller
 
     private function validateData(Request $request, ?int $id = null): array
     {
-        $rule = 'required|date_format:Y-m-d|unique:crm_holidays,date'.($id ? ','.$id : '');
+        // فرم تاریخ شمسی می‌فرستد (date_jalali) — به Y-m-d میلادی تبدیل می‌کنیم
+        // قبل از validation تا unique و date_format روی مقدار صحیح اعمال شوند.
+        $jalali = trim((string) $request->input('date_jalali', ''));
+        $gregorian = $this->jalaliToGregorian($jalali);
+        $request->merge(['date' => $gregorian]);
 
-        return $request->validate([
-            'date' => $rule,
+        $data = $request->validate([
+            'date_jalali' => 'required|string|regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/',
+            'date' => 'required|date_format:Y-m-d|unique:crm_holidays,date'.($id ? ','.$id : ''),
             'label' => 'required|string|max:200',
             'type' => 'required|in:'.implode(',', array_keys(Holiday::TYPE_LABELS)),
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
-        ]) + ['is_active' => (bool) $request->input('is_active', true)];
+        ]);
+
+        return [
+            'date' => $data['date'],
+            'label' => $data['label'],
+            'type' => $data['type'],
+            'description' => $data['description'] ?? null,
+            'is_active' => (bool) $request->input('is_active', true),
+        ];
+    }
+
+    private function jalaliToGregorian(string $jalali): ?string
+    {
+        if (! preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $jalali, $m)) {
+            return null;
+        }
+
+        try {
+            return \Morilog\Jalali\Jalalian::fromFormat(
+                'Y/m/d',
+                sprintf('%04d/%02d/%02d', (int) $m[1], (int) $m[2], (int) $m[3])
+            )->toCarbon()->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

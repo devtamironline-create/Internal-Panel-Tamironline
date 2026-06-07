@@ -1,10 +1,18 @@
 @csrf
 <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
     <div class="md:col-span-4">
-        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">تاریخ <span class="text-rose-500">*</span></label>
-        <input type="date" name="date" required value="{{ old('date', isset($item) ? $item->date->format('Y-m-d') : '') }}" dir="ltr"
-               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm ltr">
-        <p class="text-[10px] text-gray-500 mt-1">فرمت: YYYY-MM-DD میلادی</p>
+        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">تاریخ شمسی <span class="text-rose-500">*</span></label>
+        @php
+            $oldDate = old('date_jalali');
+            if (! $oldDate && isset($item) && $item->date) {
+                $oldDate = \Morilog\Jalali\Jalalian::fromCarbon($item->date)->format('Y/m/d');
+            }
+        @endphp
+        <input type="text" name="date_jalali" required value="{{ $oldDate }}"
+               placeholder="مثال: 1405/01/01"
+               class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm cursor-pointer bg-white">
+        <p class="text-[10px] text-gray-500 mt-1">فرمت: YYYY/MM/DD شمسی</p>
+        @error('date_jalali')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         @error('date')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
     </div>
     <div class="md:col-span-5">
