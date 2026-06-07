@@ -82,7 +82,7 @@ class OrderController extends Controller
             if ($visitTG)  $q->whereDate('visit_scheduled_at', '<=', $visitTG);
         };
 
-        $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city']);
+        $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'region']);
         $applyNonStatusFilters($query);
 
         // تب «بازگشت‌خورده» مجازی است: در WP سفارش‌های برگشت‌خورده
@@ -176,7 +176,7 @@ class OrderController extends Controller
             'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
-            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city'])->lazy(500) as $o) {
+            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'region'])->lazy(500) as $o) {
                 yield [
                     $o->order_code,
                     $o->order_type === 'service' ? 'نصب' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),

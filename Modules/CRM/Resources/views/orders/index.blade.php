@@ -339,7 +339,11 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                         @php
-                            $loc = trim(implode(' / ', array_filter([$order->province?->name, $order->city?->name])));
+                            $loc = trim(implode(' / ', array_filter([
+                                $order->province?->name,
+                                $order->city?->name,
+                                $order->region?->name,
+                            ])));
                         @endphp
                         {{ $loc !== '' ? $loc : '—' }}
                     </td>
@@ -353,7 +357,7 @@
                             @endif
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" dir="ltr">@jdate($order->created_at)</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($order->created_at)</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <a href="{{ route('crm.orders.show', $order) }}" class="text-gray-600 hover:text-gray-900 text-sm">جزئیات</a>
