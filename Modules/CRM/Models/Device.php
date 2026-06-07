@@ -104,6 +104,16 @@ class Device extends Model
     }
 
     /**
+     * ایرادات قابل انتخاب توسط مشتری در فرم ثبت سفارش این دستگاه.
+     */
+    public function objections(): BelongsToMany
+    {
+        return $this->belongsToMany(Objection::class, 'crm_device_objection', 'device_id', 'objection_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_device_objection.sort_order');
+    }
+
+    /**
      * FAQهای اختصاصی این دستگاه از بانک FAQ.
      */
     public function faqs(): BelongsToMany
