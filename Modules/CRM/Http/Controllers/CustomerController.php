@@ -153,6 +153,20 @@ class CustomerController extends Controller
         return response()->json($cities);
     }
 
+    /**
+     * مناطق یک شهر برای dropdown اختیاری در ویزارد.
+     *
+     * بر خلاف cities/فال‌بک، اگر شهر هیچ منطقه‌ای ندارد یک آرایهٔ خالی
+     * برمی‌گردد — منطقه اختیاری است و کلاینت در این حالت dropdown را
+     * مخفی می‌کند.
+     */
+    public function regionsOfCity(\Modules\CRM\Models\City $city)
+    {
+        return response()->json(
+            $city->regions()->active()->ordered()->get(['id', 'name'])
+        );
+    }
+
     protected function validateCustomer(Request $request, ?int $ignoreId = null): array
     {
         $mobileRule = 'required|string|max:20|unique:crm_customers,mobile';

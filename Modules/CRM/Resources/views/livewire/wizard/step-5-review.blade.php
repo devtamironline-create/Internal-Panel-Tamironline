@@ -18,6 +18,7 @@
         $this->selectedCity?->name,
     ])));
     if ($loc) $rows[] = ['استان / شهر', $loc];
+    if ($this->selectedRegion) $rows[] = ['منطقه', $this->selectedRegion->name];
     if ($address)    $rows[] = ['آدرس', $address];
 
     // دستگاه — برای لید، نوع سفارش و ایرادها معنی ندارند؛ به‌جایش

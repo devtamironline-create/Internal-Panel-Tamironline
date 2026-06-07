@@ -19,7 +19,7 @@ class Order extends Model
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
-        'province_id', 'city_id', 'address', 'postal_code',
+        'province_id', 'city_id', 'region_id', 'address', 'postal_code',
         'problem_title', 'problem_description',
         'visit_scheduled_at',
 
@@ -307,6 +307,11 @@ class Order extends Model
     public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
+    }
+
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
     }
 
     public function creator(): BelongsTo

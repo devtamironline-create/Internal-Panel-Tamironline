@@ -139,6 +139,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // Endpoint Ajax برای لود شهرهای هر استان (فرم مشتری/سفارش در فازهای بعد)
         Route::get('provinces/{province}/cities', [CustomerController::class, 'citiesOfProvince'])
             ->name('provinces.cities');
+        // Endpoint Ajax برای لود مناطق هر شهر — اگر شهر منطقه ندارد آرایهٔ
+        // خالی برمی‌گردد و کلاینت dropdown را مخفی نگه می‌دارد.
+        Route::get('cities/{city}/regions', [CustomerController::class, 'regionsOfCity'])
+            ->name('cities.regions');
     });
     Route::middleware('can:create-crm-customer')->group(function () {
         Route::get('customers/create/new', [CustomerController::class, 'create'])->name('customers.create');

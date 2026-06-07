@@ -12,6 +12,7 @@ use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\LeadReason;
 use Modules\CRM\Models\City;
+use Modules\CRM\Models\Region;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Device;
@@ -47,6 +48,7 @@ class OrderWizard extends Component
     // ─── Step 1: Location ────────────────────────────────────────
     public ?int $provinceId = null;
     public ?int $cityId = null;
+    public ?int $regionId = null;   // اختیاری — فقط اگر شهر منطقه داشته باشد
     public string $address = '';
 
     // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
@@ -188,6 +190,22 @@ class OrderWizard extends Component
     public function selectedCity(): ?City
     {
         return $this->cityId ? City::find($this->cityId) : null;
+    }
+
+    /** مناطق شهر انتخاب‌شده — اگر شهر منطقه ندارد collection خالی برمی‌گردد. */
+    #[Computed]
+    public function regions()
+    {
+        if (! $this->cityId) {
+            return collect();
+        }
+        return Region::where('city_id', $this->cityId)->active()->ordered()->get(['id', 'name']);
+    }
+
+    #[Computed]
+    public function selectedRegion(): ?Region
+    {
+        return $this->regionId ? Region::find($this->regionId) : null;
     }
 
     #[Computed]
@@ -349,15 +367,17 @@ class OrderWizard extends Component
 
         // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور در
         // مرحلهٔ «محل مراجعه» می‌تواند تأیید یا تغییر دهد و وقتش هدر
-        // برای تایپ مجدد آدرس قبلی نمی‌رود.
+        // برای تایپ مجدد آدرس قبلی نمی‌رود. region_id هم همراه می‌آید
+        // اگر سفارش قبلی منطقه داشته باشد.
         $lastOrder = Order::where('customer_id', $customer->id)
             ->whereNotNull('address')
             ->where('address', '!=', '')
             ->latest('created_at')
-            ->first(['province_id', 'city_id', 'address']);
+            ->first(['province_id', 'city_id', 'region_id', 'address']);
         if ($lastOrder) {
             $this->provinceId = $lastOrder->province_id;
             $this->cityId     = $lastOrder->city_id;
+            $this->regionId   = $lastOrder->region_id;
             $this->address    = (string) $lastOrder->address;
         }
     }
@@ -382,9 +402,18 @@ class OrderWizard extends Component
     {
         // در ویوی wizard، dropdown قابل‌سرچ شهر مستقیم از endpoint
         // /admin/crm/provinces/{id}/cities (در JS) لیست را می‌آورد و
-        // cityId را با $wire.set ست می‌کند. اینجا فقط cityId قبلی را
-        // پاک می‌کنیم.
+        // cityId را با $wire.set ست می‌کند. اینجا فقط cityId و regionId
+        // قبلی را پاک می‌کنیم تا انتخاب کهنه نمانَد.
         $this->cityId = null;
+        $this->regionId = null;
+    }
+
+    public function updatedCityId(): void
+    {
+        // هنگام تغییر شهر، منطقهٔ شهر قبلی بی‌اعتبار می‌شود — null می‌کنیم
+        // تا dropdown منطقه از نو بارگذاری شود (یا اگر شهر جدید منطقه
+        // ندارد، مخفی بماند).
+        $this->regionId = null;
     }
 
     public function clearVisitTime(): void
@@ -526,6 +555,10 @@ class OrderWizard extends Component
         $rules = [
             'provinceId' => 'required|integer|exists:crm_provinces,id',
             'cityId'     => 'required|integer|exists:crm_cities,id',
+            // منطقه اختیاری است — فقط شهرهای بزرگ منطقه دارند، و حتی
+            // برای آن‌ها اپراتور می‌تواند منطقه را نگذارد. اعتبارسنجی
+            // فقط چک می‌کند اگر مقدار داشت، یک region معتبر باشد.
+            'regionId'   => 'nullable|integer|exists:crm_regions,id',
             'brandId'    => 'required|integer|exists:crm_brands,id',
             'deviceId'   => 'required|integer|exists:crm_devices,id',
             'objections' => 'nullable|array',
@@ -550,6 +583,7 @@ class OrderWizard extends Component
         $this->validate($rules, attributes: [
             'provinceId'   => 'استان',
             'cityId'       => 'شهر',
+            'regionId'     => 'منطقه',
             'brandId'      => 'برند',
             'deviceId'     => 'نوع دستگاه',
             'orderType'    => 'نوع سفارش',
@@ -655,6 +689,7 @@ class OrderWizard extends Component
                         'customer_phone'      => $customer->phone,
                         'province_id'         => $this->provinceId,
                         'city_id'             => $this->cityId,
+                        'region_id'           => $this->regionId,
                         'address'             => $this->address,
                         'problem_title'       => $problemTitle,
                         'problem_description' => $dev['objection_description'] ?: null,

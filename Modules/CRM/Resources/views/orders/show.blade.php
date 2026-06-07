@@ -314,6 +314,7 @@
                             <span class="text-gray-900 dark:text-gray-100 font-medium">
                                 {{ $order->province?->name ?: '—' }}
                                 @if($order->city) <span class="text-gray-400">/</span> {{ $order->city->name }} @endif
+                                @if($order->region) <span class="text-gray-400">/</span> منطقه {{ $order->region->name }} @endif
                             </span>
                         </div>
                         @if($order->postal_code)
