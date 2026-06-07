@@ -26,6 +26,11 @@ class CustomerAppServiceProvider extends ServiceProvider
         // Route::middleware('api') لازم است تا exceptionها JSON رندر شوند
         Route::middleware('api')->group(__DIR__.'/../Routes/api.php');
 
+        // روت‌های ادمین — پنل «مدیریت اپلیکیشن (مشتریان)»
+        Route::middleware('web')->group(__DIR__.'/../Routes/web.php');
+
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'customerapp');
+
         $this->mergeConfigFrom(
             __DIR__.'/../config/cancel-reasons.php',
             'customerapp.cancel-reasons'
