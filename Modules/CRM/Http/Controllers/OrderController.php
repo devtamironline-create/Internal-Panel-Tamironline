@@ -530,6 +530,13 @@ class OrderController extends Controller
 
         $introductionList = \Modules\CRM\Models\CrmSetting::getJson('wp.introductionList', []);
 
+        // لیست ایرادهای رایج (objectionsList) از تنظیمات WP — برای
+        // multi-select در فرم ویرایش. هم‌ساختار با OrderWizard.
+        $objectionsListRaw = \Modules\CRM\Models\CrmSetting::getJson('wp.objectionsList', []);
+        $objectionsList = is_array($objectionsListRaw)
+            ? array_values(array_filter(array_map('strval', $objectionsListRaw)))
+            : [];
+
         return view('crm::orders.edit', [
             'order' => $order,
             'brands' => Brand::active()->ordered()->get(['id', 'name']),
@@ -541,6 +548,7 @@ class OrderController extends Controller
             'technicians' => Technician::orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),
             'introductionList' => is_array($introductionList) ? array_values(array_filter(array_map('strval', $introductionList))) : [],
+            'objectionsList' => $objectionsList,
         ]);
     }
 
@@ -571,7 +579,13 @@ class OrderController extends Controller
             'city_id' => $validated['city_id'] ?? null,
             'address' => $validated['address'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
-            'problem_title' => $validated['problem_title'] ?? null,
+            // اگر آرایهٔ objections[] از multi-select فرستاده شده، آن را
+            // با «، » join می‌کنیم تا با ساختار OrderWizard::submit
+            // یکسان بماند. در غیر این صورت روی مقدار قبلی problem_title
+            // برمی‌گردیم (fallback متنی).
+            'problem_title' => isset($validated['objections']) && is_array($validated['objections']) && ! empty($validated['objections'])
+                ? implode('، ', array_filter(array_map('trim', $validated['objections'])))
+                : ($validated['problem_title'] ?? null),
             'problem_description' => $validated['problem_description'] ?? null,
             'visit_scheduled_at' => $validated['visit_scheduled_at'] ?? null,
             'estimated_price' => $validated['estimated_price'] ?? null,
@@ -1161,6 +1175,9 @@ class OrderController extends Controller
             'address' => 'nullable|string|max:2000',
             'postal_code' => 'nullable|string|max:20',
             'problem_title' => 'nullable|string|max:255',
+            // multi-select از فرم — هر آیتم برچسبی از objectionsList تنظیمات WP
+            'objections'    => 'nullable|array',
+            'objections.*'  => 'string|max:255',
             'problem_description' => 'nullable|string|max:5000',
             'visit_scheduled_at' => 'nullable|date',
             'estimated_price' => 'nullable|integer|min:0',

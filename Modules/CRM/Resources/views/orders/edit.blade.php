@@ -51,6 +51,7 @@
                 'devices' => $devices,
                 'provinces' => $provinces,
                 'cities' => $cities,
+                'objectionsList' => $objectionsList ?? [],
                 'showFinalPrice' => true,
             ])
 

@@ -80,10 +80,73 @@
             </select>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">عنوان مشکل</label>
-            <input type="text" name="problem_title" value="{{ old('problem_title', $order->problem_title ?? '') }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"
-                   placeholder="مثلاً آب‌بندی نمی‌کند">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">ایراد دستگاه</label>
+            @php
+                // ایرادهای فعلی سفارش به‌صورت رشتهٔ «، »جداشده ذخیره شده‌اند
+                // (هم‌ساختار با OrderWizard::submit). برای پیش‌انتخاب در
+                // فرم آن را به آرایه می‌شکنیم.
+                $currentObjections = old('objections',
+                    array_filter(array_map('trim', preg_split('/،|,/u', $order->problem_title ?? '')))
+                );
+                if (! is_array($currentObjections)) {
+                    $currentObjections = [];
+                }
+            @endphp
+            @if(! empty($objectionsList))
+                <div x-data="{
+                    selected: @js(array_values($currentObjections)),
+                    query: '',
+                    norm(s) { return String(s ?? '').replace(/[يﻱ]/g, 'ی').replace(/[كﻙ]/g, 'ک').toLowerCase().trim(); },
+                    matches(label) { return this.norm(label).includes(this.norm(this.query)); },
+                    toggle(label) {
+                        const i = this.selected.indexOf(label);
+                        if (i === -1) this.selected.push(label); else this.selected.splice(i, 1);
+                        this.query = '';
+                    },
+                }" class="space-y-2">
+                    {{-- ایرادهای انتخاب‌شده — همیشه قابل دیدن --}}
+                    <template x-if="selected.length">
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="sel in selected" :key="sel">
+                                <button type="button" @click="toggle(sel)"
+                                        class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-sm hover:bg-brand-200">
+                                    <span x-text="sel"></span>
+                                    <span class="text-xs">✕</span>
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+
+                    {{-- input سرچ --}}
+                    <input type="text" x-model="query" placeholder="برای دیدن ایرادها، نام آن را جستجو کنید..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+
+                    {{-- نتایج — فقط هنگام تایپ --}}
+                    <div x-show="query.length > 0" x-cloak
+                         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        @foreach($objectionsList as $opt)
+                            <button x-show="!selected.includes(@js($opt)) && matches(@js($opt))" x-cloak
+                                    type="button" @click="toggle(@js($opt))"
+                                    class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-sm text-right">
+                                {{ $opt }}
+                            </button>
+                        @endforeach
+                    </div>
+
+                    {{-- hidden inputs: یک آرایه که controller با implode به
+                         رشتهٔ «، »جدا تبدیل می‌کند و در problem_title ذخیره می‌کند. --}}
+                    <template x-for="sel in selected" :key="'h-'+sel">
+                        <input type="hidden" name="objections[]" :value="sel">
+                    </template>
+                </div>
+            @else
+                {{-- fallback: اگر objectionsList تو تنظیمات WP نبود،
+                     همان input متنی قبلی به‌عنوان gracefully degrade. --}}
+                <input type="text" name="problem_title" value="{{ old('problem_title', $order->problem_title ?? '') }}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg"
+                       placeholder="مثلاً آب‌بندی نمی‌کند">
+                <p class="text-xs text-amber-600 mt-1">⚠ لیست ایرادها از تنظیمات WP بارگیری نشد — می‌توانید متنی وارد کنید.</p>
+            @endif
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">زمان مراجعه</label>
