@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\OrderController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\ServiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\StatusController;
 use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
@@ -44,6 +45,21 @@ Route::prefix('v1/customer')
 
         // ─── Private — auth:sanctum + rolling token ──────────────
         Route::middleware(['auth:sanctum', RollingToken::class])->group(function () {
+
+            // Orders — customer-facing
+            // cancel-reasons قبل از {id} تا روت‌گذاری اشتباه نکند
+            Route::get('/orders/cancel-reasons', [OrderController::class, 'cancelReasons'])
+                ->name('api.customer.orders.cancel-reasons');
+            Route::get('/orders', [OrderController::class, 'index'])
+                ->name('api.customer.orders.index');
+            Route::post('/orders', [OrderController::class, 'store'])
+                ->name('api.customer.orders.store');
+            Route::get('/orders/{id}', [OrderController::class, 'show'])
+                ->whereNumber('id')->name('api.customer.orders.show');
+            Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel'])
+                ->whereNumber('id')->name('api.customer.orders.cancel');
+            Route::get('/orders/{id}/version', [OrderController::class, 'version'])
+                ->whereNumber('id')->name('api.customer.orders.version');
 
             // Addresses — multi-address per customer
             Route::get('/addresses', [AddressController::class, 'index'])
