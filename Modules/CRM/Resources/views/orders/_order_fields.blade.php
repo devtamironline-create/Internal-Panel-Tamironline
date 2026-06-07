@@ -156,6 +156,31 @@
     </div>
 </div>
 
+{{-- فیلدهای لید — فقط برای رکوردهای با is_lead=true. اپراتور می‌تواند
+     دلیل و یادداشت لید را اینجا ببیند و ویرایش کند. اگر سفارش لید نیست
+     این بخش رندر نمی‌شود. --}}
+@if(isset($order) && $order->is_lead)
+    <div class="mb-6 bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-200 dark:border-rose-700 rounded-xl p-4">
+        <h3 class="text-sm font-bold text-rose-800 dark:text-rose-300 mb-3">⚠ اطلاعات لید (تماس غیرقابل سفارش)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دلیل عدم سفارش</label>
+                <select name="lead_reason_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <option value="">— انتخاب کنید —</option>
+                    @foreach(\Modules\CRM\Models\LeadReason::active()->ordered()->get() as $lr)
+                        <option value="{{ $lr->id }}" @selected(old('lead_reason_id', $order->lead_reason_id) == $lr->id)>{{ $lr->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">یادداشت لید (متن وارد شده توسط اپراتور هنگام ثبت)</label>
+            <textarea name="lead_notes" rows="4" placeholder="یادداشت اپراتور…"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('lead_notes', $order->lead_notes ?? '') }}</textarea>
+        </div>
+    </div>
+@endif
+
 {{-- یادداشت داخلی --}}
 <div class="mb-6">
     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">یادداشت داخلی</label>

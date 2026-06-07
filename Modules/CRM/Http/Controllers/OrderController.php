@@ -589,6 +589,16 @@ class OrderController extends Controller
             'subscription' => array_key_exists('subscription', $validated)
                 ? ($validated['subscription'] ?: null)
                 : $order->subscription,
+            // فیلدهای لید — فقط برای رکوردهایی که از قبل is_lead=true بودند
+            // در فرم رندر می‌شوند. برای سفارش‌های معمولی، مقادیر
+            // قبلی حفظ می‌شوند (array_key_exists فقط زمانی true است که
+            // input در فرم بود).
+            'lead_reason_id' => array_key_exists('lead_reason_id', $validated)
+                ? ($validated['lead_reason_id'] ?: null)
+                : $order->lead_reason_id,
+            'lead_notes' => array_key_exists('lead_notes', $validated)
+                ? ($validated['lead_notes'] ?: null)
+                : $order->lead_notes,
         ]);
 
         // ── اعمال تغییر روی Customer (observer در Customer::booted خودکار
@@ -1150,6 +1160,11 @@ class OrderController extends Controller
             'estimated_price' => 'nullable|integer|min:0',
             'deposit' => 'nullable|integer|min:0',
             'notes' => 'nullable|string|max:5000',
+            // فیلدهای لید — برای ویرایش رکوردهای is_lead=true. nullable
+            // چون فقط روی لیدها نمایش داده می‌شوند و سفارش‌های معمولی
+            // اصلاً ارسالشان نمی‌کنند.
+            'lead_reason_id' => 'nullable|integer|exists:crm_lead_reasons,id',
+            'lead_notes' => 'nullable|string|max:5000',
         ];
 
         if ($updating) {
