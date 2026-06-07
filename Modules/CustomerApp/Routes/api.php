@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CustomerApp\Http\Controllers\Api\V1\AddressController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\BootstrapController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\DeviceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\HolidayController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\InvoiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\LocationController;
@@ -16,6 +17,7 @@ use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
 use Modules\CustomerApp\Http\Middleware\EnsureNoPendingReview;
 use Modules\CustomerApp\Http\Middleware\IdempotencyKey;
 use Modules\CustomerApp\Http\Middleware\RollingToken;
+use Modules\CustomerApp\Http\Middleware\TrackTokenUsage;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,8 +60,14 @@ Route::prefix('v1/customer')
         Route::get('/bootstrap', BootstrapController::class)
             ->name('api.customer.bootstrap');
 
-        // ─── Private — auth:sanctum + rolling token ──────────────
-        Route::middleware(['auth:sanctum', RollingToken::class])->group(function () {
+        // ─── Private — auth:sanctum + rolling token + device tracking ──
+        Route::middleware(['auth:sanctum', RollingToken::class, TrackTokenUsage::class])->group(function () {
+
+            // Device sessions management (Block 7)
+            Route::get('/auth/devices', [DeviceController::class, 'index'])
+                ->name('api.customer.auth.devices.index');
+            Route::delete('/auth/devices/{id}', [DeviceController::class, 'destroy'])
+                ->whereNumber('id')->name('api.customer.auth.devices.destroy');
 
             // Orders — customer-facing
             // cancel-reasons و pending-reviews قبل از {id} تا روت‌گذاری اشتباه نکند
@@ -69,17 +77,20 @@ Route::prefix('v1/customer')
                 ->name('api.customer.orders.pending-reviews');
             Route::get('/orders', [OrderController::class, 'index'])
                 ->name('api.customer.orders.index');
+            // Writes حساس — rate-limit per user
             Route::post('/orders', [OrderController::class, 'store'])
-                ->middleware(EnsureNoPendingReview::class)
+                ->middleware([EnsureNoPendingReview::class, 'throttle:30,1'])
                 ->name('api.customer.orders.store');
             Route::get('/orders/{id}', [OrderController::class, 'show'])
                 ->whereNumber('id')->name('api.customer.orders.show');
             Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel'])
-                ->whereNumber('id')->name('api.customer.orders.cancel');
+                ->whereNumber('id')->middleware('throttle:10,1')
+                ->name('api.customer.orders.cancel');
             Route::get('/orders/{id}/version', [OrderController::class, 'version'])
                 ->whereNumber('id')->name('api.customer.orders.version');
             Route::post('/orders/{id}/review', [ReviewController::class, 'store'])
-                ->whereNumber('id')->name('api.customer.orders.review');
+                ->whereNumber('id')->middleware('throttle:10,1')
+                ->name('api.customer.orders.review');
 
             // Invoice — JSON و HTML (قابل تبدیل به PDF)
             Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])

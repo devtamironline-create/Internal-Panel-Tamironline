@@ -41,6 +41,64 @@
         </div>
     </div>
 
+    {{-- دستگاه‌های فعال (Sanctum tokens) — Block 7 --}}
+    @php
+        $activeTokens = \Laravel\Sanctum\PersonalAccessToken::query()
+            ->where('tokenable_type', \Modules\CRM\Models\Customer::class)
+            ->where('tokenable_id', $customer->id)
+            ->orderByDesc('last_used_at')
+            ->get(['id', 'name', 'device_id', 'last_used_at', 'last_used_ip', 'created_at', 'expires_at']);
+    @endphp
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">دستگاه‌های فعال (اپ موبایل)</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ $activeTokens->count() }} دستگاه</span>
+        </div>
+
+        @if ($activeTokens->isEmpty())
+            <p class="text-sm text-gray-500 dark:text-gray-400">این مشتری از طریق اپ موبایل لاگین نکرده است.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="px-2 py-1.5 text-start">Device ID</th>
+                            <th class="px-2 py-1.5 text-start">آخرین استفاده</th>
+                            <th class="px-2 py-1.5 text-start">IP</th>
+                            <th class="px-2 py-1.5 text-start">ساخت</th>
+                            <th class="px-2 py-1.5 text-start">انقضا</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($activeTokens as $t)
+                            <tr class="border-b border-gray-100 dark:border-gray-700/50">
+                                <td class="px-2 py-1.5 text-xs font-mono text-gray-700 dark:text-gray-300" dir="ltr">
+                                    {{ $t->device_id ? substr($t->device_id, 0, 16).'…' : '—' }}
+                                </td>
+                                <td class="px-2 py-1.5 text-xs text-gray-500">
+                                    {{ $t->last_used_at?->diffForHumans() ?? '—' }}
+                                </td>
+                                <td class="px-2 py-1.5 text-xs text-gray-500 font-mono" dir="ltr">
+                                    {{ $t->last_used_ip ?: '—' }}
+                                </td>
+                                <td class="px-2 py-1.5 text-xs text-gray-500">
+                                    {{ $t->created_at?->diffForHumans() }}
+                                </td>
+                                <td class="px-2 py-1.5 text-xs text-gray-500">
+                                    {{ $t->expires_at?->diffForHumans() ?? '—' }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <p class="text-[11px] text-gray-400 mt-3">
+            ادمین این لیست را فقط مشاهده می‌کند. کاربر در اپ می‌تواند خودش دستگاه‌ها را revoke کند یا با force_reauth سراسری از همه logout شود.
+        </p>
+    </div>
+
     {{-- آدرس‌های اپ موبایل (multi-address) — read-only؛ ویرایش/حذف از سمت کاربر اپ --}}
     @php
         $appAddresses = $customer->addresses()->with(['province:id,name', 'city:id,name'])->get();
