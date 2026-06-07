@@ -181,7 +181,7 @@ class CatalogDeviceController extends Controller
                         'enabled' => $enabled('videos', true),
                         'title' => $template['videos']['title'] ?? null,
                         'subtitle' => $template['videos']['subtitle'] ?? null,
-                        'items' => $this->buildVideos($device, $template),
+                        'items' => $this->buildVideos($device, $template, $context),
                     ],
                     'forum_questions' => [
                         'enabled' => $enabled('forum_questions', true),
@@ -198,15 +198,20 @@ class CatalogDeviceController extends Controller
 
     /**
      * منطق: ابتدا videos اختصاصی دستگاه (JSON روی entity)، در صورت خالی → template.videos.items.
+     * در هر دو حالت `{device}` و دیگر placeholderها روی متن‌ها اعمال می‌شوند.
      *
+     * @param  array<string, string>  $context
      * @return array<int, array<string, mixed>>
      */
-    private function buildVideos(Device $device, array $template): array
+    private function buildVideos(Device $device, array $template, array $context = []): array
     {
         $entity = is_array($device->videos) ? array_values(array_filter($device->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
         if ($entity !== []) {
-            return $this->shapeVideos($entity);
+            $hydrated = $context === [] ? $entity : $this->sections->applyPlaceholders($entity, $context);
+
+            return $this->shapeVideos($hydrated);
         }
+        // template.videos.items از قبل توسط loadForPublic placeholder خورده — دوباره نخور
         $tpl = (array) ($template['videos']['items'] ?? []);
 
         return $this->shapeVideos($tpl);

@@ -20,6 +20,7 @@ class Article extends Model
     protected $table = 'site_blog_articles';
 
     protected $fillable = [
+        'wp_id',
         'slug',
         'title',
         'excerpt',
@@ -34,6 +35,8 @@ class Article extends Model
         'sort_order',
         'meta_title',
         'meta_description',
+        'author_name',
+        'original_url',
     ];
 
     protected $casts = [
@@ -42,6 +45,7 @@ class Article extends Model
         'read_time_minutes' => 'integer',
         'views_count' => 'integer',
         'sort_order' => 'integer',
+        'wp_id' => 'integer',
     ];
 
     public function topics(): BelongsToMany

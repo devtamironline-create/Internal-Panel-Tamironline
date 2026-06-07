@@ -938,19 +938,19 @@ return [
             // ─── 7b. Videos (پیش‌فرض همه‌ی صفحات دستگاه) ────────────
             'videos' => [
                 'label' => 'ویدیوها (پیش‌فرض همه‌ی صفحات دستگاه)',
-                'description' => 'ویدیوهای آموزشی/معرفی. هر دستگاه می‌تواند لیست اختصاصی خود را در فرم ویرایش دستگاه ست کند تا این پیش‌فرض را override کند.',
+                'description' => 'ویدیوهای آموزشی/معرفی. هر دستگاه می‌تواند لیست اختصاصی خود را در فرم ویرایش دستگاه ست کند تا این پیش‌فرض را override کند. متن‌ها از placeholder `{device}` پشتیبانی می‌کنند.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'title' => ['label' => 'تیتر سکشن (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {device})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
                     'items' => [
                         'label' => 'لیست ویدیوها',
                         'type' => 'repeater',
                         'item_fields' => [
-                            'title' => ['label' => 'عنوان ویدیو', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'title' => ['label' => 'عنوان ویدیو (با {device})', 'type' => 'string', 'rules' => 'required|string|max:200'],
                             'aparat_id' => ['label' => 'Aparat ID (اولویت ۱)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                             'youtube_id' => ['label' => 'YouTube ID (اولویت ۲)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                             'video_url' => ['label' => 'URL مستقیم mp4 (اولویت ۳)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
-                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                            'description' => ['label' => 'توضیح کوتاه (با {device})', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
                             'poster_url' => ['label' => 'تصویر cover (اختیاری) — انتخاب از مخزن مدیا', 'type' => 'image', 'rules' => 'nullable|string|max:500'],
                         ],
                     ],
@@ -960,11 +960,11 @@ return [
             // ─── 7c. Forum Questions (۵ سوال آخر این دستگاه) ────────
             'forum_questions' => [
                 'label' => 'سوالات اخیر انجمن (فقط مرتبط با این دستگاه)',
-                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس device_id خودکار از /v1/forum/questions می‌آیند.',
+                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس device_id خودکار از /v1/forum/questions می‌آیند. متن‌ها از placeholder `{device}` پشتیبانی می‌کنند.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر سکشن (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {device})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه» (با {device})', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
 
@@ -1074,19 +1074,19 @@ return [
             // ─── 7b. Videos (پیش‌فرض همه‌ی صفحات برند) ──────────────
             'videos' => [
                 'label' => 'ویدیوها (پیش‌فرض همه‌ی صفحات برند)',
-                'description' => 'ویدیوهای آموزشی/معرفی. هر برند می‌تواند لیست اختصاصی خود را در فرم ویرایش برند ست کند تا این پیش‌فرض را override کند.',
+                'description' => 'ویدیوهای آموزشی/معرفی. هر برند می‌تواند لیست اختصاصی خود را در فرم ویرایش برند ست کند تا این پیش‌فرض را override کند. متن‌ها از placeholder `{brand}` پشتیبانی می‌کنند.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'title' => ['label' => 'تیتر سکشن (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
                     'items' => [
                         'label' => 'لیست ویدیوها',
                         'type' => 'repeater',
                         'item_fields' => [
-                            'title' => ['label' => 'عنوان ویدیو', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'title' => ['label' => 'عنوان ویدیو (با {brand})', 'type' => 'string', 'rules' => 'required|string|max:200'],
                             'aparat_id' => ['label' => 'Aparat ID (اولویت ۱)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                             'youtube_id' => ['label' => 'YouTube ID (اولویت ۲)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                             'video_url' => ['label' => 'URL مستقیم mp4 (اولویت ۳)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
-                            'description' => ['label' => 'توضیح کوتاه', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                            'description' => ['label' => 'توضیح کوتاه (با {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
                             'poster_url' => ['label' => 'تصویر cover (اختیاری) — انتخاب از مخزن مدیا', 'type' => 'image', 'rules' => 'nullable|string|max:500'],
                         ],
                     ],
@@ -1096,11 +1096,11 @@ return [
             // ─── 7c. Forum Questions (۵ سوال آخر این برند) ──────────
             'forum_questions' => [
                 'label' => 'سوالات اخیر انجمن (فقط مرتبط با این برند)',
-                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس brand_id خودکار از انجمن می‌آیند.',
+                'description' => 'تیتر و زیرتیتر سکشن. ۵ سوال آخر بر اساس brand_id خودکار از انجمن می‌آیند. متن‌ها از placeholder `{brand}` پشتیبانی می‌کنند.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر سکشن (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه» (با {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
 
@@ -1206,13 +1206,35 @@ return [
                 ],
             ],
 
+            // ─── Videos (پیش‌فرض همه‌ی صفحات ترکیبی) ───────────────
+            'videos' => [
+                'label' => 'ویدیوها (پیش‌فرض همه‌ی صفحات ترکیبی)',
+                'description' => 'ویدیوهای آموزشی/معرفی برای صفحه‌ی /devices/{d}/{b}. اولویت روی فرانت: device→videos > brand→videos > template ترکیبی > template دستگاه. متن‌ها از placeholderهای `{device}` و `{brand}` پشتیبانی می‌کنند.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {device} و {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'لیست ویدیوها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان ویدیو (با {device} و {brand})', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'aparat_id' => ['label' => 'Aparat ID (اولویت ۱)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'youtube_id' => ['label' => 'YouTube ID (اولویت ۲)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'video_url' => ['label' => 'URL مستقیم mp4 (اولویت ۳)', 'type' => 'url', 'rules' => 'nullable|site_url|max:500'],
+                            'description' => ['label' => 'توضیح کوتاه (با {device} و {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                            'poster_url' => ['label' => 'تصویر cover (اختیاری) — انتخاب از مخزن مدیا', 'type' => 'image', 'rules' => 'nullable|string|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
             'forum_questions' => [
                 'label' => 'سوالات اخیر انجمن (فقط مرتبط با این ترکیب)',
-                'description' => '۵ سوال آخر که هم device_id و هم brand_id آن‌ها مطابقت دارد. اگر چیزی نباشد، فرانت می‌تواند fallback به فقط device_id یا brand_id بزند.',
+                'description' => '۵ سوال آخر که هم device_id و هم brand_id آن‌ها مطابقت دارد. اگر چیزی نباشد، فرانت می‌تواند fallback به فقط device_id یا brand_id بزند. متن‌ها از placeholderهای `{device}` و `{brand}` پشتیبانی می‌کنند.',
                 'fields' => [
-                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
-                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه»', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'title' => ['label' => 'تیتر سکشن (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر (با {device} و {brand})', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'see_all_label' => ['label' => 'متن لینک «مشاهده همه» (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                 ],
             ],
 

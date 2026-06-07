@@ -121,16 +121,21 @@ class PageSectionService
     }
 
     /**
-     * Placeholder‌های پشتیبانی‌شده:
-     *   {device}, {device_slug}, {page_title}
+     * Placeholder‌های پشتیبانی‌شده (هر کلید context به‌صورت {key} جایگزین می‌شود):
+     *   {device}, {device_slug}, {brand}, {brand_slug}, {page_title}, ...
      *
      * Context مثلاً برای صفحه‌ی دستگاه از /v1/devices/{slug} پاس داده می‌شود:
      *   ['device' => 'لباس‌شویی', 'device_slug' => 'washing-machine']
+     * صفحه‌ی ترکیبی /devices/{d}/{b} هم `brand` و `brand_slug` را اضافه می‌کند.
+     *
+     * بازگشتی روی arrayها — برای group/repeater payload هم به‌صورت خودکار اعمال
+     * می‌شود. controllerها می‌توانند برای entity-override (مثلاً brand->videos)
+     * این متد را مستقیم صدا بزنند تا placeholder روی JSON اختصاصی هم اعمال شود.
      *
      * @param  mixed  $value
      * @param  array<string, string>  $context
      */
-    private function applyPlaceholders($value, array $context)
+    public function applyPlaceholders($value, array $context)
     {
         if ($context === []) {
             return $value;

@@ -133,6 +133,12 @@ class CatalogDeviceBrandController extends Controller
                         'enabled' => $enabled('testimonials', true),
                         'items' => $this->buildTestimonials($page, $device, $brand, $template),
                     ],
+                    'videos' => [
+                        'enabled' => $enabled('videos', true),
+                        'title' => $template['videos']['title'] ?? null,
+                        'subtitle' => $template['videos']['subtitle'] ?? null,
+                        'items' => $this->buildVideos($device, $brand, $template, $context),
+                    ],
                     'forum_questions' => [
                         'enabled' => $enabled('forum_questions', true),
                         'title' => $template['forum_questions']['title'] ?? null,
@@ -375,5 +381,49 @@ class CatalogDeviceBrandController extends Controller
             'duration_seconds' => $r->duration_seconds,
             'content' => $r->content,
         ])->all();
+    }
+
+    /**
+     * منطق videos برای صفحه‌ی ترکیبی:
+     *   device.videos > brand.videos > template.videos.items
+     * placeholderهای `{device}` و `{brand}` روی هر سه سطح اعمال می‌شوند.
+     *
+     * @param  array<string, string>  $context
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildVideos(Device $device, Brand $brand, array $template, array $context): array
+    {
+        $deviceVideos = is_array($device->videos) ? array_values(array_filter($device->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
+        if ($deviceVideos !== []) {
+            return $this->shapeVideos($this->sections->applyPlaceholders($deviceVideos, $context));
+        }
+
+        $brandVideos = is_array($brand->videos) ? array_values(array_filter($brand->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
+        if ($brandVideos !== []) {
+            return $this->shapeVideos($this->sections->applyPlaceholders($brandVideos, $context));
+        }
+
+        // template.videos.items از قبل توسط loadForPublic placeholder خورده
+        $tpl = (array) ($template['videos']['items'] ?? []);
+
+        return $this->shapeVideos($tpl);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function shapeVideos(array $rows): array
+    {
+        $rows = array_values(array_filter($rows, fn ($r) => is_array($r)));
+
+        return array_map(fn (array $r) => [
+            'title' => $r['title'] ?? null,
+            'aparat_id' => $r['aparat_id'] ?? null,
+            'youtube_id' => $r['youtube_id'] ?? null,
+            'video_url' => $r['video_url'] ?? null,
+            'description' => $r['description'] ?? null,
+            'poster_url' => $r['poster_url'] ?? null,
+        ], $rows);
     }
 }
