@@ -4,5 +4,6 @@
     "Salary": true,
     "Warehouse": true,
     "Site": true,
-    "Identity": true
+    "Identity": true,
+    "CustomerApp": true
 }

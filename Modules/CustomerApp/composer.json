@@ -1,0 +1,11 @@
+{
+    "name": "tamironline/customer-app",
+    "description": "Customer mobile/PWA application API for tamironline.",
+    "type": "laravel-module",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\CustomerApp\\": ""
+        }
+    }
+}
