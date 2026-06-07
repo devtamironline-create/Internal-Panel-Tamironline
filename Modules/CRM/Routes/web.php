@@ -205,6 +205,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->where('format', 'csv|xlsx')->name('orders.export');
         // ─── لیدها — بخش مستقل از سفارشات با فیلتر/خروجی جدا ─────
         Route::get('leads', [\Modules\CRM\Http\Controllers\LeadController::class, 'index'])->name('leads.index');
+        Route::get('leads/dashboard', [\Modules\CRM\Http\Controllers\LeadDashboardController::class, 'index'])->name('leads.dashboard');
         Route::get('leads/export/{format}', [\Modules\CRM\Http\Controllers\LeadController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('leads.export');
         // مسیر static باید قبل از orders/{order} باشد تا پارامتر اشتباه نشود
