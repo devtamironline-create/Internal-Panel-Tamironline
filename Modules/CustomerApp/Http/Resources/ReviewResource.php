@@ -5,6 +5,7 @@ namespace Modules\CustomerApp\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\CRM\Models\OrderReview;
+use Modules\CRM\Models\ReviewTag;
 
 /**
  * @mixin OrderReview
@@ -24,6 +25,15 @@ class ReviewResource extends JsonResource
             'comment' => $this->comment,
             'would_recommend' => $this->would_recommend,
             'status' => $this->status,
+            'tags' => $this->whenLoaded('tags', function () {
+                return $this->tags->map(fn (ReviewTag $t) => [
+                    'id' => (int) $t->id,
+                    'slug' => $t->slug,
+                    'label' => $t->label,
+                    'type' => $t->type,
+                    'icon' => $t->icon,
+                ])->values()->all();
+            }, []),
             'submitted_at' => $this->created_at?->utc()->toIso8601String(),
         ];
     }

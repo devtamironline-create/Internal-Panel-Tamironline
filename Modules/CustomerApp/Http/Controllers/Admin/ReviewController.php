@@ -67,6 +67,7 @@ class ReviewController extends Controller
             'customer:id,first_name,last_name,mobile',
             'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'moderator:id,first_name,last_name',
+            'tags',
         ]);
 
         return view('customerapp::admin.reviews.show', ['review' => $review]);

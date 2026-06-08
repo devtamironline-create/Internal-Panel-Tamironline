@@ -5,10 +5,12 @@ namespace Modules\CustomerApp\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderReview;
+use Modules\CRM\Models\ReviewTag;
 use Modules\CustomerApp\Http\Requests\SubmitReviewRequest;
 use Modules\CustomerApp\Http\Resources\ReviewResource;
 
@@ -81,8 +83,8 @@ class ReviewController extends Controller
             ], 422);
         }
 
-        // اگر قبلاً ثبت شده → نظر قبلی را برگردان (نه error)
-        $existing = OrderReview::query()->where('order_id', $order->id)->first();
+        // اگر قبلاً ثبت شده → نظر قبلی را با تگ‌ها برگردان (نه error)
+        $existing = OrderReview::query()->where('order_id', $order->id)->with('tags')->first();
         if ($existing) {
             return response()->json([
                 'message' => 'نظر قبلاً ثبت شده است.',
@@ -92,24 +94,65 @@ class ReviewController extends Controller
         }
 
         $data = $request->validated();
+        $tagIds = $request->activeTagIds();
 
-        $review = OrderReview::create([
-            'order_id' => $order->id,
-            'customer_id' => $customer->id,
-            'technician_id' => $order->technician_id,
-            'rating' => (int) $data['rating'],
-            'criteria' => $this->sanitizeCriteria($data['criteria'] ?? null),
-            'comment' => $data['comment'] ?? null,
-            'would_recommend' => array_key_exists('would_recommend', $data) ? (bool) $data['would_recommend'] : null,
-            'status' => OrderReview::STATUS_PENDING,
-            'ip' => $request->ip(),
-            'user_agent' => substr((string) $request->userAgent(), 0, 255),
-        ]);
+        $review = DB::transaction(function () use ($order, $customer, $data, $tagIds, $request) {
+            $r = OrderReview::create([
+                'order_id' => $order->id,
+                'customer_id' => $customer->id,
+                'technician_id' => $order->technician_id,
+                'rating' => (int) $data['rating'],
+                'criteria' => $this->sanitizeCriteria($data['criteria'] ?? null),
+                'comment' => $data['comment'] ?? null,
+                'would_recommend' => array_key_exists('would_recommend', $data) ? (bool) $data['would_recommend'] : null,
+                'status' => OrderReview::STATUS_PENDING,
+                'ip' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+
+            if (! empty($tagIds)) {
+                $r->tags()->sync($tagIds);
+            }
+
+            return $r;
+        });
+
+        $review->load('tags');
 
         return response()->json([
             'message' => 'نظر شما ثبت شد. ممنون از همکاری.',
             'data' => (new ReviewResource($review))->resolve(),
         ], 201);
+    }
+
+    /**
+     * GET /v1/customer/reviews/tags
+     *
+     * فهرست تگ‌های فعال نقاط قوت/ضعف، گروه‌بندی شده بر اساس type.
+     * عمومی است (auth لازم نیست) — public endpoint برای splash/cache فرانت.
+     * Cache 5 دقیقه‌ای روی CDN/proxy مجاز است.
+     */
+    public function tags(Request $request): JsonResponse
+    {
+        $rows = ReviewTag::query()->active()->ordered()->get(['id', 'slug', 'label', 'type', 'icon']);
+
+        $shape = fn (ReviewTag $t) => [
+            'id' => (int) $t->id,
+            'slug' => $t->slug,
+            'label' => $t->label,
+            'icon' => $t->icon,
+        ];
+
+        return response()->json([
+            'data' => [
+                'pros' => $rows->where('type', ReviewTag::TYPE_PRO)->values()->map($shape)->all(),
+                'cons' => $rows->where('type', ReviewTag::TYPE_CON)->values()->map($shape)->all(),
+            ],
+            'meta' => [
+                'total_pros' => $rows->where('type', ReviewTag::TYPE_PRO)->count(),
+                'total_cons' => $rows->where('type', ReviewTag::TYPE_CON)->count(),
+            ],
+        ])->header('Cache-Control', 'public, max-age=300');
     }
 
     private function customer(Request $request): Customer

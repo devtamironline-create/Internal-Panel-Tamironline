@@ -78,6 +78,38 @@
             </div>
         </div>
 
+        @php
+            $pros = $review->tags->where('type', 'pro');
+            $cons = $review->tags->where('type', 'con');
+        @endphp
+        @if($pros->count() || $cons->count())
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                <div class="text-xs text-gray-500 mb-2">تگ‌های انتخاب‌شده</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <div class="text-[11px] text-emerald-700 font-bold mb-1">نقاط قوت ({{ $pros->count() }})</div>
+                        <div class="flex flex-wrap gap-1.5">
+                            @forelse($pros as $t)
+                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">{{ $t->label }}</span>
+                            @empty
+                                <span class="text-[11px] text-gray-400">—</span>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[11px] text-rose-700 font-bold mb-1">نقاط ضعف ({{ $cons->count() }})</div>
+                        <div class="flex flex-wrap gap-1.5">
+                            @forelse($cons as $t)
+                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">{{ $t->label }}</span>
+                            @empty
+                                <span class="text-[11px] text-gray-400">—</span>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
             <div class="text-xs text-gray-500 mb-1">متن نظر</div>
             <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 p-3 rounded">{{ $review->comment ?: '— بدون متن —' }}</div>

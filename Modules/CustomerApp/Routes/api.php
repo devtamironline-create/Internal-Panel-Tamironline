@@ -62,6 +62,10 @@ Route::prefix('v1/customer')
         Route::get('/holidays', [HolidayController::class, 'index'])
             ->name('api.customer.holidays.index');
 
+        // Review tags picker — لیست تگ‌های نقاط قوت/ضعف برای فرم نظرسنجی اپ
+        Route::get('/reviews/tags', [ReviewController::class, 'tags'])
+            ->name('api.customer.reviews.tags');
+
         // Bootstrap aggregate — splash endpoint
         Route::get('/bootstrap', BootstrapController::class)
             ->name('api.customer.bootstrap');
