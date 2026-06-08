@@ -674,6 +674,10 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                             دلایل عدم سفارش (لید)
                         </a>
+                        <a href="{{ route('crm.objections.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+                            ایرادات دستگاه
+                        </a>
                         @endcan
                         @auth
                         <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"

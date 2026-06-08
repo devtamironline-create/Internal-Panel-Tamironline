@@ -375,6 +375,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'destroy'])->name('regions.destroy')->whereNumber('region');
     });
 
+    // ─── مدیریت ایرادات دستگاه (objectionsList در فرم ثبت سفارش) ───
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('objections', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'index'])->name('objections.index');
+        Route::post('objections', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'update'])->name('objections.update');
+    });
+
     // ─── دلایل عدم امکان سفارش (مدیریت لیدها) ─────────────────────
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('lead-reasons', [\Modules\CRM\Http\Controllers\LeadReasonController::class, 'index'])->name('lead-reasons.index');
