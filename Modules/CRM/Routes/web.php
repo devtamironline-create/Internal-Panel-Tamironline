@@ -417,6 +417,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::prefix('tech-chats')->name('tech-chats.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\TechChatController::class, 'index'])->name('index');
         Route::get('/unread-summary', [\Modules\CRM\Http\Controllers\TechChatController::class, 'unreadSummary'])->name('unread');
+        Route::get('/search', [\Modules\CRM\Http\Controllers\TechChatController::class, 'search'])->name('search');
         Route::middleware('can:manage-technicians')->group(function () {
             Route::get('/assignments', [\Modules\CRM\Http\Controllers\TechChatController::class, 'assignments'])->name('assignments');
             Route::patch('/{technician}/assign', [\Modules\CRM\Http\Controllers\TechChatController::class, 'updateAssignment'])->name('assign');

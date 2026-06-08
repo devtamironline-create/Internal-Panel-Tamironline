@@ -18,31 +18,52 @@ use Modules\CRM\Models\TechChatMessage;
  */
 class TechChatController extends Controller
 {
-    /** لیست تکنسین‌های گفت‌وگو با آخرین پیام و تعداد نخوانده. */
+    /**
+     * لیست چت‌های فعال — فقط تکنسین‌هایی که حداقل یک پیام رد و بدل شده.
+     * تکنسین‌هایی که هنوز چتی شروع نشده در لیست نمی‌آیند؛ برای شروع
+     * چت با آن‌ها از باکس جست‌وجو (endpoint search) استفاده می‌شود.
+     */
     public function index(Request $request)
     {
         $user = Auth::user();
-
-        // اگر دسترسی manage-technicians دارد، می‌تواند همه را ببیند با ?all=1.
-        $showAll = $request->boolean('all') && $user->can('manage-technicians');
-
-        $query = Technician::query()
-            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
-            ->with('operators:id,first_name,last_name');
-
-        if (! $showAll) {
-            $query->whereHas('operators', fn($q) => $q->where('users.id', $user->id));
+        $canManage = $user->can('manage-technicians');
+        $showAll = $request->boolean('all') && $canManage;
+        $filter = $request->query('filter');
+        if (! in_array($filter, ['unread', 'replied'], true)) {
+            $filter = null;
         }
 
-        $technicians = $query->orderBy('first_name')->get();
+        // تکنسین‌های در دامنهٔ این اپراتور — تخصیص یا همه برای manage-tech.
+        $scopeQuery = Technician::query()->select('id');
+        if (! $showAll) {
+            $scopeQuery->whereHas('operators', fn($q) => $q->where('users.id', $user->id));
+        }
+        $scopeIds = $scopeQuery->pluck('id');
 
-        // آخرین پیام + تعداد نخوانده برای هر تکنسین
+        // فقط تکنسین‌هایی که در این دامنه‌اند و حداقل یک پیام چت دارند.
+        $techIdsWithChat = TechChatMessage::query()
+            ->whereIn('technician_id', $scopeIds)
+            ->select('technician_id')->distinct()->pluck('technician_id');
+
+        $technicians = Technician::query()
+            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
+            ->whereIn('id', $techIdsWithChat)
+            ->with('operators:id,first_name,last_name')
+            ->get();
+
+        // آخرین پیام + sender_type آخرین پیام + تعداد نخوانده.
         $techIds = $technicians->pluck('id')->all();
-        $last = TechChatMessage::query()
+
+        $lastByTech = TechChatMessage::query()
             ->whereIn('technician_id', $techIds)
-            ->select('technician_id', DB::raw('MAX(created_at) as last_at'))
+            ->select('technician_id', DB::raw('MAX(id) as last_id'), DB::raw('MAX(created_at) as last_at'))
             ->groupBy('technician_id')
-            ->pluck('last_at', 'technician_id');
+            ->get()
+            ->keyBy('technician_id');
+
+        $lastSenderType = TechChatMessage::query()
+            ->whereIn('id', $lastByTech->pluck('last_id'))
+            ->pluck('sender_type', 'technician_id');
 
         $unread = TechChatMessage::query()
             ->whereIn('technician_id', $techIds)
@@ -52,16 +73,85 @@ class TechChatController extends Controller
             ->groupBy('technician_id')
             ->pluck('cnt', 'technician_id');
 
-        $technicians = $technicians->map(function ($t) use ($last, $unread) {
-            $t->last_message_at = $last->get($t->id);
+        $technicians = $technicians->map(function ($t) use ($lastByTech, $lastSenderType, $unread) {
+            $row = $lastByTech->get($t->id);
+            $t->last_message_at = $row?->last_at;
+            $t->last_sender_type = $lastSenderType->get($t->id);
             $t->unread_count = (int) ($unread->get($t->id) ?? 0);
+            // پیام بی‌پاسخ: آخرین پیام از تکنسین بوده و هنوز خوانده/پاسخ نشده.
+            $t->needs_reply = $t->last_sender_type === TechChatMessage::SENDER_TECH
+                && $t->unread_count > 0;
             return $t;
-        })->sortByDesc(fn($t) => $t->last_message_at ?? '');
+        });
+
+        $stats = [
+            'unread'  => $technicians->where('needs_reply', true)->count(),
+            'replied' => $technicians->where('needs_reply', false)->count(),
+            'total'   => $technicians->count(),
+            'unread_messages' => (int) $unread->sum(),
+        ];
+
+        if ($filter === 'unread') {
+            $technicians = $technicians->where('needs_reply', true);
+        } elseif ($filter === 'replied') {
+            $technicians = $technicians->where('needs_reply', false);
+        }
+
+        // اولویت: بی‌پاسخ بالا، سپس آخرین فعالیت.
+        $technicians = $technicians
+            ->sortBy(fn($t) => $t->needs_reply ? 0 : 1)
+            ->groupBy(fn($t) => $t->needs_reply ? 0 : 1)
+            ->map(fn($group) => $group->sortByDesc(fn($t) => $t->last_message_at ?? ''))
+            ->flatten();
 
         return view('crm::tech-chats.index', [
             'technicians' => $technicians,
-            'showAll' => $showAll,
+            'stats'       => $stats,
+            'showAll'     => $showAll,
+            'filter'      => $filter,
+            'canManage'   => $canManage,
         ]);
+    }
+
+    /**
+     * جست‌وجوی تکنسین‌های فعال برای شروع چت جدید — JSON.
+     * فقط تکنسین‌های دامنهٔ این اپراتور (تخصیص یا همه برای manage-tech).
+     */
+    public function search(Request $request)
+    {
+        $user = Auth::user();
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $query = Technician::query()
+            ->active()
+            ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
+            ->where(function ($w) use ($q) {
+                $w->where('first_name', 'like', "%{$q}%")
+                  ->orWhere('last_name', 'like', "%{$q}%")
+                  ->orWhere('firstname_tech', 'like', "%{$q}%")
+                  ->orWhere('mobile', 'like', "%{$q}%");
+            });
+
+        if (! $user->can('manage-technicians')) {
+            $query->whereHas('operators', fn($w) => $w->where('users.id', $user->id));
+        }
+
+        $results = $query->orderBy('first_name')->limit(15)->get()
+            ->map(function ($t) {
+                $name = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? '')));
+                $name = $name !== '' ? $name : ('تکنسین #' . $t->id);
+                return [
+                    'id'     => $t->id,
+                    'name'   => $name,
+                    'mobile' => $t->mobile,
+                    'url'    => route('crm.tech-chats.show', $t),
+                ];
+            });
+
+        return response()->json(['results' => $results]);
     }
 
     /** نمایش thread یک تکنسین + علامت‌گذاری به‌عنوان خوانده. */
