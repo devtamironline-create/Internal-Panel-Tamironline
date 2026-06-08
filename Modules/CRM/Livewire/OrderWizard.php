@@ -535,6 +535,12 @@ class OrderWizard extends Component
             ];
         if ($this->isOrderable) {
             $rules['address'] = 'required|string|max:2000';
+            // منطقه در همین مرحله انتخاب می‌شود؛ اگر شهر منطقه دارد و
+            // سفارش لید نیست، انتخاب منطقه الزامی است (لازم برای تخصیص
+            // تکنسین بر اساس منطقه).
+            if ($this->cityId && Region::where('city_id', $this->cityId)->active()->exists()) {
+                $rules['regionId'] = 'required|integer|exists:crm_regions,id';
+            }
         }
         $this->validate($rules, attributes: [
             'newName'      => 'نام مشتری',
@@ -542,8 +548,10 @@ class OrderWizard extends Component
             'customerId'   => 'مشتری',
             'introduction' => 'نحوه آشنایی',
             'address'      => 'آدرس',
+            'regionId'     => 'منطقه',
         ], messages: [
             'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
+            'regionId.required'     => 'برای این شهر، انتخاب منطقه الزامی است.',
         ]);
     }
 
@@ -573,11 +581,6 @@ class OrderWizard extends Component
             $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
         } else {
             $rules['orderType'] = 'required|string|in:repair,service';
-            // برای سفارش‌های واقعی (غیرلید)، اگر شهر منطقه دارد، انتخاب
-            // منطقه الزامی است تا تخصیص تکنسین بر اساس منطقه ممکن باشد.
-            if ($this->cityId && Region::where('city_id', $this->cityId)->active()->exists()) {
-                $rules['regionId'] = 'required|integer|exists:crm_regions,id';
-            }
         }
         // اعتبارسنجی دستگاه‌های اضافه
         foreach ($this->extraDevices as $i => $d) {
