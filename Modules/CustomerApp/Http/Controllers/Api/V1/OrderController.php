@@ -114,6 +114,7 @@ class OrderController extends Controller
 
         $order = DB::transaction(function () use ($customer, $address, $data, $scheduledAt) {
             $order = Order::create([
+                'order_code' => Order::generateOrderCode(),
                 'customer_id' => $customer->id,
                 'subscription' => $customer->subscription ?? null,
                 'introduction' => $data['introduction'] ?? null,
