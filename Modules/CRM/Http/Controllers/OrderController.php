@@ -559,7 +559,7 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order)
     {
-        $validated = $this->validateOrder($request, updating: true);
+        $validated = $this->validateOrder($request, updating: true, order: $order);
 
         // ── ویرایش اطلاعات مشتری (روی پروفایل Customer هم اعمال می‌شود).
         // اگر شماره موبایل جدید با مشتری دیگری تداخل دارد، خطا برگردان.
@@ -1173,14 +1173,22 @@ class OrderController extends Controller
         }
     }
 
-    protected function validateOrder(Request $request, bool $updating = false): array
+    protected function validateOrder(Request $request, bool $updating = false, ?Order $order = null): array
     {
+        // اگر سفارش لید نباشد و شهر منطقه داشته باشد، انتخاب منطقه
+        // الزامی است (همان قاعده‌ای که در OrderWizard هنگام ثبت اعمال
+        // می‌شود — اینجا برای edit تکرار می‌کنیم).
+        $cityId = $request->input('city_id');
+        $isLead = $order ? (bool) $order->is_lead : false;
+        $regionRequired = ! $isLead && $cityId
+            && \Modules\CRM\Models\Region::where('city_id', $cityId)->active()->exists();
+
         $rules = [
             'brand_id' => 'nullable|exists:crm_brands,id',
             'device_id' => 'nullable|exists:crm_devices,id',
             'province_id' => 'nullable|exists:crm_provinces,id',
             'city_id' => 'nullable|exists:crm_cities,id',
-            'region_id' => 'nullable|exists:crm_regions,id',
+            'region_id' => ($regionRequired ? 'required|' : 'nullable|') . 'integer|exists:crm_regions,id',
             'address' => 'nullable|string|max:2000',
             'postal_code' => 'nullable|string|max:20',
             'problem_title' => 'nullable|string|max:255',

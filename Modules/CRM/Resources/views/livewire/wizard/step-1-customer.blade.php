@@ -105,15 +105,17 @@
         <div wire:key="region-select-{{ $cityId }}">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 منطقه {{ $this->selectedCity ? '— ' . $this->selectedCity->name : '' }}
+                <span class="text-rose-600">*</span>
             </label>
             <select wire:model="regionId" data-searchable
                     class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-                <option value="">— بدون منطقه —</option>
+                <option value="">— انتخاب کنید —</option>
                 @foreach($this->regions as $r)
                     <option value="{{ $r->id }}">{{ $r->name }}</option>
                 @endforeach
             </select>
-            <p class="text-xs text-gray-500 mt-1">اگر منطقه را می‌دانید انتخاب کنید — اختیاری است.</p>
+            <p class="text-xs text-gray-500 mt-1">برای این شهر انتخاب منطقه الزامی است.</p>
+            @error('regionId')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
     @endif
 

@@ -558,9 +558,8 @@ class OrderWizard extends Component
         $rules = [
             'provinceId' => 'required|integer|exists:crm_provinces,id',
             'cityId'     => 'required|integer|exists:crm_cities,id',
-            // منطقه اختیاری است — فقط شهرهای بزرگ منطقه دارند، و حتی
-            // برای آن‌ها اپراتور می‌تواند منطقه را نگذارد. اعتبارسنجی
-            // فقط چک می‌کند اگر مقدار داشت، یک region معتبر باشد.
+            // به‌صورت پیش‌فرض اختیاری؛ پایین‌تر برای سفارش‌های قابل ثبت
+            // در شهرهایی که منطقه دارند به required ارتقا می‌یابد.
             'regionId'   => 'nullable|integer|exists:crm_regions,id',
             'brandId'    => 'required|integer|exists:crm_brands,id',
             'deviceId'   => 'required|integer|exists:crm_devices,id',
@@ -574,6 +573,11 @@ class OrderWizard extends Component
             $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
         } else {
             $rules['orderType'] = 'required|string|in:repair,service';
+            // برای سفارش‌های واقعی (غیرلید)، اگر شهر منطقه دارد، انتخاب
+            // منطقه الزامی است تا تخصیص تکنسین بر اساس منطقه ممکن باشد.
+            if ($this->cityId && Region::where('city_id', $this->cityId)->active()->exists()) {
+                $rules['regionId'] = 'required|integer|exists:crm_regions,id';
+            }
         }
         // اعتبارسنجی دستگاه‌های اضافه
         foreach ($this->extraDevices as $i => $d) {

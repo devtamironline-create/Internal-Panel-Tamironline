@@ -189,19 +189,32 @@
                 @endforeach
             </select>
         </div>
-        {{-- منطقه — اختیاری. dropdown همیشه رندر می‌شود (Tom Select روی
-             عنصر display:none گاهی init نمی‌شود)، ولی اگر شهر منطقه نداشت
-             JS آن را پنهان می‌کند. --}}
-        <div id="order-region-wrap" data-has-regions="{{ ($regions ?? collect())->count() ? '1' : '0' }}">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">منطقه (اختیاری)</label>
+        {{-- منطقه — برای سفارش‌های واقعی (غیرلید) در شهرهایی که منطقه
+             دارند الزامی است. شهرهای بدون منطقه (شهرستان‌های کوچک)
+             dropdown با JS مخفی می‌شود. --}}
+        @php
+            $regionIsRequired = isset($order) && ! $order->is_lead;
+        @endphp
+        <div id="order-region-wrap"
+             data-has-regions="{{ ($regions ?? collect())->count() ? '1' : '0' }}"
+             data-region-required="{{ $regionIsRequired ? '1' : '0' }}">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                منطقه
+                @if($regionIsRequired)
+                    <span class="text-rose-600">*</span>
+                @else
+                    <span class="text-gray-400">(اختیاری)</span>
+                @endif
+            </label>
             <select name="region_id" id="order-region"
                     data-tom-select data-placeholder="منطقه..."
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-                <option value="">— بدون منطقه —</option>
+                <option value="">{{ $regionIsRequired ? '— انتخاب کنید —' : '— بدون منطقه —' }}</option>
                 @foreach($regions ?? [] as $r)
                 <option value="{{ $r->id }}" @selected(old('region_id', $order->region_id ?? null) == $r->id)>{{ $r->name }}</option>
                 @endforeach
             </select>
+            @error('region_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
         <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل</label>
@@ -302,6 +315,10 @@
     }
 
     // dropdown منطقه — اگر شهر منطقه ندارد، wrapper مخفی می‌شود.
+    // متن placeholder بر اساس اجباری بودن منطقه عوض می‌شود تا اپراتور
+    // متوجه شود انتخاب لازم است.
+    const regionRequired = regionWrap && regionWrap.dataset.regionRequired === '1';
+    const regionPlaceholder = regionRequired ? '— انتخاب کنید —' : '— بدون منطقه —';
     function setRegionOptions(items) {
         if (!regionEl) return;
         const ts = regionEl.tomselect;
@@ -314,7 +331,7 @@
             }
             if (regionWrap) regionWrap.style.display = '';
             ts.addOption([
-                { value: '', text: '— بدون منطقه —' },
+                { value: '', text: regionPlaceholder },
                 ...items.map(r => ({ value: String(r.id), text: r.name })),
             ]);
             ts.refreshOptions(false);
@@ -325,7 +342,7 @@
                 return;
             }
             if (regionWrap) regionWrap.style.display = '';
-            regionEl.innerHTML = '<option value="">— بدون منطقه —</option>' +
+            regionEl.innerHTML = `<option value="">${regionPlaceholder}</option>` +
                 items.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
         }
     }
