@@ -37,8 +37,13 @@ class ArchiveStaleTicketsCommand extends Command
 
         $threshold = now()->subHours($hours);
 
-        // تیکت‌های واجد شرایط: status فعال + آخرین reply از admin + قدیمی‌تر از threshold
-        $candidateIds = Ticket::query()
+        // دو الگو پوشش داده می‌شود:
+        //   A) تیکت reply دارد و آخرین reply از admin است و قدیمی‌تر از threshold
+        //   B) تیکت reply ندارد ولی توسط admin ساخته شده (admin_to_tech) و
+        //      created_at آن قدیمی‌تر از threshold
+        // در هر دو حالت یعنی «ما پاسخ دادیم، تکنسین جواب نداد».
+
+        $patternA = Ticket::query()
             ->whereNotIn('status', ['archived', 'closed'])
             ->whereExists(function ($q) use ($threshold) {
                 $q->selectRaw('1')
@@ -54,6 +59,15 @@ class ArchiveStaleTicketsCommand extends Command
             })
             ->pluck('id');
 
+        $patternB = Ticket::query()
+            ->whereNotIn('status', ['archived', 'closed'])
+            ->where('direction', Ticket::DIRECTION_ADMIN_TO_TECH)
+            ->where('created_at', '<=', $threshold)
+            ->whereDoesntHave('replies')
+            ->pluck('id');
+
+        $candidateIds = $patternA->merge($patternB)->unique()->values();
+
         if ($candidateIds->isEmpty()) {
             $this->info('هیچ تیکت واجد شرایط بایگانی پیدا نشد.');
             return self::SUCCESS;
@@ -67,6 +81,10 @@ class ArchiveStaleTicketsCommand extends Command
         ]);
 
         $this->info("{$updated} تیکت به بایگانی منتقل شد.");
+        if ($this->getOutput()->isVerbose()) {
+            $this->line("  - الگوی A (reply آخر از admin): {$patternA->count()}");
+            $this->line("  - الگوی B (تیکت بدون reply توسط admin): {$patternB->count()}");
+        }
 
         return self::SUCCESS;
     }
