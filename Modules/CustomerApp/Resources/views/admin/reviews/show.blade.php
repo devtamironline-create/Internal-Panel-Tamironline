@@ -98,10 +98,10 @@
                 <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">در انتظار بررسی</span>
             @elseif($review->status === 'approved')
                 <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">تأیید شده</span>
-                <span class="text-xs text-gray-500 ms-2">توسط {{ $review->moderator?->name ?? '—' }} — {{ $review->moderated_at?->diffForHumans() }}</span>
+                <span class="text-xs text-gray-500 ms-2">توسط {{ $review->moderator?->full_name ?? '—' }} — {{ $review->moderated_at?->diffForHumans() }}</span>
             @else
                 <span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">رد شده</span>
-                <span class="text-xs text-gray-500 ms-2">توسط {{ $review->moderator?->name ?? '—' }} — {{ $review->moderated_at?->diffForHumans() }}</span>
+                <span class="text-xs text-gray-500 ms-2">توسط {{ $review->moderator?->full_name ?? '—' }} — {{ $review->moderated_at?->diffForHumans() }}</span>
             @endif
             @if($review->moderation_note)
                 <div class="mt-2 text-xs bg-gray-50 dark:bg-gray-900 rounded p-2">یادداشت: {{ $review->moderation_note }}</div>
