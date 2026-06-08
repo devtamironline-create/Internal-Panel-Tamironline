@@ -110,7 +110,7 @@
 
 | موضوع | تصمیم نهایی |
 |---|---|
-| **تاریخ/زمان** | همه ISO 8601 UTC (مثلاً `2026-06-07T14:30:00Z`). شمسی **فقط در UI سمت فرانت** ساخته شود. هیچ تاریخ شمسی در response برنمی‌گردد. |
+| **تاریخ/زمان** | همه ISO 8601 UTC (مثلاً `2026-06-07T14:30:00Z`). شمسی **معمولاً فقط در UI سمت فرانت** ساخته می‌شود. استثنا: payload فاکتور (`issued_at_jalali`، `paid_at_jalali`) برای سهولت نمایش — مرجع منطق همچنان ISO است. |
 | **شماره موبایل** | `09xxxxxxxxx` (۱۱ رقم با صفر اول). `PhoneNormalizer` در سمت بک هر فرمتی (`+98`, `0098`, `98`, با ارقام فارسی/عربی) را به این شکل نرمالایز می‌کند. |
 | **پول** | **تومان (IRT)** در همه‌ی API. integer. در DB ریال است ولی در API boundary تقسیم بر ۱۰ می‌شود (`Modules\CustomerApp\Support\Money`). |
 | **id** | همیشه number (نه string). |
@@ -804,6 +804,7 @@ images[]: <file2.jpg>
     "order_id": 1234,
     "tracking_code": "TM-1234",
     "issued_at": "2026-06-07T15:30:00Z",
+    "issued_at_jalali": "1405/03/17 19:00",   // ⭐ شمسی برای نمایش — TZ: Tehran
     "status": "issued",                       // "draft" | "issued" | "paid" | "refunded"
     "customer": {
       "name": "علی محمدی",
@@ -820,8 +821,10 @@ images[]: <file2.jpg>
         "type": "labor",                      // "labor" | "part" | "service" | "other"
         "description": "اجرت تعمیر برد",
         "quantity": 1,
-        "unit_price": 250000,                 // ⚠️ تومان
+        "unit_price": 250000,                 // ⚠️ تومان (integer)
+        "unit_price_formatted": "۲۵۰٬۰۰۰ تومان",  // ⭐ آماده برای نمایش
         "amount": 250000,
+        "amount_formatted": "۲۵۰٬۰۰۰ تومان",
         "warranty_months": 6
       },
       {
@@ -830,23 +833,30 @@ images[]: <file2.jpg>
         "description": "خازن ۲۲۰ میکروفاراد",
         "quantity": 2,
         "unit_price": 15000,
+        "unit_price_formatted": "۱۵٬۰۰۰ تومان",
         "amount": 30000,
+        "amount_formatted": "۳۰٬۰۰۰ تومان",
         "warranty_months": 3
       }
     ],
     "totals": {
       "subtotal": 280000,
+      "subtotal_formatted": "۲۸۰٬۰۰۰ تومان",
       "discount": 20000,
+      "discount_formatted": "۲۰٬۰۰۰ تومان",
       "discount_code": "OFF20",
       "tax_rate": 0.09,                       // ۹٪
       "tax": 23400,
+      "tax_formatted": "۲۳٬۴۰۰ تومان",
       "total": 283400,
+      "total_formatted": "۲۸۳٬۴۰۰ تومان",
       "currency": "IRT"                       // همیشه IRT
     },
     "payment": {
       "method": "online",                     // "online" | "cash" | "card"
       "is_paid": false,
       "paid_at": null,
+      "paid_at_jalali": null,                 // ⭐ شمسی همان منطق issued_at_jalali
       "payment_url": "https://gateway.zibal.ir/start/abc123"
     },
     "notes": "گارانتی فقط در صورت رعایت دستورالعمل استفاده معتبر است.",
