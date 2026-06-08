@@ -5,6 +5,7 @@ use Modules\CustomerApp\Http\Controllers\Admin\AppSettingsController;
 use Modules\CustomerApp\Http\Controllers\Admin\DashboardController;
 use Modules\CustomerApp\Http\Controllers\Admin\HolidayController;
 use Modules\CustomerApp\Http\Controllers\Admin\ReviewController;
+use Modules\CustomerApp\Http\Controllers\Admin\ReviewTagController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,5 +50,16 @@ Route::middleware(['auth'])
             Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name('holidays.update');
             Route::put('/holidays/{holiday}/toggle-active', [HolidayController::class, 'toggleActive'])->name('holidays.toggle-active');
             Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
+        });
+
+        // Review Tags management (pros/cons for mobile review form)
+        Route::middleware('can:manage-permissions')->group(function () {
+            Route::get('/review-tags', [ReviewTagController::class, 'index'])->name('review-tags.index');
+            Route::get('/review-tags/create', [ReviewTagController::class, 'create'])->name('review-tags.create');
+            Route::post('/review-tags', [ReviewTagController::class, 'store'])->name('review-tags.store');
+            Route::get('/review-tags/{reviewTag}/edit', [ReviewTagController::class, 'edit'])->name('review-tags.edit');
+            Route::put('/review-tags/{reviewTag}', [ReviewTagController::class, 'update'])->name('review-tags.update');
+            Route::put('/review-tags/{reviewTag}/toggle-active', [ReviewTagController::class, 'toggleActive'])->name('review-tags.toggle-active');
+            Route::delete('/review-tags/{reviewTag}', [ReviewTagController::class, 'destroy'])->name('review-tags.destroy');
         });
     });

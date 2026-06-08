@@ -80,6 +80,16 @@ class OrderReview extends Model
         return $this->belongsTo(User::class, 'moderated_by_user_id');
     }
 
+    /**
+     * تگ‌های نقطه قوت/ضعف انتخاب‌شده توسط مشتری.
+     */
+    public function tags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(ReviewTag::class, 'crm_order_review_tags', 'review_id', 'tag_id')
+            ->orderBy('crm_review_tags.type')
+            ->orderBy('crm_review_tags.sort_order');
+    }
+
     public function scopePending($q)
     {
         return $q->where('status', self::STATUS_PENDING);
