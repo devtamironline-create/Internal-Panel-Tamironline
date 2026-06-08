@@ -18,23 +18,34 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
+        // دو نمای اصلی: «در جریان» (active) و «آرشیو» (closed + archived).
+        // پیش‌فرض روی active است تا اپراتور فقط چیزی را ببیند که هنوز
+        // تکلیفش معلوم نیست.
+        $view = $request->query('view') === 'archive' ? 'archive' : 'active';
         $statusFilter = $request->query('status');
         $categoryFilter = $request->query('category');
+
+        $activeStatuses  = ['open', 'replied'];
+        $archiveStatuses = ['closed', 'archived'];
+        $allowedStatuses = $view === 'archive' ? $archiveStatuses : $activeStatuses;
+
+        // اگر status معتبر برای این view نیست، نادیده می‌گیریم
+        // (مثلاً status=open در view=archive).
+        if ($statusFilter && ! in_array($statusFilter, $allowedStatuses, true)) {
+            $statusFilter = null;
+        }
 
         $query = Ticket::with([
                 'technician:id,first_name,firstname_tech,mobile',
                 'order:id,order_code,customer_name',
                 'category:id,name',
             ])
-            ->latest();
+            // مرتب‌سازی بر اساس آخرین فعالیت — تیکتی که پیام جدید گرفته
+            // باید بالا بیاید، نه تیکتی که قدیمی‌تر ساخته شده.
+            ->orderByRaw('COALESCE(last_reply_at, created_at) DESC');
 
-        if ($statusFilter) {
-            $query->where('status', $statusFilter);
-        } else {
-            // پیش‌فرض: تیکت‌های بایگانی‌شده در لیست فعال نمایش داده
-            // نمی‌شوند — اپراتور باید روی تب «بایگانی» کلیک کند.
-            $query->where('status', '!=', 'archived');
-        }
+        $query->whereIn('status', $statusFilter ? [$statusFilter] : $allowedStatuses);
+
         if ($categoryFilter) {
             $query->where('category_id', $categoryFilter);
         }
@@ -44,13 +55,17 @@ class TicketController extends Controller
             'replied'  => Ticket::where('status', 'replied')->count(),
             'closed'   => Ticket::where('status', 'closed')->count(),
             'archived' => Ticket::where('status', 'archived')->count(),
-            'total'    => Ticket::count(),
         ];
+        $stats['active']    = $stats['open'] + $stats['replied'];
+        $stats['completed'] = $stats['closed'] + $stats['archived'];
+        $stats['total']     = $stats['active'] + $stats['completed'];
 
         $tickets = $query->paginate(20)->withQueryString();
         $categories = TicketCategory::ordered()->get(['id', 'name', 'is_active']);
 
-        return view('crm::tickets.index', compact('tickets', 'stats', 'statusFilter', 'categoryFilter', 'categories'));
+        return view('crm::tickets.index', compact(
+            'tickets', 'stats', 'view', 'statusFilter', 'categoryFilter', 'categories'
+        ));
     }
 
     public function show(Ticket $ticket)
