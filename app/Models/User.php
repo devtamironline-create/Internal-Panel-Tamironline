@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Chat\Call;
+use App\Models\Chat\Conversation;
+use App\Models\Chat\Message;
+use App\Models\Chat\UserPresence;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens;
 use Morilog\Jalali\Jalalian;
-use App\Models\Chat\Conversation;
-use App\Models\Chat\Message;
-use App\Models\Chat\Call;
-use App\Models\Chat\UserPresence;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'first_name',
@@ -65,8 +66,9 @@ class User extends Authenticatable
     public function getAvatarUrlAttribute(): ?string
     {
         if ($this->avatar) {
-            return asset('storage/' . $this->avatar);
+            return asset('storage/'.$this->avatar);
         }
+
         return null;
     }
 
@@ -74,20 +76,22 @@ class User extends Authenticatable
     {
         $first = mb_substr($this->first_name ?? '', 0, 1);
         $last = mb_substr($this->last_name ?? '', 0, 1);
-        return $first . $last ?: '؟';
+
+        return $first.$last ?: '؟';
     }
 
     public function getBirthDateJalaliAttribute(): ?string
     {
-        if (!$this->birth_date) {
+        if (! $this->birth_date) {
             return null;
         }
+
         return Jalalian::fromCarbon($this->birth_date)->format('Y/m/d');
     }
 
     public function isMobileVerified(): bool
     {
-        return !is_null($this->mobile_verified_at);
+        return ! is_null($this->mobile_verified_at);
     }
 
     public function isStaff(): bool
@@ -168,19 +172,28 @@ class User extends Authenticatable
 
     public function getPresenceStatus(): string
     {
-        if (!$this->presence) return 'offline';
+        if (! $this->presence) {
+            return 'offline';
+        }
+
         return $this->presence->getRealStatus();
     }
 
     public function getPresenceStatusLabel(): string
     {
-        if (!$this->presence || !$this->presence->isActive()) return 'آفلاین';
+        if (! $this->presence || ! $this->presence->isActive()) {
+            return 'آفلاین';
+        }
+
         return $this->presence->getStatusLabel();
     }
 
     public function getPresenceStatusColor(): string
     {
-        if (!$this->presence || !$this->presence->isActive()) return 'gray';
+        if (! $this->presence || ! $this->presence->isActive()) {
+            return 'gray';
+        }
+
         return $this->presence->getStatusColor();
     }
 }

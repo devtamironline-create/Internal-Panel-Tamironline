@@ -1,0 +1,11 @@
+{
+    "name": "Identity",
+    "alias": "identity",
+    "description": "Unified phone + OTP identity / customer management.",
+    "keywords": ["auth", "otp", "sanctum", "customer"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Identity\\Providers\\IdentityServiceProvider"
+    ],
+    "files": []
+}

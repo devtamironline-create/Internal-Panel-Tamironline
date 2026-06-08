@@ -2,5 +2,7 @@
     "Task": true,
     "OKR": true,
     "Salary": true,
-    "Warehouse": true
+    "Warehouse": true,
+    "Site": true,
+    "Identity": true
 }
