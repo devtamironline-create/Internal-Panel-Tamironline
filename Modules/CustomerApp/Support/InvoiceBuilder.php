@@ -42,23 +42,36 @@ final class InvoiceBuilder
         $totalRial = max(0, $subtotalRial - $discountRial + $taxRial);
 
         $shapedItems = array_map(function (array $row) {
+            $unitToman = Money::rialToToman($row['_unit_price_rial']);
+            $amountToman = Money::rialToToman($row['_amount_rial']);
+
             return [
                 'row' => $row['row'],
                 'type' => $row['type'],
                 'description' => $row['description'],
                 'quantity' => $row['quantity'],
-                'unit_price' => Money::rialToToman($row['_unit_price_rial']),
-                'amount' => Money::rialToToman($row['_amount_rial']),
+                'unit_price' => $unitToman,
+                'unit_price_formatted' => self::faMoney($unitToman),
+                'amount' => $amountToman,
+                'amount_formatted' => self::faMoney($amountToman),
                 'warranty_months' => $row['warranty_months'],
             ];
         }, $items);
+
+        $subtotalToman = Money::rialToToman($subtotalRial);
+        $discountToman = Money::rialToToman($discountRial);
+        $taxToman = Money::rialToToman($taxRial);
+        $totalToman = Money::rialToToman($totalRial);
+
+        $issuedAt = $invoice?->issued_at ?? $invoice?->created_at;
+        $paidAt = $invoice?->paid_at;
 
         return [
             'invoice_number' => $invoice?->invoice_code,
             'order_id' => (int) $order->id,
             'tracking_code' => $order->order_code,
-            'issued_at' => $invoice?->issued_at?->utc()->toIso8601String()
-                ?? $invoice?->created_at?->utc()->toIso8601String(),
+            'issued_at' => $issuedAt?->utc()->toIso8601String(),
+            'issued_at_jalali' => self::jalali($issuedAt),
             'status' => $invoice?->status ?? 'draft',
             'customer' => [
                 'name' => $order->customer_name,
@@ -71,15 +84,19 @@ final class InvoiceBuilder
             ] : null,
             'items' => array_values($shapedItems),
             'totals' => [
-                'subtotal' => Money::rialToToman($subtotalRial),
-                'discount' => Money::rialToToman($discountRial),
+                'subtotal' => $subtotalToman,
+                'subtotal_formatted' => self::faMoney($subtotalToman),
+                'discount' => $discountToman,
+                'discount_formatted' => self::faMoney($discountToman),
                 'discount_code' => null,
                 'tax_rate' => $taxRate,
-                'tax' => Money::rialToToman($taxRial),
-                'total' => Money::rialToToman($totalRial),
+                'tax' => $taxToman,
+                'tax_formatted' => self::faMoney($taxToman),
+                'total' => $totalToman,
+                'total_formatted' => self::faMoney($totalToman),
                 'currency' => 'IRT',
             ],
-            'payment' => self::buildPayment($invoice),
+            'payment' => self::buildPayment($invoice, $paidAt),
             'notes' => trim((string) ($order->invoice_descripotion ?? '')) ?: null,
             'pdf_url' => $invoice?->invoice_code
                 ? route('crm.invoice.public', ['invoiceCode' => $invoice->invoice_code])
@@ -177,7 +194,7 @@ final class InvoiceBuilder
     /**
      * @return array<string, mixed>
      */
-    private static function buildPayment(?Invoice $invoice): array
+    private static function buildPayment(?Invoice $invoice, ?\DateTimeInterface $paidAt): array
     {
         $isPaid = $invoice?->status === 'paid';
         $paymentUrl = null;
@@ -188,8 +205,40 @@ final class InvoiceBuilder
         return [
             'method' => $isPaid ? 'online' : null,
             'is_paid' => $isPaid,
-            'paid_at' => $invoice?->paid_at?->utc()->toIso8601String(),
+            'paid_at' => $paidAt?->format(\DateTimeInterface::ATOM),
+            'paid_at_jalali' => self::jalali($paidAt),
             'payment_url' => $paymentUrl,
         ];
+    }
+
+    /**
+     * تبدیل تاریخ Carbon به رشته شمسی فرمت‌شده (Y/m/d H:i).
+     */
+    private static function jalali(?\DateTimeInterface $dt): ?string
+    {
+        if (! $dt) {
+            return null;
+        }
+
+        return \Morilog\Jalali\Jalalian::fromCarbon(
+            \Carbon\Carbon::instance($dt)->setTimezone('Asia/Tehran')
+        )->format('Y/m/d H:i');
+    }
+
+    /**
+     * عدد integer (تومان) → رشته فارسی با جداکننده‌ی هزارگان + پسوند " تومان".
+     * مثلاً 90000 → "۹۰٬۰۰۰ تومان".
+     */
+    private static function faMoney(?int $toman): ?string
+    {
+        if ($toman === null) {
+            return null;
+        }
+        $formatted = number_format($toman, 0, '.', '٬');
+
+        return strtr($formatted, [
+            '0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
+            '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹',
+        ]).' تومان';
     }
 }
