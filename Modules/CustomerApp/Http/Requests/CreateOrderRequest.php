@@ -26,7 +26,12 @@ class CreateOrderRequest extends FormRequest
         $raw = trim((string) $this->input('scheduled_date', ''));
         $normalized = $this->normalizeDate($raw);
         if ($normalized !== null && $normalized !== $raw) {
-            $this->merge(['scheduled_date' => $normalized]);
+            // مقدار اصلی را نگه می‌داریم تا در پیام خطا به فرانت نشان دهیم
+            // چه تاریخی فرستاده و سرور آن را به چه چیزی تفسیر کرده.
+            $this->merge([
+                'scheduled_date' => $normalized,
+                'scheduled_date_original' => $raw,
+            ]);
         }
 
         // نرمالایز متن فارسی
@@ -57,13 +62,10 @@ class CreateOrderRequest extends FormRequest
             'problem_description' => 'nullable|string|max:2000',
             'problem_title' => 'nullable|string|max:200',
 
-            // scheduled_date: امروز تا حداکثر 60 روز آینده
-            'scheduled_date' => [
-                'required',
-                'date_format:Y-m-d',
-                'after_or_equal:today',
-                'before_or_equal:'.now()->addDays(60)->format('Y-m-d'),
-            ],
+            // تاریخ — format check + after_or_equal امروز. بازه‌ی حداکثری
+            // (۶۰ روز آینده) و چک تعطیلی در withValidator با پیام آموزنده‌تر
+            // اعمال می‌شوند تا فرانت بتواند مقدار تفسیرشده را ببیند.
+            'scheduled_date' => 'required|date_format:Y-m-d|after_or_equal:today',
             'scheduled_slot' => ['required', 'string', Rule::in($slotValues)],
 
             'address_id' => 'required|integer|exists:crm_customer_addresses,id',
@@ -72,7 +74,9 @@ class CreateOrderRequest extends FormRequest
     }
 
     /**
-     * چک‌های اضافی پس از validation اصلی.
+     * چک‌های اضافی پس از validation اصلی — با پیام آموزنده‌ی شامل
+     * مقدار تفسیرشده (پس از Jalali→Gregorian) و بازه‌ی مجاز،
+     * تا فرانت بتواند debug کند که چرا تاریخ رد شد.
      */
     public function withValidator($validator): void
     {
@@ -81,6 +85,28 @@ class CreateOrderRequest extends FormRequest
             if (! $date) {
                 return;
             }
+            try {
+                $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
+            } catch (\Throwable $e) {
+                return; // فرمت غلط — همان قانون date_format خطا داده
+            }
+
+            $today = now()->startOfDay();
+            $maxDate = $today->copy()->addDays(60);
+            $original = trim((string) $this->input('scheduled_date_original', '')); // اگر ست شده
+
+            // بیش از ۶۰ روز آینده — پیام شامل مقدار تفسیرشده تا فرانت ببیند
+            // سرور این تاریخ را به چه میلادی converted کرده.
+            if ($parsed->gt($maxDate)) {
+                $extra = $original !== '' ? sprintf(' (ورودی شما: %s — تفسیرشده به %s)', $original, $parsed->format('Y-m-d')) : sprintf(' (تفسیرشده به %s)', $parsed->format('Y-m-d'));
+                $v->errors()->add(
+                    'scheduled_date',
+                    sprintf('تاریخ مراجعه نمی‌تواند بیش از ۶۰ روز آینده باشد%s. آخرین تاریخ مجاز: %s.', $extra, $maxDate->format('Y-m-d'))
+                );
+
+                return; // ادامه‌ی چک‌ها بی‌فایده
+            }
+
             // اگر روز تعطیل است → رد
             $holiday = \Modules\CRM\Models\Holiday::query()
                 ->active()
