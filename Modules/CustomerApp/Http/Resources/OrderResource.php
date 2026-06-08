@@ -120,23 +120,28 @@ class OrderResource extends JsonResource
      */
     private function resolveAddress(): ?array
     {
-        if ($this->relationLoaded('address') && $this->address) {
+        // ⚠️ ستون `address` (متن snapshot) با نام relation تصادم دارد، پس
+        // relation با نام `customerAddress` تعریف شده. $this->customerAddress
+        // مدل CustomerAddress یا null برمی‌گرداند.
+        $rel = $this->relationLoaded('customerAddress') ? $this->customerAddress : null;
+        if ($rel) {
             return [
-                'id' => (int) $this->address->id,
-                'label' => $this->address->label,
-                'full_address' => $this->address->full_address,
-                'state_name' => $this->address->province?->name,
-                'city_name' => $this->address->city?->name,
-                'postal_code' => $this->address->postal_code,
-                'phone' => $this->address->phone,
+                'id' => (int) $rel->id,
+                'label' => $rel->label,
+                'full_address' => $rel->full_address,
+                'state_name' => $rel->province?->name,
+                'city_name' => $rel->city?->name,
+                'postal_code' => $rel->postal_code,
+                'phone' => $rel->phone,
             ];
         }
-        // snapshot fallback
-        if ($this->address || $this->province_id || $this->city_id) {
+        // snapshot fallback — از ستون‌های روی خود order
+        $snapshotText = $this->getAttribute('address');
+        if ($snapshotText || $this->province_id || $this->city_id) {
             return [
                 'id' => null,
                 'label' => null,
-                'full_address' => $this->getAttribute('address'),
+                'full_address' => $snapshotText,
                 'state_name' => $this->province?->name,
                 'city_name' => $this->city?->name,
                 'postal_code' => $this->postal_code,

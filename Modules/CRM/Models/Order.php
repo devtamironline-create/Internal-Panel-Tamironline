@@ -341,8 +341,12 @@ class Order extends Model
      * آدرس انتخاب‌شده از لیست multi-address مشتری (اپ موبایل).
      * snapshot فیلدهای province_id/city_id/address روی همین مدل به‌عنوان
      * fallback همچنان معتبر است.
+     *
+     * نام relation عمداً `customerAddress` است نه `address` — چون ستون
+     * `address` (متن snapshot) روی همین جدول وجود دارد و Eloquent در
+     * تصادم نام، ستون را برمی‌گرداند نه relation را.
      */
-    public function address(): BelongsTo
+    public function customerAddress(): BelongsTo
     {
         return $this->belongsTo(CustomerAddress::class, 'address_id');
     }

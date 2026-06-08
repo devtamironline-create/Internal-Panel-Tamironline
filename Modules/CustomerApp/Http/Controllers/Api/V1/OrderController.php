@@ -76,8 +76,8 @@ class OrderController extends Controller
             'device:id,name,slug,icon',
             'brand:id,name,slug',
             'objections:id,name,slug',
-            'address.province:id,name',
-            'address.city:id,name',
+            'customerAddress.province:id,name',
+            'customerAddress.city:id,name',
             'province:id,name',
             'city:id,name',
             'technician:id,bio,mobile,satisfaction_score',
@@ -163,8 +163,8 @@ class OrderController extends Controller
             'device:id,name,slug,icon',
             'brand:id,name,slug',
             'objections:id,name,slug',
-            'address.province:id,name',
-            'address.city:id,name',
+            'customerAddress.province:id,name',
+            'customerAddress.city:id,name',
         ]);
 
         return response()->json([
