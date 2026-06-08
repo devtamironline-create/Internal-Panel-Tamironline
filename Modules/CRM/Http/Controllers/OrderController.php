@@ -545,6 +545,11 @@ class OrderController extends Controller
             'cities' => $order->province_id
                 ? City::where('province_id', $order->province_id)->active()->ordered()->get(['id', 'name'])
                 : collect(),
+            // مناطق شهر فعلی سفارش — فقط اگر شهر داشت. در غیر این صورت
+            // dropdown منطقه مخفی می‌ماند تا فرم شلوغ نشود.
+            'regions' => $order->city_id
+                ? \Modules\CRM\Models\Region::where('city_id', $order->city_id)->active()->ordered()->get(['id', 'name'])
+                : collect(),
             'technicians' => Technician::orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),
             'introductionList' => is_array($introductionList) ? array_values(array_filter(array_map('strval', $introductionList))) : [],
@@ -577,6 +582,9 @@ class OrderController extends Controller
             'device_id' => $validated['device_id'] ?? null,
             'province_id' => $validated['province_id'] ?? null,
             'city_id' => $validated['city_id'] ?? null,
+            // region_id اختیاری — اگر شهر تغییر کرد و منطقهٔ قبلی برای
+            // شهر جدید معتبر نیست، اپراتور می‌تواند خالی بگذارد.
+            'region_id' => $validated['region_id'] ?? null,
             'address' => $validated['address'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
             // اگر آرایهٔ objections[] از multi-select فرستاده شده، آن را
@@ -1172,6 +1180,7 @@ class OrderController extends Controller
             'device_id' => 'nullable|exists:crm_devices,id',
             'province_id' => 'nullable|exists:crm_provinces,id',
             'city_id' => 'nullable|exists:crm_cities,id',
+            'region_id' => 'nullable|exists:crm_regions,id',
             'address' => 'nullable|string|max:2000',
             'postal_code' => 'nullable|string|max:20',
             'problem_title' => 'nullable|string|max:255',

@@ -181,10 +181,25 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شهر</label>
             <select name="city_id" id="order-city"
                     data-tom-select data-placeholder="جستجو در شهرها..."
+                    data-regions-url="{{ url('/admin/crm/cities') }}/__ID__/regions"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">— ابتدا استان را انتخاب کنید —</option>
                 @foreach($cities as $c)
                 <option value="{{ $c->id }}" @selected(old('city_id', $order->city_id ?? null) == $c->id)>{{ $c->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        {{-- منطقه — اختیاری. dropdown همیشه رندر می‌شود (Tom Select روی
+             عنصر display:none گاهی init نمی‌شود)، ولی اگر شهر منطقه نداشت
+             JS آن را پنهان می‌کند. --}}
+        <div id="order-region-wrap" data-has-regions="{{ ($regions ?? collect())->count() ? '1' : '0' }}">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">منطقه (اختیاری)</label>
+            <select name="region_id" id="order-region"
+                    data-tom-select data-placeholder="منطقه..."
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                <option value="">— بدون منطقه —</option>
+                @foreach($regions ?? [] as $r)
+                <option value="{{ $r->id }}" @selected(old('region_id', $order->region_id ?? null) == $r->id)>{{ $r->name }}</option>
                 @endforeach
             </select>
         </div>
@@ -254,6 +269,8 @@
 (function () {
     const provinceEl = document.getElementById('order-province');
     const cityEl = document.getElementById('order-city');
+    const regionEl = document.getElementById('order-region');
+    const regionWrap = document.getElementById('order-region-wrap');
     if (!provinceEl || !cityEl) return;
 
     // اگر Tom Select روی select فعال است، باید به‌جای innerHTML از API
@@ -284,9 +301,59 @@
         }
     }
 
+    // dropdown منطقه — اگر شهر منطقه ندارد، wrapper مخفی می‌شود.
+    function setRegionOptions(items) {
+        if (!regionEl) return;
+        const ts = regionEl.tomselect;
+        if (ts) {
+            ts.clear(true);
+            ts.clearOptions();
+            if (!items.length) {
+                if (regionWrap) regionWrap.style.display = 'none';
+                return;
+            }
+            if (regionWrap) regionWrap.style.display = '';
+            ts.addOption([
+                { value: '', text: '— بدون منطقه —' },
+                ...items.map(r => ({ value: String(r.id), text: r.name })),
+            ]);
+            ts.refreshOptions(false);
+            ts.enable();
+        } else {
+            if (!items.length) {
+                if (regionWrap) regionWrap.style.display = 'none';
+                return;
+            }
+            if (regionWrap) regionWrap.style.display = '';
+            regionEl.innerHTML = '<option value="">— بدون منطقه —</option>' +
+                items.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+        }
+    }
+
+    async function fetchRegions(cityId) {
+        if (!regionEl || !cityId) {
+            setRegionOptions([]);
+            return;
+        }
+        try {
+            const url = cityEl.dataset.regionsUrl.replace('__ID__', cityId);
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            setRegionOptions(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setRegionOptions([]);
+        }
+    }
+
+    // وضعیت اولیه: اگر این شهر منطقه ندارد، wrapper را مخفی کن
+    if (regionWrap && regionWrap.dataset.hasRegions === '0') {
+        regionWrap.style.display = 'none';
+    }
+
     provinceEl.addEventListener('change', async function () {
         const id = this.value;
         resetCity('در حال بارگذاری...');
+        setRegionOptions([]); // پاک کردن مناطق چون شهر هم پاک می‌شود
         if (!id) {
             resetCity('— ابتدا استان را انتخاب کنید —');
             return;
@@ -299,6 +366,11 @@
         } catch (e) {
             resetCity('خطا در بارگذاری شهرها');
         }
+    });
+
+    cityEl.addEventListener('change', function () {
+        const id = this.value;
+        fetchRegions(id);
     });
 })();
 </script>
