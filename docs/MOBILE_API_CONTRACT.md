@@ -649,7 +649,24 @@ images[]: <file2.jpg>
 
 ### ۲.۷ نظرسنجی اجباری (Block 3)
 
-**هیچ مدلی برای OrderReview نداریم.** در Block 3 می‌سازیم. قرارداد دقیق:
+> **UPDATE 2026-06-08 — جریان نظرسنجی به سبک تگ تغییر کرد.**
+> به‌جای ۴ معیار عددی، حالا کاربر بعد از دادن rating یک‌سری **تگ نقطه قوت/ضعف** انتخاب می‌کند.
+> فیلد قدیمی `criteria` همچنان قابل ارسال است (backward-compatible) ولی توصیه می‌شود به‌جای آن از `tag_ids` استفاده کنید.
+
+#### جریان جدید (پیشنهادی)
+
+```
+۱. کاربر سفارش completed دارد → مودال نظرسنجی نمایش
+۲. کاربر rating انتخاب می‌کند (1..5)
+۳. فرانت GET /v1/customer/reviews/tags را صدا می‌زند (یک‌بار، با cache)
+۴. بر اساس rating تصمیم می‌گیرد کدام گروه نمایش دهد:
+   - rating 1-2 → فقط cons (نقاط ضعف)
+   - rating 3   → هر دو
+   - rating 4-5 → فقط pros (نقاط قوت)
+   این تصمیم UX سمت فرانت است؛ سرور هیچ محدودیتی روی ترکیب pro/con با rating اعمال نمی‌کند.
+۵. کاربر چند تگ انتخاب می‌کند + متن نظر می‌نویسد
+۶. فرانت POST /v1/customer/orders/{id}/review را با rating + tag_ids + comment ارسال می‌کند
+```
 
 #### `GET /v1/customer/orders/pending-reviews`
 
@@ -670,52 +687,108 @@ images[]: <file2.jpg>
 }
 ```
 
+#### `GET /v1/customer/reviews/tags`  🆕
+
+**Public** — auth لازم نیست. `Cache-Control: public, max-age=300` ست می‌شود.
+تگ‌ها admin-managed هستند (از `/admin/customer-app/review-tags`).
+تعداد pros و cons در seed اولیه برابر است (۶ تا هرکدام) و توصیه می‌شود برابر بمانند.
+
+```jsonc
+// Response 200
+{
+  "success": true,
+  "data": {
+    "pros": [
+      { "id": 1, "slug": "pro-punctual",     "label": "وقت‌شناسی",                 "icon": "clock" },
+      { "id": 2, "slug": "pro-respectful",   "label": "برخورد محترمانه",            "icon": "smile" },
+      { "id": 3, "slug": "pro-expert",       "label": "تخصص بالا",                  "icon": "award" },
+      { "id": 4, "slug": "pro-clean",        "label": "تمیزکاری پس از کار",         "icon": "sparkles" },
+      { "id": 5, "slug": "pro-fair-price",   "label": "قیمت منصفانه",               "icon": "wallet" },
+      { "id": 6, "slug": "pro-clear-explain","label": "توضیح روشن فرآیند تعمیر",    "icon": "message-square" }
+    ],
+    "cons": [
+      { "id": 7,  "slug": "con-late",         "label": "تأخیر در مراجعه",      "icon": "clock-alert" },
+      { "id": 8,  "slug": "con-rude",         "label": "برخورد نامناسب",        "icon": "frown" },
+      { "id": 9,  "slug": "con-low-quality",  "label": "کیفیت پایین کار",       "icon": "thumbs-down" },
+      { "id": 10, "slug": "con-messy",        "label": "شلختگی محل کار",        "icon": "trash-2" },
+      { "id": 11, "slug": "con-overpriced",   "label": "قیمت بالا",              "icon": "badge-dollar-sign" },
+      { "id": 12, "slug": "con-poor-explain", "label": "توضیح ناکافی",          "icon": "message-square-off" }
+    ]
+  },
+  "meta": { "total_pros": 6, "total_cons": 6 }
+}
+```
+
+**نکات:**
+- `icon` نام یک آیکن از Lucide (lucide-react) است. اگر آیکن خاصی در دسترس نیست، می‌توانید آن را نادیده بگیرید.
+- فقط تگ‌های `is_active = true` در پاسخ می‌آیند.
+- ادمین می‌تواند تگ‌ها را در آینده اضافه/ویرایش/حذف کند — لیست را در splash یا با cache کوتاه (۵ دقیقه) رفرش کنید.
+
 #### `POST /v1/customer/orders/{id}/review`
 
 **Headers:** `Authorization: Bearer <token>`، `Idempotency-Key: <uuid>`
 
 ```jsonc
-// Request
+// Request — جریان جدید (پیشنهادی)
 {
   "rating": 5,                                  // 1..5 — اجباری
-  "criteria": {                                 // اختیاری ولی توصیه‌شده
-    "punctuality": 5,
-    "quality": 4,
-    "behavior": 5,
-    "pricing": 4
-  },
+  "tag_ids": [1, 3, 5],                         // اختیاری، حداکثر ۸ تگ، تکراری نباشد
   "comment": "تکنسین وقت‌شناس و کاربلد بود.",  // اختیاری، حداکثر ۱۰۰۰ کاراکتر
   "would_recommend": true                       // اختیاری
 }
 ```
 
 ```jsonc
-// Response 200
+// Request — جریان قدیمی (هنوز کار می‌کند، backward-compatible)
+{
+  "rating": 5,
+  "criteria": {                                 // به‌جای tag_ids قابل ارسال است
+    "punctuality": 5,
+    "quality": 4,
+    "behavior": 5,
+    "pricing": 4
+  },
+  "comment": "...",
+  "would_recommend": true
+}
+```
+
+```jsonc
+// Response 201
 {
   "success": true,
   "message": "نظر شما ثبت شد. ممنون از همکاری.",
   "data": {
-    "review": {
-      "rating": 5,
-      "criteria": { "punctuality": 5, "quality": 4, "behavior": 5, "pricing": 4 },
-      "comment": "...",
-      "would_recommend": true,
-      "submitted_at": "2026-06-07T15:00:00Z"
-    }
+    "id": 42,
+    "order_id": 1200,
+    "rating": 5,
+    "criteria": null,
+    "comment": "...",
+    "would_recommend": true,
+    "status": "pending",
+    "tags": [
+      { "id": 1, "slug": "pro-punctual",   "label": "وقت‌شناسی",     "type": "pro", "icon": "clock" },
+      { "id": 3, "slug": "pro-expert",     "label": "تخصص بالا",      "type": "pro", "icon": "award" },
+      { "id": 5, "slug": "pro-fair-price", "label": "قیمت منصفانه",   "type": "pro", "icon": "wallet" }
+    ],
+    "submitted_at": "2026-06-08T15:00:00Z"
   }
 }
 ```
 
 **پاسخ به سؤال‌های شما:**
-1. **معیارها admin-managed نیستند** — لیست ثابت ۴تایی (punctuality, quality, behavior, pricing). اگر بعداً admin-managed خواستید endpoint `GET /v1/customer/reviews/criteria` اضافه می‌کنیم.
-2. **اجباری enforce می‌شود** — اگر کاربر نظر معوق دارد، POST /orders بلاک می‌شود با کد `pending_review_required` (۴۰۹).
-3. **rating تکنسین جداگانه است** — `criteria.behavior` و `criteria.punctuality` روی `Technician.satisfaction_score` تأثیر می‌گذارد (میانگین متحرک).
-4. **حداکثر comment**: ۱۰۰۰ کاراکتر.
+1. **تگ‌ها admin-managed هستند** — لیست از `GET /v1/customer/reviews/tags`.
+2. **معیارهای قدیمی** (`criteria.punctuality|quality|behavior|pricing`) هنوز قابل ارسال — برای backward compatibility.
+3. **اجباری enforce می‌شود** — اگر کاربر نظر معوق دارد، POST /orders بلاک می‌شود با کد `pending_review_required` (۴۰۹).
+4. **محدودیت‌ها**: `tag_ids` حداکثر ۸ عدد، فقط تگ‌های active، بدون تکرار، فقط id های واقعی DB.
+5. **محدودیت نوع تگ**: سرور بررسی نمی‌کند که کاربر برای rating بالا فقط pros و برای rating پایین فقط cons انتخاب کرده باشد — این تصمیم UX سمت فرانت است.
+6. **حداکثر comment**: ۱۰۰۰ کاراکتر.
 
 **خطاهای ممکن:**
 - `403` — سفارش متعلق به کاربر دیگر
-- `409 already_reviewed` — نظر تکراری: همان نظر قبلی برمی‌گردد (نه خطا)
+- `409 already_reviewed` — نظر تکراری: همان نظر قبلی (با tag‌های انتخاب‌شده) برمی‌گردد (نه خطا)
 - `422 order_not_completed` — سفارش هنوز completed نیست
+- `422 validation_failed` — مثلاً `tag_ids.*.exists` (id نامعتبر) یا `tag_ids.max` (بیش از ۸ تا)
 
 ### ۲.۸ فاکتور حرفه‌ای (Block 4)
 
