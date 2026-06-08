@@ -45,5 +45,10 @@ class CustomerAppServiceProvider extends ServiceProvider
             __DIR__.'/../config/test-mode.php',
             'customerapp.test-mode'
         );
+
+        // Observer: روی Order events گوش می‌دهد و notification به مشتری
+        // می‌فرستد (در جدول notifications لاراول). جدا از WP push observer
+        // در مدل Order تا منطق هر کانال مستقل بماند.
+        \Modules\CRM\Models\Order::observe(\Modules\CustomerApp\Observers\CustomerOrderObserver::class);
     }
 }
