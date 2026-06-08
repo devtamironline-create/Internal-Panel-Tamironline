@@ -82,7 +82,7 @@ final class InvoiceBuilder
             'payment' => self::buildPayment($invoice),
             'notes' => trim((string) ($order->invoice_descripotion ?? '')) ?: null,
             'pdf_url' => $invoice?->invoice_code
-                ? route('api.customer.orders.invoice.pdf', ['id' => $order->id])
+                ? route('crm.invoice.public', ['invoiceCode' => $invoice->invoice_code])
                 : null,
         ];
     }
