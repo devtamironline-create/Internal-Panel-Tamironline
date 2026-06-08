@@ -106,6 +106,23 @@ class OrderController extends Controller
             abort(403, 'آدرس انتخاب‌شده به این حساب تعلق ندارد.');
         }
 
+        // آدرس باید استان/شهر داشته باشد — تکنسین بدون این‌ها قابل routing نیست.
+        // آدرس‌های قدیمی که قبل از required شدن استان/شهر ساخته شده‌اند ممکن
+        // است null باشند؛ کاربر باید آن‌ها را تکمیل کند.
+        if (! $address->province_id || ! $address->city_id) {
+            return response()->json([
+                'message' => 'این آدرس کامل نیست. لطفاً ابتدا استان و شهر آدرس را در پروفایل تکمیل کنید.',
+                'code' => 'address_incomplete',
+                'data' => [
+                    'error_code' => 'address_incomplete',
+                    'address_id' => (int) $address->id,
+                    'errors' => [
+                        'address_id' => ['استان یا شهر این آدرس ست نشده است.'],
+                    ],
+                ],
+            ], 422);
+        }
+
         // visit_scheduled_at از date + slot ساخته می‌شود (شروع slot)
         $slotDef = collect(config('customerapp.time-slots.slots', []))
             ->firstWhere('value', $data['scheduled_slot']);
