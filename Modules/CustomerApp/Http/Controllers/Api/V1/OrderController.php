@@ -80,7 +80,7 @@ class OrderController extends Controller
             'customerAddress.city:id,name',
             'province:id,name',
             'city:id,name',
-            'technician:id,bio,mobile,satisfaction_score',
+            'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'review',
         ]);
 

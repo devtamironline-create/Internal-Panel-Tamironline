@@ -48,7 +48,7 @@
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
             <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">تکنسین</h2>
-            <div class="text-sm font-medium">{{ $review->technician?->bio ?? '—' }}</div>
+            <div class="text-sm font-medium">{{ $review->technician?->display_name ?? '—' }}</div>
             <div class="text-xs text-gray-500 mt-1" dir="ltr">{{ $review->technician?->mobile ?? '' }}</div>
             <div class="text-xs text-gray-500 mt-1">میانگین rating فعلی: <span class="text-amber-600 font-bold">{{ $review->technician?->satisfaction_score ? number_format($review->technician->satisfaction_score, 1) : '—' }}</span></div>
         </div>

@@ -28,7 +28,7 @@ class InvoiceController extends Controller
     {
         [$customer, $order] = $this->resolve($request, $id);
 
-        $order->loadMissing(['items', 'technician:id,bio,mobile']);
+        $order->loadMissing(['items', 'technician:id,first_name,last_name,firstname_tech,mobile']);
         $invoice = $order->invoices()->latest('id')->first();
 
         return response()->json([

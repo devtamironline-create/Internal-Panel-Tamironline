@@ -33,7 +33,7 @@ class ReviewController extends Controller
                 'order.device:id,name',
                 'order.brand:id,name',
                 'customer:id,first_name,last_name,mobile',
-                'technician:id,bio,mobile',
+                'technician:id,first_name,last_name,firstname_tech,mobile',
             ])
             ->orderByDesc('created_at');
 
@@ -65,7 +65,7 @@ class ReviewController extends Controller
             'order.device:id,name',
             'order.brand:id,name',
             'customer:id,first_name,last_name,mobile',
-            'technician:id,bio,mobile,satisfaction_score',
+            'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'moderator:id,name',
         ]);
 

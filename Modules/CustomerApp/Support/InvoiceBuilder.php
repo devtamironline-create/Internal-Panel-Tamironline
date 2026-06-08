@@ -67,7 +67,7 @@ final class InvoiceBuilder
             ],
             'technician' => $order->technician ? [
                 'id' => (int) $order->technician->id,
-                'name' => $order->technician->bio,
+                'name' => $order->technician->display_name,
             ] : null,
             'items' => array_values($shapedItems),
             'totals' => [

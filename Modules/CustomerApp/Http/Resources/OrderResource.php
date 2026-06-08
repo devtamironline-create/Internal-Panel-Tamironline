@@ -65,7 +65,7 @@ class OrderResource extends JsonResource
             // تکنسین — اگر تخصیص داده شده
             'technician' => $this->whenLoaded('technician', fn () => $this->technician ? [
                 'id' => (int) $this->technician->id,
-                'name' => $this->technician->display_name ?? $this->technician->bio,
+                'name' => $this->technician->display_name,
                 'mobile' => $this->technician->mobile,
                 'rating' => $this->technician->satisfaction_score
                     ? (float) $this->technician->satisfaction_score : null,

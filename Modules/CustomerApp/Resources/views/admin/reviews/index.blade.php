@@ -76,7 +76,7 @@
                             <div class="text-[10px] text-gray-500" dir="ltr">{{ $r->customer->mobile ?? '' }}</div>
                         </td>
                         <td class="px-3 py-2 text-xs">
-                            {{ $r->technician?->bio ?: '—' }}
+                            {{ $r->technician?->display_name ?: '—' }}
                         </td>
                         <td class="px-3 py-2 text-center">
                             <div class="text-amber-500 font-bold text-lg">{{ $r->rating }}/5</div>

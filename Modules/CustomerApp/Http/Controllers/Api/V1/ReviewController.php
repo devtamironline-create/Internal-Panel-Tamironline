@@ -34,7 +34,7 @@ class ReviewController extends Controller
             ->where('customer_id', $customer->id)
             ->where('status', OrderStatus::Completed->value)
             ->whereDoesntHave('review')
-            ->with(['device:id,name', 'brand:id,name', 'technician:id,bio'])
+            ->with(['device:id,name', 'brand:id,name', 'technician:id,first_name,last_name,firstname_tech'])
             ->orderByDesc('completed_at')
             ->orderByDesc('id')
             ->limit(20)
@@ -46,7 +46,7 @@ class ReviewController extends Controller
             'completed_at' => $o->completed_at?->utc()->toIso8601String(),
             'device_name' => $o->device?->name,
             'brand_name' => $o->brand?->name,
-            'technician_name' => $o->technician?->bio,
+            'technician_name' => $o->technician?->display_name,
         ])->values();
 
         return response()->json([
