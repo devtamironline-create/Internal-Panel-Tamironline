@@ -112,7 +112,13 @@ class OrderController extends Controller
         $startTime = $slotDef['start'] ?? '09:00';
         $scheduledAt = $data['scheduled_date'].' '.$startTime.':00';
 
-        $order = DB::transaction(function () use ($customer, $address, $data, $scheduledAt) {
+        // ⚠️ بسیار مهم: همه‌ی عملیات نوشتاری + eager load + ساخت payload
+        // داخل transaction انجام می‌شود. اگر هر مرحله (شامل خطای OrderResource
+        // یا exception در observer) شکست بخورد، rollback می‌شود و هیچ سفارشی
+        // در DB باقی نمی‌ماند. تاریخچه‌ی باگ: قبلاً Resource خارج از تراکنش
+        // ساخته می‌شد و خطای آن باعث می‌شد سفارش commit شده در DB بماند ولی
+        // فرانت 500 ببیند و retry بزند → چند نسخه‌ی تکراری.
+        $payload = DB::transaction(function () use ($customer, $address, $data, $scheduledAt) {
             $order = Order::create([
                 'order_code' => Order::generateOrderCode(),
                 'customer_id' => $customer->id,
@@ -156,20 +162,21 @@ class OrderController extends Controller
                 $order->objections()->sync($sync);
             }
 
-            return $order;
-        });
+            // load و resource داخل transaction — اگر throw کنند، rollback
+            $order->load([
+                'device:id,name,slug,icon',
+                'brand:id,name,slug',
+                'objections:id,name,slug',
+                'customerAddress.province:id,name',
+                'customerAddress.city:id,name',
+            ]);
 
-        $order->load([
-            'device:id,name,slug,icon',
-            'brand:id,name,slug',
-            'objections:id,name,slug',
-            'customerAddress.province:id,name',
-            'customerAddress.city:id,name',
-        ]);
+            return (new OrderResource($order))->resolve();
+        });
 
         return response()->json([
             'message' => 'سفارش با موفقیت ثبت شد.',
-            'data' => (new OrderResource($order))->resolve(),
+            'data' => $payload,
         ], 201);
     }
 
