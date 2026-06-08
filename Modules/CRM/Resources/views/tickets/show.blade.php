@@ -2,12 +2,24 @@
 
 @section('page-title', 'تیکت #' . $ticket->id)
 
+@php
+    // نام اپراتور پاسخ‌دهنده — فقط در پنل ادمین نمایش داده می‌شود؛
+    // در پنل تکنسین صرفاً «پشتیبانی» نوشته شده است.
+    $adminName = function($reply) {
+        $u = $reply->senderUser ?? null;
+        if (! $u) return null;
+        $name = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+        return $name !== '' ? $name : null;
+    };
+@endphp
+
 @section('main')
 <div class="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
     <div class="flex items-center justify-between gap-2">
         <a href="{{ route('crm.tickets.index') }}"
            class="text-sm text-brand-700 hover:underline">← همه تیکت‌ها</a>
         <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-gray-100 text-gray-700" dir="ltr">#{{ $ticket->id }}</span>
             @if($ticket->category)
                 <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-800">دسته: {{ $ticket->category->name }}</span>
             @endif
@@ -64,7 +76,14 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-r-4 {{ $r->sender_type === 'admin' ? 'border-brand-500' : 'border-emerald-500' }} p-4">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-bold {{ $r->sender_type === 'admin' ? 'text-brand-700' : 'text-emerald-700' }}">
-                    {{ $r->sender_type === 'admin' ? 'پشتیبانی' : 'تکنسین' }}
+                    @if($r->sender_type === 'admin')
+                        پشتیبانی
+                        @if($name = $adminName($r))
+                            <span class="text-gray-500 font-medium">— {{ $name }}</span>
+                        @endif
+                    @else
+                        تکنسین
+                    @endif
                 </span>
                 <span class="text-xs text-gray-400" dir="ltr">@jdatetime($r->created_at)</span>
             </div>

@@ -36,36 +36,42 @@
         </a>
     </div>
 
-    {{-- Stats مختصر مرتبط با view فعلی --}}
+    {{-- Stats — هر کارت یک shortcut به فیلتر مربوطه‌اش است --}}
     @if($view === 'active')
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            <a href="{{ route('crm.tickets.index', ['view' => 'active', 'status' => 'open']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ $statusFilter === 'open' ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-gray-200 dark:border-gray-700 hover:border-emerald-400' }} transition">
                 <div class="text-xs text-gray-500">در انتظار پاسخ ما</div>
                 <div class="text-2xl font-bold text-emerald-600">{{ number_format($stats['open']) }}</div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            </a>
+            <a href="{{ route('crm.tickets.index', ['view' => 'active', 'status' => 'replied']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ $statusFilter === 'replied' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700 hover:border-blue-400' }} transition">
                 <div class="text-xs text-gray-500">منتظر تکنسین</div>
                 <div class="text-2xl font-bold text-blue-600">{{ number_format($stats['replied']) }}</div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            </a>
+            <a href="{{ route('crm.tickets.index', ['view' => 'active']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ ! $statusFilter ? 'border-gray-500 ring-2 ring-gray-200' : 'border-gray-200 dark:border-gray-700 hover:border-gray-400' }} transition">
                 <div class="text-xs text-gray-500">جمع در جریان</div>
                 <div class="text-2xl font-bold text-gray-700">{{ number_format($stats['active']) }}</div>
-            </div>
+            </a>
         </div>
     @else
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            <a href="{{ route('crm.tickets.index', ['view' => 'archive', 'status' => 'closed']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ $statusFilter === 'closed' ? 'border-gray-500 ring-2 ring-gray-200' : 'border-gray-200 dark:border-gray-700 hover:border-gray-400' }} transition">
                 <div class="text-xs text-gray-500">بسته</div>
                 <div class="text-2xl font-bold text-gray-600">{{ number_format($stats['closed']) }}</div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            </a>
+            <a href="{{ route('crm.tickets.index', ['view' => 'archive', 'status' => 'archived']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ $statusFilter === 'archived' ? 'border-amber-500 ring-2 ring-amber-200' : 'border-gray-200 dark:border-gray-700 hover:border-amber-400' }} transition">
                 <div class="text-xs text-gray-500">بایگانی</div>
                 <div class="text-2xl font-bold text-amber-600">{{ number_format($stats['archived']) }}</div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            </a>
+            <a href="{{ route('crm.tickets.index', ['view' => 'archive']) }}"
+               class="block bg-white dark:bg-gray-800 rounded-xl p-3 border {{ ! $statusFilter ? 'border-gray-500 ring-2 ring-gray-200' : 'border-gray-200 dark:border-gray-700 hover:border-gray-400' }} transition">
                 <div class="text-xs text-gray-500">جمع آرشیو</div>
                 <div class="text-2xl font-bold text-gray-700">{{ number_format($stats['completed']) }}</div>
-            </div>
+            </a>
         </div>
     @endif
 
@@ -100,6 +106,7 @@
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700 text-xs">
                 <tr>
+                    <th class="text-right p-3">شماره</th>
                     <th class="text-right p-3">تکنسین</th>
                     <th class="text-right p-3">موضوع</th>
                     <th class="text-right p-3">سفارش</th>
@@ -118,6 +125,7 @@
                     @endphp
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer {{ $needsOurReply ? 'bg-emerald-50/50' : '' }}"
                         onclick="window.location='{{ route('crm.tickets.show', $t) }}'">
+                        <td class="p-3 text-xs font-bold text-gray-500" dir="ltr">#{{ $t->id }}</td>
                         <td class="p-3">
                             <div class="font-medium">{{ $t->technician?->firstname_tech ?: $t->technician?->first_name ?: '—' }}</div>
                             <div class="text-[11px] text-gray-400" dir="ltr">{{ $t->technician?->mobile }}</div>
@@ -148,7 +156,7 @@
                         <td class="p-3 text-xs text-gray-500" dir="ltr">@jdatetime($activityAt)</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="p-8 text-center text-sm text-gray-500">
+                    <tr><td colspan="7" class="p-8 text-center text-sm text-gray-500">
                         @if($view === 'active')
                             هیچ تیکت در جریانی وجود ندارد.
                         @else

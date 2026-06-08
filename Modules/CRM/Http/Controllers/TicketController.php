@@ -40,8 +40,12 @@ class TicketController extends Controller
                 'order:id,order_code,customer_name',
                 'category:id,name',
             ])
-            // مرتب‌سازی بر اساس آخرین فعالیت — تیکتی که پیام جدید گرفته
-            // باید بالا بیاید، نه تیکتی که قدیمی‌تر ساخته شده.
+            // اولویت‌بندی دو‌مرحله‌ای:
+            //   1) تیکت‌هایی که نیاز به پاسخ ما دارند (status=open یعنی
+            //      تکنسین آخرین پیام را داده) همیشه بالا بنشینند.
+            //   2) سپس درون هر گروه، بر اساس آخرین فعالیت — تیکتی که
+            //      پیام جدید گرفته بالا بیاید، نه تیکت قدیمی‌تر.
+            ->orderByRaw("CASE WHEN status = 'open' THEN 0 ELSE 1 END")
             ->orderByRaw('COALESCE(last_reply_at, created_at) DESC');
 
         $query->whereIn('status', $statusFilter ? [$statusFilter] : $allowedStatuses);
@@ -75,6 +79,7 @@ class TicketController extends Controller
             'order:id,order_code,customer_name,customer_mobile',
             'category:id,name',
             'replies',
+            'replies.senderUser:id,first_name,last_name',
             'assignee:id,first_name,last_name',
             'creatorAdmin:id,first_name,last_name',
         ]);
