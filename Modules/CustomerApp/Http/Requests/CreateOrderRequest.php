@@ -18,6 +18,8 @@ class CreateOrderRequest extends FormRequest
      * (2026-06-09) باشد. این هوک قبل از validation فرمت را normalize می‌کند:
      * هر تاریخی که سال < 1500 دارد به‌عنوان جلالی تلقی شده و به Y-m-d میلادی
      * تبدیل می‌شود. در DB همیشه میلادی ذخیره می‌شود.
+     *
+     * علاوه بر تاریخ، متن‌های آزاد فارسی هم نرمالایز می‌شوند (ي→ی، ك→ک، trim).
      */
     protected function prepareForValidation(): void
     {
@@ -25,6 +27,15 @@ class CreateOrderRequest extends FormRequest
         $normalized = $this->normalizeDate($raw);
         if ($normalized !== null && $normalized !== $raw) {
             $this->merge(['scheduled_date' => $normalized]);
+        }
+
+        // نرمالایز متن فارسی
+        foreach (['problem_title', 'problem_description', 'introduction'] as $field) {
+            if ($this->has($field)) {
+                $this->merge([
+                    $field => \Modules\CustomerApp\Support\PersianText::normalize((string) $this->input($field)),
+                ]);
+            }
         }
     }
 
@@ -46,12 +57,39 @@ class CreateOrderRequest extends FormRequest
             'problem_description' => 'nullable|string|max:2000',
             'problem_title' => 'nullable|string|max:200',
 
-            'scheduled_date' => 'required|date_format:Y-m-d|after_or_equal:today',
+            // scheduled_date: امروز تا حداکثر 60 روز آینده
+            'scheduled_date' => [
+                'required',
+                'date_format:Y-m-d',
+                'after_or_equal:today',
+                'before_or_equal:'.now()->addDays(60)->format('Y-m-d'),
+            ],
             'scheduled_slot' => ['required', 'string', Rule::in($slotValues)],
 
             'address_id' => 'required|integer|exists:crm_customer_addresses,id',
             'introduction' => 'nullable|string|max:500',
         ];
+    }
+
+    /**
+     * چک‌های اضافی پس از validation اصلی.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            $date = $this->input('scheduled_date');
+            if (! $date) {
+                return;
+            }
+            // اگر روز تعطیل است → رد
+            $holiday = \Modules\CRM\Models\Holiday::query()
+                ->active()
+                ->whereDate('date', $date)
+                ->first(['label']);
+            if ($holiday) {
+                $v->errors()->add('scheduled_date', 'این تاریخ تعطیل است ('.$holiday->label.'). لطفاً روز دیگری انتخاب کنید.');
+            }
+        });
     }
 
     public function messages(): array
@@ -64,6 +102,7 @@ class CreateOrderRequest extends FormRequest
             'scheduled_date.required' => 'تاریخ مراجعه الزامی است.',
             'scheduled_date.date_format' => 'فرمت تاریخ مراجعه نامعتبر است. شمسی یا میلادی به شکل YYYY-MM-DD یا YYYY/MM/DD.',
             'scheduled_date.after_or_equal' => 'تاریخ مراجعه نمی‌تواند قبل از امروز باشد.',
+            'scheduled_date.before_or_equal' => 'تاریخ مراجعه نمی‌تواند بیش از ۶۰ روز آینده باشد.',
             'scheduled_slot.required' => 'بازه‌ی زمانی الزامی است.',
             'scheduled_slot.in' => 'بازه‌ی زمانی نامعتبر است.',
             'address_id.required' => 'انتخاب آدرس الزامی است.',

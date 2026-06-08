@@ -150,20 +150,30 @@ class OrderController extends Controller
         // ساخته می‌شد و خطای آن باعث می‌شد سفارش commit شده در DB بماند ولی
         // فرانت 500 ببیند و retry بزند → چند نسخه‌ی تکراری.
         $payload = DB::transaction(function () use ($customer, $address, $data, $scheduledAt) {
+            // اگر کاربر «نحوه آشنایی» را پر نکرد، نشان دهیم سفارش از اپ آمده —
+            // این به اپراتورهای CRM کمک می‌کند کانال ثبت را در لیست سفارش‌ها
+            // فوراً تشخیص دهند.
+            $introduction = trim((string) ($data['introduction'] ?? ''));
+            if ($introduction === '') {
+                $introduction = 'اپلیکیشن مشتری';
+            }
+
             $order = Order::create([
                 'order_code' => Order::generateOrderCode(),
                 'customer_id' => $customer->id,
                 'subscription' => $customer->subscription ?? null,
-                'introduction' => $data['introduction'] ?? null,
+                'introduction' => $introduction,
 
                 'order_type' => $data['order_type'],
                 'device_id' => $data['device_id'],
                 'brand_id' => $data['brand_id'] ?? null,
 
-                // snapshot از حساب
+                // snapshot از حساب — chain هم تلفن ثابت، هم موبایل ذخیره می‌شوند.
+                // customer_phone اولویت: phone آدرس (تلفن ثابت محل) → phone مشتری
+                // (تلفن ثابت ثبت‌شده در پروفایل) → mobile به‌عنوان آخرین fallback.
                 'customer_name' => $customer->full_name,
                 'customer_mobile' => $customer->mobile,
-                'customer_phone' => $address->phone ?: $customer->phone,
+                'customer_phone' => $address->phone ?: ($customer->phone ?: $customer->mobile),
 
                 // snapshot آدرس
                 'address_id' => $address->id,
