@@ -401,6 +401,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('tickets', [\Modules\CRM\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\TicketController::class, 'reply'])->name('tickets.reply')->whereNumber('ticket');
         Route::patch('tickets/{ticket}/status', [\Modules\CRM\Http\Controllers\TicketController::class, 'updateStatus'])->name('tickets.status')->whereNumber('ticket');
+        // عمل دستی بایگانی / خروج از بایگانی — جدا از updateStatus
+        // تا در view یک دکمهٔ تک‌منظوره ساده داشته باشیم.
+        Route::post('tickets/{ticket}/archive', [\Modules\CRM\Http\Controllers\TicketController::class, 'archive'])->name('tickets.archive')->whereNumber('ticket');
+        Route::post('tickets/{ticket}/unarchive', [\Modules\CRM\Http\Controllers\TicketController::class, 'unarchive'])->name('tickets.unarchive')->whereNumber('ticket');
     });
 
     // ─── چت اپراتور↔تکنسین (سمت ادمین) ─────────────────────────────

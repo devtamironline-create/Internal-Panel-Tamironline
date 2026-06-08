@@ -14,7 +14,7 @@ class Ticket extends Model
     protected $fillable = [
         'technician_id', 'order_id', 'category_id', 'subject', 'body',
         'status', 'direction', 'created_by_admin_id', 'image_path',
-        'assigned_to', 'last_reply_at', 'closed_at',
+        'assigned_to', 'last_reply_at', 'closed_at', 'archived_at',
     ];
 
     public const DIRECTION_TECH_TO_ADMIN = 'tech_to_admin';
@@ -23,12 +23,14 @@ class Ticket extends Model
     protected $casts = [
         'last_reply_at' => 'datetime',
         'closed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     public const STATUSES = [
-        'open'    => 'باز',
-        'replied' => 'پاسخ‌ داده شده',
-        'closed'  => 'بسته',
+        'open'     => 'باز',
+        'replied'  => 'پاسخ‌ داده شده',
+        'closed'   => 'بسته',
+        'archived' => 'بایگانی',
     ];
 
     public function technician(): BelongsTo
@@ -69,10 +71,21 @@ class Ticket extends Model
     public function statusBadgeClass(): string
     {
         return match ($this->status) {
-            'open'    => 'bg-emerald-100 text-emerald-800',
-            'replied' => 'bg-blue-100 text-blue-800',
-            'closed'  => 'bg-gray-100 text-gray-700',
-            default   => 'bg-gray-100 text-gray-700',
+            'open'     => 'bg-emerald-100 text-emerald-800',
+            'replied'  => 'bg-blue-100 text-blue-800',
+            'closed'   => 'bg-gray-100 text-gray-700',
+            'archived' => 'bg-amber-100 text-amber-800',
+            default    => 'bg-gray-100 text-gray-700',
         };
+    }
+
+    public function scopeArchived($q)
+    {
+        return $q->where('status', 'archived');
+    }
+
+    public function scopeNotArchived($q)
+    {
+        return $q->where('status', '!=', 'archived');
     }
 }

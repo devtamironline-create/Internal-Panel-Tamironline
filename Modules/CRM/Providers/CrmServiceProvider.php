@@ -11,6 +11,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\RecomputeInvoices;
 use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
+use Modules\CRM\Console\Commands\ArchiveStaleTicketsCommand;
 use Modules\CRM\Console\Commands\ApplyFinalWalletBalances;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
@@ -108,6 +109,7 @@ class CrmServiceProvider extends ServiceProvider
                 SetTechPercent::class,
                 RestoreTechPercentFromHistory::class,
                 RemoveManualAdjustments::class,
+                ArchiveStaleTicketsCommand::class,
                 ResetWalletFromWp::class,
                 RestoreDeletedAdjustments::class,
                 UndoRestoreAdjustments::class,

@@ -30,16 +30,21 @@ class TicketController extends Controller
 
         if ($statusFilter) {
             $query->where('status', $statusFilter);
+        } else {
+            // پیش‌فرض: تیکت‌های بایگانی‌شده در لیست فعال نمایش داده
+            // نمی‌شوند — اپراتور باید روی تب «بایگانی» کلیک کند.
+            $query->where('status', '!=', 'archived');
         }
         if ($categoryFilter) {
             $query->where('category_id', $categoryFilter);
         }
 
         $stats = [
-            'open'    => Ticket::where('status', 'open')->count(),
-            'replied' => Ticket::where('status', 'replied')->count(),
-            'closed'  => Ticket::where('status', 'closed')->count(),
-            'total'   => Ticket::count(),
+            'open'     => Ticket::where('status', 'open')->count(),
+            'replied'  => Ticket::where('status', 'replied')->count(),
+            'closed'   => Ticket::where('status', 'closed')->count(),
+            'archived' => Ticket::where('status', 'archived')->count(),
+            'total'    => Ticket::count(),
         ];
 
         $tickets = $query->paginate(20)->withQueryString();
@@ -212,14 +217,50 @@ class TicketController extends Controller
     public function updateStatus(Request $request, Ticket $ticket)
     {
         $validated = $request->validate([
-            'status' => 'required|in:open,replied,closed',
+            'status' => 'required|in:open,replied,closed,archived',
         ]);
 
         $ticket->update([
-            'status' => $validated['status'],
-            'closed_at' => $validated['status'] === 'closed' ? now() : null,
+            'status'      => $validated['status'],
+            'closed_at'   => $validated['status'] === 'closed'   ? now() : null,
+            'archived_at' => $validated['status'] === 'archived' ? now() : null,
         ]);
 
         return back()->with('success', 'وضعیت تیکت به‌روزرسانی شد.');
+    }
+
+    /**
+     * بایگانی دستی تیکت توسط اپراتور. به‌جای تغییر آزاد status، یک
+     * مسیر اختصاصی است تا در view راحت یک دکمهٔ «بایگانی» داشته باشیم.
+     */
+    public function archive(Ticket $ticket)
+    {
+        if ($ticket->status === 'archived') {
+            return back()->with('success', 'این تیکت قبلاً بایگانی شده است.');
+        }
+        $ticket->update([
+            'status'      => 'archived',
+            'archived_at' => now(),
+        ]);
+
+        return back()->with('success', 'تیکت به بایگانی منتقل شد.');
+    }
+
+    public function unarchive(Ticket $ticket)
+    {
+        if ($ticket->status !== 'archived') {
+            return back()->with('success', 'این تیکت در بایگانی نیست.');
+        }
+        // وضعیت قبل از بایگانی: اگر آخرین پاسخ از admin بود → replied،
+        // در غیر اینصورت open (تکنسین پاسخ داده ولی هنوز رسیدگی نشده).
+        $lastReply = $ticket->replies()->latest('id')->first();
+        $restoreStatus = ($lastReply && $lastReply->sender_type === 'admin') ? 'replied' : 'open';
+
+        $ticket->update([
+            'status'      => $restoreStatus,
+            'archived_at' => null,
+        ]);
+
+        return back()->with('success', 'تیکت از بایگانی خارج شد.');
     }
 }

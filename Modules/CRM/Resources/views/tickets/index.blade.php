@@ -40,6 +40,10 @@
             <div class="text-xs text-gray-500">بسته</div>
             <div class="text-2xl font-bold text-gray-600">{{ number_format($stats['closed']) }}</div>
         </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+            <div class="text-xs text-gray-500">بایگانی</div>
+            <div class="text-2xl font-bold text-amber-600">{{ number_format($stats['archived']) }}</div>
+        </div>
     </div>
 
     {{-- Filters --}}

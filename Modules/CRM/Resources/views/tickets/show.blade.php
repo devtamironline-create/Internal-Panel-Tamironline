@@ -79,7 +79,16 @@
 
     {{-- فرم پاسخ --}}
     @can('reply-crm-tickets')
-        @if($ticket->status !== 'closed')
+        @if($ticket->status === 'archived')
+            {{-- بایگانی شده — فقط دکمهٔ خروج از بایگانی نمایش داده می‌شود. --}}
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                این تیکت بایگانی شده است. برای ادامهٔ گفتگو ابتدا آن را از بایگانی خارج کنید.
+            </div>
+            <form method="POST" action="{{ route('crm.tickets.unarchive', $ticket) }}">
+                @csrf
+                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">خروج از بایگانی</button>
+            </form>
+        @elseif($ticket->status !== 'closed')
             <form method="POST" action="{{ route('crm.tickets.reply', $ticket) }}" enctype="multipart/form-data"
                   class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-3">
                 @csrf
@@ -92,13 +101,20 @@
                 </div>
             </form>
 
-            <form method="POST" action="{{ route('crm.tickets.status', $ticket) }}" class="text-left">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="status" value="closed">
-                <button type="submit" onclick="return confirm('این تیکت بسته شود؟')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg">بستن تیکت</button>
-            </form>
+            <div class="flex items-center justify-end gap-2">
+                <form method="POST" action="{{ route('crm.tickets.archive', $ticket) }}">
+                    @csrf
+                    <button type="submit" onclick="return confirm('این تیکت به بایگانی منتقل شود؟')"
+                            class="px-3 py-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg">بایگانی</button>
+                </form>
+                <form method="POST" action="{{ route('crm.tickets.status', $ticket) }}">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="closed">
+                    <button type="submit" onclick="return confirm('این تیکت بسته شود؟')"
+                            class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg">بستن تیکت</button>
+                </form>
+            </div>
         @else
             <form method="POST" action="{{ route('crm.tickets.status', $ticket) }}">
                 @csrf
