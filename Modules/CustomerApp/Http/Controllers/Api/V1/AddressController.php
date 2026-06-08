@@ -141,15 +141,28 @@ class AddressController extends Controller
      */
     private function validateData(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'label' => 'nullable|string|max:50',
-            'province_id' => ['nullable', 'integer', Rule::exists('crm_provinces', 'id')->where('is_active', true)],
-            'city_id' => ['nullable', 'integer', Rule::exists('crm_cities', 'id')->where('is_active', true)],
+            // استان و شهر اجباری — بدون اینها سفارش قابل ارسال به تکنسین نیست
+            'province_id' => ['required', 'integer', Rule::exists('crm_provinces', 'id')->where('is_active', true)],
+            'city_id' => ['required', 'integer', Rule::exists('crm_cities', 'id')->where('is_active', true)],
             'full_address' => 'required|string|min:10|max:500',
             'postal_code' => 'nullable|string|size:10',
             'phone' => 'nullable|string|max:20',
             'is_default' => 'nullable|boolean',
         ]);
+
+        // cross-check: شهر باید متعلق به استان انتخاب‌شده باشد
+        $city = \Modules\CRM\Models\City::query()
+            ->where('id', $data['city_id'])
+            ->first(['province_id']);
+        if (! $city || (int) $city->province_id !== (int) $data['province_id']) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'city_id' => 'شهر انتخاب‌شده به استان انتخاب‌شده تعلق ندارد.',
+            ]);
+        }
+
+        return $data;
     }
 
     private function markDefault(int $customerId, int $addressId): void

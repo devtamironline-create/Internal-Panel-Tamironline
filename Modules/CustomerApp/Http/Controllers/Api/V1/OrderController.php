@@ -112,6 +112,20 @@ class OrderController extends Controller
         $startTime = $slotDef['start'] ?? '09:00';
         $scheduledAt = $data['scheduled_date'].' '.$startTime.':00';
 
+        // اگر فرانت problem_title نفرستاد، از نام objection های انتخابی derive کن
+        // (پنل ادمین در صفحه‌ی سفارش این فیلد را نمایش می‌دهد)
+        if (empty($data['problem_title']) && ! empty($data['objection_ids'])) {
+            $names = \Modules\CRM\Models\Objection::query()
+                ->whereIn('id', $data['objection_ids'])
+                ->orderByRaw('FIELD(id, '.implode(',', array_map('intval', $data['objection_ids'])).')')
+                ->limit(3)
+                ->pluck('name')
+                ->all();
+            if (! empty($names)) {
+                $data['problem_title'] = mb_substr(implode('، ', $names), 0, 200);
+            }
+        }
+
         // ⚠️ بسیار مهم: همه‌ی عملیات نوشتاری + eager load + ساخت payload
         // داخل transaction انجام می‌شود. اگر هر مرحله (شامل خطای OrderResource
         // یا exception در observer) شکست بخورد، rollback می‌شود و هیچ سفارشی
