@@ -31,25 +31,18 @@ class ObjectionsSettingsController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            // هر خط یک آیتم؛ تا ۲۰۰ آیتم و هر آیتم حداکثر ۲۵۵ کاراکتر.
-            'items' => 'nullable|string|max:50000',
+            'items'   => 'nullable|array|max:200',
+            'items.*' => 'nullable|string|max:255',
         ]);
 
-        $lines = preg_split('/\r\n|\r|\n/', (string) ($validated['items'] ?? ''));
         $clean = [];
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '') continue;
-            if (mb_strlen($line) > 255) {
-                $line = mb_substr($line, 0, 255);
-            }
+        foreach ($validated['items'] ?? [] as $item) {
+            $item = trim((string) $item);
+            if ($item === '') continue;
             // یکتاسازی بدون تغییر ترتیب
-            if (! in_array($line, $clean, true)) {
-                $clean[] = $line;
+            if (! in_array($item, $clean, true)) {
+                $clean[] = $item;
             }
-        }
-        if (count($clean) > 200) {
-            $clean = array_slice($clean, 0, 200);
         }
 
         CrmSetting::setJson(self::SETTING_KEY, $clean);
