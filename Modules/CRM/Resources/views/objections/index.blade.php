@@ -20,17 +20,6 @@
         <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-lg p-3 text-sm mb-4">{{ session('error') }}</div>
     @endif
 
-    {{-- پیش‌نمایش chip‌ها (لیست فعلی ذخیره‌شده) --}}
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <div class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">پیش‌نمایش (<span x-text="items.length"></span> آیتم)</div>
-        <div class="flex flex-wrap gap-1.5" x-show="items.filter(s => s.trim() !== '').length > 0">
-            <template x-for="(it, i) in items.filter(s => s.trim() !== '')" :key="i">
-                <span class="px-2 py-1 text-[11px] rounded-full bg-indigo-100 text-indigo-800" x-text="it"></span>
-            </template>
-        </div>
-        <p x-show="items.filter(s => s.trim() !== '').length === 0" class="text-xs text-gray-400">هنوز آیتمی ثبت نشده.</p>
-    </div>
-
     {{-- ویرایشگر — هر آیتم یک input جداگانه --}}
     <form action="{{ route('crm.objections.update') }}" method="POST"
           class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
