@@ -345,9 +345,15 @@ class OrderController extends Controller
         ]);
 
         $suggestions = collect();
+        $suggestionDiagnosis = null;
         if (auth()->user()?->can('view-tech-suggestions') && ! $order->technician_id) {
-            $suggestions = app(\Modules\CRM\Services\TechnicianSuggestionService::class)
-                ->suggestForOrder($order, 5);
+            $svc = app(\Modules\CRM\Services\TechnicianSuggestionService::class);
+            $suggestions = $svc->suggestForOrder($order, 5);
+            if ($suggestions->isEmpty()) {
+                // فقط وقتی پیشنهادی نیست diagnose را اجرا کن تا خرج اضافی
+                // برای سفارش‌های عادی نکنیم.
+                $suggestionDiagnosis = $svc->diagnoseForOrder($order);
+            }
         }
 
         // فاکتور فعال این سفارش (اگر وجود دارد) — برای نمایش دکمه «صدور فاکتور»
@@ -397,6 +403,7 @@ class OrderController extends Controller
             'technicians' => Technician::active()->ready()->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile']),
             'statuses' => OrderStatus::options(),
             'suggestions' => $suggestions,
+            'suggestionDiagnosis' => $suggestionDiagnosis,
             'activeInvoice' => $activeInvoice,
             'customerOrders' => $customerOrders,
             'supersededInvoices' => $supersededInvoices,

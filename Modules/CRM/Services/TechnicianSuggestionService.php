@@ -79,63 +79,119 @@ class TechnicianSuggestionService
             ->pluck('cnt', 'technician_id');
 
         return $techs->filter(function (Technician $t) use ($order, $openCounts) {
-            // ظرفیت
-            $now = (int) ($openCounts[$t->id] ?? 0);
-            $max = (int) ($t->max_order ?? 0);
-            if ($max > 0 && $now >= $max) return false;
-
-            // تطبیق تگ‌ها — option 5-ب: بدون تگ یعنی exclude.
-            if ($order->city_id) {
-                $cityIds = $t->cities->pluck('id');
-                if ($cityIds->isEmpty() || ! $cityIds->contains($order->city_id)) return false;
-            }
-            // تطبیق منطقه — منطق سازگار با عقب:
-            //   اگر سفارش منطقه دارد:
-            //     - اگر تکنسین برای این شهر هیچ منطقه‌ای انتخاب نکرده،
-            //       فرض می‌کنیم همه را پوشش می‌دهد (قبول)
-            //     - اگر منطقه‌ای انتخاب کرده، باید منطقهٔ سفارش جزو
-            //       انتخاب‌هایش باشد
-            //   اگر سفارش منطقه ندارد، چک نمی‌کنیم.
-            if ($order->region_id && $order->city_id) {
-                $regionIds = $t->regions->pluck('id');
-                if ($regionIds->isNotEmpty()) {
-                    // تکنسین مناطق انتخابی دارد — حداقل یکی از مناطقش
-                    // باید در شهر سفارش باشد، و منطقهٔ سفارش جزو آن‌ها.
-                    $regionsInOrderCity = $t->regions
-                        ->where('city_id', $order->city_id)
-                        ->pluck('id');
-                    if ($regionsInOrderCity->isNotEmpty()
-                        && ! $regionsInOrderCity->contains($order->region_id)) {
-                        return false;
-                    }
-                }
-            }
-            if ($order->brand_id) {
-                $brandIds = $t->brands->pluck('id');
-                if ($brandIds->isEmpty() || ! $brandIds->contains($order->brand_id)) return false;
-            }
-            if ($order->device_id) {
-                $deviceIds = $t->devices->pluck('id');
-                if ($deviceIds->isEmpty() || ! $deviceIds->contains($order->device_id)) return false;
-            }
-
-            // تطبیق نوع خدمت — اگر سفارش order_type دارد و تکنسین
-            // service_types ست کرده، باید match شود. اگر تکنسین
-            // service_types خالی/null دارد، رفتار قبلی حفظ می‌شود
-            // (همه نوع را قبول می‌کند) — backward compatible.
-            if ($order->order_type) {
-                $techTypes = $t->service_types;
-                if (is_array($techTypes) && ! empty($techTypes)) {
-                    if (! in_array($order->order_type, $techTypes, true)) {
-                        return false;
-                    }
-                }
-            }
-
-            // ذخیره برای استفاده در امتیازدهی
-            $t->setAttribute('_now_orders', $now);
-            return true;
+            return $this->rejectionReason($t, $order, $openCounts) === null;
+        })->each(function (Technician $t) use ($openCounts) {
+            $t->setAttribute('_now_orders', (int) ($openCounts[$t->id] ?? 0));
         })->values();
+    }
+
+    /**
+     * اولین دلیل rejection یک تکنسین برای یک سفارش، یا null اگر قابل
+     * پیشنهاد است. هم در فیلتر اصلی استفاده می‌شود هم در diagnose.
+     *
+     * Backward-compatible: اگر تکنسین برای cities/brands/devices هیچ
+     * تگی ست نکرده باشد، فرض می‌کنیم پوشش کامل دارد (option 5-الف). این
+     * false-negative ها را کاهش می‌دهد اما ممکن است پیشنهاد عمومی‌تر
+     * باشد. اپراتور با امتیاز پایین می‌تواند تشخیص دهد.
+     */
+    protected function rejectionReason(Technician $t, Order $order, $openCounts): ?string
+    {
+        $now = (int) ($openCounts[$t->id] ?? 0);
+        $max = (int) ($t->max_order ?? 0);
+        if ($max > 0 && $now >= $max) return 'capacity';
+
+        if ($order->city_id) {
+            $cityIds = $t->cities->pluck('id');
+            // تگ خالی = پوشش همه (backward-compatible).
+            if ($cityIds->isNotEmpty() && ! $cityIds->contains($order->city_id)) {
+                return 'city';
+            }
+        }
+        // تطبیق منطقه — اگر تکنسین برای شهر سفارش منطقه‌ای انتخاب کرده
+        // باشد، باید منطقهٔ سفارش جزو آن‌ها باشد.
+        if ($order->region_id && $order->city_id) {
+            $regionsInOrderCity = $t->regions
+                ->where('city_id', $order->city_id)
+                ->pluck('id');
+            if ($regionsInOrderCity->isNotEmpty()
+                && ! $regionsInOrderCity->contains($order->region_id)) {
+                return 'region';
+            }
+        }
+        if ($order->brand_id) {
+            $brandIds = $t->brands->pluck('id');
+            if ($brandIds->isNotEmpty() && ! $brandIds->contains($order->brand_id)) {
+                return 'brand';
+            }
+        }
+        if ($order->device_id) {
+            $deviceIds = $t->devices->pluck('id');
+            if ($deviceIds->isNotEmpty() && ! $deviceIds->contains($order->device_id)) {
+                return 'device';
+            }
+        }
+        if ($order->order_type) {
+            $techTypes = $t->service_types;
+            if (is_array($techTypes) && ! empty($techTypes)
+                && ! in_array($order->order_type, $techTypes, true)) {
+                return 'service_type';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * تشخیص: برای یک سفارش، چند تکنسین فعال هستند و هر کدام به چه دلیلی
+     * رد شده‌اند. به اپراتور کمک می‌کند بفهمد چرا پیشنهادی نیست.
+     *
+     * خروجی:
+     *   ['active_total' => N, 'accepted' => M, 'rejections' => [reason => count, ...]]
+     */
+    public function diagnoseForOrder(Order $order): array
+    {
+        $techs = Technician::query()
+            ->where('status', 'active')
+            ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id'])
+            ->get();
+
+        $activeStatuses = [
+            OrderStatus::Coordinated->value,
+            OrderStatus::Open->value,
+            OrderStatus::New->value,
+            OrderStatus::Suspended->value,
+        ];
+        $openCounts = Order::query()->realOrders()
+            ->whereIn('status', $activeStatuses)
+            ->whereIn('technician_id', $techs->pluck('id'))
+            ->groupBy('technician_id')
+            ->selectRaw('technician_id, COUNT(*) as cnt')
+            ->pluck('cnt', 'technician_id');
+
+        $rejections = [];
+        $accepted   = 0;
+        $notReady   = 0;
+        foreach ($techs as $t) {
+            if (! $t->ready_for_delivery) {
+                $notReady++;
+                continue;
+            }
+            $reason = $this->rejectionReason($t, $order, $openCounts);
+            if ($reason === null) {
+                $accepted++;
+            } else {
+                $rejections[$reason] = ($rejections[$reason] ?? 0) + 1;
+            }
+        }
+        if ($notReady > 0) {
+            $rejections['not_ready'] = $notReady;
+        }
+
+        return [
+            'active_total' => $techs->count(),
+            'accepted'     => $accepted,
+            'rejections'   => $rejections,
+        ];
     }
 
     /** امتیاز هر تکنسین — جمع ۶ بُعد با وزن‌های ثابت، خروجی int 0..100. */

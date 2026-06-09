@@ -1059,8 +1059,39 @@
                         </div>
                     @elseif($order->city_id || $order->brand_id || $order->device_id)
                         <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-6">
-                            هیچ تکنسینی با تگ‌های منطبق این سفارش (شهر/برند/دستگاه) پیدا نشد.
-                            تکنسین‌های مرتبط را در صفحهٔ پروفایلشان تگ کنید تا در پیشنهاد ظاهر شوند.
+                            <div class="font-bold mb-1">هیچ تکنسین پیشنهادی برای این سفارش پیدا نشد.</div>
+                            @if($suggestionDiagnosis)
+                                @php
+                                    $reasonLabels = [
+                                        'not_ready'    => 'آماده دریافت سفارش نیستند (ready_for_delivery خاموش)',
+                                        'capacity'     => 'ظرفیت پر است (max_order)',
+                                        'city'         => 'شهر سفارش در «شهرهای پوششی» تکنسین نیست',
+                                        'region'       => 'منطقهٔ سفارش در «مناطق پوششی» تکنسین نیست',
+                                        'brand'        => 'برند سفارش در «برندهای تخصص» تکنسین نیست',
+                                        'device'       => 'دستگاه سفارش در «دستگاه‌های تخصص» تکنسین نیست',
+                                        'service_type' => 'نوع خدمت (تعمیر/سرویس) با service_types تکنسین جور نیست',
+                                    ];
+                                @endphp
+                                <div class="mt-2">
+                                    از <span class="font-bold">{{ $suggestionDiagnosis['active_total'] }}</span>
+                                    تکنسین فعال،
+                                    <span class="font-bold">{{ $suggestionDiagnosis['accepted'] }}</span>
+                                    کاندید بود ولی هیچ‌کدام در ۵ امتیاز برتر نشد.
+                                    @if(! empty($suggestionDiagnosis['rejections']))
+                                        <div class="mt-2 font-bold">دلایل ردشدن بقیه:</div>
+                                        <ul class="list-disc ps-5 mt-1 space-y-0.5">
+                                            @foreach($suggestionDiagnosis['rejections'] as $reason => $count)
+                                                <li>
+                                                    <span class="font-bold">{{ $count }} تکنسین:</span>
+                                                    {{ $reasonLabels[$reason] ?? $reason }}
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="mt-1">تکنسین‌های مرتبط را در صفحهٔ پروفایلشان تگ کنید تا در پیشنهاد ظاهر شوند.</div>
+                            @endif
                         </div>
                     @endif
                 @endcan
