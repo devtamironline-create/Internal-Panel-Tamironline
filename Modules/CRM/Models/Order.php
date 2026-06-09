@@ -364,13 +364,19 @@ class Order extends Model
     // ─────────────────── Helpers ──────────────────────────────────
     /**
      * Generate the next order_code. Format: ORD-YYMM-NNNNN (monthly sequence).
+     *
+     * مرتب‌سازی بر اساس خود order_code انجام می‌شود (نه id) — چون با
+     * sync از WP رکوردهای قدیمی با id بالاتر ولی شمارهٔ کوچک‌تر وارد
+     * می‌شوند و در غیر این صورت ممکن است کدِ تکراری تولید شود.
+     * در صورت برخورد با duplicate (race condition بین دو ثبت هم‌زمان)
+     * تا ۵ بار retry می‌شود.
      */
     public static function generateOrderCode(): string
     {
         $prefix = 'ORD-' . date('ym') . '-';
 
         $last = static::where('order_code', 'like', $prefix . '%')
-            ->orderByDesc('id')
+            ->orderByDesc('order_code')
             ->value('order_code');
 
         $next = 1;
@@ -379,7 +385,16 @@ class Order extends Model
             $next = $tail + 1;
         }
 
-        return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = $prefix . str_pad((string) ($next + $attempt), 5, '0', STR_PAD_LEFT);
+            if (! static::where('order_code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        // در حالت بسیار نادر همه‌ی ۵ کاندید پر بودند — یک suffix تصادفی
+        // اضافه می‌کنیم تا حتماً یکتا باشد.
+        return $prefix . str_pad((string) ($next + random_int(10, 999)), 5, '0', STR_PAD_LEFT);
     }
 
     public function getItemsSubtotalAttribute(): int
