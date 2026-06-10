@@ -98,7 +98,28 @@ class CityConverterController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // 3) شهر مبدأ را غیرفعال کن (حذف نه — تا history سالم بماند)
+            // 3) تگ‌های پوشش تکنسین‌ها هم مثل سفارش‌ها منتقل می‌شوند:
+            //    شهر مبدأ → شهر مقصد + منطقهٔ جدید. بدون این، سیستم
+            //    پیشنهاد هوشمند تکنسین‌های تگ‌شده روی شهر قدیمی را با
+            //    سفارش‌های منتقل‌شده match نمی‌کرد.
+            $techIds = DB::table('crm_technician_cities')
+                ->where('city_id', $city->id)
+                ->pluck('technician_id');
+            foreach ($techIds as $techId) {
+                DB::table('crm_technician_cities')->insertOrIgnore([
+                    'technician_id' => $techId,
+                    'city_id'       => $target->id,
+                    'created_at'    => now(),
+                ]);
+                DB::table('crm_technician_regions')->insertOrIgnore([
+                    'technician_id' => $techId,
+                    'region_id'     => $region->id,
+                    'created_at'    => now(),
+                ]);
+            }
+            DB::table('crm_technician_cities')->where('city_id', $city->id)->delete();
+
+            // 4) شهر مبدأ را غیرفعال کن (حذف نه — تا history سالم بماند)
             $city->update(['is_active' => false]);
         });
 

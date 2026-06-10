@@ -62,7 +62,7 @@ class TechnicianSuggestionService
             ->where('ready_for_delivery', true)
             // رکوردهای placeholder (مثل «سفارش کنسل شده») هرگز پیشنهاد نمی‌شوند.
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id']);
+            ->with(['cities:id,is_active', 'regions:id,city_id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
         // محدود کنیم. شمارش سفارش‌های فعال در همان loop انجام می‌شود.
@@ -103,7 +103,9 @@ class TechnicianSuggestionService
         if ($max > 0 && $now >= $max) return 'capacity';
 
         if ($order->city_id) {
-            $cityIds = $t->cities->pluck('id');
+            // فقط تگ شهرهای فعال — شهرهایی که به منطقه تبدیل شده‌اند
+            // (is_active=false) نباید تکنسین را block کنند.
+            $cityIds = $t->cities->where('is_active', true)->pluck('id');
             // تگ خالی = پوشش همه (backward-compatible).
             if ($cityIds->isNotEmpty() && ! $cityIds->contains($order->city_id)) {
                 return 'city';
@@ -155,7 +157,7 @@ class TechnicianSuggestionService
         $techs = Technician::query()
             ->where('status', 'active')
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id'])
+            ->with(['cities:id,is_active', 'regions:id,city_id', 'brands:id', 'devices:id'])
             ->get();
 
         $activeStatuses = [
