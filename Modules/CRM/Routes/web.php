@@ -144,6 +144,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('provinces', [ProvinceController::class, 'store'])->name('provinces.store');
         Route::get('provinces/{province}/edit', [ProvinceController::class, 'edit'])->name('provinces.edit');
         Route::put('provinces/{province}', [ProvinceController::class, 'update'])->name('provinces.update');
+        Route::put('provinces/{province}/toggle-active', [ProvinceController::class, 'toggleActive'])->name('provinces.toggle-active');
         Route::delete('provinces/{province}', [ProvinceController::class, 'destroy'])->name('provinces.destroy');
     });
 
@@ -156,11 +157,38 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('cities', [CityController::class, 'store'])->name('cities.store');
         Route::get('cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
         Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
+        Route::put('cities/{city}/toggle-active', [CityController::class, 'toggleActive'])->name('cities.toggle-active');
         Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
         // تبدیل یک شهر به منطقهٔ ذیل شهر دیگر — برای رفع داده‌های قدیمی
         // که «منطقه N» به‌اشتباه به‌عنوان شهر ثبت شده بودند.
         Route::get('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'form'])->name('cities.convert.form');
         Route::post('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'store'])->name('cities.convert.store');
+    });
+
+    // ─── تاکسونومی ── انواع خدمات ──────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'index'])->name('service-types.index');
+    });
+    Route::middleware('can:manage-crm-taxonomies')->group(function () {
+        Route::get('service-types/create', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'create'])->name('service-types.create');
+        Route::post('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'store'])->name('service-types.store');
+        Route::get('service-types/{serviceType}/edit', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'edit'])->name('service-types.edit');
+        Route::put('service-types/{serviceType}', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'update'])->name('service-types.update');
+        Route::put('service-types/{serviceType}/toggle-active', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'toggleActive'])->name('service-types.toggle-active');
+        Route::delete('service-types/{serviceType}', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'destroy'])->name('service-types.destroy');
+    });
+
+    // ─── تاکسونومی ── ایرادات ──────────────────────────────────────
+    Route::middleware('can:view-crm-taxonomies')->group(function () {
+        Route::get('objections', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'index'])->name('objections.index');
+    });
+    Route::middleware('can:manage-crm-taxonomies')->group(function () {
+        Route::get('objections/create', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'create'])->name('objections.create');
+        Route::post('objections', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'store'])->name('objections.store');
+        Route::get('objections/{objection}/edit', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'edit'])->name('objections.edit');
+        Route::put('objections/{objection}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'update'])->name('objections.update');
+        Route::put('objections/{objection}/toggle-active', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'toggleActive'])->name('objections.toggle-active');
+        Route::delete('objections/{objection}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'destroy'])->name('objections.destroy');
     });
 
     // ─── مشتری‌ها ──────────────────────────────────────────────────
@@ -338,7 +366,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->name('wallet.transaction.destroy')
             ->whereNumber('transaction');
 
-
         // افزودن فاکتور حسابداری — هم‌ارز add_financial.php در WP
         Route::get('wallet/add', [WalletController::class, 'addFinancial'])->name('wallet.add');
         Route::post('wallet/reward', [WalletController::class, 'storeReward'])->name('wallet.reward.store');
@@ -404,10 +431,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'destroy'])->name('regions.destroy')->whereNumber('region');
     });
 
-    // ─── مدیریت ایرادات دستگاه (objectionsList در فرم ثبت سفارش) ───
+    // ─── ایرادات فرم ثبت سفارش پنل (objectionsList در ویزارد اپراتور) ───
+    // مسیر/نام «objections-settings» است تا با CRUD ایرادات اپ موبایل
+    // (ObjectionController با نام‌های crm.objections.*) تداخل نکند.
     Route::middleware('can:manage-crm-settings')->group(function () {
-        Route::get('objections', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'index'])->name('objections.index');
-        Route::post('objections', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'update'])->name('objections.update');
+        Route::get('objections-settings', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'index'])->name('objections-settings.index');
+        Route::post('objections-settings', [\Modules\CRM\Http\Controllers\ObjectionsSettingsController::class, 'update'])->name('objections-settings.update');
     });
 
     // ─── دلایل عدم امکان سفارش (مدیریت لیدها) ─────────────────────

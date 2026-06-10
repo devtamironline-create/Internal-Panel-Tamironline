@@ -25,7 +25,7 @@ class ObjectionsSettingsController extends Controller
             ? array_values(array_filter(array_map('strval', $raw), fn ($s) => trim($s) !== ''))
             : [];
 
-        return view('crm::objections.index', compact('items'));
+        return view('crm::objections-settings.index', compact('items'));
     }
 
     public function update(Request $request)

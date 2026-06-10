@@ -144,6 +144,22 @@ class Customer extends Authenticatable
         return $this->hasMany(Invoice::class);
     }
 
+    /**
+     * آدرس‌های مشتری (multi-address — اپ موبایل).
+     * فیلدهای province_id/city_id/address/postal_code روی همین مدل برای
+     * سازگاری legacy حفظ شده‌اند ولی اپ موبایل از این رابطه استفاده می‌کند.
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(CustomerAddress::class)->orderByDesc('is_default')->orderByDesc('id');
+    }
+
+    public function defaultAddress(): ?CustomerAddress
+    {
+        return $this->addresses()->where('is_default', true)->first()
+            ?? $this->addresses()->orderBy('id')->first();
+    }
+
     // ─── WP push observer — async via afterResponse, env-toggleable ─
 
     protected static function booted(): void

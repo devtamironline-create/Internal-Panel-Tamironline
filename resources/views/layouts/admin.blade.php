@@ -816,6 +816,43 @@
                 </div>
                 @endcanany
 
+                <!-- مدیریت اپلیکیشن مشتریان -->
+                @if(Route::has('customer-app.dashboard'))
+                @can('manage-permissions')
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('customer-app.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <span>مدیریت اپلیکیشن</span>
+                        </span>
+                        <svg class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-collapse class="mt-1 mr-3 space-y-0.5">
+                        <a href="{{ route('customer-app.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('customer-app.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد اپ
+                        </a>
+                        <a href="{{ route('customer-app.reviews.index') }}" class="sidebar-menu-item {{ request()->routeIs('customer-app.reviews.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                            نظرسنجی‌ها
+                        </a>
+                        <a href="{{ route('customer-app.review-tags.index') }}" class="sidebar-menu-item {{ request()->routeIs('customer-app.review-tags.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
+                            تگ‌های نظرسنجی
+                        </a>
+                        <a href="{{ route('customer-app.holidays.index') }}" class="sidebar-menu-item {{ request()->routeIs('customer-app.holidays.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            تعطیلات
+                        </a>
+                        <a href="{{ route('customer-app.settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('customer-app.settings.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            تنظیمات اپ
+                        </a>
+                    </div>
+                </div>
+                @endcan
+                @endif
+
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
                 @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-costs', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
@@ -930,9 +967,9 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                             دلایل عدم سفارش (لید)
                         </a>
-                        <a href="{{ route('crm.objections.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections.*') ? 'sidebar-menu-item-active' : '' }}">
+                        <a href="{{ route('crm.objections-settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections-settings.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
-                            ایرادات دستگاه
+                            ایرادات فرم سفارش
                         </a>
                         @endcan
                         @auth
@@ -1028,6 +1065,14 @@
                         <a href="{{ route('crm.cities.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.cities.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                             شهرها
+                        </a>
+                        <a href="{{ route('crm.service-types.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.service-types.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/></svg>
+                            انواع خدمات
+                        </a>
+                        <a href="{{ route('crm.objections.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                            ایرادات
                         </a>
                         @endcan
                         @can('manage-crm-settings')

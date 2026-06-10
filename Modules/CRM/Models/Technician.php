@@ -83,10 +83,10 @@ class Technician extends Authenticatable
      *   - کیف‌پول: wp_to_laravel (برای جلوگیری از overwrite شارژ WP)
      */
     public const SYNC_DIRECTIONS = [
-        'both'          => 'دو طرفه',
+        'both' => 'دو طرفه',
         'wp_to_laravel' => 'فقط از WP به پنل',
         'laravel_to_wp' => 'فقط از پنل به WP',
-        'none'          => 'قطع سینک',
+        'none' => 'قطع سینک',
     ];
 
     /** آیا تغییری از سمت Laravel به WP push شود؟ */
@@ -130,6 +130,25 @@ class Technician extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * نام نمایشی — برای استفاده در رابط‌های اپ موبایل و فاکتور.
+     * اولویت: firstname_tech (نام رسمی برای WP) → first_name + last_name → mobile.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $firstnameTech = trim((string) ($this->attributes['firstname_tech'] ?? ''));
+        if ($firstnameTech !== '') {
+            return $firstnameTech;
+        }
+
+        $combined = trim(
+            (string) ($this->attributes['first_name'] ?? '').' '.
+            (string) ($this->attributes['last_name'] ?? '')
+        );
+
+        return $combined !== '' ? $combined : (string) ($this->attributes['mobile'] ?? 'تکنسین');
+    }
 
     public function user(): BelongsTo
     {
@@ -227,10 +246,10 @@ class Technician extends Authenticatable
         $remaining = max(0, $total - $watched);
 
         return [
-            'watched'   => $watched,
-            'total'     => $total,
+            'watched' => $watched,
+            'total' => $total,
             'remaining' => $remaining,
-            'percent'   => (int) round($watched / $total * 100),
+            'percent' => (int) round($watched / $total * 100),
         ];
     }
 
@@ -266,6 +285,7 @@ class Technician extends Authenticatable
         if (array_key_exists('invoices_sum_company_share', $this->attributes)) {
             return (int) ($this->attributes['invoices_sum_company_share'] ?? 0);
         }
+
         return (int) $this->invoices()->where('in_wallet', false)->sum('company_share');
     }
 
@@ -296,7 +316,7 @@ class Technician extends Authenticatable
             return $tech;
         }
 
-        $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
+        $name = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
 
         return $name !== '' ? $name : (string) $this->mobile;
     }
@@ -333,8 +353,12 @@ class Technician extends Authenticatable
     protected static function booted(): void
     {
         $push = function (self $t) {
-            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) return;
-            if (app()->bound('crm.suppress_outbound_push')) return;
+            if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
+                return;
+            }
+            if (app()->bound('crm.suppress_outbound_push')) {
+                return;
+            }
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushTechnician($t);
             } catch (\Throwable $e) {

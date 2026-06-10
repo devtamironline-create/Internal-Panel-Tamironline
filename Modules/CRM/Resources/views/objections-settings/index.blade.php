@@ -1,0 +1,67 @@
+@extends('layouts.admin')
+
+@section('page-title', 'ایرادات فرم ثبت سفارش')
+
+@section('main')
+<div class="p-4 md:p-6 max-w-4xl mx-auto" x-data="objectionsEditor(@js(array_values($items)))">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">ایرادات فرم ثبت سفارش</h1>
+            <p class="text-xs text-gray-500 mt-1">
+                این لیست در فرم ثبت سفارش پنل (ویزارد اپراتور) به‌صورت چندگزینه‌ای نمایش داده می‌شود.
+                لیست ایرادات اپ موبایل مشتری جداست (بخش «ایرادات»).
+            </p>
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm mb-4">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-lg p-3 text-sm mb-4">{{ session('error') }}</div>
+    @endif
+
+    {{-- ویرایشگر — هر آیتم یک input جداگانه --}}
+    <form action="{{ route('crm.objections-settings.update') }}" method="POST"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        @csrf
+
+        <template x-for="(item, idx) in items" :key="idx">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">ایراد</label>
+                <input type="text" name="items[]" maxlength="255"
+                       x-model="items[idx]"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+            </div>
+        </template>
+
+        <button type="button" @click="add()"
+                class="w-full md:w-auto px-4 py-2 bg-amber-400 hover:bg-amber-500 text-amber-900 rounded-lg text-sm font-bold">
+            افزودن ایراد
+        </button>
+
+        <button type="submit"
+                class="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold">
+            به روز رسانی
+        </button>
+
+        @error('items')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+        @error('items.*')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+    </form>
+</div>
+
+<script>
+function objectionsEditor(initial) {
+    return {
+        items: initial.length ? initial : [''],
+        add() {
+            this.items.push('');
+            this.$nextTick(() => {
+                const inputs = document.querySelectorAll('input[name="items[]"]');
+                inputs[inputs.length - 1]?.focus();
+            });
+        },
+    };
+}
+</script>
+@endsection

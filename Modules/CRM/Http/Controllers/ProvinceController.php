@@ -27,10 +27,12 @@ class ProvinceController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:crm_provinces,slug',
             'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         Province::create($validated);
 
@@ -47,17 +49,26 @@ class ProvinceController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:crm_provinces,slug,' . $province->id,
+            'slug' => 'nullable|string|max:255|unique:crm_provinces,slug,'.$province->id,
             'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $province->update($validated);
 
         return redirect()->route('crm.provinces.index')
             ->with('success', 'استان ویرایش شد.');
+    }
+
+    public function toggleActive(Province $province)
+    {
+        $province->forceFill(['is_active' => ! $province->is_active])->save();
+
+        return back()->with('success', $province->is_active ? 'استان فعال شد.' : 'استان غیرفعال شد.');
     }
 
     public function destroy(Province $province)

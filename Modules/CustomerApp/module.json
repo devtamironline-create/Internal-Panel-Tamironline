@@ -1,0 +1,11 @@
+{
+    "name": "CustomerApp",
+    "alias": "customerapp",
+    "description": "Customer mobile/PWA application API (orders, addresses, reviews, invoices, notifications).",
+    "keywords": ["mobile", "pwa", "customer", "api"],
+    "priority": 0,
+    "providers": [
+        "Modules\\CustomerApp\\Providers\\CustomerAppServiceProvider"
+    ],
+    "files": []
+}

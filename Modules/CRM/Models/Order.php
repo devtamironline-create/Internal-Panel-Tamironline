@@ -19,12 +19,12 @@ class Order extends Model
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
-        'province_id', 'city_id', 'region_id', 'address', 'postal_code',
+        'province_id', 'city_id', 'region_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
-        'visit_scheduled_at',
+        'visit_scheduled_at', 'visit_scheduled_slot',
 
         // وضعیت
-        'status', 'cancel_reason',
+        'status', 'cancel_reason', 'cancel_reason_id',
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
         'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
         'is_legacy_closed', 'legacy_tech_share', 'legacy_company_share',
@@ -121,9 +121,9 @@ class Order extends Model
      * مقادیر مجاز برای source_of_truth + برچسب فارسی برای UI.
      */
     public const SOURCE_OF_TRUTH_OPTIONS = [
-        'auto'  => 'بر اساس تنظیم تکنسین (پیش‌فرض)',
+        'auto' => 'بر اساس تنظیم تکنسین (پیش‌فرض)',
         'panel' => 'پنل لاراول اصل است',
-        'crm'   => 'WP CRM اصل است',
+        'crm' => 'WP CRM اصل است',
     ];
 
     /**
@@ -137,10 +137,15 @@ class Order extends Model
     public function shouldAcceptInboundFromWp(): bool
     {
         $sot = $this->source_of_truth ?: 'auto';
-        if ($sot === 'panel') return false;
-        if ($sot === 'crm')   return true;
+        if ($sot === 'panel') {
+            return false;
+        }
+        if ($sot === 'crm') {
+            return true;
+        }
 
         $tech = $this->technician_id ? Technician::find($this->technician_id) : null;
+
         return $tech ? $tech->canReceiveOrderFromWp() : true;
     }
 
@@ -155,10 +160,15 @@ class Order extends Model
     public function shouldPushToWp(): bool
     {
         $sot = $this->source_of_truth ?: 'auto';
-        if ($sot === 'panel') return true;
-        if ($sot === 'crm')   return false;
+        if ($sot === 'panel') {
+            return true;
+        }
+        if ($sot === 'crm') {
+            return false;
+        }
 
         $tech = $this->technician_id ? Technician::find($this->technician_id) : null;
+
         return $tech ? $tech->canPushOrder() : true;
     }
 
@@ -204,12 +214,16 @@ class Order extends Model
         // event create، wp_id pre-set است و pushOrderCreate بلافاصله
         // return می‌کند (early return).
         static::created(function (self $order) {
-            if ($order->wp_id) return; // از WP inbound آمده، push لازم نیست
+            if ($order->wp_id) {
+                return;
+            } // از WP inbound آمده، push لازم نیست
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 return; // در artisan/seedها push اتوماتیک نمی‌خواهیم
             }
             // در طول inbound sync پاسخ ندهیم تا حلقه نشود
-            if (app()->bound('crm.suppress_outbound_push')) return;
+            if (app()->bound('crm.suppress_outbound_push')) {
+                return;
+            }
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushOrderCreate($order);
             } catch (\Throwable $e) {
@@ -226,14 +240,18 @@ class Order extends Model
         // inbound آمده‌اند، یک flag روی request set می‌شود که اینجا
         // skip شود — به‌علاوه پلاگین خودش یک transient suppress دارد.
         static::updated(function (self $order) {
-            if (! $order->wp_id) return;
+            if (! $order->wp_id) {
+                return;
+            }
             if (app()->runningInConsole() && ! app()->bound('crm.wp_push.force')) {
                 // در artisan/queue پیش‌فرض push نمی‌کنیم تا backfillها
                 // و ResolveOrphanTechnicians باعث push انبوه نشوند.
                 return;
             }
             // در طول inbound sync پاسخ ندهیم تا حلقه نشود
-            if (app()->bound('crm.suppress_outbound_push')) return;
+            if (app()->bound('crm.suppress_outbound_push')) {
+                return;
+            }
             // فیلدهایی که اگر تغییر کنند پوش لازم است. بقیه فیلدها
             // (مثل تنظیمات داخلی) ربطی به WP ندارند.
             $relevant = [
@@ -324,6 +342,47 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /**
+     * آدرس انتخاب‌شده از لیست multi-address مشتری (اپ موبایل).
+     * snapshot فیلدهای province_id/city_id/address روی همین مدل به‌عنوان
+     * fallback همچنان معتبر است.
+     *
+     * نام relation عمداً `customerAddress` است نه `address` — چون ستون
+     * `address` (متن snapshot) روی همین جدول وجود دارد و Eloquent در
+     * تصادم نام، ستون را برمی‌گرداند نه relation را.
+     */
+    public function customerAddress(): BelongsTo
+    {
+        return $this->belongsTo(CustomerAddress::class, 'address_id');
+    }
+
+    /**
+     * ایرادات انتخاب‌شده از منوی dropdown اپ.
+     */
+    public function objections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Objection::class, 'crm_order_objection', 'order_id', 'objection_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_order_objection.sort_order');
+    }
+
+    /**
+     * نظرسنجی مشتری روی این سفارش (اگر ثبت شده باشد).
+     */
+    public function review(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(OrderReview::class);
+    }
+
+    /**
+     * فاکتورهای این سفارش (معمولاً یک، ولی در بازنویسی/cancel چند فاکتور
+     * ممکن است). Global scope روی Invoice فاکتورهای superseded را حذف می‌کند.
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function statusLogs(): HasMany
     {
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');
@@ -373,7 +432,7 @@ class Order extends Model
      */
     public static function generateOrderCode(): string
     {
-        $prefix = 'ORD-' . date('ym') . '-';
+        $prefix = 'ORD-'.date('ym').'-';
 
         $last = static::where('order_code', 'like', $prefix . '%')
             ->orderByDesc('order_code')
@@ -503,8 +562,8 @@ class Order extends Model
     public function financialSummary(): array
     {
         $customerTotal = (int) ($this->price_customer ?? 0);
-        $costTotal     = (int) ($this->cost_price ?? 0);
-        $remaining     = (int) ($this->total_invoice ?? 0);
+        $costTotal = (int) ($this->cost_price ?? 0);
+        $remaining = (int) ($this->total_invoice ?? 0);
 
         // ─── Fallbackها برای داده‌های ناقص (display-only) ───────────────
         if ($costTotal === 0 && is_array($this->buy_price_list) && ! empty($this->buy_price_list)) {
@@ -521,9 +580,9 @@ class Order extends Model
             || ! empty($this->piece_list);
 
         $tech = $this->technician;
-        $percent      = $tech ? (int) ($tech->percent ?? 0) : 0;
+        $percent = $tech ? (int) ($tech->percent ?? 0) : 0;
         $techPerOfAll = $tech ? (int) ($tech->tech_per_of_all ?? 0) : 0;
-        $calcType     = $tech ? (string) ($tech->type_of_calc_tech ?? '') : '';
+        $calcType = $tech ? (string) ($tech->type_of_calc_tech ?? '') : '';
 
         $statusValue = $this->status instanceof OrderStatus
             ? $this->status->value
@@ -539,14 +598,14 @@ class Order extends Model
             $legacyPercent = $base > 0 ? (int) round(($legacyCompany / $base) * 100) : 0;
 
             return [
-                'has_data'       => $hasData,
+                'has_data' => $hasData,
                 'customer_total' => $customerTotal,
-                'cost_total'     => $costTotal,
-                'remaining'      => $remaining,
-                'tech_share'     => $legacyTech,
-                'company_share'  => $legacyCompany,
-                'percent'        => $legacyPercent,
-                'calc_type'      => 'legacy_wp',
+                'cost_total' => $costTotal,
+                'remaining' => $remaining,
+                'tech_share' => $legacyTech,
+                'company_share' => $legacyCompany,
+                'percent' => $legacyPercent,
+                'calc_type' => 'legacy_wp',
             ];
         }
 
@@ -558,25 +617,25 @@ class Order extends Model
                 $techShare = $customerTotal;
                 $companyShare = 0;
             } elseif ($calcType === '1' || $calcType === 'internal') {
-                $companyPct   = max(0, min(100, $techPerOfAll));
+                $companyPct = max(0, min(100, $techPerOfAll));
                 $companyShare = (int) intdiv($customerTotal * $companyPct, 100);
-                $techShare    = max(0, $customerTotal - $companyShare);
+                $techShare = max(0, $customerTotal - $companyShare);
             } else {
-                $companyPct   = max(0, min(100, $percent));
+                $companyPct = max(0, min(100, $percent));
                 $companyShare = (int) intdiv($customerTotal * $companyPct, 100);
-                $techShare    = max(0, $customerTotal - $companyShare);
+                $techShare = max(0, $customerTotal - $companyShare);
             }
         }
 
         return [
-            'has_data'       => $hasData,
+            'has_data' => $hasData,
             'customer_total' => $customerTotal,
-            'cost_total'     => $costTotal,
-            'remaining'      => $remaining,
-            'tech_share'     => $techShare,
-            'company_share'  => $companyShare,
-            'percent'        => $percent,
-            'calc_type'      => $calcType !== '' ? $calcType : null,
+            'cost_total' => $costTotal,
+            'remaining' => $remaining,
+            'tech_share' => $techShare,
+            'company_share' => $companyShare,
+            'percent' => $percent,
+            'calc_type' => $calcType !== '' ? $calcType : null,
         ];
     }
 }
