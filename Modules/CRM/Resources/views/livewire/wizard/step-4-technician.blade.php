@@ -59,6 +59,37 @@
                 @endforeach
             </div>
         </div>
+    @elseif($this->smartSuggestionDiagnosis)
+        @php
+            $reasonLabels = [
+                'not_ready'    => 'آماده دریافت سفارش نیستند (ready_for_delivery خاموش)',
+                'capacity'     => 'ظرفیت پر است (max_order)',
+                'city'         => 'شهر سفارش در «شهرهای پوششی» تکنسین نیست',
+                'region'       => 'منطقهٔ سفارش در «مناطق پوششی» تکنسین نیست',
+                'brand'        => 'برند سفارش در «برندهای تخصص» تکنسین نیست',
+                'device'       => 'دستگاه سفارش در «دستگاه‌های تخصص» تکنسین نیست',
+                'service_type' => 'نوع خدمت (تعمیر/سرویس) با service_types تکنسین جور نیست',
+            ];
+            $diag = $this->smartSuggestionDiagnosis;
+        @endphp
+        <div class="mb-5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-6">
+            <div class="font-bold mb-1">هیچ تکنسین پیشنهادی برای انتخاب‌های فعلی پیدا نشد.</div>
+            <div>
+                از <span class="font-bold">{{ $diag['active_total'] }}</span> تکنسین فعال،
+                <span class="font-bold">{{ $diag['accepted'] }}</span> کاندید بود.
+            </div>
+            @if(! empty($diag['rejections']))
+                <div class="mt-1 font-bold">دلایل ردشدن بقیه:</div>
+                <ul class="list-disc ps-5 mt-1 space-y-0.5">
+                    @foreach($diag['rejections'] as $reason => $count)
+                        <li>
+                            <span class="font-bold">{{ $count }} تکنسین:</span>
+                            {{ $reasonLabels[$reason] ?? $reason }}
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
     @endif
 
     <div>

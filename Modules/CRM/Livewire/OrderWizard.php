@@ -259,14 +259,40 @@ class OrderWizard extends Component
         if (! $this->cityId || ! $this->brandId || ! $this->deviceId) {
             return collect();
         }
-        // Order ساختگی فقط برای کوئری service — هنوز در DB ذخیره نشده.
-        $fakeOrder = new Order([
-            'city_id' => $this->cityId,
-            'brand_id' => $this->brandId,
-            'device_id' => $this->deviceId,
-        ]);
         return app(\Modules\CRM\Services\TechnicianSuggestionService::class)
-            ->suggestForOrder($fakeOrder, 5);
+            ->suggestForOrder($this->buildSuggestionOrder(), 5);
+    }
+
+    /**
+     * تشخیص «چرا پیشنهادی نیست» — فقط وقتی لیست پیشنهاد خالی است اجرا
+     * می‌شود تا برای حالت عادی هزینهٔ اضافه نداشته باشد.
+     */
+    #[Computed]
+    public function smartSuggestionDiagnosis(): ?array
+    {
+        if (! auth()->user()?->can('view-tech-suggestions')) {
+            return null;
+        }
+        if (! $this->cityId || ! $this->brandId || ! $this->deviceId) {
+            return null;
+        }
+        if ($this->smartSuggestions->count()) {
+            return null;
+        }
+        return app(\Modules\CRM\Services\TechnicianSuggestionService::class)
+            ->diagnoseForOrder($this->buildSuggestionOrder());
+    }
+
+    /** Order ساختگی فقط برای کوئری service — هنوز در DB ذخیره نشده. */
+    protected function buildSuggestionOrder(): Order
+    {
+        return new Order([
+            'city_id'    => $this->cityId,
+            'region_id'  => $this->regionId,
+            'brand_id'   => $this->brandId,
+            'device_id'  => $this->deviceId,
+            'order_type' => $this->orderType,
+        ]);
     }
 
     #[Computed]
