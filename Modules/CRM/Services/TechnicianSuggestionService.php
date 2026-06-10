@@ -60,6 +60,8 @@ class TechnicianSuggestionService
         $query = Technician::query()
             ->where('status', 'active')
             ->where('ready_for_delivery', true)
+            // رکوردهای placeholder (مثل «سفارش کنسل شده») هرگز پیشنهاد نمی‌شوند.
+            ->where('exclude_from_suggestions', false)
             ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
@@ -152,6 +154,7 @@ class TechnicianSuggestionService
     {
         $techs = Technician::query()
             ->where('status', 'active')
+            ->where('exclude_from_suggestions', false)
             ->with(['cities:id', 'regions:id,city_id', 'brands:id', 'devices:id'])
             ->get();
 

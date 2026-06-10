@@ -114,6 +114,7 @@ class TechnicianController extends Controller
         $validated = $this->validateTechnician($request);
 
         $validated['ready_for_delivery'] = (bool) ($validated['ready_for_delivery'] ?? false);
+        $validated['exclude_from_suggestions'] = (bool) ($validated['exclude_from_suggestions'] ?? false);
 
         Technician::create($validated);
 
@@ -228,6 +229,7 @@ class TechnicianController extends Controller
         $validated = $this->validateTechnician($request, $technician->id);
 
         $validated['ready_for_delivery'] = (bool) ($validated['ready_for_delivery'] ?? false);
+        $validated['exclude_from_suggestions'] = (bool) ($validated['exclude_from_suggestions'] ?? false);
 
         // تخصص: شهر/منطقه/برند/دستگاه — برای سیستم پیشنهاد هوشمند
         $cityIds   = (array) $request->input('city_ids', []);
@@ -399,6 +401,7 @@ class TechnicianController extends Controller
             // وضعیت
             'status' => 'nullable|in:active,inactive',
             'ready_for_delivery' => 'nullable|boolean',
+            'exclude_from_suggestions' => 'nullable|boolean',
 
             // جهت سینک per-technician
             'order_sync_direction' => 'nullable|in:both,wp_to_laravel,laravel_to_wp,none',

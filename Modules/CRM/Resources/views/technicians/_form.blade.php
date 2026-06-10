@@ -210,6 +210,14 @@
                    class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
             <span class="text-sm text-gray-700 dark:text-gray-200">آماده دریافت سفارش جدید</span>
         </label>
+        <div class="md:col-span-2">
+            <label class="inline-flex items-center gap-2">
+                <input type="checkbox" name="exclude_from_suggestions" value="1" @checked(old('exclude_from_suggestions', $technician->exclude_from_suggestions ?? false))
+                       class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                <span class="text-sm text-gray-700 dark:text-gray-200">از پیشنهاد هوشمند حذف شود</span>
+            </label>
+            <p class="text-xs text-gray-400 mt-1">برای رکوردهای سیستمی مثل «سفارش کنسل شده» — در پیشنهاد هوشمند ظاهر نمی‌شود ولی در تخصیص دستی قابل انتخاب می‌ماند.</p>
+        </div>
     </div>
 </div>
 

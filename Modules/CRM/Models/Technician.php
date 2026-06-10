@@ -65,6 +65,7 @@ class Technician extends Authenticatable
         // وضعیت
         'status',
         'ready_for_delivery',
+        'exclude_from_suggestions',
 
         // جهت سینک (per-technician) — برای جلوگیری از overwrite ناخواسته بین WP↔Laravel
         'order_sync_direction',
@@ -118,6 +119,7 @@ class Technician extends Authenticatable
         'max_order' => 'integer',
         'max_price' => 'integer',
         'ready_for_delivery' => 'boolean',
+        'exclude_from_suggestions' => 'boolean',
         'password' => 'hashed',
         'last_login_at' => 'datetime',
         'training_completed_at' => 'datetime',
