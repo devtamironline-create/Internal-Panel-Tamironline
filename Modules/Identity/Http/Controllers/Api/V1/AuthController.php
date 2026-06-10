@@ -43,9 +43,14 @@ class AuthController extends Controller
 
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
+        // X-Device-ID اختیاری — اپ موبایل می‌فرستد، Next BFF نمی‌فرستد.
+        // فقط برای tagging توکن استفاده می‌شود تا بشود لیست دستگاه‌ها را داد.
+        $deviceId = trim((string) $request->header('X-Device-ID', ''));
+
         $result = $this->identity->verifyOtp(
             (string) $request->input('mobile'),
             (string) $request->input('code'),
+            $deviceId !== '' ? $deviceId : null,
         );
 
         $customer = $result['customer'];

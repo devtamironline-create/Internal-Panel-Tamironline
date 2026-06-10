@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             AdminSeeder::class,
             \Modules\Site\Database\Seeders\SiteContentSeeder::class,
+            ObjectionsSeeder::class,
         ]);
     }
 }

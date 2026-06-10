@@ -15,12 +15,14 @@ class City extends Model
         'name',
         'slug',
         'sort_order',
+        'is_active',
     ];
 
     protected $casts = [
         'wp_id' => 'integer',
         'province_id' => 'integer',
         'sort_order' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     public function province(): BelongsTo
@@ -31,5 +33,10 @@ class City extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

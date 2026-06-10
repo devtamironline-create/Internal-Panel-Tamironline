@@ -57,6 +57,23 @@ final class IdentityService
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
+        // ─── حالت تست — Kavenegar صدا نمی‌خورد، فقط success برمی‌گردد ──
+        // فقط زمانی فعال که env CUSTOMER_APP_TEST_MODE=true و شماره در
+        // allowlist (در صورت تعریف) باشد. در production همیشه false.
+        if ($this->isTestModeFor($normalized)) {
+            \Illuminate\Support\Facades\Log::warning('identity.test_mode_send_otp', [
+                'mobile' => $normalized,
+                'master_otp' => config('customerapp.test-mode.master_otp'),
+            ]);
+
+            return [
+                'ok' => true,
+                'expires_in' => (int) config('sms.otp.expires_in', 120),
+                'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
+                'test_mode' => true,
+            ];
+        }
+
         $hourKey = 'identity:otp_hourly:'.$normalized;
         $hourCount = (int) Cache::get($hourKey, 0);
         if ($hourCount >= self::MAX_OTP_PER_HOUR_PER_PHONE) {
@@ -88,22 +105,40 @@ final class IdentityService
     /**
      * تأیید OTP — اگر مشتری نباشد ساخته می‌شود، توکن Sanctum برمی‌گرداند.
      *
+     * $deviceId اختیاری: مقدار X-Device-ID که فرانت اپ موبایل می‌فرستد.
+     * در ستون device_id روی personal_access_tokens ذخیره می‌شود تا بشود لیست
+     * دستگاه‌ها را نمایش داد یا فقط یکی را revoke کرد. اگر null باشد، توکن
+     * بدون device_id ذخیره می‌شود (web/Next BFF/فعلاً غیرضروری).
+     *
      * @return array{customer: Customer, token: NewAccessToken, is_new: bool}
      *
      * @throws ValidationException
      */
-    public function verifyOtp(string $mobile, string $code): array
+    public function verifyOtp(string $mobile, string $code, ?string $deviceId = null): array
     {
         $normalized = PhoneNormalizer::normalize($mobile);
         if ($normalized === null) {
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
-        $verification = $this->otp->verify($normalized, trim($code));
-        if (! ($verification['success'] ?? false)) {
-            throw ValidationException::withMessages([
-                'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
+        $trimmedCode = trim($code);
+
+        // ─── حالت تست — اگر کد === master_otp باشد، تأیید واقعی skip می‌شود ──
+        $isTestBypass = $this->isTestModeFor($normalized)
+            && $trimmedCode !== ''
+            && hash_equals((string) config('customerapp.test-mode.master_otp'), $trimmedCode);
+
+        if ($isTestBypass) {
+            \Illuminate\Support\Facades\Log::warning('identity.test_mode_verify_otp', [
+                'mobile' => $normalized,
             ]);
+        } else {
+            $verification = $this->otp->verify($normalized, $trimmedCode);
+            if (! ($verification['success'] ?? false)) {
+                throw ValidationException::withMessages([
+                    'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
+                ]);
+            }
         }
 
         // race-safe upsert — unique(mobile) + transaction جلوی duplicate در
@@ -137,11 +172,54 @@ final class IdentityService
 
         $token = $customer->createToken(self::TOKEN_NAME, ['*']);
 
+        // ذخیره‌ی device_id روی Sanctum PAT — Sanctum API مستقیماً این فیلد را
+        // نمی‌سازد، پس بعد از createToken روی همان رکورد update می‌کنیم.
+        // دسترسی به ip مستقیماً از request() گرفته می‌شود.
+        if ($deviceId !== null && $deviceId !== '' && $this->isValidDeviceId($deviceId)) {
+            $token->accessToken->forceFill([
+                'device_id' => substr($deviceId, 0, 64),
+                'last_used_ip' => request()?->ip(),
+            ])->save();
+        }
+
         return [
             'customer' => $customer->fresh(),
             'token' => $token,
             'is_new' => $isNew,
         ];
+    }
+
+    /**
+     * آیا حالت تست برای این شماره فعال است؟
+     *
+     * شرایط:
+     *   - env CUSTOMER_APP_TEST_MODE=true
+     *   - شماره در allowed_mobiles (در صورت تعریف) باشد، یا allowlist خالی باشد
+     */
+    private function isTestModeFor(string $normalizedMobile): bool
+    {
+        if (! config('customerapp.test-mode.enabled', false)) {
+            return false;
+        }
+
+        $allowed = (array) config('customerapp.test-mode.allowed_mobiles', []);
+        if (empty($allowed)) {
+            return true; // allowlist خالی → همه شماره‌ها در حالت تست قبول
+        }
+
+        return in_array($normalizedMobile, $allowed, true);
+    }
+
+    /**
+     * اعتبارسنجی X-Device-ID — UUID v4 یا alpha-num محدود طول‌دار.
+     */
+    private function isValidDeviceId(string $id): bool
+    {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return true;
+        }
+
+        return (bool) preg_match('/^[A-Za-z0-9_-]{8,64}$/', $id);
     }
 
     /**

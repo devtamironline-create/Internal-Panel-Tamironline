@@ -14,11 +14,13 @@ class Province extends Model
         'name',
         'slug',
         'sort_order',
+        'is_active',
     ];
 
     protected $casts = [
         'wp_id' => 'integer',
         'sort_order' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     public function cities(): HasMany
@@ -29,5 +31,10 @@ class Province extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }
