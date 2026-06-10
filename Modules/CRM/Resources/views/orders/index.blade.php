@@ -194,10 +194,19 @@
                 <input type="text" name="visit_to" value="{{ $visitTo }}" dir="ltr" placeholder="مثلاً 1404/02/12" readonly
                        class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg cursor-pointer bg-white">
             </div>
-        </div>
 
-        {{-- وضعیت روی تب‌ها رفته است — اینجا hidden نگه می‌داریم --}}
-        <input type="hidden" name="status" value="{{ $status }}">
+            {{-- وضعیت — همان فیلتری که تب‌های پایین اعمال می‌کنند؛ اینجا
+                 هم برای دسترسی سریع در جستجوی پیشرفته در دسترس است. --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">وضعیت</label>
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <option value="">— همه —</option>
+                    @foreach(\Modules\CRM\Enums\OrderStatus::options() as $value => $label)
+                        <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
 
         <div class="flex items-center gap-2 mt-3">
             <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">
