@@ -315,8 +315,17 @@ class OrderController extends Controller
                 'brand:id,name', 'device:id,name',
             ])
             ->where('status', OrderStatus::Completed->value)
-            ->whereNotNull('completed_at')
-            ->where('completed_at', '>=', $since)
+            // completed_at بعضی سفارش‌ها NULL است (مثلاً سفارش‌هایی که از
+            // ابتدا «انجام کار» از WP رسیده‌اند) — این‌ها نباید از چشم
+            // detector پنهان بمانند؛ برای پنجرهٔ زمانی به updated_at
+            // (آخرین تغییر) fallback می‌کنیم.
+            ->where(function ($q) use ($since) {
+                $q->where('completed_at', '>=', $since)
+                    ->orWhere(function ($qq) use ($since) {
+                        $qq->whereNull('completed_at')
+                            ->where('updated_at', '>=', $since);
+                    });
+            })
             ->where(function ($q) {
                 $q->where('is_legacy_closed', false)
                     ->orWhereNull('is_legacy_closed');
@@ -326,7 +335,7 @@ class OrderController extends Controller
                 $q->where('save_as_draft', false)
                     ->orWhereNull('save_as_draft');
             })
-            ->orderByDesc('completed_at')
+            ->orderByRaw('COALESCE(completed_at, updated_at) DESC')
             ->paginate(50)
             ->withQueryString();
 

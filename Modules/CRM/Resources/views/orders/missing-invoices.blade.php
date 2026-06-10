@@ -67,7 +67,12 @@
                                     {{ $o->order_code }}
                                 </a>
                             </td>
-                            <td class="p-3 text-gray-500" dir="ltr">@jdatetime($o->completed_at)</td>
+                            <td class="p-3 text-gray-500" dir="ltr">
+                                @jdatetime($o->completed_at ?? $o->updated_at)
+                                @if(! $o->completed_at)
+                                    <div class="text-[10px] text-amber-600" dir="rtl">تاریخ تکمیل ثبت نشده — آخرین تغییر</div>
+                                @endif
+                            </td>
                             <td class="p-3">
                                 <div class="font-medium">{{ $custName ?: '—' }}</div>
                                 <div class="text-[10.5px] text-gray-400" dir="ltr">{{ $custMobile ?: '' }}</div>
