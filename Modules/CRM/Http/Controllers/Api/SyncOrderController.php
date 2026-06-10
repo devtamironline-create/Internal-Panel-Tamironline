@@ -284,6 +284,15 @@ class SyncOrderController extends Controller
                 if ($wpCreatedAt) {
                     $payload['created_at'] = $wpCreatedAt;
                 }
+                // سفارشی که از همان ابتدا «انجام کار» از WP می‌آید
+                // completed_at ندارد (WP این فیلد را نمی‌فرستد). بدون
+                // آن، صفحهٔ «فاکتورهای از قلم افتاده» سفارش را هرگز
+                // نمی‌دید. زمان دقیق تکمیل را نداریم — زمان import
+                // نزدیک‌ترین تقریب است و سفارش را در پنجرهٔ بررسی
+                // نگه می‌دارد.
+                if (($payload['status'] ?? null) === OrderStatus::Completed->value) {
+                    $payload['completed_at'] = now();
+                }
                 $order = Order::create($payload);
                 $action = 'created';
             }
