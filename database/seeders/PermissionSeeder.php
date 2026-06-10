@@ -128,6 +128,9 @@ class PermissionSeeder extends Seeder
             'view-crm-tickets' => 'مشاهده تیکت‌های پشتیبانی تکنسین‌ها',
             'reply-crm-tickets' => 'پاسخ به تیکت‌های پشتیبانی',
 
+            // CRM - اعلانات تکنسین‌ها
+            'manage-crm-announcements' => 'مدیریت اعلانات تکنسین‌ها',
+
             // CRM - پنل تکنسین (نقش جداگانه)
             'view-tech-dashboard' => 'مشاهده داشبورد تکنسین',
             'view-own-orders' => 'مشاهده سفارش‌های خود تکنسین',

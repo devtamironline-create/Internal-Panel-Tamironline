@@ -207,6 +207,98 @@
     })();
     </script>
 
+    @if(\Illuminate\Support\Facades\Auth::guard('tech')->check())
+    {{-- ─── پاپ‌آپ اعلانات تأییدنشده ───────────────────────────────
+         اعلان‌هایی که اپراتور از پنل ادمین منتشر کرده و تکنسین هنوز
+         «متوجه شدم» نزده، با polling هر ۶۰ ثانیه گرفته و یکی‌یکی
+         نمایش داده می‌شوند. تأیید با POST ثبت می‌شود. --}}
+    <div id="techAnnModal" style="display:none;" class="fixed inset-0 z-[60] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" style="backdrop-filter: blur(2px);"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5">
+            <div class="flex items-center gap-2.5 mb-3">
+                <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84A6 6 0 0118 10v-.7a6 6 0 10-12 0v.7a6 6 0 01-1.5 3.96L3 16h6m1.34-.16L9 16m1.34-.16a6 6 0 003.32 0M9 16v1a3 3 0 006 0v-1m-6 0h6"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="font-bold text-gray-900 text-sm">اعلان جدید</div>
+                    <div id="techAnnDate" class="text-[10px] text-gray-400" dir="ltr"></div>
+                </div>
+            </div>
+            <div id="techAnnTitle" class="font-bold text-sm text-gray-900 mb-1.5 leading-6"></div>
+            <p id="techAnnBody" class="text-xs text-gray-600 leading-6 whitespace-pre-line max-h-56 overflow-y-auto"></p>
+            <button id="techAnnAckBtn" type="button"
+                    class="mt-4 w-full py-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-bold active:scale-95 transition">
+                متوجه شدم ✓
+            </button>
+            <a href="{{ route('tech.announcements') }}" class="block text-center text-[11px] text-gray-400 mt-2.5">
+                مشاهدهٔ همهٔ اعلانات
+            </a>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var queue = [];
+        var current = null;
+        var known = {};
+        var modal = document.getElementById('techAnnModal');
+        var ackBtn = document.getElementById('techAnnAckBtn');
+        if (! modal || ! ackBtn) return;
+        var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        function showNext() {
+            if (! queue.length) {
+                modal.style.display = 'none';
+                current = null;
+                return;
+            }
+            current = queue.shift();
+            document.getElementById('techAnnTitle').textContent = current.title;
+            document.getElementById('techAnnBody').textContent = current.body;
+            document.getElementById('techAnnDate').textContent = current.date;
+            modal.style.display = 'flex';
+        }
+
+        ackBtn.addEventListener('click', async function () {
+            if (! current) return;
+            ackBtn.disabled = true;
+            try {
+                await fetch('{{ url('/tech/announcements') }}/' + current.id + '/ack', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                });
+            } catch (e) {}
+            ackBtn.disabled = false;
+            showNext();
+        });
+
+        async function poll() {
+            try {
+                var res = await fetch('{{ route('tech.announcements.unacked') }}', { headers: { 'Accept': 'application/json' } });
+                if (! res.ok) return;
+                var json = await res.json();
+                (json.items || []).forEach(function (item) {
+                    if (known[item.id]) return;
+                    known[item.id] = true;
+                    queue.push(item);
+                });
+                // بج اعلانات روی داشبورد (اگر در صفحهٔ جاری وجود دارد)
+                var badge = document.getElementById('techAnnBadge');
+                if (badge) {
+                    var c = parseInt(json.count || 0, 10);
+                    badge.textContent = c > 99 ? '99+' : c;
+                    badge.style.display = c > 0 ? 'flex' : 'none';
+                }
+                if (! current && queue.length) showNext();
+            } catch (e) {}
+        }
+        poll();
+        setInterval(poll, 60000);
+    })();
+    </script>
+    @endif
+
     @stack('scripts')
 </body>
 </html>

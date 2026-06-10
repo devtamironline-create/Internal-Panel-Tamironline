@@ -871,7 +871,7 @@
                         @endcanany
 
                         {{-- ── عملیات ── --}}
-                        @canany(['view-crm-orders', 'create-crm-order', 'view-crm-customers'])
+                        @canany(['view-crm-orders', 'create-crm-order', 'view-crm-customers', 'manage-crm-announcements'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">عملیات</div>
                         @can('view-crm-orders')
                         <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.index') || request()->routeIs('crm.orders.show') || request()->routeIs('crm.orders.edit') ? 'sidebar-menu-item-active' : '' }}">
@@ -917,6 +917,12 @@
                             @if($pendingTicketCount > 0)
                             <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #10b981; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingTicketCount }}</span>
                             @endif
+                        </a>
+                        @endcan
+                        @can('manage-crm-announcements')
+                        <a href="{{ route('crm.announcements.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.announcements.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            اعلانات تکنسین‌ها
                         </a>
                         @endcan
                         @can('manage-crm-settings')

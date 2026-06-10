@@ -205,6 +205,9 @@ class PermissionController extends Controller
             'view-crm-tickets' => 'مشاهده تیکت‌های پشتیبانی تکنسین',
             'reply-crm-tickets' => 'پاسخ به تیکت‌های پشتیبانی',
 
+            // CRM - اعلانات تکنسین‌ها
+            'manage-crm-announcements' => 'مدیریت اعلانات تکنسین‌ها',
+
             // CRM - پنل تکنسین (PWA)
             'view-tech-dashboard' => 'مشاهده داشبورد پنل تکنسین',
             'view-own-orders' => 'مشاهده سفارش‌های خودِ تکنسین',

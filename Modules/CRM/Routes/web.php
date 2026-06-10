@@ -425,6 +425,15 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('{category}', [\Modules\CRM\Http\Controllers\TicketCategoryController::class, 'destroy'])->name('destroy')->whereNumber('category');
     });
 
+    // ─── اعلانات تکنسین‌ها (سمت ادمین/اپراتور) ───────────────────
+    Route::middleware('can:manage-crm-announcements')->prefix('announcements')->name('announcements.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'index'])->name('index');
+        Route::post('/', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'store'])->name('store');
+        Route::get('{announcement}', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'show'])->name('show')->whereNumber('announcement');
+        Route::post('{announcement}/toggle', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'toggle'])->name('toggle')->whereNumber('announcement');
+        Route::delete('{announcement}', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'destroy'])->name('destroy')->whereNumber('announcement');
+    });
+
     // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
     // {ticket} با whereNumber محدود شده تا 'categories' را به اشتباه match نکند.
     Route::middleware('can:view-crm-tickets')->group(function () {
@@ -590,6 +599,11 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('messages/send', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'send'])->name('messages.send');
         Route::get('messages/poll', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'poll'])->name('messages.poll');
         Route::get('messages/unread', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'unread'])->name('messages.unread');
+
+        // ── اعلانات (نوشته‌شده توسط اپراتور از پنل ادمین) ────────
+        Route::get('announcements', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'index'])->name('announcements');
+        Route::get('announcements/unacked', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'unacked'])->name('announcements.unacked');
+        Route::post('announcements/{announcement}/ack', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'ack'])->name('announcements.ack')->whereNumber('announcement');
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس

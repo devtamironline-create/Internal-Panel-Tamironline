@@ -363,6 +363,25 @@
                 <div class="text-[10px] text-white/80 mt-1">مدیریت کار</div>
             </a>
         </div>
+
+        {{-- اعلانات — بج تعداد تأییدنشده‌ها توسط اسکریپت polling در layout پر می‌شود --}}
+        <a href="{{ route('tech.announcements') }}"
+           class="mt-3 bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3 hover:border-gray-200 transition">
+            <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0 relative">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84A6 6 0 0118 10v-.7a6 6 0 10-12 0v.7a6 6 0 01-1.5 3.96L3 16h6m1.34-.16L9 16m1.34-.16a6 6 0 003.32 0M9 16v1a3 3 0 006 0v-1m-6 0h6"/>
+                </svg>
+                <span id="techAnnBadge" style="display:none;"
+                      class="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-bold text-gray-900">اعلانات</div>
+                <div class="text-[10px] text-gray-400 mt-0.5">اطلاعیه‌های پشتیبانی تعمیرآنلاین</div>
+            </div>
+            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
     </div>
 
     {{-- ─────── Quick stats — اعتبار پنل + وضعیت مالی ─────── --}}
