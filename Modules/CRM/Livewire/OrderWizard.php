@@ -95,6 +95,13 @@ class OrderWizard extends Component
                 $this->customerSearch = $customer->display_name . ' — ' . $customer->mobile;
             }
         }
+
+        // استان پیش‌فرض: تهران — عمدهٔ سفارش‌ها تهران است؛ اگر جای
+        // دیگری بود اپراتور خودش عوض می‌کند. (انتخاب مشتری قدیمی با
+        // آدرس قبلی، این مقدار را override می‌کند.)
+        if (! $this->provinceId) {
+            $this->provinceId = Province::where('name', 'تهران')->value('id');
+        }
     }
 
     // ─── Computed (Livewire 3 #[Computed] cache for one render) ──
