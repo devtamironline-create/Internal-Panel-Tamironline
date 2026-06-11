@@ -101,7 +101,8 @@
 
     {{-- آدرس‌های اپ موبایل (multi-address) — read-only؛ ویرایش/حذف از سمت کاربر اپ --}}
     @php
-        $appAddresses = $customer->addresses()->with(['province:id,name', 'city:id,name'])->get();
+        $appAddresses = $customer->addresses()->with(['province:id,name', 'city:id,name', 'district:id,name'])->get();
+        $neshanWebKey = (string) config('services.neshan.web_key');
     @endphp
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div class="flex items-center justify-between mb-3">
@@ -125,7 +126,7 @@
                             <span class="text-[10px] text-gray-400">#{{ $addr->id }}</span>
                         </div>
                         <div class="text-gray-700 dark:text-gray-300">
-                            {{ optional($addr->province)->name }}{{ $addr->province && $addr->city ? ' — ' : '' }}{{ optional($addr->city)->name }}
+                            {{ optional($addr->province)->name }}{{ $addr->province && $addr->city ? ' — ' : '' }}{{ optional($addr->city)->name }}@if($addr->district) — {{ $addr->district->name }}@endif
                         </div>
                         <div class="text-gray-700 dark:text-gray-300 mt-1">{{ $addr->full_address }}</div>
                         <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
@@ -135,9 +136,53 @@
                             @if ($addr->phone)
                                 <span>تلفن: @tel($addr->phone)</span>
                             @endif
+                            @if ($addr->hasCoordinates())
+                                <span dir="ltr" class="font-mono text-[10px]">{{ $addr->latitude }}, {{ $addr->longitude }}</span>
+                            @endif
                         </div>
+                        @if ($addr->hasCoordinates())
+                            @if ($neshanWebKey !== '')
+                                {{-- نقشه نشان (Web SDK — Leaflet) --}}
+                                <div id="neshan-map-{{ $addr->id }}" class="mt-3 h-48 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+                                     data-lat="{{ $addr->latitude }}" data-lng="{{ $addr->longitude }}"></div>
+                            @else
+                                {{-- fallback بدون کلید: OSM embed --}}
+                                <div class="mt-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                                    <iframe class="w-full h-48" loading="lazy" referrerpolicy="no-referrer"
+                                            src="https://www.openstreetmap.org/export/embed.html?bbox={{ $addr->longitude - 0.005 }}%2C{{ $addr->latitude - 0.003 }}%2C{{ $addr->longitude + 0.005 }}%2C{{ $addr->latitude + 0.003 }}&layer=mapnik&marker={{ $addr->latitude }}%2C{{ $addr->longitude }}"></iframe>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">برای نمایش نقشه نشان، NESHAN_WEB_KEY را در env ست کنید.</p>
+                            @endif
+                        @endif
                     </div>
                 @endforeach
+
+                @if ($neshanWebKey !== '' && $appAddresses->contains(fn ($a) => $a->hasCoordinates()))
+                    @push('styles')
+                        <link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.css">
+                    @endpush
+                    @push('scripts')
+                        <script src="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.js"></script>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                document.querySelectorAll('[id^="neshan-map-"]').forEach(function (el) {
+                                    var lat = parseFloat(el.dataset.lat), lng = parseFloat(el.dataset.lng);
+                                    if (isNaN(lat) || isNaN(lng)) return;
+                                    var map = new L.Map(el.id, {
+                                        key: @json($neshanWebKey),
+                                        maptype: 'neshan',
+                                        center: [lat, lng],
+                                        zoom: 15,
+                                        poi: false,
+                                        traffic: false,
+                                        scrollWheelZoom: false,
+                                    });
+                                    L.marker([lat, lng]).addTo(map);
+                                });
+                            });
+                        </script>
+                    @endpush
+                @endif
             </div>
         @endif
 
