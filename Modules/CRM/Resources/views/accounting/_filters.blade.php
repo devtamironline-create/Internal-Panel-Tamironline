@@ -1,6 +1,35 @@
 {{-- فیلترهای مشترک لیست/گزارش هزینه‌ها.
      انتظار: $filters, $categories, $accounts, $allTags, $action (URL)
      و $extraHidden (آرایه name=>value اختیاری مثل group در گزارش). --}}
+@php
+    $qfToday     = \Morilog\Jalali\Jalalian::now()->format('Y/m/d');
+    $qfYesterday = \Morilog\Jalali\Jalalian::fromCarbon(now()->subDay())->format('Y/m/d');
+    $qfWeekAgo   = \Morilog\Jalali\Jalalian::fromCarbon(now()->subDays(6))->format('Y/m/d');
+    $qfMonth     = \Morilog\Jalali\Jalalian::now()->format('Y/m/01');
+    $qfBase      = array_merge(request()->except('page', 'from_date', 'to_date'), $extraHidden ?? []);
+    $quickRanges = [
+        'امروز'      => ['from_date' => $qfToday,     'to_date' => $qfToday],
+        'دیروز'      => ['from_date' => $qfYesterday, 'to_date' => $qfYesterday],
+        '۷ روز اخیر' => ['from_date' => $qfWeekAgo,   'to_date' => $qfToday],
+        'این ماه'    => ['from_date' => $qfMonth,     'to_date' => $qfToday],
+    ];
+@endphp
+
+{{-- بازه‌های سریع --}}
+<div class="flex items-center gap-2 flex-wrap">
+    @foreach($quickRanges as $qfLabel => $range)
+        @php $qfActive = $filters['from_date'] === $range['from_date'] && $filters['to_date'] === $range['to_date']; @endphp
+        <a href="{{ $action }}?{{ http_build_query(array_merge($qfBase, $range)) }}"
+           class="px-3 py-1.5 rounded-full text-xs font-bold border transition
+                  {{ $qfActive ? 'bg-brand-600 text-white border-brand-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400' }}">
+            {{ $qfLabel }}
+        </a>
+    @endforeach
+    @if($filters['from_date'] !== '' || $filters['to_date'] !== '')
+        <a href="{{ $action }}?{{ http_build_query($qfBase) }}" class="px-3 py-1.5 rounded-full text-xs text-gray-400 hover:text-gray-600">× حذف بازه</a>
+    @endif
+</div>
+
 <form method="GET" action="{{ $action }}" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
     @foreach(($extraHidden ?? []) as $hName => $hValue)
         <input type="hidden" name="{{ $hName }}" value="{{ $hValue }}">

@@ -38,6 +38,59 @@
         </div>
     </div>
 
+    {{-- نمودارها — دایره‌ای (سهم هر {{ $groups[$group] }}) + خطی روزانه --}}
+    @if($grandCount > 0)
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">سهم هر {{ $groups[$group] }}</div>
+                <div id="expensePie"></div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 lg:col-span-2">
+                <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
+                    روند روزانه بر اساس {{ $groups[$group] }}
+                    <span class="text-[10px] font-normal text-gray-400">
+                        ({{ $filters['from_date'] !== '' || $filters['to_date'] !== '' ? 'بازهٔ انتخابی' : '۳۰ روز اخیر' }})
+                    </span>
+                </div>
+                <div id="expenseLine"></div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var pieData = @json($pie);
+            var lineData = @json($lineChart);
+            var fontStack = 'Vazirmatn, system-ui, sans-serif';
+            var fmt = function (v) { return Number(v || 0).toLocaleString('fa-IR'); };
+
+            if (pieData.values.length) {
+                new ApexCharts(document.querySelector('#expensePie'), {
+                    chart: { type: 'donut', height: 300, fontFamily: fontStack },
+                    series: pieData.values,
+                    labels: pieData.labels,
+                    legend: { position: 'bottom', fontSize: '11px' },
+                    dataLabels: { formatter: function (val) { return val.toFixed(1) + '٪'; } },
+                    tooltip: { y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
+                }).render();
+            }
+
+            if (lineData.series.length) {
+                new ApexCharts(document.querySelector('#expenseLine'), {
+                    chart: { type: 'area', height: 300, fontFamily: fontStack, toolbar: { show: false }, zoom: { enabled: false } },
+                    series: lineData.series,
+                    xaxis: { categories: lineData.dates, labels: { rotate: -45, style: { fontSize: '10px' } }, tickAmount: Math.min(15, lineData.dates.length) },
+                    yaxis: { labels: { formatter: fmt } },
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: { type: 'gradient', gradient: { opacityFrom: 0.25, opacityTo: 0.02 } },
+                    dataLabels: { enabled: false },
+                    legend: { position: 'bottom', fontSize: '11px' },
+                    tooltip: { y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
+                }).render();
+            }
+        });
+        </script>
+    @endif
+
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300">

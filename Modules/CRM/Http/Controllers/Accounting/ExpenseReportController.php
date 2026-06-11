@@ -45,6 +45,18 @@ class ExpenseReportController extends Controller
 
         $rows = $this->aggregate($base, $group);
 
+        // داده‌ی نمودار دایره‌ای — ۱۰ مورد برتر + «سایر»
+        $pieRows = $rows->take(10);
+        $otherTotal = (int) $rows->slice(10)->sum('total');
+        $pie = [
+            'labels' => $pieRows->pluck('label')->values()->all(),
+            'values' => $pieRows->pluck('total')->map(fn ($v) => (int) $v)->values()->all(),
+        ];
+        if ($otherTotal > 0) {
+            $pie['labels'][] = 'سایر';
+            $pie['values'][] = $otherTotal;
+        }
+
         return view('crm::accounting.report', [
             'rows'       => $rows,
             'group'      => $group,
@@ -53,10 +65,110 @@ class ExpenseReportController extends Controller
             'hasFilter'  => $this->hasActiveExpenseFilter($filters),
             'grandTotal' => $grandTotal,
             'grandCount' => $grandCount,
+            'pie'        => $pie,
+            'lineChart'  => $this->dailyLineChart($base, $group, $filters),
             'categories' => ExpenseCategory::roots()->with('children')->get(),
             'accounts'   => PaymentAccount::orderBy('title')->get(),
             'allTags'    => ExpenseTag::orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    /**
+     * نمودار خطی روزانه — سری جداگانه برای هر یک از ۶ گروهِ پرهزینه‌تر
+     * (+ «سایر») در پنجرهٔ زمانی فیلتر؛ بدون فیلتر تاریخ: ۳۰ روز اخیر.
+     *
+     * @return array{dates: array<string>, series: array<array{name:string, data:array<int>}>}
+     */
+    private function dailyLineChart($base, string $group, array $filters): array
+    {
+        $fromG = $this->expenseJalaliToGregorian($filters['from_date']) ?: now()->subDays(29)->toDateString();
+        $toG   = $this->expenseJalaliToGregorian($filters['to_date']) ?: now()->toDateString();
+        if ($fromG > $toG) {
+            [$fromG, $toG] = [$toG, $fromG];
+        }
+        // سقف ۱۸۰ روز تا نمودار روزانه خوانا بماند
+        if (\Carbon\Carbon::parse($fromG)->diffInDays($toG) > 180) {
+            $fromG = \Carbon\Carbon::parse($toG)->subDays(179)->toDateString();
+        }
+
+        [$q, $labelExpr] = $this->labeledQuery($base, $group);
+        $raw = $q->whereDate('crm_expenses.paid_at', '>=', $fromG)
+            ->whereDate('crm_expenses.paid_at', '<=', $toG)
+            ->groupByRaw("DATE(crm_expenses.paid_at), {$labelExpr}")
+            ->selectRaw("DATE(crm_expenses.paid_at) as d, {$labelExpr} as label, SUM(crm_expenses.amount) as total")
+            ->get();
+
+        // ۶ سری برتر؛ بقیه در «سایر» جمع می‌شوند
+        $topLabels = $raw->groupBy('label')
+            ->map(fn ($g) => (int) $g->sum('total'))
+            ->sortDesc()->take(6)->keys()->all();
+
+        $dates = [];
+        $byDate = [];
+        $cursor = \Carbon\Carbon::parse($fromG);
+        $end = \Carbon\Carbon::parse($toG);
+        while ($cursor->lte($end)) {
+            $key = $cursor->toDateString();
+            $dates[$key] = \Morilog\Jalali\Jalalian::fromCarbon($cursor)->format('m/d');
+            $byDate[$key] = [];
+            $cursor->addDay();
+        }
+
+        foreach ($raw as $r) {
+            $label = in_array($r->label, $topLabels, true) ? $r->label : 'سایر';
+            $byDate[$r->d][$label] = ($byDate[$r->d][$label] ?? 0) + (int) $r->total;
+        }
+
+        $seriesLabels = $topLabels;
+        if ($raw->pluck('label')->unique()->count() > count($topLabels)) {
+            $seriesLabels[] = 'سایر';
+        }
+
+        $series = [];
+        foreach ($seriesLabels as $label) {
+            $series[] = [
+                'name' => $label,
+                'data' => array_values(array_map(fn ($day) => (int) ($day[$label] ?? 0), $byDate)),
+            ];
+        }
+
+        return ['dates' => array_values($dates), 'series' => $series];
+    }
+
+    /**
+     * کوئری با join و عبارت SQL برچسبِ گروه — مشترک بین نمودار خطی و
+     * (در آینده) سایر تجمیع‌ها.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: string}
+     */
+    private function labeledQuery($base, string $group): array
+    {
+        $q = clone $base;
+
+        return match ($group) {
+            'category' => [
+                $q->join('crm_expense_categories as child', 'child.id', '=', 'crm_expenses.category_id')
+                    ->join('crm_expense_categories as parent', 'parent.id', '=', 'child.parent_id'),
+                'parent.name',
+            ],
+            'subcategory' => [
+                $q->join('crm_expense_categories as child', 'child.id', '=', 'crm_expenses.category_id'),
+                'child.name',
+            ],
+            'account' => [
+                $q->join('crm_payment_accounts as acc', 'acc.id', '=', 'crm_expenses.payment_account_id'),
+                'acc.title',
+            ],
+            'payer' => [
+                $q,
+                "COALESCE(NULLIF(TRIM(crm_expenses.payer), ''), '— بدون پرداخت‌کننده —')",
+            ],
+            'tag' => [
+                $q->join('crm_expense_tag as pt', 'pt.expense_id', '=', 'crm_expenses.id')
+                    ->join('crm_expense_tags as tag', 'tag.id', '=', 'pt.tag_id'),
+                'tag.name',
+            ],
+        };
     }
 
     /**
