@@ -463,6 +463,30 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('{announcement}', [\Modules\CRM\Http\Controllers\AnnouncementController::class, 'destroy'])->name('destroy')->whereNumber('announcement');
     });
 
+    // ─── حسابداری — فاز ۱: ثبت هزینه‌ها ───────────────────────────
+    Route::middleware('can:view-crm-costs')->prefix('costs')->name('costs.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'index'])->name('index');
+        Route::get('create', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'create'])->name('create');
+        Route::post('/', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'store'])->name('store');
+        Route::get('report', [\Modules\CRM\Http\Controllers\Accounting\ExpenseReportController::class, 'index'])->name('report');
+        Route::get('{expense}/attachment', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'attachment'])->name('attachment')->whereNumber('expense');
+    });
+    Route::middleware('can:manage-crm-costs')->prefix('costs')->name('costs.')->group(function () {
+        Route::get('categories', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'index'])->name('categories.index');
+        Route::post('categories', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'store'])->name('categories.store');
+        Route::put('categories/{category}', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'update'])->name('categories.update')->whereNumber('category');
+        Route::delete('categories/{category}', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'destroy'])->name('categories.destroy')->whereNumber('category');
+
+        Route::get('accounts', [\Modules\CRM\Http\Controllers\Accounting\PaymentAccountController::class, 'index'])->name('accounts.index');
+        Route::post('accounts', [\Modules\CRM\Http\Controllers\Accounting\PaymentAccountController::class, 'store'])->name('accounts.store');
+        Route::put('accounts/{account}', [\Modules\CRM\Http\Controllers\Accounting\PaymentAccountController::class, 'update'])->name('accounts.update')->whereNumber('account');
+        Route::delete('accounts/{account}', [\Modules\CRM\Http\Controllers\Accounting\PaymentAccountController::class, 'destroy'])->name('accounts.destroy')->whereNumber('account');
+
+        Route::get('{expense}/edit', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'edit'])->name('edit')->whereNumber('expense');
+        Route::put('{expense}', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'update'])->name('update')->whereNumber('expense');
+        Route::delete('{expense}', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'destroy'])->name('destroy')->whereNumber('expense');
+    });
+
     // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
     // {ticket} با whereNumber محدود شده تا 'categories' را به اشتباه match نکند.
     Route::middleware('can:view-crm-tickets')->group(function () {
