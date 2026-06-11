@@ -25,8 +25,10 @@ final class MediaUrl
             return $value;
         }
         if (Str::startsWith($value, '/')) {
-            return $value;
+            // مسیر مطلق روی همین دامنه — با APP_URL ترکیب کن
+            return url($value);
         }
-        return asset('storage/' . ltrim($value, '/'));
+
+        return asset('storage/'.ltrim($value, '/'));
     }
 }

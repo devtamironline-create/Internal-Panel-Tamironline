@@ -20,7 +20,10 @@ class CustomerAddress extends Model
         'label',
         'province_id',
         'city_id',
+        'district_id',
         'full_address',
+        'latitude',
+        'longitude',
         'postal_code',
         'phone',
         'is_default',
@@ -30,6 +33,9 @@ class CustomerAddress extends Model
         'customer_id' => 'integer',
         'province_id' => 'integer',
         'city_id' => 'integer',
+        'district_id' => 'integer',
+        'latitude' => 'float',
+        'longitude' => 'float',
         'is_default' => 'boolean',
     ];
 
@@ -46,6 +52,17 @@ class CustomerAddress extends Model
     public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
+    }
+
+    /** منطقه (ردیف crm_cities با parent_city_id) — اختیاری. */
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'district_id');
+    }
+
+    public function hasCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 
     public function scopeForCustomer($query, int $customerId)

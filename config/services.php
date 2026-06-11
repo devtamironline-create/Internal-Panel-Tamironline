@@ -30,4 +30,14 @@ return [
         'secret' => env('SITE_REVALIDATION_SECRET'),
     ],
 
+    // نقشه نشان (neshan.org) — platform.neshan.org
+    //   web_key:     کلید Web SDK برای نمایش نقشه (فرانت اپ + پنل ادمین)
+    //   service_key: کلید REST برای «تبدیل نقطه به آدرس» (reverse geocode)
+    //                — فقط سمت سرور استفاده می‌شود و هرگز به فرانت نمی‌رود.
+    'neshan' => [
+        'web_key' => env('NESHAN_WEB_KEY'),
+        'service_key' => env('NESHAN_SERVICE_KEY'),
+        'base_url' => env('NESHAN_BASE_URL', 'https://api.neshan.org'),
+    ],
+
 ];

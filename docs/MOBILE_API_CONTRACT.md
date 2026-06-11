@@ -559,22 +559,30 @@ images[]: <file2.jpg>
 | `POST /addresses` | 🚧 Block 2 | `POST /v1/customer/addresses` |
 | `PUT /addresses/{id}` | 🚧 Block 2 | `PUT /v1/customer/addresses/{id}` |
 | `DELETE /addresses/{id}` | 🚧 Block 2 | `DELETE /v1/customer/addresses/{id}` |
-| `GET /locations/states` | 🚧 Block 2 | `GET /v1/customer/locations/states` |
-| `GET /locations/cities` | 🚧 Block 2 | `GET /v1/customer/locations/cities?state_id=N` |
+| `GET /locations/states` | ✅ | فقط استان‌های سرویس‌دهی (تنظیم ادمین — پیش‌فرض تهران+البرز) |
+| `GET /locations/cities` | ✅ | شهرهای اصلی استان‌های سرویس‌دهی + `has_districts` |
+| `GET /locations/districts?city_id=N` | ✅ 🆕 | مناطق شهر (۲۲ منطقه تهران، ۱۳ کرج) |
+| `GET /locations/reverse-geocode?lat&lng` | ✅ 🆕 | پروکسی نشان — private + throttle 30/min |
 
-> **توجه ساختاری**: مدل فعلی Customer ما فقط یک آدرس دارد. اگر شما multi-address می‌خواهید، در Block 2 جدول جدید `crm_customer_addresses` می‌سازیم.
+> **UPDATE 2026-06-11 — فلوی location عوض شد:** استان از کاربر پرسیده نمی‌شود.
+> فلو: شهر ← منطقه ← (اختیاری) پین نقشه نشان. استان سمت سرور از شهر ست می‌شود.
+> جزئیات کامل + نمونه کد نقشه در `docs/FRONTEND_LOCATIONS_NESHAN.md`.
 
-#### قرارداد Address
+#### قرارداد Address (به‌روز)
 
 ```jsonc
 {
   "id": 7,
   "label": "خانه",                            // اختیاری — مثلاً "خانه" / "محل کار"
-  "full_address": "تهران، خیابان آزادی، کوچه‌ی ۵، پلاک ۱۰، واحد ۳",
+  "full_address": "خیابان آزادی، کوچه‌ی ۵، پلاک ۱۰، واحد ۳",
   "city_id": 102,
   "city_name": "تهران",
-  "state_id": 8,
+  "district_id": 110,                          // 🆕 اختیاری — منطقه شهرداری
+  "district_name": "منطقه ۵ تهران",            // 🆕
+  "state_id": 8,                               // فقط در پاسخ — در request لازم نیست
   "state_name": "تهران",
+  "latitude": 35.7219,                         // 🆕 اختیاری — پین نقشه نشان
+  "longitude": 51.3347,                        // 🆕
   "postal_code": "1234567890",                // ۱۰ رقم
   "phone": "02144556677",                     // اختیاری — تلفن ثابت محل
   "is_default": true,
@@ -582,25 +590,34 @@ images[]: <file2.jpg>
 }
 ```
 
-#### قرارداد Location
+#### قرارداد Location (به‌روز)
 
 ```jsonc
-// GET /v1/customer/locations/states
+// GET /v1/customer/locations/cities  ← state_id لازم نیست
 {
   "success": true,
   "data": [
-    { "id": 8, "name": "تهران", "slug": "tehran" },
-    { "id": 9, "name": "اصفهان", "slug": "isfahan" }
+    { "id": 102, "state_id": 8, "name": "تهران", "slug": "tehran", "has_districts": true },
+    { "id": 103, "state_id": 8, "name": "شهرری", "slug": "shahr-e-ray", "has_districts": false }
   ]
 }
 
-// GET /v1/customer/locations/cities?state_id=8
+// GET /v1/customer/locations/districts?city_id=102
 {
   "success": true,
   "data": [
-    { "id": 102, "state_id": 8, "name": "تهران", "slug": "tehran" },
-    { "id": 103, "state_id": 8, "name": "شهرری", "slug": "shahr-e-ray" }
-  ]
+    { "id": 110, "city_id": 102, "name": "منطقه ۱ تهران", "slug": "tehran-district-1" }
+  ],
+  "meta": { "city_id": 102, "total": 22 }
+}
+
+// GET /v1/customer/locations/reverse-geocode?lat=35.7219&lng=51.3347  (Bearer لازم)
+{
+  "success": true,
+  "data": {
+    "formatted_address": "تهران، ونک، خیابان ملاصدرا...",
+    "province": "تهران", "city": "تهران", "district": "منطقه ۳", "route": "ملاصدرا"
+  }
 }
 ```
 
