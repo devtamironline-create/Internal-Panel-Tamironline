@@ -36,6 +36,9 @@ class PermissionController extends Controller
             if (str_contains($name, 'warehouse')) return 'انبار';
             if (str_contains($name, 'technician')) return 'تکنسین';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
+            if (str_contains($name, 'forum')) return 'انجمن';
+            if (str_contains($name, 'site')) return 'مدیریت سایت';
+            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) return 'CRM';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
         });
@@ -62,6 +65,9 @@ class PermissionController extends Controller
             if (str_contains($name, 'warehouse')) return 'انبار';
             if (str_contains($name, 'technician')) return 'تکنسین';
             if (str_contains($name, 'messenger')) return 'پیام‌رسان';
+            if (str_contains($name, 'forum')) return 'انجمن';
+            if (str_contains($name, 'site')) return 'مدیریت سایت';
+            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) return 'CRM';
             if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
             return 'سایر';
         });
@@ -207,6 +213,35 @@ class PermissionController extends Controller
 
             // CRM - اعلانات تکنسین‌ها
             'manage-crm-announcements' => 'مدیریت اعلانات تکنسین‌ها',
+
+            // مدیریت سایت (ماژول Site)
+            'manage-site' => 'مدیریت کامل سایت',
+            'manage-site-pages' => 'مدیریت صفحات سایت',
+            'manage-site-faqs' => 'مدیریت سوالات متداول سایت',
+            'manage-site-testimonials' => 'مدیریت نظرات مشتریان سایت',
+            'manage-site-banners' => 'مدیریت بنرهای سایت و اپ',
+            'view-site-contact-messages' => 'مشاهده پیام‌های تماس سایت',
+            'manage-site-contact-messages' => 'مدیریت پیام‌های تماس سایت',
+            'view-site-device-reviews' => 'مشاهده بررسی دستگاه‌های سایت',
+            'manage-site-device-reviews' => 'مدیریت بررسی دستگاه‌های سایت',
+            'view-site-reviews' => 'مشاهده دیدگاه‌های سایت',
+            'manage-site-reviews' => 'مدیریت دیدگاه‌های سایت',
+            'view-site-comments' => 'مشاهده کامنت‌های سایت',
+            'manage-site-comments' => 'مدیریت کامنت‌های سایت',
+            'view-site-media' => 'مشاهده رسانه‌های سایت',
+            'upload-site-media' => 'آپلود رسانه در سایت',
+            'manage-site-media' => 'مدیریت رسانه‌های سایت',
+
+            // انجمن (Forum)
+            'view-forum' => 'مشاهده انجمن',
+            'manage-forum-questions' => 'مدیریت سوالات انجمن',
+            'moderate-forum-questions' => 'بررسی و تایید سوالات انجمن',
+            'delete-forum-questions' => 'حذف سوالات انجمن',
+            'manage-forum-answers' => 'مدیریت پاسخ‌های انجمن',
+            'manage-forum-experts' => 'مدیریت کارشناسان انجمن',
+
+            // فاکتور (نام‌های قدیمی بدون پیشوند crm)
+            'view-invoices' => 'مشاهده فاکتورها',
 
             // CRM - پنل تکنسین (PWA)
             'view-tech-dashboard' => 'مشاهده داشبورد پنل تکنسین',
