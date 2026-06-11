@@ -136,6 +136,28 @@ class LocationController extends Controller
             ], 503);
         }
 
+        // تشخیص spam فرانت: اگر همین کاربر دقیقاً همان مختصات را در ۵ ثانیه
+        // اخیر بیش از ۳ بار خواست، هشدار در لاگ — بدون 4xx کردن (cache هنوز
+        // سرویس می‌دهد) ولی ادمین می‌فهمد فرانت در حال spam است.
+        $userId = optional($request->user())->id ?: 'guest';
+        $sigKey = sprintf(
+            'neshan:rev_sig:%s:%.5f,%.5f',
+            $userId,
+            round((float) $data['lat'], 5),
+            round((float) $data['lng'], 5)
+        );
+        $count = (int) \Illuminate\Support\Facades\Cache::get($sigKey, 0);
+        \Illuminate\Support\Facades\Cache::put($sigKey, $count + 1, 5);
+        if ($count + 1 === 5) {
+            \Illuminate\Support\Facades\Log::warning('neshan.reverse_spam_detected', [
+                'user_id' => $userId,
+                'lat' => $data['lat'],
+                'lng' => $data['lng'],
+                'count_in_5s' => $count + 1,
+                'hint' => 'Frontend likely missing debounce or has a state/effect loop.',
+            ]);
+        }
+
         $result = $neshan->reverseGeocode((float) $data['lat'], (float) $data['lng']);
 
         if ($result === null) {

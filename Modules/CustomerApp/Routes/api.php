@@ -76,9 +76,12 @@ Route::prefix('v1/customer')
         // ─── Private — auth:sanctum + rolling token + device tracking ──
         Route::middleware(['auth:sanctum', RollingToken::class, TrackTokenUsage::class])->group(function () {
 
-            // Reverse geocode نشان — private تا سهمیه‌ی API عمومی هدر نرود
+            // Reverse geocode نشان — private تا سهمیه‌ی API عمومی هدر نرود.
+            // throttle عمداً سخت‌گیر (20/min) تا اشتباهات فرانت (StrictMode دوبل،
+            // event موش روی move نه moveend، یا loop در state) با 429 فوری
+            // مشخص شود به‌جای اینکه سهمیه نشان سکوت‌وار مصرف شود.
             Route::get('/locations/reverse-geocode', [LocationController::class, 'reverseGeocode'])
-                ->middleware('throttle:30,1')
+                ->middleware('throttle:20,1')
                 ->name('api.customer.locations.reverse-geocode');
 
             // Device sessions management (Block 7)
