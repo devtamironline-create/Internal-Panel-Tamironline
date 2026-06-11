@@ -855,7 +855,7 @@
 
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-costs', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
@@ -1025,31 +1025,6 @@
                         @endcan
                         @endcanany
 
-                        {{-- ── حسابداری (فاز ۱: هزینه‌ها) ── --}}
-                        @canany(['view-crm-costs', 'manage-crm-costs'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">حسابداری</div>
-                        @can('view-crm-costs')
-                        <a href="{{ route('crm.costs.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.index') || request()->routeIs('crm.costs.create') || request()->routeIs('crm.costs.edit') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            هزینه‌ها
-                        </a>
-                        <a href="{{ route('crm.costs.report') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.report') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                            گزارش هزینه‌ها
-                        </a>
-                        @endcan
-                        @can('manage-crm-costs')
-                        <a href="{{ route('crm.costs.categories.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.categories.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                            دسته‌بندی هزینه‌ها
-                        </a>
-                        <a href="{{ route('crm.costs.accounts.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.accounts.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l9-4 9 4M4 10h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9zM9 14h6"/></svg>
-                            حساب‌های پرداخت
-                        </a>
-                        @endcan
-                        @endcanany
-
                         {{-- ── گزارش‌ها ── --}}
                         @canany(['view-crm-reports', 'manage-crm-orphan-orders'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">گزارش‌ها</div>
@@ -1148,6 +1123,47 @@
                         </a>
                         @endcan
                         @endcanany
+                    </div>
+                </div>
+                @endcanany
+                @endif
+
+                <!-- حسابداری — دسترسی فقط با اعطای صریح (حتی admin هم bypass ندارد) -->
+                @if(Route::has('crm.costs.index'))
+                @canany(['view-crm-costs', 'manage-crm-costs'])
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.costs.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            حسابداری
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-collapse class="sidebar-submenu">
+                        @can('view-crm-costs')
+                        <a href="{{ route('crm.costs.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.index') || request()->routeIs('crm.costs.create') || request()->routeIs('crm.costs.edit') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            هزینه‌ها
+                        </a>
+                        <a href="{{ route('crm.costs.create') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.create') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            ثبت هزینه
+                        </a>
+                        <a href="{{ route('crm.costs.report') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.report') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            گزارش هزینه‌ها
+                        </a>
+                        @endcan
+                        @can('manage-crm-costs')
+                        <a href="{{ route('crm.costs.categories.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.categories.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                            دسته‌بندی هزینه‌ها
+                        </a>
+                        <a href="{{ route('crm.costs.accounts.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.costs.accounts.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l9-4 9 4M4 10h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9zM9 14h6"/></svg>
+                            حساب‌های پرداخت
+                        </a>
+                        @endcan
                     </div>
                 </div>
                 @endcanany

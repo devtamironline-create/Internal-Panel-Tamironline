@@ -24,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // Super-admin bypass: admin role has access to everything
         Gate::before(function ($user, $ability) {
+            // استثنا: حسابداری (هزینه‌ها) از bypass سوپر-ادمین خارج است —
+            // دسترسی باید صریحاً (per-user از مدیریت دسترسی‌ها) داده شود،
+            // حتی برای نقش admin. null یعنی بررسی عادی permission ادامه یابد.
+            if (in_array($ability, ['view-crm-costs', 'manage-crm-costs'], true)) {
+                return null;
+            }
             if ($user->hasRole('admin')) {
                 return true;
             }
