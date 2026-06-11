@@ -92,8 +92,10 @@ class ImportArticlesFromWp extends Command
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        // chunk-based برای کنترل حافظه روی dataset بزرگ
-        $query->orderBy('ID')->chunkById(50, function ($posts) use ($importer, $bar, $prefix, $siteUrl) {
+        // chunk-based برای کنترل حافظه روی dataset بزرگ.
+        // ستون باید qualified باشد چون LEFT JOIN با users آن هم ستون ID دارد —
+        // alias چهارم به chunkById می‌گوید کلید را با نام «ID» در خروجی بشناسد.
+        $query->orderBy('p.ID')->chunkById(50, function ($posts) use ($importer, $bar, $prefix, $siteUrl) {
             foreach ($posts as $post) {
                 $meta = $this->fetchMeta($prefix, (int) $post->ID);
                 $terms = $this->fetchTerms($prefix, (int) $post->ID);
@@ -120,7 +122,7 @@ class ImportArticlesFromWp extends Command
 
                 $bar->advance();
             }
-        }, 'ID');
+        }, 'p.ID', 'ID');
 
         $bar->finish();
         $this->newLine(2);

@@ -28,7 +28,7 @@ class AddressController extends Controller
         $customer = $this->customer($request);
 
         $rows = $customer->addresses()
-            ->with(['province:id,name', 'city:id,name'])
+            ->with(['province:id,name', 'city:id,name', 'district:id,name'])
             ->get();
 
         return response()->json([
@@ -41,7 +41,7 @@ class AddressController extends Controller
         $customer = $this->customer($request);
         $address = $this->find($customer->id, $id);
 
-        $address->load(['province:id,name', 'city:id,name']);
+        $address->load(['province:id,name', 'city:id,name', 'district:id,name']);
 
         return response()->json([
             'data' => (new AddressResource($address))->resolve(),
@@ -59,7 +59,7 @@ class AddressController extends Controller
                 $this->markDefault($customer->id, $address->id);
             }
 
-            return $address->fresh(['province:id,name', 'city:id,name']);
+            return $address->fresh(['province:id,name', 'city:id,name', 'district:id,name']);
         });
 
         return response()->json([
@@ -81,7 +81,7 @@ class AddressController extends Controller
             }
         });
 
-        $address->refresh()->load(['province:id,name', 'city:id,name']);
+        $address->refresh()->load(['province:id,name', 'city:id,name', 'district:id,name']);
 
         return response()->json([
             'message' => 'آدرس به‌روز شد.',
@@ -137,30 +137,65 @@ class AddressController extends Controller
     }
 
     /**
+     * فلوی جدید: استان از کاربر پرسیده نمی‌شود — از شهر تشخیص داده می‌شود.
+     * اگر فرانت قدیمی به‌جای شهر اصلی، ردیف «منطقه» را در city_id بفرستد،
+     * خودکار به district_id منتقل و city_id به شهر والد اصلاح می‌شود.
+     *
      * @return array<string, mixed>
      */
     private function validateData(Request $request): array
     {
         $data = $request->validate([
             'label' => 'nullable|string|max:50',
-            // استان و شهر اجباری — بدون اینها سفارش قابل ارسال به تکنسین نیست
-            'province_id' => ['required', 'integer', Rule::exists('crm_provinces', 'id')->where('is_active', true)],
+            // شهر اجباری — استان سمت سرور از شهر ست می‌شود
             'city_id' => ['required', 'integer', Rule::exists('crm_cities', 'id')->where('is_active', true)],
+            'district_id' => ['nullable', 'integer', Rule::exists('crm_cities', 'id')->where('is_active', true)],
             'full_address' => 'required|string|min:10|max:500',
+            'latitude' => 'nullable|numeric|between:-90,90|required_with:longitude',
+            'longitude' => 'nullable|numeric|between:-180,180|required_with:latitude',
             'postal_code' => 'nullable|string|size:10',
             'phone' => 'nullable|string|max:20',
             'is_default' => 'nullable|boolean',
+        ], [
+            'city_id.required' => 'انتخاب شهر الزامی است.',
+            'latitude.required_with' => 'مختصات نقشه ناقص است.',
+            'longitude.required_with' => 'مختصات نقشه ناقص است.',
         ]);
 
-        // cross-check: شهر باید متعلق به استان انتخاب‌شده باشد
         $city = \Modules\CRM\Models\City::query()
-            ->where('id', $data['city_id'])
-            ->first(['province_id']);
-        if (! $city || (int) $city->province_id !== (int) $data['province_id']) {
+            ->whereKey($data['city_id'])
+            ->first(['id', 'province_id', 'parent_city_id']);
+
+        // سازگاری با فرانت قدیمی: اگر city_id خودش یک «منطقه» است،
+        // district = همان، city = شهر والد
+        if ($city && $city->parent_city_id !== null) {
+            $data['district_id'] = $city->id;
+            $data['city_id'] = (int) $city->parent_city_id;
+            $city = \Modules\CRM\Models\City::query()
+                ->whereKey($data['city_id'])
+                ->first(['id', 'province_id', 'parent_city_id']);
+        }
+
+        if (! $city) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'city_id' => 'شهر انتخاب‌شده به استان انتخاب‌شده تعلق ندارد.',
+                'city_id' => 'شهر انتخاب‌شده معتبر نیست.',
             ]);
         }
+
+        // cross-check: منطقه باید فرزند همین شهر باشد
+        if (! empty($data['district_id'])) {
+            $district = \Modules\CRM\Models\City::query()
+                ->whereKey($data['district_id'])
+                ->first(['id', 'parent_city_id']);
+            if (! $district || (int) $district->parent_city_id !== (int) $city->id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'district_id' => 'منطقه‌ی انتخاب‌شده به این شهر تعلق ندارد.',
+                ]);
+            }
+        }
+
+        // استان همیشه سمت سرور از شهر ست می‌شود — ورودی کلاینت نادیده گرفته می‌شود
+        $data['province_id'] = (int) $city->province_id;
 
         return $data;
     }

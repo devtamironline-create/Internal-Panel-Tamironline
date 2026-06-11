@@ -175,11 +175,15 @@ class OrderController extends Controller
                 'customer_mobile' => $customer->mobile,
                 'customer_phone' => $address->phone ?: ($customer->phone ?: $customer->mobile),
 
-                // snapshot آدرس
+                // snapshot آدرس — نام منطقه (در صورت وجود) به متن آدرس اضافه
+                // می‌شود تا تکنسین در نمای سفارش بدون join آن را ببیند.
                 'address_id' => $address->id,
                 'province_id' => $address->province_id,
                 'city_id' => $address->city_id,
-                'address' => $address->full_address,
+                'address' => trim(
+                    ($address->district_id && $address->district ? $address->district->name.'، ' : '')
+                    .$address->full_address
+                ),
                 'postal_code' => $address->postal_code,
 
                 // مشکل

@@ -41,10 +41,13 @@ Route::prefix('v1/customer')
         Route::get('/status', StatusController::class)->name('api.customer.status');
 
         // Locations برای picker — public با cache بلندمدت
+        // فلو: شهر → منطقه (استان از کاربر پرسیده نمی‌شود؛ سرور تشخیص می‌دهد)
         Route::get('/locations/states', [LocationController::class, 'states'])
             ->name('api.customer.locations.states');
         Route::get('/locations/cities', [LocationController::class, 'cities'])
             ->name('api.customer.locations.cities');
+        Route::get('/locations/districts', [LocationController::class, 'districts'])
+            ->name('api.customer.locations.districts');
 
         // Services picker — انواع خدمات، ایرادات، دسته‌بندی، برند، بنر
         Route::get('/services/types', [ServiceController::class, 'types'])
@@ -72,6 +75,14 @@ Route::prefix('v1/customer')
 
         // ─── Private — auth:sanctum + rolling token + device tracking ──
         Route::middleware(['auth:sanctum', RollingToken::class, TrackTokenUsage::class])->group(function () {
+
+            // Reverse geocode نشان — private تا سهمیه‌ی API عمومی هدر نرود.
+            // throttle عمداً سخت‌گیر (20/min) تا اشتباهات فرانت (StrictMode دوبل،
+            // event موش روی move نه moveend، یا loop در state) با 429 فوری
+            // مشخص شود به‌جای اینکه سهمیه نشان سکوت‌وار مصرف شود.
+            Route::get('/locations/reverse-geocode', [LocationController::class, 'reverseGeocode'])
+                ->middleware('throttle:20,1')
+                ->name('api.customer.locations.reverse-geocode');
 
             // Device sessions management (Block 7)
             Route::get('/auth/devices', [DeviceController::class, 'index'])

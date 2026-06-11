@@ -1,0 +1,145 @@
+<?php
+
+namespace Modules\CustomerApp\Services;
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * کلاینت سرویس REST نشان (neshan.org).
+ *
+ * فعلاً فقط reverse geocode («تبدیل نقطه به آدرس») — کلید service سمت سرور
+ * می‌ماند و از طریق proxy endpoint به اپ سرویس داده می‌شود تا کلید لو نرود
+ * و سهمیه‌ی API قابل کنترل (throttle + cache) باشد.
+ *
+ * مرجع: https://platform.neshan.org/api/reverse-geocoding
+ *   GET https://api.neshan.org/v5/reverse?lat=..&lng=..
+ *   Header: Api-Key: <SERVICE_KEY>
+ *
+ * ⚠️ نوع کلید مهم است: کلید باید از نوع «وب‌سرویس» با دسترسی
+ * «تبدیل نقطه به آدرس» باشد — کلید Web SDK (نقشه) اینجا کار نمی‌کند
+ * و نشان 483 ApiKeyTypeError برمی‌گرداند.
+ */
+class NeshanService
+{
+    private const CACHE_TTL = 86400;       // 24h — آدرس یک نقطه عوض نمی‌شود
+
+    private const FAILURE_COOLDOWN = 60;   // 1min — جلوی کوبیدن مکرر روی خطا
+
+    /** کدهای خطای نشان → پیام قابل‌فهم برای لاگ/دیباگ */
+    private const ERROR_CODES = [
+        400 => 'INVALID_ARGUMENT — پارامتر ورودی نامعتبر',
+        470 => 'CoordinateParseError — مختصات نامعتبر',
+        480 => 'KeyNotFound — کلید نامعتبر است یا در header ارسال نشده',
+        481 => 'LimitExceeded — سهمیه‌ی کل مصرف شده',
+        482 => 'RateExceeded — تعداد درخواست در دقیقه بیش از حد',
+        483 => 'ApiKeyTypeError — نوع کلید با سرویس همخوانی ندارد (کلید Web را به‌جای کلید وب‌سرویس گذاشته‌اید؟)',
+        484 => 'ApiWhiteListError — دامنه/IP در whitelist کلید نیست',
+        485 => 'ApiServiceListError — سرویس «تبدیل نقطه به آدرس» برای این کلید فعال نیست',
+    ];
+
+    /** آخرین HTTP status خطای نشان — برای تفکیک خطای پیکربندی از خطای موقت. */
+    private ?int $lastStatus = null;
+
+    public function isConfigured(): bool
+    {
+        return (string) config('services.neshan.service_key') !== '';
+    }
+
+    /**
+     * آیا آخرین شکست، خطای پیکربندی کلید بود؟ (نه خطای موقت شبکه/سهمیه)
+     */
+    public function lastFailureWasKeyMisconfiguration(): bool
+    {
+        return in_array($this->lastStatus, [480, 483, 484, 485], true);
+    }
+
+    /**
+     * تبدیل مختصات به آدرس فارسی.
+     *
+     * مختصات تا ۵ رقم اعشار (دقت ~۱ متر) round می‌شود تا cache مؤثر باشد.
+     * موفقیت ۲۴ ساعت cache می‌شود؛ شکست ۶۰ ثانیه (تا روی خطای تکراری،
+     * هر درخواست کاربر یک round-trip ~۵۰۰ms به نشان نخورد).
+     *
+     * @return array<string, mixed>|null null اگر config نشده یا پاسخ نامعتبر بود
+     */
+    public function reverseGeocode(float $lat, float $lng): ?array
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        $lat = round($lat, 5);
+        $lng = round($lng, 5);
+        $cacheKey = sprintf('neshan:reverse:%.5f,%.5f', $lat, $lng);
+
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            if ($cached['ok'] ?? false) {
+                return $cached['data'];
+            }
+            $this->lastStatus = $cached['status'] ?? null;
+
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(8)
+                ->withHeaders(['Api-Key' => (string) config('services.neshan.service_key')])
+                ->get(rtrim((string) config('services.neshan.base_url'), '/').'/v5/reverse', [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                ]);
+
+            if (! $response->successful()) {
+                $this->lastStatus = $response->status();
+                Log::warning('neshan.reverse_failed', [
+                    'status' => $response->status(),
+                    'reason' => self::ERROR_CODES[$response->status()] ?? 'unknown',
+                    'body' => mb_substr($response->body(), 0, 500),
+                    'lat' => $lat,
+                    'lng' => $lng,
+                ]);
+                Cache::put($cacheKey, ['ok' => false, 'status' => $response->status()], self::FAILURE_COOLDOWN);
+
+                return null;
+            }
+
+            $json = $response->json();
+
+            // mapping مطابق مستندات رسمی v5/reverse
+            $municipalityZone = $json['municipality_zone'] ?? null;
+            $data = [
+                'formatted_address' => $json['formatted_address'] ?? null,
+                'province' => $json['state'] ?? null,
+                'city' => $json['city'] ?? null,
+                'neighbourhood' => $json['neighbourhood'] ?? null,
+                'municipality_zone' => $municipalityZone,
+                // برای نمایش مستقیم: «منطقه ۶» — اگر zone نبود، محله
+                'district' => $municipalityZone !== null && $municipalityZone !== ''
+                    ? 'منطقه '.$municipalityZone
+                    : ($json['neighbourhood'] ?? null),
+                'route' => $json['route_name'] ?? null,
+                'place' => $json['place'] ?? null,
+                'in_traffic_zone' => $json['in_traffic_zone'] ?? null,
+                'in_odd_even_zone' => $json['in_odd_even_zone'] ?? null,
+            ];
+
+            Cache::put($cacheKey, ['ok' => true, 'data' => $data], self::CACHE_TTL);
+            $this->lastStatus = null;
+
+            return $data;
+        } catch (\Throwable $e) {
+            $this->lastStatus = null;
+            Log::warning('neshan.reverse_exception', [
+                'error' => $e->getMessage(),
+                'lat' => $lat,
+                'lng' => $lng,
+            ]);
+            Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
+
+            return null;
+        }
+    }
+}

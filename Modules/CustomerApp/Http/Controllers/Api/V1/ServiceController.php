@@ -41,17 +41,28 @@ class ServiceController extends Controller
     {
         $deviceId = $request->integer('device_id');
 
-        $query = Objection::query()->active()->ordered();
-        if ($deviceId > 0) {
-            $query->forDevice($deviceId);
+        // device_id اجباری — لیست عمومی همه‌ی ایرادات معنی ندارد
+        if ($deviceId <= 0) {
+            return response()->json([
+                'message' => 'برای دیدن لیست ایرادات، باید ابتدا دستگاه انتخاب شود.',
+                'code' => 'device_id_required',
+            ], 422);
         }
 
-        $rows = $query->get();
+        // اطمینان از وجود دستگاه — جلوگیری از بازگشت array خالی بی‌توضیح
+        if (! \Modules\CRM\Models\Device::query()->whereKey($deviceId)->exists()) {
+            return response()->json([
+                'message' => 'دستگاه انتخاب‌شده معتبر نیست.',
+                'code' => 'invalid_device',
+            ], 422);
+        }
+
+        $rows = Objection::query()->active()->ordered()->forDevice($deviceId)->get();
 
         return response()->json([
             'data' => ObjectionResource::collection($rows),
             'meta' => [
-                'device_id' => $deviceId > 0 ? $deviceId : null,
+                'device_id' => $deviceId,
                 'total' => $rows->count(),
             ],
         ])->header('Cache-Control', 'public, max-age=1800');
@@ -186,11 +197,12 @@ class ServiceController extends Controller
      */
     private function shapeBanner(Banner $b, string $placement): array
     {
+        // اولویت: media → image_url (raw DB). در هر دو حالت absolute URL برمی‌گردد.
         $imageUrl = null;
         if ($b->media) {
             $imageUrl = $b->media->url();
         } elseif ($b->image_url) {
-            $imageUrl = $b->image_url;
+            $imageUrl = MediaUrl::resolve($b->image_url);
         }
 
         return [
