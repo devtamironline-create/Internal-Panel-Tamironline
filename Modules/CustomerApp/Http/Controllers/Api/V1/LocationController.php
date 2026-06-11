@@ -139,6 +139,15 @@ class LocationController extends Controller
         $result = $neshan->reverseGeocode((float) $data['lat'], (float) $data['lng']);
 
         if ($result === null) {
+            // خطای پیکربندی کلید (480/483/484/485) را از خطای موقت جدا کن —
+            // فرانت پیام مناسب نشان می‌دهد و ادمین در لاگ دلیل دقیق را می‌بیند.
+            if ($neshan->lastFailureWasKeyMisconfiguration()) {
+                return response()->json([
+                    'message' => 'پیکربندی سرویس نقشه اشتباه است. (نوع کلید نشان را بررسی کنید — جزئیات در لاگ سرور)',
+                    'code' => 'neshan_key_misconfigured',
+                ], 503);
+            }
+
             return response()->json([
                 'message' => 'تبدیل مختصات به آدرس ناموفق بود. دوباره تلاش کنید.',
                 'code' => 'reverse_geocode_failed',

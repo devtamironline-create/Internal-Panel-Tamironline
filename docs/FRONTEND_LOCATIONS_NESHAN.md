@@ -116,35 +116,80 @@
 
 ## ۳. نقشه نشان (neshan.org)
 
-### نمایش نقشه در اپ — Web SDK
+### نمایش نقشه در اپ — Web SDK رسمی (Mapbox-gl)
 
 کلید وب از تیم بک‌اند بگیرید (env `NESHAN_WEB_KEY` — مقدارش با شما به اشتراک گذاشته می‌شود؛ کلید وب public-facing است و فقط به domainهای ثبت‌شده سرویس می‌دهد).
 
+⚠️ **دو کلید جدا هستند — قاطی نکنید:**
+- کلید **Web** (نقشه) → فقط برای SDK نمایش نقشه
+- کلید **وب‌سرویس** (REST) → فقط سمت سرور؛ هرگز به فرانت نمی‌رود
+
+#### نصب — React (پکیج رسمی نشان)
+
+```bash
+# .npmrc در روت پروژه:
+# @neshan-maps-platform:registry=https://npm.neshan.org
+
+npm install @neshan-maps-platform/mapbox-gl-react @neshan-maps-platform/mapbox-gl
+```
+
+```tsx
+import { MapComponent, MapTypes } from '@neshan-maps-platform/mapbox-gl-react';
+import nmp_mapboxgl from '@neshan-maps-platform/mapbox-gl';
+import '@neshan-maps-platform/mapbox-gl/dist/NeshanMapboxGl.css';
+
+function AddressMapPicker({ onPicked }: { onPicked: (lat: number, lng: number) => void }) {
+  const mapRef = useRef<any>(null);
+
+  return (
+    <MapComponent
+      options={{
+        mapKey: process.env.NEXT_PUBLIC_NESHAN_WEB_KEY!,
+        mapType: MapTypes.neshanVector,
+        center: [51.3890, 35.6892],   // ⚠️ mapbox = [lng, lat] — برعکس leaflet!
+        zoom: 13,
+        poi: true,
+        traffic: false,
+        isTouchPlatform: true,
+      }}
+      mapSetter={(map) => {
+        mapRef.current = map;
+        // الگوی «پین وسط صفحه»: marker ثابت در center، با حرکت نقشه آپدیت می‌شود
+        const marker = new nmp_mapboxgl.Marker()
+          .setLngLat(map.getCenter())
+          .addTo(map);
+        map.on('move', () => marker.setLngLat(map.getCenter()));
+        map.on('moveend', () => {
+          const { lat, lng } = map.getCenter();
+          onPicked(lat, lng);   // → debounce + صدا زدن reverse-geocode
+        });
+      }}
+    />
+  );
+}
+```
+
+> ⚠️ کامپوننت React نشان فعلاً از **SSR/SSG پشتیبانی نمی‌کند** — در Next.js حتماً با `dynamic(() => import(...), { ssr: false })` لود کنید.
+
+#### نصب — Vanilla JS / CDN
+
 ```html
-<link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.css">
-<script src="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.js"></script>
+<link rel="stylesheet" href="https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.css" />
+<script src="https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.js"></script>
 ```
 
 ```js
-const map = new L.Map('map', {
-  key: NESHAN_WEB_KEY,
-  maptype: 'neshan',
-  center: [35.6997, 51.3380],   // تهران
+const map = new nmp_mapboxgl.Map({
+  mapType: nmp_mapboxgl.Map.mapTypes.neshanVector,
+  container: 'map',
   zoom: 13,
+  center: [51.3890, 35.6892],   // [lng, lat]
+  mapKey: NESHAN_WEB_KEY,
   poi: true,
   traffic: false,
 });
-
-// پین وسط صفحه — الگوی رایج انتخاب موقعیت
-let marker = L.marker(map.getCenter(), { draggable: true }).addTo(map);
-map.on('move', () => marker.setLatLng(map.getCenter()));
-map.on('moveend', () => {
-  const { lat, lng } = map.getCenter();
-  onLocationPicked(lat, lng);   // → صدا زدن reverse-geocode
-});
+new nmp_mapboxgl.Marker().setLngLat([51.3890, 35.6892]).addTo(map);
 ```
-
-> برای React: پکیج `@neshan-maps-platform/react-openlayers` یا همان SDK لیفلت در `useEffect`.
 
 ### تبدیل نقطه به آدرس — از طریق پروکسی بک‌اند (نه مستقیم!)
 
@@ -172,7 +217,20 @@ map.on('moveend', () => {
 
 خطاها:
 - `503 neshan_not_configured` — کلید هنوز ست نشده (تا قبل از تحویل کلید این را می‌گیرید)
+- `503 neshan_key_misconfigured` — نوع کلید اشتباه است (مشکل سمت بک‌اند — گزارش دهید، retry فایده ندارد)
 - `502 reverse_geocode_failed` — خطای موقت نشان؛ دکمه retry نمایش دهید
+
+### عیب‌یابی کلید نشان (سمت بک‌اند/ادمین)
+
+اگر `neshan_key_misconfigured` گرفتید، در لاگ سرور (`neshan.reverse_failed`) دلیل دقیق ثبت می‌شود:
+
+| HTTP نشان | معنی | راه حل |
+|---|---|---|
+| 480 KeyNotFound | کلید نامعتبر | کلید را از پنل نشان دوباره کپی کنید |
+| **483 ApiKeyTypeError** | **نوع کلید اشتباه — رایج‌ترین خطا!** کلید Web (نقشه) را در `NESHAN_SERVICE_KEY` گذاشته‌اید | در پنل نشان یک کلید از نوع **«وب‌سرویس»** بسازید |
+| 484 ApiWhiteListError | IP/دامنه سرور در whitelist کلید نیست | IP سرور را به whitelist کلید اضافه کنید |
+| 485 ApiServiceListError | سرویس «تبدیل نقطه به آدرس» برای کلید فعال نیست | در تنظیمات کلید این سرویس را تیک بزنید |
+| 481/482 | سهمیه/نرخ تمام شده | پلن نشان را ارتقا دهید (این خطا 502 برمی‌گردد نه 503) |
 
 ### UX پیشنهادی فرم آدرس
 

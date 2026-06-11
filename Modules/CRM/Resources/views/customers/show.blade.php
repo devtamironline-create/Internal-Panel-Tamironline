@@ -158,26 +158,32 @@
                 @endforeach
 
                 @if ($neshanWebKey !== '' && $appAddresses->contains(fn ($a) => $a->hasCoordinates()))
+                    {{-- SDK رسمی نشان — Mapbox-gl. دقت: center به‌صورت [lng, lat] است --}}
                     @push('styles')
-                        <link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.css">
+                        <link rel="stylesheet" href="https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.css">
                     @endpush
                     @push('scripts')
-                        <script src="https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.js"></script>
+                        <script src="https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.js"></script>
                         <script>
                             document.addEventListener('DOMContentLoaded', function () {
                                 document.querySelectorAll('[id^="neshan-map-"]').forEach(function (el) {
                                     var lat = parseFloat(el.dataset.lat), lng = parseFloat(el.dataset.lng);
                                     if (isNaN(lat) || isNaN(lng)) return;
-                                    var map = new L.Map(el.id, {
-                                        key: @json($neshanWebKey),
-                                        maptype: 'neshan',
-                                        center: [lat, lng],
+                                    var map = new nmp_mapboxgl.Map({
+                                        mapType: nmp_mapboxgl.Map.mapTypes.neshanVector,
+                                        container: el.id,
                                         zoom: 15,
+                                        pitch: 0,
+                                        center: [lng, lat],
+                                        minZoom: 2,
+                                        maxZoom: 21,
+                                        trackResize: true,
+                                        mapKey: @json($neshanWebKey),
                                         poi: false,
                                         traffic: false,
-                                        scrollWheelZoom: false,
+                                        mapTypeControllerOptions: { show: false },
                                     });
-                                    L.marker([lat, lng]).addTo(map);
+                                    new nmp_mapboxgl.Marker().setLngLat([lng, lat]).addTo(map);
                                 });
                             });
                         </script>
