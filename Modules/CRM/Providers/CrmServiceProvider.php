@@ -19,6 +19,7 @@ use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\FullRebuildFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
+use Modules\CRM\Console\Commands\ImportTermContentFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\PullNewOrdersFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
@@ -126,6 +127,7 @@ class CrmServiceProvider extends ServiceProvider
                 ApplyFinalWalletBalances::class,
                 FullRebuildFromWp::class,
                 PullNewOrdersFromWp::class,
+                ImportTermContentFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,
                 SnapshotOrderStatuses::class,
