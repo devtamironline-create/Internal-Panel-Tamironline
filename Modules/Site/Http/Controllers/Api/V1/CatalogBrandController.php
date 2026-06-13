@@ -10,6 +10,7 @@ use Modules\CRM\Models\Device;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
+use Modules\Site\Support\InlineMediaUrl;
 use Modules\Site\Support\MediaUrl;
 
 /**
@@ -110,7 +111,10 @@ class CatalogBrandController extends Controller
                     ],
                     'content' => [
                         'enabled' => $enabled('content', true),
-                        'html' => CatalogMerger::pick($brand->description, $template['content']['html'] ?? null),
+                        'html' => InlineMediaUrl::absolutize(
+                            CatalogMerger::pick($brand->description, $template['content']['html'] ?? null),
+                            request()->getSchemeAndHttpHost()
+                        ),
                     ],
                     'faq' => [
                         'enabled' => $enabled('faq', true),
