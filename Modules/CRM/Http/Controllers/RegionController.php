@@ -57,35 +57,21 @@ class RegionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'city_id' => 'required|integer|exists:crm_cities,id',
-            'name' => 'required|string|max:120',
+            // باید یک «شهر اصلی» باشد (نه خودش یک منطقه).
+            'city_id'    => ['required', 'integer', Rule::exists('crm_cities', 'id')->whereNull('parent_city_id')],
+            'name'       => 'required|string|max:120',
             'sort_order' => 'nullable|integer|min:0|max:9999',
         ]);
 
-        // slug را از نام می‌سازیم. ابتدا ارقام فارسی/عربی را به انگلیسی تبدیل
-        // می‌کنیم تا «منطقه ۱» و «منطقه ۲» slugهای متمایز بسازند (وگرنه رقم در
-        // Str::slug حذف می‌شود و هر دو به یک slug می‌رسند). سپس یکتایی را در
-        // محدودهٔ همان شهر تضمین می‌کنیم (constraint جدول crm_regions_city_id_slug_unique).
-        $name = strtr($validated['name'], [
-            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
-            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
-            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
-            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
-        ]);
-        $base = Str::slug($name) ?: 'region';
-        $slug = $base;
-        $i = 2;
-        while (Region::where('city_id', $validated['city_id'])->where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$i;
-            $i++;
-        }
+        $parent = City::findOrFail($validated['city_id']);
 
-        Region::create([
-            'city_id' => $validated['city_id'],
-            'name' => $validated['name'],
-            'slug' => $slug,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_active' => true,
+        City::create([
+            'province_id'    => $parent->province_id,
+            'parent_city_id' => $parent->id,
+            'name'           => $validated['name'],
+            'slug'           => $this->uniqueSlug($validated['name'], (int) $parent->province_id),
+            'sort_order'     => $validated['sort_order'] ?? 0,
+            'is_active'      => true,
         ]);
 
         return back()->with('success', 'منطقهٔ جدید اضافه شد.');
@@ -155,16 +141,28 @@ class RegionController extends Controller
 
     /**
      * ساخت slug یکتا در محدودهٔ استان (constraint جدول: province_id+slug).
-     * برای نام فارسی Str::slug خالی برمی‌گرداند، پس به slug تصادفی fallback
-     * می‌کنیم و در صورت برخورد، پسوند تصادفی اضافه می‌شود.
+     *
+     * ابتدا ارقام فارسی/عربی را به انگلیسی تبدیل می‌کنیم تا «منطقه ۱» و
+     * «منطقه ۲» slugهای متمایز بسازند (وگرنه رقم در Str::slug حذف می‌شود و
+     * هر دو به یک slug می‌رسند). برای نام کاملاً فارسیِ بدون رقم، Str::slug
+     * خالی برمی‌گرداند پس به یک base تصادفی fallback می‌کنیم و در صورت
+     * برخورد، پسوند عددی افزایشی می‌زنیم.
      */
     private function uniqueSlug(string $name, int $provinceId): string
     {
+        $name = strtr($name, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+
         $base = Str::slug($name) ?: ('district-' . Str::random(6));
         $slug = $base;
-
+        $i = 2;
         while (City::where('province_id', $provinceId)->where('slug', $slug)->exists()) {
-            $slug = $base . '-' . Str::random(4);
+            $slug = $base . '-' . $i;
+            $i++;
         }
 
         return $slug;
