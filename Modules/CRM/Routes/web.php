@@ -428,6 +428,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('regions', [\Modules\CRM\Http\Controllers\RegionController::class, 'index'])->name('regions.index');
         Route::post('regions', [\Modules\CRM\Http\Controllers\RegionController::class, 'store'])->name('regions.store');
         Route::put('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'update'])->name('regions.update')->whereNumber('region');
+        Route::put('regions/{region}/toggle-active', [\Modules\CRM\Http\Controllers\RegionController::class, 'toggleActive'])->name('regions.toggle-active')->whereNumber('region');
         Route::delete('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'destroy'])->name('regions.destroy')->whereNumber('region');
     });
 
