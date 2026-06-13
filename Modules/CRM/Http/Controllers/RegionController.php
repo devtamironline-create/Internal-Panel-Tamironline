@@ -70,19 +70,31 @@ class RegionController extends Controller
 
     public function update(Request $request, Region $region)
     {
+        // is_active اینجا دست‌کاری نمی‌شود — فعال/غیرفعال‌سازی از طریق
+        // route اختصاصی toggle-active انجام می‌گیرد تا ذخیرهٔ نام/ترتیب
+        // به‌اشتباه وضعیت فعال‌بودن منطقه را تغییر ندهد.
         $validated = $request->validate([
             'name'       => 'required|string|max:120',
             'sort_order' => 'nullable|integer|min:0|max:9999',
-            'is_active'  => 'nullable|boolean',
         ]);
 
         $region->update([
             'name'       => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? 0,
-            'is_active'  => (bool) ($validated['is_active'] ?? false),
         ]);
 
         return back()->with('success', 'منطقه به‌روزرسانی شد.');
+    }
+
+    /**
+     * فعال/غیرفعال کردن سریع یک منطقه با یک کلیک — بدون نیاز به باز کردن
+     * فرم ویرایش. منطقهٔ غیرفعال از picker اپ حذف می‌شود بدون حذف داده.
+     */
+    public function toggleActive(Region $region)
+    {
+        $region->forceFill(['is_active' => ! $region->is_active])->save();
+
+        return back()->with('success', $region->is_active ? 'منطقه فعال شد.' : 'منطقه غیرفعال شد.');
     }
 
     public function destroy(Region $region)

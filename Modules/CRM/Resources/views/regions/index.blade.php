@@ -97,11 +97,20 @@
                                        class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
                             </td>
                             <td class="px-4 py-2">
-                                <label class="inline-flex items-center gap-1 text-xs">
-                                    <input type="checkbox" name="is_active" value="1" form="upd-{{ $r->id }}" @checked($r->is_active)
-                                           class="w-4 h-4 rounded text-brand-600">
-                                    <span>فعال</span>
-                                </label>
+                                <form action="{{ route('crm.regions.toggle-active', $r) }}" method="POST" class="inline">
+                                    @csrf @method('PUT')
+                                    @if($r->is_active)
+                                        <button type="submit" title="غیرفعال کردن"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-medium">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> فعال
+                                        </button>
+                                    @else
+                                        <button type="submit" title="فعال کردن"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-medium">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> غیرفعال
+                                        </button>
+                                    @endif
+                                </form>
                             </td>
                             <td class="px-4 py-2 text-end">
                                 <button type="submit" form="upd-{{ $r->id }}"
