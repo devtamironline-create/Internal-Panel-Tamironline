@@ -32,6 +32,7 @@
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Slug</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">تعداد شهر</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ترتیب</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">نمایش در اپ</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">عملیات</th>
                 </tr>
             </thead>
@@ -42,6 +43,26 @@
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $province->slug }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $province->cities_count }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $province->sort_order }}</td>
+                    <td class="px-6 py-4">
+                        @can('manage-crm-provinces')
+                        <form action="{{ route('crm.provinces.toggle-active', $province) }}" method="POST" class="inline">
+                            @csrf @method('PUT')
+                            @if($province->is_active)
+                                <button type="submit" title="غیرفعال کردن نمایش در اپلیکیشن"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> فعال
+                                </button>
+                            @else
+                                <button type="submit" title="فعال کردن نمایش در اپلیکیشن"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> غیرفعال
+                                </button>
+                            @endif
+                        </form>
+                        @else
+                            <span class="text-xs {{ $province->is_active ? 'text-emerald-600' : 'text-gray-400' }}">{{ $province->is_active ? 'فعال' : 'غیرفعال' }}</span>
+                        @endcan
+                    </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             @can('manage-crm-provinces')
@@ -57,7 +78,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">استانی ثبت نشده.</td>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">استانی ثبت نشده.</td>
                 </tr>
                 @endforelse
             </tbody>

@@ -46,21 +46,37 @@
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">استان</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Slug</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ترتیب</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">نمایش در اپ</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">عملیات</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($cities as $city)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                        {{ $city->name }}
-                        @if(isset($city->is_active) && ! $city->is_active)
-                            <span class="ms-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-600">غیرفعال</span>
-                        @endif
-                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $city->name }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->province?->name }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->slug }}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $city->sort_order }}</td>
+                    <td class="px-6 py-4">
+                        @can('manage-crm-cities')
+                        <form action="{{ route('crm.cities.toggle-active', $city) }}" method="POST" class="inline">
+                            @csrf @method('PUT')
+                            @if($city->is_active)
+                                <button type="submit" title="غیرفعال کردن نمایش در اپلیکیشن"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> فعال
+                                </button>
+                            @else
+                                <button type="submit" title="فعال کردن نمایش در اپلیکیشن"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> غیرفعال
+                                </button>
+                            @endif
+                        </form>
+                        @else
+                            <span class="text-xs {{ $city->is_active ? 'text-emerald-600' : 'text-gray-400' }}">{{ $city->is_active ? 'فعال' : 'غیرفعال' }}</span>
+                        @endcan
+                    </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2 flex-wrap">
                             @can('manage-crm-cities')
@@ -79,7 +95,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">شهری ثبت نشده.</td>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">شهری ثبت نشده.</td>
                 </tr>
                 @endforelse
             </tbody>
