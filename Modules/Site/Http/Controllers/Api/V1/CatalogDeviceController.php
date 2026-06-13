@@ -10,6 +10,7 @@ use Modules\CRM\Models\Device;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
+use Modules\Site\Support\InlineMediaUrl;
 use Modules\Site\Support\MediaUrl;
 
 /**
@@ -94,7 +95,7 @@ class CatalogDeviceController extends Controller
             'slug' => $c->slug,
             'icon' => $c->icon,
             'tone' => $c->tone,
-            'description' => $c->description,
+            'description' => InlineMediaUrl::absolutize($c->description, request()->getSchemeAndHttpHost()),
             'devices' => $c->devices->map(fn ($d) => [
                 'id' => (int) $d->id,
                 'label' => $d->name,
@@ -163,7 +164,10 @@ class CatalogDeviceController extends Controller
                     ],
                     'content' => [
                         'enabled' => $enabled('content', true),
-                        'html' => CatalogMerger::pick($device->description, $template['content']['html'] ?? null),
+                        'html' => InlineMediaUrl::absolutize(
+                            CatalogMerger::pick($device->description, $template['content']['html'] ?? null),
+                            request()->getSchemeAndHttpHost()
+                        ),
                     ],
                     'faq' => [
                         'enabled' => $enabled('faq', true),
