@@ -432,6 +432,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('regions/{region}', [\Modules\CRM\Http\Controllers\RegionController::class, 'destroy'])->name('regions.destroy')->whereNumber('region');
     });
 
+    // ─── محدودهٔ سرویس‌دهی اپلیکیشن — انتخاب استان‌های قابل‌نمایش در اپ ──
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('app-service-area', [\Modules\CRM\Http\Controllers\AppServiceAreaController::class, 'index'])->name('app-service-area.index');
+        Route::post('app-service-area', [\Modules\CRM\Http\Controllers\AppServiceAreaController::class, 'update'])->name('app-service-area.update');
+    });
+
     // ─── ایرادات فرم ثبت سفارش پنل (objectionsList در ویزارد اپراتور) ───
     // مسیر/نام «objections-settings» است تا با CRUD ایرادات اپ موبایل
     // (ObjectionController با نام‌های crm.objections.*) تداخل نکند.
