@@ -460,7 +460,14 @@ class ImportTermContentFromWp extends Command
                 }
                 $this->stats['images_downloaded']++;
 
-                return str_replace($src, $media->url(), $tag);
+                // مسیر ریشه‌ای-نسبی (بدون هاست) — مستقل از APP_URL در CLI،
+                // تا src تصاویر روی هر دامنه‌ای که پنل سرو می‌شود درست بماند.
+                $newUrl = route('site.media.serve', [
+                    'id' => $media->id,
+                    'name' => $media->hash.'.'.$media->extension,
+                ], false);
+
+                return str_replace($src, $newUrl, $tag);
             },
             $html
         ) ?? $html;
