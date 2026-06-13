@@ -5,13 +5,21 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Province;
-use Modules\CRM\Models\Region;
 
 /**
- * مدیریت مناطق (Region/District) ذیل شهر. هر شهر می‌تواند صفر یا چند
- * منطقه داشته باشد؛ منطقه در ویزارد ثبت سفارش اختیاری است.
+ * مدیریت مناطق شهری (Districts) ذیل هر شهر.
+ *
+ * نکتهٔ معماری: «منطقهٔ» قابل‌نمایش در اپلیکیشن موبایل به‌صورت ردیف
+ * فرزند در همان جدول crm_cities (با parent_city_id) ذخیره می‌شود — نه
+ * در جدول crm_regions. اپ (LocationController::districts و آدرس‌های
+ * مشتری) دقیقاً همین ردیف‌ها را می‌خواند. بنابراین این صفحه روی
+ * crm_cities کار می‌کند تا فعال/غیرفعال‌سازی منطقه مستقیماً روی اپ اثر
+ * بگذارد.
+ *
+ * (جدول crm_regions جدا و فقط برای منطقهٔ سفارش‌های پنل داخلی است.)
  *
  * صفحهٔ مدیریت با فیلتر بر اساس استان و شهر کار می‌کند چون لیست شهرها
  * طولانی است و عبور پیمایشی بین صدها شهر برای پیدا کردن یکی غیرعملی است.
@@ -24,17 +32,19 @@ class RegionController extends Controller
         $provinceId = $request->integer('province_id');
         $cityId = $request->integer('city_id');
 
-        // فقط شهرهای فعال — شهرهای غیرفعال (که قبلاً به منطقه تبدیل
-        // شده‌اند) دیگر نباید منطقهٔ جدیدی بپذیرند.
+        // فقط شهرهای اصلی فعال — ردیف‌های منطقه (parent_city_id دار) خودشان
+        // به‌عنوان شهر انتخاب نمی‌شوند و شهرهای غیرفعال هم منطقهٔ جدید نمی‌پذیرند.
         $cities = $provinceId
-            ? City::where('province_id', $provinceId)->active()->ordered()->get(['id', 'name'])
+            ? City::where('province_id', $provinceId)->mainCities()->active()->ordered()->get(['id', 'name'])
             : collect();
 
+        // مناطق = شهرهای فرزندِ شهر انتخاب‌شده. غیرفعال‌ها هم می‌آیند تا
+        // ادمین بتواند دوباره فعالشان کند.
         $regions = $cityId
-            ? Region::where('city_id', $cityId)->ordered()->get()
+            ? City::where('parent_city_id', $cityId)->ordered()->get()
             : collect();
 
-        $selectedCity = $cityId ? City::find($cityId) : null;
+        $selectedCity = $cityId ? City::mainCities()->find($cityId) : null;
         $selectedProvince = $provinceId ? Province::find($provinceId) : null;
 
         return view('crm::regions.index', compact(
@@ -81,8 +91,10 @@ class RegionController extends Controller
         return back()->with('success', 'منطقهٔ جدید اضافه شد.');
     }
 
-    public function update(Request $request, Region $region)
+    public function update(Request $request, City $region)
     {
+        $this->ensureDistrict($region);
+
         // is_active اینجا دست‌کاری نمی‌شود — فعال/غیرفعال‌سازی از طریق
         // route اختصاصی toggle-active انجام می‌گیرد تا ذخیرهٔ نام/ترتیب
         // به‌اشتباه وضعیت فعال‌بودن منطقه را تغییر ندهد.
@@ -103,24 +115,58 @@ class RegionController extends Controller
      * فعال/غیرفعال کردن سریع یک منطقه با یک کلیک — بدون نیاز به باز کردن
      * فرم ویرایش. منطقهٔ غیرفعال از picker اپ حذف می‌شود بدون حذف داده.
      */
-    public function toggleActive(Region $region)
+    public function toggleActive(City $region)
     {
+        $this->ensureDistrict($region);
+
         $region->forceFill(['is_active' => ! $region->is_active])->save();
 
         return back()->with('success', $region->is_active ? 'منطقه فعال شد.' : 'منطقه غیرفعال شد.');
     }
 
-    public function destroy(Region $region)
+    public function destroy(City $region)
     {
-        // اگر سفارشی به این منطقه ارجاع داده، حذف نمی‌کنیم — به‌جایش
-        // پیشنهاد غیرفعال‌سازی می‌دهیم تا تاریخچه نشکند.
-        $hasOrders = \Modules\CRM\Models\Order::where('region_id', $region->id)->exists();
-        if ($hasOrders) {
-            return back()->with('error', 'این منطقه در سفارش‌های ثبت‌شده استفاده شده — به‌جای حذف، آن را غیرفعال کنید.');
+        $this->ensureDistrict($region);
+
+        // اگر سفارشی یا آدرس مشتری به این منطقه ارجاع داده، حذف نمی‌کنیم —
+        // به‌جایش پیشنهاد غیرفعال‌سازی می‌دهیم تا تاریخچه/داده نشکند.
+        $usedByOrders = \Modules\CRM\Models\Order::where('city_id', $region->id)->exists();
+        $usedByAddresses = \Modules\CRM\Models\CustomerAddress::where('district_id', $region->id)
+            ->orWhere('city_id', $region->id)
+            ->exists();
+
+        if ($usedByOrders || $usedByAddresses) {
+            return back()->with('error', 'این منطقه در سفارش‌ها یا آدرس مشتری‌ها استفاده شده — به‌جای حذف، آن را غیرفعال کنید.');
         }
 
         $region->delete();
 
         return back()->with('success', 'منطقه حذف شد.');
+    }
+
+    /**
+     * اطمینان از اینکه ردیف بایند‌شده واقعاً یک منطقه است (نه شهر اصلی) تا
+     * عملیات این کنترلر به‌اشتباه یک شهر اصلی را تغییر ندهد یا حذف نکند.
+     */
+    private function ensureDistrict(City $city): void
+    {
+        abort_if($city->parent_city_id === null, 404);
+    }
+
+    /**
+     * ساخت slug یکتا در محدودهٔ استان (constraint جدول: province_id+slug).
+     * برای نام فارسی Str::slug خالی برمی‌گرداند، پس به slug تصادفی fallback
+     * می‌کنیم و در صورت برخورد، پسوند تصادفی اضافه می‌شود.
+     */
+    private function uniqueSlug(string $name, int $provinceId): string
+    {
+        $base = Str::slug($name) ?: ('district-' . Str::random(6));
+        $slug = $base;
+
+        while (City::where('province_id', $provinceId)->where('slug', $slug)->exists()) {
+            $slug = $base . '-' . Str::random(4);
+        }
+
+        return $slug;
     }
 }

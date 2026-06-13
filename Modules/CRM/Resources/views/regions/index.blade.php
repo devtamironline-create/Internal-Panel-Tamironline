@@ -5,8 +5,8 @@
 @section('main')
 <div class="p-4 md:p-6 max-w-5xl mx-auto">
     <div class="mb-4">
-        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">مدیریت مناطق (Region/District)</h1>
-        <p class="text-xs text-gray-500 mt-1">مناطق شهری ذیل هر شهر — اختیاری. اگر شهری کوچک است، نیازی به افزودن منطقه ندارد.</p>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">مدیریت مناطق شهری</h1>
+        <p class="text-xs text-gray-500 mt-1">مناطق ذیل هر شهر که در اپلیکیشن موبایل به مشتری نمایش داده می‌شوند — اختیاری. با غیرفعال کردن هر منطقه، از لیست انتخاب آدرس در اپ حذف می‌شود (بدون حذف داده).</p>
     </div>
 
     @if(session('success'))
