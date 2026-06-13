@@ -27,6 +27,7 @@ use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
 use Modules\CRM\Console\Commands\ReplaceTechInfo;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
+use Modules\CRM\Console\Commands\ImportDeviceThumbnailsFromWp;
 use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
 use Modules\CRM\Console\Commands\RestoreWalletFromSnapshot;
 use Modules\CRM\Console\Commands\UndoRestoreAdjustments;
@@ -128,6 +129,7 @@ class CrmServiceProvider extends ServiceProvider
                 FullRebuildFromWp::class,
                 PullNewOrdersFromWp::class,
                 ImportTermContentFromWp::class,
+                ImportDeviceThumbnailsFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,
                 SnapshotOrderStatuses::class,
