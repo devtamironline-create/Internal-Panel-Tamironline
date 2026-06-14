@@ -21,6 +21,7 @@ class TechnicianServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Modules\Technician\Console\Commands\FixDocuments::class,
+                \Modules\Technician\Console\Commands\RelinkOrphanDocuments::class,
             ]);
         }
     }
