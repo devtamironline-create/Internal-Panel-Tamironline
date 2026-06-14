@@ -2,59 +2,28 @@
 
 namespace Modules\CRM\Http\Controllers;
 
-use App\Models\Setting;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Models\Province;
 
 /**
- * مدیریت «محدودهٔ سرویس‌دهی اپلیکیشن» — مشخص می‌کند کدام استان‌ها در
- * اپلیکیشن موبایل مشتری نمایش داده شوند.
+ * «محدودهٔ سرویس‌دهی اپلیکیشن» — هابِ سلسله‌مراتبی استان → شهر → منطقه.
  *
- * این لیست در تنظیمات سراسری زیر کلید `customer_app_service_provinces`
- * به‌صورت رشتهٔ ID‌های جداشده با کاما نگه‌داری می‌شود (پیش‌فرض «1,18» =
- * تهران و البرز) و در LocationController اپ خوانده می‌شود.
+ * منبع واحد: نمایش هر استان/شهر/منطقه در اپ موبایل فقط با پرچم is_active
+ * («نمایش در اپ») کنترل می‌شود — همان تاگلی که اینجا و در صفحات شهرها و
+ * مناطق دیده می‌شود. دیگر گیت جداگانه‌ای (Setting قدیمی
+ * customer_app_service_provinces) وجود ندارد و LocationController اپ نیز
+ * مستقیماً is_active را می‌خواند.
  *
- * توجه: این گیت جدا از پرچم is_active هر استان است؛ استانی که اینجا
- * انتخاب نشود، حتی اگر فعال باشد، در اپ نمایش داده نمی‌شود.
+ * این صفحه فقط نمایش/پیمایش است: تاگل فعال‌سازی استان از روت موجود
+ * crm.provinces.toggle-active انجام می‌گیرد و لینکِ «شهرها» به صفحهٔ
+ * شهرهای همان استان (و از آنجا «مناطق» هر شهر) می‌رود.
  */
 class AppServiceAreaController extends Controller
 {
-    private const SETTING_KEY = 'customer_app_service_provinces';
-
     public function index()
     {
-        $provinces = Province::ordered()->get(['id', 'name', 'is_active']);
-        $selectedIds = $this->currentIds();
+        $provinces = Province::withCount('cities')->ordered()->get();
 
-        return view('crm::app-service-area.index', compact('provinces', 'selectedIds'));
-    }
-
-    public function update(Request $request)
-    {
-        $validated = $request->validate([
-            'province_ids'   => 'nullable|array',
-            'province_ids.*' => 'integer|exists:crm_provinces,id',
-        ]);
-
-        $ids = array_values(array_unique(array_map('intval', $validated['province_ids'] ?? [])));
-        sort($ids);
-
-        Setting::set(self::SETTING_KEY, implode(',', $ids));
-
-        return back()->with('success', 'محدودهٔ سرویس‌دهی اپلیکیشن ذخیره شد.');
-    }
-
-    /**
-     * @return array<int>
-     */
-    private function currentIds(): array
-    {
-        $raw = (string) Setting::get(self::SETTING_KEY, '1,18');
-
-        return array_values(array_filter(
-            array_map(fn ($v) => (int) trim($v), explode(',', $raw)),
-            fn ($v) => $v > 0
-        ));
+        return view('crm::app-service-area.index', compact('provinces'));
     }
 }
