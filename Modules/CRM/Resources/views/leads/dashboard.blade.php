@@ -217,11 +217,11 @@
                 <ul class="text-sm divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach($topRegions as $r)
                         <li>
-                            <a href="{{ route('crm.leads.index', ['region_id' => $r->region_id]) }}"
+                            <a href="{{ route('crm.leads.index', ['district_id' => $r->district_id]) }}"
                                class="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1.5 -mx-2 transition">
                                 <span class="text-gray-700 dark:text-gray-300">
-                                    {{ $r->region?->name ?? '—' }}
-                                    <span class="text-xs text-gray-400">({{ $r->region?->city?->name }})</span>
+                                    {{ $r->district?->name ?? '—' }}
+                                    <span class="text-xs text-gray-400">({{ $r->district?->parent?->name }})</span>
                                 </span>
                                 <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ number_format($r->cnt) }}</span>
                             </a>
