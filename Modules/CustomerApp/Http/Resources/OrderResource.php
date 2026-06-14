@@ -131,6 +131,7 @@ class OrderResource extends JsonResource
                 'full_address' => $rel->full_address,
                 'state_name' => $rel->province?->name,
                 'city_name' => $rel->city?->name,
+                'district_name' => $rel->district?->name,
                 'postal_code' => $rel->postal_code,
                 'phone' => $rel->phone,
             ];
@@ -144,6 +145,7 @@ class OrderResource extends JsonResource
                 'full_address' => $snapshotText,
                 'state_name' => $this->province?->name,
                 'city_name' => $this->city?->name,
+                'district_name' => $this->district?->name,
                 'postal_code' => $this->postal_code,
                 'phone' => $this->customer_phone,
             ];
