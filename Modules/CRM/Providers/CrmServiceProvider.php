@@ -56,6 +56,7 @@ use Modules\CRM\Console\Commands\SnapshotTechnicians;
 use Modules\CRM\Console\Commands\TechMergeFromWp;
 use Modules\CRM\Console\Commands\WalletAudit;
 use Modules\CRM\Livewire\OrderWizard;
+use Modules\CRM\Livewire\ServiceAreaManager;
 
 class CrmServiceProvider extends ServiceProvider
 {
@@ -76,6 +77,7 @@ class CrmServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Blade::anonymousComponentNamespace('crm::components', 'crm');
 
         Livewire::component('crm.order-wizard', OrderWizard::class);
+        Livewire::component('crm.service-area-manager', ServiceAreaManager::class);
 
         // متغیرهای branding پنل تکنسین به همهٔ ویوهای tech-panel.* پاس
         // داده می‌شوند. تعریف در parent layout @php کافی نیست چون scope
