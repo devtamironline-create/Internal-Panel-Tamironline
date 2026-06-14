@@ -3,7 +3,6 @@
 namespace Modules\CustomerApp\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\City;
@@ -19,11 +18,9 @@ use Modules\CustomerApp\Services\NeshanService;
  * فلوی اپ: استان از کاربر پرسیده نمی‌شود. کاربر فقط «شهر» و سپس «منطقه»
  * انتخاب می‌کند؛ استان سمت سرور از شهر تشخیص داده می‌شود.
  *
- * فقط شهرهای استان‌های سرویس‌دهی نمایش داده می‌شوند — لیست استان‌ها از
- * Setting «customer_app_service_provinces» (پیش‌فرض «1,18» = تهران، البرز).
- *
- * فقط رکوردهای is_active=true بازگشت می‌گیرند تا ادمین بتواند مناطق
- * ساخته‌نشده را با toggle کردن، از picker اپ حذف کند بدون حذف داده.
+ * منبع واحد نمایش در اپ: فقط رکوردهای is_active=true بازگشت می‌گیرند —
+ * یعنی همان تاگل «نمایش در اپ» در صفحات استان/شهر/منطقهٔ پنل. شهر و
+ * منطقه‌ای که استانِ والدش غیرفعال باشد هم نمایش داده نمی‌شود.
  */
 class LocationController extends Controller
 {
@@ -31,7 +28,6 @@ class LocationController extends Controller
     {
         $rows = Province::query()
             ->active()
-            ->whereIn('id', $this->serviceProvinceIds())
             ->ordered()
             ->get(['id', 'name', 'slug']);
 
@@ -55,7 +51,7 @@ class LocationController extends Controller
         $query = City::query()
             ->active()
             ->mainCities()
-            ->whereIn('province_id', $this->serviceProvinceIds())
+            ->whereHas('province', fn ($q) => $q->active())
             ->ordered();
 
         if ($stateId > 0) {
@@ -90,7 +86,12 @@ class LocationController extends Controller
             ], 422);
         }
 
-        $city = City::query()->mainCities()->whereKey($cityId)->first(['id', 'province_id']);
+        $city = City::query()
+            ->mainCities()
+            ->active()
+            ->whereHas('province', fn ($q) => $q->active())
+            ->whereKey($cityId)
+            ->first(['id', 'province_id']);
         if (! $city) {
             return response()->json([
                 'message' => 'شهر انتخاب‌شده معتبر نیست.',
@@ -181,19 +182,4 @@ class LocationController extends Controller
         ])->header('Cache-Control', 'private, max-age=86400');
     }
 
-    /**
-     * @return array<int>
-     */
-    private function serviceProvinceIds(): array
-    {
-        $raw = (string) Setting::get('customer_app_service_provinces', '1,18');
-
-        $ids = array_values(array_filter(array_map(
-            fn ($v) => (int) trim($v),
-            explode(',', $raw)
-        ), fn ($v) => $v > 0));
-
-        // اگر تنظیم خالی/خراب بود، پیش‌فرض تهران + البرز
-        return $ids ?: [1, 18];
-    }
 }
