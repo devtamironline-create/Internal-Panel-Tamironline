@@ -3,27 +3,21 @@
 namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Routing\Controller;
-use Modules\CRM\Models\Province;
 
 /**
- * «محدودهٔ سرویس‌دهی اپلیکیشن» — هابِ سلسله‌مراتبی استان → شهر → منطقه.
+ * صفحهٔ «مدیریت مناطق و محدودهٔ سرویس‌دهی اپ».
  *
- * منبع واحد: نمایش هر استان/شهر/منطقه در اپ موبایل فقط با پرچم is_active
- * («نمایش در اپ») کنترل می‌شود — همان تاگلی که اینجا و در صفحات شهرها و
- * مناطق دیده می‌شود. دیگر گیت جداگانه‌ای (Setting قدیمی
- * customer_app_service_provinces) وجود ندارد و LocationController اپ نیز
- * مستقیماً is_active را می‌خواند.
+ * یک هاب یکپارچه که جای صفحات پراکندهٔ استان‌ها/شهرها/مناطق را می‌گیرد.
+ * کل تعامل (درختِ استان→شهر→منطقه، تاگل «نمایش در اپ»، افزودن/ویرایش/حذف)
+ * در کامپوننت Livewire `crm.service-area-manager` انجام می‌شود.
  *
- * این صفحه فقط نمایش/پیمایش است: تاگل فعال‌سازی استان از روت موجود
- * crm.provinces.toggle-active انجام می‌گیرد و لینکِ «شهرها» به صفحهٔ
- * شهرهای همان استان (و از آنجا «مناطق» هر شهر) می‌رود.
+ * منبع واحد: نمایش در اپ فقط با پرچم is_active کنترل می‌شود و
+ * LocationController اپ نیز همین را می‌خواند — دیگر گیت جداگانه‌ای نیست.
  */
 class AppServiceAreaController extends Controller
 {
     public function index()
     {
-        $provinces = Province::withCount('cities')->ordered()->get();
-
-        return view('crm::app-service-area.index', compact('provinces'));
+        return view('crm::app-service-area.index');
     }
 }
