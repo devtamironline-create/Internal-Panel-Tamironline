@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Order;
-use Modules\CRM\Models\Region;
 
 /**
  * تبدیل یک «شهر» موجود به «منطقه» ذیل شهر دیگر.
@@ -49,10 +48,10 @@ class CityConverterController extends Controller
     {
         $validated = $request->validate([
             'target_city_id' => 'required|integer|exists:crm_cities,id',
-            'region_name'    => 'required|string|max:120',
+            'region_name' => 'required|string|max:120',
         ], [
             'target_city_id.required' => 'شهر مقصد را انتخاب کنید.',
-            'region_name.required'    => 'نام منطقه را وارد کنید.',
+            'region_name.required' => 'نام منطقه را وارد کنید.',
         ]);
 
         $target = City::findOrFail($validated['target_city_id']);
@@ -68,33 +67,36 @@ class CityConverterController extends Controller
         $migrated = 0;
 
         DB::transaction(function () use ($city, $target, $validated, &$migrated) {
-            // 1) ساخت منطقه ذیل شهر مقصد (idempotent)
-            $slug = Str::slug($validated['region_name']) ?: ('region-' . Str::random(8));
-
-            // اگر منطقه‌ای با همین نام/slug در شهر مقصد هست، همان را استفاده کن.
             // sort_order ترجیحاً از عدد داخل نام («منطقه ۱۲» → ۱۲) استخراج
             // می‌شود تا dropdown به‌جای الفبایی (1، 10، 11، ...) به‌صورت
             // عددی (1، 2، 3، ...) مرتب شود.
             $sortOrder = 0;
-            if (preg_match('/(\d+)/u', $validated['region_name'], $m)) {
+            if (preg_match('/(\d+)/u', $this->normalizeDigits($validated['region_name']), $m)) {
                 $sortOrder = (int) $m[1];
             } elseif ($city->sort_order) {
                 $sortOrder = (int) $city->sort_order;
             }
 
-            $region = Region::firstOrCreate(
-                ['city_id' => $target->id, 'slug' => $slug],
-                [
-                    'name'       => $validated['region_name'],
+            // 1) ساخت/یافتن منطقه به‌صورت ردیف فرزندِ crm_cities ذیل شهر مقصد
+            //    (سیستم یکپارچه — crm_regions بازنشسته شد).
+            $district = City::where('parent_city_id', $target->id)
+                ->where('name', $validated['region_name'])
+                ->first();
+            if (! $district) {
+                $district = City::create([
+                    'province_id' => $target->province_id,
+                    'parent_city_id' => $target->id,
+                    'name' => $validated['region_name'],
+                    'slug' => $this->uniqueDistrictSlug($validated['region_name'], (int) $target->province_id),
                     'sort_order' => $sortOrder,
-                    'is_active'  => true,
-                ]
-            );
+                    'is_active' => true,
+                ]);
+            }
 
             // 2) همهٔ سفارش‌ها را به شهر+منطقهٔ جدید منتقل کن
             $migrated = Order::where('city_id', $city->id)->update([
-                'city_id'    => $target->id,
-                'region_id'  => $region->id,
+                'city_id' => $target->id,
+                'district_id' => $district->id,
                 'updated_at' => now(),
             ]);
 
@@ -108,13 +110,13 @@ class CityConverterController extends Controller
             foreach ($techIds as $techId) {
                 DB::table('crm_technician_cities')->insertOrIgnore([
                     'technician_id' => $techId,
-                    'city_id'       => $target->id,
-                    'created_at'    => now(),
+                    'city_id' => $target->id,
+                    'created_at' => now(),
                 ]);
-                DB::table('crm_technician_regions')->insertOrIgnore([
+                DB::table('crm_technician_districts')->insertOrIgnore([
                     'technician_id' => $techId,
-                    'region_id'     => $region->id,
-                    'created_at'    => now(),
+                    'district_id' => $district->id,
+                    'created_at' => now(),
                 ]);
             }
             DB::table('crm_technician_cities')->where('city_id', $city->id)->delete();
@@ -125,5 +127,29 @@ class CityConverterController extends Controller
 
         return redirect()->route('crm.cities.index')
             ->with('success', "شهر «{$city->name}» به منطقه ذیل «{$target->name}» تبدیل شد. {$migrated} سفارش منتقل شد.");
+    }
+
+    private function normalizeDigits(string $value): string
+    {
+        return strtr($value, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+    }
+
+    /** slug یکتا در محدودهٔ استان — قید جدول crm_cities: (province_id, slug). */
+    private function uniqueDistrictSlug(string $name, int $provinceId): string
+    {
+        $base = Str::slug($this->normalizeDigits($name)) ?: ('region-'.Str::random(8));
+        $slug = $base;
+        $i = 2;
+        while (City::where('province_id', $provinceId)->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$i;
+            $i++;
+        }
+
+        return $slug;
     }
 }

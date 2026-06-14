@@ -559,14 +559,16 @@ images[]: <file2.jpg>
 | `POST /addresses` | 🚧 Block 2 | `POST /v1/customer/addresses` |
 | `PUT /addresses/{id}` | 🚧 Block 2 | `PUT /v1/customer/addresses/{id}` |
 | `DELETE /addresses/{id}` | 🚧 Block 2 | `DELETE /v1/customer/addresses/{id}` |
-| `GET /locations/states` | ✅ | فقط استان‌های سرویس‌دهی (تنظیم ادمین — پیش‌فرض تهران+البرز) |
-| `GET /locations/cities` | ✅ | شهرهای اصلی استان‌های سرویس‌دهی + `has_districts` |
-| `GET /locations/districts?city_id=N` | ✅ 🆕 | مناطق شهر (۲۲ منطقه تهران، ۱۳ کرج) |
+| `GET /locations/states` | ✅ | فقط استان‌های فعال (پرچم «نمایش در اپ» / is_active — گیت جداگانهٔ «محدودهٔ سرویس‌دهی» حذف شد) |
+| `GET /locations/cities` | ✅ | شهرهای اصلیِ فعالِ استان‌های فعال + `has_districts` |
+| `GET /locations/districts?city_id=N` | ✅ 🆕 | مناطق فعالِ شهر (۲۲ منطقه تهران، ۱۳ کرج) |
 | `GET /locations/reverse-geocode?lat&lng` | ✅ 🆕 | پروکسی نشان — private + throttle 30/min |
 
+> **UPDATE 2026-06-14 — منبع واحد:** نمایش استان/شهر/منطقه در اپ فقط با پرچم «نمایش در اپ» (is_active) کنترل می‌شود؛ گیتِ قدیمیِ «محدودهٔ سرویس‌دهی» حذف شد. مدیریت همه در پنل: «CRM ← مناطق و محدودهٔ سرویس».
 > **UPDATE 2026-06-11 — فلوی location عوض شد:** استان از کاربر پرسیده نمی‌شود.
 > فلو: شهر ← منطقه ← (اختیاری) پین نقشه نشان. استان سمت سرور از شهر ست می‌شود.
 > جزئیات کامل + نمونه کد نقشه در `docs/FRONTEND_LOCATIONS_NESHAN.md`.
+> **رفعِ باگِ «منطقه داخل نشانی»:** راهنمای کامل در `docs/FRONTEND_ADDRESS_DISTRICT_FIX.md`.
 
 #### قرارداد Address (به‌روز)
 

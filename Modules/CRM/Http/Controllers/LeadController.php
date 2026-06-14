@@ -4,7 +4,6 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Carbon;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Device;
@@ -25,23 +24,23 @@ class LeadController extends Controller
 {
     public function index(Request $request)
     {
-        $search       = $request->string('search')->toString();
-        $provinceId   = $request->integer('province_id');
-        $cityId       = $request->integer('city_id');
-        $regionId     = $request->integer('region_id');
-        $brandId      = $request->integer('brand_id');
-        $deviceId     = $request->integer('device_id');
+        $search = $request->string('search')->toString();
+        $provinceId = $request->integer('province_id');
+        $cityId = $request->integer('city_id');
+        $districtId = $request->integer('district_id');
+        $brandId = $request->integer('brand_id');
+        $deviceId = $request->integer('device_id');
         $leadReasonId = $request->integer('lead_reason_id');
         $introduction = $request->string('introduction')->toString();
-        $fromDate     = $request->string('from_date')->toString();
-        $toDate       = $request->string('to_date')->toString();
+        $fromDate = $request->string('from_date')->toString();
+        $toDate = $request->string('to_date')->toString();
 
-        $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'region', 'leadReason'])
+        $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'district', 'leadReason'])
             ->leads();
 
         $this->applyFilters($query, [
             'search' => $search, 'province_id' => $provinceId, 'city_id' => $cityId,
-            'region_id' => $regionId,
+            'district_id' => $districtId,
             'brand_id' => $brandId, 'device_id' => $deviceId,
             'lead_reason_id' => $leadReasonId, 'introduction' => $introduction,
             'from_date' => $fromDate, 'to_date' => $toDate,
@@ -55,12 +54,12 @@ class LeadController extends Controller
         $leads = $query->latest()->paginate($perPage)->withQueryString();
 
         // داده‌های کمکی dropdown ها
-        $provinces   = Province::ordered()->get(['id', 'name']);
-        $cities      = $provinceId
+        $provinces = Province::ordered()->get(['id', 'name']);
+        $cities = $provinceId
             ? City::where('province_id', $provinceId)->active()->ordered()->get(['id', 'name'])
             : collect();
-        $brands      = Brand::active()->ordered()->get(['id', 'name']);
-        $devices     = Device::active()->ordered()->get(['id', 'name']);
+        $brands = Brand::active()->ordered()->get(['id', 'name']);
+        $devices = Device::active()->ordered()->get(['id', 'name']);
         $leadReasons = LeadReason::active()->ordered()->get(['id', 'name']);
 
         // معرف‌ها از تنظیمات WP (سازگار با همان لیست سفارشات)
@@ -71,7 +70,7 @@ class LeadController extends Controller
 
         return view('crm::leads.index', compact(
             'leads', 'provinces', 'cities', 'brands', 'devices', 'leadReasons', 'introductionList',
-            'search', 'provinceId', 'cityId', 'regionId', 'brandId', 'deviceId', 'leadReasonId',
+            'search', 'provinceId', 'cityId', 'districtId', 'brandId', 'deviceId', 'leadReasonId',
             'introduction', 'fromDate', 'toDate', 'perPage'
         ));
     }
@@ -82,7 +81,7 @@ class LeadController extends Controller
             abort(404);
         }
 
-        $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'region', 'leadReason'])
+        $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'district', 'leadReason'])
             ->leads();
 
         $this->applyFilters($query, $request->all());
@@ -102,7 +101,7 @@ class LeadController extends Controller
                 $l->customer?->mobile ?? $l->customer_mobile,
                 $l->province?->name,
                 $l->city?->name,
-                $l->region?->name,
+                $l->district?->name,
                 $l->device?->name,
                 $l->brand?->name,
                 $l->leadReason?->name,
@@ -111,13 +110,13 @@ class LeadController extends Controller
             ];
         }
 
-        $filename = 'leads-' . now()->format('Y-m-d-His');
+        $filename = 'leads-'.now()->format('Y-m-d-His');
 
         if ($format === 'csv') {
-            return $this->streamCsv($filename . '.csv', $headers, $rows);
+            return $this->streamCsv($filename.'.csv', $headers, $rows);
         }
 
-        return $this->streamXlsx($filename . '.xlsx', $headers, $rows);
+        return $this->streamXlsx($filename.'.xlsx', $headers, $rows);
     }
 
     /**
@@ -130,18 +129,36 @@ class LeadController extends Controller
         if ($search !== '') {
             $query->search($search);
         }
-        if (! empty($f['province_id']))    $query->where('province_id', (int) $f['province_id']);
-        if (! empty($f['city_id']))        $query->where('city_id', (int) $f['city_id']);
-        if (! empty($f['region_id']))      $query->where('region_id', (int) $f['region_id']);
-        if (! empty($f['brand_id']))       $query->where('brand_id', (int) $f['brand_id']);
-        if (! empty($f['device_id']))      $query->where('device_id', (int) $f['device_id']);
-        if (! empty($f['lead_reason_id'])) $query->where('lead_reason_id', (int) $f['lead_reason_id']);
-        if (! empty($f['introduction']))   $query->where('introduction', $f['introduction']);
+        if (! empty($f['province_id'])) {
+            $query->where('province_id', (int) $f['province_id']);
+        }
+        if (! empty($f['city_id'])) {
+            $query->where('city_id', (int) $f['city_id']);
+        }
+        if (! empty($f['district_id'])) {
+            $query->where('district_id', (int) $f['district_id']);
+        }
+        if (! empty($f['brand_id'])) {
+            $query->where('brand_id', (int) $f['brand_id']);
+        }
+        if (! empty($f['device_id'])) {
+            $query->where('device_id', (int) $f['device_id']);
+        }
+        if (! empty($f['lead_reason_id'])) {
+            $query->where('lead_reason_id', (int) $f['lead_reason_id']);
+        }
+        if (! empty($f['introduction'])) {
+            $query->where('introduction', $f['introduction']);
+        }
 
         $from = $this->jalaliToGregorian((string) ($f['from_date'] ?? ''));
-        $to   = $this->jalaliToGregorian((string) ($f['to_date'] ?? ''));
-        if ($from) $query->whereDate('created_at', '>=', $from);
-        if ($to)   $query->whereDate('created_at', '<=', $to);
+        $to = $this->jalaliToGregorian((string) ($f['to_date'] ?? ''));
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to);
+        }
     }
 
     protected function jalaliToGregorian(?string $jalaliDate): ?string
@@ -156,6 +173,7 @@ class LeadController extends Controller
         try {
             [$y, $m, $d] = array_map('intval', $parts);
             [$gy, $gm, $gd] = CalendarUtils::toGregorian($y, $m, $d);
+
             return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
         } catch (\Throwable $e) {
             return null;
@@ -178,7 +196,7 @@ class LeadController extends Controller
 
     protected function streamXlsx(string $filename, array $headers, array $rows)
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->fromArray($headers, null, 'A1');

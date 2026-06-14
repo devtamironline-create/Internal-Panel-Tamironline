@@ -184,10 +184,13 @@ class Technician extends Authenticatable
     /**
      * مناطق پوشش — اختیاری. اگر برای یک شهر تکنسین هیچ منطقه‌ای
      * انتخاب نکرده، پیش‌فرض «همه مناطق آن شهر را می‌پوشاند».
+     *
+     * منطقه = ردیف فرزندِ crm_cities (district). pivot یکپارچهٔ
+     * crm_technician_districts. (سیستم crm_regions بازنشسته شده است.)
      */
     public function regions(): BelongsToMany
     {
-        return $this->belongsToMany(Region::class, 'crm_technician_regions');
+        return $this->belongsToMany(City::class, 'crm_technician_districts', 'technician_id', 'district_id');
     }
 
     /** برندهای تخصصی. */

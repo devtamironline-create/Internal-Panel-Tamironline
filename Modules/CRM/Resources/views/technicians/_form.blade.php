@@ -324,7 +324,7 @@
                    class="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus:border-brand-400">
             <div data-group="regions" class="space-y-3 max-h-80 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                 @foreach($allRegions as $cityId => $regions)
-                    @php $cityName = $regions->first()->city?->name ?? '—'; @endphp
+                    @php $cityName = $regions->first()->parent?->name ?? '—'; @endphp
                     <div>
                         <div class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">{{ $cityName }}</div>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 ps-2">

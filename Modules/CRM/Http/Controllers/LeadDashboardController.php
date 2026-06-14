@@ -5,7 +5,6 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Modules\CRM\Models\Order;
 use Morilog\Jalali\CalendarUtils;
 use Morilog\Jalali\Jalalian;
@@ -28,7 +27,7 @@ class LeadDashboardController extends Controller
         [$fromCarbon, $toCarbon] = $this->resolveDateRange($preset, $request);
 
         $fromJ = Jalalian::fromCarbon($fromCarbon)->format('Y/m/d');
-        $toJ   = Jalalian::fromCarbon($toCarbon)->format('Y/m/d');
+        $toJ = Jalalian::fromCarbon($toCarbon)->format('Y/m/d');
 
         $chartPeriod = $request->query('chart_period', 'week');
         if (! in_array($chartPeriod, ['day', 'week', 'month'], true)) {
@@ -38,11 +37,11 @@ class LeadDashboardController extends Controller
         $baseQuery = fn () => Order::query()->leads()->whereBetween('created_at', [$fromCarbon, $toCarbon]);
 
         // کاشی‌های خلاصه
-        $totalLeads        = (clone $baseQuery())->count();
-        $convertedLeads    = (clone $baseQuery())->where('is_lead', false)->count();
+        $totalLeads = (clone $baseQuery())->count();
+        $convertedLeads = (clone $baseQuery())->where('is_lead', false)->count();
         // ↑ leads() فقط is_lead=true را برمی‌گرداند، پس این 0 می‌شود.
         // برای شمارش تبدیل‌شده‌ها نیاز به کوئری جداگانه:
-        $convertedInRange  = Order::query()->realOrders()
+        $convertedInRange = Order::query()->realOrders()
             ->whereBetween('updated_at', [$fromCarbon, $toCarbon])
             ->whereHas('statusLogs', function ($q) {
                 $q->where('note', 'like', 'تبدیل لید به سفارش%');
@@ -58,8 +57,8 @@ class LeadDashboardController extends Controller
             ->with('leadReason:id,name')
             ->get()
             ->map(fn ($r) => [
-                'id'    => (int) $r->lead_reason_id,
-                'name'  => $r->leadReason?->name ?? '—',
+                'id' => (int) $r->lead_reason_id,
+                'name' => $r->leadReason?->name ?? '—',
                 'count' => (int) $r->cnt,
             ]);
 
@@ -97,10 +96,10 @@ class LeadDashboardController extends Controller
 
         // ─── پرتکرارترین مناطق ────────────────────────────────
         $topRegions = (clone $baseQuery())
-            ->whereNotNull('region_id')
-            ->with('region.city:id,name')
-            ->selectRaw('region_id, COUNT(*) as cnt')
-            ->groupBy('region_id')
+            ->whereNotNull('district_id')
+            ->with('district.parent:id,name')
+            ->selectRaw('district_id, COUNT(*) as cnt')
+            ->groupBy('district_id')
             ->orderByDesc('cnt')
             ->limit(10)
             ->get();
@@ -148,12 +147,13 @@ class LeadDashboardController extends Controller
 
         // تاریخ دستی شمسی از فرم
         $fromJ = $request->string('from')->toString() ?: Jalalian::now()->subDays(30)->format('Y/m/d');
-        $toJ   = $request->string('to')->toString()   ?: Jalalian::now()->format('Y/m/d');
+        $toJ = $request->string('to')->toString() ?: Jalalian::now()->format('Y/m/d');
         $fromG = $this->jalaliToGregorian($fromJ);
-        $toG   = $this->jalaliToGregorian($toJ);
+        $toG = $this->jalaliToGregorian($toJ);
         if (! $fromG || ! $toG) {
             return [now()->subDays(30)->startOfDay(), now()->endOfDay()];
         }
+
         return [Carbon::parse($fromG)->startOfDay(), Carbon::parse($toG)->endOfDay()];
     }
 
@@ -166,13 +166,13 @@ class LeadDashboardController extends Controller
         $labels = [];
         $counts = [];
 
-        $latinDigits   = ['0','1','2','3','4','5','6','7','8','9'];
-        $persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $latinDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        $persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
         if ($period === 'day') {
             for ($i = 29; $i >= 0; $i--) {
                 $start = now()->subDays($i)->startOfDay();
-                $end   = (clone $start)->endOfDay();
+                $end = (clone $start)->endOfDay();
                 $labels[] = str_replace(
                     $latinDigits, $persianDigits,
                     Jalalian::fromCarbon($start)->format('m/d')
@@ -182,7 +182,7 @@ class LeadDashboardController extends Controller
         } elseif ($period === 'month') {
             for ($i = 5; $i >= 0; $i--) {
                 $start = now()->subMonths($i)->startOfMonth();
-                $end   = now()->subMonths($i)->endOfMonth();
+                $end = now()->subMonths($i)->endOfMonth();
                 $labels[] = str_replace(
                     $latinDigits, $persianDigits,
                     Jalalian::fromCarbon($start)->format('Y/m')
@@ -192,7 +192,7 @@ class LeadDashboardController extends Controller
         } else { // week (default)
             for ($i = 11; $i >= 0; $i--) {
                 $start = now()->subWeeks($i)->startOfWeek(Carbon::SATURDAY);
-                $end   = (clone $start)->endOfWeek(Carbon::FRIDAY);
+                $end = (clone $start)->endOfWeek(Carbon::FRIDAY);
                 $labels[] = str_replace(
                     $latinDigits, $persianDigits,
                     Jalalian::fromCarbon($start)->format('m/d')
@@ -216,6 +216,7 @@ class LeadDashboardController extends Controller
         try {
             [$y, $m, $d] = array_map('intval', $parts);
             [$gy, $gm, $gd] = CalendarUtils::toGregorian($y, $m, $d);
+
             return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
         } catch (\Throwable $e) {
             return null;

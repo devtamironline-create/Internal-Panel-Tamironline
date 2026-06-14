@@ -78,8 +78,10 @@ class OrderController extends Controller
             'objections:id,name,slug',
             'customerAddress.province:id,name',
             'customerAddress.city:id,name',
+            'customerAddress.district:id,name',
             'province:id,name',
             'city:id,name',
+            'district:id,name',
             'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'review',
         ]);
@@ -175,15 +177,14 @@ class OrderController extends Controller
                 'customer_mobile' => $customer->mobile,
                 'customer_phone' => $address->phone ?: ($customer->phone ?: $customer->mobile),
 
-                // snapshot آدرس — نام منطقه (در صورت وجود) به متن آدرس اضافه
-                // می‌شود تا تکنسین در نمای سفارش بدون join آن را ببیند.
+                // snapshot آدرس — استان/شهر/منطقه به‌صورت فیلدهای ساختاری ذخیره
+                // می‌شوند (نه داخل متن address) تا پنل/تکنسین آن‌ها را در
+                // سلسله‌مراتب «استان/شهر/منطقه» نشان دهند و متن آدرس تمیز بماند.
                 'address_id' => $address->id,
                 'province_id' => $address->province_id,
                 'city_id' => $address->city_id,
-                'address' => trim(
-                    ($address->district_id && $address->district ? $address->district->name.'، ' : '')
-                    .$address->full_address
-                ),
+                'district_id' => $address->district_id,
+                'address' => $address->full_address,
                 'postal_code' => $address->postal_code,
 
                 // مشکل
@@ -214,6 +215,8 @@ class OrderController extends Controller
                 'objections:id,name,slug',
                 'customerAddress.province:id,name',
                 'customerAddress.city:id,name',
+                'customerAddress.district:id,name',
+                'district:id,name',
             ]);
 
             return (new OrderResource($order))->resolve();

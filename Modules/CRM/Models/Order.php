@@ -19,7 +19,7 @@ class Order extends Model
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
-        'province_id', 'city_id', 'region_id', 'address', 'postal_code', 'address_id',
+        'province_id', 'city_id', 'region_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
         'visit_scheduled_at', 'visit_scheduled_slot',
 
@@ -332,6 +332,16 @@ class Order extends Model
         return $this->belongsTo(Region::class);
     }
 
+    /**
+     * منطقهٔ snapshotِ سفارش از نوع crm_cities (ردیف فرزند با parent_city_id).
+     * این همان منطقه‌ای است که آدرس مشتری/اپ استفاده می‌کند — جدا از
+     * region() قدیمی (crm_regions) که مخصوص سفارش‌های ثبت‌شده از پنل است.
+     */
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'district_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -434,7 +444,7 @@ class Order extends Model
     {
         $prefix = 'ORD-'.date('ym').'-';
 
-        $last = static::where('order_code', 'like', $prefix . '%')
+        $last = static::where('order_code', 'like', $prefix.'%')
             ->orderByDesc('order_code')
             ->value('order_code');
 
@@ -445,7 +455,7 @@ class Order extends Model
         }
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $candidate = $prefix . str_pad((string) ($next + $attempt), 5, '0', STR_PAD_LEFT);
+            $candidate = $prefix.str_pad((string) ($next + $attempt), 5, '0', STR_PAD_LEFT);
             if (! static::where('order_code', $candidate)->exists()) {
                 return $candidate;
             }
@@ -453,7 +463,7 @@ class Order extends Model
 
         // در حالت بسیار نادر همه‌ی ۵ کاندید پر بودند — یک suffix تصادفی
         // اضافه می‌کنیم تا حتماً یکتا باشد.
-        return $prefix . str_pad((string) ($next + random_int(10, 999)), 5, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) ($next + random_int(10, 999)), 5, '0', STR_PAD_LEFT);
     }
 
     public function getItemsSubtotalAttribute(): int
