@@ -79,6 +79,11 @@
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2 flex-wrap">
+                            @unless($city->parent_city_id)
+                            @can('manage-crm-settings')
+                            <a href="{{ route('crm.regions.index', ['province_id' => $city->province_id, 'city_id' => $city->id]) }}" class="text-indigo-600 hover:text-indigo-800 text-sm" title="مدیریت مناطق این شهر">مناطق</a>
+                            @endcan
+                            @endunless
                             @can('manage-crm-cities')
                             <a href="{{ route('crm.cities.edit', $city) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
                             <a href="{{ route('crm.cities.convert.form', $city) }}" class="text-emerald-600 hover:text-emerald-800 text-sm" title="تبدیل این شهر به منطقهٔ ذیل شهر دیگر">
