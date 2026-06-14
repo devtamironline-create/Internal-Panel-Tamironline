@@ -26,9 +26,9 @@ class CustomerController extends Controller
                     $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
                     $q->where(function ($qq) use ($candidate) {
                         $qq->where('wp_id', $candidate)
-                           ->orWhere(function ($qqq) use ($candidate) {
-                               $qqq->whereNull('wp_id')->where('id', $candidate);
-                           });
+                            ->orWhere(function ($qqq) use ($candidate) {
+                                $qqq->whereNull('wp_id')->where('id', $candidate);
+                            });
                     });
                 } else {
                     // در غیر این صورت موبایل دقیق (مثل WP)
@@ -52,9 +52,9 @@ class CustomerController extends Controller
                     $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
                     $q->where(function ($qq) use ($candidate) {
                         $qq->where('wp_id', $candidate)
-                           ->orWhere(function ($qqq) use ($candidate) {
-                               $qqq->whereNull('wp_id')->where('id', $candidate);
-                           });
+                            ->orWhere(function ($qqq) use ($candidate) {
+                                $qqq->whereNull('wp_id')->where('id', $candidate);
+                            });
                     });
                 } else {
                     $q->where('mobile', $search);
@@ -76,7 +76,7 @@ class CustomerController extends Controller
             }
         };
 
-        return $this->streamSpreadsheet('crm-customers-' . date('Ymd-His'), $format, $headers, $rows);
+        return $this->streamSpreadsheet('crm-customers-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
     public function create()
@@ -143,7 +143,7 @@ class CustomerController extends Controller
                     // slug در DB nullable نیست و یونیک بر اساس (province_id, slug)
                     // است. برای نام فارسی Str::slug رشتهٔ خالی برمی‌گرداند، پس
                     // به‌جایش از یک slug قطعی بر اساس ID استان استفاده می‌کنیم.
-                    'slug' => 'province-' . $province->id,
+                    'slug' => 'province-'.$province->id,
                     'sort_order' => 0,
                 ]
             );
@@ -162,8 +162,9 @@ class CustomerController extends Controller
      */
     public function regionsOfCity(\Modules\CRM\Models\City $city)
     {
+        // منطقه = ردیف فرزندِ crm_cities (سیستم یکپارچه). crm_regions بازنشسته شد.
         return response()->json(
-            $city->regions()->active()->ordered()->get(['id', 'name'])
+            $city->districts()->active()->ordered()->get(['id', 'name'])
         );
     }
 
@@ -171,7 +172,7 @@ class CustomerController extends Controller
     {
         $mobileRule = 'required|string|max:20|unique:crm_customers,mobile';
         if ($ignoreId) {
-            $mobileRule .= ',' . $ignoreId;
+            $mobileRule .= ','.$ignoreId;
         }
 
         return $request->validate([

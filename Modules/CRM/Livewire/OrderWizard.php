@@ -4,23 +4,20 @@ namespace Modules\CRM\Livewire;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\Brand;
-use Modules\CRM\Models\LeadReason;
 use Modules\CRM\Models\City;
-use Modules\CRM\Models\Region;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Device;
+use Modules\CRM\Models\LeadReason;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
-use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\OrderSmsNotifier;
 
 /**
@@ -33,36 +30,53 @@ use Modules\CRM\Services\OrderSmsNotifier;
 class OrderWizard extends Component
 {
     public int $currentStep = 1;
+
     public const TOTAL_STEPS = 3;
 
     // ─── Step 2: Customer ────────────────────────────────────────
     public ?int $customerId = null;
+
     public string $customerSearch = '';
+
     public bool $showNewCustomerForm = false;
+
     public string $newName = '';
+
     public string $newMobile = '';
+
     public string $newPhone = '';
+
     public string $subscription = '';
+
     public string $introduction = '';
 
     // ─── Step 1: Location ────────────────────────────────────────
     public ?int $provinceId = null;
+
     public ?int $cityId = null;
+
     public ?int $regionId = null;   // اختیاری — فقط اگر شهر منطقه داشته باشد
+
     public string $address = '';
 
     // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
     public string $orderType = 'repair';
+
     public ?int $brandId = null;
+
     public ?int $deviceId = null;
+
     /** @var array<int,string> */
     public array $objections = [];
+
     public string $objectionDescription = '';
 
     // قابل سفارش بودن دستگاه اصلی. اگر false شود، به‌جای سفارش، یک
     // رکورد لید (is_lead=true) ساخته می‌شود.
     public bool $isOrderable = true;
+
     public ?int $leadReasonId = null;
+
     public string $leadNotes = '';
 
     /**
@@ -74,8 +88,11 @@ class OrderWizard extends Component
 
     // ─── Step 4: Technician & Visit ──────────────────────────────
     public ?int $technicianId = null;
+
     public ?string $visitDate = null;   // Y-m-d (Gregorian); UI shows Jalali
+
     public ?int $visitSlot = null;      // 1..4 — keys of self::VISIT_SLOTS
+
     public string $technicianSearch = ''; // فیلتر سرچ روی نام/موبایل تکنسین
 
     /** بازه‌های پیشنهادی مراجعه. start برای ترکیب با تاریخ هنگام ذخیره. */
@@ -92,7 +109,7 @@ class OrderWizard extends Component
             $customer = Customer::find($customerId);
             if ($customer) {
                 $this->customerId = $customer->id;
-                $this->customerSearch = $customer->display_name . ' — ' . $customer->mobile;
+                $this->customerSearch = $customer->display_name.' — '.$customer->mobile;
             }
         }
 
@@ -117,9 +134,9 @@ class OrderWizard extends Component
         return Customer::query()
             ->where(function ($q) use ($term) {
                 $q->where('mobile', 'like', "%{$term}%")
-                  ->orWhere('first_name', 'like', "%{$term}%");
+                    ->orWhere('first_name', 'like', "%{$term}%");
             })
-            ->orderByRaw('CASE WHEN mobile LIKE ? THEN 0 ELSE 1 END', [$term . '%'])
+            ->orderByRaw('CASE WHEN mobile LIKE ? THEN 0 ELSE 1 END', [$term.'%'])
             ->limit(8)
             ->get(['id', 'first_name', 'mobile', 'phone']);
     }
@@ -153,13 +170,14 @@ class OrderWizard extends Component
                     ['province_id' => $province->id, 'name' => $province->name],
                     [
                         // slug NOT NULL است؛ unique بر اساس (province_id, slug).
-                        'slug' => 'province-' . $province->id,
+                        'slug' => 'province-'.$province->id,
                         'sort_order' => 0,
                     ]
                 );
                 $cities = collect([(object) ['id' => $default->id, 'name' => $default->name]]);
             }
         }
+
         return $cities;
     }
 
@@ -199,20 +217,21 @@ class OrderWizard extends Component
         return $this->cityId ? City::find($this->cityId) : null;
     }
 
-    /** مناطق شهر انتخاب‌شده — اگر شهر منطقه ندارد collection خالی برمی‌گردد. */
+    /** مناطق شهر انتخاب‌شده (ردیف‌های فرزندِ crm_cities) — خالی اگر شهر منطقه ندارد. */
     #[Computed]
     public function regions()
     {
         if (! $this->cityId) {
             return collect();
         }
-        return Region::where('city_id', $this->cityId)->active()->ordered()->get(['id', 'name']);
+
+        return City::where('parent_city_id', $this->cityId)->active()->ordered()->get(['id', 'name']);
     }
 
     #[Computed]
-    public function selectedRegion(): ?Region
+    public function selectedRegion(): ?City
     {
-        return $this->regionId ? Region::find($this->regionId) : null;
+        return $this->regionId ? City::find($this->regionId) : null;
     }
 
     #[Computed]
@@ -226,6 +245,7 @@ class OrderWizard extends Component
     public function introductionList(): array
     {
         $list = CrmSetting::getJson('wp.introductionList', []);
+
         return is_array($list) ? array_values(array_filter(array_map('strval', $list))) : [];
     }
 
@@ -241,6 +261,7 @@ class OrderWizard extends Component
     public function objectionsList(): array
     {
         $list = CrmSetting::getJson('wp.objectionsList', []);
+
         return is_array($list) ? array_values(array_filter(array_map('strval', $list))) : [];
     }
 
@@ -253,6 +274,7 @@ class OrderWizard extends Component
     public function canAssignTechnician(): bool
     {
         $u = auth()->user();
+
         return $u !== null && $u->can('assign-crm-technician');
     }
 
@@ -266,6 +288,7 @@ class OrderWizard extends Component
         if (! $this->cityId || ! $this->brandId || ! $this->deviceId) {
             return collect();
         }
+
         return app(\Modules\CRM\Services\TechnicianSuggestionService::class)
             ->suggestForOrder($this->buildSuggestionOrder(), 5);
     }
@@ -286,6 +309,7 @@ class OrderWizard extends Component
         if ($this->smartSuggestions->count()) {
             return null;
         }
+
         return app(\Modules\CRM\Services\TechnicianSuggestionService::class)
             ->diagnoseForOrder($this->buildSuggestionOrder());
     }
@@ -294,10 +318,10 @@ class OrderWizard extends Component
     protected function buildSuggestionOrder(): Order
     {
         return new Order([
-            'city_id'    => $this->cityId,
-            'region_id'  => $this->regionId,
-            'brand_id'   => $this->brandId,
-            'device_id'  => $this->deviceId,
+            'city_id' => $this->cityId,
+            'district_id' => $this->regionId,
+            'brand_id' => $this->brandId,
+            'device_id' => $this->deviceId,
             'order_type' => $this->orderType,
         ]);
     }
@@ -312,11 +336,11 @@ class OrderWizard extends Component
             ->orderBy('first_name');
 
         if ($term !== '') {
-            $like = '%' . $term . '%';
+            $like = '%'.$term.'%';
             $q->where(function ($w) use ($like) {
                 $w->where('first_name', 'like', $like)
-                  ->orWhere('firstname_tech', 'like', $like)
-                  ->orWhere('mobile', 'like', $like);
+                    ->orWhere('firstname_tech', 'like', $like)
+                    ->orWhere('mobile', 'like', $like);
             });
         }
 
@@ -368,8 +392,8 @@ class OrderWizard extends Component
             'Thursday' => 'پنجشنبه',
             'Friday' => 'جمعه',
         ];
-        $latin = ['0','1','2','3','4','5','6','7','8','9'];
-        $persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $latin = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -382,6 +406,7 @@ class OrderWizard extends Component
                 'month' => $j->format('F'),
             ];
         }
+
         return $days;
     }
 
@@ -394,23 +419,23 @@ class OrderWizard extends Component
             return;
         }
         $this->customerId = $customer->id;
-        $this->customerSearch = $customer->display_name . ' — ' . $customer->mobile;
+        $this->customerSearch = $customer->display_name.' — '.$customer->mobile;
         $this->subscription = (string) $customer->subscription;
         $this->showNewCustomerForm = false;
 
         // پیش‌پر کردن آدرس از آخرین سفارش این مشتری — اپراتور می‌تواند
         // تأیید یا تغییر دهد و وقتش هدر برای تایپ مجدد آدرس قبلی نمی‌رود.
-        // region_id هم همراه می‌آید اگر سفارش قبلی منطقه داشته باشد.
+        // منطقه (district_id) هم همراه می‌آید اگر سفارش قبلی منطقه داشته باشد.
         $lastOrder = Order::where('customer_id', $customer->id)
             ->whereNotNull('address')
             ->where('address', '!=', '')
             ->latest('created_at')
-            ->first(['province_id', 'city_id', 'region_id', 'address']);
+            ->first(['province_id', 'city_id', 'district_id', 'address']);
         if ($lastOrder) {
             $this->provinceId = $lastOrder->province_id;
-            $this->cityId     = $lastOrder->city_id;
-            $this->regionId   = $lastOrder->region_id;
-            $this->address    = (string) $lastOrder->address;
+            $this->cityId = $lastOrder->city_id;
+            $this->regionId = $lastOrder->district_id;
+            $this->address = (string) $lastOrder->address;
 
             // dispatch مستقیم به JS تا اگر morph روی textarea مقدار را
             // نگرفت، Alpine.js به‌صورت دستی set کند (defense in depth).
@@ -493,7 +518,9 @@ class OrderWizard extends Component
 
     public function toggleExtraObjection(int $index, string $value): void
     {
-        if (! isset($this->extraDevices[$index])) return;
+        if (! isset($this->extraDevices[$index])) {
+            return;
+        }
         $current = $this->extraDevices[$index]['objections'] ?? [];
         $idx = array_search($value, $current, true);
         if ($idx === false) {
@@ -557,13 +584,13 @@ class OrderWizard extends Component
     {
         $rules = $this->showNewCustomerForm
             ? [
-                'newName'      => 'required|string|max:255',
-                'newMobile'    => 'required|string|max:20',
-                'newPhone'     => 'nullable|string|max:20',
+                'newName' => 'required|string|max:255',
+                'newMobile' => 'required|string|max:20',
+                'newPhone' => 'nullable|string|max:20',
                 'introduction' => 'required|string|max:255',
             ]
             : [
-                'customerId'   => 'required|integer|exists:crm_customers,id',
+                'customerId' => 'required|integer|exists:crm_customers,id',
                 'introduction' => 'required|string|max:255',
             ];
         if ($this->isOrderable) {
@@ -571,20 +598,20 @@ class OrderWizard extends Component
             // منطقه در همین مرحله انتخاب می‌شود؛ اگر شهر منطقه دارد و
             // سفارش لید نیست، انتخاب منطقه الزامی است (لازم برای تخصیص
             // تکنسین بر اساس منطقه).
-            if ($this->cityId && Region::where('city_id', $this->cityId)->active()->exists()) {
-                $rules['regionId'] = 'required|integer|exists:crm_regions,id';
+            if ($this->cityId && City::where('parent_city_id', $this->cityId)->active()->exists()) {
+                $rules['regionId'] = 'required|integer|exists:crm_cities,id';
             }
         }
         $this->validate($rules, attributes: [
-            'newName'      => 'نام مشتری',
-            'newMobile'    => 'موبایل',
-            'customerId'   => 'مشتری',
+            'newName' => 'نام مشتری',
+            'newMobile' => 'موبایل',
+            'customerId' => 'مشتری',
             'introduction' => 'نحوه آشنایی',
-            'address'      => 'آدرس',
-            'regionId'     => 'منطقه',
+            'address' => 'آدرس',
+            'regionId' => 'منطقه',
         ], messages: [
             'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
-            'regionId.required'     => 'برای این شهر، انتخاب منطقه الزامی است.',
+            'regionId.required' => 'برای این شهر، انتخاب منطقه الزامی است.',
         ]);
     }
 
@@ -598,17 +625,17 @@ class OrderWizard extends Component
         // انتخاب مشتری قدیمی، آدرس آخرین سفارش به‌صورت خودکار پر شود).
         $rules = [
             'provinceId' => 'required|integer|exists:crm_provinces,id',
-            'cityId'     => 'required|integer|exists:crm_cities,id',
+            'cityId' => 'required|integer|exists:crm_cities,id',
             // به‌صورت پیش‌فرض اختیاری؛ پایین‌تر برای سفارش‌های قابل ثبت
             // در شهرهایی که منطقه دارند به required ارتقا می‌یابد.
-            'regionId'   => 'nullable|integer|exists:crm_regions,id',
-            'brandId'    => 'required|integer|exists:crm_brands,id',
-            'deviceId'   => 'required|integer|exists:crm_devices,id',
+            'regionId' => 'nullable|integer|exists:crm_cities,id',
+            'brandId' => 'required|integer|exists:crm_brands,id',
+            'deviceId' => 'required|integer|exists:crm_devices,id',
             'objections' => 'nullable|array',
             'objections.*' => 'string|max:255',
             'objectionDescription' => 'nullable|string|max:5000',
             'isOrderable' => 'boolean',
-            'leadNotes'   => 'nullable|string|max:2000',
+            'leadNotes' => 'nullable|string|max:2000',
         ];
         if (! $this->isOrderable) {
             $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
@@ -617,19 +644,19 @@ class OrderWizard extends Component
         }
         // اعتبارسنجی دستگاه‌های اضافه
         foreach ($this->extraDevices as $i => $d) {
-            $rules["extraDevices.$i.brand_id"]  = 'required|integer|exists:crm_brands,id';
+            $rules["extraDevices.$i.brand_id"] = 'required|integer|exists:crm_brands,id';
             $rules["extraDevices.$i.device_id"] = 'required|integer|exists:crm_devices,id';
             if (! ($d['is_orderable'] ?? true)) {
                 $rules["extraDevices.$i.lead_reason_id"] = 'required|integer|exists:crm_lead_reasons,id';
             }
         }
         $this->validate($rules, attributes: [
-            'provinceId'   => 'استان',
-            'cityId'       => 'شهر',
-            'regionId'     => 'منطقه',
-            'brandId'      => 'برند',
-            'deviceId'     => 'نوع دستگاه',
-            'orderType'    => 'نوع سفارش',
+            'provinceId' => 'استان',
+            'cityId' => 'شهر',
+            'regionId' => 'منطقه',
+            'brandId' => 'برند',
+            'deviceId' => 'نوع دستگاه',
+            'orderType' => 'نوع سفارش',
             'leadReasonId' => 'دلیل عدم سفارش',
         ]);
     }
@@ -687,26 +714,26 @@ class OrderWizard extends Component
                 // قابل سفارش=false → یک رکورد لید (is_lead=true) با
                 // دلیل عدم سفارش ذخیره می‌شود.
                 $allDevices = [[
-                    'brand_id'              => $this->brandId,
-                    'device_id'             => $this->deviceId,
-                    'objections'            => $this->objections,
+                    'brand_id' => $this->brandId,
+                    'device_id' => $this->deviceId,
+                    'objections' => $this->objections,
                     'objection_description' => $this->objectionDescription,
-                    'is_orderable'          => $this->isOrderable,
-                    'lead_reason_id'        => $this->leadReasonId,
-                    'lead_notes'            => $this->leadNotes,
-                    'order_type'            => $this->orderType,
+                    'is_orderable' => $this->isOrderable,
+                    'lead_reason_id' => $this->leadReasonId,
+                    'lead_notes' => $this->leadNotes,
+                    'order_type' => $this->orderType,
                 ]];
                 foreach ($this->extraDevices as $extra) {
                     if (! empty($extra['brand_id']) && ! empty($extra['device_id'])) {
                         $allDevices[] = [
-                            'brand_id'              => (int) $extra['brand_id'],
-                            'device_id'             => (int) $extra['device_id'],
-                            'objections'            => $extra['objections'] ?? [],
+                            'brand_id' => (int) $extra['brand_id'],
+                            'device_id' => (int) $extra['device_id'],
+                            'objections' => $extra['objections'] ?? [],
                             'objection_description' => $extra['objection_description'] ?? '',
-                            'is_orderable'          => (bool) ($extra['is_orderable'] ?? true),
-                            'lead_reason_id'        => $extra['lead_reason_id'] ?? null,
-                            'lead_notes'            => $extra['lead_notes'] ?? '',
-                            'order_type'            => $extra['order_type'] ?? 'repair',
+                            'is_orderable' => (bool) ($extra['is_orderable'] ?? true),
+                            'lead_reason_id' => $extra['lead_reason_id'] ?? null,
+                            'lead_notes' => $extra['lead_notes'] ?? '',
+                            'order_type' => $extra['order_type'] ?? 'repair',
                         ];
                     }
                 }
@@ -719,44 +746,44 @@ class OrderWizard extends Component
                         : null;
 
                     $o = Order::create([
-                        'order_code'          => Order::generateOrderCode(),
-                        'customer_id'         => $customer->id,
-                        'subscription'        => $this->subscription !== '' ? (int) $this->subscription : null,
-                        'introduction'        => $this->introduction ?: null,
-                        'order_type'          => $dev['order_type'] ?? $this->orderType,
-                        'brand_id'            => $dev['brand_id'],
-                        'device_id'           => $dev['device_id'],
-                        'technician_id'       => null,
-                        'customer_name'       => $customer->display_name,
-                        'customer_mobile'     => $customer->mobile,
-                        'customer_phone'      => $customer->phone,
-                        'province_id'         => $this->provinceId,
-                        'city_id'             => $this->cityId,
-                        'region_id'           => $this->regionId,
-                        'address'             => $this->address,
-                        'problem_title'       => $problemTitle,
+                        'order_code' => Order::generateOrderCode(),
+                        'customer_id' => $customer->id,
+                        'subscription' => $this->subscription !== '' ? (int) $this->subscription : null,
+                        'introduction' => $this->introduction ?: null,
+                        'order_type' => $dev['order_type'] ?? $this->orderType,
+                        'brand_id' => $dev['brand_id'],
+                        'device_id' => $dev['device_id'],
+                        'technician_id' => null,
+                        'customer_name' => $customer->display_name,
+                        'customer_mobile' => $customer->mobile,
+                        'customer_phone' => $customer->phone,
+                        'province_id' => $this->provinceId,
+                        'city_id' => $this->cityId,
+                        'district_id' => $this->regionId,
+                        'address' => $this->address,
+                        'problem_title' => $problemTitle,
                         'problem_description' => $dev['objection_description'] ?: null,
-                        'visit_scheduled_at'  => null,
-                        'status'              => OrderStatus::New->value,
-                        'assigned_at'         => null,
-                        'created_by'          => auth()->id(),
+                        'visit_scheduled_at' => null,
+                        'status' => OrderStatus::New->value,
+                        'assigned_at' => null,
+                        'created_by' => auth()->id(),
                         // فیلدهای لید — فقط اگر غیرقابل سفارش بود فعال‌اند
-                        'is_lead'             => ! $isOrderable,
-                        'lead_reason_id'      => ! $isOrderable ? ($dev['lead_reason_id'] ?? null) : null,
-                        'lead_notes'          => ! $isOrderable ? ($dev['lead_notes'] ?? null) : null,
+                        'is_lead' => ! $isOrderable,
+                        'lead_reason_id' => ! $isOrderable ? ($dev['lead_reason_id'] ?? null) : null,
+                        'lead_notes' => ! $isOrderable ? ($dev['lead_notes'] ?? null) : null,
                     ]);
 
                     OrderStatusLog::create([
-                        'order_id'    => $o->id,
+                        'order_id' => $o->id,
                         'from_status' => null,
-                        'to_status'   => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
-                        'note'        => $isOrderable
+                        'to_status' => $o->status instanceof OrderStatus ? $o->status->value : $o->status,
+                        'note' => $isOrderable
                             ? (count($allDevices) > 1
-                                ? 'ثبت اولیه سفارش از ویزارد (یکی از ' . count($allDevices) . ' دستگاه)'
+                                ? 'ثبت اولیه سفارش از ویزارد (یکی از '.count($allDevices).' دستگاه)'
                                 : 'ثبت اولیه سفارش از ویزارد')
                             : 'ثبت لید (تماس غیرقابل سفارش) از ویزارد',
-                        'changed_by'  => auth()->id(),
-                        'created_at'  => now(),
+                        'changed_by' => auth()->id(),
+                        'created_at' => now(),
                     ]);
 
                     $orders[] = $o;
@@ -768,7 +795,9 @@ class OrderWizard extends Component
             // SMS فقط برای سفارش‌های واقعی — لیدها (is_lead=true) پیامک
             // OrderCreated نمی‌گیرند چون منجر به سفارش نشده‌اند.
             foreach ($createdOrders as $o) {
-                if ($o->is_lead) continue;
+                if ($o->is_lead) {
+                    continue;
+                }
                 $smsNotifier->notify($o, SmsTrigger::OrderCreated);
                 if ($o->technician_id) {
                     $smsNotifier->notify($o->refresh()->load('technician'), SmsTrigger::OrderAssignedTech);
@@ -779,8 +808,8 @@ class OrderWizard extends Component
             $count = count($createdOrders);
             session()->flash('success',
                 $count === 1
-                    ? 'سفارش ثبت شد: ' . $order->order_code
-                    : "{$count} سفارش ثبت شد: " . collect($createdOrders)->pluck('order_code')->implode('، ')
+                    ? 'سفارش ثبت شد: '.$order->order_code
+                    : "{$count} سفارش ثبت شد: ".collect($createdOrders)->pluck('order_code')->implode('، ')
             );
 
             // اجازهٔ خروج از wizard را به JS بده تا beforeunload prompt
@@ -803,10 +832,10 @@ class OrderWizard extends Component
             Log::error('OrderWizard submit failed', [
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
-                'file' => $e->getFile() . ':' . $e->getLine(),
+                'file' => $e->getFile().':'.$e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            $this->addError('submit', 'خطا در ثبت سفارش: ' . $e->getMessage());
+            $this->addError('submit', 'خطا در ثبت سفارش: '.$e->getMessage());
         }
     }
 
