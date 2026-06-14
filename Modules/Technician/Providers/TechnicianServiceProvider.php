@@ -17,5 +17,11 @@ class TechnicianServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(module_path($this->name, 'Database/Migrations'));
         $this->loadViewsFrom(module_path($this->name, 'Resources/views'), 'technician');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Modules\Technician\Console\Commands\FixDocuments::class,
+            ]);
+        }
     }
 }
