@@ -407,9 +407,15 @@ class OrderWizard extends Component
             ->latest('created_at')
             ->first(['province_id', 'city_id', 'region_id', 'address']);
         if ($lastOrder) {
-            $this->provinceId = $lastOrder->province_id;
-            $this->cityId     = $lastOrder->city_id;
-            $this->regionId   = $lastOrder->region_id;
+            // اگر اپراتور هنوز استان/شهر را انتخاب نکرده، از سفارش قبلی
+            // پیش‌پر می‌کنیم؛ ولی اگر قبلاً انتخاب کرده، استان/شهر/منطقه را
+            // دست نمی‌زنیم تا انتخابش بازنویسی نشود (و گیرِ منطقهٔ شهرِ قبلی
+            // پیش نیاید). آدرس همیشه در باکس آدرس قرار می‌گیرد.
+            if (! $this->provinceId && ! $this->cityId) {
+                $this->provinceId = $lastOrder->province_id;
+                $this->cityId     = $lastOrder->city_id;
+                $this->regionId   = $lastOrder->region_id;
+            }
             $this->address    = (string) $lastOrder->address;
 
             // dispatch مستقیم به JS تا اگر morph روی textarea مقدار را
