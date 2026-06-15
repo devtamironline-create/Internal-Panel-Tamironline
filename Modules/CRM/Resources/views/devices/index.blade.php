@@ -100,7 +100,8 @@
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $device->sort_order }}</td>
                     <td class="px-6 py-4">
                         @can('manage-crm-devices')
-                        <form method="POST" action="{{ route('crm.devices.toggle', [$device, 'is_active']) }}">
+                        <form method="POST" action="{{ route('crm.devices.toggle', [$device, 'is_active']) }}"
+                              @if($device->is_active) onsubmit="return confirm('غیرفعال‌سازی این دستگاه باعث حذف آن از API سایت و صفحات مرتبط می‌شود. مطمئنید؟');" @endif>
                             @csrf @method('PUT')
                             <button type="submit" class="inline-flex">
                                 @if($device->is_active)
