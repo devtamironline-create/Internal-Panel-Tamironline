@@ -70,7 +70,8 @@
                     <td class="px-4 py-3 flex gap-2">
                         @can('manage-crm-devices')
                         <a href="{{ route('crm.device-categories.edit', $c->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
-                        <form method="POST" action="{{ route('crm.device-categories.toggle', $c->id) }}">
+                        <form method="POST" action="{{ route('crm.device-categories.toggle', $c->id) }}"
+                              @if($c->is_active) onsubmit="return confirm('غیرفعال‌سازی این دسته‌بندی باعث حذف آن از API سایت می‌شود. مطمئنید؟');" @endif>
                             @csrf @method('PUT')
                             <button class="text-amber-600 hover:underline">{{ $c->is_active ? 'غیرفعال' : 'فعال' }}</button>
                         </form>
