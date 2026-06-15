@@ -132,6 +132,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('device-brand-pages', [DeviceBrandPageController::class, 'store'])->name('device-brand-pages.store');
         Route::get('device-brand-pages/{devicebrandpage}/edit', [DeviceBrandPageController::class, 'edit'])->name('device-brand-pages.edit');
         Route::put('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'update'])->name('device-brand-pages.update');
+        Route::put('device-brand-pages/{devicebrandpage}/toggle', [DeviceBrandPageController::class, 'toggle'])->name('device-brand-pages.toggle');
         Route::delete('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'destroy'])->name('device-brand-pages.destroy');
     });
 
