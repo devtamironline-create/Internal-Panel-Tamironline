@@ -27,8 +27,7 @@ class OrderController extends Controller
     public function __construct(
         protected OrderSmsNotifier $smsNotifier,
         protected InvoiceService $invoiceService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -59,30 +58,57 @@ class OrderController extends Controller
                 $q->search($search);
             }
             if ($includeTech) {
-                if ($technicianId === 'none') $q->whereNull('technician_id');
-                elseif ($technicianId)        $q->where('technician_id', $technicianId);
+                if ($technicianId === 'none') {
+                    $q->whereNull('technician_id');
+                } elseif ($technicianId) {
+                    $q->where('technician_id', $technicianId);
+                }
             }
-            if ($provinceId)          $q->where('province_id', $provinceId);
-            if ($cityId)              $q->where('city_id', $cityId);
-            if ($brandId)             $q->where('brand_id', $brandId);
-            if ($deviceId)            $q->where('device_id', $deviceId);
-            if ($orderType !== '')    $q->where('order_type', $orderType);
-            if ($introduction !== '') $q->where('introduction', $introduction);
-            if ($hasInvoice === '1')  $q->where('have_invoice', true);
-            if ($hasInvoice === '0')  $q->where(function ($qq) {
-                $qq->whereNull('have_invoice')->orWhere('have_invoice', false);
-            });
-            $fromG    = $this->jalaliToGregorian($fromDate);
-            $toG      = $this->jalaliToGregorian($toDate);
-            $visitFG  = $this->jalaliToGregorian($visitFrom);
-            $visitTG  = $this->jalaliToGregorian($visitTo);
-            if ($fromG)    $q->whereDate('created_at', '>=', $fromG);
-            if ($toG)      $q->whereDate('created_at', '<=', $toG);
-            if ($visitFG)  $q->whereDate('visit_scheduled_at', '>=', $visitFG);
-            if ($visitTG)  $q->whereDate('visit_scheduled_at', '<=', $visitTG);
+            if ($provinceId) {
+                $q->where('province_id', $provinceId);
+            }
+            if ($cityId) {
+                $q->where('city_id', $cityId);
+            }
+            if ($brandId) {
+                $q->where('brand_id', $brandId);
+            }
+            if ($deviceId) {
+                $q->where('device_id', $deviceId);
+            }
+            if ($orderType !== '') {
+                $q->where('order_type', $orderType);
+            }
+            if ($introduction !== '') {
+                $q->where('introduction', $introduction);
+            }
+            if ($hasInvoice === '1') {
+                $q->where('have_invoice', true);
+            }
+            if ($hasInvoice === '0') {
+                $q->where(function ($qq) {
+                    $qq->whereNull('have_invoice')->orWhere('have_invoice', false);
+                });
+            }
+            $fromG = $this->jalaliToGregorian($fromDate);
+            $toG = $this->jalaliToGregorian($toDate);
+            $visitFG = $this->jalaliToGregorian($visitFrom);
+            $visitTG = $this->jalaliToGregorian($visitTo);
+            if ($fromG) {
+                $q->whereDate('created_at', '>=', $fromG);
+            }
+            if ($toG) {
+                $q->whereDate('created_at', '<=', $toG);
+            }
+            if ($visitFG) {
+                $q->whereDate('visit_scheduled_at', '>=', $visitFG);
+            }
+            if ($visitTG) {
+                $q->whereDate('visit_scheduled_at', '<=', $visitTG);
+            }
         };
 
-        $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'region']);
+        $query = Order::with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'district']);
         $applyNonStatusFilters($query);
 
         // تب «بازگشت‌خورده» مجازی است: در WP سفارش‌های برگشت‌خورده
@@ -168,7 +194,7 @@ class OrderController extends Controller
             'تکنسین', 'استان', 'شهر', 'وضعیت', 'مبلغ نهایی', 'تاریخ ثبت',
         ];
         $rows = function () use ($query) {
-            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'region'])->lazy(500) as $o) {
+            foreach ($query->with(['customer', 'technician', 'brand', 'device', 'province', 'city', 'district'])->lazy(500) as $o) {
                 yield [
                     $o->order_code,
                     $o->order_type === 'service' ? 'نصب' : ($o->order_type === 'repair' ? 'تعمیر' : '—'),
@@ -178,7 +204,7 @@ class OrderController extends Controller
                     $o->device?->name,
                     $o->brand?->name,
                     $o->technician
-                        ? trim($o->technician->firstname_tech ?: ($o->technician->first_name . ' ' . $o->technician->last_name))
+                        ? trim($o->technician->firstname_tech ?: ($o->technician->first_name.' '.$o->technician->last_name))
                         : null,
                     $o->province?->name,
                     $o->city?->name,
@@ -189,7 +215,7 @@ class OrderController extends Controller
             }
         };
 
-        return $this->streamSpreadsheet('crm-orders-' . date('Ymd-His'), $format, $headers, $rows);
+        return $this->streamSpreadsheet('crm-orders-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
     /** هم در index هم در export استفاده می‌شود — همان فیلترهای صفحه. */
@@ -197,32 +223,57 @@ class OrderController extends Controller
     {
         $query = Order::query()->latest();
 
-        if ($s = trim((string) $request->string('q'))) $query->search($s);
+        if ($s = trim((string) $request->string('q'))) {
+            $query->search($s);
+        }
         $techParam = $request->string('technician_id')->toString();
-        if ($techParam === 'none')              $query->whereNull('technician_id');
-        elseif ($v = (int) $techParam)          $query->where('technician_id', $v);
-        if ($v = $request->integer('province_id'))   $query->where('province_id', $v);
-        if ($v = $request->integer('city_id'))       $query->where('city_id', $v);
-        if ($v = $request->integer('brand_id'))      $query->where('brand_id', $v);
-        if ($v = $request->integer('device_id'))     $query->where('device_id', $v);
-        if ($v = trim((string) $request->string('order_type')))   $query->where('order_type', $v);
-        if ($v = trim((string) $request->string('introduction'))) $query->where('introduction', $v);
-        if ($v = trim((string) $request->string('status')))       $query->where('status', $v);
+        if ($techParam === 'none') {
+            $query->whereNull('technician_id');
+        } elseif ($v = (int) $techParam) {
+            $query->where('technician_id', $v);
+        }
+        if ($v = $request->integer('province_id')) {
+            $query->where('province_id', $v);
+        }
+        if ($v = $request->integer('city_id')) {
+            $query->where('city_id', $v);
+        }
+        if ($v = $request->integer('brand_id')) {
+            $query->where('brand_id', $v);
+        }
+        if ($v = $request->integer('device_id')) {
+            $query->where('device_id', $v);
+        }
+        if ($v = trim((string) $request->string('order_type'))) {
+            $query->where('order_type', $v);
+        }
+        if ($v = trim((string) $request->string('introduction'))) {
+            $query->where('introduction', $v);
+        }
+        if ($v = trim((string) $request->string('status'))) {
+            $query->where('status', $v);
+        }
 
         $hasInvoice = (string) $request->string('has_invoice');
-        if ($hasInvoice === '1') $query->where('have_invoice', true);
-        if ($hasInvoice === '0') $query->where(function ($q) {
-            $q->whereNull('have_invoice')->orWhere('have_invoice', false);
-        });
+        if ($hasInvoice === '1') {
+            $query->where('have_invoice', true);
+        }
+        if ($hasInvoice === '0') {
+            $query->where(function ($q) {
+                $q->whereNull('have_invoice')->orWhere('have_invoice', false);
+            });
+        }
 
         foreach ([
-            'from_date'  => ['col' => 'created_at',           'op' => '>='],
-            'to_date'    => ['col' => 'created_at',           'op' => '<='],
+            'from_date' => ['col' => 'created_at',           'op' => '>='],
+            'to_date' => ['col' => 'created_at',           'op' => '<='],
             'visit_from' => ['col' => 'visit_scheduled_at',   'op' => '>='],
-            'visit_to'   => ['col' => 'visit_scheduled_at',   'op' => '<='],
+            'visit_to' => ['col' => 'visit_scheduled_at',   'op' => '<='],
         ] as $param => $info) {
             $g = $this->jalaliToGregorian((string) $request->string($param));
-            if ($g) $query->whereDate($info['col'], $info['op'], $g);
+            if ($g) {
+                $query->whereDate($info['col'], $info['op'], $g);
+            }
         }
 
         return $query;
@@ -260,6 +311,7 @@ class OrderController extends Controller
                 // آدرس به ازای هر سفارش جداگانه ثبت می‌شود (مثل WP)
                 'province_id' => $validated['province_id'] ?? null,
                 'city_id' => $validated['city_id'] ?? null,
+                'district_id' => $validated['district_id'] ?? null,
                 'address' => $validated['address'] ?? null,
                 'postal_code' => $validated['postal_code'] ?? null,
                 'problem_title' => $validated['problem_title'] ?? null,
@@ -287,7 +339,7 @@ class OrderController extends Controller
         $this->smsNotifier->notify($order, SmsTrigger::OrderCreated);
 
         return redirect()->route('crm.orders.show', $order)
-            ->with('success', 'سفارش ثبت شد: ' . $order->order_code);
+            ->with('success', 'سفارش ثبت شد: '.$order->order_code);
     }
 
     /**
@@ -298,7 +350,9 @@ class OrderController extends Controller
     public function missingInvoices(Request $request)
     {
         $sinceDays = (int) $request->query('days', 14);
-        if ($sinceDays <= 0 || $sinceDays > 90) $sinceDays = 14;
+        if ($sinceDays <= 0 || $sinceDays > 90) {
+            $sinceDays = 14;
+        }
         $since = now()->subDays($sinceDays);
 
         // ID همهٔ سفارش‌هایی که فاکتور فعال (superseded نباشد) دارند —
@@ -385,7 +439,7 @@ class OrderController extends Controller
             $candidateIds = $supersededInvoices->where('in_wallet', true)->pluck('id');
             $idsWithTxs = \Modules\CRM\Models\WalletTransaction::whereIn('invoice_id', $candidateIds)
                 ->pluck('invoice_id')->unique();
-            $affectedInvoiceIds = $candidateIds->reject(fn($id) => $idsWithTxs->contains($id))->values();
+            $affectedInvoiceIds = $candidateIds->reject(fn ($id) => $idsWithTxs->contains($id))->values();
         }
 
         // ردیف‌های بازسازی‌شدهٔ قبلی (با مارکر [بازسازی] در note) — برای
@@ -460,7 +514,7 @@ class OrderController extends Controller
                     'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
                     'amount' => $companyShare,
                     'balance_after' => $last + $companyShare,
-                    'note' => '[بازسازی] بازگشت سهم شرکت از فاکتور بایگانی‌شده ' . $inv->invoice_code,
+                    'note' => '[بازسازی] بازگشت سهم شرکت از فاکتور بایگانی‌شده '.$inv->invoice_code,
                     'created_by' => auth()->id(),
                 ]);
 
@@ -534,8 +588,8 @@ class OrderController extends Controller
         $legacy->applyToOrder($order, $extracted);
 
         return back()->with('success',
-            'سفارش بسته شد (legacy). سهم تکنسین: ' . number_format($extracted['tech_share']) .
-            ' / سهم شرکت: ' . number_format($extracted['company_share']) .
+            'سفارش بسته شد (legacy). سهم تکنسین: '.number_format($extracted['tech_share']).
+            ' / سهم شرکت: '.number_format($extracted['company_share']).
             ' — هیچ فاکتور یا تراکنش کیف‌پولی ساخته نشد.'
         );
     }
@@ -561,10 +615,10 @@ class OrderController extends Controller
             'cities' => $order->province_id
                 ? City::where('province_id', $order->province_id)->active()->ordered()->get(['id', 'name'])
                 : collect(),
-            // مناطق شهر فعلی سفارش — فقط اگر شهر داشت. در غیر این صورت
-            // dropdown منطقه مخفی می‌ماند تا فرم شلوغ نشود.
+            // مناطق شهر فعلی سفارش (ردیف‌های فرزندِ crm_cities) — فقط اگر شهر
+            // داشت. در غیر این صورت dropdown منطقه مخفی می‌ماند.
             'regions' => $order->city_id
-                ? \Modules\CRM\Models\Region::where('city_id', $order->city_id)->active()->ordered()->get(['id', 'name'])
+                ? City::where('parent_city_id', $order->city_id)->active()->ordered()->get(['id', 'name'])
                 : collect(),
             'technicians' => Technician::orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'wp_id']),
@@ -579,7 +633,7 @@ class OrderController extends Controller
 
         // ── ویرایش اطلاعات مشتری (روی پروفایل Customer هم اعمال می‌شود).
         // اگر شماره موبایل جدید با مشتری دیگری تداخل دارد، خطا برگردان.
-        $newCustomerName   = $validated['customer_name']   ?? null;
+        $newCustomerName = $validated['customer_name'] ?? null;
         $newCustomerMobile = $validated['customer_mobile'] ?? null;
 
         $customer = $order->customer;
@@ -598,9 +652,9 @@ class OrderController extends Controller
             'device_id' => $validated['device_id'] ?? null,
             'province_id' => $validated['province_id'] ?? null,
             'city_id' => $validated['city_id'] ?? null,
-            // region_id اختیاری — اگر شهر تغییر کرد و منطقهٔ قبلی برای
-            // شهر جدید معتبر نیست، اپراتور می‌تواند خالی بگذارد.
-            'region_id' => $validated['region_id'] ?? null,
+            // district_id (منطقهٔ crm_cities) اختیاری — اگر شهر تغییر کرد و
+            // منطقهٔ قبلی برای شهر جدید معتبر نیست، اپراتور می‌تواند خالی بگذارد.
+            'district_id' => $validated['district_id'] ?? null,
             'address' => $validated['address'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
             // اگر آرایهٔ objections[] از multi-select فرستاده شده، آن را
@@ -718,7 +772,7 @@ class OrderController extends Controller
             'from_status' => $previousStatus,
             'to_status' => $newStatus,
             'note' => $shouldResetStatus
-                ? 'تخصیص مجدد — وضعیت از ' . ($previousStatusEnum?->label() ?? $previousStatus) . ' به جدید بازگردانده شد'
+                ? 'تخصیص مجدد — وضعیت از '.($previousStatusEnum?->label() ?? $previousStatus).' به جدید بازگردانده شد'
                 : 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
             'changed_by' => auth()->id(),
             'created_at' => now(),
@@ -752,20 +806,20 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($order, $newCode) {
             $order->update([
-                'is_lead'        => false,
+                'is_lead' => false,
                 'lead_reason_id' => null,
-                'lead_notes'     => null,
-                'order_code'     => $newCode,
-                'status'         => \Modules\CRM\Enums\OrderStatus::New->value,
+                'lead_notes' => null,
+                'order_code' => $newCode,
+                'status' => \Modules\CRM\Enums\OrderStatus::New->value,
             ]);
 
             \Modules\CRM\Models\OrderStatusLog::create([
-                'order_id'    => $order->id,
+                'order_id' => $order->id,
                 'from_status' => null,
-                'to_status'   => \Modules\CRM\Enums\OrderStatus::New->value,
-                'note'        => 'تبدیل لید به سفارش — کد قبلی: ' . $order->getOriginal('order_code'),
-                'changed_by'  => auth()->id(),
-                'created_at'  => now(),
+                'to_status' => \Modules\CRM\Enums\OrderStatus::New->value,
+                'note' => 'تبدیل لید به سفارش — کد قبلی: '.$order->getOriginal('order_code'),
+                'changed_by' => auth()->id(),
+                'created_at' => now(),
             ]);
         });
 
@@ -817,7 +871,8 @@ class OrderController extends Controller
         $order->update(['source_of_truth' => $validated['source_of_truth']]);
 
         $label = Order::SOURCE_OF_TRUTH_OPTIONS[$validated['source_of_truth']] ?? $validated['source_of_truth'];
-        return back()->with('success', 'منبع داده سفارش تغییر کرد: ' . $label);
+
+        return back()->with('success', 'منبع داده سفارش تغییر کرد: '.$label);
     }
 
     // ───────────── یادداشت‌های اپراتور ──────────────────────────
@@ -851,6 +906,7 @@ class OrderController extends Controller
         }
 
         $note->delete();
+
         return back()->with('success', 'یادداشت حذف شد.');
     }
 
@@ -912,7 +968,8 @@ class OrderController extends Controller
         if (! in_array($newStatus, $allowed, true)) {
             $msg = $currentEnum?->isFinal()
                 ? 'این سفارش در وضعیت نهایی است. برای تغییر از «بازگشت سفارش» استفاده کنید.'
-                : 'گذار از «' . ($currentEnum?->label() ?? $previousStatus) . '» به «' . $newStatus->label() . '» مجاز نیست.';
+                : 'گذار از «'.($currentEnum?->label() ?? $previousStatus).'» به «'.$newStatus->label().'» مجاز نیست.';
+
             return back()->with('error', $msg);
         }
 
@@ -969,7 +1026,7 @@ class OrderController extends Controller
             $this->smsNotifier->notify($order->refresh(), $trigger);
         }
 
-        return back()->with('success', 'وضعیت به "' . $newStatus->label() . '" تغییر کرد.');
+        return back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
     }
 
     /**
@@ -1083,7 +1140,7 @@ class OrderController extends Controller
             'order_id' => $order->id,
             'from_status' => $previousStatus,
             'to_status' => OrderStatus::New->value,
-            'note' => 'بازگشت سفارش (' . $returnTypeLabel . ') — ' . $returnDesc,
+            'note' => 'بازگشت سفارش ('.$returnTypeLabel.') — '.$returnDesc,
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
@@ -1197,20 +1254,20 @@ class OrderController extends Controller
         $cityId = $request->input('city_id');
         $isLead = $order ? (bool) $order->is_lead : false;
         $regionRequired = ! $isLead && $cityId
-            && \Modules\CRM\Models\Region::where('city_id', $cityId)->active()->exists();
+            && City::where('parent_city_id', $cityId)->active()->exists();
 
         $rules = [
             'brand_id' => 'nullable|exists:crm_brands,id',
             'device_id' => 'nullable|exists:crm_devices,id',
             'province_id' => 'nullable|exists:crm_provinces,id',
             'city_id' => 'nullable|exists:crm_cities,id',
-            'region_id' => ($regionRequired ? 'required|' : 'nullable|') . 'integer|exists:crm_regions,id',
+            'district_id' => ($regionRequired ? 'required|' : 'nullable|').'integer|exists:crm_cities,id',
             'address' => 'nullable|string|max:2000',
             'postal_code' => 'nullable|string|max:20',
             'problem_title' => 'nullable|string|max:255',
             // multi-select از فرم — هر آیتم برچسبی از objectionsList تنظیمات WP
-            'objections'    => 'nullable|array',
-            'objections.*'  => 'string|max:255',
+            'objections' => 'nullable|array',
+            'objections.*' => 'string|max:255',
             'problem_description' => 'nullable|string|max:5000',
             'visit_scheduled_at' => 'nullable|date',
             'estimated_price' => 'nullable|integer|min:0',
@@ -1230,7 +1287,7 @@ class OrderController extends Controller
             $rules['customer_phone'] = 'nullable|string|max:20';
         } else {
             $rules['customer_id'] = 'required|exists:crm_customers,id';
-            $rules['status'] = 'nullable|string|in:' . implode(',', array_keys(OrderStatus::options()));
+            $rules['status'] = 'nullable|string|in:'.implode(',', array_keys(OrderStatus::options()));
         }
 
         // فیلدهای مشترک edit + create که از فرم می‌آیند

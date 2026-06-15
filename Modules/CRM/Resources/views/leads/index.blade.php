@@ -159,7 +159,7 @@
                         <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                             @php
                                 $loc = trim(implode(' / ', array_filter([
-                                    $lead->province?->name, $lead->city?->name, $lead->region?->name,
+                                    $lead->province?->name, $lead->city?->name, $lead->district?->name,
                                 ])));
                             @endphp
                             {{ $loc !== '' ? $loc : '—' }}

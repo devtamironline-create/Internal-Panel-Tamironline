@@ -82,7 +82,7 @@ class TechnicianController extends Controller
         $rows = function () use ($query) {
             foreach ($query->lazy(500) as $t) {
                 yield [
-                    trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? ''))),
+                    trim($t->firstname_tech ?: ($t->first_name.' '.($t->last_name ?? ''))),
                     $t->technician_id,
                     $t->mobile,
                     $t->phone,
@@ -99,12 +99,12 @@ class TechnicianController extends Controller
             }
         };
 
-        return $this->streamSpreadsheet('crm-technicians-' . date('Ymd-His'), $format, $headers, $rows);
+        return $this->streamSpreadsheet('crm-technicians-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
     public function create()
     {
-        $technician = new Technician();
+        $technician = new Technician;
 
         return view('crm::technicians.create', compact('technician'));
     }
@@ -183,7 +183,7 @@ class TechnicianController extends Controller
 
         $note = trim($validated['note'] ?? '');
         if ($note === '') {
-            $note = 'تنظیم دستی مانده توسط ادمین به ' . number_format($target) . ' تومان';
+            $note = 'تنظیم دستی مانده توسط ادمین به '.number_format($target).' تومان';
         }
 
         // ۵) ثبت Adjustment — WalletService قفل می‌کند، delta را جمع می‌زند،
@@ -199,27 +199,29 @@ class TechnicianController extends Controller
         return redirect()
             ->route('crm.technicians.show', $technician)
             ->with('success', 'مانده تنظیم شد. تراکنش Adjustment با مبلغ '
-                . ($delta >= 0 ? '+' : '−') . number_format(abs($delta))
-                . ' تومان ثبت شد. مانده فعلی: ' . number_format($target) . ' تومان.');
+                .($delta >= 0 ? '+' : '−').number_format(abs($delta))
+                .' تومان ثبت شد. مانده فعلی: '.number_format($target).' تومان.');
     }
 
     public function edit(Technician $technician)
     {
         $technician->load('cities:id', 'regions:id', 'brands:id', 'devices:id');
+
         return view('crm::technicians.edit', [
             'technician' => $technician,
-            'allCities'  => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
-            'allBrands'  => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
+            'allCities' => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
+            'allBrands' => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
             'allDevices' => \Modules\CRM\Models\Device::active()->ordered()->get(['id', 'name']),
-            // مناطق گروه‌بندی‌شده بر اساس شهر — فقط مناطقی که شهرشان
-            // هم در فهرست انتخاب‌های تکنسین هست عملاً پوشش می‌دهد.
-            'allRegions' => \Modules\CRM\Models\Region::active()->ordered()
-                                ->with('city:id,name')
-                                ->get(['id', 'name', 'city_id'])
-                                ->groupBy('city_id'),
-            'selectedCityIds'   => $technician->cities->pluck('id')->all(),
+            // مناطق (ردیف‌های فرزندِ crm_cities) گروه‌بندی‌شده بر اساس شهرِ والد.
+            // crm_regions بازنشسته شد؛ پوشش منطقه روی همان crm_cities است.
+            'allRegions' => \Modules\CRM\Models\City::query()
+                ->whereNotNull('parent_city_id')->active()->ordered()
+                ->with('parent:id,name')
+                ->get(['id', 'name', 'parent_city_id'])
+                ->groupBy('parent_city_id'),
+            'selectedCityIds' => $technician->cities->pluck('id')->all(),
             'selectedRegionIds' => $technician->regions->pluck('id')->all(),
-            'selectedBrandIds'  => $technician->brands->pluck('id')->all(),
+            'selectedBrandIds' => $technician->brands->pluck('id')->all(),
             'selectedDeviceIds' => $technician->devices->pluck('id')->all(),
         ]);
     }
@@ -232,9 +234,9 @@ class TechnicianController extends Controller
         $validated['exclude_from_suggestions'] = (bool) ($validated['exclude_from_suggestions'] ?? false);
 
         // تخصص: شهر/منطقه/برند/دستگاه — برای سیستم پیشنهاد هوشمند
-        $cityIds   = (array) $request->input('city_ids', []);
+        $cityIds = (array) $request->input('city_ids', []);
         $regionIds = (array) $request->input('region_ids', []);
-        $brandIds  = (array) $request->input('brand_ids', []);
+        $brandIds = (array) $request->input('brand_ids', []);
         $deviceIds = (array) $request->input('device_ids', []);
         $satisfaction = $request->input('satisfaction_score');
 
@@ -287,11 +289,11 @@ class TechnicianController extends Controller
             // مجبور به آموزش — پاک کردن وضعیت تکمیل و رد دیدن‌های قبلی
             $technician->forceFill(['training_completed_at' => null])->saveQuietly();
             $technician->watchedVideos()->detach();
-            $msg = 'تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» مجبور به مشاهده ویدیوها شد.';
+            $msg = 'تکنسین «'.($technician->firstname_tech ?: $technician->mobile).'» مجبور به مشاهده ویدیوها شد.';
         } else {
             // برداشتن قفل — علامت‌گذاری به‌عنوان آموزش‌دیده
             $technician->forceFill(['training_completed_at' => now()])->saveQuietly();
-            $msg = 'قفل آموزش برای تکنسین «' . ($technician->firstname_tech ?: $technician->mobile) . '» برداشته شد.';
+            $msg = 'قفل آموزش برای تکنسین «'.($technician->firstname_tech ?: $technician->mobile).'» برداشته شد.';
         }
 
         return back()->with('success', $msg);
@@ -338,9 +340,9 @@ class TechnicianController extends Controller
             return ['user' => $user, 'password' => $generatedPassword];
         });
 
-        $msg = 'حساب کاربری به تکنسین متصل شد (user ID: ' . $result['user']->id . ').';
+        $msg = 'حساب کاربری به تکنسین متصل شد (user ID: '.$result['user']->id.').';
         if ($result['password']) {
-            $msg .= ' رمز عبور اولیه: ' . $result['password'] . ' — آن را یادداشت کنید؛ دیگر نمایش داده نخواهد شد.';
+            $msg .= ' رمز عبور اولیه: '.$result['password'].' — آن را یادداشت کنید؛ دیگر نمایش داده نخواهد شد.';
         }
 
         return back()->with('success', $msg);
@@ -362,8 +364,8 @@ class TechnicianController extends Controller
         $mobileRule = 'required|string|max:20|unique:crm_technicians,mobile';
         $techIdRule = 'nullable|string|max:50|unique:crm_technicians,technician_id';
         if ($ignoreId) {
-            $mobileRule .= ',' . $ignoreId;
-            $techIdRule .= ',' . $ignoreId;
+            $mobileRule .= ','.$ignoreId;
+            $techIdRule .= ','.$ignoreId;
         }
 
         return $request->validate([

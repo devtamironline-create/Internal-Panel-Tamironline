@@ -86,7 +86,8 @@
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ $brand->sort_order }}</td>
                     <td class="px-6 py-4">
                         @can('manage-crm-brands')
-                        <form method="POST" action="{{ route('crm.brands.toggle', [$brand, 'is_active']) }}">
+                        <form method="POST" action="{{ route('crm.brands.toggle', [$brand, 'is_active']) }}"
+                              @if($brand->is_active) onsubmit="return confirm('غیرفعال‌سازی این برند باعث حذف آن از API سایت و صفحات مرتبط می‌شود. مطمئنید؟');" @endif>
                             @csrf @method('PUT')
                             <button type="submit" class="inline-flex">
                                 @if($brand->is_active)

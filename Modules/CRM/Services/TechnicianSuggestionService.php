@@ -25,19 +25,22 @@ class TechnicianSuggestionService
 {
     /** وزن‌های ثابت — هم‌سو با Roadmap محصولی فاز ۱. */
     public const WEIGHTS = [
-        'open_orders'    => 30,  // سفارش باز کمتر = بهتر
-        'debt'           => 25,  // بدهی کمتر = بهتر
-        'satisfaction'   => 20,  // رضایت بالاتر = بهتر
-        'cancel_rate'    => 10,  // نرخ کنسلی پایین‌تر = بهتر
-        'recent_activity'=> 10,  // فعالیت اخیر = بهتر
+        'open_orders' => 30,  // سفارش باز کمتر = بهتر
+        'debt' => 25,  // بدهی کمتر = بهتر
+        'satisfaction' => 20,  // رضایت بالاتر = بهتر
+        'cancel_rate' => 10,  // نرخ کنسلی پایین‌تر = بهتر
+        'recent_activity' => 10,  // فعالیت اخیر = بهتر
         'response_speed' => 5,   // سرعت پاسخگویی بالاتر = بهتر
     ];
 
     /** آستانه‌های دسته‌بندی اعتبار پیشنهاد. */
     public const TIER_EXCELLENT = 80;
-    public const TIER_GOOD      = 60;
-    public const TIER_NORMAL    = 40;
-    public const TIER_CAUTION   = 20;
+
+    public const TIER_GOOD = 60;
+
+    public const TIER_NORMAL = 40;
+
+    public const TIER_CAUTION = 20;
 
     /**
      * @return Collection<int, object{technician:Technician, score:int, breakdown:array, tier:string, label:string, reasons:array}>
@@ -62,7 +65,7 @@ class TechnicianSuggestionService
             ->where('ready_for_delivery', true)
             // رکوردهای placeholder (مثل «سفارش کنسل شده») هرگز پیشنهاد نمی‌شوند.
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id,is_active', 'regions:id,city_id', 'brands:id', 'devices:id']);
+            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id']);
 
         // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
         // محدود کنیم. شمارش سفارش‌های فعال در همان loop انجام می‌شود.
@@ -100,7 +103,9 @@ class TechnicianSuggestionService
     {
         $now = (int) ($openCounts[$t->id] ?? 0);
         $max = (int) ($t->max_order ?? 0);
-        if ($max > 0 && $now >= $max) return 'capacity';
+        if ($max > 0 && $now >= $max) {
+            return 'capacity';
+        }
 
         if ($order->city_id) {
             // فقط تگ شهرهای فعال — شهرهایی که به منطقه تبدیل شده‌اند
@@ -112,13 +117,14 @@ class TechnicianSuggestionService
             }
         }
         // تطبیق منطقه — اگر تکنسین برای شهر سفارش منطقه‌ای انتخاب کرده
-        // باشد، باید منطقهٔ سفارش جزو آن‌ها باشد.
-        if ($order->region_id && $order->city_id) {
+        // باشد، باید منطقهٔ سفارش جزو آن‌ها باشد. منطقه = ردیف فرزندِ
+        // crm_cities (district_id روی سفارش، parent_city_id روی پوشش تکنسین).
+        if ($order->district_id && $order->city_id) {
             $regionsInOrderCity = $t->regions
-                ->where('city_id', $order->city_id)
+                ->where('parent_city_id', $order->city_id)
                 ->pluck('id');
             if ($regionsInOrderCity->isNotEmpty()
-                && ! $regionsInOrderCity->contains($order->region_id)) {
+                && ! $regionsInOrderCity->contains($order->district_id)) {
                 return 'region';
             }
         }
@@ -157,7 +163,7 @@ class TechnicianSuggestionService
         $techs = Technician::query()
             ->where('status', 'active')
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id,is_active', 'regions:id,city_id', 'brands:id', 'devices:id'])
+            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id'])
             ->get();
 
         $activeStatuses = [
@@ -174,11 +180,12 @@ class TechnicianSuggestionService
             ->pluck('cnt', 'technician_id');
 
         $rejections = [];
-        $accepted   = 0;
-        $notReady   = 0;
+        $accepted = 0;
+        $notReady = 0;
         foreach ($techs as $t) {
             if (! $t->ready_for_delivery) {
                 $notReady++;
+
                 continue;
             }
             $reason = $this->rejectionReason($t, $order, $openCounts);
@@ -194,8 +201,8 @@ class TechnicianSuggestionService
 
         return [
             'active_total' => $techs->count(),
-            'accepted'     => $accepted,
-            'rejections'   => $rejections,
+            'accepted' => $accepted,
+            'rejections' => $rejections,
         ];
     }
 
@@ -215,8 +222,11 @@ class TechnicianSuggestionService
             $openRatio = max(0, 1 - $now / 10);
         }
         $breakdown['open_orders'] = (int) round($openRatio * self::WEIGHTS['open_orders']);
-        if ($now === 0) $reasons[] = 'بدون سفارش باز';
-        elseif ($max > 0 && $now >= $max * 0.8) $reasons[] = 'نزدیک به سقف ظرفیت';
+        if ($now === 0) {
+            $reasons[] = 'بدون سفارش باز';
+        } elseif ($max > 0 && $now >= $max * 0.8) {
+            $reasons[] = 'نزدیک به سقف ظرفیت';
+        }
 
         // ─── ۲) بدهی (25٪)
         $balance = (int) ($t->wallet_balance ?? 0);
@@ -231,8 +241,11 @@ class TechnicianSuggestionService
             $debtScore = max(0, 1 - $debt / 5_000_000);
         }
         $breakdown['debt'] = (int) round($debtScore * self::WEIGHTS['debt']);
-        if ($debt === 0) $reasons[] = 'بدون بدهی';
-        elseif ($maxDebt > 0 && $debt >= $maxDebt) $reasons[] = '⚠ بدهی بحرانی';
+        if ($debt === 0) {
+            $reasons[] = 'بدون بدهی';
+        } elseif ($maxDebt > 0 && $debt >= $maxDebt) {
+            $reasons[] = '⚠ بدهی بحرانی';
+        }
 
         // ─── ۳) رضایت مشتری (20٪) — option 2-ب: دستی توسط ادمین
         $sat = $t->satisfaction_score !== null ? (float) $t->satisfaction_score : null;
@@ -243,7 +256,9 @@ class TechnicianSuggestionService
             $satScore = 0.5;
         }
         $breakdown['satisfaction'] = (int) round($satScore * self::WEIGHTS['satisfaction']);
-        if ($sat !== null && $sat >= 4.5) $reasons[] = 'رضایت عالی';
+        if ($sat !== null && $sat >= 4.5) {
+            $reasons[] = 'رضایت عالی';
+        }
 
         // ─── ۴) نرخ کنسلی (10٪)
         $stats = $this->orderStats($t->id);
@@ -253,7 +268,9 @@ class TechnicianSuggestionService
             $cancelRate = 0; // تکنسین جدید — مزیت شک
         }
         $breakdown['cancel_rate'] = (int) round((1 - $cancelRate) * self::WEIGHTS['cancel_rate']);
-        if ($cancelRate > 0.3) $reasons[] = '⚠ نرخ کنسلی بالا';
+        if ($cancelRate > 0.3) {
+            $reasons[] = '⚠ نرخ کنسلی بالا';
+        }
 
         // ─── ۵) فعالیت اخیر (10٪)
         $lastDays = $stats['last_assigned_at']
@@ -261,7 +278,9 @@ class TechnicianSuggestionService
             : 999;
         $activityRatio = max(0, 1 - $lastDays / 14); // افول در ۲ هفته
         $breakdown['recent_activity'] = (int) round($activityRatio * self::WEIGHTS['recent_activity']);
-        if ($lastDays > 14) $reasons[] = '⚠ بدون فعالیت اخیر';
+        if ($lastDays > 14) {
+            $reasons[] = '⚠ بدون فعالیت اخیر';
+        }
 
         // ─── ۶) سرعت پاسخگویی (5٪)
         // میانگین فاصلهٔ assigned_at تا اولین تغییر وضعیت توسط تکنسین
@@ -303,11 +322,11 @@ class TechnicianSuggestionService
     {
         $row = Order::query()->realOrders()
             ->where('technician_id', $techId)
-            ->selectRaw("
+            ->selectRaw('
                 COUNT(*) as total,
                 SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as cancelled,
                 MAX(assigned_at) as last_assigned_at
-            ", [OrderStatus::Cancelled->value, OrderStatus::Declined->value])
+            ', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])
             ->first();
 
         return [
@@ -324,12 +343,14 @@ class TechnicianSuggestionService
     protected function avgResponseMinutes(int $techId): ?float
     {
         $tech = Technician::find($techId);
-        if (! $tech || ! $tech->user_id) return null;
+        if (! $tech || ! $tech->user_id) {
+            return null;
+        }
 
         // فقط سفارش‌هایی که تکنسین وضعیت‌شان را عوض کرده
         // o.assigned_at را MIN می‌گیریم تا با ONLY_FULL_GROUP_BY MySQL
         // سازگار بماند (per-order یکتاست پس MIN/MAX/ANY_VALUE یکسان است).
-        $rows = \DB::select("
+        $rows = \DB::select('
             SELECT TIMESTAMPDIFF(MINUTE, MIN(o.assigned_at), MIN(l.created_at)) AS mins
             FROM crm_orders o
             INNER JOIN crm_order_status_logs l ON l.order_id = o.id AND l.changed_by = ?
@@ -338,11 +359,15 @@ class TechnicianSuggestionService
               AND l.created_at > o.assigned_at
             GROUP BY o.id
             LIMIT 50
-        ", [$tech->user_id, $techId]);
+        ', [$tech->user_id, $techId]);
 
-        if (empty($rows)) return null;
+        if (empty($rows)) {
+            return null;
+        }
         $values = array_filter(array_map(fn ($r) => (int) $r->mins, $rows), fn ($v) => $v > 0);
-        if (empty($values)) return null;
+        if (empty($values)) {
+            return null;
+        }
 
         return array_sum($values) / count($values);
     }
@@ -352,10 +377,10 @@ class TechnicianSuggestionService
     {
         return match (true) {
             $score >= self::TIER_EXCELLENT => ['excellent', 'پیشنهاد ویژه'],
-            $score >= self::TIER_GOOD      => ['good',      'مناسب'],
-            $score >= self::TIER_NORMAL    => ['normal',    'قابل بررسی'],
-            $score >= self::TIER_CAUTION   => ['caution',   'احتیاط'],
-            default                        => ['blocked',   'غیرقابل توصیه'],
+            $score >= self::TIER_GOOD => ['good',      'مناسب'],
+            $score >= self::TIER_NORMAL => ['normal',    'قابل بررسی'],
+            $score >= self::TIER_CAUTION => ['caution',   'احتیاط'],
+            default => ['blocked',   'غیرقابل توصیه'],
         };
     }
 }

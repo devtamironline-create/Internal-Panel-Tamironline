@@ -65,11 +65,21 @@
                         <code class="text-xs ltr" dir="ltr">/devices/{{ $p->device->slug ?? '?' }}/{{ $p->brand->slug ?? '?' }}</code>
                     </td>
                     <td class="px-4 py-3">
-                        @if($p->is_active)
-                            <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">فعال</span>
+                        @can('manage-crm-devices')
+                        <form method="POST" action="{{ route('crm.device-brand-pages.toggle', $p->id) }}"
+                              @if($p->is_active) onsubmit="return confirm('غیرفعال‌سازی این صفحه‌ی ترکیبی باعث حذف آن از API سایت می‌شود. مطمئنید؟');" @endif>
+                            @csrf @method('PUT')
+                            <button type="submit" class="inline-flex">
+                                @if($p->is_active)
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200">فعال</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-gray-200 text-gray-600 hover:bg-gray-300">غیرفعال</span>
+                                @endif
+                            </button>
+                        </form>
                         @else
-                            <span class="px-2 py-0.5 rounded-full text-xs bg-gray-200 text-gray-600">غیرفعال</span>
-                        @endif
+                            @if($p->is_active)<span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">فعال</span>@else<span class="px-2 py-0.5 rounded-full text-xs bg-gray-200 text-gray-600">غیرفعال</span>@endif
+                        @endcan
                     </td>
                     <td class="px-4 py-3 text-xs text-gray-500">
                         {{ \Morilog\Jalali\Jalalian::fromDateTime($p->updated_at)->format('Y/m/d H:i') }}

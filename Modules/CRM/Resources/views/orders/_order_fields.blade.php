@@ -206,15 +206,15 @@
                     <span class="text-gray-400">(اختیاری)</span>
                 @endif
             </label>
-            <select name="region_id" id="order-region"
+            <select name="district_id" id="order-region"
                     data-tom-select data-placeholder="منطقه..."
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 <option value="">{{ $regionIsRequired ? '— انتخاب کنید —' : '— بدون منطقه —' }}</option>
                 @foreach($regions ?? [] as $r)
-                <option value="{{ $r->id }}" @selected(old('region_id', $order->region_id ?? null) == $r->id)>{{ $r->name }}</option>
+                <option value="{{ $r->id }}" @selected(old('district_id', $order->district_id ?? null) == $r->id)>{{ $r->name }}</option>
                 @endforeach
             </select>
-            @error('region_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            @error('district_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
         <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">آدرس کامل</label>

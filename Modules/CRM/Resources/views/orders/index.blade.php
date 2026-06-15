@@ -335,7 +335,7 @@
                             $loc = trim(implode(' / ', array_filter([
                                 $order->province?->name,
                                 $order->city?->name,
-                                $order->region?->name,
+                                $order->district?->name,
                             ])));
                         @endphp
                         {{ $loc !== '' ? $loc : '—' }}
