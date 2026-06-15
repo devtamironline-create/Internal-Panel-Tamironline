@@ -19,7 +19,7 @@ class Order extends Model
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
-        'province_id', 'city_id', 'region_id', 'district_id', 'address', 'postal_code', 'address_id',
+        'province_id', 'city_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
         'visit_scheduled_at', 'visit_scheduled_slot',
 
@@ -327,15 +327,10 @@ class Order extends Model
         return $this->belongsTo(City::class);
     }
 
-    public function region(): BelongsTo
-    {
-        return $this->belongsTo(Region::class);
-    }
-
     /**
      * منطقهٔ snapshotِ سفارش از نوع crm_cities (ردیف فرزند با parent_city_id).
-     * این همان منطقه‌ای است که آدرس مشتری/اپ استفاده می‌کند — جدا از
-     * region() قدیمی (crm_regions) که مخصوص سفارش‌های ثبت‌شده از پنل است.
+     * این همان منطقه‌ای است که آدرس مشتری/اپ استفاده می‌کند و تنها سیستم
+     * منطقه در پروژه است (crm_regions بازنشسته شد).
      */
     public function district(): BelongsTo
     {
