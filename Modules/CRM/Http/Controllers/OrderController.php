@@ -311,6 +311,7 @@ class OrderController extends Controller
                 // آدرس به ازای هر سفارش جداگانه ثبت می‌شود (مثل WP)
                 'province_id' => $validated['province_id'] ?? null,
                 'city_id' => $validated['city_id'] ?? null,
+                'district_id' => $validated['district_id'] ?? null,
                 'address' => $validated['address'] ?? null,
                 'postal_code' => $validated['postal_code'] ?? null,
                 'problem_title' => $validated['problem_title'] ?? null,
