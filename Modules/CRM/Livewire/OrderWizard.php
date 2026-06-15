@@ -150,7 +150,7 @@ class OrderWizard extends Component
     #[Computed]
     public function provinces()
     {
-        return Province::ordered()->get(['id', 'name']);
+        return Province::active()->ordered()->get(['id', 'name']);
     }
 
     #[Computed]
