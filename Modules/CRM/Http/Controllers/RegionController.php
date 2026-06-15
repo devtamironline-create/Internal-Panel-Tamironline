@@ -32,10 +32,11 @@ class RegionController extends Controller
         $provinceId = $request->integer('province_id');
         $cityId = $request->integer('city_id');
 
-        // فقط شهرهای اصلی فعال — ردیف‌های منطقه (parent_city_id دار) خودشان
-        // به‌عنوان شهر انتخاب نمی‌شوند و شهرهای غیرفعال هم منطقهٔ جدید نمی‌پذیرند.
+        // همهٔ شهرهای اصلی (فعال و غیرفعال) — در پنل ادمین وضعیت نمایش در اپ
+        // نباید جلوی مدیریت مناطق را بگیرد. ردیف‌های منطقه (parent_city_id دار)
+        // خودشان به‌عنوان شهر انتخاب نمی‌شوند.
         $cities = $provinceId
-            ? City::where('province_id', $provinceId)->mainCities()->active()->ordered()->get(['id', 'name'])
+            ? City::where('province_id', $provinceId)->mainCities()->ordered()->get(['id', 'name'])
             : collect();
 
         // مناطق = شهرهای فرزندِ شهر انتخاب‌شده. غیرفعال‌ها هم می‌آیند تا

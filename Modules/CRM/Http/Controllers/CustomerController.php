@@ -130,7 +130,7 @@ class CustomerController extends Controller
      */
     public function citiesOfProvince(Province $province)
     {
-        $cities = $province->cities()->active()->mainCities()->ordered()->get(['id', 'name']);
+        $cities = $province->cities()->mainCities()->ordered()->get(['id', 'name']);
 
         // اگر برای این استان هیچ شهری در دیتابیس نیست، یک ردیف
         // پیش‌فرض با نام خود استان می‌سازیم تا اپراتور بتواند سفارش
@@ -164,7 +164,7 @@ class CustomerController extends Controller
     {
         // منطقه = ردیف فرزندِ crm_cities (سیستم یکپارچه). crm_regions بازنشسته شد.
         return response()->json(
-            $city->districts()->active()->ordered()->get(['id', 'name'])
+            $city->districts()->ordered()->get(['id', 'name'])
         );
     }
 
