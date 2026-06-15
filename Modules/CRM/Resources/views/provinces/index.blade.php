@@ -67,7 +67,7 @@
                         <div class="flex items-center gap-2">
                             @can('manage-crm-provinces')
                             <a href="{{ route('crm.provinces.edit', $province) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
-                            <form action="{{ route('crm.provinces.destroy', $province) }}" method="POST" class="inline" onsubmit="return confirm('حذف این استان انجام شود؟');">
+                            <form action="{{ route('crm.provinces.destroy', $province) }}" method="POST" class="inline" onsubmit="return confirm('حذف این استان، همهٔ شهرها و مناطق آن را هم حذف می‌کند و از سفارش‌های ثبت‌شده جدا می‌شود. مطمئنید؟');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-600 hover:text-red-800 text-sm">حذف</button>

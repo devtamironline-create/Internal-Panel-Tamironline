@@ -55,7 +55,7 @@
                         @include('crm::livewire.partials.toggle-pill', ['type' => 'province', 'row' => $province])
                         <div class="flex items-center gap-2 shrink-0">
                             <button type="button" wire:click="startEdit('province', {{ $province->id }})" class="text-blue-600 hover:text-blue-800 text-xs">ویرایش</button>
-                            <button type="button" wire:click="deleteProvince({{ $province->id }})" wire:confirm="حذف این استان؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
+                            <button type="button" wire:click="deleteProvince({{ $province->id }})" wire:confirm="حذف این استان، همهٔ شهرها و مناطق آن را هم حذف می‌کند و از سفارش‌های ثبت‌شده جدا می‌شود. مطمئنید؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
                         </div>
                     @endif
                 </div>
@@ -90,7 +90,7 @@
                                             @include('crm::livewire.partials.toggle-pill', ['type' => 'city', 'row' => $city])
                                             <div class="flex items-center gap-2 shrink-0">
                                                 <button type="button" wire:click="startEdit('city', {{ $city->id }})" class="text-blue-600 hover:text-blue-800 text-xs">ویرایش</button>
-                                                <button type="button" wire:click="deleteCity({{ $city->id }})" wire:confirm="حذف این شهر؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
+                                                <button type="button" wire:click="deleteCity({{ $city->id }})" wire:confirm="حذف این شهر، همهٔ مناطق آن را هم حذف می‌کند و از سفارش‌های ثبت‌شده جدا می‌شود. مطمئنید؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
                                             </div>
                                         @endif
                                     </div>
@@ -115,7 +115,7 @@
                                                             @include('crm::livewire.partials.toggle-pill', ['type' => 'district', 'row' => $district])
                                                             <div class="flex items-center gap-2 shrink-0">
                                                                 <button type="button" wire:click="startEdit('district', {{ $district->id }})" class="text-blue-600 hover:text-blue-800 text-xs">ویرایش</button>
-                                                                <button type="button" wire:click="deleteDistrict({{ $district->id }})" wire:confirm="حذف این منطقه؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
+                                                                <button type="button" wire:click="deleteDistrict({{ $district->id }})" wire:confirm="حذف این منطقه؛ از سفارش‌های ثبت‌شده جدا می‌شود. مطمئنید؟" class="text-rose-600 hover:text-rose-800 text-xs">حذف</button>
                                                             </div>
                                                         @endif
                                                     </div>

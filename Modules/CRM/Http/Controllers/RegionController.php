@@ -115,17 +115,8 @@ class RegionController extends Controller
     {
         $this->ensureDistrict($region);
 
-        // اگر سفارشی یا آدرس مشتری به این منطقه ارجاع داده، حذف نمی‌کنیم —
-        // به‌جایش پیشنهاد غیرفعال‌سازی می‌دهیم تا تاریخچه/داده نشکند.
-        $usedByOrders = \Modules\CRM\Models\Order::where('city_id', $region->id)->exists();
-        $usedByAddresses = \Modules\CRM\Models\CustomerAddress::where('district_id', $region->id)
-            ->orWhere('city_id', $region->id)
-            ->exists();
-
-        if ($usedByOrders || $usedByAddresses) {
-            return back()->with('error', 'این منطقه در سفارش‌ها یا آدرس مشتری‌ها استفاده شده — به‌جای حذف، آن را غیرفعال کنید.');
-        }
-
+        // حذف منطقه؛ ارجاع‌ها در سفارش/آدرس مشتری به‌صورت خودکار null می‌شوند
+        // (دادهٔ سفارش پاک نمی‌شود).
         $region->delete();
 
         return back()->with('success', 'منطقه حذف شد.');

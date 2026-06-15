@@ -73,13 +73,12 @@ class ProvinceController extends Controller
 
     public function destroy(Province $province)
     {
-        if ($province->cities()->exists()) {
-            return back()->with('error', 'این استان شامل شهر است؛ ابتدا شهرها را حذف کنید.');
-        }
-
+        // حذف آبشاری: شهرها و مناطق این استان هم حذف می‌شوند. ارجاع‌ها در
+        // سفارش/آدرس مشتری به‌صورت خودکار null می‌شوند (دادهٔ سفارش پاک نمی‌شود).
+        $province->cities()->delete();
         $province->delete();
 
         return redirect()->route('crm.provinces.index')
-            ->with('success', 'استان حذف شد.');
+            ->with('success', 'استان و همهٔ شهرها و مناطق آن حذف شد.');
     }
 }
