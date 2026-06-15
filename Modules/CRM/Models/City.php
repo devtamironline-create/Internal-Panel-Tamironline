@@ -38,11 +38,6 @@ class City extends Model
         return $this->belongsTo(Province::class);
     }
 
-    public function regions(): HasMany
-    {
-        return $this->hasMany(Region::class);
-    }
-
     /** شهر والد — فقط برای ردیف‌های «منطقه». */
     public function parent(): BelongsTo
     {

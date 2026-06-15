@@ -326,9 +326,8 @@
                             <span class="text-gray-900 dark:text-gray-100 font-medium">
                                 {{ $order->province?->name ?: '—' }}
                                 @if($order->city) <span class="text-gray-400">/</span> {{ $order->city->name }} @endif
-                                {{-- منطقه: ابتدا district (سفارش اپ، crm_cities) سپس region (سفارش پنل، crm_regions). نام منطقه خودش شامل «منطقه» است؛ پیشوند دستی نمی‌زنیم. --}}
-                                @php($__districtName = $order->district?->name ?? $order->region?->name)
-                                @if($__districtName) <span class="text-gray-400">/</span> {{ $__districtName }} @endif
+                                {{-- منطقه: ردیف فرزندِ crm_cities (district). نام منطقه خودش شامل «منطقه» است؛ پیشوند دستی نمی‌زنیم. --}}
+                                @if($order->district) <span class="text-gray-400">/</span> {{ $order->district->name }} @endif
                             </span>
                         </div>
                         @if($order->postal_code)

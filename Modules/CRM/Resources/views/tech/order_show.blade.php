@@ -51,7 +51,7 @@
                     <dd class="col-span-2 whitespace-pre-wrap">{{ $order->problem_description ?: '—' }}</dd>
 
                     <dt class="text-gray-500">استان / شهر</dt>
-                    @php($__districtName = $order->district?->name ?? $order->region?->name)
+                    @php($__districtName = $order->district?->name)
                     <dd>{{ $order->province?->name ?: '—' }}{{ $order->city ? ' / ' . $order->city->name : '' }}{{ $__districtName ? ' / ' . $__districtName : '' }}</dd>
 
                     <dt class="text-gray-500">کد پستی</dt>

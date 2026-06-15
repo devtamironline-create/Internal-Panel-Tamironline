@@ -163,7 +163,7 @@ class TechnicianSuggestionService
         $techs = Technician::query()
             ->where('status', 'active')
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id,is_active', 'regions:id,city_id', 'brands:id', 'devices:id'])
+            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id'])
             ->get();
 
         $activeStatuses = [
