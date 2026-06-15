@@ -89,7 +89,7 @@
                             <a href="{{ route('crm.cities.convert.form', $city) }}" class="text-emerald-600 hover:text-emerald-800 text-sm" title="تبدیل این شهر به منطقهٔ ذیل شهر دیگر">
                                 تبدیل به منطقه
                             </a>
-                            <form action="{{ route('crm.cities.destroy', $city) }}" method="POST" class="inline" onsubmit="return confirm('حذف این شهر انجام شود؟');">
+                            <form action="{{ route('crm.cities.destroy', $city) }}" method="POST" class="inline" onsubmit="return confirm('حذف این شهر، همهٔ مناطق آن را هم حذف می‌کند و از سفارش‌های ثبت‌شده جدا می‌شود. مطمئنید؟');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-600 hover:text-red-800 text-sm">حذف</button>

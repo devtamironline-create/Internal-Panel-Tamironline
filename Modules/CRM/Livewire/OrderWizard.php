@@ -150,7 +150,7 @@ class OrderWizard extends Component
     #[Computed]
     public function provinces()
     {
-        return Province::active()->ordered()->get(['id', 'name']);
+        return Province::ordered()->get(['id', 'name']);
     }
 
     #[Computed]
@@ -159,7 +159,7 @@ class OrderWizard extends Component
         if (! $this->provinceId) {
             return collect();
         }
-        $cities = City::where('province_id', $this->provinceId)->active()->mainCities()->ordered()->get(['id', 'name']);
+        $cities = City::where('province_id', $this->provinceId)->mainCities()->ordered()->get(['id', 'name']);
         // اگر استان شهر تعریف‌شده ندارد، یک شهر پیش‌فرض با نام خود استان
         // ساخته می‌شود تا اپراتور بتواند مرحله را رد کند. منطق در
         // CustomerController::citiesOfProvince هم هست (مسیر AJAX).
@@ -225,7 +225,7 @@ class OrderWizard extends Component
             return collect();
         }
 
-        return City::where('parent_city_id', $this->cityId)->active()->ordered()->get(['id', 'name']);
+        return City::where('parent_city_id', $this->cityId)->ordered()->get(['id', 'name']);
     }
 
     #[Computed]
@@ -598,7 +598,7 @@ class OrderWizard extends Component
             // منطقه در همین مرحله انتخاب می‌شود؛ اگر شهر منطقه دارد و
             // سفارش لید نیست، انتخاب منطقه الزامی است (لازم برای تخصیص
             // تکنسین بر اساس منطقه).
-            if ($this->cityId && City::where('parent_city_id', $this->cityId)->active()->exists()) {
+            if ($this->cityId && City::where('parent_city_id', $this->cityId)->exists()) {
                 $rules['regionId'] = 'required|integer|exists:crm_cities,id';
             }
         }

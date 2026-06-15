@@ -98,10 +98,12 @@ class CityController extends Controller
 
     public function destroy(City $city)
     {
+        // حذف آبشاری مناطق این شهر (ردیف‌های فرزند) تا یتیم نشوند.
+        $city->districts()->delete();
         $city->delete();
 
         return redirect()->route('crm.cities.index')
-            ->with('success', 'شهر حذف شد.');
+            ->with('success', 'شهر و همهٔ مناطق آن حذف شد.');
     }
 
     public function toggleActive(City $city)

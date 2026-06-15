@@ -7,8 +7,6 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Modules\CRM\Models\City;
-use Modules\CRM\Models\CustomerAddress;
-use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Province;
 
 /**
@@ -256,18 +254,22 @@ class ServiceAreaManager extends Component
         $this->guard();
         $province = Province::findOrFail($id);
 
-        if ($province->cities()->exists()) {
-            $this->flash('error', 'این استان شامل شهر است؛ ابتدا شهرها را حذف کنید.');
+        // حذف آبشاری: شهرها و مناطق این استان هم حذف می‌شوند. ارجاع‌ها در
+        // سفارش/آدرس مشتری به‌صورت خودکار null می‌شوند (دادهٔ سفارش پاک نمی‌شود).
+        try {
+            City::where('province_id', $id)->delete();
+            $province->delete();
+        } catch (\Throwable $e) {
+            $this->flash('error', 'حذف استان ممکن نشد: '.$e->getMessage());
 
             return;
         }
 
-        $province->delete();
         if ($this->openProvince === $id) {
             $this->openProvince = null;
             $this->openCity = null;
         }
-        $this->flash('success', 'استان حذف شد.');
+        $this->flash('success', 'استان و همهٔ شهرها و مناطق آن حذف شد.');
         $this->forgetData();
     }
 
@@ -276,22 +278,20 @@ class ServiceAreaManager extends Component
         $this->guard();
         $city = City::mainCities()->findOrFail($id);
 
-        if ($city->districts()->exists()) {
-            $this->flash('error', 'این شهر منطقه دارد؛ ابتدا مناطقش را حذف کنید.');
+        // حذف آبشاری مناطق این شهر.
+        try {
+            City::where('parent_city_id', $id)->delete();
+            $city->delete();
+        } catch (\Throwable $e) {
+            $this->flash('error', 'حذف شهر ممکن نشد: '.$e->getMessage());
 
             return;
         }
-        if ($this->cityInUse($id)) {
-            $this->flash('error', 'این شهر در سفارش‌ها یا آدرس مشتری استفاده شده — به‌جای حذف، غیرفعالش کنید.');
 
-            return;
-        }
-
-        $city->delete();
         if ($this->openCity === $id) {
             $this->openCity = null;
         }
-        $this->flash('success', 'شهر حذف شد.');
+        $this->flash('success', 'شهر و همهٔ مناطق آن حذف شد.');
         $this->forgetData();
     }
 
@@ -300,13 +300,14 @@ class ServiceAreaManager extends Component
         $this->guard();
         $district = City::whereNotNull('parent_city_id')->findOrFail($id);
 
-        if ($this->cityInUse($id)) {
-            $this->flash('error', 'این منطقه در سفارش‌ها یا آدرس مشتری استفاده شده — به‌جای حذف، غیرفعالش کنید.');
+        try {
+            $district->delete();
+        } catch (\Throwable $e) {
+            $this->flash('error', 'حذف منطقه ممکن نشد: '.$e->getMessage());
 
             return;
         }
 
-        $district->delete();
         $this->flash('success', 'منطقه حذف شد.');
         $this->forgetData();
     }
@@ -333,13 +334,6 @@ class ServiceAreaManager extends Component
     private function forgetData(): void
     {
         unset($this->provinces, $this->cities, $this->districts);
-    }
-
-    /** آیا این رکوردِ شهر/منطقه در سفارش یا آدرس مشتری استفاده شده؟ */
-    private function cityInUse(int $id): bool
-    {
-        return Order::where('city_id', $id)->exists()
-            || CustomerAddress::where('district_id', $id)->orWhere('city_id', $id)->exists();
     }
 
     private function uniqueProvinceSlug(string $name): string
