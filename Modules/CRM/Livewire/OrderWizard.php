@@ -150,7 +150,7 @@ class OrderWizard extends Component
     #[Computed]
     public function provinces()
     {
-        return Province::ordered()->get(['id', 'name']);
+        return Province::active()->ordered()->get(['id', 'name']);
     }
 
     #[Computed]
@@ -159,7 +159,7 @@ class OrderWizard extends Component
         if (! $this->provinceId) {
             return collect();
         }
-        $cities = City::where('province_id', $this->provinceId)->active()->ordered()->get(['id', 'name']);
+        $cities = City::where('province_id', $this->provinceId)->active()->mainCities()->ordered()->get(['id', 'name']);
         // اگر استان شهر تعریف‌شده ندارد، یک شهر پیش‌فرض با نام خود استان
         // ساخته می‌شود تا اپراتور بتواند مرحله را رد کند. منطق در
         // CustomerController::citiesOfProvince هم هست (مسیر AJAX).
