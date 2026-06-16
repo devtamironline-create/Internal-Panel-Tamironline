@@ -26,6 +26,28 @@
         <div class="mt-1 text-[11px] text-gray-400">robots: <span class="font-mono">{{ $this->preview['robots'] ?? '' }}</span></div>
     </div>
 
+    {{-- امتیاز و چک‌لیست سئو --}}
+    @php
+        $a = $this->analysis;
+        $sc = (int) ($a['score'] ?? 0);
+        $scClass = $sc >= 80 ? 'bg-emerald-100 text-emerald-700' : ($sc >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700');
+        $dot = ['good' => 'bg-emerald-500', 'ok' => 'bg-amber-500', 'bad' => 'bg-rose-500'];
+    @endphp
+    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-3">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">امتیاز سئو</span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold {{ $scClass }}">{{ $sc }}/100</span>
+        </div>
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+            @foreach($a['checks'] as $c)
+                <li class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    <span class="w-2 h-2 rounded-full shrink-0 {{ $dot[$c['status']] ?? 'bg-gray-400' }}"></span>
+                    <span>{{ $c['label'] }}</span>
+                </li>
+            @endforeach
+        </ul>
+    </div>
+
     {{-- عنوان سئو --}}
     <div>
         <div class="flex items-center justify-between mb-1">

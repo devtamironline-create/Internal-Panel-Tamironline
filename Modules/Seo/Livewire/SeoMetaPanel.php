@@ -8,6 +8,7 @@ use Livewire\Component;
 use Modules\Seo\Models\SeoMeta;
 use Modules\Seo\Services\MetaResolver;
 use Modules\Seo\Services\SeoableRegistry;
+use Modules\Seo\Services\SeoScorer;
 
 /**
  * پنل متای سئو که داخل فرم‌های ویرایشِ موجود embed می‌شود.
@@ -178,6 +179,31 @@ class SeoMetaPanel extends Component
             'canonical' => $meta['canonical'],
             'robots' => $meta['robots'],
         ];
+    }
+
+    /** تحلیل و امتیاز سئوِ زنده (چک‌لیست Rank Math-style). */
+    #[Computed]
+    public function analysis(): array
+    {
+        $model = $this->model();
+        if (! $model) {
+            return ['score' => 0, 'checks' => [], 'stats' => []];
+        }
+
+        $preview = $this->preview;
+        $content = (string) ($model->content ?? $model->description ?? $model->body ?? '');
+        $keyword = collect(preg_split('/[،,\n]+/u', (string) $this->focusKeywords))
+            ->map(fn ($k) => trim($k))->filter()->first() ?? '';
+
+        return app(SeoScorer::class)->analyze([
+            'keyword' => $keyword,
+            'title' => $preview['title'] ?? '',
+            'description' => $preview['description'] ?? '',
+            'url' => $preview['canonical'] ?? '',
+            'content' => $content,
+            'images' => [],
+            'base_host' => (string) (parse_url((string) ($preview['canonical'] ?? ''), PHP_URL_HOST) ?? ''),
+        ]);
     }
 
     public function save(): void
