@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Seo\Http\Controllers\AuditController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoSettingsController;
@@ -22,4 +23,11 @@ Route::middleware(['auth', 'can:manage-seo'])
         // مانیتور ۴۰۴
         Route::get('/404', [NotFoundController::class, 'index'])->name('not-found.index');
         Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->name('not-found.destroy');
+
+        // مانیتورینگ و آدیت
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::post('/audit/run', [AuditController::class, 'run'])->name('audit.run');
+        Route::get('/audit/run/{run}', [AuditController::class, 'show'])->name('audit.show');
+        Route::get('/audit/run/{run}/export/{format}', [AuditController::class, 'export'])
+            ->where('format', 'csv|json')->name('audit.export');
     });

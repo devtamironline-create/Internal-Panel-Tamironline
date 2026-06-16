@@ -49,6 +49,10 @@ class SeoSettingsController extends Controller
         'lb_lng' => 'local',
         // technical
         'robots_txt' => 'technical',
+        // monitoring
+        'alert_email' => 'monitoring',
+        'alert_webhook' => 'monitoring',
+        'pagespeed_api_key' => 'monitoring',
     ];
 
     public function index()
@@ -94,6 +98,9 @@ class SeoSettingsController extends Controller
             'lb_lat' => 'nullable|string|max:30',
             'lb_lng' => 'nullable|string|max:30',
             'robots_txt' => 'nullable|string|max:20000',
+            'alert_email' => 'nullable|email|max:255',
+            'alert_webhook' => 'nullable|url|max:500',
+            'pagespeed_api_key' => 'nullable|string|max:255',
         ]);
 
         foreach (self::KEYS as $key => $group) {

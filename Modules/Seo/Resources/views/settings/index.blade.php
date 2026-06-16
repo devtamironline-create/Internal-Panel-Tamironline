@@ -140,6 +140,21 @@
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">{{ old('robots_txt', $settings['robots_txt'] ?? '') }}</textarea>
         </fieldset>
 
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">مانیتورینگ و هشدار</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block text-sm">ایمیل هشدار
+                    <input name="alert_email" dir="ltr" value="{{ old('alert_email', $settings['alert_email'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+                <label class="block text-sm">وبهوک هشدار (Slack/Telegram/…)
+                    <input name="alert_webhook" dir="ltr" value="{{ old('alert_webhook', $settings['alert_webhook'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+            </div>
+            <label class="block text-sm">کلید Google PageSpeed (برای Core Web Vitals)
+                <input name="pagespeed_api_key" dir="ltr" value="{{ old('pagespeed_api_key', $settings['pagespeed_api_key'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </label>
+        </fieldset>
+
         <div class="flex justify-end">
             <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ذخیره</button>
         </div>
