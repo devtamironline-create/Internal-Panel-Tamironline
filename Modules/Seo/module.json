@@ -1,0 +1,11 @@
+{
+    "name": "Seo",
+    "alias": "seo",
+    "description": "مدیریت سئو و متادیتا (معادل Rank Math) — متای پلی‌مورفیک، متغیرها، sitemap/robots/redirect و API هدلس برای فرانت Next.js",
+    "keywords": ["seo", "meta", "schema", "sitemap"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Seo\\Providers\\SeoServiceProvider"
+    ],
+    "files": []
+}
