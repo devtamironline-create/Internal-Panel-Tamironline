@@ -4,12 +4,15 @@ namespace Modules\Site\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 
 /**
  * تاپیک‌های مقاله — برای فیلتر و marquee بالای /blog و badge کارت‌ها.
  */
 class BlogTopic extends Model
 {
+    use HasSeoMeta;
+
     protected $table = 'site_blog_topics';
 
     protected $fillable = [

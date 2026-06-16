@@ -118,6 +118,14 @@
     </ul>
 </li>
 @endcanany
+@can('manage-seo')
+<li>
+    <a href="{{ route('seo.admin.settings') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('seo.admin.*') ? 'bg-slate-700 text-white' : '' }}">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span x-show="sidebarOpen">سئو</span>
+    </a>
+</li>
+@endcan
 <li class="my-4 border-t border-slate-700"></li>
 <li>
     <a href="{{ route('admin.staff.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('admin.staff.*') ? 'bg-slate-700 text-white' : '' }}">

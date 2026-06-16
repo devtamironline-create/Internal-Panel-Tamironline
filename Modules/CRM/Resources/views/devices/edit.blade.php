@@ -86,4 +86,10 @@
     </div>
 </div>
 @include('crm::partials.entity-form-controller')
+
+@can('manage-seo')
+<div class="max-w-3xl mx-auto px-6 pb-8" dir="rtl">
+    <livewire:seo.meta-panel type="device" :model-id="$device->id" :key="'seo-device-'.$device->id" />
+</div>
+@endcan
 @endsection
