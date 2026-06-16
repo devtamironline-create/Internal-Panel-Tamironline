@@ -140,6 +140,12 @@
         <li>
             <a href="{{ route('seo.admin.audit.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.audit.*') ? 'bg-slate-700/50 text-white' : '' }}">مانیتورینگ سئو</a>
         </li>
+        <li>
+            <a href="{{ route('seo.admin.tools.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.tools.*') ? 'bg-slate-700/50 text-white' : '' }}">ابزارها و Audit Log</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.roles.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.roles.*') ? 'bg-slate-700/50 text-white' : '' }}">دسترسی نقش‌ها</a>
+        </li>
     </ul>
 </li>
 @endcan
