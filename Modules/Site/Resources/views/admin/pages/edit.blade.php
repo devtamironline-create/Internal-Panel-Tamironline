@@ -24,5 +24,11 @@
             <a href="{{ route('site.admin.pages.index') }}" class="px-4 py-2 bg-gray-100 rounded text-sm">انصراف</a>
         </div>
     </form>
+
+    @can('manage-seo')
+    <div class="mt-6" dir="rtl">
+        <livewire:seo.meta-panel type="page" :model-id="$page->id" :key="'seo-page-'.$page->id" />
+    </div>
+    @endcan
 </div>
 @endsection

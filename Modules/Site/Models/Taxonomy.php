@@ -4,9 +4,12 @@ namespace Modules\Site\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 
 class Taxonomy extends Model
 {
+    use HasSeoMeta;
+
     protected $table = 'site_taxonomies';
 
     protected $fillable = [

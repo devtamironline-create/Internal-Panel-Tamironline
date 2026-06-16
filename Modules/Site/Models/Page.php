@@ -5,9 +5,11 @@ namespace Modules\Site\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 
 class Page extends Model
 {
+    use HasSeoMeta;
     use HasUlids;
 
     protected $table = 'site_pages';

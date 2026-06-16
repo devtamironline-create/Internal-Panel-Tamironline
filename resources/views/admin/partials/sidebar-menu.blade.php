@@ -118,6 +118,37 @@
     </ul>
 </li>
 @endcanany
+@can('manage-seo')
+<li x-data="{ seoOpen: {{ request()->routeIs('seo.admin.*') ? 'true' : 'false' }} }">
+    <button @click="seoOpen = !seoOpen" class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('seo.admin.*') ? 'bg-slate-700 text-white' : '' }}">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <span x-show="sidebarOpen">سئو</span>
+        </div>
+        <svg x-show="sidebarOpen" class="w-4 h-4 transition-transform" :class="seoOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+    <ul x-show="seoOpen && sidebarOpen" x-transition class="mt-1 mr-4 space-y-1">
+        <li>
+            <a href="{{ route('seo.admin.settings') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.settings') ? 'bg-slate-700/50 text-white' : '' }}">تنظیمات سئو</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.redirects.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.redirects.*') ? 'bg-slate-700/50 text-white' : '' }}">ریدایرکت‌ها</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.not-found.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.not-found.*') ? 'bg-slate-700/50 text-white' : '' }}">مانیتور ۴۰۴</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.audit.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.audit.*') ? 'bg-slate-700/50 text-white' : '' }}">مانیتورینگ سئو</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.tools.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.tools.*') ? 'bg-slate-700/50 text-white' : '' }}">ابزارها و Audit Log</a>
+        </li>
+        <li>
+            <a href="{{ route('seo.admin.roles.index') }}" class="block px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white text-sm {{ request()->routeIs('seo.admin.roles.*') ? 'bg-slate-700/50 text-white' : '' }}">دسترسی نقش‌ها</a>
+        </li>
+    </ul>
+</li>
+@endcan
 <li class="my-4 border-t border-slate-700"></li>
 <li>
     <a href="{{ route('admin.staff.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white {{ request()->routeIs('admin.staff.*') ? 'bg-slate-700 text-white' : '' }}">

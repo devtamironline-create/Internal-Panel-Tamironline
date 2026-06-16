@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
+use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Site\Models\Concerns\HasComments;
 use Modules\Site\Models\Concerns\HasMedia;
 
@@ -15,6 +16,7 @@ use Modules\Site\Models\Concerns\HasMedia;
 class Article extends Model
 {
     use HasComments;
+    use HasSeoMeta;
     use HasMedia;
 
     protected $table = 'site_blog_articles';

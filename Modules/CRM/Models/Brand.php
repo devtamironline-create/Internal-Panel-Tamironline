@@ -4,11 +4,13 @@ namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Site\Models\Concerns\HasMedia;
 
 class Brand extends Model
 {
     use HasMedia;
+    use HasSeoMeta;
 
     protected $table = 'crm_brands';
 

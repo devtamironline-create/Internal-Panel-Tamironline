@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
+use Modules\Seo\Concerns\HasSeoMeta;
 
 class Question extends Model
 {
+    use HasSeoMeta;
+
     protected $table = 'site_forum_questions';
 
     protected $fillable = [

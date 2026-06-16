@@ -12,5 +12,11 @@
         @method('PUT')
         @include('site::admin.blog.articles._form')
     </form>
+
+    @can('manage-seo')
+    <div class="mt-6" dir="rtl">
+        <livewire:seo.meta-panel type="article" :model-id="$article->id" :key="'seo-article-'.$article->id" />
+    </div>
+    @endcan
 </div>
 @endsection
