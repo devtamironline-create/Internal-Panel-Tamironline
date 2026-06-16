@@ -229,6 +229,8 @@ class SeoMetaPanel extends Component
 
         $model->seoMeta()->updateOrCreate([], $this->metaAttributes());
 
+        \Modules\Seo\Models\SeoChangeLog::record('updated', 'meta:'.$this->type.':'.$this->modelId, 'متای سئوِ آیتم ذخیره شد.');
+
         $this->saved = 'متای سئو ذخیره شد.';
     }
 

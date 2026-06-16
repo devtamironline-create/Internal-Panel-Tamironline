@@ -4,6 +4,7 @@ namespace Modules\Seo\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Seo\Models\SeoChangeLog;
 use Modules\Seo\Models\SeoSetting;
 
 /**
@@ -53,6 +54,10 @@ class SeoSettingsController extends Controller
         'alert_email' => 'monitoring',
         'alert_webhook' => 'monitoring',
         'pagespeed_api_key' => 'monitoring',
+        // integrations
+        'indexnow_key' => 'integrations',
+        'ga4_measurement_id' => 'integrations',
+        'gsc_property' => 'integrations',
     ];
 
     public function index()
@@ -101,6 +106,9 @@ class SeoSettingsController extends Controller
             'alert_email' => 'nullable|email|max:255',
             'alert_webhook' => 'nullable|url|max:500',
             'pagespeed_api_key' => 'nullable|string|max:255',
+            'indexnow_key' => 'nullable|string|max:255',
+            'ga4_measurement_id' => 'nullable|string|max:50',
+            'gsc_property' => 'nullable|string|max:255',
         ]);
 
         foreach (self::KEYS as $key => $group) {
@@ -109,6 +117,8 @@ class SeoSettingsController extends Controller
 
         $sameAs = array_values(array_filter(array_map('trim', (array) $request->input('kg_same_as', []))));
         SeoSetting::setJson('kg_same_as', $sameAs, 'knowledge_graph');
+
+        SeoChangeLog::record('updated', 'settings', 'تنظیمات سراسری سئو به‌روزرسانی شد.');
 
         return back()->with('success', 'تنظیمات سئو ذخیره شد.');
     }

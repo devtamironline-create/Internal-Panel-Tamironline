@@ -5,6 +5,7 @@ namespace Modules\Seo\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
+use Modules\Seo\Models\SeoChangeLog;
 use Modules\Seo\Models\SeoRedirect;
 
 /**
@@ -46,7 +47,9 @@ class RedirectController extends Controller
         }
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
-        SeoRedirect::create($validated);
+        $redirect = SeoRedirect::create($validated);
+
+        SeoChangeLog::record('created', 'redirect', $redirect->source.' → '.($redirect->target ?? (string) $redirect->status_code));
 
         return back()->with('success', 'ریدایرکت اضافه شد.');
     }

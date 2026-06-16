@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
+use Modules\Seo\Http\Controllers\SeoRoleController;
 use Modules\Seo\Http\Controllers\SeoSettingsController;
+use Modules\Seo\Http\Controllers\SeoToolsController;
 
 // بخش مدیریت سئو (نیاز به لاگین + دسترسی manage-seo)
 Route::middleware(['auth', 'can:manage-seo'])
@@ -30,4 +32,13 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/audit/run/{run}', [AuditController::class, 'show'])->name('audit.show');
         Route::get('/audit/run/{run}/export/{format}', [AuditController::class, 'export'])
             ->where('format', 'csv|json')->name('audit.export');
+
+        // ابزارها: Import/Export + Audit log
+        Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
+        Route::get('/tools/export', [SeoToolsController::class, 'export'])->name('tools.export');
+        Route::post('/tools/import', [SeoToolsController::class, 'import'])->name('tools.import');
+
+        // Role manager
+        Route::get('/roles', [SeoRoleController::class, 'index'])->name('roles.index');
+        Route::put('/roles', [SeoRoleController::class, 'update'])->name('roles.update');
     });

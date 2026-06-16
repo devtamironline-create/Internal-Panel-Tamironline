@@ -155,6 +155,22 @@
             </label>
         </fieldset>
 
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">اتصال‌ها (Integrations)</legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label class="block text-sm">کلید IndexNow
+                    <input name="indexnow_key" dir="ltr" value="{{ old('indexnow_key', $settings['indexnow_key'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+                <label class="block text-sm">GA4 Measurement ID
+                    <input name="ga4_measurement_id" dir="ltr" value="{{ old('ga4_measurement_id', $settings['ga4_measurement_id'] ?? '') }}" placeholder="G-XXXXXXX" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+                <label class="block text-sm">Search Console Property
+                    <input name="gsc_property" dir="ltr" value="{{ old('gsc_property', $settings['gsc_property'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+            </div>
+            <p class="text-xs text-gray-500">برای ارسال فوری: <code class="font-mono ltr">php artisan seo:ping --all</code> (نیازمند کلید IndexNow و میزبانیِ فایل <code class="font-mono ltr">{key}.txt</code> روی دامنه).</p>
+        </fieldset>
+
         <div class="flex justify-end">
             <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ذخیره</button>
         </div>
