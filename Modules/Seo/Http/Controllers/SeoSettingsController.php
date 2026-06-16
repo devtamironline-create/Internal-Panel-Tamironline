@@ -34,6 +34,19 @@ class SeoSettingsController extends Controller
         'kg_type' => 'knowledge_graph',
         'kg_name' => 'knowledge_graph',
         'kg_logo' => 'knowledge_graph',
+        // local business (Local SEO)
+        'lb_enabled' => 'local',
+        'lb_type' => 'local',
+        'lb_name' => 'local',
+        'lb_phone' => 'local',
+        'lb_price_range' => 'local',
+        'lb_street' => 'local',
+        'lb_city' => 'local',
+        'lb_region' => 'local',
+        'lb_postal' => 'local',
+        'lb_country' => 'local',
+        'lb_lat' => 'local',
+        'lb_lng' => 'local',
         // technical
         'robots_txt' => 'technical',
     ];
@@ -68,6 +81,18 @@ class SeoSettingsController extends Controller
             'kg_logo' => 'nullable|string|max:500',
             'kg_same_as' => 'nullable|array',
             'kg_same_as.*' => 'nullable|string|max:255',
+            'lb_enabled' => 'nullable|in:1',
+            'lb_type' => 'nullable|string|max:50',
+            'lb_name' => 'nullable|string|max:255',
+            'lb_phone' => 'nullable|string|max:50',
+            'lb_price_range' => 'nullable|string|max:20',
+            'lb_street' => 'nullable|string|max:255',
+            'lb_city' => 'nullable|string|max:100',
+            'lb_region' => 'nullable|string|max:100',
+            'lb_postal' => 'nullable|string|max:20',
+            'lb_country' => 'nullable|string|max:2',
+            'lb_lat' => 'nullable|string|max:30',
+            'lb_lng' => 'nullable|string|max:30',
             'robots_txt' => 'nullable|string|max:20000',
         ]);
 

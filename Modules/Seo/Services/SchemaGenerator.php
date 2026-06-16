@@ -1,0 +1,303 @@
+<?php
+
+namespace Modules\Seo\Services;
+
+use Illuminate\Database\Eloquent\Model;
+use Modules\Seo\Models\SeoSetting;
+
+/**
+ * تولید JSON-LD (schema.org) برای هر آیتم. خروجی یک لیست از نودهاست که
+ * فرانت هرکدام را در یک <script type="application/ld+json"> رندر می‌کند.
+ *
+ * نودهای پایه (Organization/WebSite/WebPage/BreadcrumbList) همیشه می‌آیند؛
+ * نود اختصاصی بر اساس نوع‌محتوا (Article/Service/QAPage/…) اضافه می‌شود؛
+ * و اگر ادمین custom_schema گذاشته باشد، عیناً merge می‌شود.
+ */
+class SchemaGenerator
+{
+    /**
+     * @param  array<string, mixed>  $meta  خروجی MetaResolver::resolve (بدون jsonld)
+     * @return list<array<string, mixed>>
+     */
+    public function generate(string $type, Model $model, array $meta): array
+    {
+        $graph = [];
+
+        if ($org = $this->organization()) {
+            $graph[] = $org;
+        }
+        $graph[] = $this->website();
+        $graph[] = $this->webPage($type, $meta);
+
+        if ($crumbs = $this->breadcrumb($meta)) {
+            $graph[] = $crumbs;
+        }
+
+        if ($specific = $this->typeSpecific($type, $model, $meta)) {
+            $graph[] = $specific;
+        }
+
+        if ($lb = $this->localBusiness()) {
+            $graph[] = $lb;
+        }
+
+        // custom schema ادمین (یک نود یا آرایه‌ای از نودها)
+        $custom = method_exists($model, 'seoMeta') ? ($model->seoMeta?->custom_schema) : null;
+        if (is_array($custom) && $custom !== []) {
+            if (array_is_list($custom)) {
+                $graph = array_merge($graph, $custom);
+            } else {
+                $graph[] = $custom;
+            }
+        }
+
+        return array_values(array_filter($graph));
+    }
+
+    private function baseUrl(): string
+    {
+        return rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
+    }
+
+    /** @return array<string, mixed>|null */
+    private function organization(): ?array
+    {
+        $name = SeoSetting::get('kg_name') ?: (SeoSetting::get('site_name') ?: config('app.name'));
+        if (! $name) {
+            return null;
+        }
+        $type = SeoSetting::get('kg_type') ?: 'Organization';
+
+        $node = [
+            '@context' => 'https://schema.org',
+            '@type' => $type,
+            '@id' => $this->baseUrl().'/#organization',
+            'name' => $name,
+            'url' => $this->baseUrl(),
+        ];
+        if ($logo = SeoSetting::get('kg_logo')) {
+            $node['logo'] = $logo;
+            $node['image'] = $logo;
+        }
+        $sameAs = SeoSetting::getJson('kg_same_as', []);
+        if ($sameAs !== []) {
+            $node['sameAs'] = array_values($sameAs);
+        }
+
+        return $node;
+    }
+
+    /** @return array<string, mixed> */
+    private function website(): array
+    {
+        $node = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            '@id' => $this->baseUrl().'/#website',
+            'url' => $this->baseUrl(),
+            'name' => SeoSetting::get('site_name') ?: config('app.name'),
+            'publisher' => ['@id' => $this->baseUrl().'/#organization'],
+        ];
+
+        // Sitelinks Searchbox (اگر فرانت مسیر جستجو دارد)
+        $node['potentialAction'] = [
+            '@type' => 'SearchAction',
+            'target' => [
+                '@type' => 'EntryPoint',
+                'urlTemplate' => $this->baseUrl().'/search?q={search_term_string}',
+            ],
+            'query-input' => 'required name=search_term_string',
+        ];
+
+        return $node;
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function webPage(string $type, array $meta): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            '@id' => ($meta['canonical'] ?? $this->baseUrl()).'#webpage',
+            'url' => $meta['canonical'] ?? $this->baseUrl(),
+            'name' => $meta['title'] ?? null,
+            'description' => $meta['description'] ?? null,
+            'isPartOf' => ['@id' => $this->baseUrl().'/#website'],
+            'inLanguage' => 'fa-IR',
+        ];
+    }
+
+    /**
+     * BreadcrumbList از روی segmentهای مسیر canonical.
+     *
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>|null
+     */
+    private function breadcrumb(array $meta): ?array
+    {
+        $canonical = (string) ($meta['canonical'] ?? '');
+        $path = trim((string) parse_url($canonical, PHP_URL_PATH), '/');
+        if ($path === '') {
+            return null;
+        }
+
+        $segments = explode('/', $path);
+        $items = [[
+            '@type' => 'ListItem',
+            'position' => 1,
+            'name' => 'خانه',
+            'item' => $this->baseUrl().'/',
+        ]];
+
+        $acc = '';
+        foreach ($segments as $i => $seg) {
+            $acc .= '/'.$seg;
+            $name = $i === array_key_last($segments)
+                ? ($meta['breadcrumb_title'] ?? $this->humanize($seg))
+                : $this->humanize($seg);
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $i + 2,
+                'name' => $name,
+                'item' => $this->baseUrl().$acc,
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $items,
+        ];
+    }
+
+    /**
+     * نود اختصاصیِ نوع‌محتوا.
+     *
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>|null
+     */
+    private function typeSpecific(string $type, Model $model, array $meta): ?array
+    {
+        return match ($type) {
+            'article' => $this->article($model, $meta),
+            'brand', 'device' => $this->service($model, $meta),
+            'forum_question' => $this->qaPage($model, $meta),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function article(Model $model, array $meta): array
+    {
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'BlogPosting',
+            'headline' => $meta['title'] ?? $model->getAttribute('title'),
+            'description' => $meta['description'] ?? null,
+            'image' => $meta['og']['image'] ?? null,
+            'datePublished' => $this->iso($model->getAttribute('published_at')),
+            'dateModified' => $this->iso($model->getAttribute('updated_at')),
+            'mainEntityOfPage' => ['@id' => ($meta['canonical'] ?? '').'#webpage'],
+            'publisher' => ['@id' => $this->baseUrl().'/#organization'],
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function service(Model $model, array $meta): array
+    {
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Service',
+            'name' => $meta['title'] ?? $model->getAttribute('name'),
+            'description' => $meta['description'] ?? null,
+            'serviceType' => $model->getAttribute('name'),
+            'areaServed' => 'IR',
+            'provider' => ['@id' => $this->baseUrl().'/#organization'],
+            'url' => $meta['canonical'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function qaPage(Model $model, array $meta): array
+    {
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'QAPage',
+            'mainEntity' => array_filter([
+                '@type' => 'Question',
+                'name' => $model->getAttribute('title'),
+                'text' => $this->plain((string) $model->getAttribute('body')),
+                'answerCount' => (int) $model->getAttribute('answers_count'),
+            ], fn ($v) => $v !== null && $v !== ''),
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /** LocalBusiness از تنظیمات Local SEO (در صورت فعال‌بودن). */
+    private function localBusiness(): ?array
+    {
+        if (SeoSetting::get('lb_enabled') !== '1') {
+            return null;
+        }
+
+        $node = array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => SeoSetting::get('lb_type') ?: 'LocalBusiness',
+            '@id' => $this->baseUrl().'/#localbusiness',
+            'name' => SeoSetting::get('lb_name') ?: SeoSetting::get('site_name'),
+            'telephone' => SeoSetting::get('lb_phone'),
+            'priceRange' => SeoSetting::get('lb_price_range'),
+            'url' => $this->baseUrl(),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $address = array_filter([
+            '@type' => 'PostalAddress',
+            'streetAddress' => SeoSetting::get('lb_street'),
+            'addressLocality' => SeoSetting::get('lb_city'),
+            'addressRegion' => SeoSetting::get('lb_region'),
+            'postalCode' => SeoSetting::get('lb_postal'),
+            'addressCountry' => SeoSetting::get('lb_country') ?: 'IR',
+        ], fn ($v) => $v !== null && $v !== '');
+        if (count($address) > 1) {
+            $node['address'] = $address;
+        }
+
+        $lat = SeoSetting::get('lb_lat');
+        $lng = SeoSetting::get('lb_lng');
+        if ($lat && $lng) {
+            $node['geo'] = ['@type' => 'GeoCoordinates', 'latitude' => $lat, 'longitude' => $lng];
+        }
+
+        return $node;
+    }
+
+    private function iso($val): ?string
+    {
+        if (! $val) {
+            return null;
+        }
+
+        return rescue(fn () => \Illuminate\Support\Carbon::parse($val)->toAtomString(), null);
+    }
+
+    private function humanize(string $slug): string
+    {
+        return trim(str_replace(['-', '_'], ' ', urldecode($slug)));
+    }
+
+    private function plain(string $html): string
+    {
+        return \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($html))), 500, '');
+    }
+}

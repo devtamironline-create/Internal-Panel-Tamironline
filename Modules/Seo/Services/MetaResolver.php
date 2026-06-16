@@ -21,6 +21,7 @@ class MetaResolver
         private readonly SeoableRegistry $registry,
         private readonly VariableRenderer $variables,
         private readonly RobotsBuilder $robots,
+        private readonly SchemaGenerator $schema,
     ) {}
 
     /**
@@ -79,7 +80,7 @@ class MetaResolver
             'creator' => SeoSetting::get('twitter_creator'),
         ];
 
-        return [
+        $result = [
             'type' => $type,
             'title' => $title,
             'description' => $description,
@@ -89,8 +90,14 @@ class MetaResolver
             'og' => $og,
             'twitter' => $twitter,
             'breadcrumb_title' => self::pick($meta?->breadcrumb_title, $context['title'] ?? null),
-            'jsonld' => [], // فاز ۳: Schema Generator
         ];
+
+        // JSON-LD فقط برای آیتم‌های index‌پذیر تولید می‌شود.
+        $result['jsonld'] = empty($robotsFlags['noindex'])
+            ? $this->schema->generate($type, $model, $result)
+            : [];
+
+        return $result;
     }
 
     /**
