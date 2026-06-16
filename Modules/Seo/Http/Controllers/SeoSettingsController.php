@@ -34,6 +34,8 @@ class SeoSettingsController extends Controller
         'kg_type' => 'knowledge_graph',
         'kg_name' => 'knowledge_graph',
         'kg_logo' => 'knowledge_graph',
+        // technical
+        'robots_txt' => 'technical',
     ];
 
     public function index()
@@ -66,6 +68,7 @@ class SeoSettingsController extends Controller
             'kg_logo' => 'nullable|string|max:500',
             'kg_same_as' => 'nullable|array',
             'kg_same_as.*' => 'nullable|string|max:255',
+            'robots_txt' => 'nullable|string|max:20000',
         ]);
 
         foreach (self::KEYS as $key => $group) {

@@ -156,6 +156,12 @@ return [
         'id' => 'شناسهٔ آیتم',
     ],
 
+    // پیش‌فرض‌های sitemap (در سطح نوع با کلیدهای priority/changefreq قابل override).
+    'sitemap' => [
+        'priority' => 0.7,
+        'changefreq' => 'weekly',
+    ],
+
     // robots پیش‌فرض سراسری (وقتی آیتم و نوع چیزی تعیین نکرده‌اند).
     'robots_default' => [
         'noindex' => false,

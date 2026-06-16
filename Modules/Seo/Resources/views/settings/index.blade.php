@@ -93,6 +93,13 @@
             </div>
         </fieldset>
 
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">robots.txt</legend>
+            <p class="text-xs text-gray-500">اگر خالی بماند، نسخهٔ پیش‌فرض با ارجاع به sitemap تولید می‌شود. خروجی در <code class="font-mono ltr">/v1/seo/robots.txt</code> سرو می‌شود.</p>
+            <textarea name="robots_txt" rows="6" dir="ltr" placeholder="User-agent: *&#10;Allow: /"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">{{ old('robots_txt', $settings['robots_txt'] ?? '') }}</textarea>
+        </fieldset>
+
         <div class="flex justify-end">
             <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ذخیره</button>
         </div>
