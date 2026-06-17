@@ -6,7 +6,6 @@
     $providerPhone   = CrmSetting::get('invoice_provider_phone', '');
     $providerPostal  = CrmSetting::get('invoice_provider_postal_code', '');
     $providerAddress = CrmSetting::get('invoice_provider_address', '');
-    $notes           = CrmSetting::get('invoice_print_notes', '');
     $logoPath        = CrmSetting::get('invoice_provider_logo_path', '');
     $stampPath       = CrmSetting::get('invoice_print_stamp_path', '');
     $logoUrl         = $logoPath  ? route('crm.invoice.asset', 'logo')  : null;
@@ -23,6 +22,12 @@
     $provinceName = optional($order?->province ?? null)->name ?? '';
     $orderAddr    = $order?->address ?? '';
     $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
+
+    // اطلاعات خدمت
+    $serviceTypeMap = ['repair' => 'تعمیر', 'service' => 'سرویس'];
+    $serviceType = $serviceTypeMap[$order?->order_type] ?? ($order?->order_type ?? '—');
+    $deviceName  = optional($order?->device)->name ?: '—';
+    $brandName   = optional($order?->brand)->name ?: '—';
 
     $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
     $grandTotal = (int) ($invoice->total_amount ?? 0);
@@ -43,7 +48,6 @@
             $rows->push(['title' => is_string($title) ? $title : (string) ($title['title'] ?? ''), 'total' => $unit]);
         }
     }
-
     if ($rows->isEmpty()) {
         $rows->push(['title' => 'انجام خدمات', 'total' => $grandTotal]);
     }
@@ -60,90 +64,129 @@
         ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'],
         number_format((int) $n)
     );
+
+    $receiptUrl = route('crm.invoice.public', $invoice->invoice_code);
 @endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <title>صورتحساب {{ $invoice->invoice_code }}</title>
-    {{-- CSSِ ساده و سازگار با mPDF — بدون flex/float/transform/writing-mode/calc --}}
     <style>
-        body { font-family: dejavusans, sans-serif; font-size: 12px; color: #111; }
+        body { font-family: dejavusans, sans-serif; font-size: 11px; color: #1f2937; }
         table { border-collapse: collapse; }
-        .head { width: 100%; border-bottom: 1px solid #e5e7eb; }
-        .head td { vertical-align: middle; padding-bottom: 10px; }
-        .brand-name { font-size: 20px; font-weight: bold; color: #0f172a; }
-        .brand-sub { font-size: 11px; color: #64748b; }
-        .meta { border: 1px solid #d1d5db; font-size: 12px; }
-        .meta td { border: 1px solid #d1d5db; padding: 6px 10px; }
-        .meta .lbl { background: #f9fafb; font-weight: bold; }
-        h1.title { text-align: center; font-size: 17px; font-weight: bold; margin: 16px 0 12px; color: #0f172a; }
-        .party { width: 100%; border: 1px solid #d1d5db; margin-bottom: 8px; }
-        .party td { border: 1px solid #d1d5db; padding: 10px; font-size: 12.5px; line-height: 1.9; vertical-align: middle; }
-        .party .plabel { width: 90px; background: #f9fafb; font-weight: bold; text-align: center; }
-        .items { width: 100%; border: 1px solid #d1d5db; font-size: 12.5px; margin-top: 4px; }
-        .items th, .items td { border: 1px solid #d1d5db; padding: 9px 8px; text-align: center; }
-        .items th { background: #f9fafb; font-weight: bold; }
+        .frame { border: 2px solid #1e3a5f; padding: 6px; }
+
+        .top { width: 100%; }
+        .top td { vertical-align: middle; }
+        .brand-name { font-size: 18px; font-weight: bold; color: #1e3a5f; }
+        .brand-sub { font-size: 10px; color: #64748b; }
+        .title { font-size: 22px; font-weight: bold; color: #1e3a5f; text-align: center; }
+        .metabox { border: 1px solid #1e3a5f; border-radius: 4px; font-size: 10px; margin-bottom: 4px; }
+        .metabox td { padding: 4px 8px; }
+        .metabox .ml { background: #eef2f7; font-weight: bold; border-left: 1px solid #1e3a5f; }
+
+        /* بخش‌های اطلاعاتی با برچسب عمودی */
+        .sec { width: 100%; border: 1px solid #1e3a5f; border-bottom: none; }
+        .sec.last { border-bottom: 1px solid #1e3a5f; }
+        .sec td { vertical-align: middle; }
+        .vlabel { width: 30px; background: #1e3a5f; text-align: center; }
+        .vtext { display: inline-block; color: #fff; font-weight: bold; font-size: 11px;
+                 white-space: nowrap; transform: rotate(-90deg); }
+        .fields { padding: 8px 10px; line-height: 1.9; font-size: 11px; }
+        .fields .lbl { font-weight: bold; color: #1e3a5f; }
+
+        .sec-head { background: #e8eef5; border: 1px solid #1e3a5f; border-bottom: none;
+                    text-align: center; font-weight: bold; font-size: 12px; padding: 6px; }
+        .items { width: 100%; border: 1px solid #1e3a5f; font-size: 11px; }
+        .items th, .items td { border: 1px solid #1e3a5f; padding: 8px 6px; text-align: center; }
+        .items th { background: #eef2f7; font-weight: bold; }
         .items td.desc { text-align: right; }
-        .items tr.total td { background: #f9fafb; font-weight: bold; }
-        .section-title { background: #f3f4f6; border: 1px solid #d1d5db; border-bottom: none; padding: 7px; font-weight: bold; text-align: center; font-size: 13px; }
-        .footer { width: 100%; margin-top: 16px; }
-        .footer td { vertical-align: top; font-size: 11.5px; color: #475569; line-height: 1.9; }
+        .items tr.total td { background: #eef2f7; font-weight: bold; }
+
+        .bottom { width: 100%; margin-top: 10px; }
+        .bottom td { vertical-align: top; }
+        .qrbox { border: 1px solid #1e3a5f; padding: 6px; text-align: center; width: 120px; }
+        .qrbox .qrlabel { font-size: 9px; color: #1e3a5f; font-weight: bold; margin-bottom: 4px; }
+        .qrbox .qrcode { font-size: 8px; color: #64748b; margin-top: 2px; }
+        .stamp { width: 130px; }
     </style>
 </head>
 <body>
-    <table class="head">
+<div class="frame">
+
+    {{-- سربرگ: لوگو راست، عنوان وسط، شماره/تاریخ چپ --}}
+    <table class="top">
         <tr>
-            <td style="text-align: right;">
+            <td style="width: 32%; text-align: right;">
                 @if($logoUrl)
-                    <img src="{{ $logoUrl }}" style="height: 60px;" alt="">
+                    <img src="{{ $logoUrl }}" style="height: 52px;" alt="">
                 @else
                     <span class="brand-name">{{ $providerName }}</span><br>
                     <span class="brand-sub">{{ $providerTagline }}</span>
                 @endif
             </td>
-            <td style="text-align: left;">
-                <table class="meta">
-                    <tr><td class="lbl">شماره فاکتور</td><td dir="ltr">{{ $invoice->invoice_code }}</td></tr>
-                    <tr><td class="lbl">تاریخ</td><td dir="ltr">@jdate($invoice->issued_at ?? $invoice->created_at)</td></tr>
+            <td style="width: 36%;"><div class="title">صورتحساب خدمات</div></td>
+            <td style="width: 32%; text-align: left;">
+                <table class="metabox" style="margin-right: auto;">
+                    <tr><td class="ml">شماره فاکتور</td><td dir="ltr">{{ $invoice->invoice_code }}</td></tr>
+                </table>
+                <table class="metabox" style="margin-right: auto;">
+                    <tr><td class="ml">تاریخ</td><td dir="ltr">@jdate($invoice->issued_at ?? $invoice->created_at)</td></tr>
                 </table>
             </td>
         </tr>
     </table>
 
-    <h1 class="title">صورتحساب خدمات</h1>
+    <div style="height: 6px;"></div>
 
-    <table class="party">
+    {{-- ارائه‌دهنده --}}
+    <table class="sec">
         <tr>
-            <td class="plabel">ارائه‌دهنده</td>
-            <td>
-                <strong>نام شخص:</strong> {{ $providerName }} &nbsp;&nbsp;
-                <strong>تلفن:</strong> <span dir="ltr">{{ $providerPhone }}</span> &nbsp;&nbsp;
-                <strong>کد پستی:</strong> <span dir="ltr">{{ $providerPostal }}</span>
-                @if($providerAddress)<br><strong>آدرس:</strong> {{ $providerAddress }}@endif
+            <td class="vlabel"><span class="vtext">ارائه‌دهنده</span></td>
+            <td class="fields">
+                <span class="lbl">نام:</span> {{ $providerName }} &nbsp;&nbsp;
+                <span class="lbl">شماره تلفن:</span> <span dir="ltr">{{ $providerPhone }}</span> &nbsp;&nbsp;
+                <span class="lbl">آدرس:</span> {{ $providerAddress }} &nbsp;&nbsp;
+                <span class="lbl">کد پستی:</span> <span dir="ltr">{{ $providerPostal }}</span>
             </td>
         </tr>
     </table>
 
-    <table class="party">
+    {{-- مشتری --}}
+    <table class="sec">
         <tr>
-            <td class="plabel">مشتری</td>
-            <td>
-                <strong>نام شخص:</strong> {{ $custName }}
-                @if($custMobile)&nbsp;&nbsp;<strong>موبایل:</strong> <span dir="ltr">{{ $custMobile }}</span>@endif
-                @if($custPhone)&nbsp;&nbsp;<strong>تلفن:</strong> <span dir="ltr">{{ $custPhone }}</span>@endif
-                @if($custAddr !== '')<br><strong>نشانی:</strong> {{ $custAddr }}@endif
+            <td class="vlabel"><span class="vtext">مشتری</span></td>
+            <td class="fields">
+                <span class="lbl">نام:</span> {{ $custName }} &nbsp;&nbsp;
+                <span class="lbl">شماره تلفن:</span> <span dir="ltr">{{ $custMobile ?: $custPhone }}</span><br>
+                <span class="lbl">آدرس:</span> {{ $custAddr !== '' ? $custAddr : '—' }}
             </td>
         </tr>
     </table>
 
-    <div class="section-title">مشخصات کالا یا خدمات مورد معامله</div>
+    {{-- اطلاعات خدمت --}}
+    <table class="sec last">
+        <tr>
+            <td class="vlabel"><span class="vtext">اطلاعات خدمت</span></td>
+            <td class="fields">
+                <span class="lbl">نوع خدمت:</span> {{ $serviceType }} &nbsp;&nbsp;
+                <span class="lbl">دستگاه:</span> {{ $deviceName }} &nbsp;&nbsp;
+                <span class="lbl">برند:</span> {{ $brandName }}
+            </td>
+        </tr>
+    </table>
+
+    <div style="height: 8px;"></div>
+
+    {{-- شرح خدمات --}}
+    <div class="sec-head">شرح خدمات صورت گرفته</div>
     <table class="items">
         <thead>
             <tr>
-                <th style="width: 44px;">ردیف</th>
+                <th style="width: 42px;">ردیف</th>
                 <th>شرح کالا/خدمت</th>
-                <th style="width: 170px;">مبلغ کل (تومان)</th>
+                <th style="width: 160px;">مبلغ کل (تومان)</th>
             </tr>
         </thead>
         <tbody>
@@ -161,15 +204,28 @@
         </tbody>
     </table>
 
-    @if($notes || $stampUrl)
-    <table class="footer">
+    {{-- پاورقی: QR راست، مهر چپ --}}
+    <table class="bottom">
         <tr>
-            <td>{{ $notes }}</td>
-            @if($stampUrl)
-                <td style="width: 150px; text-align: left;"><img src="{{ $stampUrl }}" style="width: 120px;" alt=""></td>
-            @endif
+            <td style="width: 140px; text-align: right;">
+                <div class="qrbox">
+                    <div class="qrlabel">اعتبارسنجی QR-CODE</div>
+                    <barcode code="{{ $receiptUrl }}" type="QR" class="barcode" size="0.9" error="M" disableborder="1" />
+                    <div class="qrcode" dir="ltr">{{ $invoice->invoice_code }}</div>
+                </div>
+            </td>
+            <td></td>
+            <td style="width: 150px; text-align: left; vertical-align: bottom;">
+                @if($stampUrl)
+                    <img src="{{ $stampUrl }}" class="stamp" alt="">
+                @else
+                    <div style="font-size: 10px; color: #1e3a5f; font-weight: bold;">{{ $providerName }}</div>
+                    <div style="font-size: 9px; color: #64748b;">{{ $providerTagline }}</div>
+                @endif
+            </td>
         </tr>
     </table>
-    @endif
+
+</div>
 </body>
 </html>

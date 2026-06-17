@@ -16,7 +16,9 @@ final class InvoicePdf
      */
     public static function render(Invoice $invoice): string
     {
-        $invoice->loadMissing(['order.items', 'customer']);
+        $invoice->loadMissing([
+            'order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer',
+        ]);
 
         // نسخهٔ مخصوص PDF — CSSِ ساده و سازگار با mPDF (بدون flex/float/
         // transform/writing-mode/calc که در نسخهٔ HTML باعث runaway صفحات می‌شد).
