@@ -62,15 +62,9 @@
     $money = fn($n) => $fa(number_format((int) $n));
     $dateStr = $fa(\Morilog\Jalali\Jalalian::fromDateTime($invoice->issued_at ?? $invoice->created_at)->format('Y/m/d'));
 
-    // دارایی‌های تزئینی (در صورت وجودِ فایل، خودکار اعمال می‌شوند).
-    $assetUri = function (string $rel) {
-        $p = public_path($rel);
-        if (! is_file($p)) return null;
-        $ext = strtolower(pathinfo($p, PATHINFO_EXTENSION)) ?: 'png';
-        return 'data:image/'.$ext.';base64,'.base64_encode(file_get_contents($p));
-    };
-    $tazhibUri   = $assetUri('images/invoice/tazhib.png');
-    $hologramUri = $assetUri('images/invoice/hologram.png');
+    // وجودِ حاشیهٔ تذهیب — خودِ تصاویر با API مستقیمِ mPDF کشیده می‌شوند
+    // (position:absolute در HTML گاهی mPDF را می‌شکند).
+    $hasTazhib = is_file(public_path('images/invoice/tazhib.png'));
 @endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -132,18 +126,7 @@
     </style>
 </head>
 <body>
-
-@if($tazhibUri)
-    {{-- حاشیهٔ تذهیب در دو لبهٔ صفحه (تمام‌قد) --}}
-    <img src="{{ $tazhibUri }}" style="position: absolute; top: 0; right: 0; width: 15mm; height: 297mm;" alt="">
-    <img src="{{ $tazhibUri }}" style="position: absolute; top: 0; left: 0; width: 15mm; height: 297mm;" alt="">
-@endif
-@if($hologramUri)
-    {{-- استیکر هولوگرام پایین‌وسط --}}
-    <img src="{{ $hologramUri }}" style="position: absolute; bottom: 16mm; left: 88mm; width: 34mm;" alt="">
-@endif
-
-<div class="frame {{ $tazhibUri ? 'bare' : '' }}">
+<div class="frame {{ $hasTazhib ? 'bare' : '' }}">
 
     {{-- سربرگ --}}
     <table class="head">

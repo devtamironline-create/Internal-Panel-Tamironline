@@ -67,6 +67,22 @@ final class InvoicePdf
         $mpdf->showImageErrors = false;
         $mpdf->WriteHTML($html);
 
+        // عناصرِ تزئینی (تذهیبِ دو لبه + هولوگرامِ پایین‌وسط) را با API مستقیمِ
+        // mPDF می‌کشیم — مطمئن‌تر از position:absolute در HTML. اختیاری‌اند.
+        try {
+            $tazhib = public_path('images/invoice/tazhib.png');
+            if (is_file($tazhib)) {
+                $mpdf->Image($tazhib, 0, 0, 15, 297, 'png', '', true, false);    // لبهٔ چپ
+                $mpdf->Image($tazhib, 195, 0, 15, 297, 'png', '', true, false);  // لبهٔ راست
+            }
+            $holo = public_path('images/invoice/hologram.png');
+            if (is_file($holo)) {
+                $mpdf->Image($holo, 88, 247, 34, 34, 'png', '', true, false);    // پایین‌وسط
+            }
+        } catch (\Throwable $e) {
+            // عناصرِ تزئینی اختیاری‌اند.
+        }
+
         return (string) $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
     }
 
