@@ -49,8 +49,11 @@ Route::middleware('web')->group(function () {
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
 
     // ─── لینک عمومی صورتحساب — برای ارسال به مشتری از طریق پیامک ────
+    // نسخهٔ PDF (باید قبل از روتِ HTML تعریف شود تا «.pdf» را خودش بگیرد).
+    Route::get('/crm/receipt/{invoiceCode}.pdf', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceiptPdf'])
+        ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public.pdf');
     Route::get('/crm/receipt/{invoiceCode}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceipt'])
-        ->name('crm.invoice.public');
+        ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public');
 
     // سرو لوگو/مهر فاکتور — public چون داخل لینک عمومی فاکتور هم لازم
     // می‌شود. دارایی‌های حساس نیستند (فقط برند شرکت‌اند).

@@ -19,10 +19,8 @@ use Modules\CustomerApp\Support\InvoiceBuilder;
  *   payload کامل فاکتور (JSON) با items/totals/tax/payment_url/pdf_url.
  *
  * GET /v1/customer/orders/{id}/invoice.pdf
- *   render همان view موجود ادمین (invoices/print.blade.php) به‌عنوان HTML قابل
- *   چاپ. فرانت می‌تواند با iframe یا webview نمایش دهد، یا با کتابخانه‌ی
- *   client-side به PDF تبدیل کند. اگر بعداً mPDF server-side خواستیم، همین
- *   endpoint را با تبدیل به binary PDF می‌توان ارتقا داد.
+ *   خروجیِ واقعیِ PDF (application/pdf) از روی همان رسیدِ ادمین
+ *   (invoices/print.blade.php) با mPDF — قابل نمایش در webview/مرورگر.
  */
 class InvoiceController extends Controller
 {
@@ -76,15 +74,11 @@ class InvoiceController extends Controller
             abort(404, 'فاکتوری برای این سفارش صادر نشده است.');
         }
 
-        $order->loadMissing(['items', 'technician', 'customer']);
+        $pdf = \Modules\CRM\Support\InvoicePdf::render($invoice);
 
-        $html = view('crm::invoices.print', [
-            'invoice' => $invoice,
-            'order' => $order,
-        ])->render();
-
-        return response($html, 200, [
-            'Content-Type' => 'text/html; charset=utf-8',
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$invoice->invoice_code.'.pdf"',
             'Cache-Control' => 'private, max-age=60',
         ]);
     }

@@ -9,6 +9,7 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Services\InvoiceService;
+use Modules\CRM\Support\InvoicePdf;
 
 class InvoiceController extends Controller
 {
@@ -115,6 +116,25 @@ class InvoiceController extends Controller
             ->firstOrFail();
 
         return view('crm::invoices.print', compact('invoice'));
+    }
+
+    /**
+     * همان رسیدِ عمومی، ولی خروجیِ واقعیِ PDF (application/pdf).
+     */
+    public function publicReceiptPdf(string $invoiceCode)
+    {
+        $invoice = Invoice::withoutGlobalScope('active')
+            ->with(['order.items', 'customer'])
+            ->where('invoice_code', $invoiceCode)
+            ->firstOrFail();
+
+        $pdf = InvoicePdf::render($invoice);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$invoice->invoice_code.'.pdf"',
+            'Cache-Control' => 'private, max-age=60',
+        ]);
     }
 
     /**
