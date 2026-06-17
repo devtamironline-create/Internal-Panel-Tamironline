@@ -84,18 +84,18 @@
         .tl td { vertical-align: middle; }
         .tl .line { border-bottom: 1pt solid #262d68; }
         .meta { width: auto; }
-        .meta .pill { border: 0.6pt solid #cfd4ea; border-radius: 20px; padding: 4px 4px; }
-        .meta .pill td { padding: 2px 8px; font-size: 8.5pt; white-space: nowrap; }
-        .meta .k { color: #262d68; font-weight: bold; }
+        .meta .pill { border: 0.6pt solid #cfd4ea; border-radius: 18px; }
+        .meta .pill td { padding: 4px 9px; font-size: 8.5pt; white-space: nowrap; }
+        .meta .pill .k { color: #262d68; font-weight: bold; border-left: 0.6pt solid #e1e4f3; }
 
         /* بلوک اطلاعات */
-        .info { border: 0.6pt solid #cfd4ea; border-radius: 6px; margin-top: 2px; }
+        .info { border: 0.6pt solid #cfd4ea; border-radius: 6px; margin-top: 4px; }
         .info > tbody > tr > td { border-bottom: 0.5pt solid #e7eaf4; }
         .info > tbody > tr:last-child > td { border-bottom: 0; }
-        .vlabel { width: 28px; background: #262d68; text-align: center; vertical-align: middle; }
-        .vlabel .vt { display: block; color: #fff; font-weight: bold; font-size: 8.5pt;
+        .vlabel { width: 30px; background: #262d68; text-align: center; vertical-align: middle; }
+        .vlabel .vt { display: block; color: #fff; font-weight: bold; font-size: 8pt;
                       white-space: nowrap; text-align: center; transform: rotate(-90deg); }
-        .fld td { border: 0; border-right: 0.5pt solid #eef0f7; padding: 10px 12px; font-size: 9pt; line-height: 1.7; }
+        .fld td { border: 0; border-right: 0.5pt solid #eef0f7; padding: 14px 14px; font-size: 9pt; line-height: 1.7; }
         .fld td:first-child { border-right: 0; }
         .fld .k { color: #262d68; font-weight: bold; }
 
@@ -144,14 +144,20 @@
                 </tr></table>
             </td>
             <td style="width: 36%;">
-                <table class="meta" style="margin-right: auto;"><tr><td>
-                    <table class="pill"><tr>
-                        <td class="k">شماره فاکتور</td>
-                        <td dir="ltr">{{ $invoice->invoice_code }}</td>
-                        <td class="k" style="border-right: 0.6pt solid #cfd4ea;">تاریخ</td>
-                        <td dir="ltr">{{ $dateStr }}</td>
-                    </tr></table>
-                </td></tr></table>
+                <table class="meta" style="margin-right: auto;"><tr>
+                    <td style="padding-left: 6px;">
+                        <table class="pill"><tr>
+                            <td class="k">شماره فاکتور</td>
+                            <td dir="ltr">{{ $invoice->invoice_code }}</td>
+                        </tr></table>
+                    </td>
+                    <td>
+                        <table class="pill"><tr>
+                            <td class="k">تاریخ</td>
+                            <td dir="ltr">{{ $dateStr }}</td>
+                        </tr></table>
+                    </td>
+                </tr></table>
             </td>
         </tr>
     </table>
@@ -210,8 +216,8 @@
                 </tr>
             @endforeach
             <tr class="sum">
-                <td colspan="2">جمع کل</td>
-                <td>{{ $money($grandTotal) }} تومان</td>
+                <td colspan="2" style="font-size: 10pt;">جمع کل</td>
+                <td style="font-size: 10.5pt;">{{ $money($grandTotal) }} تومان</td>
             </tr>
         </tbody>
     </table>
