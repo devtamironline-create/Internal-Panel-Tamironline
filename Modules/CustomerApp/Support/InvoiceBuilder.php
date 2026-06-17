@@ -16,7 +16,9 @@ use Modules\CRM\Models\Order;
  *   - order.hire (اجرت) و transportation (ایاب‌وذهاب) و discount به‌عنوان آیتم سرویس اضافه می‌شوند
  *
  * Tax: از Setting('invoice_tax_rate') (default 0) خوانده می‌شود.
- * مبالغ DB ریال‌اند — در خروجی به تومان تبدیل می‌شوند.
+ * واحد پول: مبالغِ DB (سفارش و فاکتور) همگی «تومان» هستند و مستقیم و بدون
+ * تبدیل برگردانده می‌شوند — مطابق پنل، صفحهٔ پرداخت و درگاه (که خودش
+ * تومان→ریال می‌کند). تقسیم بر ۱۰ اشتباه بود و مبالغ را ۱۰ برابر کم نشان می‌داد.
  * payment_url به route عمومی موجود /crm/pay/{invoice_code} اشاره می‌کند.
  */
 final class InvoiceBuilder
@@ -42,8 +44,8 @@ final class InvoiceBuilder
         $totalRial = max(0, $subtotalRial - $discountRial + $taxRial);
 
         $shapedItems = array_map(function (array $row) {
-            $unitToman = Money::rialToToman($row['_unit_price_rial']);
-            $amountToman = Money::rialToToman($row['_amount_rial']);
+            $unitToman = (int) $row['_unit_price_rial'];
+            $amountToman = (int) $row['_amount_rial'];
 
             return [
                 'row' => $row['row'],
@@ -58,10 +60,10 @@ final class InvoiceBuilder
             ];
         }, $items);
 
-        $subtotalToman = Money::rialToToman($subtotalRial);
-        $discountToman = Money::rialToToman($discountRial);
-        $taxToman = Money::rialToToman($taxRial);
-        $totalToman = Money::rialToToman($totalRial);
+        $subtotalToman = (int) $subtotalRial;
+        $discountToman = (int) $discountRial;
+        $taxToman = (int) $taxRial;
+        $totalToman = (int) $totalRial;
 
         $issuedAt = $invoice?->issued_at ?? $invoice?->created_at;
         $paidAt = $invoice?->paid_at;
