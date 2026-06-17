@@ -16,9 +16,13 @@ final class InvoicePdf
      */
     public static function render(Invoice $invoice): string
     {
-        $invoice->loadMissing(['order.items', 'customer']);
+        $invoice->loadMissing([
+            'order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer',
+        ]);
 
-        $html = view('crm::invoices.print', compact('invoice'))->render();
+        // نسخهٔ مخصوص PDF — CSSِ ساده و سازگار با mPDF (بدون flex/float/
+        // transform/writing-mode/calc که در نسخهٔ HTML باعث runaway صفحات می‌شد).
+        $html = view('crm::invoices.print-pdf', compact('invoice'))->render();
 
         $tmp = storage_path('app/mpdf-tmp');
         if (! is_dir($tmp)) {
