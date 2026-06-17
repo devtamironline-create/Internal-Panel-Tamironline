@@ -31,12 +31,30 @@ final class InvoicePdf
         if (class_exists(\Spatie\Browsershot\Browsershot::class)) {
             try {
                 $html = view('crm::invoices.print-browser', compact('invoice', 'qrDataUri'))->render();
-                $pdf = base64_decode((string) \Spatie\Browsershot\Browsershot::html($html)
+
+                $shot = \Spatie\Browsershot\Browsershot::html($html)
                     ->format('A4')
                     ->showBackground()
                     ->margins(0, 0, 0, 0)
-                    ->noSandbox()
-                    ->base64pdf());
+                    ->noSandbox();
+
+                // زیرِ کاربرِ وب (php-fpm) معمولاً node/chrome در PATH نیستند؛
+                // اگر مسیرشان در .env تعریف شده باشد، صراحتاً ست می‌کنیم تا
+                // Browsershot به‌جای fallback، واقعاً اجرا شود.
+                if ($node = env('BROWSERSHOT_NODE_BINARY')) {
+                    $shot->setNodeBinary($node);
+                }
+                if ($npm = env('BROWSERSHOT_NPM_BINARY')) {
+                    $shot->setNpmBinary($npm);
+                }
+                if ($chrome = env('BROWSERSHOT_CHROME_PATH')) {
+                    $shot->setChromePath($chrome);
+                }
+                if ($include = env('BROWSERSHOT_INCLUDE_PATH')) {
+                    $shot->setIncludePath($include);
+                }
+
+                $pdf = base64_decode((string) $shot->base64pdf());
                 if ($pdf !== '') {
                     return $pdf;
                 }
@@ -120,7 +138,7 @@ final class InvoicePdf
     /**
      * تولید QR به‌صورت data-URI (PNG). در صورت نبودِ پکیج یا خطا، null.
      */
-    private static function qr(string $text): ?string
+    public static function qr(string $text): ?string
     {
         try {
             if (! class_exists(\Mpdf\QrCode\QrCode::class)) {

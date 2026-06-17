@@ -52,6 +52,9 @@ Route::middleware('web')->group(function () {
     // نسخهٔ PDF (باید قبل از روتِ HTML تعریف شود تا «.pdf» را خودش بگیرد).
     Route::get('/crm/receipt/{invoiceCode}.pdf', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceiptPdf'])
         ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public.pdf');
+    // صفحهٔ دانلودِ سمت‌مرورگر (html2canvas + jsPDF) — مخصوص اپ مشتری.
+    Route::get('/crm/receipt/{invoiceCode}/download', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceiptDownload'])
+        ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public.download');
     Route::get('/crm/receipt/{invoiceCode}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceipt'])
         ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public');
 
