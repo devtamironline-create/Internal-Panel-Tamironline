@@ -68,62 +68,61 @@
     <meta charset="UTF-8">
     <title>صورتحساب {{ $invoice->invoice_code }}</title>
     <style>
+        /* پالت: ایندیگو #262d68 · لوندر #e1e4f3 · خط #cfd4ea · متن #313a47 */
         * { font-family: vazir, sans-serif; }
-        body { color: #2a3441; font-size: 9.5pt; }
+        body { color: #313a47; font-size: 9.5pt; }
         table { border-collapse: collapse; width: 100%; }
-        .navy { color: #14315a; }
 
-        /* قابِ تزئینیِ سند (دو خط navy با فاصله) */
-        .frame { border: 2pt solid #14315a; padding: 5mm 6mm; }
-        .frame-in { border: 0.5pt solid #b9c4d4; padding: 4mm 4mm 5mm; }
-        /* عنوان با خط‌های کناری */
-        .tl td { vertical-align: middle; }
-        .tl .line { border-bottom: 1pt solid #14315a; }
+        .frame { border: 0.75pt solid #cfd4ea; border-radius: 7px; padding: 6mm 6mm 7mm; }
 
-        /* ── سربرگ ── */
+        /* سربرگ */
         .head td { vertical-align: middle; padding-bottom: 14px; }
-        .bname { font-size: 15pt; font-weight: bold; color: #14315a; }
+        .bname { font-size: 15pt; font-weight: bold; color: #262d68; }
         .bsub  { font-size: 8pt; color: #98a2b3; }
-        .title { font-size: 18pt; font-weight: bold; color: #14315a; text-align: center; }
-        .title-sub { text-align: center; font-size: 7.5pt; color: #98a2b3; letter-spacing: 1px; padding-top: 2px; }
+        .title { font-size: 19pt; font-weight: bold; color: #262d68; text-align: center; }
+        .title-sub { text-align: center; font-size: 7.5pt; color: #aab0c4; letter-spacing: 3px; padding-top: 2px; }
+        .tl td { vertical-align: middle; }
+        .tl .line { border-bottom: 1pt solid #262d68; }
         .meta { width: auto; }
-        .meta td { padding: 4px 9px; font-size: 8.5pt; white-space: nowrap; border: 0.5pt solid #d7dde6; }
-        .meta .k { color: #14315a; font-weight: bold; background: #f4f7fb; }
+        .meta .pill { border: 0.6pt solid #cfd4ea; border-radius: 20px; padding: 4px 4px; }
+        .meta .pill td { padding: 2px 8px; font-size: 8.5pt; white-space: nowrap; }
+        .meta .k { color: #262d68; font-weight: bold; }
 
-        /* ── بلوک اطلاعات با برچسب عمودی ── */
-        .info { border: 0.5pt solid #cdd6e2; margin-top: 2px; }
-        .info > tbody > tr > td { border-bottom: 0.5pt solid #e4e9f0; }
+        /* بلوک اطلاعات */
+        .info { border: 0.6pt solid #cfd4ea; border-radius: 6px; margin-top: 2px; }
+        .info > tbody > tr > td { border-bottom: 0.5pt solid #e7eaf4; }
         .info > tbody > tr:last-child > td { border-bottom: 0; }
-        .vlabel { width: 26px; background: #14315a; text-align: center; vertical-align: middle; }
+        .vlabel { width: 28px; background: #262d68; text-align: center; vertical-align: middle; }
         .vlabel .vt { display: block; color: #fff; font-weight: bold; font-size: 8.5pt;
                       white-space: nowrap; text-align: center; transform: rotate(-90deg); }
-        .fld { padding: 0; }
-        .fld td { border: 0; border-right: 0.5pt solid #eef1f6; padding: 9px 11px; font-size: 9pt; line-height: 1.7; }
+        .fld td { border: 0; border-right: 0.5pt solid #eef0f7; padding: 10px 12px; font-size: 9pt; line-height: 1.7; }
         .fld td:first-child { border-right: 0; }
-        .fld .k { color: #14315a; font-weight: bold; }
+        .fld .k { color: #262d68; font-weight: bold; }
 
-        /* ── جدول خدمات ── */
-        .svc-h { color: #14315a; font-weight: bold; font-size: 10pt; padding: 12px 2px 6px; }
-        .items { border: 0.5pt solid #cdd6e2; font-size: 9pt; }
-        .items th { background: #14315a; color: #fff; font-weight: bold; padding: 8px 6px; }
-        .items td { border-top: 0.5pt solid #e4e9f0; padding: 9px 7px; text-align: center; }
+        /* جدول خدمات */
+        .svc-h { background: #e1e4f3; border: 0.6pt solid #cfd4ea; border-radius: 5px;
+                 color: #262d68; font-weight: bold; font-size: 10pt; text-align: center;
+                 padding: 8px; margin: 14px 0 7px; }
+        .items { border: 0.6pt solid #cfd4ea; border-radius: 6px; font-size: 9pt; }
+        .items th { background: #e1e4f3; color: #262d68; font-weight: bold; padding: 9px 6px; }
+        .items td { border-top: 0.5pt solid #e7eaf4; padding: 10px 7px; text-align: center; }
         .items td.desc { text-align: right; line-height: 1.8; }
-        .items tr.sum td { background: #f4f7fb; font-weight: bold; color: #14315a; border-top: 0.8pt solid #14315a; }
+        .items tr.sum td { background: #eef0f8; font-weight: bold; color: #262d68; border-top: 0.8pt solid #cfd4ea; }
 
-        /* ── پاورقی ── */
-        .foot { margin-top: 16px; }
+        /* پاورقی */
+        .foot { margin-top: 18px; }
         .foot td { vertical-align: bottom; }
-        .qrbox { width: 112px; border: 0.5pt solid #cdd6e2; }
-        .qrbox .ql { background: #f4f7fb; color: #14315a; font-weight: bold; font-size: 7pt; text-align: center; padding: 4px; }
+        .qrbox { width: 118px; border: 0.6pt solid #cfd4ea; border-radius: 6px; }
+        .qrbox .ql { background: #e1e4f3; color: #262d68; font-weight: bold; font-size: 7pt; text-align: center; padding: 4px; }
         .qrbox .qi { text-align: center; padding: 7px 0 2px; }
         .qrbox .qc { text-align: center; font-size: 6.5pt; color: #98a2b3; padding-bottom: 5px; }
-        .stamp { width: 118px; }
+        .stamp { width: 120px; }
     </style>
 </head>
 <body>
-<div class="frame"><div class="frame-in">
+<div class="frame">
 
-    {{-- سربرگ: برند راست، عنوان وسط، شماره/تاریخ (کنار هم) چپ --}}
+    {{-- سربرگ --}}
     <table class="head">
         <tr>
             <td style="width: 32%; text-align: right;">
@@ -134,25 +133,25 @@
                     <span class="bsub">{{ $providerTagline }}</span>
                 @endif
             </td>
-            <td style="width: 30%;">
+            <td style="width: 32%;">
                 <table class="tl"><tr>
-                    <td class="line" style="width: 18%;"></td>
+                    <td class="line" style="width: 16%;"></td>
                     <td style="white-space: nowrap; padding: 0 8px;">
                         <div class="title">صورتحساب خدمات</div>
                         <div class="title-sub">SERVICE&nbsp;INVOICE</div>
                     </td>
-                    <td class="line" style="width: 18%;"></td>
+                    <td class="line" style="width: 16%;"></td>
                 </tr></table>
             </td>
-            <td style="width: 38%;">
-                <table class="meta" style="margin-right: auto;">
-                    <tr>
+            <td style="width: 36%;">
+                <table class="meta" style="margin-right: auto;"><tr><td>
+                    <table class="pill"><tr>
                         <td class="k">شماره فاکتور</td>
                         <td dir="ltr">{{ $invoice->invoice_code }}</td>
-                        <td class="k">تاریخ</td>
+                        <td class="k" style="border-right: 0.6pt solid #cfd4ea;">تاریخ</td>
                         <td dir="ltr">{{ $dateStr }}</td>
-                    </tr>
-                </table>
+                    </tr></table>
+                </td></tr></table>
             </td>
         </tr>
     </table>
@@ -220,11 +219,11 @@
     {{-- پاورقی --}}
     <table class="foot">
         <tr>
-            <td style="width: 122px; text-align: right; vertical-align: top;">
+            <td style="width: 128px; text-align: right; vertical-align: top;">
                 <table class="qrbox">
                     <tr><td class="ql">اعتبارسنجی QR-CODE</td></tr>
                     @if(! empty($qrDataUri))
-                        <tr><td class="qi"><img src="{{ $qrDataUri }}" style="width: 88px; height: 88px;" alt="QR"></td></tr>
+                        <tr><td class="qi"><img src="{{ $qrDataUri }}" style="width: 90px; height: 90px;" alt="QR"></td></tr>
                     @endif
                     <tr><td class="qc" dir="ltr">{{ $invoice->invoice_code }}</td></tr>
                 </table>
@@ -241,6 +240,6 @@
         </tr>
     </table>
 
-</div></div>
+</div>
 </body>
 </html>
