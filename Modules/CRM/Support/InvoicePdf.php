@@ -23,12 +23,38 @@ final class InvoicePdf
             'order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer',
         ]);
 
-        // QR اعتبارسنجی (لینک عمومی رسید). اگر پکیج mpdf/qrcode نصب نباشد یا
-        // خطایی رخ دهد، QR حذف می‌شود اما PDF بدون خطا رندر می‌گردد.
+        // QR اعتبارسنجی (لینک عمومی رسید).
         $qrDataUri = self::qr(route('crm.invoice.public', $invoice->invoice_code));
 
-        // نسخهٔ مخصوص PDF — CSSِ ساده و سازگار با mPDF (بدون flex/float/
-        // transform/writing-mode/calc که در نسخهٔ HTML باعث runaway صفحات می‌شد).
+        // ۱) رندرِ دقیقِ طرح با Browsershot (Chrome) — همان HTML/CSS کامل
+        // (flex/gradient/…). اگر Chrome/Node در دسترس نباشد، به mPDF می‌افتیم.
+        if (class_exists(\Spatie\Browsershot\Browsershot::class)) {
+            try {
+                $html = view('crm::invoices.print-browser', compact('invoice', 'qrDataUri'))->render();
+                $pdf = base64_decode((string) \Spatie\Browsershot\Browsershot::html($html)
+                    ->format('A4')
+                    ->showBackground()
+                    ->margins(0, 0, 0, 0)
+                    ->noSandbox()
+                    ->base64pdf());
+                if ($pdf !== '') {
+                    return $pdf;
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Invoice Browsershot failed; fallback to mPDF: '.$e->getMessage());
+            }
+        }
+
+        // ۲) fallback: mPDF.
+        return self::renderMpdf($invoice, $qrDataUri);
+    }
+
+    /**
+     * fallback با mPDF — نسخهٔ سازگار (بدون flex/gradient).
+     */
+    private static function renderMpdf(Invoice $invoice, ?string $qrDataUri): string
+    {
+        // نسخهٔ مخصوص PDF — CSSِ ساده و سازگار با mPDF.
         $html = view('crm::invoices.print-pdf', compact('invoice', 'qrDataUri'))->render();
 
         $tmp = storage_path('app/mpdf-tmp');
