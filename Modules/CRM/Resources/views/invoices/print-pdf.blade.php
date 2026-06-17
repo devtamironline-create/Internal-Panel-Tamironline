@@ -61,6 +61,16 @@
     $fa = fn($s) => strtr((string) $s, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']);
     $money = fn($n) => $fa(number_format((int) $n));
     $dateStr = $fa(\Morilog\Jalali\Jalalian::fromDateTime($invoice->issued_at ?? $invoice->created_at)->format('Y/m/d'));
+
+    // دارایی‌های تزئینی (در صورت وجودِ فایل، خودکار اعمال می‌شوند).
+    $assetUri = function (string $rel) {
+        $p = public_path($rel);
+        if (! is_file($p)) return null;
+        $ext = strtolower(pathinfo($p, PATHINFO_EXTENSION)) ?: 'png';
+        return 'data:image/'.$ext.';base64,'.base64_encode(file_get_contents($p));
+    };
+    $tazhibUri   = $assetUri('images/invoice/tazhib.png');
+    $hologramUri = $assetUri('images/invoice/hologram.png');
 @endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -74,6 +84,8 @@
         table { border-collapse: collapse; width: 100%; }
 
         .frame { border: 0.75pt solid #cfd4ea; border-radius: 7px; padding: 6mm 6mm 7mm; }
+        /* با وجودِ تذهیب، قابِ ساده حذف می‌شود چون خودِ تذهیب نقشِ حاشیه را دارد. */
+        .frame.bare { border: 0; border-radius: 0; padding: 2mm 2mm 4mm; }
 
         /* سربرگ */
         .head td { vertical-align: middle; padding-bottom: 14px; }
@@ -120,7 +132,18 @@
     </style>
 </head>
 <body>
-<div class="frame">
+
+@if($tazhibUri)
+    {{-- حاشیهٔ تذهیب در دو لبهٔ صفحه (تمام‌قد) --}}
+    <img src="{{ $tazhibUri }}" style="position: absolute; top: 0; right: 0; width: 15mm; height: 297mm;" alt="">
+    <img src="{{ $tazhibUri }}" style="position: absolute; top: 0; left: 0; width: 15mm; height: 297mm;" alt="">
+@endif
+@if($hologramUri)
+    {{-- استیکر هولوگرام پایین‌وسط --}}
+    <img src="{{ $hologramUri }}" style="position: absolute; bottom: 16mm; left: 88mm; width: 34mm;" alt="">
+@endif
+
+<div class="frame {{ $tazhibUri ? 'bare' : '' }}">
 
     {{-- سربرگ --}}
     <table class="head">
