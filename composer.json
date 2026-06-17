@@ -14,6 +14,7 @@
         "livewire/livewire": "^3.4",
         "morilog/jalali": "^3.0",
         "mpdf/mpdf": "*",
+        "mpdf/qrcode": "*",
         "nwidart/laravel-modules": "^11.0",
         "phpoffice/phpspreadsheet": "^5.3",
         "spatie/laravel-permission": "^6.4"
