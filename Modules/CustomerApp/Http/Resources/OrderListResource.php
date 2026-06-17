@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Order;
-use Modules\CustomerApp\Support\Money;
 use Modules\CustomerApp\Support\OrderStatusMapper;
 
 /**
@@ -45,9 +44,22 @@ class OrderListResource extends JsonResource
             ] : null),
             'scheduled_date' => $this->visit_scheduled_at?->format('Y-m-d'),
             'scheduled_slot' => $this->visit_scheduled_slot,
-            'total_amount' => Money::rialToToman($this->total_invoice ?: $this->estimated_price ?: null),
+            // مبلغِ نهاییِ مشتری = price_customer (جمع کل) — همان مبنای فاکتور و
+            // همان عددی که مشتری می‌پردازد. واحدِ DB «تومان» است و نباید ÷۱۰
+            // شود؛ total_invoice (= price_customer − هزینه) فقط ماندهٔ داخلی است.
+            'total_amount' => $this->customerTotalToman(),
             'created_at' => $this->created_at?->utc()->toIso8601String(),
             'updated_at' => $this->updated_at?->utc()->toIso8601String(),
         ];
+    }
+
+    /**
+     * جمع کلِ قابل‌پرداختِ مشتری به تومان (بدون تبدیلِ واحد). صفر → null.
+     */
+    private function customerTotalToman(): ?int
+    {
+        $toman = (int) ($this->price_customer ?: $this->estimated_price ?: 0);
+
+        return $toman > 0 ? $toman : null;
     }
 }
