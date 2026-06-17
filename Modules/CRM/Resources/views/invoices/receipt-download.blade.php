@@ -150,9 +150,24 @@
 </head>
 <body>
   <div class="toolbar">
-    <button id="dl" class="btn btn-primary">دریافت و مشاهدهٔ فاکتور (PDF)</button>
-    <a id="viewLink" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none;">مشاهدهٔ فاکتور</a>
-    <span id="hint" style="display:none;align-self:center;font-size:13px;color:var(--muted);"></span>
+    <button id="dl" class="btn btn-primary">دانلود و مشاهدهٔ فاکتور (PDF)</button>
+    <span id="hint" style="display:none;align-self:center;font-size:13px;color:#0a7d2c;font-weight:700;"></span>
+  </div>
+
+  {{-- پنجرهٔ پیش‌نمایشِ درون‌برنامه‌ای — کاربر از اپ خارج نمی‌شود --}}
+  <div id="modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(16,20,45,.82);overflow:auto;padding:14px;">
+    <div style="max-width:1000px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid #e3e6f0;">
+        <b style="color:#1e2a78;font-size:14px;">پیش‌نمایش فاکتور</b>
+        <div style="display:flex;gap:8px;">
+          <button id="reDl" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">دانلود مجدد</button>
+          <button id="closeModal" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">بستن</button>
+        </div>
+      </div>
+      <div style="padding:12px;text-align:center;background:#f3f4fa;">
+        <img id="previewImg" alt="فاکتور" style="max-width:100%;height:auto;box-shadow:0 4px 18px rgba(20,28,80,.18);border-radius:4px;">
+      </div>
+    </div>
   </div>
 
   <div class="sheet" id="sheet">
@@ -252,9 +267,10 @@
     const FILE_NAME = @json($invoice->invoice_code) + '.pdf';
     let lastUrl = null;
 
-    async function buildPdfBlob() {
-      // منتظر لود شدن فونت وزیر می‌مانیم تا متن در تصویر درست بیفتد؛ ولی
-      // اگر فونت کند/مسدود بود حداکثر ۳ ثانیه صبر می‌کنیم تا معلق نماند.
+    // یک بار رندر می‌کنیم و هم تصویرِ پیش‌نمایش و هم فایلِ PDF را از همان می‌سازیم.
+    async function renderInvoice() {
+      // منتظر لود شدن فونت وزیر می‌مانیم تا متن درست بیفتد؛ اگر کند/مسدود بود
+      // حداکثر ۳ ثانیه صبر می‌کنیم تا معلق نماند.
       await Promise.race([
         (document.fonts && document.fonts.ready) || Promise.resolve(),
         new Promise(function (r) { setTimeout(r, 3000); }),
@@ -271,12 +287,11 @@
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
-      // برازش با حفظ نسبت تصویر و مرکز‌چینی.
       let w = pageW, h = canvas.height * pageW / canvas.width;
       if (h > pageH) { h = pageH; w = canvas.width * pageH / canvas.height; }
       pdf.addImage(imgData, 'PNG', (pageW - w) / 2, (pageH - h) / 2, w, h, undefined, 'FAST');
 
-      return pdf.output('blob');
+      return { imgData: imgData, blob: pdf.output('blob') };
     }
 
     function triggerDownload(url) {
@@ -288,41 +303,36 @@
     document.getElementById('dl').addEventListener('click', async function () {
       const btn = this;
       const original = btn.textContent;
-
-      // تبِ نمایش را همین حالا (درونِ همان کلیکِ کاربر) باز می‌کنیم تا در TWA
-      // به‌عنوان popupِ بدونِ اکشنِ کاربر بلاک نشود؛ بعد از ساخت، آدرسش را ست می‌کنیم.
-      const viewer = window.open('about:blank', '_blank');
-      if (viewer) {
-        viewer.document.write('<!doctype html><meta charset="utf-8"><body style="font-family:Tahoma;direction:rtl;text-align:center;padding:40px;color:#1e2a78">در حال ساخت فاکتور…</body>');
-      }
-
       btn.disabled = true;
       btn.textContent = 'در حال ساخت فایل…';
       try {
-        const blob = await buildPdfBlob();
+        const out = await renderInvoice();
         if (lastUrl) URL.revokeObjectURL(lastUrl);
-        lastUrl = URL.createObjectURL(blob);
+        lastUrl = URL.createObjectURL(out.blob);
 
-        // ۱) دانلودِ فایل روی دستگاه
+        // ۱) دانلودِ فایل روی دستگاه (در همان اپ می‌ماند؛ فقط نوتیفیکیشنِ دانلود)
         triggerDownload(lastUrl);
 
-        // ۲) نمایشِ همان فایل برای کاربر
-        if (viewer) {
-          viewer.location.href = lastUrl;
-        }
+        // ۲) نمایشِ نسخهٔ ساخته‌شده داخلِ همین صفحه (بدونِ خروج از اپ)
+        document.getElementById('previewImg').src = out.imgData;
+        document.getElementById('modal').style.display = 'block';
 
-        // لینکِ پشتیبان (اگر popup بسته شد، کاربر دستی باز کند)
-        const vl = document.getElementById('viewLink');
-        vl.href = lastUrl; vl.style.display = 'inline-block';
         const hint = document.getElementById('hint');
-        hint.textContent = 'فاکتور دانلود شد.'; hint.style.display = 'inline';
+        hint.textContent = '✓ فاکتور دانلود شد'; hint.style.display = 'inline';
       } catch (e) {
-        if (viewer) viewer.close();
         alert('خطا در ساخت PDF: ' + (e && e.message ? e.message : e));
       } finally {
         btn.disabled = false;
         btn.textContent = original;
       }
+    });
+
+    // دکمه‌های پنجرهٔ پیش‌نمایش
+    document.getElementById('closeModal').addEventListener('click', function () {
+      document.getElementById('modal').style.display = 'none';
+    });
+    document.getElementById('reDl').addEventListener('click', function () {
+      if (lastUrl) triggerDownload(lastUrl);
     });
   </script>
 </body>

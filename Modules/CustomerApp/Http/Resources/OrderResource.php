@@ -76,7 +76,9 @@ class OrderResource extends JsonResource
                 'estimated' => Money::rialToToman($this->estimated_price ?: null),
                 'final' => Money::rialToToman($this->final_price ?: null),
                 'deposit' => Money::rialToToman($this->deposit ?: null),
-                'total' => Money::rialToToman($this->total_invoice ?: null),
+                // جمع کلِ مشتری = price_customer (تومان، بدون ÷۱۰) — همان مبنای
+                // فاکتور؛ total_invoice مبلغِ ماندهٔ داخلی است نه قابل‌پرداختِ مشتری.
+                'total' => ($t = (int) ($this->price_customer ?: 0)) > 0 ? $t : null,
                 'currency' => 'IRT',
             ],
 
