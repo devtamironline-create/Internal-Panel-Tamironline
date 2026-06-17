@@ -138,7 +138,7 @@ final class InvoicePdf
     /**
      * تولید QR به‌صورت data-URI (PNG). در صورت نبودِ پکیج یا خطا، null.
      */
-    private static function qr(string $text): ?string
+    public static function qr(string $text): ?string
     {
         try {
             if (! class_exists(\Mpdf\QrCode\QrCode::class)) {

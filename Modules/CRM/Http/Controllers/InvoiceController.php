@@ -119,6 +119,23 @@ class InvoiceController extends Controller
     }
 
     /**
+     * صفحهٔ دانلودِ سمت‌مرورگرِ فاکتور — همان طرح، با دکمهٔ «دانلود PDF»
+     * که با html2canvas + jsPDF فایلِ {invoice_code}.pdf را روی دستگاهِ
+     * کاربر می‌سازد. نیازی به Chrome/Node روی سرور ندارد، مناسبِ اپ مشتری.
+     */
+    public function publicReceiptDownload(string $invoiceCode)
+    {
+        $invoice = Invoice::withoutGlobalScope('active')
+            ->with(['order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer'])
+            ->where('invoice_code', $invoiceCode)
+            ->firstOrFail();
+
+        $qrDataUri = InvoicePdf::qr(route('crm.invoice.public', $invoice->invoice_code));
+
+        return view('crm::invoices.receipt-download', compact('invoice', 'qrDataUri'));
+    }
+
+    /**
      * همان رسیدِ عمومی، ولی خروجیِ واقعیِ PDF (application/pdf).
      */
     public function publicReceiptPdf(string $invoiceCode)
