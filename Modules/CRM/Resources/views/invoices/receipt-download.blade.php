@@ -150,8 +150,9 @@
 </head>
 <body>
   <div class="toolbar">
-    <button id="dl" class="btn btn-primary" onclick="downloadPdf()">دانلود فاکتور (PDF)</button>
-    <button class="btn btn-ghost" onclick="window.print()">چاپ</button>
+    <button id="dl" class="btn btn-primary">دریافت و مشاهدهٔ فاکتور (PDF)</button>
+    <a id="viewLink" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none;">مشاهدهٔ فاکتور</a>
+    <span id="hint" style="display:none;align-self:center;font-size:13px;color:var(--muted);"></span>
   </div>
 
   <div class="sheet" id="sheet">
@@ -249,46 +250,80 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
     const FILE_NAME = @json($invoice->invoice_code) + '.pdf';
+    let lastUrl = null;
 
-    async function downloadPdf() {
-      const btn = document.getElementById('dl');
+    async function buildPdfBlob() {
+      // منتظر لود شدن فونت وزیر می‌مانیم تا متن در تصویر درست بیفتد؛ ولی
+      // اگر فونت کند/مسدود بود حداکثر ۳ ثانیه صبر می‌کنیم تا معلق نماند.
+      await Promise.race([
+        (document.fonts && document.fonts.ready) || Promise.resolve(),
+        new Promise(function (r) { setTimeout(r, 3000); }),
+      ]);
+
+      const el = document.getElementById('sheet');
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+
+      const { jsPDF } = window.jspdf;
+      // طرح عریض است → A4 افقی بهترین برازش را می‌دهد.
+      const orientation = canvas.width >= canvas.height ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      // برازش با حفظ نسبت تصویر و مرکز‌چینی.
+      let w = pageW, h = canvas.height * pageW / canvas.width;
+      if (h > pageH) { h = pageH; w = canvas.width * pageH / canvas.height; }
+      pdf.addImage(imgData, 'PNG', (pageW - w) / 2, (pageH - h) / 2, w, h, undefined, 'FAST');
+
+      return pdf.output('blob');
+    }
+
+    function triggerDownload(url) {
+      const a = document.createElement('a');
+      a.href = url; a.download = FILE_NAME;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    document.getElementById('dl').addEventListener('click', async function () {
+      const btn = this;
       const original = btn.textContent;
+
+      // تبِ نمایش را همین حالا (درونِ همان کلیکِ کاربر) باز می‌کنیم تا در TWA
+      // به‌عنوان popupِ بدونِ اکشنِ کاربر بلاک نشود؛ بعد از ساخت، آدرسش را ست می‌کنیم.
+      const viewer = window.open('about:blank', '_blank');
+      if (viewer) {
+        viewer.document.write('<!doctype html><meta charset="utf-8"><body style="font-family:Tahoma;direction:rtl;text-align:center;padding:40px;color:#1e2a78">در حال ساخت فاکتور…</body>');
+      }
+
       btn.disabled = true;
-      btn.textContent = 'در حال ساخت فایل...';
+      btn.textContent = 'در حال ساخت فایل…';
       try {
-        // منتظر لود شدن فونت وزیر می‌مانیم تا متن در تصویر درست بیفتد؛ ولی
-        // اگر فونت کند/مسدود بود حداکثر ۳ ثانیه صبر می‌کنیم تا معلق نماند.
-        await Promise.race([
-          (document.fonts && document.fonts.ready) || Promise.resolve(),
-          new Promise(function (r) { setTimeout(r, 3000); }),
-        ]);
+        const blob = await buildPdfBlob();
+        if (lastUrl) URL.revokeObjectURL(lastUrl);
+        lastUrl = URL.createObjectURL(blob);
 
-        const el = document.getElementById('sheet');
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-        const imgData = canvas.toDataURL('image/png');
+        // ۱) دانلودِ فایل روی دستگاه
+        triggerDownload(lastUrl);
 
-        const { jsPDF } = window.jspdf;
-        // طرح عریض است → A4 افقی بهترین برازش را می‌دهد.
-        const orientation = canvas.width >= canvas.height ? 'landscape' : 'portrait';
-        const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+        // ۲) نمایشِ همان فایل برای کاربر
+        if (viewer) {
+          viewer.location.href = lastUrl;
+        }
 
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-
-        // برازش با حفظ نسبت تصویر و مرکز‌چینی.
-        let w = pageW, h = canvas.height * pageW / canvas.width;
-        if (h > pageH) { h = pageH; w = canvas.width * pageH / canvas.height; }
-        const x = (pageW - w) / 2, y = (pageH - h) / 2;
-
-        pdf.addImage(imgData, 'PNG', x, y, w, h, undefined, 'FAST');
-        pdf.save(FILE_NAME);
+        // لینکِ پشتیبان (اگر popup بسته شد، کاربر دستی باز کند)
+        const vl = document.getElementById('viewLink');
+        vl.href = lastUrl; vl.style.display = 'inline-block';
+        const hint = document.getElementById('hint');
+        hint.textContent = 'فاکتور دانلود شد.'; hint.style.display = 'inline';
       } catch (e) {
+        if (viewer) viewer.close();
         alert('خطا در ساخت PDF: ' + (e && e.message ? e.message : e));
       } finally {
         btn.disabled = false;
         btn.textContent = original;
       }
-    }
+    });
   </script>
 </body>
 </html>
