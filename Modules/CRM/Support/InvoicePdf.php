@@ -33,19 +33,31 @@ final class InvoicePdf
             @mkdir($tmp, 0775, true);
         }
 
+        // ثبت فونتِ وزیر (فایل‌های .ttf در storage/fonts) به‌عنوان فونتِ پیش‌فرض
+        // تا فاکتور دقیقاً با فونتِ برند رندر شود.
+        $fontDirs = (new \Mpdf\Config\ConfigVariables)->getDefaults()['fontDir'];
+        $fontData = (new \Mpdf\Config\FontVariables)->getDefaults()['fontdata'];
+
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
-            'default_font' => 'dejavusans',  // پشتیبانی از اسکریپت فارسی/عربی
-            'default_font_size' => 10,
-            'directionality' => 'rtl',
             'tempDir' => $tmp,
-            'autoScriptToLang' => true,
-            'autoLangToFont' => true,
-            'margin_top' => 10,
-            'margin_bottom' => 10,
-            'margin_left' => 10,
-            'margin_right' => 10,
+            'fontDir' => array_merge($fontDirs, [storage_path('fonts')]),
+            'fontdata' => $fontData + [
+                'vazir' => [
+                    'R' => 'Vazir.ttf',
+                    'B' => 'Vazir-Bold.ttf',
+                    'useOTL' => 0xFF,     // shaping صحیح فارسی/عربی
+                    'useKashida' => 75,
+                ],
+            ],
+            'default_font' => 'vazir',
+            'default_font_size' => 9.5,
+            'directionality' => 'rtl',
+            'margin_top' => 8,
+            'margin_bottom' => 8,
+            'margin_left' => 8,
+            'margin_right' => 8,
         ]);
         // تصاویرِ راه‌دور (لوگو/مهر) اختیاری‌اند — خطایشان فاکتور را نشکند.
         $mpdf->showImageErrors = false;
