@@ -210,7 +210,9 @@
             <td style="width: 140px; text-align: right;">
                 <div class="qrbox">
                     <div class="qrlabel">اعتبارسنجی QR-CODE</div>
-                    <barcode code="{{ $receiptUrl }}" type="QR" class="barcode" size="0.9" error="M" disableborder="1" />
+                    @if(! empty($qrDataUri))
+                        <img src="{{ $qrDataUri }}" style="width: 96px; height: 96px;" alt="QR">
+                    @endif
                     <div class="qrcode" dir="ltr">{{ $invoice->invoice_code }}</div>
                 </div>
             </td>
