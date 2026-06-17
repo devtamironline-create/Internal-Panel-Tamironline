@@ -38,6 +38,10 @@ final class InvoicePdf
         $fontDirs = (new \Mpdf\Config\ConfigVariables)->getDefaults()['fontDir'];
         $fontData = (new \Mpdf\Config\FontVariables)->getDefaults()['fontdata'];
 
+        // اگر حاشیهٔ تذهیب موجود است، حاشیهٔ چپ/راست بازتر می‌شود تا محتوا
+        // روی نوارهای تزئینیِ لبه نیفتد.
+        $side = is_file(public_path('images/invoice/tazhib.png')) ? 19 : 8;
+
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
@@ -56,8 +60,8 @@ final class InvoicePdf
             'directionality' => 'rtl',
             'margin_top' => 8,
             'margin_bottom' => 8,
-            'margin_left' => 8,
-            'margin_right' => 8,
+            'margin_left' => $side,
+            'margin_right' => $side,
         ]);
         // تصاویرِ راه‌دور (لوگو/مهر) اختیاری‌اند — خطایشان فاکتور را نشکند.
         $mpdf->showImageErrors = false;
