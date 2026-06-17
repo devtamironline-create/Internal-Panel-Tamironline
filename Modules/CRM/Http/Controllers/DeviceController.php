@@ -174,7 +174,7 @@ class DeviceController extends Controller
 
     public function toggle(Request $request, Device $device, string $flag)
     {
-        if (! in_array($flag, ['is_active', 'is_featured'], true)) {
+        if (! in_array($flag, ['is_active', 'is_active_app', 'is_featured'], true)) {
             abort(404);
         }
         $device->{$flag} = ! $device->{$flag};
@@ -196,6 +196,7 @@ class DeviceController extends Controller
             'thumbnail_file' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'is_active_app' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
 
             // CMS-override fields
@@ -337,6 +338,7 @@ class DeviceController extends Controller
         $this->assertEnglishSlug($validated['slug']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? ($isNew ? true : false));
+        $validated['is_active_app'] = (bool) ($validated['is_active_app'] ?? ($isNew ? true : false));
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         unset($validated['thumbnail_file']);
 

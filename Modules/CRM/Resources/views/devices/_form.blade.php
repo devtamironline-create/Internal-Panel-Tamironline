@@ -85,7 +85,11 @@
             <div class="md:col-span-2 flex items-center gap-6">
                 <label class="inline-flex items-center gap-2">
                     <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $device->is_active ?? true)) class="w-4 h-4">
-                    <span class="text-sm">فعال</span>
+                    <span class="text-sm">فعال (سایت)</span>
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" name="is_active_app" value="1" @checked(old('is_active_app', $device->is_active_app ?? true)) class="w-4 h-4">
+                    <span class="text-sm">نمایش در اپ</span>
                 </label>
                 <label class="inline-flex items-center gap-2">
                     <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $device->is_featured ?? false)) class="w-4 h-4">
