@@ -61,12 +61,6 @@
     $fa = fn($s) => strtr((string) $s, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']);
     $money = fn($n) => $fa(number_format((int) $n));
     $dateStr = $fa(\Morilog\Jalali\Jalalian::fromDateTime($invoice->issued_at ?? $invoice->created_at)->format('Y/m/d'));
-
-    // تذهیب (لبه‌ها) با API mPDF کشیده می‌شود؛ هولوگرام به‌صورت تصویرِ inline.
-    $hasTazhib = is_file(public_path('images/invoice/tazhib.png'));
-    $hologramUri = is_file(public_path('images/invoice/hologram.png'))
-        ? 'data:image/png;base64,'.base64_encode(file_get_contents(public_path('images/invoice/hologram.png')))
-        : null;
 @endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -128,7 +122,7 @@
     </style>
 </head>
 <body>
-<div class="frame {{ $hasTazhib ? '' : '' }}">
+<div class="frame">
 
     {{-- هدر: شماره/تاریخ (چپ) — برند (راست) --}}
     <table class="top">
@@ -235,11 +229,7 @@
                     <tr><td class="qc" dir="ltr">{{ $invoice->invoice_code }}</td></tr>
                 </table>
             </td>
-            <td style="text-align: center;">
-                @if($hologramUri)
-                    <img src="{{ $hologramUri }}" style="width: 30mm; height: 30mm;" alt="">
-                @endif
-            </td>
+            <td style="text-align: center;"></td>
             <td class="sign" style="width: 200px; text-align: left;">
                 @if($stampUrl)
                     <img src="{{ $stampUrl }}" style="width: 130px;" alt="">

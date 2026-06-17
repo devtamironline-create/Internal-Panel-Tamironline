@@ -16,6 +16,9 @@ final class InvoicePdf
      */
     public static function render(Invoice $invoice): string
     {
+        // پردازشِ تصاویرِ تزئینیِ بزرگ (تذهیب/هولوگرام) می‌تواند حافظه‌بر باشد.
+        @ini_set('memory_limit', '1024M');
+
         $invoice->loadMissing([
             'order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer',
         ]);
@@ -67,16 +70,22 @@ final class InvoicePdf
         $mpdf->showImageErrors = false;
         $mpdf->WriteHTML($html);
 
-        // تذهیبِ دو لبه را با API مستقیمِ mPDF می‌کشیم (مطمئن‌تر از
-        // position:absolute در HTML). هولوگرام به‌صورت تصویرِ inline در فوتر است.
-        try {
-            $tazhib = public_path('images/invoice/tazhib.png');
-            if (is_file($tazhib)) {
-                $mpdf->Image($tazhib, 0, 0, 15, 297, 'png', '', true, false);    // لبهٔ چپ
-                $mpdf->Image($tazhib, 195, 0, 15, 297, 'png', '', true, false);  // لبهٔ راست
+        // عناصرِ تزئینی را با API مستقیمِ mPDF می‌کشیم (تذهیبِ دو لبه + هولوگرامِ
+        // پایین‌وسط). هرکدام در try/catch مستقل تا خطای یک تصویر، بقیه و کلِ
+        // فاکتور را نشکند. [rel, x, y, w, h] برحسب میلی‌متر.
+        foreach ([
+            ['images/invoice/tazhib.png',   0,   0, 15, 297],
+            ['images/invoice/tazhib.png', 195,   0, 15, 297],
+            ['images/invoice/hologram.png', 90, 244, 30, 30],
+        ] as [$rel, $x, $y, $w, $h]) {
+            try {
+                $p = public_path($rel);
+                if (is_file($p)) {
+                    $mpdf->Image($p, $x, $y, $w, $h, '', '', true, false);
+                }
+            } catch (\Throwable $e) {
+                // تصاویرِ تزئینی اختیاری‌اند.
             }
-        } catch (\Throwable $e) {
-            // تذهیب اختیاری است.
         }
 
         return (string) $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
