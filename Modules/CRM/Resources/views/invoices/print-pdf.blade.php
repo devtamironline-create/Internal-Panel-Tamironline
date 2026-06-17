@@ -73,6 +73,13 @@
         table { border-collapse: collapse; width: 100%; }
         .navy { color: #14315a; }
 
+        /* قابِ تزئینیِ سند (دو خط navy با فاصله) */
+        .frame { border: 2pt solid #14315a; padding: 5mm 6mm; }
+        .frame-in { border: 0.5pt solid #b9c4d4; padding: 4mm 4mm 5mm; }
+        /* عنوان با خط‌های کناری */
+        .tl td { vertical-align: middle; }
+        .tl .line { border-bottom: 1pt solid #14315a; }
+
         /* ── سربرگ ── */
         .head td { vertical-align: middle; padding-bottom: 14px; }
         .bname { font-size: 15pt; font-weight: bold; color: #14315a; }
@@ -114,21 +121,28 @@
     </style>
 </head>
 <body>
+<div class="frame"><div class="frame-in">
 
     {{-- سربرگ: برند راست، عنوان وسط، شماره/تاریخ (کنار هم) چپ --}}
     <table class="head">
         <tr>
             <td style="width: 32%; text-align: right;">
                 @if($logoUrl)
-                    <img src="{{ $logoUrl }}" style="height: 44px;" alt="">
+                    <img src="{{ $logoUrl }}" style="height: 62px;" alt="">
                 @else
                     <span class="bname">{{ $providerName }}</span><br>
                     <span class="bsub">{{ $providerTagline }}</span>
                 @endif
             </td>
             <td style="width: 30%;">
-                <div class="title">صورتحساب خدمات</div>
-                <div class="title-sub">SERVICE&nbsp;INVOICE</div>
+                <table class="tl"><tr>
+                    <td class="line" style="width: 18%;"></td>
+                    <td style="white-space: nowrap; padding: 0 8px;">
+                        <div class="title">صورتحساب خدمات</div>
+                        <div class="title-sub">SERVICE&nbsp;INVOICE</div>
+                    </td>
+                    <td class="line" style="width: 18%;"></td>
+                </tr></table>
             </td>
             <td style="width: 38%;">
                 <table class="meta" style="margin-right: auto;">
@@ -227,5 +241,6 @@
         </tr>
     </table>
 
+</div></div>
 </body>
 </html>
