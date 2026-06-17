@@ -77,8 +77,10 @@ class ServiceController extends Controller
      */
     public function categories(): JsonResponse
     {
+        // نمایش در اپ با فلگِ مستقلِ is_active_app کنترل می‌شود (جدا از is_active
+        // که مخصوص نمایش در سایت است).
         $rows = Device::query()
-            ->where('is_active', true)
+            ->where('is_active_app', true)
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
             ->orderBy('name')
