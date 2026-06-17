@@ -5,11 +5,13 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Site\Models\Concerns\HasMedia;
 
 class Device extends Model
 {
     use HasMedia;
+    use HasSeoMeta;
 
     protected $table = 'crm_devices';
 
@@ -52,6 +54,7 @@ class Device extends Model
         'sections_enabled',
         'sort_order',
         'is_active',
+        'is_active_app',
         'is_featured',
     ];
 
@@ -59,6 +62,7 @@ class Device extends Model
         'wp_id' => 'integer',
         'device_category_id' => 'integer',
         'is_active' => 'boolean',
+        'is_active_app' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
         'starting_price' => 'integer',

@@ -5,5 +5,6 @@
     "Warehouse": true,
     "Site": true,
     "Identity": true,
-    "CustomerApp": true
+    "CustomerApp": true,
+    "Seo": true
 }

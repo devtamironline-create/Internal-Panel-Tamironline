@@ -119,7 +119,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('devices', [DeviceController::class, 'store'])->name('devices.store');
         Route::get('devices/{device}/edit', [DeviceController::class, 'edit'])->name('devices.edit');
         Route::put('devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
-        Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('devices.toggle');
+        Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_active_app', 'is_featured'])->name('devices.toggle');
         Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
     });
 

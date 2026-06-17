@@ -57,7 +57,8 @@
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">دستگاه</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">آیکن / تم</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ترتیب</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">فعال</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">فعال (سایت)</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">نمایش در اپ</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ویژه</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">عملیات</th>
                 </tr>
@@ -113,6 +114,23 @@
                         </form>
                         @else
                             @if($device->is_active)<span class="px-2.5 py-1 text-xs bg-green-100 text-green-800 rounded-full">فعال</span>@else<span class="px-2.5 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">غیرفعال</span>@endif
+                        @endcan
+                    </td>
+                    <td class="px-6 py-4">
+                        @can('manage-crm-devices')
+                        <form method="POST" action="{{ route('crm.devices.toggle', [$device, 'is_active_app']) }}"
+                              @if($device->is_active_app) onsubmit="return confirm('غیرفعال‌سازی نمایش در اپ باعث حذف این دستگاه از اپلیکیشن مشتری می‌شود. مطمئنید؟');" @endif>
+                            @csrf @method('PUT')
+                            <button type="submit" class="inline-flex">
+                                @if($device->is_active_app)
+                                    <span class="px-2.5 py-1 text-xs font-medium bg-sky-100 text-sky-800 rounded-full hover:bg-sky-200">در اپ</span>
+                                @else
+                                    <span class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200">حذف از اپ</span>
+                                @endif
+                            </button>
+                        </form>
+                        @else
+                            @if($device->is_active_app)<span class="px-2.5 py-1 text-xs bg-sky-100 text-sky-800 rounded-full">در اپ</span>@else<span class="px-2.5 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">حذف از اپ</span>@endif
                         @endcan
                     </td>
                     <td class="px-6 py-4">
