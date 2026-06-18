@@ -3,6 +3,9 @@
 namespace Modules\Seo\Services;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
+use Modules\Seo\Support\BrandDeviceCombo;
 
 /**
  * پل میان «type» (که فرانت در ?type= می‌فرستد) و مدل واقعی + الگوی URL.
@@ -49,6 +52,11 @@ class SeoableRegistry
             return null;
         }
 
+        // resolverِ اختصاصی برای صفحاتِ ترکیبی (دستگاه+برند) که ردیفِ واحد ندارند.
+        if (($cfg['resolver'] ?? null) === 'brand_device') {
+            return $this->resolveBrandDevice($slug);
+        }
+
         /** @var class-string<Model> $modelClass */
         $modelClass = $cfg['model'];
         $slugColumn = $cfg['slug'] ?? 'slug';
@@ -60,6 +68,39 @@ class SeoableRegistry
         }
 
         return $query->first();
+    }
+
+    /**
+     * واکشیِ صفحهٔ ترکیبیِ دستگاه+برند از slugِ «device-slug/brand-slug».
+     * اگر هر کدام پیدا نشد یا فرمت غلط بود، null (→ ۴۰۴ در MetaController).
+     */
+    private function resolveBrandDevice(string $slug): ?BrandDeviceCombo
+    {
+        $parts = explode('/', trim($slug, '/'), 2);
+        if (count($parts) < 2 || $parts[0] === '' || $parts[1] === '') {
+            return null;
+        }
+        [$deviceSlug, $brandSlug] = $parts;
+
+        $device = Device::query()->where('slug', $deviceSlug)->first();
+        $brand = Brand::query()->where('slug', $brandSlug)->first();
+        if (! $device || ! $brand) {
+            return null;
+        }
+
+        $combo = new BrandDeviceCombo([
+            'slug' => $deviceSlug.'/'.$brandSlug,
+            'device' => $deviceSlug,            // توکنِ {device} در الگوی URL
+            'brand' => $brandSlug,              // توکنِ {brand} در الگوی URL
+            'device_name' => $device->name,
+            'brand_name' => $brand->name,
+            'name' => trim($device->name.' '.$brand->name),
+            'is_active' => (bool) ($device->is_active ?? true) && (bool) ($brand->is_active ?? true),
+        ]);
+        $combo->deviceModel = $device;
+        $combo->brandModel = $brand;
+
+        return $combo;
     }
 
     /**

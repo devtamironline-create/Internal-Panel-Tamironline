@@ -183,7 +183,7 @@ class SchemaGenerator
     {
         return match ($type) {
             'article' => $this->article($model, $meta),
-            'brand', 'device' => $this->service($model, $meta),
+            'brand', 'device', 'brand_device' => $this->service($model, $meta),
             'forum_question' => $this->qaPage($model, $meta),
             default => null,
         };
@@ -214,16 +214,25 @@ class SchemaGenerator
      */
     private function service(Model $model, array $meta): array
     {
-        return array_filter([
+        // برای صفحهٔ ترکیبی، serviceType = نامِ دستگاه و brand جداگانه می‌آید.
+        $serviceType = $model->getAttribute('device_name') ?: $model->getAttribute('name');
+
+        $node = [
             '@context' => 'https://schema.org',
             '@type' => 'Service',
             'name' => $meta['title'] ?? $model->getAttribute('name'),
             'description' => $meta['description'] ?? null,
-            'serviceType' => $model->getAttribute('name'),
-            'areaServed' => 'IR',
+            'serviceType' => $serviceType,
+            'areaServed' => SeoSetting::get('default_city') ?: 'IR',
             'provider' => ['@id' => $this->baseUrl().'/#organization'],
             'url' => $meta['canonical'] ?? null,
-        ], fn ($v) => $v !== null && $v !== '');
+        ];
+
+        if ($brand = $model->getAttribute('brand_name')) {
+            $node['brand'] = ['@type' => 'Brand', 'name' => $brand];
+        }
+
+        return array_filter($node, fn ($v) => $v !== null && $v !== '');
     }
 
     /**

@@ -122,6 +122,12 @@ class MetaResolver
             'sitedesc' => $sitedesc,
             'sep' => $sep,
             'excerpt' => $excerpt !== '' ? $excerpt : $sitedesc,
+            // متغیرهای دامنه‌ای — برای قالب‌های دستگاه/برند/شهر (خالی‌ها در render حذف می‌شوند).
+            'brand' => (string) ($model->getAttribute('brand_name') ?? ''),
+            'device' => (string) ($model->getAttribute('device_name') ?? ''),
+            'city' => (string) (SeoSetting::get('default_city') ?: 'تهران'),
+            'guarantee' => (string) (SeoSetting::get('guarantee_text') ?? ''),
+            'phone' => (string) (SeoSetting::get('contact_phone') ?: SeoSetting::get('lb_phone') ?: ''),
             'date' => $this->formatDate($cfg, $model),
             'currentyear' => (string) (int) date('Y'),
             'id' => (string) ($model->getKey() ?? ''),
@@ -162,6 +168,12 @@ class MetaResolver
             if (! $isLive) {
                 $flags['noindex'] = true;
             }
+        }
+
+        // آیتمِ غیرفعال (ستون is_active = false) نباید ایندکس شود.
+        if (array_key_exists('is_active', $model->getAttributes())
+            && ! (bool) $model->getAttribute('is_active')) {
+            $flags['noindex'] = true;
         }
 
         return $flags;
