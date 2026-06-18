@@ -41,6 +41,9 @@ class NotFoundController extends Controller
 
         $affected = SeoNotFound::query()->where('uri_hash', $hash)->update($update);
         if ($affected === 0) {
+            // تشخیص سادهٔ ربات از روی User-Agent.
+            $isBot = $ua !== '' && (bool) preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|googlebot/i', $ua);
+
             try {
                 SeoNotFound::query()->create([
                     'uri' => $uri,
@@ -49,6 +52,8 @@ class NotFoundController extends Controller
                     'user_agent' => $ua,
                     'hits' => 1,
                     'last_seen_at' => now(),
+                    'first_seen_at' => now(),
+                    'is_bot' => $isBot,
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
                 // برخوردِ unique در شرایطِ هم‌زمانی → فقط increment.

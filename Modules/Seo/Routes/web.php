@@ -28,6 +28,11 @@ Route::middleware(['auth', 'can:manage-seo'])
 
         // مانیتور ۴۰۴
         Route::get('/404', [NotFoundController::class, 'index'])->name('not-found.index');
+        // مسیرهای ثابت پیش از binding پویا تعریف می‌شوند تا «bulk»/«export» به‌عنوان مدل تفسیر نشوند.
+        Route::get('/404/export', [NotFoundController::class, 'export'])->name('not-found.export');
+        Route::delete('/404/bulk', [NotFoundController::class, 'bulkDestroy'])->name('not-found.bulk-destroy');
+        Route::post('/404/{notFound}/ignore', [NotFoundController::class, 'ignore'])->name('not-found.ignore');
+        Route::post('/404/{notFound}/unignore', [NotFoundController::class, 'unignore'])->name('not-found.unignore');
         Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->name('not-found.destroy');
 
         // مانیتورینگ و آدیت
