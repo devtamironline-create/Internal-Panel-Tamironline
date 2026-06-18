@@ -8,7 +8,7 @@ class SeoNotFound extends Model
 {
     protected $table = 'seo_not_found_logs';
 
-    protected $fillable = ['uri', 'referrer', 'user_agent', 'hits', 'last_seen_at'];
+    protected $fillable = ['uri', 'uri_hash', 'referrer', 'user_agent', 'hits', 'last_seen_at'];
 
     protected $casts = [
         'hits' => 'integer',

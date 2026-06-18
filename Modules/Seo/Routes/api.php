@@ -18,6 +18,9 @@ Route::prefix('v1/seo')->middleware('throttle:120,1')->group(function () {
 
     // Sitemap (XML) + robots.txt
     Route::get('/sitemap-index.xml', [SitemapController::class, 'index'])->name('api.v1.seo.sitemap-index');
+    // فایلِ بزرگ به chunkهای ۵۰هزارتایی تقسیم می‌شود: {type}-{page}.xml
+    Route::get('/sitemap/{type}-{page}.xml', [SitemapController::class, 'show'])
+        ->where('type', '[a-z_]+')->where('page', '[0-9]+')->name('api.v1.seo.sitemap-chunk');
     Route::get('/sitemap/{type}.xml', [SitemapController::class, 'show'])
         ->where('type', '[a-z_]+')->name('api.v1.seo.sitemap');
     Route::get('/robots.txt', [RobotsController::class, 'show'])->name('api.v1.seo.robots');

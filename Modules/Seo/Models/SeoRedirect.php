@@ -8,7 +8,7 @@ class SeoRedirect extends Model
 {
     protected $table = 'seo_redirects';
 
-    public const STATUS_CODES = [301, 302, 307, 410, 451];
+    public const STATUS_CODES = [301, 302, 307, 308, 410, 451];
 
     public const MATCH_TYPES = ['exact', 'contains', 'start', 'end', 'regex'];
 

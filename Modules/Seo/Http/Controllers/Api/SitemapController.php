@@ -33,9 +33,11 @@ class SitemapController extends Controller
         return $this->xml($xml);
     }
 
-    public function show(string $type): Response
+    public function show(string $type, ?string $page = null): Response
     {
-        $urls = $this->builder->urlsForType($type);
+        $urls = $page === null
+            ? $this->builder->urlsForType($type)
+            : $this->builder->urlsForTypePaged($type, (int) $page);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
