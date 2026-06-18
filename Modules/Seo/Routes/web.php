@@ -53,6 +53,8 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
         Route::get('/tools/export', [SeoToolsController::class, 'export'])->name('tools.export');
         Route::post('/tools/import', [SeoToolsController::class, 'import'])->name('tools.import');
+        Route::get('/tools/export-csv', [SeoToolsController::class, 'exportCsv'])->name('tools.export-csv');
+        Route::post('/tools/import-csv', [SeoToolsController::class, 'importCsv'])->name('tools.import-csv');
 
         // Role manager
         Route::get('/roles', [SeoRoleController::class, 'index'])->name('roles.index');

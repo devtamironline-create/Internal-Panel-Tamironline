@@ -26,6 +26,28 @@
         </div>
     </div>
 
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
+        <h2 class="font-bold text-gray-800 dark:text-gray-100 mb-2">خروجی/ورودی CSV متاهای صفحات</h2>
+        <p class="text-xs text-gray-500 mb-3">
+            ترتیب ستون‌ها:
+            <span class="font-mono ltr" dir="ltr">type, slug, url, seo_title, meta_description, canonical, index, follow, og_title, og_description, focus_keyword, notes</span>
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs text-gray-500 mb-2">دانلود همهٔ صفحات (حتی بدون متا) برای ویرایش گروهی.</p>
+                <a href="{{ route('seo.admin.tools.export-csv') }}" class="inline-block px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">دانلود CSV متاها</a>
+            </div>
+            <div>
+                <form method="POST" action="{{ route('seo.admin.tools.import-csv') }}" enctype="multipart/form-data" class="space-y-2">
+                    @csrf
+                    <input type="file" name="file" accept=".csv,.txt" required class="block w-full text-sm">
+                    @error('file')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                    <button class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-bold">وارد کردن CSV</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Audit Log تغییرات سئو</h2>
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
         <table class="w-full text-sm">
