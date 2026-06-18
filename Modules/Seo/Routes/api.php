@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Seo\Http\Controllers\Api\LlmsController;
 use Modules\Seo\Http\Controllers\Api\MetaController;
 use Modules\Seo\Http\Controllers\Api\RobotsController;
 use Modules\Seo\Http\Controllers\Api\SettingsController;
@@ -24,6 +25,7 @@ Route::prefix('v1/seo')->middleware('throttle:120,1')->group(function () {
     Route::get('/sitemap/{type}.xml', [SitemapController::class, 'show'])
         ->where('type', '[a-z_]+')->name('api.v1.seo.sitemap');
     Route::get('/robots.txt', [RobotsController::class, 'show'])->name('api.v1.seo.robots');
+    Route::get('/llms.txt', [LlmsController::class, 'show'])->name('api.v1.seo.llms');
 
     // ریدایرکت‌ها (برای middleware.ts فرانت)
     Route::get('/redirects', [RedirectController::class, 'index'])->name('api.v1.seo.redirects');

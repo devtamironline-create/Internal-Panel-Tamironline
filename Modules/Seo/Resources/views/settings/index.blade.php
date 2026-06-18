@@ -60,7 +60,7 @@
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
             <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">کدهای تأیید (Verification)</legend>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                @foreach(['verify_google'=>'Google','verify_bing'=>'Bing','verify_yandex'=>'Yandex','verify_baidu'=>'Baidu','verify_pinterest'=>'Pinterest'] as $k=>$label)
+                @foreach(['verify_google'=>'Google','verify_bing'=>'Bing','verify_yandex'=>'Yandex','verify_baidu'=>'Baidu','verify_pinterest'=>'Pinterest','verification_facebook'=>'Facebook'] as $k=>$label)
                     <label class="block text-sm">{{ $label }}
                         <input name="{{ $k }}" dir="ltr" value="{{ old($k, $settings[$k] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                     </label>
@@ -157,18 +157,39 @@
 
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
             <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">اتصال‌ها (Integrations)</legend>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block text-sm">کلید IndexNow
                     <input name="indexnow_key" dir="ltr" value="{{ old('indexnow_key', $settings['indexnow_key'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-                </label>
-                <label class="block text-sm">GA4 Measurement ID
-                    <input name="ga4_measurement_id" dir="ltr" value="{{ old('ga4_measurement_id', $settings['ga4_measurement_id'] ?? '') }}" placeholder="G-XXXXXXX" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                 </label>
                 <label class="block text-sm">Search Console Property
                     <input name="gsc_property" dir="ltr" value="{{ old('gsc_property', $settings['gsc_property'] ?? '') }}" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                 </label>
             </div>
             <p class="text-xs text-gray-500">برای ارسال فوری: <code class="font-mono ltr">php artisan seo:ping --all</code> (نیازمند کلید IndexNow و میزبانیِ فایل <code class="font-mono ltr">{key}.txt</code> روی دامنه).</p>
+        </fieldset>
+
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">ابزارهای تحلیلی (Integrations)</legend>
+            <p class="text-xs text-gray-500">این مقادیر در <code class="font-mono ltr">/v1/seo/settings</code> منتشر می‌شوند تا اپ فرانت اسکریپت GA4/GTM را تزریق کند (بدون تزریق سمت سرور).</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block text-sm">GA4 Measurement ID
+                    <input name="ga4_measurement_id" dir="ltr" value="{{ old('ga4_measurement_id', $settings['ga4_measurement_id'] ?? '') }}" placeholder="G-XXXXXXX" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+                <label class="block text-sm">GTM Container ID
+                    <input name="gtm_container_id" dir="ltr" value="{{ old('gtm_container_id', $settings['gtm_container_id'] ?? '') }}" placeholder="GTM-XXXXXXX" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                </label>
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="analytics_disable_for_admins" value="1" @checked(($settings['analytics_disable_for_admins'] ?? '') === '1') class="rounded">
+                غیرفعال‌سازی تحلیل برای مدیران (عدم ثبت بازدید ادمین‌ها)
+            </label>
+        </fieldset>
+
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">llms.txt</legend>
+            <p class="text-xs text-gray-500">اگر خالی بماند، نسخهٔ پیش‌فرض از روی نام/توضیح سایت تولید می‌شود. خروجی در <code class="font-mono ltr">/v1/seo/llms.txt</code> سرو می‌شود.</p>
+            <textarea name="llms_txt" rows="6" dir="ltr" placeholder="# {SiteName}&#10;&#10;{description}&#10;&#10;Important pages:&#10;- /services&#10;- /blog"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">{{ old('llms_txt', $settings['llms_txt'] ?? '') }}</textarea>
         </fieldset>
 
         <div class="flex justify-end">

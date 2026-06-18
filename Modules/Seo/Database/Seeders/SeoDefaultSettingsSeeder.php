@@ -19,6 +19,14 @@ class SeoDefaultSettingsSeeder extends Seeder
             ['key' => 'canonical_base_url', 'value' => rtrim((string) config('app.url'), '/'), 'group' => 'general'],
             ['key' => 'twitter_card', 'value' => 'summary_large_image', 'group' => 'social'],
             ['key' => 'kg_type', 'value' => 'Organization', 'group' => 'knowledge_graph'],
+            // §15 Facebook domain verification
+            ['key' => 'verification_facebook', 'value' => '', 'group' => 'verification'],
+            // §13 GA4 / GTM
+            ['key' => 'ga4_measurement_id', 'value' => '', 'group' => 'integrations'],
+            ['key' => 'gtm_container_id', 'value' => '', 'group' => 'integrations'],
+            ['key' => 'analytics_disable_for_admins', 'value' => '', 'group' => 'integrations'],
+            // §39 llms.txt
+            ['key' => 'llms_txt', 'value' => '', 'group' => 'general'],
         ];
 
         foreach ($defaults as $row) {

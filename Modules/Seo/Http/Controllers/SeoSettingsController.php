@@ -31,6 +31,7 @@ class SeoSettingsController extends Controller
         'verify_yandex' => 'verification',
         'verify_baidu' => 'verification',
         'verify_pinterest' => 'verification',
+        'verification_facebook' => 'verification',
         // knowledge graph
         'kg_type' => 'knowledge_graph',
         'kg_name' => 'knowledge_graph',
@@ -57,7 +58,11 @@ class SeoSettingsController extends Controller
         // integrations
         'indexnow_key' => 'integrations',
         'ga4_measurement_id' => 'integrations',
+        'gtm_container_id' => 'integrations',
+        'analytics_disable_for_admins' => 'integrations',
         'gsc_property' => 'integrations',
+        // llms.txt (general)
+        'llms_txt' => 'general',
     ];
 
     public function index()
@@ -85,6 +90,7 @@ class SeoSettingsController extends Controller
             'verify_yandex' => 'nullable|string|max:255',
             'verify_baidu' => 'nullable|string|max:255',
             'verify_pinterest' => 'nullable|string|max:255',
+            'verification_facebook' => 'nullable|string|max:255',
             'kg_type' => 'nullable|in:Organization,Person',
             'kg_name' => 'nullable|string|max:255',
             'kg_logo' => 'nullable|string|max:500',
@@ -108,7 +114,10 @@ class SeoSettingsController extends Controller
             'pagespeed_api_key' => 'nullable|string|max:255',
             'indexnow_key' => 'nullable|string|max:255',
             'ga4_measurement_id' => 'nullable|string|max:50',
+            'gtm_container_id' => 'nullable|string|max:50',
+            'analytics_disable_for_admins' => 'nullable|in:1',
             'gsc_property' => 'nullable|string|max:255',
+            'llms_txt' => 'nullable|string|max:20000',
         ]);
 
         foreach (self::KEYS as $key => $group) {
