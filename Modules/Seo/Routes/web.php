@@ -5,7 +5,6 @@ use Modules\Seo\Http\Controllers\AuditController;
 use Modules\Seo\Http\Controllers\CannibalizationController;
 use Modules\Seo\Http\Controllers\CanonicalController;
 use Modules\Seo\Http\Controllers\DashboardController;
-use Modules\Seo\Http\Controllers\FaqController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
@@ -31,15 +30,6 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::post('/redirects/import', [RedirectController::class, 'import'])->name('redirects.import');
         Route::put('/redirects/{redirect}/toggle', [RedirectController::class, 'toggle'])->name('redirects.toggle');
         Route::delete('/redirects/{redirect}', [RedirectController::class, 'destroy'])->name('redirects.destroy');
-
-        // پرسش‌های متداول (FAQ) به‌ازای هر صفحه
-        Route::get('/faq', [FaqController::class, 'index'])->name('faq.index');
-        Route::post('/faq', [FaqController::class, 'store'])->name('faq.store');
-        // مسیرِ ثابتِ reorder پیش از binding پویا تعریف می‌شود تا «reorder» مدل تفسیر نشود.
-        Route::post('/faq/reorder', [FaqController::class, 'reorder'])->name('faq.reorder');
-        Route::put('/faq/{faq}', [FaqController::class, 'update'])->name('faq.update');
-        Route::post('/faq/{faq}/toggle', [FaqController::class, 'toggle'])->name('faq.toggle');
-        Route::delete('/faq/{faq}', [FaqController::class, 'destroy'])->name('faq.destroy');
 
         // مانیتور ۴۰۴
         Route::get('/404', [NotFoundController::class, 'index'])->name('not-found.index');
