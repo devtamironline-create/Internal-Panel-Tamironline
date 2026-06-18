@@ -3,6 +3,7 @@
 namespace Modules\Seo\Services;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Seo\Models\SeoFaq;
 use Modules\Seo\Models\SeoSetting;
 
 /**
@@ -45,6 +46,12 @@ class SchemaGenerator
             if ($this->valid($specific)) {
                 $graph[] = $specific;
             }
+        }
+
+        // FAQPage (§38) — فقط وقتی تنظیم faq_schema_enabled روشن است و آیتم
+        // پرسش‌های متداولِ فعال دارد.
+        if ($faq = $this->faqPage($model)) {
+            $graph[] = $faq;
         }
 
         if ($lb = $this->localBusiness()) {
@@ -294,6 +301,63 @@ class SchemaGenerator
                 'answerCount' => (int) $model->getAttribute('answers_count'),
             ], fn ($v) => $v !== null && $v !== ''),
         ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * نود FAQPage (§38) از پرسش‌های متداولِ فعالِ مدل.
+     *
+     * گِیت: تنظیم سراسری faq_schema_enabled === '1' و وجودِ حداقل یک FAQ فعال.
+     * مدل‌های بدون کلید (مثل BrandDeviceCombo) نادیده گرفته می‌شوند.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function faqPage(Model $model): ?array
+    {
+        if (SeoSetting::get('faq_schema_enabled') !== '1') {
+            return null;
+        }
+
+        $key = $model->getKey();
+        if (! $key) {
+            return null;
+        }
+
+        $faqs = SeoFaq::query()
+            ->where('faqable_type', $model->getMorphClass())
+            ->where('faqable_id', $key)
+            ->active()
+            ->get(['question', 'answer']);
+
+        if ($faqs->isEmpty()) {
+            return null;
+        }
+
+        $mainEntity = [];
+        foreach ($faqs as $faq) {
+            $question = trim((string) $faq->question);
+            $answer = $this->plain((string) $faq->answer);
+            if ($question === '' || $answer === '') {
+                continue;
+            }
+            $mainEntity[] = [
+                '@type' => 'Question',
+                'name' => $question,
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => $answer,
+                ],
+            ];
+        }
+
+        if ($mainEntity === []) {
+            return null;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => $mainEntity,
+        ];
     }
 
     /**

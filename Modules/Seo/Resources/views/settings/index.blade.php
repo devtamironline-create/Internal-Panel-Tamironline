@@ -34,6 +34,10 @@
                 <input type="checkbox" name="publish_allow_seo_errors" value="1" @checked(($settings['publish_allow_seo_errors'] ?? '') === '1') class="rounded">
                 اجازهٔ انتشار با خطاهای سئو
             </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="faq_schema_enabled" value="1" @checked(($settings['faq_schema_enabled'] ?? '') === '1') class="rounded">
+                انتشار FAQPage schema برای صفحات دارای پرسش‌های متداول
+            </label>
         </fieldset>
 
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">

@@ -27,6 +27,8 @@ class SeoDefaultSettingsSeeder extends Seeder
             ['key' => 'analytics_disable_for_admins', 'value' => '', 'group' => 'integrations'],
             // §39 llms.txt
             ['key' => 'llms_txt', 'value' => '', 'group' => 'general'],
+            // §38 FAQPage schema (پیش‌فرض غیرفعال)
+            ['key' => 'faq_schema_enabled', 'value' => '', 'group' => 'general'],
         ];
 
         foreach ($defaults as $row) {

@@ -5,6 +5,7 @@ namespace Modules\Seo\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Modules\Seo\Models\SeoFaq;
 use Modules\Seo\Models\SeoMeta;
 use Modules\Seo\Models\SeoSetting;
 
@@ -92,12 +93,40 @@ class MetaResolver
             'breadcrumb_title' => self::pick($meta?->breadcrumb_title, $context['title'] ?? null),
         ];
 
+        // پرسش‌های متداول صفحه (در صورت persist بودن مدل) — یک کوئری.
+        $result['faq'] = $this->faqs($model);
+
         // JSON-LD فقط برای آیتم‌های index‌پذیر تولید می‌شود.
         $result['jsonld'] = empty($robotsFlags['noindex'])
             ? $this->schema->generate($type, $model, $result)
             : [];
 
         return $result;
+    }
+
+    /**
+     * پرسش‌های متداول فعالِ یک مدل، به‌صورت [['question'=>..,'answer'=>..], ...]
+     * با پاسخِ متن‌ساده. مدل‌های بدون کلید (مثل BrandDeviceCombo) خروجی خالی دارند.
+     *
+     * @return list<array{question:string, answer:string}>
+     */
+    private function faqs(Model $model): array
+    {
+        $key = $model->getKey();
+        if (! $key) {
+            return [];
+        }
+
+        return SeoFaq::query()
+            ->where('faqable_type', $model->getMorphClass())
+            ->where('faqable_id', $key)
+            ->active()
+            ->get(['question', 'answer'])
+            ->map(fn (SeoFaq $f) => [
+                'question' => (string) $f->question,
+                'answer' => $this->clean((string) $f->answer),
+            ])
+            ->all();
     }
 
     /**
