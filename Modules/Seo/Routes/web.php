@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
+use Modules\Seo\Http\Controllers\CannibalizationController;
 use Modules\Seo\Http\Controllers\CanonicalController;
 use Modules\Seo\Http\Controllers\DashboardController;
 use Modules\Seo\Http\Controllers\FaqController;
@@ -58,6 +59,9 @@ Route::middleware(['auth', 'can:manage-seo'])
 
         // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده
         Route::get('/canonical', [CanonicalController::class, 'index'])->name('canonical.index');
+
+        // گزارش هم‌نوع‌خواری کلمات (Cannibalization) + محتوای تکراری
+        Route::get('/cannibalization', [CannibalizationController::class, 'index'])->name('cannibalization.index');
 
         // ابزارها: Import/Export + Audit log
         Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
