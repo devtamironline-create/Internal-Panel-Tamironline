@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
+use Modules\Seo\Http\Controllers\DashboardController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
@@ -13,6 +14,9 @@ Route::middleware(['auth', 'can:manage-seo'])
     ->prefix('admin/seo')
     ->name('seo.admin.')
     ->group(function () {
+        // داشبورد سئو (نمای کلی)
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
         Route::get('/settings', [SeoSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [SeoSettingsController::class, 'update'])->name('settings.update');
 
