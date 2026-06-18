@@ -14,7 +14,7 @@ robots.txt، ریدایرکت‌ها) از بک‌اند Laravel می‌آید �
 آیتم‌های زیر در قرارداد API **اضافه/تغییر** کرده‌اند — لطفاً مطابقت دهید:
 
 1. **نوعِ `brand_device`** برای `/services/{device}/{brand}` → `?type=brand_device&slug={device}/{brand}` (بخش ۱).
-2. فیلدِ **`faq`** در پاسخِ `‎/meta` + نودهای جدیدِ JSON-LD (`Service`, `FAQPage`, `DiscussionForumPosting`) (بخش ۱).
+2. نودهای جدیدِ JSON-LD (`Service`, `FAQPage`, `DiscussionForumPosting`) در `meta.jsonld` (بخش ۱). **توجه:** فیلدِ جداگانهٔ `meta.faq` وجود ندارد — FAQ از **بانکِ FAQِ موجودِ شما** می‌آید و `FAQPage` خودکار از همان ساخته می‌شود (بخش ۱).
 3. بلاکِ **`integrations`** در `‎/settings` (GA4 + GTM + disable-for-admins) و **Facebook verification** (بخش ۲ و ۶).
 4. **`/llms.txt`** جدید (بخش ۳).
 5. **chunkingِ sitemap** برای نوع‌های بزرگ: `{type}-{page}.xml` (بخش ۳).
@@ -98,9 +98,6 @@ GET {BACKEND_URL}/v1/seo/meta?type=device&slug=refrigerator
       "site": null, "creator": null
     },
     "breadcrumb_title": "تعمیر یخچال",
-    "faq": [
-      { "question": "هزینهٔ تعمیر چقدر است؟", "answer": "پس از بررسی توسط تکنسین اعلام می‌شود." }
-    ],
     "jsonld": [ { "@context": "https://schema.org", "@type": "WebPage", "...": "..." } ]
   }
 }
@@ -113,11 +110,11 @@ GET {BACKEND_URL}/v1/seo/meta?type=device&slug=refrigerator
   `<script type="application/ld+json">` جداگانه رندر کنید. نودهای ممکن:
   `Organization، WebSite، WebPage، BreadcrumbList، LocalBusiness` (پایه) +
   بسته به نوع: `Article/BlogPosting، Service، QAPage، DiscussionForumPosting، FAQPage`.
-- **🆕 `faq`** آرایه‌ای از پرسش/پاسخِ همان صفحه است (اگر در پنل برایش FAQ تعریف
-  شده باشد، وگرنه `[]`). آن را به‌صورتِ آکاردئونِ «سؤالات متداول» در صفحه رندر
-  کنید. نودِ `FAQPage` در `jsonld` فقط وقتی می‌آید که در پنل فعال شده باشد —
-  پس برای جلوگیری از دوباره‌کاری، اگر FAQPage در `jsonld` بود، آن را خودتان
-  دوباره از `faq` نسازید.
+- **سؤالات متداول (FAQ):** پاسخِ متا فیلدِ جداگانهٔ FAQ **ندارد**. خودِ FAQ را
+  مثل قبل از **همان APIِ FAQِ موجودِ سایت** (بانکِ FAQ روی برند/دستگاه) بگیرید و
+  رندر کنید. اگر در تنظیماتِ سئو، `FAQPage` فعال باشد، نودِ `FAQPage` **خودکار از
+  همان بانک** در `jsonld` می‌آید — پس برای پرهیز از دوباره‌کاری، اگر `FAQPage`
+  در `jsonld` بود، خودتان نودِ FAQPage نسازید (فقط آکاردئونِ بصری را رندر کنید).
 
 ### پیاده‌سازی
 ```ts
@@ -133,7 +130,6 @@ export type SeoMeta = {
   og: { title: string; description: string; image: string | null; type: string; url: string; site_name: string };
   twitter: { card: string; title: string; description: string; image: string | null; site: string | null; creator: string | null };
   breadcrumb_title: string | null;
-  faq: { question: string; answer: string }[];
   jsonld: Record<string, unknown>[];
 };
 
@@ -405,7 +401,7 @@ const enabled = !(integrations.analytics_disable_for_admins && isAdminUser);
       (`page`, `article`, `blog_topic`, `brand`, `device`, **`brand_device`**, `taxonomy`, `forum_question`).
 - [ ] 🆕 روتِ `app/services/[device]/[brand]/page.tsx` با `type=brand_device` و slugِ `«device/brand»`.
 - [ ] کامپوننت `<JsonLd>` و رندر `meta.jsonld` در هر صفحه.
-- [ ] 🆕 رندرِ بلاکِ «سؤالات متداول» از `meta.faq` (و عدم ساختِ دستیِ FAQPage اگر در jsonld بود).
+- [ ] رندرِ «سؤالات متداول» از APIِ FAQِ موجودِ سایت (نه از متا)؛ FAQPage در `meta.jsonld` خودکار است — دوباره نسازید.
 - [ ] `next.config.js` rewrites برای robots.txt، **llms.txt** و sitemap (شاملِ chunkها).
 - [ ] `middleware.ts` برای ریدایرکت‌ها (شاملِ `308`).
 - [ ] گزارش ۴۰۴ در `app/not-found.tsx`.
@@ -415,7 +411,7 @@ const enabled = !(integrations.analytics_disable_for_admins && isAdminUser);
 ## مرجع سریع endpointها
 | متد | مسیر | توضیح |
 |-----|------|-------|
-| GET | `/v1/seo/meta?type=&slug=` | متای کامل یک آیتم (شاملِ `faq` و `brand_device`) |
+| GET | `/v1/seo/meta?type=&slug=` | متای کامل یک آیتم (شاملِ `brand_device`؛ FAQPage در `jsonld`) |
 | GET | `/v1/seo/settings` | تنظیمات سراسری (شاملِ `integrations`) |
 | GET | `/v1/seo/sitemap-index.xml` | ایندکس sitemap |
 | GET | `/v1/seo/sitemap/{type}.xml` | sitemap هر نوع |

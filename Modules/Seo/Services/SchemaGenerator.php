@@ -3,8 +3,9 @@
 namespace Modules\Seo\Services;
 
 use Illuminate\Database\Eloquent\Model;
-use Modules\Seo\Models\SeoFaq;
+use Modules\CRM\Models\DeviceBrandPage;
 use Modules\Seo\Models\SeoSetting;
+use Modules\Seo\Support\BrandDeviceCombo;
 
 /**
  * تولید JSON-LD (schema.org) برای هر آیتم. خروجی یک لیست از نودهاست که
@@ -304,10 +305,11 @@ class SchemaGenerator
     }
 
     /**
-     * نود FAQPage (§38) از پرسش‌های متداولِ فعالِ مدل.
+     * نود FAQPage (§38) از «بانکِ FAQِ» موجودِ سایت (Site\Faq) — منبعِ واحد.
      *
-     * گِیت: تنظیم سراسری faq_schema_enabled === '1' و وجودِ حداقل یک FAQ فعال.
-     * مدل‌های بدون کلید (مثل BrandDeviceCombo) نادیده گرفته می‌شوند.
+     * منبع: رابطهٔ faqs() روی Brand/Device؛ برای صفحهٔ ترکیبیِ برند+دستگاه از
+     * DeviceBrandPage (و در نبودِ آن، FAQهای خودِ دستگاه). فقط FAQهای منتشرشده.
+     * گِیت: تنظیم سراسری faq_schema_enabled === '1'.
      *
      * @return array<string, mixed>|null
      */
@@ -317,17 +319,7 @@ class SchemaGenerator
             return null;
         }
 
-        $key = $model->getKey();
-        if (! $key) {
-            return null;
-        }
-
-        $faqs = SeoFaq::query()
-            ->where('faqable_type', $model->getMorphClass())
-            ->where('faqable_id', $key)
-            ->active()
-            ->get(['question', 'answer']);
-
+        $faqs = $this->bankFaqs($model);
         if ($faqs->isEmpty()) {
             return null;
         }
@@ -358,6 +350,32 @@ class SchemaGenerator
             '@type' => 'FAQPage',
             'mainEntity' => $mainEntity,
         ];
+    }
+
+    /**
+     * FAQهای منتشرشدهٔ مدل از بانکِ مشترکِ سایت (Site\Faq).
+     * Brand/Device → رابطهٔ faqs()؛ برند+دستگاه → DeviceBrandPage (یا fallback به دستگاه).
+     *
+     * @return \Illuminate\Support\Collection<int, \Modules\Site\Models\Faq>
+     */
+    private function bankFaqs(Model $model): \Illuminate\Support\Collection
+    {
+        $source = $model;
+
+        if ($model instanceof BrandDeviceCombo) {
+            $deviceId = $model->deviceModel?->id;
+            $brandId = $model->brandModel?->id;
+            $page = ($deviceId && $brandId)
+                ? DeviceBrandPage::query()->where('device_id', $deviceId)->where('brand_id', $brandId)->first()
+                : null;
+            $source = $page ?: $model->deviceModel;   // per-pair ?? per-device
+        }
+
+        if (! $source || ! method_exists($source, 'faqs')) {
+            return collect();
+        }
+
+        return collect($source->faqs()->where('faqs.is_published', true)->get());
     }
 
     /**
