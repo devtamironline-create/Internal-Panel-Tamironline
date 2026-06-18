@@ -23,6 +23,9 @@ Route::middleware(['auth', 'can:manage-seo'])
         // ریدایرکت‌ها
         Route::get('/redirects', [RedirectController::class, 'index'])->name('redirects.index');
         Route::post('/redirects', [RedirectController::class, 'store'])->name('redirects.store');
+        // مسیرهای ثابت پیش از binding پویا تعریف می‌شوند تا «export» به‌عنوان مدل تفسیر نشود.
+        Route::get('/redirects/export', [RedirectController::class, 'export'])->name('redirects.export');
+        Route::post('/redirects/import', [RedirectController::class, 'import'])->name('redirects.import');
         Route::put('/redirects/{redirect}/toggle', [RedirectController::class, 'toggle'])->name('redirects.toggle');
         Route::delete('/redirects/{redirect}', [RedirectController::class, 'destroy'])->name('redirects.destroy');
 

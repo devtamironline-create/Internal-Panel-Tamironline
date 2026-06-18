@@ -10,6 +10,57 @@
     @if(session('success'))
         <div class="mb-4 p-3 rounded bg-emerald-50 text-emerald-700 text-sm">{{ session('success') }}</div>
     @endif
+    @if(session('info'))
+        <div class="mb-4 p-3 rounded bg-sky-50 text-sky-700 text-sm" dir="ltr">{{ session('info') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="mb-4 p-3 rounded bg-rose-50 text-rose-700 text-sm">{{ session('error') }}</div>
+    @endif
+
+    {{-- خروجی/ورود CSV --}}
+    <div class="flex flex-col md:flex-row gap-2 md:items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-5">
+        <a href="{{ route('seo.admin.redirects.export') }}"
+           class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-bold text-center">خروجی CSV</a>
+        <form method="POST" action="{{ route('seo.admin.redirects.import') }}" enctype="multipart/form-data"
+              class="flex items-center gap-2">
+            @csrf
+            <input type="file" name="file" accept=".csv,.txt" required
+                   class="text-sm text-gray-600 dark:text-gray-300 file:ml-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gray-100 dark:file:bg-gray-700 file:text-sm">
+            <button class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ورود CSV</button>
+        </form>
+    </div>
+    @error('file')<p class="text-xs text-rose-600 mb-3">{{ $message }}</p>@enderror
+
+    {{-- پنل هشدار زنجیره‌ها --}}
+    @if(!empty($chains))
+        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-5">
+            <h2 class="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">زنجیره‌های ریدایرکت ({{ count($chains) }})</h2>
+            <ul class="space-y-2 text-sm">
+                @foreach($chains as $c)
+                <li class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono ltr" dir="ltr">{{ $c['redirect']->source }}</span>
+                    <span class="text-gray-400">→</span>
+                    <span class="font-mono ltr" dir="ltr">{{ $c['redirect']->target }}</span>
+                    <span class="text-gray-400">⇒ پیشنهاد مستقیم:</span>
+                    <span class="font-mono ltr text-emerald-700 dark:text-emerald-400" dir="ltr">{{ $c['final'] }}</span>
+                    @if($c['looped'])
+                        <span class="px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">حلقه</span>
+                    @else
+                        <span class="text-xs text-amber-700 dark:text-amber-400">({{ $c['hops'] }} پرش)</span>
+                    @endif
+                    <form method="POST" action="{{ route('seo.admin.redirects.toggle', $c['redirect']) }}" class="inline">
+                        @csrf @method('PUT')
+                        <button class="text-xs text-gray-600 hover:underline">{{ $c['redirect']->is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی' }}</button>
+                    </form>
+                    <form method="POST" action="{{ route('seo.admin.redirects.destroy', $c['redirect']) }}" class="inline" onsubmit="return confirm('حذف این ریدایرکت؟');">
+                        @csrf @method('DELETE')
+                        <button class="text-xs text-rose-600 hover:underline">حذف</button>
+                    </form>
+                </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     {{-- فرم افزودن --}}
     <form method="POST" action="{{ route('seo.admin.redirects.store') }}" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-5">
@@ -20,7 +71,7 @@
                        class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </label>
             <label class="md:col-span-2 text-sm">مقصد
-                <input name="target" dir="ltr" value="{{ old('target') }}" placeholder="/new-path"
+                <input name="target" dir="ltr" value="{{ old('target', $prefillTarget ?? '') }}" placeholder="/new-path"
                        class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </label>
             <label class="text-sm">کد
