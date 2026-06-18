@@ -29,6 +29,14 @@ final class ImageProcessor
     public const QUALITY_PNG = 7;   // 0=بهترین تا 9=کوچک‌ترین
 
     /**
+     * سقفِ تعدادِ پیکسل برای ساختِ variant. GD کلِ بیت‌مپ را decode می‌کند
+     * (~w*h*4 بایت)، پس تصاویرِ بسیار بزرگ حافظه را تمام می‌کنند. بالاتر از این
+     * حد، فایلِ اصلی ذخیره/سرو می‌شود ولی variant ساخته نمی‌شود (به‌جای کرش).
+     * 30MP ≈ ۱۲۰MB بیت‌مپ.
+     */
+    public const MAX_VARIANT_PIXELS = 30_000_000;
+
+    /**
      * @return array{width:int, height:int, mime:string, kind:string}|null
      */
     public static function probe(string $absolutePath): ?array
@@ -59,6 +67,11 @@ final class ImageProcessor
      */
     public static function generateVariants(string $originalRelativePath, string $variantsBaseDir, string $baseFilename): array
     {
+        // پردازشِ GD حافظه‌بر است؛ سقف را بالا می‌بریم تا روی تصاویرِ بزرگ کرش نکند.
+        if (self::memoryLimitBytes() < 512 * 1024 * 1024) {
+            @ini_set('memory_limit', '512M');
+        }
+
         $disk = Storage::disk('public');
         if (! $disk->exists($originalRelativePath)) {
             return [];
@@ -66,6 +79,18 @@ final class ImageProcessor
         $absolute = $disk->path($originalRelativePath);
         $info = self::probe($absolute);
         if (! $info) {
+            return [];
+        }
+
+        // محافظِ حافظه: تصاویرِ خیلی بزرگ را برای ساختِ variant باز نمی‌کنیم تا
+        // GD حافظه را تمام نکند (fatal غیرقابل‌catch). اصلِ فایل دست‌نخورده می‌ماند.
+        if (($info['width'] * $info['height']) > self::MAX_VARIANT_PIXELS) {
+            \Illuminate\Support\Facades\Log::warning('image_processor.skip_variants_too_large', [
+                'path' => $originalRelativePath,
+                'width' => $info['width'],
+                'height' => $info['height'],
+            ]);
+
             return [];
         }
 
@@ -164,6 +189,24 @@ final class ImageProcessor
         $g = self::gcd($w, $h);
 
         return ($w / $g).':'.($h / $g);
+    }
+
+    /** memory_limit فعلی به بایت (−1 یعنی نامحدود → عددِ بزرگ). */
+    private static function memoryLimitBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw === '' || $raw === '-1') {
+            return PHP_INT_MAX;
+        }
+        $unit = strtolower($raw[strlen($raw) - 1]);
+        $num = (int) $raw;
+
+        return match ($unit) {
+            'g' => $num * 1024 * 1024 * 1024,
+            'm' => $num * 1024 * 1024,
+            'k' => $num * 1024,
+            default => (int) $raw,
+        };
     }
 
     private static function gcd(int $a, int $b): int
