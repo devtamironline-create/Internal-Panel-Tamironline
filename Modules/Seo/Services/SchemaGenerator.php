@@ -33,8 +33,18 @@ class SchemaGenerator
             $graph[] = $crumbs;
         }
 
-        if ($specific = $this->typeSpecific($type, $model, $meta)) {
-            $graph[] = $specific;
+        // override در سطح آیتم: seo_meta.schema_type
+        //  - 'none'  → نود اختصاصی حذف می‌شود (غیرفعال‌سازی)
+        //  - مقدار دیگر → @type نود اختصاصی override می‌شود
+        //  - خالی/null → default_schema نوع (config) + مپینگ پیش‌فرض
+        $override = $this->schemaTypeOverride($model);
+        $disabled = $override !== null && strcasecmp($override, 'none') === 0;
+        $resolved = $this->resolveSchemaType($type, $override);
+
+        if (! $disabled && ($specific = $this->typeSpecific($type, $model, $meta, $resolved))) {
+            if ($this->valid($specific)) {
+                $graph[] = $specific;
+            }
         }
 
         if ($lb = $this->localBusiness()) {
@@ -52,6 +62,33 @@ class SchemaGenerator
         }
 
         return array_values(array_filter($graph));
+    }
+
+    /** override نوع schema در سطح آیتم (seo_meta.schema_type) یا null. */
+    private function schemaTypeOverride(Model $model): ?string
+    {
+        if (! method_exists($model, 'seoMeta')) {
+            return null;
+        }
+        $val = $model->seoMeta?->schema_type;
+        $val = is_string($val) ? trim($val) : null;
+
+        return ($val === null || $val === '') ? null : $val;
+    }
+
+    /**
+     * @type نهاییِ نود اختصاصی را تعیین می‌کند:
+     * override آیتم ← default_schema نوع (config) ← null.
+     */
+    private function resolveSchemaType(string $type, ?string $override): ?string
+    {
+        if ($override !== null && strcasecmp($override, 'none') !== 0) {
+            return $override;
+        }
+
+        $default = config("seo.types.$type.default_schema");
+
+        return is_string($default) && $default !== '' ? $default : null;
     }
 
     private function baseUrl(): string
@@ -177,14 +214,17 @@ class SchemaGenerator
      * نود اختصاصیِ نوع‌محتوا.
      *
      * @param  array<string, mixed>  $meta
+     * @param  string|null  $resolved  @type نهاییِ نود (از override آیتم یا default_schema)
      * @return array<string, mixed>|null
      */
-    private function typeSpecific(string $type, Model $model, array $meta): ?array
+    private function typeSpecific(string $type, Model $model, array $meta, ?string $resolved = null): ?array
     {
         return match ($type) {
-            'article' => $this->article($model, $meta),
+            'article' => $this->article($model, $meta, $resolved ?: 'BlogPosting'),
             'brand', 'device', 'brand_device' => $this->service($model, $meta),
-            'forum_question' => $this->qaPage($model, $meta),
+            'forum_question' => strcasecmp((string) $resolved, 'DiscussionForumPosting') === 0
+                ? $this->discussionForumPosting($model, $meta)
+                : $this->qaPage($model, $meta),
             default => null,
         };
     }
@@ -193,11 +233,14 @@ class SchemaGenerator
      * @param  array<string, mixed>  $meta
      * @return array<string, mixed>
      */
-    private function article(Model $model, array $meta): array
+    private function article(Model $model, array $meta, string $schemaType = 'BlogPosting'): array
     {
+        // فقط Article یا BlogPosting مجازند؛ هر مقدار دیگری به پیش‌فرض برمی‌گردد.
+        $type = strcasecmp($schemaType, 'Article') === 0 ? 'Article' : 'BlogPosting';
+
         return array_filter([
             '@context' => 'https://schema.org',
-            '@type' => 'BlogPosting',
+            '@type' => $type,
             'headline' => $meta['title'] ?? $model->getAttribute('title'),
             'description' => $meta['description'] ?? null,
             'image' => $meta['og']['image'] ?? null,
@@ -251,6 +294,50 @@ class SchemaGenerator
                 'answerCount' => (int) $model->getAttribute('answers_count'),
             ], fn ($v) => $v !== null && $v !== ''),
         ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * نود DiscussionForumPosting (override برای صفحهٔ پرسش انجمن).
+     *
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function discussionForumPosting(Model $model, array $meta): array
+    {
+        $node = [
+            '@context' => 'https://schema.org',
+            '@type' => 'DiscussionForumPosting',
+            'headline' => $meta['title'] ?? $model->getAttribute('title'),
+            'text' => $this->plain((string) $model->getAttribute('body')),
+            'datePublished' => $this->iso($model->getAttribute('published_at')),
+            'url' => $meta['canonical'] ?? null,
+            'mainEntityOfPage' => ['@id' => ($meta['canonical'] ?? '').'#webpage'],
+            'publisher' => ['@id' => $this->baseUrl().'/#organization'],
+        ];
+
+        if ($author = $model->getAttribute('author_name')) {
+            $node['author'] = ['@type' => 'Person', 'name' => $author];
+        }
+
+        return array_filter($node, fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * اعتبارسنجی سبک: نود اختصاصی فاقد ویژگیِ ضروری‌اش حذف می‌شود تا
+     * هیچ نود ناقصی منتشر نشود. (مرور/امتیاز ساختگی تولید نمی‌کنیم.)
+     *
+     * @param  array<string, mixed>  $node
+     */
+    private function valid(array $node): bool
+    {
+        $type = $node['@type'] ?? null;
+
+        return match ($type) {
+            'Article', 'BlogPosting', 'DiscussionForumPosting' => ! empty($node['headline']),
+            'Service' => ! empty($node['name']),
+            'QAPage' => ! empty($node['mainEntity']) && ! empty($node['mainEntity']['name']),
+            default => true,
+        };
     }
 
     /** LocalBusiness از تنظیمات Local SEO (در صورت فعال‌بودن). */
