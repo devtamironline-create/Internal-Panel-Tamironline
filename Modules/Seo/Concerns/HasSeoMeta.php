@@ -4,6 +4,7 @@ namespace Modules\Seo\Concerns;
 
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Modules\Seo\Models\SeoMeta;
+use Modules\Seo\Services\SlugHistoryRecorder;
 
 /**
  * به هر مدلی که باید متای سئو داشته باشد اضافه می‌شود. رابطهٔ morphOne
@@ -11,6 +12,16 @@ use Modules\Seo\Models\SeoMeta;
  */
 trait HasSeoMeta
 {
+    /**
+     * بوتِ خودکارِ تریت: با تغییرِ slug، تاریخچه ثبت و redirect 301 ساخته می‌شود.
+     */
+    public static function bootHasSeoMeta(): void
+    {
+        static::updated(function ($model): void {
+            app(SlugHistoryRecorder::class)->handle($model);
+        });
+    }
+
     public function seoMeta(): MorphOne
     {
         return $this->morphOne(SeoMeta::class, 'seoable');
