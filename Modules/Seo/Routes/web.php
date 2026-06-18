@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
+use Modules\Seo\Http\Controllers\CannibalizationController;
+use Modules\Seo\Http\Controllers\CanonicalController;
+use Modules\Seo\Http\Controllers\DashboardController;
+use Modules\Seo\Http\Controllers\FaqController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
@@ -13,17 +17,37 @@ Route::middleware(['auth', 'can:manage-seo'])
     ->prefix('admin/seo')
     ->name('seo.admin.')
     ->group(function () {
+        // داشبورد سئو (نمای کلی)
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
         Route::get('/settings', [SeoSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [SeoSettingsController::class, 'update'])->name('settings.update');
 
         // ریدایرکت‌ها
         Route::get('/redirects', [RedirectController::class, 'index'])->name('redirects.index');
         Route::post('/redirects', [RedirectController::class, 'store'])->name('redirects.store');
+        // مسیرهای ثابت پیش از binding پویا تعریف می‌شوند تا «export» به‌عنوان مدل تفسیر نشود.
+        Route::get('/redirects/export', [RedirectController::class, 'export'])->name('redirects.export');
+        Route::post('/redirects/import', [RedirectController::class, 'import'])->name('redirects.import');
         Route::put('/redirects/{redirect}/toggle', [RedirectController::class, 'toggle'])->name('redirects.toggle');
         Route::delete('/redirects/{redirect}', [RedirectController::class, 'destroy'])->name('redirects.destroy');
 
+        // پرسش‌های متداول (FAQ) به‌ازای هر صفحه
+        Route::get('/faq', [FaqController::class, 'index'])->name('faq.index');
+        Route::post('/faq', [FaqController::class, 'store'])->name('faq.store');
+        // مسیرِ ثابتِ reorder پیش از binding پویا تعریف می‌شود تا «reorder» مدل تفسیر نشود.
+        Route::post('/faq/reorder', [FaqController::class, 'reorder'])->name('faq.reorder');
+        Route::put('/faq/{faq}', [FaqController::class, 'update'])->name('faq.update');
+        Route::post('/faq/{faq}/toggle', [FaqController::class, 'toggle'])->name('faq.toggle');
+        Route::delete('/faq/{faq}', [FaqController::class, 'destroy'])->name('faq.destroy');
+
         // مانیتور ۴۰۴
         Route::get('/404', [NotFoundController::class, 'index'])->name('not-found.index');
+        // مسیرهای ثابت پیش از binding پویا تعریف می‌شوند تا «bulk»/«export» به‌عنوان مدل تفسیر نشوند.
+        Route::get('/404/export', [NotFoundController::class, 'export'])->name('not-found.export');
+        Route::delete('/404/bulk', [NotFoundController::class, 'bulkDestroy'])->name('not-found.bulk-destroy');
+        Route::post('/404/{notFound}/ignore', [NotFoundController::class, 'ignore'])->name('not-found.ignore');
+        Route::post('/404/{notFound}/unignore', [NotFoundController::class, 'unignore'])->name('not-found.unignore');
         Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->name('not-found.destroy');
 
         // مانیتورینگ و آدیت
@@ -33,10 +57,18 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/audit/run/{run}/export/{format}', [AuditController::class, 'export'])
             ->where('format', 'csv|json')->name('audit.export');
 
+        // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده
+        Route::get('/canonical', [CanonicalController::class, 'index'])->name('canonical.index');
+
+        // گزارش هم‌نوع‌خواری کلمات (Cannibalization) + محتوای تکراری
+        Route::get('/cannibalization', [CannibalizationController::class, 'index'])->name('cannibalization.index');
+
         // ابزارها: Import/Export + Audit log
         Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
         Route::get('/tools/export', [SeoToolsController::class, 'export'])->name('tools.export');
         Route::post('/tools/import', [SeoToolsController::class, 'import'])->name('tools.import');
+        Route::get('/tools/export-csv', [SeoToolsController::class, 'exportCsv'])->name('tools.export-csv');
+        Route::post('/tools/import-csv', [SeoToolsController::class, 'importCsv'])->name('tools.import-csv');
 
         // Role manager
         Route::get('/roles', [SeoRoleController::class, 'index'])->name('roles.index');

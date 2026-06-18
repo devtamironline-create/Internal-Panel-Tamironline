@@ -16,31 +16,49 @@ class NotFoundController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'uri' => 'required|string|max:191',
+            'uri' => 'required|string|max:2048',
             'referrer' => 'nullable|string|max:2048',
         ]);
 
         $uri = $data['uri'];
+        $hash = hash('sha256', $uri);
         $referrer = $data['referrer'] ?? null;
         $ua = substr((string) $request->userAgent(), 0, 512);
 
-        // upsert اتمیک: اگر uri موجود بود hits++ و در غیر این صورت رکورد جدید.
-        $existing = SeoNotFound::query()->where('uri', $uri)->first();
-        if ($existing) {
-            $existing->forceFill([
-                'hits' => DB::raw('hits + 1'),
-                'referrer' => $referrer ?: $existing->referrer,
-                'user_agent' => $ua ?: $existing->user_agent,
-                'last_seen_at' => now(),
-            ])->save();
-        } else {
-            SeoNotFound::query()->create([
-                'uri' => $uri,
-                'referrer' => $referrer,
-                'user_agent' => $ua,
-                'hits' => 1,
-                'last_seen_at' => now(),
-            ]);
+        // upsertِ اتمیک و امن در برابرِ هم‌زمانی: اول increment روی ردیفِ موجود
+        // (با کلیدِ uri_hash). اگر ردیفی نبود، insert؛ و اگر insert به‌خاطرِ
+        // مسابقهٔ هم‌زمان با unique برخورد، دوباره increment.
+        $update = [
+            'hits' => DB::raw('hits + 1'),
+            'last_seen_at' => now(),
+        ];
+        if ($referrer) {
+            $update['referrer'] = $referrer;
+        }
+        if ($ua !== '') {
+            $update['user_agent'] = $ua;
+        }
+
+        $affected = SeoNotFound::query()->where('uri_hash', $hash)->update($update);
+        if ($affected === 0) {
+            // تشخیص سادهٔ ربات از روی User-Agent.
+            $isBot = $ua !== '' && (bool) preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|googlebot/i', $ua);
+
+            try {
+                SeoNotFound::query()->create([
+                    'uri' => $uri,
+                    'uri_hash' => $hash,
+                    'referrer' => $referrer,
+                    'user_agent' => $ua,
+                    'hits' => 1,
+                    'last_seen_at' => now(),
+                    'first_seen_at' => now(),
+                    'is_bot' => $isBot,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // برخوردِ unique در شرایطِ هم‌زمانی → فقط increment.
+                SeoNotFound::query()->where('uri_hash', $hash)->update($update);
+            }
         }
 
         return response()->json(['ok' => true], 201);

@@ -5,6 +5,7 @@ namespace Modules\Seo\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Modules\Seo\Models\SeoFaq;
 use Modules\Seo\Models\SeoMeta;
 use Modules\Seo\Models\SeoSetting;
 
@@ -92,12 +93,40 @@ class MetaResolver
             'breadcrumb_title' => self::pick($meta?->breadcrumb_title, $context['title'] ?? null),
         ];
 
+        // پرسش‌های متداول صفحه (در صورت persist بودن مدل) — یک کوئری.
+        $result['faq'] = $this->faqs($model);
+
         // JSON-LD فقط برای آیتم‌های index‌پذیر تولید می‌شود.
         $result['jsonld'] = empty($robotsFlags['noindex'])
             ? $this->schema->generate($type, $model, $result)
             : [];
 
         return $result;
+    }
+
+    /**
+     * پرسش‌های متداول فعالِ یک مدل، به‌صورت [['question'=>..,'answer'=>..], ...]
+     * با پاسخِ متن‌ساده. مدل‌های بدون کلید (مثل BrandDeviceCombo) خروجی خالی دارند.
+     *
+     * @return list<array{question:string, answer:string}>
+     */
+    private function faqs(Model $model): array
+    {
+        $key = $model->getKey();
+        if (! $key) {
+            return [];
+        }
+
+        return SeoFaq::query()
+            ->where('faqable_type', $model->getMorphClass())
+            ->where('faqable_id', $key)
+            ->active()
+            ->get(['question', 'answer'])
+            ->map(fn (SeoFaq $f) => [
+                'question' => (string) $f->question,
+                'answer' => $this->clean((string) $f->answer),
+            ])
+            ->all();
     }
 
     /**
@@ -122,6 +151,12 @@ class MetaResolver
             'sitedesc' => $sitedesc,
             'sep' => $sep,
             'excerpt' => $excerpt !== '' ? $excerpt : $sitedesc,
+            // متغیرهای دامنه‌ای — برای قالب‌های دستگاه/برند/شهر (خالی‌ها در render حذف می‌شوند).
+            'brand' => (string) ($model->getAttribute('brand_name') ?? ''),
+            'device' => (string) ($model->getAttribute('device_name') ?? ''),
+            'city' => (string) (SeoSetting::get('default_city') ?: 'تهران'),
+            'guarantee' => (string) (SeoSetting::get('guarantee_text') ?? ''),
+            'phone' => (string) (SeoSetting::get('contact_phone') ?: SeoSetting::get('lb_phone') ?: ''),
             'date' => $this->formatDate($cfg, $model),
             'currentyear' => (string) (int) date('Y'),
             'id' => (string) ($model->getKey() ?? ''),
@@ -162,6 +197,17 @@ class MetaResolver
             if (! $isLive) {
                 $flags['noindex'] = true;
             }
+        }
+
+        // آیتمِ غیرفعال (ستون is_active = false) نباید ایندکس شود.
+        if (array_key_exists('is_active', $model->getAttributes())
+            && ! (bool) $model->getAttribute('is_active')) {
+            $flags['noindex'] = true;
+        }
+
+        // وضعیت گردش‌کار انتشار → پیش‌نویس/بایگانی/noindex اجباراً noindex.
+        if ($meta && in_array($meta->status, ['draft', 'archived', 'noindex'], true)) {
+            $flags['noindex'] = true;
         }
 
         return $flags;

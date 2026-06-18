@@ -79,6 +79,20 @@ return [
             'sitemap' => true,
             'default_schema' => 'WebPage',
         ],
+        // صفحهٔ ترکیبیِ دستگاه+برند (مثلاً /services/washing-machine/lg).
+        // ردیفِ DB ندارد؛ resolver آن را از Device+Brand می‌سازد (resolver=brand_device).
+        // slug ورودی به‌صورت «device-slug/brand-slug» است.
+        'brand_device' => [
+            'model' => \Modules\Seo\Support\BrandDeviceCombo::class,
+            'resolver' => 'brand_device',
+            'slug' => 'slug',
+            'url' => '/services/{device}/{brand}',
+            'title_attr' => 'name',
+            'excerpt_attr' => null,
+            'published' => null,
+            'sitemap' => false,   // فقط ترکیب‌های دارای محتوای اختصاصی → فاز بعد
+            'default_schema' => 'Service',
+        ],
         'taxonomy' => [
             'model' => \Modules\Site\Models\Taxonomy::class,
             'slug' => 'slug',
@@ -129,6 +143,10 @@ return [
             'title' => 'تعمیر %title% %sep% %sitename%',
             'description' => 'تعمیر تخصصی %title% در محل با گارانتی — رزرو آنلاین.',
         ],
+        'brand_device' => [
+            'title' => 'تعمیر %title% در %city% %sep% %sitename%',
+            'description' => 'تعمیر تخصصی %title% در %city% با اعزام تکنسین متخصص و پرداخت پس از تست نهایی دستگاه.',
+        ],
         'forum_question' => [
             'title' => '%title% %sep% %sitename%',
             'description' => '%excerpt%',
@@ -147,6 +165,11 @@ return [
         'sitedesc' => 'توضیح سایت',
         'sep' => 'جداکننده',
         'excerpt' => 'خلاصه/چکیده',
+        'brand' => 'نام برند',
+        'device' => 'نام دستگاه',
+        'city' => 'شهر',
+        'guarantee' => 'متن ضمانت',
+        'phone' => 'شمارهٔ تماس',
         'term' => 'نام ترم/برچسب',
         'category' => 'دستهٔ اصلی',
         'date' => 'تاریخ انتشار',

@@ -41,7 +41,12 @@ class SeoMeta extends Model
         'is_pillar',
         'schema_type',
         'custom_schema',
+        'status',
+        'notes',
     ];
+
+    /** وضعیت‌های گردش‌کار انتشار سئو. */
+    public const STATUSES = ['draft', 'ready', 'approved', 'published', 'needs_update', 'noindex', 'archived'];
 
     protected $casts = [
         'focus_keywords' => 'array',
@@ -56,6 +61,24 @@ class SeoMeta extends Model
         'robots_max_video_preview' => 'integer',
         'is_pillar' => 'boolean',
     ];
+
+    /**
+     * برچسب فارسی هر وضعیت گردش‌کار.
+     *
+     * @return array<string, string>
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            'draft' => 'پیش‌نویس',
+            'ready' => 'آمادهٔ بازبینی',
+            'approved' => 'تأییدشده',
+            'published' => 'منتشرشده',
+            'needs_update' => 'نیازمند به‌روزرسانی',
+            'noindex' => 'بدون ایندکس',
+            'archived' => 'بایگانی‌شده',
+        ];
+    }
 
     public function seoable(): MorphTo
     {

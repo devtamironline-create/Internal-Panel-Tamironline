@@ -69,6 +69,10 @@ class SiteCrawler
                 'avg_score' => $total > 0 ? (int) round($scoreSum / $total) : 0,
             ]);
 
+            // پاس پس از run: مشکلات canonical میان‌ردیفی (وابسته به سایر صفحات همین
+            // کرال) را محاسبه و شمارش‌های run را بازمحاسبه می‌کند.
+            $this->analyzer->analyzeRun($run->refresh());
+
             $this->alerts->afterRun($run->refresh());
         } catch (\Throwable $e) {
             $run->update(['status' => 'failed', 'finished_at' => now()]);

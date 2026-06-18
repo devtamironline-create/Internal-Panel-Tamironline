@@ -11,7 +11,30 @@ use Modules\Seo\Models\SeoSetting;
  */
 class SitemapBuilder
 {
+    /** سقفِ استانداردِ موتورهای جستجو برای هر فایلِ sitemap. */
+    public const MAX_URLS_PER_FILE = 50000;
+
     public function __construct(private readonly SeoableRegistry $registry) {}
+
+    /**
+     * آیتم‌های یک نوع برای یک «صفحه» (chunk) — برای تقسیمِ sitemapهای بزرگ.
+     *
+     * @return list<array{loc:string,lastmod:?string,changefreq:string,priority:string}>
+     */
+    public function urlsForTypePaged(string $type, int $page): array
+    {
+        $all = $this->urlsForType($type);
+
+        return array_slice($all, (max(1, $page) - 1) * self::MAX_URLS_PER_FILE, self::MAX_URLS_PER_FILE);
+    }
+
+    /** تعدادِ فایل‌های sitemap لازم برای یک نوع (≥۱). */
+    public function chunkCountForType(string $type): int
+    {
+        $total = count($this->urlsForType($type));
+
+        return max(1, (int) ceil($total / self::MAX_URLS_PER_FILE));
+    }
 
     /** نوع‌هایی که باید در sitemap بیایند. */
     public function sitemapTypes(): array
@@ -69,12 +92,26 @@ class SitemapBuilder
     public function index(): array
     {
         $out = [];
+        $now = Carbon::now()->toAtomString();
         foreach ($this->sitemapTypes() as $type) {
-            $out[] = [
-                'type' => $type,
-                'loc' => $this->absoluteUrl('/v1/seo/sitemap/'.$type.'.xml'),
-                'lastmod' => Carbon::now()->toAtomString(),
-            ];
+            $chunks = $this->chunkCountForType($type);
+            if ($chunks <= 1) {
+                $out[] = [
+                    'type' => $type,
+                    'loc' => $this->absoluteUrl('/v1/seo/sitemap/'.$type.'.xml'),
+                    'lastmod' => $now,
+                ];
+
+                continue;
+            }
+            // نوعِ بزرگ → چند فایلِ {type}-{page}.xml
+            for ($p = 1; $p <= $chunks; $p++) {
+                $out[] = [
+                    'type' => $type,
+                    'loc' => $this->absoluteUrl('/v1/seo/sitemap/'.$type.'-'.$p.'.xml'),
+                    'lastmod' => $now,
+                ];
+            }
         }
 
         return $out;

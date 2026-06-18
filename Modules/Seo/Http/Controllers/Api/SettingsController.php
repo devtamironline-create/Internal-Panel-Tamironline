@@ -31,6 +31,11 @@ class SettingsController extends Controller
                     'facebook_app_id' => SeoSetting::get('facebook_app_id'),
                 ],
                 'verification' => SeoSetting::group('verification'),
+                'integrations' => [
+                    'ga4_measurement_id' => SeoSetting::get('ga4_measurement_id'),
+                    'gtm_container_id' => SeoSetting::get('gtm_container_id'),
+                    'analytics_disable_for_admins' => SeoSetting::get('analytics_disable_for_admins') === '1',
+                ],
                 'knowledge_graph' => [
                     'type' => SeoSetting::get('kg_type') ?: 'Organization',
                     'name' => SeoSetting::get('kg_name') ?: (SeoSetting::get('site_name') ?: config('app.name')),

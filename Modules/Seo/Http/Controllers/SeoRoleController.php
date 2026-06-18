@@ -4,40 +4,70 @@ namespace Modules\Seo\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Seo\Models\SeoChangeLog;
+use Modules\Seo\Support\SeoPermissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Modules\Seo\Models\SeoChangeLog;
 
 /**
- * Role Manager سئو — تعیین این‌که چه نقش‌هایی دسترسی manage-seo دارند.
+ * Role Manager سئو — تعیین این‌که چه نقش‌هایی دسترسی manage-seo و دسترسی‌های ریزدانه دارند.
  */
 class SeoRoleController extends Controller
 {
-    private const PERMISSION = 'manage-seo';
+    private const PERMISSION = SeoPermissions::MANAGE;
 
     public function index()
     {
         Permission::findOrCreate(self::PERMISSION, 'web');
+        foreach (SeoPermissions::keys() as $name) {
+            Permission::findOrCreate($name, 'web');
+        }
 
-        $roles = Role::query()->orderBy('name')->get()->map(fn (Role $r) => [
-            'id' => $r->id,
-            'name' => $r->name,
-            'has' => $r->hasPermissionTo(self::PERMISSION),
-        ]);
+        $granularLabels = SeoPermissions::labels();
+        $granularKeys = SeoPermissions::keys();
 
-        return view('seo::roles.index', compact('roles'));
+        $roles = Role::query()->orderBy('name')->get()->map(function (Role $r) use ($granularKeys) {
+            $granular = [];
+            foreach ($granularKeys as $name) {
+                $granular[$name] = $r->hasPermissionTo($name);
+            }
+
+            return [
+                'id' => $r->id,
+                'name' => $r->name,
+                'has' => $r->hasPermissionTo(self::PERMISSION),
+                'granular' => $granular,
+            ];
+        });
+
+        return view('seo::roles.index', compact('roles', 'granularLabels'));
     }
 
     public function update(Request $request)
     {
-        $permission = Permission::findOrCreate(self::PERMISSION, 'web');
+        $managePermission = Permission::findOrCreate(self::PERMISSION, 'web');
         $checked = array_map('intval', (array) $request->input('roles', []));
 
+        // ماتریسِ دسترسی‌های ریزدانه: granular[permissionKey][] = roleId
+        $granularInput = (array) $request->input('granular', []);
+
         foreach (Role::all() as $role) {
+            // manage-seo (مثل قبل)
             if (in_array($role->id, $checked, true)) {
-                $role->givePermissionTo($permission);
+                $role->givePermissionTo($managePermission);
             } else {
-                $role->revokePermissionTo($permission);
+                $role->revokePermissionTo($managePermission);
+            }
+
+            // دسترسی‌های ریزدانه
+            foreach (SeoPermissions::keys() as $name) {
+                $permission = Permission::findOrCreate($name, 'web');
+                $rolesForPerm = array_map('intval', (array) ($granularInput[$name] ?? []));
+                if (in_array($role->id, $rolesForPerm, true)) {
+                    $role->givePermissionTo($permission);
+                } else {
+                    $role->revokePermissionTo($permission);
+                }
             }
         }
 
