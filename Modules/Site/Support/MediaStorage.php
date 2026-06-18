@@ -25,6 +25,11 @@ final class MediaStorage
         $hash = hash_file('sha256', $file->getRealPath());
 
         if ($existing = Media::where('hash', $hash)->first()) {
+            // dedup — همان فایل قبلاً آپلود شده. ولی اگر فایلِ فیزیکی پاک شده
+            // باشد (پاک‌سازیِ دستیِ مخزن)، همین‌جا روی همان مسیر بازیابی‌اش
+            // می‌کنیم تا URLهای موجود (مقالات/برندها) بدونِ تغییر دوباره کار کنند.
+            self::restoreMissingFile($existing, $file);
+
             return $existing;   // dedup — همان فایل قبلاً آپلود شده
         }
 
@@ -74,6 +79,42 @@ final class MediaStorage
         }
 
         return $media;
+    }
+
+    /**
+     * بازیابیِ فایلِ فیزیکیِ یک Media که رکوردش در DB هست ولی فایلش روی disk
+     * پاک شده. مسیر/نام از خودِ رکورد (یا بازساخت از hash) می‌آید تا URLهای
+     * موجود دست‌نخورده بمانند. اگر فایل سرجایش باشد، کاری نمی‌کند.
+     *
+     * @return bool true اگر بازیابی انجام شد
+     */
+    public static function restoreMissingFile(Media $media, UploadedFile $file): bool
+    {
+        $disk = Storage::disk('public');
+
+        // مسیرِ مرجع: path موجود، وگرنه بازساخت از hash+extension (هم‌منطق با store).
+        $ext = $media->extension ?: strtolower($file->getClientOriginalExtension() ?: ($file->extension() ?: 'bin'));
+        $path = $media->path
+            ?: 'site/media/'.substr($media->hash, 0, 2).'/'.substr($media->hash, 2, 2).'/'.$media->hash.'.'.$ext;
+
+        if ($disk->exists($path)) {
+            return false;   // فایل سرجایش است — نیازی به بازیابی نیست
+        }
+
+        $disk->putFileAs(dirname($path), $file, basename($path));
+        @chmod($disk->path($path), 0644);
+
+        // اگر path روی رکورد خالی بود، تثبیتش کن.
+        if (empty($media->path)) {
+            $media->forceFill(['path' => $path])->save();
+        }
+
+        // variantها هم با فایل اصلی پاک شده‌اند → بازسازی.
+        if ($media->kind === 'image') {
+            self::buildVariants($media);
+        }
+
+        return true;
     }
 
     /**

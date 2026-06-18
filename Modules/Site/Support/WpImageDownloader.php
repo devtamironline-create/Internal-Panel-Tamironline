@@ -47,7 +47,10 @@ final class WpImageDownloader
         $guessName = basename(parse_url($url, PHP_URL_PATH) ?? '');
         if ($guessName !== '') {
             $existing = Media::where('filename', $guessName)->orderByDesc('id')->first();
-            if ($existing) {
+            // فقط وقتی short-circuit کن که فایلِ فیزیکی هم موجود باشد. اگر رکورد
+            // هست ولی فایل پاک شده، ادامه می‌دهیم تا دوباره دانلود و روی همان
+            // مسیر بازیابی شود (MediaStorage::store خودش بازیابی می‌کند).
+            if ($existing && $this->fileExists($existing)) {
                 $this->cache[$url] = $existing;
 
                 return $existing;
@@ -78,6 +81,13 @@ final class WpImageDownloader
         } finally {
             @unlink($tmpPath);
         }
+    }
+
+    /** آیا فایلِ فیزیکیِ این Media روی disk موجود است؟ */
+    private function fileExists(Media $media): bool
+    {
+        return ! empty($media->path)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($media->path);
     }
 
     private function downloadWithRetry(string $url): ?string
