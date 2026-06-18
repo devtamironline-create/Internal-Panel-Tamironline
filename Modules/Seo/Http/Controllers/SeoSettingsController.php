@@ -19,6 +19,7 @@ class SeoSettingsController extends Controller
         'site_description' => 'general',
         'separator' => 'general',
         'canonical_base_url' => 'general',
+        'publish_allow_seo_errors' => 'general',
         // social
         'og_default_image' => 'social',
         'twitter_card' => 'social',
@@ -80,6 +81,7 @@ class SeoSettingsController extends Controller
             'site_description' => 'nullable|string|max:500',
             'separator' => 'nullable|string|max:10',
             'canonical_base_url' => 'nullable|string|max:255',
+            'publish_allow_seo_errors' => 'nullable|in:1',
             'og_default_image' => 'nullable|string|max:500',
             'twitter_card' => 'nullable|in:summary,summary_large_image,app,player',
             'twitter_site' => 'nullable|string|max:100',

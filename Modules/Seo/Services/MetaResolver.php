@@ -176,6 +176,11 @@ class MetaResolver
             $flags['noindex'] = true;
         }
 
+        // وضعیت گردش‌کار انتشار → پیش‌نویس/بایگانی/noindex اجباراً noindex.
+        if ($meta && in_array($meta->status, ['draft', 'archived', 'noindex'], true)) {
+            $flags['noindex'] = true;
+        }
+
         return $flags;
     }
 

@@ -62,6 +62,10 @@ class SeoMetaPanel extends Component
 
     public bool $is_pillar = false;
 
+    public ?string $status = null;
+
+    public ?string $notes = null;
+
     public ?string $saved = null;
 
     public function mount(string $type, int|string $modelId): void
@@ -122,6 +126,8 @@ class SeoMetaPanel extends Component
         $this->twitter_image = $meta->twitter_image;
         $this->breadcrumb_title = $meta->breadcrumb_title;
         $this->is_pillar = (bool) $meta->is_pillar;
+        $this->status = $meta->status;
+        $this->notes = $meta->notes;
     }
 
     /** آرایهٔ مقادیر فرم برای ذخیره/پیش‌نمایش. */
@@ -154,6 +160,8 @@ class SeoMetaPanel extends Component
             'twitter_image' => $this->twitter_image ?: null,
             'breadcrumb_title' => $this->breadcrumb_title ?: null,
             'is_pillar' => $this->is_pillar,
+            'status' => $this->status ?: null,
+            'notes' => $this->notes ?: null,
         ];
     }
 
@@ -206,6 +214,29 @@ class SeoMetaPanel extends Component
         ]);
     }
 
+    /**
+     * چک‌لیست پیش از انتشار — از روی همان مقادیر فرم/پیش‌نمایش (بدون موتور جدید).
+     *
+     * @return list<array{label:string,pass:bool}>
+     */
+    #[Computed]
+    public function publishChecklist(): array
+    {
+        $preview = $this->preview;
+        $keyword = collect(preg_split('/[،,\n]+/u', (string) $this->focusKeywords))
+            ->map(fn ($k) => trim($k))->filter()->first() ?? '';
+
+        $canonical = (string) ($preview['canonical'] ?? '');
+
+        return [
+            ['label' => 'عنوان سئو تنظیم شده است', 'pass' => trim((string) ($preview['title'] ?? '')) !== ''],
+            ['label' => 'توضیحات متا تنظیم شده است', 'pass' => trim((string) ($preview['description'] ?? '')) !== ''],
+            ['label' => 'آدرس Canonical موجود و معتبر است', 'pass' => $canonical !== '' && filter_var($canonical, FILTER_VALIDATE_URL) !== false],
+            ['label' => 'تصویر Open Graph تنظیم شده است', 'pass' => trim((string) $this->og_image) !== ''],
+            ['label' => 'کلمهٔ کلیدی کانونی تعیین شده است', 'pass' => $keyword !== ''],
+        ];
+    }
+
     public function save(): void
     {
         abort_unless(Gate::allows('manage-seo'), 403);
@@ -222,6 +253,8 @@ class SeoMetaPanel extends Component
             'twitter_image' => 'nullable|string|max:500',
             'breadcrumb_title' => 'nullable|string|max:255',
             'robots_max_image_preview' => 'nullable|in:none,standard,large',
+            'status' => 'nullable|in:'.implode(',', SeoMeta::STATUSES),
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         $model = $this->model();

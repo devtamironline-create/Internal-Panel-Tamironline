@@ -30,6 +30,10 @@
             <label class="block text-sm">آدرس پایه (canonical base)
                 <input name="canonical_base_url" dir="ltr" value="{{ old('canonical_base_url', $settings['canonical_base_url'] ?? '') }}" placeholder="https://tamironline.com" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
             </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="publish_allow_seo_errors" value="1" @checked(($settings['publish_allow_seo_errors'] ?? '') === '1') class="rounded">
+                اجازهٔ انتشار با خطاهای سئو
+            </label>
         </fieldset>
 
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">

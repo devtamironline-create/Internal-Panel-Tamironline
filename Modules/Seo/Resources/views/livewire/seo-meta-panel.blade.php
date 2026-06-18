@@ -48,6 +48,19 @@
         </ul>
     </div>
 
+    {{-- چک‌لیست پیش از انتشار --}}
+    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-3">
+        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">چک‌لیست پیش از انتشار</span>
+        <ul class="space-y-1">
+            @foreach($this->publishChecklist as $item)
+                <li class="flex items-center gap-2 text-xs {{ $item['pass'] ? 'text-emerald-600' : 'text-rose-600' }}">
+                    <span class="shrink-0">{{ $item['pass'] ? '✓' : '✗' }}</span>
+                    <span>{{ $item['label'] }}</span>
+                </li>
+            @endforeach
+        </ul>
+    </div>
+
     {{-- عنوان سئو --}}
     <div>
         <div class="flex items-center justify-between mb-1">
@@ -158,6 +171,26 @@
             <input type="checkbox" wire:model="is_pillar" class="rounded">
             <span class="text-sm text-gray-600 dark:text-gray-300">محتوای ستون (Pillar)</span>
         </label>
+    </div>
+
+    {{-- وضعیت گردش‌کار و یادداشت --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">وضعیت انتشار</label>
+            <select wire:model.live="status"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                <option value="">—</option>
+                @foreach(\Modules\Seo\Models\SeoMeta::statusLabels() as $value => $label)
+                    <option value="{{ $value }}">{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">یادداشت‌های داخلی</label>
+            <textarea wire:model="notes" rows="2" maxlength="1000"
+                      placeholder="یادداشت تحریریه (در صفحه نمایش داده نمی‌شود)"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm"></textarea>
+        </div>
     </div>
 
     <div class="flex justify-end">
