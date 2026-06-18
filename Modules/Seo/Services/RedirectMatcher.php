@@ -147,6 +147,16 @@ class RedirectMatcher
     }
 
     /**
+     * نسخهٔ عمومی activeRules برای استفاده در تحلیل‌ها (مثلاً بررسی canonical).
+     *
+     * @return array<int,array{source:string,match_type:string,target:?string,status_code:int}>
+     */
+    public function activeRulesForAnalysis(): array
+    {
+        return $this->activeRules();
+    }
+
+    /**
      * ریدایرکت‌های فعال از دیتابیس (با امکان نادیده‌گرفتن یک id).
      *
      * @return array<int,array{source:string,match_type:string,target:?string,status_code:int}>

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
+use Modules\Seo\Http\Controllers\CanonicalController;
 use Modules\Seo\Http\Controllers\DashboardController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
@@ -44,6 +45,9 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/audit/run/{run}', [AuditController::class, 'show'])->name('audit.show');
         Route::get('/audit/run/{run}/export/{format}', [AuditController::class, 'export'])
             ->where('format', 'csv|json')->name('audit.export');
+
+        // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده
+        Route::get('/canonical', [CanonicalController::class, 'index'])->name('canonical.index');
 
         // ابزارها: Import/Export + Audit log
         Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
