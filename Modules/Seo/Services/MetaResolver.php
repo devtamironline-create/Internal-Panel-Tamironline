@@ -39,6 +39,21 @@ class MetaResolver
     }
 
     /**
+     * قالبِ نهاییِ یک نوع برای title/description با اولویت:
+     *   تنظیمِ پنل برای نوع ← تنظیمِ پنل سراسری ← config نوع ← config سراسری.
+     * این باعث می‌شود مدیر بتواند قالب‌ها را از پنل و بدونِ کد عوض کند.
+     */
+    private function template(string $type, string $field): ?string
+    {
+        return self::pick(
+            SeoSetting::get("tpl_{$type}_{$field}"),
+            SeoSetting::get("tpl_global_{$field}"),
+            config("seo.templates.$type.$field"),
+            config("seo.templates.global.$field"),
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function resolve(string $type, Model $model): array
@@ -49,12 +64,12 @@ class MetaResolver
         $context = $this->buildContext($type, $cfg, $model);
 
         $title = $this->variables->render(
-            self::pick($meta?->title, config("seo.templates.$type.title"), config('seo.templates.global.title')),
+            self::pick($meta?->title, $this->template($type, 'title')),
             $context
         );
 
         $description = $this->variables->render(
-            self::pick($meta?->description, config("seo.templates.$type.description"), config('seo.templates.global.description')),
+            self::pick($meta?->description, $this->template($type, 'description')),
             $context
         );
 
@@ -116,10 +131,14 @@ class MetaResolver
 
         $title = (string) ($model->getAttribute($titleAttr) ?? '');
         $excerpt = $excerptAttr ? $this->clean((string) ($model->getAttribute($excerptAttr) ?? '')) : '';
+        $slug = (string) ($model->getAttribute($cfg['slug'] ?? 'slug') ?? '');
+        $year = (string) (int) date('Y');
 
         return [
             'title' => $title,
+            'slug' => $slug,
             'sitename' => $sitename,
+            'site_name' => $sitename,    // نام مستعارِ خوانا برای {site_name}
             'sitedesc' => $sitedesc,
             'sep' => $sep,
             'excerpt' => $excerpt !== '' ? $excerpt : $sitedesc,
@@ -130,7 +149,8 @@ class MetaResolver
             'guarantee' => (string) (SeoSetting::get('guarantee_text') ?? ''),
             'phone' => (string) (SeoSetting::get('contact_phone') ?: SeoSetting::get('lb_phone') ?: ''),
             'date' => $this->formatDate($cfg, $model),
-            'currentyear' => (string) (int) date('Y'),
+            'currentyear' => $year,
+            'year' => $year,             // نام مستعار برای {year}
             'id' => (string) ($model->getKey() ?? ''),
         ];
     }

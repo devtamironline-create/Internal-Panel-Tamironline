@@ -54,6 +54,34 @@
                 </div>
                 @endforeach
             </div>
+
+            @if($groupKey === 'contact')
+            {{-- لیست شماره‌های تماس (repeater) --}}
+            <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold">شماره تماس‌ها</h3>
+                    <button type="button" id="phones-add"
+                            class="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs">افزودن شماره</button>
+                </div>
+                @php $phoneRows = old('phones', $phones ?? []); @endphp
+                @if(empty($phoneRows)) @php $phoneRows = [['label' => '', 'number' => '']]; @endphp @endif
+                <div id="phones-list" class="space-y-2">
+                    @foreach($phoneRows as $i => $p)
+                    <div class="phones-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                        <input type="text" name="phones[{{ $i }}][label]" value="{{ $p['label'] ?? '' }}"
+                               placeholder="برچسب (مثلاً فروش / پشتیبانی / دفتر)"
+                               class="sm:col-span-5 w-full px-3 py-2 border border-gray-200 rounded text-sm">
+                        <input type="text" name="phones[{{ $i }}][number]" value="{{ $p['number'] ?? '' }}"
+                               placeholder="شماره" dir="ltr"
+                               class="sm:col-span-6 w-full px-3 py-2 border border-gray-200 rounded text-sm ltr">
+                        <button type="button"
+                                class="phones-remove sm:col-span-1 px-3 py-2 bg-red-50 text-red-600 rounded text-xs">حذف</button>
+                    </div>
+                    @endforeach
+                </div>
+                <p class="text-xs text-gray-400 mt-2">حداکثر ۱۰ شماره. ردیف‌های بدون شماره ذخیره نمی‌شوند. اولین شماره به‌عنوان شماره‌ی اصلی استفاده می‌شود.</p>
+            </div>
+            @endif
         </div>
         @endforeach
 
@@ -62,4 +90,47 @@
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    var list = document.getElementById('phones-list');
+    var addBtn = document.getElementById('phones-add');
+    if (!list || !addBtn) return;
+    var MAX = 10;
+
+    function reindex() {
+        var rows = list.querySelectorAll('.phones-row');
+        rows.forEach(function (row, i) {
+            var label = row.querySelector('input[name$="[label]"]');
+            var number = row.querySelector('input[name$="[number]"]');
+            if (label) label.name = 'phones[' + i + '][label]';
+            if (number) number.name = 'phones[' + i + '][number]';
+        });
+    }
+
+    function addRow() {
+        if (list.querySelectorAll('.phones-row').length >= MAX) return;
+        var first = list.querySelector('.phones-row');
+        var row = first ? first.cloneNode(true) : null;
+        if (!row) return;
+        row.querySelectorAll('input').forEach(function (inp) { inp.value = ''; });
+        list.appendChild(row);
+        reindex();
+    }
+
+    addBtn.addEventListener('click', addRow);
+
+    list.addEventListener('click', function (e) {
+        if (!e.target.classList.contains('phones-remove')) return;
+        var rows = list.querySelectorAll('.phones-row');
+        if (rows.length <= 1) {
+            // آخرین ردیف پاک می‌شود ولی باقی می‌ماند تا فرم خالی نشود.
+            e.target.closest('.phones-row').querySelectorAll('input').forEach(function (inp) { inp.value = ''; });
+            return;
+        }
+        e.target.closest('.phones-row').remove();
+        reindex();
+    });
+})();
+</script>
 @endsection

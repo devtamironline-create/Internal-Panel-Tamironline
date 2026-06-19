@@ -25,7 +25,25 @@ class SettingsController extends Controller
             ->pluck('value', 'key')
             ->all();
 
-        $phone = $values['contact_phone'] ?? null;
+        // لیست شماره‌های برچسب‌دار — منبع اصلی contact_phones (JSON)، با fallback به contact_phone.
+        $phones = $this->decodePhones($values['contact_phones'] ?? null);
+        if (empty($phones)) {
+            $legacy = $values['contact_phone'] ?? null;
+            if ($legacy !== null && trim($legacy) !== '') {
+                $phones[] = ['label' => '', 'number' => trim($legacy)];
+            }
+        }
+
+        $phonesOut = array_map(function (array $p): array {
+            return [
+                'label' => $p['label'] !== '' ? $p['label'] : null,
+                'number' => $p['number'],
+                'href' => 'tel:'.$this->cleanPhone($p['number']),
+            ];
+        }, $phones);
+
+        // سازگاری با مصرف‌کننده‌های قدیمی: phone = شماره‌ی اولین ردیف.
+        $phone = $phonesOut[0]['number'] ?? null;
 
         return response()
             ->json([
@@ -36,6 +54,7 @@ class SettingsController extends Controller
                 // تماس
                 'phone' => $phone,
                 'phone_href' => $phone ? 'tel:'.$this->cleanPhone($phone) : null,
+                'phones' => $phonesOut,
                 'support_phone' => $values['contact_support_phone'] ?? null,
                 'email' => $values['contact_email'] ?? null,
                 'address' => $values['contact_address'] ?? null,
@@ -56,6 +75,40 @@ class SettingsController extends Controller
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * تبدیل JSON ذخیره‌شده‌ی contact_phones به آرایه‌ای از ['label'=>..,'number'=>..].
+     *
+     * @return array<int, array{label: string, number: string}>
+     */
+    private function decodePhones(?string $json): array
+    {
+        if (! is_string($json) || trim($json) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $phones = [];
+        foreach ($decoded as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $number = trim((string) ($row['number'] ?? ''));
+            if ($number === '') {
+                continue;
+            }
+            $phones[] = [
+                'label' => trim((string) ($row['label'] ?? '')),
+                'number' => $number,
+            ];
+        }
+
+        return $phones;
     }
 
     /**

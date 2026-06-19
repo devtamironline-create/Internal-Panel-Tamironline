@@ -13,6 +13,7 @@ Route::get('/media/{id}/v/{variant}/{name?}', [MediaServeController::class, 'ser
 use Modules\Site\Http\Controllers\Admin\ArticleController;
 use Modules\Site\Http\Controllers\Admin\BannerController;
 use Modules\Site\Http\Controllers\Admin\BlogTopicController;
+use Modules\Site\Http\Controllers\Admin\CacheController;
 use Modules\Site\Http\Controllers\Admin\CommentController as AdminCommentController;
 use Modules\Site\Http\Controllers\Admin\ContactMessageController;
 use Modules\Site\Http\Controllers\Admin\FaqController;
@@ -223,6 +224,14 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'edit'])->name('edit');
         Route::put('/', [SettingsController::class, 'update'])->name('update');
+    });
+
+    // پاک‌سازی کش فرانت (Next.js on-demand revalidation)
+    Route::prefix('cache')->name('cache.')->middleware('can:manage-site-settings')->group(function () {
+        Route::get('/', [CacheController::class, 'index'])->name('index');
+        Route::put('/config', [CacheController::class, 'updateConfig'])->name('config');
+        Route::post('/purge', [CacheController::class, 'purge'])->name('purge');
+        Route::post('/test', [CacheController::class, 'test'])->name('test');
     });
 
 });

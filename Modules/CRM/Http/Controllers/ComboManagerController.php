@@ -116,6 +116,10 @@ class ComboManagerController extends Controller
             ? 'صفحهٔ ترکیبی فعال شد.'
             : 'صفحهٔ ترکیبی غیرفعال شد.';
 
+        // پاک‌سازیِ کشِ صفحهٔ ترکیبیِ متأثر (fire-and-forget).
+        app(\Modules\Site\Support\FrontendRevalidator::class)
+            ->purgePaths(['/services/'.$device->slug.'/'.$brand->slug]);
+
         return redirect()
             ->route('crm.combo-manager.index', ['device' => $device->id])
             ->with('success', $message);
@@ -175,6 +179,9 @@ class ComboManagerController extends Controller
 
         $verb = $activate ? 'فعال' : 'غیرفعال';
         $message = "{$count} صفحهٔ ترکیبی {$verb} شد.";
+
+        // تغییرِ گروهی → پاک‌سازیِ کاملِ کشِ فرانت.
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeAll();
 
         return redirect()
             ->route('crm.combo-manager.index', ['device' => $device->id])

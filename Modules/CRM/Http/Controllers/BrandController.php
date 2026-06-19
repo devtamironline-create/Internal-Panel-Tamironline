@@ -183,6 +183,12 @@ class BrandController extends Controller
         $brand->{$flag} = ! $brand->{$flag};
         $brand->save();
 
+        // پاک‌سازیِ کشِ فرانت برای صفحاتِ متأثر (fire-and-forget).
+        if ($flag === 'is_active') {
+            app(\Modules\Site\Support\FrontendRevalidator::class)
+                ->purgePaths(['/services/brands/'.$brand->slug, '/services', '/']);
+        }
+
         return back()->with('success', 'به‌روز شد.');
     }
 
@@ -208,6 +214,9 @@ class BrandController extends Controller
         $message = $activate
             ? "{$count} برند فعال شد."
             : "{$count} برند غیرفعال شد.";
+
+        // تغییرِ گروهی → پاک‌سازیِ کاملِ کشِ فرانت.
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeAll();
 
         return back()->with('success', $message);
     }
