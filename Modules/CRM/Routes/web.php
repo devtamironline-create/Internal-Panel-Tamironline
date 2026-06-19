@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\BrandController;
 use Modules\CRM\Http\Controllers\CityController;
+use Modules\CRM\Http\Controllers\ComboManagerController;
 use Modules\CRM\Http\Controllers\CrmController;
 use Modules\CRM\Http\Controllers\CustomerController;
 use Modules\CRM\Http\Controllers\DeviceBrandPageController;
@@ -140,6 +141,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'update'])->name('device-brand-pages.update');
         Route::put('device-brand-pages/{devicebrandpage}/toggle', [DeviceBrandPageController::class, 'toggle'])->name('device-brand-pages.toggle');
         Route::delete('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'destroy'])->name('device-brand-pages.destroy');
+    });
+
+    // ─── مدیریت دستگاه‌محورِ صفحات ترکیبی (device × brand) — فقط مدیر کل ──
+    Route::middleware('can:manage-permissions')->group(function () {
+        Route::get('combo-manager', [ComboManagerController::class, 'index'])->name('combo-manager.index');
+        Route::put('combo-manager/{device}/{brand}/toggle', [ComboManagerController::class, 'toggle'])->name('combo-manager.toggle');
     });
 
     // ─── تاکسونومی ── استان‌ها ──────────────────────────────────────
