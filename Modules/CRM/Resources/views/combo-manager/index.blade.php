@@ -50,6 +50,52 @@
                 </span>
             </div>
 
+            {{-- ─── عملیات گروهی روی همهٔ برندهای این دستگاه ─────────────── --}}
+            <div class="mb-4 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">عملیات گروهی:</span>
+
+                {{-- همهٔ برندهای این دستگاه — فعال --}}
+                <form method="POST" action="{{ route('crm.combo-manager.bulk-toggle', $device) }}"
+                      onsubmit="return confirm('همهٔ صفحات ترکیبیِ این دستگاه روی سایت فعال شوند؟');">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="activate">
+                    <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+                        فعال‌سازیِ همهٔ برندهای این دستگاه
+                    </button>
+                </form>
+
+                {{-- همهٔ برندهای این دستگاه — غیرفعال --}}
+                <form method="POST" action="{{ route('crm.combo-manager.bulk-toggle', $device) }}"
+                      onsubmit="return confirm('همهٔ صفحات ترکیبیِ این دستگاه غیرفعال شوند؟ این کار آن‌ها را از سایت حذف می‌کند.');">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="deactivate">
+                    <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">
+                        غیرفعال‌سازیِ همه
+                    </button>
+                </form>
+
+                <span class="mx-1 text-gray-300 dark:text-gray-600">|</span>
+
+                {{-- اعمال روی زیرمجموعهٔ انتخاب‌شده (الگوی form="..."؛ بدون nested-form) --}}
+                <span class="text-sm text-gray-600 dark:text-gray-300">اعمال روی انتخاب‌شده‌ها:</span>
+                <button type="submit" form="combo-bulk"
+                        onclick="document.getElementById('combo-bulk-action').value='activate'; return confirm('برندهای انتخاب‌شده فعال شوند؟');"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    فعال
+                </button>
+                <button type="submit" form="combo-bulk"
+                        onclick="document.getElementById('combo-bulk-action').value='deactivate'; return confirm('برندهای انتخاب‌شده غیرفعال شوند؟');"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300">
+                    غیرفعال
+                </button>
+            </div>
+
+            {{-- فرمِ مستقلِ زیرمجموعه — چک‌باکس‌های کارت‌ها از طریق form="combo-bulk" به آن متصل‌اند --}}
+            <form id="combo-bulk" method="POST" action="{{ route('crm.combo-manager.bulk-toggle', $device) }}">
+                @csrf @method('PUT')
+                <input type="hidden" name="action" id="combo-bulk-action" value="">
+            </form>
+
             {{-- ─── گرید کارت‌های برند ─────────────────────────────────── --}}
             @if($brandRows->isEmpty())
                 <div class="p-8 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
@@ -59,6 +105,13 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     @foreach($brandRows as $b)
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <input type="checkbox" name="brand_ids[]" value="{{ $b['id'] }}" form="combo-bulk"
+                                       class="rounded border-gray-300">
+                                انتخاب
+                            </label>
+                        </div>
                         <div class="flex items-center gap-3 mb-3">
                             @if($b['logo'])
                                 <img src="{{ \Modules\Site\Support\MediaUrl::resolve($b['logo']) }}" alt="{{ $b['name'] }}"

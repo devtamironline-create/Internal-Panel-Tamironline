@@ -186,6 +186,32 @@ class BrandController extends Controller
         return back()->with('success', 'به‌روز شد.');
     }
 
+    /**
+     * فعال/غیرفعال‌سازی گروهیِ برندها — فقط مدیر کل (manage-permissions).
+     * گیتِ سطح روت این را تضمین می‌کند و اینجا نیز دوباره چک می‌شود.
+     */
+    public function bulkToggle(Request $request)
+    {
+        if (! $request->user()?->can('manage-permissions')) {
+            abort(403, 'عملیات گروهیِ فعال/غیرفعال‌سازی فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
+
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:crm_brands,id',
+            'action' => 'required|in:activate,deactivate',
+        ]);
+
+        $activate = $validated['action'] === 'activate';
+        $count = Brand::whereIn('id', $validated['ids'])->update(['is_active' => $activate]);
+
+        $message = $activate
+            ? "{$count} برند فعال شد."
+            : "{$count} برند غیرفعال شد.";
+
+        return back()->with('success', $message);
+    }
+
     private function validateRequest(Request $request, ?int $id = null): array
     {
         return $request->validate([

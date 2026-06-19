@@ -103,6 +103,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('brands/{brand}/toggle/{flag}', [BrandController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('brands.toggle');
         Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
     });
+    // فعال/غیرفعال‌سازی گروهیِ برندها — فقط مدیر کل.
+    Route::middleware('can:manage-permissions')->group(function () {
+        Route::post('brands/bulk-toggle', [BrandController::class, 'bulkToggle'])->name('brands.bulk-toggle');
+    });
 
     // ─── دسته‌بندی والد دستگاه‌ها ───────────────────────────────────
     Route::middleware('can:view-crm-taxonomies')->group(function () {
@@ -129,6 +133,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_active_app', 'is_featured'])->name('devices.toggle');
         Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
     });
+    // فعال/غیرفعال‌سازی گروهیِ دستگاه‌ها (سایت/اپ) — فقط مدیر کل.
+    Route::middleware('can:manage-permissions')->group(function () {
+        Route::post('devices/bulk-toggle', [DeviceController::class, 'bulkToggle'])->name('devices.bulk-toggle');
+    });
 
     // ─── صفحه‌های ترکیبی (device, brand) ─── /devices/{slug}/{brand}
     Route::middleware('can:view-crm-taxonomies')->group(function () {
@@ -147,6 +155,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-permissions')->group(function () {
         Route::get('combo-manager', [ComboManagerController::class, 'index'])->name('combo-manager.index');
         Route::put('combo-manager/{device}/{brand}/toggle', [ComboManagerController::class, 'toggle'])->name('combo-manager.toggle');
+        Route::put('combo-manager/{device}/bulk-toggle', [ComboManagerController::class, 'bulkToggle'])->name('combo-manager.bulk-toggle');
     });
 
     // ─── تاکسونومی ── استان‌ها ──────────────────────────────────────
