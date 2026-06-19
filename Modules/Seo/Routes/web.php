@@ -9,6 +9,7 @@ use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
 use Modules\Seo\Http\Controllers\SeoSettingsController;
+use Modules\Seo\Http\Controllers\SeoTemplateController;
 use Modules\Seo\Http\Controllers\SeoToolsController;
 
 // بخش مدیریت سئو (نیاز به لاگین + دسترسی manage-seo)
@@ -21,6 +22,10 @@ Route::middleware(['auth', 'can:manage-seo'])
 
         Route::get('/settings', [SeoSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [SeoSettingsController::class, 'update'])->name('settings.update');
+
+        // قالب‌های عنوان/توضیح به‌ازای نوع صفحه
+        Route::get('/templates', [SeoTemplateController::class, 'edit'])->name('templates.index');
+        Route::put('/templates', [SeoTemplateController::class, 'update'])->name('templates.update');
 
         // ریدایرکت‌ها
         Route::get('/redirects', [RedirectController::class, 'index'])->name('redirects.index');
