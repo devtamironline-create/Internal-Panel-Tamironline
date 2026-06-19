@@ -187,6 +187,33 @@ class DeviceController extends Controller
         return back()->with('success', 'به‌روز شد.');
     }
 
+    /**
+     * فعال/غیرفعال‌سازی گروهیِ دستگاه‌ها روی سایت یا اپ — فقط مدیر کل.
+     * گیتِ سطح روت این را تضمین می‌کند و اینجا نیز دوباره چک می‌شود.
+     */
+    public function bulkToggle(Request $request)
+    {
+        if (! $request->user()?->can('manage-permissions')) {
+            abort(403, 'عملیات گروهیِ فعال/غیرفعال‌سازی فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
+
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:crm_devices,id',
+            'target' => 'required|in:is_active,is_active_app',
+            'action' => 'required|in:activate,deactivate',
+        ]);
+
+        $activate = $validated['action'] === 'activate';
+        $count = Device::whereIn('id', $validated['ids'])->update([$validated['target'] => $activate]);
+
+        $where = $validated['target'] === 'is_active_app' ? 'اپ' : 'سایت';
+        $verb = $activate ? 'فعال' : 'غیرفعال';
+        $message = "{$count} دستگاه در {$where} {$verb} شد.";
+
+        return back()->with('success', $message);
+    }
+
     private function validateRequest(Request $request, ?int $id = null): array
     {
         return $request->validate([

@@ -50,10 +50,47 @@
         @endif
     </form>
 
+    @can('manage-permissions')
+    {{-- ─── فرمِ مستقلِ عملیات گروهی (الگوی form="..."؛ بدون nested-form) ─── --}}
+    <form id="devices-bulk" method="POST" action="{{ route('crm.devices.bulk-toggle') }}">
+        @csrf
+        <input type="hidden" name="target" id="devices-bulk-target" value="">
+        <input type="hidden" name="action" id="devices-bulk-action" value="">
+    </form>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 flex flex-wrap items-center gap-2">
+        <span class="text-sm text-gray-600 dark:text-gray-300 ml-2">عملیات گروهی روی موارد انتخاب‌شده:</span>
+        <button type="submit" form="devices-bulk"
+                onclick="document.getElementById('devices-bulk-target').value='is_active'; document.getElementById('devices-bulk-action').value='activate'; return confirm('دستگاه‌های انتخاب‌شده در سایت فعال شوند؟');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700">
+            فعال‌سازی در سایت
+        </button>
+        <button type="submit" form="devices-bulk"
+                onclick="document.getElementById('devices-bulk-target').value='is_active'; document.getElementById('devices-bulk-action').value='deactivate'; return confirm('دستگاه‌های انتخاب‌شده در سایت غیرفعال شوند؟ این کار آن‌ها را از API سایت حذف می‌کند.');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">
+            غیرفعال‌سازی در سایت
+        </button>
+        <button type="submit" form="devices-bulk"
+                onclick="document.getElementById('devices-bulk-target').value='is_active_app'; document.getElementById('devices-bulk-action').value='activate'; return confirm('دستگاه‌های انتخاب‌شده در اپ فعال شوند؟');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-sky-600 text-white hover:bg-sky-700">
+            فعال‌سازی در اپ
+        </button>
+        <button type="submit" form="devices-bulk"
+                onclick="document.getElementById('devices-bulk-target').value='is_active_app'; document.getElementById('devices-bulk-action').value='deactivate'; return confirm('دستگاه‌های انتخاب‌شده در اپ غیرفعال شوند؟ این کار آن‌ها را از اپلیکیشن مشتری حذف می‌کند.');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-gray-600 text-white hover:bg-gray-700">
+            غیرفعال‌سازی در اپ
+        </button>
+    </div>
+    @endcan
+
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
+                    @can('manage-permissions')
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                        <input type="checkbox" id="devices-select-all" class="rounded border-gray-300">
+                    </th>
+                    @endcan
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">دستگاه</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">آیکن / تم</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ترتیب</th>
@@ -71,6 +108,12 @@
                         : null;
                 @endphp
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    @can('manage-permissions')
+                    <td class="px-6 py-4">
+                        <input type="checkbox" name="ids[]" value="{{ $device->id }}" form="devices-bulk"
+                               class="devices-row-check rounded border-gray-300">
+                    </td>
+                    @endcan
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -164,7 +207,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">دستگاهی ثبت نشده.</td>
+                    <td colspan="@can('manage-permissions')8@else 7 @endcan" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">دستگاهی ثبت نشده.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -173,4 +216,18 @@
 
     <div>{{ $devices->links() }}</div>
 </div>
+
+@can('manage-permissions')
+<script>
+    (function () {
+        var selectAll = document.getElementById('devices-select-all');
+        if (! selectAll) return;
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('.devices-row-check').forEach(function (cb) {
+                cb.checked = selectAll.checked;
+            });
+        });
+    })();
+</script>
+@endcan
 @endsection

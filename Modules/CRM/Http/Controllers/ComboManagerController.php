@@ -120,4 +120,64 @@ class ComboManagerController extends Controller
             ->route('crm.combo-manager.index', ['device' => $device->id])
             ->with('success', $message);
     }
+
+    /**
+     * فعال/غیرفعال‌سازی گروهیِ صفحات ترکیبیِ یک دستگاه — فقط مدیر کل.
+     *
+     * اگر brand_ids خالی باشد روی همهٔ برندهای این دستگاه اعمال می‌شود
+     * (همان منبعِ index(): برندهای فعالِ متصل، در صورت خالی‌بودن همهٔ
+     * برندهای فعال). برای هر برند رکورد صفحهٔ ترکیبی ساخته/به‌روز می‌شود.
+     */
+    public function bulkToggle(Request $request, Device $device)
+    {
+        // ─── دفاع لایه‌ی دوم: فقط مدیر کل (علاوه بر گیتِ روت). ────────
+        if (! $request->user()?->can('manage-permissions')) {
+            abort(403, 'عملیات گروهیِ فعال/غیرفعال‌سازی فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
+
+        $validated = $request->validate([
+            'action' => 'required|in:activate,deactivate',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'integer|exists:crm_brands,id',
+        ]);
+
+        $activate = $validated['action'] === 'activate';
+
+        // ─── تعیین مجموعهٔ برندهای هدف ──────────────────────────────
+        $brandIds = array_values(array_unique(array_map('intval', $validated['brand_ids'] ?? [])));
+
+        if (empty($brandIds)) {
+            // همان منبع index(): برندهای فعالِ متصل، در صورت خالی‌بودن
+            // همهٔ برندهای فعال.
+            $brandIds = $device->brands()
+                ->where('is_active', true)
+                ->pluck('crm_brands.id')
+                ->all();
+
+            if (empty($brandIds)) {
+                $brandIds = Brand::query()
+                    ->where('is_active', true)
+                    ->pluck('id')
+                    ->all();
+            }
+        }
+
+        $count = 0;
+        foreach ($brandIds as $bId) {
+            $page = DeviceBrandPage::firstOrNew([
+                'device_id' => $device->id,
+                'brand_id' => (int) $bId,
+            ]);
+            $page->is_active = $activate;
+            $page->save();
+            $count++;
+        }
+
+        $verb = $activate ? 'فعال' : 'غیرفعال';
+        $message = "{$count} صفحهٔ ترکیبی {$verb} شد.";
+
+        return redirect()
+            ->route('crm.combo-manager.index', ['device' => $device->id])
+            ->with('success', $message);
+    }
 }

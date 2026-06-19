@@ -50,10 +50,36 @@
         @endif
     </form>
 
+    @can('manage-permissions')
+    {{-- ─── فرمِ مستقلِ عملیات گروهی (الگوی form="..."؛ بدون nested-form) ─── --}}
+    <form id="brands-bulk" method="POST" action="{{ route('crm.brands.bulk-toggle') }}">
+        @csrf
+        <input type="hidden" name="action" id="brands-bulk-action" value="">
+    </form>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 flex flex-wrap items-center gap-3">
+        <span class="text-sm text-gray-600 dark:text-gray-300">عملیات گروهی روی موارد انتخاب‌شده:</span>
+        <button type="submit" form="brands-bulk"
+                onclick="document.getElementById('brands-bulk-action').value='activate'; return confirm('برندهای انتخاب‌شده فعال شوند؟');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700">
+            فعال‌سازی انتخاب‌شده‌ها
+        </button>
+        <button type="submit" form="brands-bulk"
+                onclick="document.getElementById('brands-bulk-action').value='deactivate'; return confirm('برندهای انتخاب‌شده غیرفعال شوند؟ این کار آن‌ها را از API سایت حذف می‌کند.');"
+                class="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">
+            غیرفعال‌سازی انتخاب‌شده‌ها
+        </button>
+    </div>
+    @endcan
+
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
+                    @can('manage-permissions')
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                        <input type="checkbox" id="brands-select-all" class="rounded border-gray-300">
+                    </th>
+                    @endcan
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">برند</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Slug</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ترتیب</th>
@@ -70,6 +96,12 @@
                         : null;
                 @endphp
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    @can('manage-permissions')
+                    <td class="px-6 py-4">
+                        <input type="checkbox" name="ids[]" value="{{ $brand->id }}" form="brands-bulk"
+                               class="brands-row-check rounded border-gray-300">
+                    </td>
+                    @endcan
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -132,7 +164,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">برندی ثبت نشده.</td>
+                    <td colspan="@can('manage-permissions')7@else 6 @endcan" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">برندی ثبت نشده.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -141,4 +173,18 @@
 
     <div>{{ $brands->links() }}</div>
 </div>
+
+@can('manage-permissions')
+<script>
+    (function () {
+        var selectAll = document.getElementById('brands-select-all');
+        if (! selectAll) return;
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('.brands-row-check').forEach(function (cb) {
+                cb.checked = selectAll.checked;
+            });
+        });
+    })();
+</script>
+@endcan
 @endsection
