@@ -44,6 +44,7 @@ class SiteContentSeeder extends Seeder
 
             // contact
             ['key' => 'contact_phone',         'value' => '021-45396', 'group' => 'contact'],
+            ['key' => 'contact_phones',        'value' => json_encode([['label' => 'تماس و پشتیبانی', 'number' => '021-45396']], JSON_UNESCAPED_UNICODE), 'group' => 'contact'],
             ['key' => 'contact_email',         'value' => 'support@tamironline.com', 'group' => 'contact'],
             ['key' => 'contact_address',       'value' => 'تهران، خیابان مطهری، نرسیده به خیابان ترکمنستان، پلاک ۲۰، ساختمان تعمیرآنلاین', 'group' => 'contact'],
             ['key' => 'contact_working_hours', 'value' => 'شنبه تا پنج‌شنبه ۹ تا ۲۲ — روزهای تعطیل ۱۰ تا ۱۸', 'group' => 'contact'],
