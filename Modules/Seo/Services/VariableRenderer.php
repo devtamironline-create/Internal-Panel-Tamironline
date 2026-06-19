@@ -22,9 +22,10 @@ class VariableRenderer
 
         $separator = (string) ($vars['sep'] ?? '');
 
-        // ۱) جایگزینی توکن‌های شناخته‌شده (حساس‌نبودن به بزرگی/کوچکی حروف)
-        $rendered = preg_replace_callback('/%([a-zA-Z0-9_\-]+)%/', function ($m) use ($vars) {
-            $key = strtolower($m[1]);
+        // ۱) جایگزینی توکن‌های شناخته‌شده — هر دو نحو پشتیبانی می‌شوند:
+        //    %name% (سبک Rank-Math) و {name} (سبک ساده/خوانا).
+        $rendered = preg_replace_callback('/%([a-zA-Z0-9_\-]+)%|\{([a-zA-Z0-9_\-]+)\}/', function ($m) use ($vars) {
+            $key = strtolower(($m[1] ?? '') !== '' ? $m[1] : ($m[2] ?? ''));
 
             return array_key_exists($key, $vars) ? (string) ($vars[$key] ?? '') : "\0UNKNOWN\0";
         }, $template);
