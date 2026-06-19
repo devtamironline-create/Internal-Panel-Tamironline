@@ -107,8 +107,12 @@ class DeviceBrandPageController extends Controller
      * فعال/غیرفعال‌کردن درون‌خطی یک صفحه‌ی ترکیبی. صفحه‌ی غیرفعال از
      * API سایت حذف می‌شود ولی override‌های ادمین دست‌نخورده می‌ماند.
      */
-    public function toggle(DeviceBrandPage $devicebrandpage)
+    public function toggle(Request $request, DeviceBrandPage $devicebrandpage)
     {
+        // فعال/غیرفعال‌سازیِ صفحهٔ ترکیبی فقط با دسترسی مدیر کل.
+        if (! $request->user()?->can('manage-permissions')) {
+            abort(403, 'فعال/غیرفعال‌سازی صفحهٔ ترکیبی فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
         $devicebrandpage->is_active = ! $devicebrandpage->is_active;
         $devicebrandpage->save();
 
