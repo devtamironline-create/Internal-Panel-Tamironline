@@ -184,6 +184,12 @@ class DeviceController extends Controller
         $device->{$flag} = ! $device->{$flag};
         $device->save();
 
+        // پاک‌سازیِ کشِ فرانت برای صفحاتِ متأثر (fire-and-forget).
+        if (in_array($flag, ['is_active', 'is_active_app'], true)) {
+            app(\Modules\Site\Support\FrontendRevalidator::class)
+                ->purgePaths(['/services/'.$device->slug, '/services', '/']);
+        }
+
         return back()->with('success', 'به‌روز شد.');
     }
 
@@ -210,6 +216,9 @@ class DeviceController extends Controller
         $where = $validated['target'] === 'is_active_app' ? 'اپ' : 'سایت';
         $verb = $activate ? 'فعال' : 'غیرفعال';
         $message = "{$count} دستگاه در {$where} {$verb} شد.";
+
+        // تغییرِ گروهی → پاک‌سازیِ کاملِ کشِ فرانت.
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeAll();
 
         return back()->with('success', $message);
     }
