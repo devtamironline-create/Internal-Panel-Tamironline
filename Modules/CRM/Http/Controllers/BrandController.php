@@ -176,6 +176,10 @@ class BrandController extends Controller
         if (! in_array($flag, ['is_active', 'is_featured'], true)) {
             abort(404);
         }
+        // فعال/غیرفعال‌سازیِ نمایش در سایت فقط با دسترسی مدیر کل.
+        if ($flag === 'is_active' && ! $request->user()?->can('manage-permissions')) {
+            abort(403, 'فعال/غیرفعال‌سازی برند فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
         $brand->{$flag} = ! $brand->{$flag};
         $brand->save();
 

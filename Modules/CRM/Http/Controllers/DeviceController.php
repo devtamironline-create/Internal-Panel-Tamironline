@@ -177,6 +177,10 @@ class DeviceController extends Controller
         if (! in_array($flag, ['is_active', 'is_active_app', 'is_featured'], true)) {
             abort(404);
         }
+        // فعال/غیرفعال‌سازیِ نمایش در سایت یا اپ فقط با دسترسی مدیر کل.
+        if (in_array($flag, ['is_active', 'is_active_app'], true) && ! $request->user()?->can('manage-permissions')) {
+            abort(403, 'فعال/غیرفعال‌سازی دستگاه فقط با دسترسی مدیر کل امکان‌پذیر است.');
+        }
         $device->{$flag} = ! $device->{$flag};
         $device->save();
 
