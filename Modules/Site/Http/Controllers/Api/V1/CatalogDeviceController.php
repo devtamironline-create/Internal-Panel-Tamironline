@@ -47,7 +47,7 @@ class CatalogDeviceController extends Controller
 
         $devices = $query->with('category:id,name,slug,icon,tone')
             ->limit($limit)
-            ->get(['id', 'device_category_id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
+            ->get(['id', 'device_category_id', 'name', 'slug', 'icon', 'thumbnail', 'tone', 'sort_order', 'is_featured']);
 
         $data = $devices->map(fn (Device $d) => [
             'id' => (int) $d->id,
@@ -57,6 +57,11 @@ class CatalogDeviceController extends Controller
             'icon' => $d->icon,
             'thumbnail' => MediaUrl::resolve($d->thumbnail),
             'tone' => $d->tone,
+            // ترتیب نمایش (پنل) — لیست بر اساس is_featured DESC، سپس sort_order ASC،
+            // سپس name مرتب می‌شود. فرانت برای حفظ همین ترتیب نیازی به مرتب‌سازی
+            // مجدد ندارد، ولی این مقادیر برای شفافیت برگردانده می‌شوند.
+            'sort_order' => (int) $d->sort_order,
+            'is_featured' => (bool) $d->is_featured,
             'category' => $d->category ? [
                 'id' => (int) $d->category->id,
                 'name' => $d->category->name,
@@ -104,6 +109,8 @@ class CatalogDeviceController extends Controller
                 'icon' => $d->icon,
                 'thumbnail' => MediaUrl::resolve($d->thumbnail),
                 'tone' => $d->tone,
+                'sort_order' => (int) $d->sort_order,
+                'is_featured' => (bool) $d->is_featured,
             ])->values(),
         ])->values();
 

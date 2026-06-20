@@ -84,7 +84,7 @@ class ServiceController extends Controller
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description']);
+            ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured']);
 
         $data = $rows->map(fn (Device $d) => [
             'id' => (int) $d->id,
@@ -94,6 +94,10 @@ class ServiceController extends Controller
             'image' => MediaUrl::resolve($d->thumbnail),
             'description' => $d->description ? mb_substr(strip_tags($d->description), 0, 280) : null,
             'badge' => null,
+            // ترتیب نمایش (پنل). لیست از قبل بر اساس is_featured DESC، سپس
+            // sort_order ASC، سپس name مرتب شده است.
+            'sort_order' => (int) $d->sort_order,
+            'is_featured' => (bool) $d->is_featured,
         ])->values();
 
         return response()->json([
