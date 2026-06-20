@@ -63,13 +63,13 @@ class ImportTermContentFromWp extends Command
         252 => ['اجاق گاز', 'گاز رومیزی'],
         253 => ['مایکروفر', 'سولاردام', 'فر'],
         254 => ['اسپیلت'],
-        255 => ['تلویزیون'],
+        255 => ['تلویزیون LCD', 'تلویزیون LED'],
         311 => ['جاروشارژی'],
         379 => ['قهوه ساز'],
         384 => ['بخارشوی'],
-        385 => ['اتو', 'اتوپرس'],
+        385 => ['اتوپرس'],
         390 => ['پکیج', 'آبگرمکن'],
-        391 => ['چایی ساز'],
+        391 => ['چای ساز'],
         403 => ['کولر آبی'],
         408 => ['تصفیه آب'],
         410 => ['تصفیه آب'],
@@ -77,12 +77,14 @@ class ImportTermContentFromWp extends Command
 
     /**
      * دستگاه‌هایی که در پنل وجود ندارند و در صورت داشتن محتوا ساخته می‌شوند.
-     * slug انگلیسی از slug همان term وردپرس گرفته شده است.
+     * slug انگلیسی برای هر دستگاه به‌صورت دستی تعیین شده است.
      *
      * @var array<string, string> name => slug
      */
     private const CREATABLE_DEVICES = [
         'کولر آبی' => 'evaporative-cooler',
+        'جاروشارژی' => 'charging-vacuum-cleaner',
+        'چای ساز' => 'tea-maker',
     ];
 
     /**
@@ -243,9 +245,7 @@ class ImportTermContentFromWp extends Command
         }
 
         foreach ($targetNames as $targetName) {
-            $model = $isDevice
-                ? Device::where('name', $targetName)->first()
-                : Brand::where('name', $targetName)->first();
+            $model = $this->resolveModel($targetName, $isDevice);
 
             $willCreate = false;
             if (! $model && $isDevice && isset(self::CREATABLE_DEVICES[$targetName])) {
@@ -286,6 +286,43 @@ class ImportTermContentFromWp extends Command
                 $this->stats['errors']++;
             }
         }
+    }
+
+    /**
+     * یافتن دستگاه/برند بر اساس نام — اول تطبیق دقیق، سپس تطبیق نرمال‌شده
+     * (عربی ك/ي → فارسی ک/ی، حذف نیم‌فاصله/zero-width و یکدست‌سازی فاصله‌ها)
+     * تا اختلاف‌های نامرئیِ نگارشی باعث skipِ خاموش نشوند.
+     */
+    private function resolveModel(string $name, bool $isDevice): Device|Brand|null
+    {
+        $exact = $isDevice
+            ? Device::where('name', $name)->first()
+            : Brand::where('name', $name)->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $target = $this->normalizeName($name);
+        $all = $isDevice ? Device::all() : Brand::all();
+
+        return $all->first(fn ($m) => $this->normalizeName((string) $m->name) === $target);
+    }
+
+    /**
+     * یکدست‌سازی نام فارسی برای مقایسه‌ی مقاوم.
+     */
+    private function normalizeName(string $name): string
+    {
+        // عربی → فارسی
+        $name = str_replace(['ك', 'ي', 'ﻱ', 'ة'], ['ک', 'ی', 'ی', 'ه'], $name);
+        // حذف نیم‌فاصله و کاراکترهای zero-width / جهت‌دهی
+        $name = str_replace([
+            "\u{200c}", "\u{200d}", "\u{200e}", "\u{200f}", "\u{feff}",
+        ], ['', '', '', '', ''], $name);
+        // یکدست‌سازی فاصله‌ها
+        $name = (string) preg_replace('/\s+/u', ' ', $name);
+
+        return mb_strtolower(trim($name));
     }
 
     /**
