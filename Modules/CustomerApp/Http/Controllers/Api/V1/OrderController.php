@@ -41,7 +41,7 @@ class OrderController extends Controller
         $query = Order::query()
             ->where('customer_id', $customer->id)
             ->where(fn ($q) => $q->where('is_lead', false)->orWhereNull('is_lead'))
-            ->with(['device:id,name,slug,icon', 'brand:id,name,slug'])
+            ->with(['device:id,name,slug,icon,thumbnail', 'brand:id,name,slug'])
             ->orderByDesc('id');
 
         // فیلتر status — mobile string ها به internal enum تبدیل می‌شوند
@@ -74,7 +74,7 @@ class OrderController extends Controller
         $customer = $this->customer($request);
         $order = $this->find($customer->id, $id);
         $order->load([
-            'device:id,name,slug,icon',
+            'device:id,name,slug,icon,thumbnail',
             'brand:id,name,slug',
             'objections:id,name,slug',
             'customerAddress.province:id,name',
@@ -211,7 +211,7 @@ class OrderController extends Controller
 
             // load و resource داخل transaction — اگر throw کنند، rollback
             $order->load([
-                'device:id,name,slug,icon',
+                'device:id,name,slug,icon,thumbnail',
                 'brand:id,name,slug',
                 'objections:id,name,slug',
                 'customerAddress.province:id,name',
@@ -274,7 +274,7 @@ class OrderController extends Controller
             ]);
         });
 
-        $order->load(['device:id,name,slug,icon', 'brand:id,name,slug']);
+        $order->load(['device:id,name,slug,icon,thumbnail', 'brand:id,name,slug']);
 
         return response()->json([
             'message' => 'سفارش لغو شد.',
