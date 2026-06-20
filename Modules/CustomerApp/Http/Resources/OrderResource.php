@@ -38,6 +38,9 @@ class OrderResource extends JsonResource
                 'name' => $this->device->name,
                 'slug' => $this->device->slug,
                 'icon' => $this->device->icon,
+                // تصویرِ کاتالوگِ دستگاه (همان تصویر /v1/catalog/devices) — برای
+                // نمایش روی صفحه‌ی سفارش حتی وقتی عکسِ تعمیر وجود ندارد.
+                'thumbnail' => \Modules\Site\Support\MediaUrl::resolve($this->device->thumbnail ?? null),
             ] : null),
             'brand' => $this->whenLoaded('brand', fn () => $this->brand ? [
                 'id' => (int) $this->brand->id,

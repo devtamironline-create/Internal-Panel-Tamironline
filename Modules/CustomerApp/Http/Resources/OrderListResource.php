@@ -31,12 +31,15 @@ class OrderListResource extends JsonResource
             'status_label' => $status?->label() ?? 'نامشخص',
             'is_terminal' => $status ? OrderStatusMapper::isTerminal($status) : false,
             'order_type' => $this->order_type,
-            'device' => $this->whenLoaded('device', fn () => [
+            'device' => $this->whenLoaded('device', fn () => $this->device ? [
                 'id' => (int) $this->device->id,
                 'name' => $this->device->name,
                 'slug' => $this->device->slug,
                 'icon' => $this->device->icon,
-            ]),
+                // تصویرِ کاتالوگِ دستگاه (همان تصویر /v1/catalog/devices) — برای
+                // نمایش روی کارتِ سفارش حتی وقتی عکسِ تعمیر وجود ندارد.
+                'thumbnail' => \Modules\Site\Support\MediaUrl::resolve($this->device->thumbnail ?? null),
+            ] : null),
             'brand' => $this->whenLoaded('brand', fn () => $this->brand ? [
                 'id' => (int) $this->brand->id,
                 'name' => $this->brand->name,
