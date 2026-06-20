@@ -249,7 +249,13 @@ class ImportTermContentFromWp extends Command
 
             $willCreate = false;
             if (! $model && $isDevice && isset(self::CREATABLE_DEVICES[$targetName])) {
-                $willCreate = true;
+                // شاید دستگاهی با همین slugِ کانونیک از قبل وجود دارد (حتی غیرفعال)
+                // که نامش با targetName یکی نیست؛ به‌جای ساخت رکورد تکراری و خطای
+                // unique، همان دستگاه را به‌روزرسانی کن.
+                $model = Device::where('slug', self::CREATABLE_DEVICES[$targetName])->first();
+                if (! $model) {
+                    $willCreate = true;
+                }
             } elseif (! $model) {
                 $this->warn("term {$termId} ({$term->name}) → «{$targetName}»: در پنل پیدا نشد — skip");
                 $this->stats['errors']++;
