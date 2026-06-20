@@ -44,6 +44,9 @@ class OrderListResource extends JsonResource
             ] : null),
             'scheduled_date' => $this->visit_scheduled_at?->format('Y-m-d'),
             'scheduled_slot' => $this->visit_scheduled_slot,
+            // عکس‌های سفارش (برای thumbnailِ کارتِ لیست — فرانت می‌تواند اولین
+            // مورد را به‌عنوان thumbnail استفاده کند). خالی = بدون عکس.
+            'attachments' => \Modules\CustomerApp\Support\OrderAttachments::for($this->resource),
             // مبلغِ نهاییِ مشتری = price_customer (جمع کل) — همان مبنای فاکتور و
             // همان عددی که مشتری می‌پردازد. واحدِ DB «تومان» است و نباید ÷۱۰
             // شود؛ total_invoice (= price_customer − هزینه) فقط ماندهٔ داخلی است.

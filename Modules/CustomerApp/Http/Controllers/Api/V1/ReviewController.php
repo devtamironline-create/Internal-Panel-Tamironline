@@ -32,10 +32,19 @@ class ReviewController extends Controller
     {
         $customer = $this->customer($request);
 
-        $rows = Order::query()
+        $query = Order::query()
             ->where('customer_id', $customer->id)
             ->where('status', OrderStatus::Completed->value)
-            ->whereDoesntHave('review')
+            ->whereDoesntHave('review');
+
+        // فقط سفارش‌های اخیر نظرسنجیِ اجباری دارند (سفارش‌های خیلی قدیمی
+        // نباید کاربر را مجبور به ثبت نظر کنند).
+        $windowDays = (int) config('customerapp.reviews.pending_window_days', 30);
+        if ($windowDays > 0) {
+            $query->where('completed_at', '>=', now()->subDays($windowDays));
+        }
+
+        $rows = $query
             ->with(['device:id,name', 'brand:id,name', 'technician:id,first_name,last_name,firstname_tech'])
             ->orderByDesc('completed_at')
             ->orderByDesc('id')

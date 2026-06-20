@@ -46,6 +46,11 @@ class CustomerAppServiceProvider extends ServiceProvider
             'customerapp.test-mode'
         );
 
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/reviews.php',
+            'customerapp.reviews'
+        );
+
         // Observer: روی Order events گوش می‌دهد و notification به مشتری
         // می‌فرستد (در جدول notifications لاراول). جدا از WP push observer
         // در مدل Order تا منطق هر کانال مستقل بماند.

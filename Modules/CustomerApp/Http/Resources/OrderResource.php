@@ -91,6 +91,10 @@ class OrderResource extends JsonResource
             // نظر — وضعیت واقعی review
             'review' => $this->reviewPayload($status),
 
+            // عکس‌های سفارش (عکسِ پس‌از‌تعمیرِ تکنسین و عکسِ legacy). خالی اگر
+            // سفارش عکسی نداشته باشد → فرانت fallback آیکن دسته را نشان می‌دهد.
+            'attachments' => \Modules\CustomerApp\Support\OrderAttachments::for($this->resource),
+
             'created_at' => $this->created_at?->utc()->toIso8601String(),
             'updated_at' => $this->updated_at?->utc()->toIso8601String(),
         ];

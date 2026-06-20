@@ -28,10 +28,19 @@ class EnsureNoPendingReview
             return $next($request);
         }
 
-        $pending = Order::query()
+        $query = Order::query()
             ->where('customer_id', $user->id)
             ->where('status', OrderStatus::Completed->value)
-            ->whereDoesntHave('review')
+            ->whereDoesntHave('review');
+
+        // enforcement فقط روی همان بازه‌ی محدودِ pending-reviews اعمال می‌شود
+        // تا با لیستی که فرانت نشان می‌دهد هماهنگ باشد (نه کل تاریخچه).
+        $windowDays = (int) config('customerapp.reviews.pending_window_days', 30);
+        if ($windowDays > 0) {
+            $query->where('completed_at', '>=', now()->subDays($windowDays));
+        }
+
+        $pending = $query
             ->orderByDesc('id')
             ->first(['id', 'order_code']);
 
