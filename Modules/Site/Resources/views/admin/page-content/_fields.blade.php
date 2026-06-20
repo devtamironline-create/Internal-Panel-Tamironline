@@ -162,6 +162,17 @@
                                         x-model="item[@js($itemKey)]"
                                         class="w-full px-2 py-1 border border-gray-200 rounded text-sm"
                                     >
+                                @elseif($itemType === 'select')
+                                    <select
+                                        :name="`{{ $name }}[${i}][{{ $itemKey }}]`"
+                                        x-model="item[@js($itemKey)]"
+                                        class="w-full px-2 py-1 border border-gray-200 rounded text-sm bg-white dark:bg-gray-800"
+                                    >
+                                        <option value="">—</option>
+                                        @foreach(($itemDef['options'] ?? []) as $optVal => $optLabel)
+                                            <option value="{{ $optVal }}">{{ $optLabel }}</option>
+                                        @endforeach
+                                    </select>
                                 @elseif($itemType === 'image')
                                     <input type="hidden" :name="`{{ $name }}[${i}][{{ $itemKey }}]`" :value="item[@js($itemKey)] ?? ''">
                                     <div class="flex items-start gap-3 p-2 border border-gray-200 rounded bg-white dark:bg-gray-800">

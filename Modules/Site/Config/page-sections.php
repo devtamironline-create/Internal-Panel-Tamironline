@@ -11,6 +11,7 @@
 | نوع فیلدها:
 |   - string           → text input تک‌خطی
 |   - textarea         → text چندخطی
+|   - string_list      → فهرست رشته‌های ساده (هر خط یک آیتم) → خروجی string[]
 |   - url              → URL (با validation)
 |   - image_url        → URL تصویر تک (با پیش‌نمایش)  ⚠️ منسوخ — از responsive_image استفاده شود
 |   - responsive_image → دو URL: desktop و mobile با پیش‌نمایش
@@ -1242,6 +1243,193 @@ return [
                 'label' => 'سئو (پیش‌فرض ترکیبی)',
                 'fields' => [
                     'meta_title' => ['label' => 'Meta Title (با {device} و {brand})', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
+    // ─── صفحه‌ی گارانتی (/guarantee) ────────────────────────────────
+    'guarantee' => [
+        'title' => 'صفحه‌ی گارانتی (/guarantee)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero گارانتی',
+                'fields' => [
+                    'eyebrow' => ['label' => 'برچسب بالای عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'عنوان اصلی (H1)', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرعنوان', 'type' => 'string', 'rules' => 'nullable|string|max:300'],
+                    'description' => ['label' => 'پاراگراف توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                ],
+            ],
+
+            'benefits' => [
+                'label' => 'مزایای گارانتی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => ['label' => 'فهرست مزایا (هر خط یک مورد)', 'type' => 'string_list', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'conditions' => [
+                'label' => 'شرایط استفاده از گارانتی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'intro' => ['label' => 'مقدمه', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                    'note' => ['label' => 'یادداشت پایانی (اختیاری)', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                    'items' => [
+                        'label' => 'شرایط',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'exclusions' => [
+                'label' => 'موارد خارج از گارانتی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'intro' => ['label' => 'مقدمه', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                    'note' => ['label' => 'یادداشت پایانی (اختیاری)', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                    'items' => [
+                        'label' => 'موارد',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:200'],
+                            'description' => ['label' => 'توضیح (می‌تواند چندخطی باشد)', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'process' => [
+                'label' => 'فرآیند استفاده از گارانتی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'steps' => ['label' => 'مراحل (هر خط یک مرحله؛ شماره‌گذاری در فرانت)', 'type' => 'string_list', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'faq' => [
+                'label' => 'پرسش‌های متداول گارانتی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرعنوان (اختیاری)', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'سوالات',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'question' => ['label' => 'سوال', 'type' => 'string', 'rules' => 'required|string|max:300'],
+                            'answer' => ['label' => 'پاسخ', 'type' => 'textarea', 'rules' => 'nullable|string|max:3000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'final_notes' => [
+                'label' => 'نکات پایانی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => ['label' => 'فهرست نکات (هر خط یک مورد)', 'type' => 'string_list', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
+    // ─── صفحه‌ی دانلود اپلیکیشن (/application) ──────────────────────
+    'application' => [
+        'title' => 'صفحه‌ی دانلود اپلیکیشن (/application)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero اپلیکیشن',
+                'fields' => [
+                    'eyebrow' => ['label' => 'برچسب بالای عنوان', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'عنوان اصلی (H1)', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرعنوان', 'type' => 'string', 'rules' => 'nullable|string|max:300'],
+                    'description' => ['label' => 'پاراگراف توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                ],
+            ],
+
+            'download' => [
+                'label' => 'دانلود',
+                'description' => 'آدرس وب‌اپ، تصویر QR (اختیاری) و مارکت‌های اندروید.',
+                'fields' => [
+                    'web_url' => ['label' => 'آدرس وب‌اپ/PWA (مبنای QR و دکمه‌های iOS/وب)', 'type' => 'url', 'rules' => 'nullable|url|max:500'],
+                    'qr_image' => ['label' => 'تصویر QR (اختیاری — URL کامل یا مسیر نسبی؛ خالی = تولید خودکار از روی web_url)', 'type' => 'string', 'rules' => 'nullable|string|max:500'],
+                    'android_stores' => [
+                        'label' => 'مارکت‌های اندروید (به‌ترتیب نمایش)',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'key' => [
+                                'label' => 'نوع آیکن',
+                                'type' => 'select',
+                                'options' => [
+                                    'cafebazaar' => 'کافه بازار',
+                                    'myket' => 'مایکت',
+                                    'googleplay' => 'گوگل‌پلی',
+                                    'appstore' => 'اپ استور (iOS)',
+                                    'web' => 'وب',
+                                ],
+                                'rules' => 'nullable|in:cafebazaar,myket,googleplay,appstore,web',
+                            ],
+                            'name' => ['label' => 'نام نمایشی', 'type' => 'string', 'rules' => 'required|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'url', 'rules' => 'required|url|max:500'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'features' => [
+                'label' => 'امکانات اپلیکیشن',
+                'fields' => [
+                    'eyebrow' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'عنوان سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'کارت‌های امکانات',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'steps' => [
+                'label' => 'راهنمای نصب',
+                'fields' => [
+                    'eyebrow' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'عنوان سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'مراحل نصب',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:600'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
                 ],
             ],

@@ -330,6 +330,33 @@ class PageSectionService
                 continue;
             }
 
+            if ($type === 'string_list') {
+                // ورودی یا textarea (هر خط یک آیتم) است یا آرایه — هر دو به
+                // آرایه‌ای از رشته‌های trim‌شده و غیرخالی نرمالایز می‌شوند.
+                $raw = Arr::get($payload, $key, []);
+                if (is_string($raw)) {
+                    $raw = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+                }
+                if (! is_array($raw)) {
+                    $raw = [];
+                }
+                $items = [];
+                foreach ($raw as $line) {
+                    if (! is_string($line)) {
+                        continue;
+                    }
+                    $line = trim($line);
+                    if ($line !== '') {
+                        $items[] = $line;
+                    }
+                }
+                $data[$key] = $items;
+                $rules[$fullKey] = 'nullable|array';
+                $rules["{$fullKey}.*"] = $field['rules'] ?? 'nullable|string|max:1000';
+
+                continue;
+            }
+
             if ($type === 'bool') {
                 $data[$key] = (bool) Arr::get($payload, $key, false);
                 $rules[$fullKey] = 'nullable|boolean';
