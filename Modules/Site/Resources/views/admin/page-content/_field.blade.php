@@ -103,6 +103,15 @@
         </select>
     </div>
 
+@elseif($type === 'string_list')
+    @php $listValue = is_array($value) ? implode("\n", $value) : (is_string($value) ? $value : ''); @endphp
+    <div>
+        <label class="block text-sm mb-1">{{ $label }}</label>
+        <textarea name="{{ $name }}" rows="5" placeholder="هر مورد را در یک خط بنویسید"
+                  class="w-full px-3 py-2 border border-gray-200 rounded text-sm">{{ old($name, $listValue) }}</textarea>
+        <p class="text-xs text-gray-400 mt-1">هر خط = یک آیتم مستقل (خروجی به‌صورت لیست رشته‌ای).</p>
+    </div>
+
 @else
     {{-- string (default) --}}
     <div>

@@ -128,6 +128,9 @@ class PageContentController extends Controller
 
         $this->sections->saveAll($slug, (array) $request->input('sections', []));
 
+        // پاک‌سازیِ کشِ فرانتِ همین صفحه (fire-and-forget؛ هرگز throw نمی‌کند).
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeTags(['page:'.$slug]);
+
         return redirect()
             ->route('site.admin.page-content.edit', $slug)
             ->with('success', 'محتوای صفحه ذخیره شد.');
