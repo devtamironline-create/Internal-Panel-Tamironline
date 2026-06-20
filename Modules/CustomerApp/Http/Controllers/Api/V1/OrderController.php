@@ -10,6 +10,7 @@ use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\CustomerAddress;
 use Modules\CRM\Models\Order;
+use Modules\CRM\Models\OrderStatusLog;
 use Modules\CustomerApp\Http\Requests\CancelOrderRequest;
 use Modules\CustomerApp\Http\Requests\CreateOrderRequest;
 use Modules\CustomerApp\Http\Resources\OrderListResource;
@@ -248,11 +249,30 @@ class OrderController extends Controller
         $data = $request->validated();
         $reasonText = $this->resolveReasonText((int) $data['reason_id'], $data['reason_other'] ?? null);
 
-        $order->forceFill([
-            'status' => OrderStatus::Cancelled,
-            'cancel_reason' => $reasonText,
-            'cancel_reason_id' => (int) $data['reason_id'],
-        ])->save();
+        // وضعیت قبلی برای ثبت در تاریخچه (قبل از تغییر)
+        $previousStatus = $order->status instanceof OrderStatus
+            ? $order->status->value
+            : (string) $order->status;
+
+        DB::transaction(function () use ($order, $reasonText, $data, $previousStatus) {
+            $order->forceFill([
+                'status' => OrderStatus::Cancelled,
+                'cancel_reason' => $reasonText,
+                'cancel_reason_id' => (int) $data['reason_id'],
+            ])->save();
+
+            // ثبت در تاریخچه‌ی وضعیت تا دلیل لغو در پنل ادمین («تاریخچه وضعیت»)
+            // دیده شود — هم‌سو با مسیر لغوِ پنل. changed_by=null یعنی لغو توسط
+            // خودِ مشتری از اپلیکیشن.
+            OrderStatusLog::create([
+                'order_id' => $order->id,
+                'from_status' => $previousStatus,
+                'to_status' => OrderStatus::Cancelled->value,
+                'note' => 'لغو توسط مشتری (اپلیکیشن): '.$reasonText,
+                'changed_by' => null,
+                'created_at' => now(),
+            ]);
+        });
 
         $order->load(['device:id,name,slug,icon', 'brand:id,name,slug']);
 
