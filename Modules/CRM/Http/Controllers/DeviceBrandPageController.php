@@ -22,6 +22,8 @@ class DeviceBrandPageController extends Controller
     {
         $query = DeviceBrandPage::query()
             ->with(['device:id,name,slug', 'brand:id,name,slug,logo'])
+            // دستگاه‌های غیرفعال نباید در فهرست صفحات ترکیبی دیده شوند.
+            ->whereHas('device', fn ($q) => $q->where('is_active', true))
             ->latest('updated_at');
 
         if ($deviceId = $request->query('device_id')) {
@@ -31,8 +33,10 @@ class DeviceBrandPageController extends Controller
             $query->where('brand_id', (int) $brandId);
         }
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->whereHas('device', fn ($qq) => $qq->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"))
-                ->orWhereHas('brand', fn ($qq) => $qq->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"));
+            $query->where(function ($sub) use ($q) {
+                $sub->whereHas('device', fn ($qq) => $qq->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"))
+                    ->orWhereHas('brand', fn ($qq) => $qq->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"));
+            });
         }
 
         $pages = $query->paginate(20)->withQueryString();
