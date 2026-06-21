@@ -51,6 +51,7 @@ class BlogController extends Controller
         $publishedJoin = fn ($table, $entity, $fk) => DB::table($table.' as pivot')
             ->join('site_blog_articles as a', 'a.id', '=', 'pivot.article_id')
             ->join($entity.' as e', 'e.id', '=', 'pivot.'.$fk)
+            ->where('pivot.is_active', true)   // فقط اتصال‌های فعال
             ->where('a.is_published', true)
             ->whereNotNull('a.published_at')
             ->where('a.published_at', '<=', $now);
@@ -93,16 +94,17 @@ class BlogController extends Controller
 
         $query = Article::query()
             ->published()
-            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'devices:id,name,slug', 'brands:id,name,slug']);
+            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'activeDevices:id,name,slug', 'activeBrands:id,name,slug']);
 
         if ($topicSlug = trim((string) $request->query('topic', ''))) {
             $query->whereHas('topics', fn ($q) => $q->where('site_blog_topics.slug', $topicSlug)->where('is_active', true));
         }
         if ($deviceSlug = trim((string) $request->query('device', ''))) {
-            $query->whereHas('devices', fn ($q) => $q->where('crm_devices.slug', $deviceSlug));
+            // فقط اتصال‌های فعالِ دستگاه نتیجه می‌دهند.
+            $query->whereHas('activeDevices', fn ($q) => $q->where('crm_devices.slug', $deviceSlug));
         }
         if ($brandSlug = trim((string) $request->query('brand', ''))) {
-            $query->whereHas('brands', fn ($q) => $q->where('crm_brands.slug', $brandSlug));
+            $query->whereHas('activeBrands', fn ($q) => $q->where('crm_brands.slug', $brandSlug));
         }
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where(fn ($qq) => $qq->where('title', 'like', "%{$q}%")->orWhere('excerpt', 'like', "%{$q}%"));
@@ -139,7 +141,7 @@ class BlogController extends Controller
         $article = Article::query()
             ->published()
             ->where('slug', $slug)
-            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'devices:id,name,slug,icon,thumbnail,tone', 'brands:id,name,slug,logo'])
+            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'activeDevices:id,name,slug,icon,thumbnail,tone', 'activeBrands:id,name,slug,logo'])
             ->first();
 
         if (! $article) {
@@ -154,11 +156,11 @@ class BlogController extends Controller
             'meta_title' => $article->meta_title,
             'meta_description' => $article->meta_description,
             'views_count' => (int) $article->views_count,
-            'devices' => $article->devices->map(fn ($d) => [
+            'devices' => $article->activeDevices->map(fn ($d) => [
                 'id' => (int) $d->id, 'name' => $d->name, 'slug' => $d->slug, 'href' => '/devices/'.$d->slug,
                 'icon' => $d->icon, 'thumbnail' => MediaUrl::resolve($d->thumbnail), 'tone' => $d->tone,
             ])->values(),
-            'brands' => $article->brands->map(fn ($b) => [
+            'brands' => $article->activeBrands->map(fn ($b) => [
                 'id' => (int) $b->id, 'name' => $b->name, 'slug' => $b->slug, 'logo' => MediaUrl::resolve($b->logo),
             ])->values(),
         ]);
@@ -186,17 +188,17 @@ class BlogController extends Controller
                 'id' => (int) $t->id, 'slug' => $t->slug, 'name' => $t->name,
                 'colors' => ['bg' => $t->color_bg, 'fg' => $t->color_fg, 'border' => $t->color_border],
             ])->values(),
-            // دستگاه‌ها و برندهای مرتبط — برای ساخت چیپ/لینکِ «مقالات بر اساس
-            // دستگاه/برند» در لیست (slug برای فیلتر ?device=/?brand= استفاده می‌شود).
-            'devices' => $a->devices->map(fn ($d) => [
+            // دستگاه‌ها و برندهای مرتبطِ فعال — برای ساخت چیپ/لینکِ «مقالات بر
+            // اساس دستگاه/برند» (slug برای فیلتر ?device=/?brand= استفاده می‌شود).
+            'devices' => $a->activeDevices->map(fn ($d) => [
                 'id' => (int) $d->id, 'name' => $d->name, 'slug' => $d->slug, 'href' => '/devices/'.$d->slug,
             ])->values(),
-            'brands' => $a->brands->map(fn ($b) => [
+            'brands' => $a->activeBrands->map(fn ($b) => [
                 'id' => (int) $b->id, 'name' => $b->name, 'slug' => $b->slug,
             ])->values(),
             'tags' => array_values(array_filter([
-                $a->devices->first()?->name,
-                $a->brands->first()?->name,
+                $a->activeDevices->first()?->name,
+                $a->activeBrands->first()?->name,
                 $a->topics->first()?->name,
             ])),
         ];
