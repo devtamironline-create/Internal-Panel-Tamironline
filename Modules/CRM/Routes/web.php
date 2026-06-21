@@ -208,6 +208,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-taxonomies')->group(function () {
         Route::get('objections/create', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'create'])->name('objections.create');
         Route::post('objections', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'store'])->name('objections.store');
+        // ویرایشِ دستگاه‌محور (انتخاب دستگاه → تیک‌زدنِ ایرادهای آن)
+        Route::get('objections/device/{device}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'manageDevice'])->name('objections.device');
+        Route::put('objections/device/{device}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'syncDevice'])->name('objections.device.sync');
         Route::get('objections/{objection}/edit', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'edit'])->name('objections.edit');
         Route::put('objections/{objection}', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'update'])->name('objections.update');
         Route::put('objections/{objection}/toggle-active', [\Modules\CRM\Http\Controllers\ObjectionController::class, 'toggleActive'])->name('objections.toggle-active');
