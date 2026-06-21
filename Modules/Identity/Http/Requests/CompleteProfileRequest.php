@@ -14,16 +14,17 @@ class CompleteProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'min:2', 'max:80'],
-            'last_name' => ['nullable', 'string', 'max:80'],
+            // فقط نام خانوادگی الزامی است؛ نام (first_name) اختیاری است.
+            'last_name' => ['required', 'string', 'min:2', 'max:80'],
+            'first_name' => ['nullable', 'string', 'max:80'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'first_name.required' => 'نام الزامی است.',
-            'first_name.min' => 'نام باید حداقل ۲ کاراکتر باشد.',
+            'last_name.required' => 'نام خانوادگی الزامی است.',
+            'last_name.min' => 'نام خانوادگی باید حداقل ۲ کاراکتر باشد.',
         ];
     }
 }

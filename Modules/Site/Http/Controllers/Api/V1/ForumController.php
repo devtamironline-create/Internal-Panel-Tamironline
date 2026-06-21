@@ -223,10 +223,10 @@ class ForumController extends Controller
         if (! $customer instanceof \Modules\CRM\Models\Customer) {
             return response()->json(['ok' => false, 'message' => 'برای ثبت سوال باید وارد شوید.'], 401);
         }
-        if (empty($customer->first_name)) {
+        if (empty($customer->last_name)) {
             return response()->json([
                 'ok' => false,
-                'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
+                'message' => 'ابتدا نام خانوادگی خود را در پروفایل تکمیل کنید.',
                 'needs_profile' => true,
             ], 422);
         }
@@ -291,10 +291,10 @@ class ForumController extends Controller
         if (! $customer instanceof \Modules\CRM\Models\Customer) {
             return response()->json(['ok' => false, 'message' => 'برای ثبت پاسخ باید وارد شوید.'], 401);
         }
-        if (empty($customer->first_name)) {
+        if (empty($customer->last_name)) {
             return response()->json([
                 'ok' => false,
-                'message' => 'ابتدا نام خود را در پروفایل تکمیل کنید.',
+                'message' => 'ابتدا نام خانوادگی خود را در پروفایل تکمیل کنید.',
                 'needs_profile' => true,
             ], 422);
         }

@@ -69,8 +69,8 @@ class AuthController extends Controller
     {
         $customer = $this->identity->completeProfile(
             $request->user(),
-            (string) $request->input('first_name'),
-            $request->input('last_name'),
+            (string) $request->input('last_name'),
+            $request->input('first_name'),
         );
 
         return response()->json([
