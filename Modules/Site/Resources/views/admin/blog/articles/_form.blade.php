@@ -25,8 +25,8 @@
     <div class="space-y-5 min-w-0">
 
         {{-- اطلاعات پایه --}}
-        <div class="{{ $boxClass }}" x-data="{ open: true }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }}">
+        <div class="{{ $boxClass }}" x-data="accBox(true)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }}">
                 <h4 class="text-sm font-bold">اطلاعات پایه</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -65,8 +65,8 @@
         </div>
 
         {{-- محتوای مقاله (پیش‌فرض باز — برای TinyMCE) --}}
-        <div class="{{ $boxClass }}" x-data="{ open: true }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }}">
+        <div class="{{ $boxClass }}" x-data="accBox(true)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }}">
                 <h4 class="text-sm font-bold">محتوای مقاله</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -80,8 +80,8 @@
         </div>
 
         {{-- طبقه‌بندی --}}
-        <div class="{{ $boxClass }}" x-data="{ open: true }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }}">
+        <div class="{{ $boxClass }}" x-data="accBox(true)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }}">
                 <h4 class="text-sm font-bold">طبقه‌بندی (تاپیک / دستگاه / برند)</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -132,8 +132,8 @@
     <div class="space-y-4 lg:sticky lg:top-20">
 
         {{-- جعبه‌ی انتشار (پیش‌فرض باز) --}}
-        <div class="{{ $boxClass }}" x-data="{ open: true }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+        <div class="{{ $boxClass }}" x-data="accBox(true)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-bold">انتشار</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -167,8 +167,8 @@
         </div>
 
         {{-- جعبه‌ی تصویر کاور --}}
-        <div class="{{ $boxClass }}" x-data="{ open: true }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+        <div class="{{ $boxClass }}" x-data="accBox(true)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-bold">تصویر کاور</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -203,8 +203,8 @@
         </div>
 
         {{-- جعبه‌ی سئو --}}
-        <div class="{{ $boxClass }}" x-data="{ open: false }">
-            <button type="button" @click="open = !open" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+        <div class="{{ $boxClass }}" x-data="accBox(false)">
+            <button type="button" @click="toggle($event)" class="{{ $headBtn }} bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-bold">سئو</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -231,3 +231,19 @@
     <button type="submit" class="flex-1 px-5 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700">ذخیره مقاله</button>
     <a href="{{ route('site.admin.blog.articles.index') }}" class="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">انصراف</a>
 </div>
+
+<script>
+    // آکوردینِ مقاوم در برابر دوبار-اجرا: در صفحاتی که Livewire هم Alpine
+    // خودش را لود می‌کند، هندلرِ @click دوبار اجرا می‌شود؛ این guard هر کلیک
+    // را فقط یک‌بار اعمال می‌کند تا open دوبار toggle (و خنثی) نشود.
+    function accBox(open) {
+        return {
+            open: open,
+            toggle(e) {
+                if (e) { if (e.__accHandled) return; e.__accHandled = true; }
+                this.open = ! this.open;
+            },
+        };
+    }
+</script>
+

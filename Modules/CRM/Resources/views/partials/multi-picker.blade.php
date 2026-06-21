@@ -45,7 +45,11 @@
         search: '',
         selected: @js($selectedIds),
         items: @js($itemsArr),
-        toggle(id) {
+        toggle(id, e) {
+            // محافظ در برابر دوبار-اجرا شدن هندلر در صفحاتی که دو نمونه‌ی Alpine
+            // فعال است (Livewire + standalone): هر کلیک فقط یک‌بار اعمال شود،
+            // وگرنه toggle دوبار اجرا شده و انتخاب «خنثی» می‌شود.
+            if (e) { if (e.__mpHandled) return; e.__mpHandled = true; }
             const idx = this.selected.findIndex(x => x == id);
             if (idx === -1) {
                 this.selected.push(id);
@@ -114,7 +118,7 @@
     <div class="grid {{ $colsClass }} gap-2 max-h-[28rem] overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
         <template x-for="item in filtered" :key="item.id">
             <label
-                @click.prevent="toggle(item.id)"
+                @click.prevent="toggle(item.id, $event)"
                 class="relative flex items-start gap-3 p-3 bg-white dark:bg-gray-800 border-2 rounded-lg cursor-pointer transition hover:shadow-md"
                 :class="isSelected(item.id) ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'">
 
