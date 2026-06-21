@@ -47,7 +47,7 @@
             @foreach($devices as $d)
                 <label class="inline-flex items-center gap-2 text-sm" x-show="match(@js($d->name))">
                     <input type="checkbox" name="device_ids[]" value="{{ $d->id }}" @change="recount()" @checked(in_array($d->id, (array) $selected))>
-                    <span>{{ $d->name }}</span>
+                    <span>{{ $d->name }}@unless($d->is_active ?? true)<span class="text-[10px] text-gray-400"> (غیرفعال)</span>@endunless</span>
                 </label>
             @endforeach
         </div>

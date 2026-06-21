@@ -44,10 +44,11 @@
                     <p class="text-xs font-bold text-rose-700 dark:text-rose-300 mb-2">دستگاه‌هایی که هنوز ایرادی ندارند ({{ $withoutCount }}):</p>
                     <div class="flex flex-wrap gap-2">
                         @foreach($devicesWithout as $d)
-                            <a href="{{ route('crm.objections.create', ['device_id' => $d->id]) }}"
+                            <a href="{{ route('crm.objections.device', $d->id) }}"
                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800"
-                               title="افزودن ایراد برای {{ $d->name }}">
+                               title="مدیریت ایرادهای {{ $d->name }}">
                                 <span>{{ $d->name }}</span>
+                                @unless($d->is_active)<span class="text-[9px] text-gray-400">(غیرفعال)</span>@endunless
                                 <span class="text-rose-400">+</span>
                             </a>
                         @endforeach
@@ -55,18 +56,19 @@
                 </div>
             @endif
 
-            {{-- جدول کامل پوشش — تعداد ایراد هر دستگاه (کلیک = فیلتر) --}}
+            {{-- جدول کامل پوشش — تعداد ایراد هر دستگاه (کلیک = مدیریت ایرادهای دستگاه) --}}
             <div>
-                <p class="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">تعداد ایراد هر دستگاه:</p>
+                <p class="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">تعداد ایراد هر دستگاه (کلیک = مدیریت):</p>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     @foreach($coverage as $d)
-                        <a href="{{ route('crm.objections.index', ['device_id' => $d->id]) }}"
+                        <a href="{{ route('crm.objections.device', $d->id) }}"
                            class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs transition
                                   {{ $d->objections_count > 0
                                         ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-brand-400'
-                                        : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' }}
-                                  {{ $deviceId === $d->id ? 'ring-2 ring-brand-500' : '' }}">
-                            <span class="font-medium text-gray-800 dark:text-gray-100 truncate">{{ $d->name }}</span>
+                                        : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' }}">
+                            <span class="font-medium text-gray-800 dark:text-gray-100 truncate">
+                                {{ $d->name }}@unless($d->is_active)<span class="text-gray-400"> (غیرفعال)</span>@endunless
+                            </span>
                             <span class="shrink-0 px-1.5 py-0.5 rounded-full font-bold
                                          {{ $d->objections_count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-200 text-rose-700' }}">
                                 {{ $d->objections_count }}
@@ -92,8 +94,8 @@
         <button class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm">اعمال</button>
         @if($deviceId)
             <a href="{{ route('crm.objections.index') }}" class="px-3 py-2 text-sm text-gray-600 hover:underline">حذف فیلتر</a>
-            <a href="{{ route('crm.objections.create', ['device_id' => $deviceId]) }}"
-               class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold ms-auto">+ افزودن ایراد برای این دستگاه</a>
+            <a href="{{ route('crm.objections.device', $deviceId) }}"
+               class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold ms-auto">مدیریت ایرادهای این دستگاه</a>
         @endif
     </form>
 

@@ -20,16 +20,17 @@ class ObjectionController extends Controller
         }
 
         $items = $query->paginate(30)->withQueryString();
-        $devices = Device::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        // پنل ادمین همه‌ی دستگاه‌ها را نشان می‌دهد (فعال + غیرفعال)؛ فلگ is_active
+        // فقط نمایشِ سایت را کنترل می‌کند.
+        $devices = Device::query()->orderBy('name')->get(['id', 'name']);
 
-        // پوششِ ایرادات: تعدادِ ایرادِ متصل به هر دستگاهِ فعال. مبنای نمایشِ
+        // پوششِ ایرادات: تعدادِ ایرادِ متصل به هر دستگاه. مبنای نمایشِ
         // «دستگاه‌هایی که هنوز ایرادی ندارند».
         $coverage = Device::query()
-            ->where('is_active', true)
             ->withCount('objections')
             ->orderBy('objections_count')
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'is_active']);
         $devicesWithout = $coverage->where('objections_count', 0)->values();
 
         return view('crm::objections.index', compact('items', 'devices', 'deviceId', 'coverage', 'devicesWithout'));
@@ -37,12 +38,38 @@ class ObjectionController extends Controller
 
     public function create(Request $request)
     {
-        $devices = Device::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $devices = Device::query()->orderBy('name')->get(['id', 'name', 'is_active']);
         // پیش‌انتخابِ دستگاه وقتی از «افزودن ایراد برای این دستگاه» آمده‌ایم.
         $preDevice = $request->integer('device_id');
         $selectedDeviceIds = $preDevice > 0 ? [$preDevice] : [];
 
         return view('crm::objections.create', compact('devices', 'selectedDeviceIds'));
+    }
+
+    /**
+     * ویرایشِ دستگاه‌محور: انتخاب یک دستگاه و تیک‌زدنِ ایرادهای متصل به آن
+     * (برعکسِ فرمِ ایراد→دستگاه). راهِ سریعِ افزودن چند ایراد به یک دستگاه.
+     */
+    public function manageDevice(Device $device)
+    {
+        $objections = Objection::ordered()->get(['id', 'name', 'slug', 'is_active']);
+        $attachedIds = $device->objections()->pluck('crm_objections.id')->map(fn ($i) => (int) $i)->all();
+        $devices = Device::query()->orderBy('name')->get(['id', 'name', 'is_active']);
+
+        return view('crm::objections.device', compact('device', 'objections', 'attachedIds', 'devices'));
+    }
+
+    public function syncDevice(Request $request, Device $device)
+    {
+        $data = $request->validate([
+            'objection_ids' => 'nullable|array',
+            'objection_ids.*' => 'integer|exists:crm_objections,id',
+        ]);
+        $ids = array_values(array_unique(array_map('intval', $data['objection_ids'] ?? [])));
+        $device->objections()->sync($this->withOrder($ids));
+
+        return redirect()->route('crm.objections.device', $device)
+            ->with('success', 'ایرادهای دستگاه «'.$device->name.'» به‌روزرسانی شد.');
     }
 
     public function store(Request $request)
@@ -58,7 +85,7 @@ class ObjectionController extends Controller
 
     public function edit(Objection $objection)
     {
-        $devices = Device::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $devices = Device::query()->orderBy('name')->get(['id', 'name', 'is_active']);
         $selectedDeviceIds = $objection->devices()->pluck('crm_devices.id')->all();
 
         return view('crm::objections.edit', [
