@@ -30,13 +30,23 @@
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">{{ old('description', $item->description ?? '') }}</textarea>
     </div>
 
-    <div class="md:col-span-12">
-        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">دستگاه‌های مرتبط</label>
+    <div class="md:col-span-12" x-data="objectionDevices()">
+        @php $selected = old('device_ids', $selectedDeviceIds ?? []); @endphp
+        <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-200">
+                دستگاه‌های مرتبط <span class="text-gray-400" x-text="'(' + count + ' انتخاب‌شده)'"></span>
+            </label>
+            <div class="flex items-center gap-3 text-xs">
+                <button type="button" @click="selectAll()" class="text-blue-600 hover:underline">انتخاب همه</button>
+                <button type="button" @click="selectNone()" class="text-rose-600 hover:underline">حذف همه</button>
+            </div>
+        </div>
+        <input type="text" x-model="q" placeholder="جستجوی دستگاه..."
+               class="w-full px-3 py-2 mb-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
         <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900 grid grid-cols-2 md:grid-cols-3 gap-2">
-            @php $selected = old('device_ids', $selectedDeviceIds ?? []); @endphp
             @foreach($devices as $d)
-                <label class="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="device_ids[]" value="{{ $d->id }}" @checked(in_array($d->id, (array) $selected))>
+                <label class="inline-flex items-center gap-2 text-sm" x-show="match(@js($d->name))">
+                    <input type="checkbox" name="device_ids[]" value="{{ $d->id }}" @change="recount()" @checked(in_array($d->id, (array) $selected))>
                     <span>{{ $d->name }}</span>
                 </label>
             @endforeach
@@ -57,3 +67,18 @@
     <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ذخیره</button>
     <a href="{{ route('crm.objections.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm">انصراف</a>
 </div>
+
+<script>
+    function objectionDevices() {
+        return {
+            q: '',
+            count: 0,
+            init() { this.recount(); },
+            match(name) { return ! this.q || (name || '').includes(this.q.trim()); },
+            boxes() { return this.$root.querySelectorAll('input[name="device_ids[]"]'); },
+            recount() { this.count = this.$root.querySelectorAll('input[name="device_ids[]"]:checked').length; },
+            selectAll() { this.boxes().forEach((c) => { c.checked = true; }); this.recount(); },
+            selectNone() { this.boxes().forEach((c) => { c.checked = false; }); this.recount(); },
+        };
+    }
+</script>
