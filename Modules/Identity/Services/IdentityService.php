@@ -223,23 +223,25 @@ final class IdentityService
     }
 
     /**
-     * ست کردن first_name / last_name (اولین بار یا تغییر).
+     * ست کردن نام خانوادگی (الزامی) و نام (اختیاری).
      */
-    public function completeProfile(Customer $customer, string $firstName, ?string $lastName = null): Customer
+    public function completeProfile(Customer $customer, string $lastName, ?string $firstName = null): Customer
     {
-        $customer->forceFill([
-            'first_name' => trim($firstName),
-            'last_name' => $lastName ? trim($lastName) : null,
-        ])->save();
+        $attrs = ['last_name' => trim($lastName) ?: $customer->last_name];
+        // نام فقط در صورت ارسالِ مقدار غیرخالی به‌روزرسانی می‌شود (اختیاری).
+        if ($firstName !== null && trim($firstName) !== '') {
+            $attrs['first_name'] = trim($firstName);
+        }
+        $customer->forceFill($attrs)->save();
 
         return $customer->fresh();
     }
 
     /**
-     * آیا پروفایل مشتری کامل است؟ (حداقل first_name)
+     * آیا پروفایل مشتری کامل است؟ (حداقل نام خانوادگی)
      */
     public function isProfileComplete(Customer $customer): bool
     {
-        return ! empty($customer->first_name);
+        return ! empty($customer->last_name);
     }
 }

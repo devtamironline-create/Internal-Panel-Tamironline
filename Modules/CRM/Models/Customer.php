@@ -96,7 +96,9 @@ class Customer extends Authenticatable
     {
         $full = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
 
-        return $full !== '' ? $full : ($this->mobile ?? 'مشتری');
+        // هرگز شماره موبایل را به‌عنوان نام نمایشی برنگردان (حریم خصوصی —
+        // این accessor در انجمن و سطوح عمومی هم استفاده می‌شود).
+        return $full !== '' ? $full : 'کاربر تعمیرآنلاین';
     }
 
     /** نام نمایشی legacy — هم‌خوان با کد قدیمی که این accessor را صدا می‌زد. */
