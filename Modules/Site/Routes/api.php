@@ -44,6 +44,7 @@ Route::prefix('v1')->group(function () {
 
         // ── Blog ─────────────────────────────────────────────────
         Route::get('/blog/topics', [BlogController::class, 'topics'])->name('api.v1.blog.topics');
+        Route::get('/blog/filters', [BlogController::class, 'filters'])->name('api.v1.blog.filters');
         Route::get('/blog/articles', [BlogController::class, 'index'])->name('api.v1.blog.articles.index');
         Route::get('/blog/articles/{slug}', [BlogController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')

@@ -130,8 +130,11 @@ class ArticleController extends Controller
     {
         return [
             'allTopics' => BlogTopic::query()->where('is_active', true)->ordered()->get(['id', 'name', 'slug', 'icon', 'color_bg', 'color_fg']),
-            'allDevices' => Device::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'thumbnail', 'icon']),
-            'allBrands' => Brand::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'logo']),
+            // پنل ادمین همه‌ی دستگاه‌ها/برندها را نشان می‌دهد (فعال + غیرفعال)؛
+            // فلگ is_active فقط نمایشِ سایت را کنترل می‌کند و نباید مانع
+            // مرتبط‌کردنِ مقاله به یک دستگاه/برند شود.
+            'allDevices' => Device::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'thumbnail', 'icon']),
+            'allBrands' => Brand::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'logo']),
             'selectedTopicIds' => $article ? $article->topics()->pluck('site_blog_topics.id')->map(fn ($i) => (int) $i)->all() : [],
             'selectedDeviceIds' => $article ? $article->devices()->pluck('crm_devices.id')->map(fn ($i) => (int) $i)->all() : [],
             'selectedBrandIds' => $article ? $article->brands()->pluck('crm_brands.id')->map(fn ($i) => (int) $i)->all() : [],

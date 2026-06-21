@@ -5,6 +5,7 @@ namespace Modules\Site\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Site\Models\Article;
 use Modules\Site\Models\BlogTopic;
 use Modules\Site\Support\MediaUrl;
@@ -37,6 +38,47 @@ class BlogController extends Controller
 
         return response()->json(['data' => $data])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * GET /v1/blog/filters — دستگاه‌ها و برندهایی که حداقل یک مقاله‌ی منتشرشده
+     * دارند (با شمارش). برای ساخت ناوبری/فیلترِ «مقالات بر اساس دستگاه/برند».
+     */
+    public function filters(): JsonResponse
+    {
+        $now = now();
+
+        $publishedJoin = fn ($table, $entity, $fk) => DB::table($table.' as pivot')
+            ->join('site_blog_articles as a', 'a.id', '=', 'pivot.article_id')
+            ->join($entity.' as e', 'e.id', '=', 'pivot.'.$fk)
+            ->where('a.is_published', true)
+            ->whereNotNull('a.published_at')
+            ->where('a.published_at', '<=', $now);
+
+        $devices = $publishedJoin('site_blog_article_devices', 'crm_devices', 'device_id')
+            ->groupBy('e.id', 'e.name', 'e.slug', 'e.thumbnail')
+            ->select('e.id', 'e.name', 'e.slug', 'e.thumbnail', DB::raw('count(distinct a.id) as articles_count'))
+            ->orderByDesc('articles_count')->orderBy('e.name')->get();
+
+        $brands = $publishedJoin('site_blog_article_brands', 'crm_brands', 'brand_id')
+            ->groupBy('e.id', 'e.name', 'e.slug', 'e.logo')
+            ->select('e.id', 'e.name', 'e.slug', 'e.logo', DB::raw('count(distinct a.id) as articles_count'))
+            ->orderByDesc('articles_count')->orderBy('e.name')->get();
+
+        return response()->json([
+            'data' => [
+                'devices' => $devices->map(fn ($d) => [
+                    'id' => (int) $d->id, 'name' => $d->name, 'slug' => $d->slug,
+                    'thumbnail' => MediaUrl::resolve($d->thumbnail),
+                    'articles_count' => (int) $d->articles_count,
+                ])->values(),
+                'brands' => $brands->map(fn ($b) => [
+                    'id' => (int) $b->id, 'name' => $b->name, 'slug' => $b->slug,
+                    'logo' => MediaUrl::resolve($b->logo),
+                    'articles_count' => (int) $b->articles_count,
+                ])->values(),
+            ],
+        ])->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
 
     /**
@@ -143,6 +185,14 @@ class BlogController extends Controller
             'topics' => $a->topics->map(fn ($t) => [
                 'id' => (int) $t->id, 'slug' => $t->slug, 'name' => $t->name,
                 'colors' => ['bg' => $t->color_bg, 'fg' => $t->color_fg, 'border' => $t->color_border],
+            ])->values(),
+            // دستگاه‌ها و برندهای مرتبط — برای ساخت چیپ/لینکِ «مقالات بر اساس
+            // دستگاه/برند» در لیست (slug برای فیلتر ?device=/?brand= استفاده می‌شود).
+            'devices' => $a->devices->map(fn ($d) => [
+                'id' => (int) $d->id, 'name' => $d->name, 'slug' => $d->slug, 'href' => '/devices/'.$d->slug,
+            ])->values(),
+            'brands' => $a->brands->map(fn ($b) => [
+                'id' => (int) $b->id, 'name' => $b->name, 'slug' => $b->slug,
             ])->values(),
             'tags' => array_values(array_filter([
                 $a->devices->first()?->name,
