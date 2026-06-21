@@ -2,7 +2,7 @@
 @section('page-title', 'ویرایش مقاله')
 
 @section('main')
-<div class="p-6 max-w-5xl mx-auto">
+<div class="p-6 max-w-7xl mx-auto">
     <a href="{{ route('site.admin.blog.articles.index') }}" class="text-sm text-blue-600 hover:underline">&larr; بازگشت</a>
     <div class="flex items-center justify-between mt-2 mb-4">
         <h1 class="text-xl font-bold">ویرایش: {{ $article->title }}</h1>

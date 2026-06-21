@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -68,5 +71,39 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('tel', function ($expr) {
             return "<?php echo \\App\\Helpers\\TelHelper::render($expr); ?>";
         });
+
+        // ─── Rate limiter «catalog» برای روت‌های خواندنیِ کاتالوگ/عمومی ───
+        // درخواست‌های BFF (سرور-به-سرور با INTERNAL_API_TOKEN) از throttleِ
+        // مبتنی بر IP معاف‌اند؛ چون همه از یک IP (کانتینر فرانت) می‌آیند و
+        // در غیر این صورت سقفِ مشترک خیلی زود پر می‌شود و 429 می‌دهد.
+        // کاربرانِ عادیِ مرورگر (بدون توکن) همچنان IP-based محدود می‌مانند.
+        RateLimiter::for('catalog', function (Request $request) {
+            if (self::isInternalBff($request)) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(60)->by($request->ip());
+        });
+    }
+
+    /**
+     * آیا این درخواست از BFFِ داخلی با توکنِ معتبرِ سرور-به-سرور است؟
+     * هم‌منطق با App\Http\Middleware\VerifyInternalToken (شامل توکن قدیمی).
+     */
+    private static function isInternalBff(Request $request): bool
+    {
+        $provided = (string) $request->bearerToken();
+        if ($provided === '') {
+            return false;
+        }
+
+        foreach ([config('services.internal.token'), config('services.internal.token_old')] as $expected) {
+            $expected = (string) $expected;
+            if ($expected !== '' && hash_equals($expected, $provided)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
