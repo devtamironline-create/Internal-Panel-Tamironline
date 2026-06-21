@@ -22,14 +22,27 @@ class ObjectionController extends Controller
         $items = $query->paginate(30)->withQueryString();
         $devices = Device::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
-        return view('crm::objections.index', compact('items', 'devices', 'deviceId'));
+        // پوششِ ایرادات: تعدادِ ایرادِ متصل به هر دستگاهِ فعال. مبنای نمایشِ
+        // «دستگاه‌هایی که هنوز ایرادی ندارند».
+        $coverage = Device::query()
+            ->where('is_active', true)
+            ->withCount('objections')
+            ->orderBy('objections_count')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $devicesWithout = $coverage->where('objections_count', 0)->values();
+
+        return view('crm::objections.index', compact('items', 'devices', 'deviceId', 'coverage', 'devicesWithout'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $devices = Device::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        // پیش‌انتخابِ دستگاه وقتی از «افزودن ایراد برای این دستگاه» آمده‌ایم.
+        $preDevice = $request->integer('device_id');
+        $selectedDeviceIds = $preDevice > 0 ? [$preDevice] : [];
 
-        return view('crm::objections.create', compact('devices'));
+        return view('crm::objections.create', compact('devices', 'selectedDeviceIds'));
     }
 
     public function store(Request $request)
