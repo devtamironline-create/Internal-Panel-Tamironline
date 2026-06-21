@@ -180,7 +180,9 @@
 
             {{-- ─── اطلاعات سفارش — ۴ کارت دسته‌بندی‌شده با آیکن ─── --}}
             @php
-                $customerName = $order->customer?->first_name ?: $order->customer_name;
+                // نامِ کامل (نام + نام خانوادگی) — هم‌سو با لیست سفارش‌ها:
+                // snapshotِ زمانِ ثبت، سپس display_name زنده‌ی مشتری.
+                $customerName = $order->customer_name ?: $order->customer?->display_name;
                 $customerMobile = $order->customer?->mobile ?: $order->customer_mobile;
                 $customerPhone = $order->customer?->phone ?: $order->customer_phone;
 
