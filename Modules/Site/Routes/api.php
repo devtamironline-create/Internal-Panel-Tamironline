@@ -26,7 +26,8 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Public, cached, read-only ─────────────────────────────────
-    Route::middleware('throttle:60,1')->group(function () {
+    // limiter «catalog»: BFF (توکن داخلی) معاف؛ مرورگرِ عادی 60/min بر اساس IP.
+    Route::middleware('throttle:catalog')->group(function () {
         Route::get('/activity/recent', [ActivityController::class, 'recent'])
             ->name('api.v1.activity.recent');
         Route::get('/testimonials', [TestimonialController::class, 'index'])
@@ -126,7 +127,9 @@ Route::prefix('v1')->group(function () {
 
     // ── Internal-only detail endpoints (BFF → API) ────────────────
     // catalog brand/device detail با تمام فیلدهای CMS — فقط برای فرانت Next.js
-    Route::middleware(['internal.token', 'throttle:60,1'])->group(function () {
+    // throttle:catalog → چون internal.token الزامی است، عملاً BFF نامحدود می‌شود
+    // و دیگر 429 روی صفحات ترکیبی/دستگاه رخ نمی‌دهد.
+    Route::middleware(['internal.token', 'throttle:catalog'])->group(function () {
         Route::get('/catalog/brands/{slug}', [CatalogBrandController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.catalog.brands.show');
