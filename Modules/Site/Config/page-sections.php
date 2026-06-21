@@ -1437,4 +1437,98 @@ return [
         ],
     ],
 
+    // ─── صفحه‌ی سوالات متداول (/faq) ────────────────────────────────
+    'faq' => [
+        'title' => 'صفحه‌ی سوالات متداول (/faq)',
+        'sections' => [
+
+            'faq' => [
+                'label' => 'سوالات متداول',
+                'description' => 'عنوان و زیرعنوان + انتخاب از بانک FAQ (دسته‌بندی یا سوال منفرد). دسته‌ها در فرانت به‌صورت تب نمایش داده می‌شوند.',
+                'fields' => [
+                    'title' => ['label' => 'عنوان صفحه', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرعنوان', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'category_ids' => [
+                        'label' => 'دسته‌بندی‌های FAQ (در فرانت تب می‌شوند)',
+                        'type' => 'reference',
+                        'source' => 'faq_categories',
+                    ],
+                    'faq_ids' => [
+                        'label' => 'یا سوالات منفرد از بانک FAQ',
+                        'type' => 'reference',
+                        'source' => 'faqs',
+                    ],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
+    // ─── صفحه‌ی بایو / لینک‌دونی (/bio) ─────────────────────────────
+    'bio' => [
+        'title' => 'صفحه‌ی بایو / لینک‌دونی (/bio)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'هدر (عکس + معرفی)',
+                'fields' => [
+                    'image' => ['label' => 'عکس بالای صفحه (URL مطلق http/https)', 'type' => 'url', 'rules' => 'nullable|url|max:500'],
+                    'image_alt' => ['label' => 'متن جایگزین عکس', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'title' => ['label' => 'عنوان اصلی', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرعنوان', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'description' => ['label' => 'متن معرفی', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                ],
+            ],
+
+            'order' => [
+                'label' => 'دکمه‌ی ثبت سفارش آنلاین',
+                'fields' => [
+                    'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'url' => ['label' => 'لینک (URL مطلق)', 'type' => 'url', 'rules' => 'nullable|url|max:500'],
+                ],
+            ],
+
+            'phone' => [
+                'label' => 'ثبت سفارش تلفنی',
+                'fields' => [
+                    'title' => ['label' => 'عنوان بخش', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'lines' => [
+                        'label' => 'شماره‌ها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'tel' => ['label' => 'شماره‌ی قابل شماره‌گیری (مثل 02145396)', 'type' => 'string', 'rules' => 'required|string|max:30'],
+                            'display' => ['label' => 'متن نمایشی (اختیاری)', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'ganje' => [
+                'label' => 'گنجه مارکت',
+                'fields' => [
+                    'note' => ['label' => 'متن توضیحی', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'label' => ['label' => 'متن دکمه', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                    'url' => ['label' => 'لینک (URL مطلق)', 'type' => 'url', 'rules' => 'nullable|url|max:500'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
 ];
