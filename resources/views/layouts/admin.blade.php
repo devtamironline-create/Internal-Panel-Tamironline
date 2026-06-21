@@ -23,6 +23,24 @@
          کند. هشدار «multiple instances» یک warning بی‌ضرر است. --}}
     <script defer src="/vendor/js/alpine-collapse.min.js"></script>
     <script defer src="/vendor/js/alpine.min.js"></script>
+    {{-- محافظِ پنجره‌ی انتخاب فایل: در صفحاتی که Livewire اجرا می‌شود دو نمونه‌ی
+         Alpine فعال است و هندلرهای @click دوبار اجرا می‌شوند؛ در نتیجه .click()
+         روی input فایل دوبار صدا زده می‌شود و پنجره‌ی انتخاب عکس دوبار باز می‌شود.
+         این shim کلیکِ دومِ برنامه‌ایِ همان input فایل را در بازه‌ی ۵۰۰ms نادیده
+         می‌گیرد (فقط برای type=file؛ رفتارِ بقیه دست‌نخورده می‌ماند). --}}
+    <script>
+        (function () {
+            var nativeClick = HTMLInputElement.prototype.click;
+            HTMLInputElement.prototype.click = function () {
+                if (this.type === 'file') {
+                    var now = Date.now();
+                    if (now - (this.__fileClickAt || 0) < 500) return;
+                    this.__fileClickAt = now;
+                }
+                return nativeClick.apply(this, arguments);
+            };
+        })();
+    </script>
     <link rel="stylesheet" href="/vendor/css/apexcharts.css">
     <script>
         tailwind.config = {

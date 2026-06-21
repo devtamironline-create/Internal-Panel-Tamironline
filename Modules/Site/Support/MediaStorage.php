@@ -73,9 +73,19 @@ final class MediaStorage
             'uploaded_by_user_id' => $userId,
         ]);
 
-        // تولید variants فقط برای تصاویر
+        // تولید variants فقط برای تصاویر — شکستِ ساختِ variant نباید کلِ آپلود
+        // را با ۵۰۰ از کار بیندازد؛ فایلِ اصلی ذخیره شده و variantها بعداً
+        // قابل بازسازی‌اند (rebuild-variants).
         if ($kind === 'image' && $width !== null) {
-            self::buildVariants($media);
+            try {
+                self::buildVariants($media);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('media.build_variants_failed', [
+                    'media_id' => $media->id,
+                    'path' => $path,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $media;
@@ -109,9 +119,17 @@ final class MediaStorage
             $media->forceFill(['path' => $path])->save();
         }
 
-        // variantها هم با فایل اصلی پاک شده‌اند → بازسازی.
+        // variantها هم با فایل اصلی پاک شده‌اند → بازسازی (شکست نباید throw کند).
         if ($media->kind === 'image') {
-            self::buildVariants($media);
+            try {
+                self::buildVariants($media);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('media.build_variants_failed', [
+                    'media_id' => $media->id,
+                    'path' => $media->path,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return true;
