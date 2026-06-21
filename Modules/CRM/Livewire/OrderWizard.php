@@ -184,13 +184,18 @@ class OrderWizard extends Component
     #[Computed]
     public function brands()
     {
-        return Brand::active()->ordered()->get(['id', 'name']);
+        // پنل ادمین همه‌ی برندها را نشان می‌دهد؛ فلگ is_active فقط نمایشِ
+        // سایت را کنترل می‌کند و نباید جلوی ثبت سفارش توسط ادمین را بگیرد.
+        return Brand::ordered()->get(['id', 'name']);
     }
 
     #[Computed]
     public function devices()
     {
-        return Device::active()->ordered()->get(['id', 'name']);
+        // پنل ادمین همه‌ی دستگاه‌ها را نشان می‌دهد؛ فلگ‌های is_active (سایت) و
+        // is_active_app (اپ) فقط نمایشِ آن کانال‌ها را کنترل می‌کنند و نباید
+        // جلوی ثبت سفارش توسط ادمین را بگیرند.
+        return Device::ordered()->get(['id', 'name']);
     }
 
     #[Computed]

@@ -609,8 +609,10 @@ class OrderController extends Controller
 
         return view('crm::orders.edit', [
             'order' => $order,
-            'brands' => Brand::active()->ordered()->get(['id', 'name']),
-            'devices' => Device::active()->ordered()->get(['id', 'name']),
+            // همه‌ی برندها/دستگاه‌ها برای ویرایشِ سفارش در پنل — فلگ‌های
+            // is_active (سایت) و is_active_app (اپ) نباید روی پنل اثر بگذارند.
+            'brands' => Brand::ordered()->get(['id', 'name']),
+            'devices' => Device::ordered()->get(['id', 'name']),
             'provinces' => Province::ordered()->get(['id', 'name']),
             'cities' => $order->province_id
                 ? City::where('province_id', $order->province_id)->active()->ordered()->get(['id', 'name'])
