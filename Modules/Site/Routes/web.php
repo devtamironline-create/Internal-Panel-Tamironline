@@ -144,8 +144,10 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::get('/', [ArticleController::class, 'index'])->name('index');
             Route::get('/create', [ArticleController::class, 'create'])->name('create');
             Route::post('/', [ArticleController::class, 'store'])->name('store');
+            Route::post('/bulk', [ArticleController::class, 'bulk'])->name('bulk');
             Route::get('/{article}/edit', [ArticleController::class, 'edit'])->name('edit');
             Route::put('/{article}', [ArticleController::class, 'update'])->name('update');
+            Route::put('/{article}/toggle-publish', [ArticleController::class, 'togglePublish'])->name('toggle-publish');
             Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('destroy');
         });
     });

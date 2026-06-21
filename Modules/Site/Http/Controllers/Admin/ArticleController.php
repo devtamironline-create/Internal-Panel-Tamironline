@@ -46,8 +46,84 @@ class ArticleController extends Controller
 
         $articles = $query->paginate(15)->withQueryString();
         $topics = BlogTopic::query()->ordered()->get(['id', 'name', 'slug']);
+        // برای اتصالِ گروهی از روی همین صفحه — همه‌ی دستگاه‌ها/برندها (نه فقط فعال).
+        $devices = Device::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $brands = Brand::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
 
-        return view('site::admin.blog.articles.index', compact('articles', 'topics'));
+        return view('site::admin.blog.articles.index', compact('articles', 'topics', 'devices', 'brands'));
+    }
+
+    /**
+     * تغییر سریعِ وضعیت انتشار یک مقاله (تکی) از صفحه‌ی لیست.
+     */
+    public function togglePublish(Article $article): RedirectResponse
+    {
+        $this->check();
+        $article->is_published = ! $article->is_published;
+        if ($article->is_published && empty($article->published_at)) {
+            $article->published_at = now();
+        }
+        $article->save();
+
+        return back()->with('success', $article->is_published ? 'مقاله منتشر شد.' : 'مقاله به پیش‌نویس رفت.');
+    }
+
+    /**
+     * عملیاتِ گروهی روی مقالاتِ انتخاب‌شده: انتشار/پیش‌نویس/حذف و اتصالِ
+     * تاپیک/دستگاه/برند (attach بدون حذفِ موارد موجود).
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $this->check();
+        $data = $request->validate([
+            'action' => 'required|in:publish,unpublish,delete,attach',
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:site_blog_articles,id',
+            'topic_id' => 'nullable|integer|exists:site_blog_topics,id',
+            'device_id' => 'nullable|integer|exists:crm_devices,id',
+            'brand_id' => 'nullable|integer|exists:crm_brands,id',
+        ]);
+
+        $articles = Article::query()->whereIn('id', $data['ids'])->get();
+        $count = $articles->count();
+
+        if ($data['action'] === 'delete') {
+            Article::query()->whereIn('id', $data['ids'])->delete();
+
+            return back()->with('success', "{$count} مقاله حذف شد.");
+        }
+
+        foreach ($articles as $a) {
+            if ($data['action'] === 'publish') {
+                $a->is_published = true;
+                if (empty($a->published_at)) {
+                    $a->published_at = now();
+                }
+                $a->save();
+            } elseif ($data['action'] === 'unpublish') {
+                $a->is_published = false;
+                $a->save();
+            } elseif ($data['action'] === 'attach') {
+                if (! empty($data['topic_id'])) {
+                    $a->topics()->syncWithoutDetaching([$data['topic_id']]);
+                }
+                if (! empty($data['device_id'])) {
+                    $a->devices()->syncWithoutDetaching([$data['device_id']]);
+                }
+                if (! empty($data['brand_id'])) {
+                    $a->brands()->syncWithoutDetaching([$data['brand_id']]);
+                }
+            }
+        }
+
+        $label = match ($data['action']) {
+            'publish' => "{$count} مقاله منتشر شد.",
+            'unpublish' => "{$count} مقاله به پیش‌نویس رفت.",
+            'attach' => "طبقه‌بندی به {$count} مقاله اضافه شد.",
+            default => 'انجام شد.',
+        };
+
+        return back()->with('success', $label);
     }
 
     public function create(): View
@@ -156,7 +232,7 @@ class ArticleController extends Controller
             'cover_color' => 'nullable|string|max:9|regex:/^#[0-9a-fA-F]{3,8}$/',
             'read_time_minutes' => 'nullable|integer|min:1|max:600',
             'is_published' => 'nullable|boolean',
-            'published_at' => 'nullable|date',
+            'published_at_jalali' => 'nullable|string|max:20',
             'sort_order' => 'nullable|integer|min:0',
             'meta_title' => 'nullable|string|max:250',
             'meta_description' => 'nullable|string|max:500',
@@ -175,6 +251,18 @@ class ArticleController extends Controller
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         if (! preg_match('/^[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?$/', $data['slug'])) {
             throw ValidationException::withMessages(['slug' => 'اسلاگ باید با حروف کوچک انگلیسی، عدد و خط تیره باشد.']);
+        }
+
+        // تاریخ انتشارِ شمسی → میلادی (ساعت = شروعِ روز). دیجیت‌های فارسی هم
+        // پشتیبانی می‌شوند. تاریخِ نامعتبر نادیده گرفته می‌شود.
+        $jalali = trim((string) ($data['published_at_jalali'] ?? ''));
+        unset($data['published_at_jalali']);
+        if ($jalali !== '') {
+            try {
+                $data['published_at'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $this->persianToLatin($jalali))->toCarbon();
+            } catch (\Throwable $e) {
+                // نادیده
+            }
         }
 
         $data['is_published'] = (bool) ($data['is_published'] ?? false);
@@ -207,6 +295,18 @@ class ArticleController extends Controller
         unset($data[$key]);
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * تبدیل ارقام فارسی/عربی به لاتین (برای پارسِ تاریخِ شمسیِ ورودی).
+     */
+    private function persianToLatin(string $value): string
+    {
+        $fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        $en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        return str_replace([...$fa, ...$ar], [...$en, ...$en], $value);
     }
 
     /**

@@ -122,11 +122,12 @@
     {{-- ─── انتشار + SEO ─── --}}
     <div class="bg-white border border-gray-200 rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium mb-1">تاریخ انتشار</label>
-            <input type="datetime-local" name="published_at"
-                   value="{{ old('published_at', $a?->published_at?->format('Y-m-d\TH:i')) }}"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-            <p class="text-xs text-gray-500 mt-1">خالی + منتشر شود = الان.</p>
+            <label class="block text-sm font-medium mb-1">تاریخ انتشار (شمسی)</label>
+            <input type="text" name="published_at_jalali" dir="ltr" autocomplete="off"
+                   value="{{ old('published_at_jalali', $a?->published_at ? \Morilog\Jalali\Jalalian::fromDateTime($a->published_at)->format('Y/m/d') : '') }}"
+                   placeholder="۱۴۰۵/۰۳/۳۱"
+                   class="jalali-datepicker w-full px-3 py-2 border border-gray-300 rounded-lg text-sm ltr">
+            <p class="text-xs text-gray-500 mt-1">تاریخ را شمسی انتخاب کنید. خالی + «منتشر شود» = همین حالا.</p>
         </div>
         <div class="flex items-end pb-1">
             <label class="inline-flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 w-full">
