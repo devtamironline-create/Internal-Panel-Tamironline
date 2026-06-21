@@ -58,8 +58,10 @@ class LeadController extends Controller
         $cities = $provinceId
             ? City::where('province_id', $provinceId)->active()->ordered()->get(['id', 'name'])
             : collect();
-        $brands = Brand::active()->ordered()->get(['id', 'name']);
-        $devices = Device::active()->ordered()->get(['id', 'name']);
+        // همه‌ی برندها/دستگاه‌ها در پنل — فلگ‌های is_active (سایت) و
+        // is_active_app (اپ) نباید جلوی ثبت/تبدیل لید را در پنل بگیرند.
+        $brands = Brand::ordered()->get(['id', 'name']);
+        $devices = Device::ordered()->get(['id', 'name']);
         $leadReasons = LeadReason::active()->ordered()->get(['id', 'name']);
 
         // معرف‌ها از تنظیمات WP (سازگار با همان لیست سفارشات)
