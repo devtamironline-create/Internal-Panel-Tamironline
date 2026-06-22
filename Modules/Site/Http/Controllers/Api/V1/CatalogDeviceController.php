@@ -314,38 +314,39 @@ class CatalogDeviceController extends Controller
      */
     private function buildFaq(Device $device, array $template): array
     {
-        // اولویت ۱: union(دسته‌بندی‌های انتخاب‌شده، سوالات منفرد انتخاب‌شده) از بانک FAQ
-        $byCategory = collect();
-        if ($device->faqCategories()->exists()) {
-            $catIds = $device->faqCategories()->pluck('site_taxonomies.id')->all();
-            $byCategory = \Modules\Site\Models\Faq::query()
-                ->where('is_published', true)
-                ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
-                ->orderBy('sort_order')
-                ->orderByDesc('created_at')
-                ->get(['id', 'question', 'answer']);
+        // اولویت ۱ (معتبرِ صریح): اگر ادمین برای این دستگاه دسته‌بندی یا سوالِ
+        // منفرد انتخاب کرده باشد، همان ملاک است و ستونِ قدیمیِ inline یا الگوی
+        // سراسری دیگر آن را override نمی‌کنند (حتی اگر نتیجه فعلاً خالی باشد).
+        $hasCategories = $device->faqCategories()->exists();
+        $hasIndividual = $device->faqs()->exists();
+
+        if ($hasCategories || $hasIndividual) {
+            $byCategory = collect();
+            if ($hasCategories) {
+                $catIds = $device->faqCategories()->pluck('site_taxonomies.id')->all();
+                $byCategory = \Modules\Site\Models\Faq::query()
+                    ->where('is_published', true)
+                    ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
+                    ->orderBy('sort_order')
+                    ->orderByDesc('created_at')
+                    ->get(['id', 'question', 'answer']);
+            }
+
+            $byIndividual = $hasIndividual
+                ? $device->faqs()->where('faqs.is_published', true)->get(['faqs.id', 'faqs.question', 'faqs.answer'])
+                : collect();
+
+            return $byCategory->concat($byIndividual)->unique('id')->values()
+                ->map(fn ($f) => ['id' => $f->id, 'question' => $f->question, 'answer' => $f->answer])
+                ->all();
         }
 
-        $byIndividual = $device->faqs()
-            ->where('faqs.is_published', true)
-            ->get(['faqs.id', 'faqs.question', 'faqs.answer']);
-
-        $merged = $byCategory->concat($byIndividual)->unique('id')->values();
-
-        if ($merged->isNotEmpty()) {
-            return $merged->map(fn ($f) => [
-                'id' => $f->id,
-                'question' => $f->question,
-                'answer' => $f->answer,
-            ])->all();
-        }
-
-        // اولویت ۲: inline JSON column device->faq (legacy)
+        // اولویت ۲: ستون JSON قدیمیِ device->faq (legacy — import وردپرس).
         if (! empty($device->faq)) {
             return $device->faq;
         }
 
-        // اولویت ۳: template (page_sections.device.faq) — از category/faq references
+        // اولویت ۳: الگوی سراسری (page_sections.device.faq).
         return CatalogMerger::templateFaq($template);
     }
 
