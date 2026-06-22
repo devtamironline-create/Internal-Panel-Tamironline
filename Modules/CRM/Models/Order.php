@@ -294,12 +294,7 @@ class Order extends Model
      */
     public function customerDisplayName(): string
     {
-        $c = $this->customer;
-        if ($c && (filled($c->first_name) || filled($c->last_name))) {
-            return trim(($c->first_name ?? '').' '.($c->last_name ?? ''));
-        }
-
-        return $this->customer_name ?: '—';
+        return $this->customer?->composedName() ?? ($this->customer_name ?: '—');
     }
 
     public function brand(): BelongsTo

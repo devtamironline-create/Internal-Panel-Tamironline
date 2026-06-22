@@ -94,11 +94,36 @@ class Customer extends Authenticatable
 
     public function getFullNameAttribute(): string
     {
-        $full = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
-
         // هرگز شماره موبایل را به‌عنوان نام نمایشی برنگردان (حریم خصوصی —
         // این accessor در انجمن و سطوح عمومی هم استفاده می‌شود).
-        return $full !== '' ? $full : 'کاربر تعمیرآنلاین';
+        return $this->composedName() ?? 'کاربر تعمیرآنلاین';
+    }
+
+    /**
+     * نام + نام خانوادگیِ ترکیب‌شده با حذفِ تکرار؛ null اگر هیچ نامی نباشد.
+     *
+     * در دیتای قدیمی گاهی کلِ نام داخل first_name ذخیره شده و بعداً last_name
+     * (که زیرمجموعه‌ی همان است) اضافه شده؛ در این حالت نباید دوباره append شود
+     * (وگرنه «صادق نقیبی نقیبی» می‌شود).
+     */
+    public function composedName(): ?string
+    {
+        $first = trim((string) ($this->first_name ?? ''));
+        $last = trim((string) ($this->last_name ?? ''));
+
+        if ($first === '' && $last === '') {
+            return null;
+        }
+        if ($first === '') {
+            return $last;
+        }
+        if ($last === '') {
+            return $first;
+        }
+
+        $firstWords = preg_split('/\s+/u', $first) ?: [];
+
+        return in_array($last, $firstWords, true) ? $first : $first.' '.$last;
     }
 
     /** نام نمایشی legacy — هم‌خوان با کد قدیمی که این accessor را صدا می‌زد. */

@@ -78,6 +78,8 @@ class DeviceController extends Controller
             DeviceBrandPage::ensureForPair((int) $device->id, (int) $brandId);
         }
 
+        $this->purgeDeviceCache($device);
+
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه با موفقیت اضافه شد.');
     }
@@ -115,8 +117,22 @@ class DeviceController extends Controller
             DeviceBrandPage::ensureForPair((int) $device->id, (int) $brandId);
         }
 
+        $this->purgeDeviceCache($device);
+
         return redirect()->route('crm.devices.index')
             ->with('success', 'دستگاه ویرایش شد.');
+    }
+
+    /**
+     * پاک‌سازیِ کشِ فرانت برای صفحه‌ی این دستگاه (مسیر + تگ). بدونِ این،
+     * تغییراتِ ادمین (FAQ، محتوا، …) تا انقضای کش روی سایت دیده نمی‌شوند.
+     */
+    private function purgeDeviceCache(Device $device): void
+    {
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purge(
+            ['/services/'.$device->slug, '/devices/'.$device->slug],
+            ['device:'.$device->slug],
+        );
     }
 
     /**
