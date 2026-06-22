@@ -37,6 +37,7 @@ class SiteServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Modules\Site\Console\Commands\ImportArticlesFromWp::class,
+                \Modules\Site\Console\Commands\BlogTaxonomyReport::class,
             ]);
         }
     }
