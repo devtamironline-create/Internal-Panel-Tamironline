@@ -200,6 +200,35 @@ class ArticleController extends Controller
     }
 
     /**
+     * فعال/غیرفعال‌کردنِ اتصالِ یک دستگاه به مقاله (pivot is_active).
+     * اتصالِ غیرفعال در API عمومی/فیلترها/فِیسِت‌ها لحاظ نمی‌شود.
+     */
+    public function toggleDeviceActive(Article $article, Device $device): RedirectResponse
+    {
+        $this->check();
+        $row = $article->devices()->where('crm_devices.id', $device->id)->first();
+        if ($row) {
+            $article->devices()->updateExistingPivot($device->id, ['is_active' => ! $row->pivot->is_active]);
+        }
+
+        return back()->with('success', 'وضعیت نمایشِ دستگاه «'.$device->name.'» به‌روزرسانی شد.');
+    }
+
+    /**
+     * فعال/غیرفعال‌کردنِ اتصالِ یک برند به مقاله (pivot is_active).
+     */
+    public function toggleBrandActive(Article $article, Brand $brand): RedirectResponse
+    {
+        $this->check();
+        $row = $article->brands()->where('crm_brands.id', $brand->id)->first();
+        if ($row) {
+            $article->brands()->updateExistingPivot($brand->id, ['is_active' => ! $row->pivot->is_active]);
+        }
+
+        return back()->with('success', 'وضعیت نمایشِ برند «'.$brand->name.'» به‌روزرسانی شد.');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function formData(?Article $article): array

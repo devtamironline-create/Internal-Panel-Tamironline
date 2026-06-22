@@ -16,8 +16,8 @@ use Modules\Site\Models\Concerns\HasMedia;
 class Article extends Model
 {
     use HasComments;
-    use HasSeoMeta;
     use HasMedia;
+    use HasSeoMeta;
 
     protected $table = 'site_blog_articles';
 
@@ -60,15 +60,27 @@ class Article extends Model
     public function devices(): BelongsToMany
     {
         return $this->belongsToMany(Device::class, 'site_blog_article_devices', 'article_id', 'device_id')
-            ->withPivot('sort_order')
+            ->withPivot('sort_order', 'is_active')
             ->orderBy('site_blog_article_devices.sort_order');
+    }
+
+    /** فقط دستگاه‌های فعالِ این مقاله (برای API عمومی). */
+    public function activeDevices(): BelongsToMany
+    {
+        return $this->devices()->wherePivot('is_active', true);
     }
 
     public function brands(): BelongsToMany
     {
         return $this->belongsToMany(Brand::class, 'site_blog_article_brands', 'article_id', 'brand_id')
-            ->withPivot('sort_order')
+            ->withPivot('sort_order', 'is_active')
             ->orderBy('site_blog_article_brands.sort_order');
+    }
+
+    /** فقط برندهای فعالِ این مقاله (برای API عمومی). */
+    public function activeBrands(): BelongsToMany
+    {
+        return $this->brands()->wherePivot('is_active', true);
     }
 
     public function scopePublished($query)

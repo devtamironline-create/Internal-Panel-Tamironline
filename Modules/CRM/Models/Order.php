@@ -285,6 +285,23 @@ class Order extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * نامِ نمایشیِ مشتری برای پنل. نامِ زنده‌ی مشتری در اولویت است تا تغییراتِ
+     * بعدیِ نام/نام‌خانوادگی دیده شود (مثلاً سفارش‌های اپ که فقط نامِ کوچک را
+     * snapshot کرده‌اند ولی مشتری بعداً نام خانوادگی‌اش را تکمیل کرده). اگر
+     * مشتریِ متصل نامِ واقعی نداشت، به snapshotِ زمانِ ثبت برمی‌گردیم. هرگز
+     * شماره موبایل برنمی‌گردد.
+     */
+    public function customerDisplayName(): string
+    {
+        $c = $this->customer;
+        if ($c && (filled($c->first_name) || filled($c->last_name))) {
+            return trim(($c->first_name ?? '').' '.($c->last_name ?? ''));
+        }
+
+        return $this->customer_name ?: '—';
+    }
+
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
