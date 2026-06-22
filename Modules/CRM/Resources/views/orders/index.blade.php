@@ -321,7 +321,7 @@
                         @endif
                     </td>
                     <td class="px-6 py-4 text-sm">
-                        <div class="text-gray-900 dark:text-gray-100">{{ $order->customer_name ?: $order->customer?->display_name }}</div>
+                        <div class="text-gray-900 dark:text-gray-100">{{ $order->customerDisplayName() }}</div>
                         <div class="text-xs">@tel($order->customer_mobile)</div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">

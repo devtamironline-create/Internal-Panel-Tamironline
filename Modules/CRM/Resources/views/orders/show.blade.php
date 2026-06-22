@@ -180,9 +180,9 @@
 
             {{-- ─── اطلاعات سفارش — ۴ کارت دسته‌بندی‌شده با آیکن ─── --}}
             @php
-                // نامِ کامل (نام + نام خانوادگی) — هم‌سو با لیست سفارش‌ها:
-                // snapshotِ زمانِ ثبت، سپس display_name زنده‌ی مشتری.
-                $customerName = $order->customer_name ?: $order->customer?->display_name;
+                // نامِ کاملِ مشتری — نامِ زنده در اولویت (تا نام خانوادگیِ بعداً
+                // تکمیل‌شده هم دیده شود)، سپس snapshotِ زمانِ ثبت.
+                $customerName = $order->customerDisplayName();
                 $customerMobile = $order->customer?->mobile ?: $order->customer_mobile;
                 $customerPhone = $order->customer?->phone ?: $order->customer_phone;
 
@@ -1303,7 +1303,7 @@
                 <div>
                     <h3 class="font-bold text-gray-900 dark:text-gray-100">سوابق سفارش‌های مشتری</h3>
                     <p class="text-xs text-gray-500 mt-0.5">
-                        {{ $order->customer_name ?: $order->customer?->display_name }}
+                        {{ $order->customerDisplayName() }}
                         — <span dir="ltr">{{ $order->customer_mobile ?: $order->customer?->mobile }}</span>
                         — {{ $customerOrders->count() }} سفارش قبلی
                     </p>
