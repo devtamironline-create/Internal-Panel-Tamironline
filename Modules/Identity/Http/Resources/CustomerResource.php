@@ -14,10 +14,9 @@ class CustomerResource extends JsonResource
     {
         // پروفایل با «نام خانوادگی» کامل تلقی می‌شود (نام اختیاری است).
         $isProfileComplete = ! empty($this->last_name);
-        // full_name فقط از نام/نام‌خانوادگی ساخته می‌شود — هرگز شماره موبایل
-        // (accessor مدل برای جاهای دیگر fallback دارد، ولی این پاسخِ عمومی نباید
-        // شماره را افشا کند).
-        $fullName = trim((string) ($this->first_name ?? '').' '.(string) ($this->last_name ?? '')) ?: null;
+        // full_name با حذفِ تکرارِ نام خانوادگی ساخته می‌شود و هرگز شماره موبایل
+        // نیست؛ اگر نامی نباشد null (تا فرانت خودش تصمیم بگیرد).
+        $fullName = $this->resource->composedName();
 
         return [
             'id' => (int) $this->id,
