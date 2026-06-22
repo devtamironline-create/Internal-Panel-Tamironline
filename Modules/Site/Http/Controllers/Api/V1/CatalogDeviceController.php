@@ -369,11 +369,22 @@ class CatalogDeviceController extends Controller
                 ->get(['id', 'name', 'slug', 'logo']);
         }
 
+        // وضعیتِ فعال‌بودنِ صفحه‌ی ترکیبی (device×brand) از combo-manager —
+        // تا فرانت بداند کدام ترکیبی روی سایت منتشر است.
+        $comboActive = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('device_id', $device->id)
+            ->whereIn('brand_id', $picked->pluck('id')->all())
+            ->pluck('is_active', 'brand_id');
+
         return $picked->map(fn ($b) => [
             'id' => (int) $b->id,
             'name' => $b->name,
             'slug' => $b->slug,
             'logo' => MediaUrl::resolve($b->logo),
+            // صفحه‌ی خودِ برند + صفحه‌ی ترکیبیِ این دستگاه × برند.
+            'href' => '/brands/'.$b->slug,
+            'combo_href' => '/services/'.$device->slug.'/'.$b->slug,
+            'combo_active' => (bool) ($comboActive[$b->id] ?? false),
         ])->all();
     }
 
