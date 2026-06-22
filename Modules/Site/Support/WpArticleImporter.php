@@ -18,6 +18,51 @@ use Modules\Site\Models\BlogTopic;
  */
 final class WpArticleImporter
 {
+    /**
+     * نقشه‌ی صریح: term_id دسته‌ی وردپرس → دستگاه/برندِ سایت جدید (با slug).
+     * این دسته‌ها علاوه بر تاپیک، به دستگاه/برندِ متناظر هم وصل می‌شوند.
+     * slug پایدارتر از id است و در زمان اجرا به id ترجمه می‌شود.
+     *
+     * @var array<int, array{devices?: array<int, string>, brands?: array<int, string>}>
+     */
+    private const CATEGORY_MAP = [
+        87 => ['devices' => ['washing-machine']],          // تعمیرات ماشین لباسشویی
+        85 => ['devices' => ['dishwasher']],               // تعمیرات ماشین ظرفشویی
+        1 => ['devices' => ['refrigerator-freezer']],      // تعمیرات یخچال
+        94 => ['brands' => ['bosch']],                     // تعمیرات بوش
+        138 => ['brands' => ['samsung']],                  // تعمیرات سامسونگ
+        110 => ['devices' => ['vacuum-cleaner']],          // تعمیر جاروبرقی
+        176 => ['brands' => ['lg']],                       // تعمیرات ال جی
+        203 => ['devices' => ['tv']],                      // تلویزیون
+        206 => ['devices' => ['water-heater']],            // پکیج → آبگرمکن
+        161 => ['devices' => ['split-air-conditioner']],   // تعمیر کولر گازی → اسپیلت
+        146 => ['brands' => ['aeg']],                      // تعمیرات آاگ
+        154 => ['devices' => ['iron']],                    // تعمیر اتو بخار → اتو
+        131 => ['devices' => ['gas-stove']],               // تعمیر اجاق گاز
+        181 => ['devices' => ['oven', 'microwave']],       // فر و مایکروفر
+        183 => ['devices' => ['evaporative-cooler']],      // کولر آبی
+        169 => ['devices' => ['meat-grinder']],            // چرخ گوشت
+        386 => ['devices' => ['steam-cleaner']],           // بخارشوی
+        204 => ['devices' => ['cordless-vacuum']],         // جاروشارژی
+        // 323 «دستگاه ها» و 322 «برند ها» عمومی‌اند → فقط تاپیک.
+    ];
+
+    /**
+     * نقشه‌ی صریح: term_id برچسبِ وردپرس → دستگاه/برندِ سایت جدید.
+     * اگر برچسب اینجا نبود، به منطقِ تطبیقِ slug/name برمی‌گردد.
+     *
+     * @var array<int, array{devices?: array<int, string>, brands?: array<int, string>}>
+     */
+    private const TAG_MAP = [
+        387 => ['devices' => ['washing-machine']],         // ارورهای ماشین لباسشویی
+    ];
+
+    /** کشِ slug→id دستگاه‌ها (lazy). @var array<string, int>|null */
+    private ?array $deviceSlugMap = null;
+
+    /** کشِ slug→id برندها (lazy). @var array<string, int>|null */
+    private ?array $brandSlugMap = null;
+
     private bool $downloadImages = false;
 
     private bool $apply = false;
@@ -172,6 +217,7 @@ final class WpArticleImporter
             $taxonomy = $term['taxonomy'] ?? '';
             $name = trim((string) ($term['name'] ?? ''));
             $slug = trim((string) ($term['slug'] ?? ''));
+            $wpTermId = (int) ($term['wp_term_id'] ?? 0);
 
             if ($taxonomy === 'category') {
                 $topic = BlogTopic::where('wp_term_id', $term['wp_term_id'])->first()
@@ -188,7 +234,16 @@ final class WpArticleImporter
                     $topic->forceFill(['wp_term_id' => (int) $term['wp_term_id']])->save();
                 }
                 $topicIds[] = $topic->id;
+
+                // نقشه‌ی صریح: این دسته علاوه بر تاپیک، به دستگاه/برندِ متناظر هم وصل شود.
+                $this->applyExplicitMap(self::CATEGORY_MAP[$wpTermId] ?? null, $deviceIds, $brandIds);
             } elseif ($taxonomy === 'post_tag') {
+                // نقشه‌ی صریحِ برچسب اول؛ اگر بود همان را اعمال و رد شو.
+                if (isset(self::TAG_MAP[$wpTermId])) {
+                    $this->applyExplicitMap(self::TAG_MAP[$wpTermId], $deviceIds, $brandIds);
+
+                    continue;
+                }
                 // tag → match با device یا brand بر اساس name/slug (case-insensitive)
                 $device = Device::query()
                     ->where(function ($q) use ($slug, $name) {
@@ -224,6 +279,57 @@ final class WpArticleImporter
         $article->topics()->sync($this->withOrder(array_values(array_unique($topicIds))));
         $article->devices()->sync($this->withOrder(array_values(array_unique($deviceIds))));
         $article->brands()->sync($this->withOrder(array_values(array_unique($brandIds))));
+    }
+
+    /**
+     * اعمالِ یک ورودیِ نقشه‌ی صریح: slugهای دستگاه/برند را به idها ترجمه
+     * و به آرایه‌های مرجع اضافه می‌کند. slugهای ناشناخته نادیده گرفته می‌شوند.
+     *
+     * @param  array{devices?: array<int, string>, brands?: array<int, string>}|null  $map
+     * @param  array<int, int>  $deviceIds  passed by reference
+     * @param  array<int, int>  $brandIds  passed by reference
+     */
+    private function applyExplicitMap(?array $map, array &$deviceIds, array &$brandIds): void
+    {
+        if (! $map) {
+            return;
+        }
+        foreach ($map['devices'] ?? [] as $slug) {
+            if ($id = ($this->deviceSlugMap()[$slug] ?? null)) {
+                $deviceIds[] = $id;
+            }
+        }
+        foreach ($map['brands'] ?? [] as $slug) {
+            if ($id = ($this->brandSlugMap()[$slug] ?? null)) {
+                $brandIds[] = $id;
+            }
+        }
+    }
+
+    /**
+     * نقشه‌ی slug→id دستگاه‌ها (یک‌بار ساخته و کش می‌شود).
+     *
+     * @return array<string, int>
+     */
+    private function deviceSlugMap(): array
+    {
+        return $this->deviceSlugMap ??= Device::query()
+            ->pluck('id', 'slug')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * نقشه‌ی slug→id برندها (یک‌بار ساخته و کش می‌شود).
+     *
+     * @return array<string, int>
+     */
+    private function brandSlugMap(): array
+    {
+        return $this->brandSlugMap ??= Brand::query()
+            ->pluck('id', 'slug')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
