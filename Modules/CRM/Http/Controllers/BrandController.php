@@ -74,6 +74,8 @@ class BrandController extends Controller
             DeviceBrandPage::ensureForPair((int) $deviceId, (int) $brand->id);
         }
 
+        $this->purgeBrandCache($brand);
+
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند با موفقیت اضافه شد.');
     }
@@ -112,8 +114,22 @@ class BrandController extends Controller
             DeviceBrandPage::ensureForPair((int) $deviceId, (int) $brand->id);
         }
 
+        $this->purgeBrandCache($brand);
+
         return redirect()->route('crm.brands.index')
             ->with('success', 'برند ویرایش شد.');
+    }
+
+    /**
+     * پاک‌سازیِ کشِ فرانت برای صفحه‌ی این برند (مسیر + تگ). بدونِ این،
+     * تغییراتِ ادمین (محتوا، دستگاه‌های مرتبط، …) تا انقضای کش روی سایت دیده نمی‌شوند.
+     */
+    private function purgeBrandCache(Brand $brand): void
+    {
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purge(
+            ['/services/brands/'.$brand->slug, '/brands/'.$brand->slug],
+            ['brand:'.$brand->slug],
+        );
     }
 
     /**
