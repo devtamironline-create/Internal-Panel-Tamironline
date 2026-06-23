@@ -119,8 +119,8 @@
                 <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg p-3">
                     <p class="text-xs text-purple-700 dark:text-purple-300 mb-2">پیش‌نمایش پخش:</p>
                     <audio controls preload="metadata" class="w-full" :src="audioUrl"
-                           @loadedmetadata="onMeta($event)"
-                           @error="playError = true" @loadeddata="playError = false"></audio>
+                           x-on:loadedmetadata="onMeta($event)"
+                           x-on:error="playError = true" x-on:loadeddata="playError = false"></audio>
                     <p x-show="playError" class="text-xs text-red-600 mt-2">
                         ⚠️ این فایل پخش نشد. مطمئن شوید لینک، <b>آدرس مستقیم فایل صوتی</b> (mp3/m4a/ogg) است — نه صفحه‌ی اشتراک‌گذاری. بهترین راه: دکمه‌ی «آپلود فایل صوتی».
                     </p>
