@@ -34,17 +34,24 @@ class CatalogDeviceBrandController extends Controller
             return response()->json(['message' => 'Not Found'], 404);
         }
 
-        // اطمینان از اینکه این برند، این دستگاه را پشتیبانی می‌کند
-        $supports = $brand->devices()->where('crm_devices.id', $device->id)->exists();
-        if (! $supports) {
-            return response()->json(['message' => 'این برند این دستگاه را پشتیبانی نمی‌کند.'], 404);
-        }
-
+        // منبعِ یگانه‌ی رابطه‌ی دستگاه↔برند: صفحه‌ی ترکیبی (DeviceBrandPage).
+        //  • اگر رکوردی برای این جفت هست، is_active آن تعیین‌کننده است (combo-manager).
+        //  • اگر اصلاً رکوردی نیست، به چکِ legacyِ pivot برمی‌گردیم (سازگاریِ داده‌ی قدیمی).
         $page = DeviceBrandPage::query()
             ->where('device_id', $device->id)
             ->where('brand_id', $brand->id)
-            ->where('is_active', true)
             ->first();
+
+        if ($page) {
+            if (! $page->is_active) {
+                return response()->json(['message' => 'این صفحه‌ی ترکیبی غیرفعال است.'], 404);
+            }
+        } else {
+            $supports = $brand->devices()->where('crm_devices.id', $device->id)->exists();
+            if (! $supports) {
+                return response()->json(['message' => 'این برند این دستگاه را پشتیبانی نمی‌کند.'], 404);
+            }
+        }
 
         // Template با placeholder substitution — اولویت با device_brand
         // (الگوی اختصاصی ترکیبی) و fallback به template device استاندارد.
@@ -120,10 +127,10 @@ class CatalogDeviceBrandController extends Controller
                             request()->getSchemeAndHttpHost()
                         ),
                     ],
-                    'faq' => [
-                        'enabled' => $enabled('faq', true),
-                        'items' => $this->buildFaq($page, $device, $brand, $template),
-                    ],
+                    'faq' => array_merge(
+                        ['enabled' => $enabled('faq', true)],
+                        $this->buildFaq($page, $device, $brand, $template),
+                    ),
                     'brand_other_devices' => [
                         'enabled' => $enabled('brand_other_devices', true),
                         'current_slug' => $device->slug,
@@ -251,55 +258,19 @@ class CatalogDeviceBrandController extends Controller
     }
 
     /**
-     * منطق FAQ:
-     *  ۱) union(categories, individual) از page
-     *  ۲) union(categories, individual) از device
-     *  ۳) union(categories, individual) از brand
-     *  ۴) inline JSON device->faq
-     *  ۵) template
+     * FAQ گروه‌بندی‌شده بر اساس دسته‌بندی (tab) + لیست مسطح items.
+     * owners به ترتیب اولویت: page → device → brand. legacy: device->faq.
+     * fallback: template.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array{items: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
     private function buildFaq(?DeviceBrandPage $page, Device $device, Brand $brand, array $template): array
     {
-        foreach ([$page, $device, $brand] as $owner) {
-            if (! $owner) {
-                continue;
-            }
-            $merged = $this->faqsForOwner($owner);
-            if ($merged->isNotEmpty()) {
-                return $merged->map(fn ($f) => [
-                    'id' => $f->id,
-                    'question' => $f->question,
-                    'answer' => $f->answer,
-                ])->all();
-            }
-        }
-
-        if (! empty($device->faq)) {
-            return $device->faq;
-        }
-
-        return CatalogMerger::templateFaq($template);
-    }
-
-    private function faqsForOwner($owner)
-    {
-        $byCategory = collect();
-        if ($owner->faqCategories()->exists()) {
-            $catIds = $owner->faqCategories()->pluck('site_taxonomies.id')->all();
-            $byCategory = \Modules\Site\Models\Faq::query()
-                ->where('is_published', true)
-                ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
-                ->orderBy('sort_order')
-                ->orderByDesc('created_at')
-                ->get(['id', 'question', 'answer']);
-        }
-        $byIndividual = $owner->faqs()
-            ->where('faqs.is_published', true)
-            ->get(['faqs.id', 'faqs.question', 'faqs.answer']);
-
-        return $byCategory->concat($byIndividual)->unique('id')->values();
+        return \Modules\Site\Support\FaqSectionBuilder::build(
+            [$page, $device, $brand],
+            is_array($device->faq) ? $device->faq : [],
+            CatalogMerger::templateFaq($template),
+        );
     }
 
     /**
