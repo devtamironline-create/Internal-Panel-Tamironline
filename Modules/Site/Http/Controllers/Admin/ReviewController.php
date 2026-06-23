@@ -270,12 +270,27 @@ class ReviewController extends Controller
             'author_name' => 'required|string|max:80',
             'topic' => 'required|string|max:120',
             'rating' => 'required|integer|min:1|max:5',
+            'content' => 'nullable|string|max:5000',
             'audio_url' => 'nullable|url|max:500',
             'duration_seconds' => 'nullable|integer|min:1|max:7200',
             'sort_order' => 'nullable|integer|min:0',
             'is_published' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
+        ], [], [
+            'author_name' => 'نام مشتری',
+            'topic' => 'موضوع',
+            'rating' => 'امتیاز',
+            'content' => 'متن نظر',
+            'audio_url' => 'لینک فایل صوتی',
+            'duration_seconds' => 'مدت زمان',
         ]);
+
+        // حداقل یکی از «متن» یا «فایل صوتی» باید باشد (می‌توانند هر دو باشند).
+        if (empty($validated['content']) && empty($validated['audio_url'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'content' => 'حداقل یکی از «متن نظر» یا «فایل صوتی» را وارد کنید.',
+            ]);
+        }
 
         $validated['is_published'] = (bool) ($validated['is_published'] ?? false);
         $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);

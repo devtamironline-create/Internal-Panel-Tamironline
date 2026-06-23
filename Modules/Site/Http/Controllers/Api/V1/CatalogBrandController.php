@@ -328,6 +328,12 @@ class CatalogBrandController extends Controller
      */
     private function buildTestimonials(Brand $brand, array $template): array
     {
+        // context برای جایگزینیِ placeholderهای موضوع ({brand} و …).
+        $ctx = [
+            'brand' => $brand->name,
+            'brand_slug' => $brand->slug,
+        ];
+
         $picked = $brand->reviews()
             ->where('site_reviews.status', Review::STATUS_APPROVED)
             ->get();
@@ -339,7 +345,7 @@ class CatalogBrandController extends Controller
                     'id' => $t['id'] ?? null,
                     'type' => Review::TYPE_AUDIO,
                     'author_name' => $t['customer_name'] ?? null,
-                    'topic' => $t['topic'] ?? null,
+                    'topic' => \Modules\Site\Support\ReviewTopic::fill($t['topic'] ?? null, $ctx),
                     'rating' => isset($t['rating']) ? (int) $t['rating'] : null,
                     'audio_url' => $t['audio_url'] ?? null,
                     'duration_seconds' => $t['duration_seconds'] ?? null,
@@ -362,7 +368,7 @@ class CatalogBrandController extends Controller
             'id' => $r->id,
             'type' => $r->type,
             'author_name' => $r->author_name,
-            'topic' => $r->topic,
+            'topic' => \Modules\Site\Support\ReviewTopic::fill($r->topic, $ctx),
             'rating' => (int) $r->rating,
             'audio_url' => $r->audio_url,
             'duration_seconds' => $r->duration_seconds,

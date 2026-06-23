@@ -29,14 +29,20 @@ class TestimonialController extends Controller
             ->orderBy('sort_order')
             ->orderByDesc('published_at');
 
+        $ctx = [];
         $deviceSlug = $request->query('device') ?? $request->query('device_slug');
         if ($deviceSlug) {
             $device = Device::query()
                 ->where('slug', $deviceSlug)
                 ->where('is_active', true)
-                ->first(['id']);
+                ->first(['id', 'name', 'short_name', 'slug']);
 
             if ($device) {
+                $ctx = [
+                    'device' => $device->short_name ?? $device->name,
+                    'device_label' => $device->name,
+                    'device_slug' => $device->slug,
+                ];
                 $query->where(function ($q) use ($device) {
                     $q->whereHas('devices', fn ($qq) => $qq->where('crm_devices.id', $device->id))
                         ->orWhereDoesntHave('devices');
@@ -50,8 +56,9 @@ class TestimonialController extends Controller
             'id' => $t->id,
             'customer_name' => $t->author_name,
             'author_name' => $t->author_name,
-            'topic' => $t->topic,
+            'topic' => \Modules\Site\Support\ReviewTopic::fill($t->topic, $ctx),
             'rating' => (int) $t->rating,
+            'content' => $t->content,
             'audio_url' => $t->audio_url,
             'duration_seconds' => $t->duration_seconds,
             'audio_duration' => $this->formatDuration($t->duration_seconds),

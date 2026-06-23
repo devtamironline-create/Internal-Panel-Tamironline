@@ -56,11 +56,10 @@
         @if($review->audio_url)
             <div class="bg-purple-50 p-4 rounded">
                 <p class="text-xs text-purple-700 mb-2">فایل صوتی:</p>
-                <audio controls class="w-full" preload="metadata">
-                    <source src="{{ $review->audio_url }}">
-                </audio>
+                <audio controls class="w-full" preload="metadata" src="{{ $review->audio_url }}"></audio>
+                <p class="text-[11px] text-gray-400 mt-2 ltr break-all">{{ $review->audio_url }}</p>
                 @if($review->duration_seconds)
-                    <p class="text-xs text-gray-500 mt-2">مدت: {{ floor($review->duration_seconds / 60) }}:{{ str_pad($review->duration_seconds % 60, 2, '0', STR_PAD_LEFT) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">مدت: {{ floor($review->duration_seconds / 60) }}:{{ str_pad($review->duration_seconds % 60, 2, '0', STR_PAD_LEFT) }}</p>
                 @endif
             </div>
         @endif

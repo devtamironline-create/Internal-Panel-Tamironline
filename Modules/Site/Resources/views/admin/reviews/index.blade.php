@@ -21,7 +21,7 @@
         <div class="flex items-center gap-2">
             <a href="{{ route('site.admin.reviews.create') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 inline-flex items-center gap-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/></svg>
-                افزودن توصیه‌نامه‌ی صوتی
+                افزودن نظر / توصیه‌نامه
             </a>
         </div>
     </div>
@@ -133,11 +133,15 @@
                     {{-- Header row --}}
                     <div class="flex items-start justify-between gap-3 mb-2">
                         <div class="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                            @if($isAudio)
+                            @if($r->audio_url)
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 shrink-0">🎙️ صوتی</span>
-                            @else
+                            @endif
+                            @if($r->content)
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700 shrink-0">💬 متنی</span>
                             @endif
+                            @unless($r->audio_url || $r->content)
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 shrink-0">بدون محتوا</span>
+                            @endunless
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $statusBadge }} shrink-0">{{ $statusLabel }}</span>
                             @if($r->reply)
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 shrink-0">پاسخ داده شده ✓</span>
@@ -174,7 +178,8 @@
                     {{-- Content preview --}}
                     @if($r->content)
                         <p class="text-sm text-gray-700 dark:text-gray-300 mt-2 leading-relaxed line-clamp-3">{{ $r->content }}</p>
-                    @elseif($r->audio_url)
+                    @endif
+                    @if($r->audio_url)
                         <div class="mt-2 inline-flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-xs text-purple-700 dark:text-purple-300">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13"/></svg>
                             فایل صوتی
