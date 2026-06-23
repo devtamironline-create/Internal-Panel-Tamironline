@@ -7,90 +7,96 @@ use Illuminate\Support\Facades\DB;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
+use Modules\Site\Models\Article;
 use Modules\Site\Support\WpImageDownloader;
 
 /**
- * بازیابیِ تصاویرِ خرابِ محتوا که در زمانِ انتقال از وردپرس src خود را از دست
- * داده‌اند.
+ * بازیابی/محلی‌سازیِ تصاویرِ محتوا که از سایتِ وردپرسِ قدیمی می‌آیند.
  *
- * علت: تصاویرِ lazy-loadِ وردپرس آدرسِ واقعی را در data-src/srcset داشتند و
- * src یک placeholder (data:...) بود؛ HtmlSanitizer هم data: و هم data-src را
- * حذف کرد و تگِ <img> بدونِ src ماند. تنها نشانه‌ی باقی‌مانده class="wp-image-{ID}"
- * است که از روی آن می‌توان فایلِ اصلی را در وردپرس پیدا کرد.
+ * دو حالت پوشش داده می‌شود:
+ *   A) تگ <img> بدونِ src (lazy-loadِ وردپرس → src گم شده) ولی با class
+ *      "wp-image-{ID}" → آدرسِ فایل از روی ID در WP پیدا و دانلود می‌شود.
+ *   B) تگ <img> با src که هنوز به وردپرسِ قدیمی اشاره می‌کند
+ *      (مثلاً http://tamironline.com/wp-content/uploads/...) → همان فایل دانلود
+ *      و src به نسخه‌ی محلی (/media/...) تغییر می‌کند.
  *
- * این دستور: <img>های بدونِ src که wp-image-{ID} دارند را پیدا می‌کند، فایل را
- * از وردپرس در کتابخانه‌ی مدیا دانلود می‌کند و src محلی (/media/...) می‌گذارد.
- * بقیه‌ی محتوا دست‌نخورده می‌ماند.
+ * همچنین cover_imageِ مقالات که به وردپرس اشاره می‌کند محلی می‌شود.
+ * بقیه‌ی محتوا دست‌نخورده می‌ماند (ویرایش‌های دستی حفظ می‌شوند). Dry-run by default.
  *
- * نیاز env (همان اتصالِ importهای دیگر):
- *   WP_BLOG_DB_HOST, WP_BLOG_DB_PORT, WP_BLOG_DB_NAME, WP_BLOG_DB_USER,
- *   WP_BLOG_DB_PASS, WP_BLOG_DB_PREFIX, WP_BLOG_SITE_URL
+ * نیاز env: WP_BLOG_DB_* و WP_BLOG_SITE_URL (DB فقط برای حالت A لازم است؛ اگر
+ * در دسترس نباشد، حالت B همچنان کار می‌کند).
  *
- * Dry-run by default:
  *   php artisan crm:repair-content-images
  *   php artisan crm:repair-content-images --apply
- *   php artisan crm:repair-content-images --apply --only=devices
+ *   php artisan crm:repair-content-images --apply --only=articles
  */
 class RepairContentImages extends Command
 {
     protected $signature = 'crm:repair-content-images
                             {--apply : اعمال واقعی (پیش‌فرض dry-run)}
-                            {--only= : محدود به یک نوع: devices|brands|combos}';
+                            {--only= : محدود به یک نوع: devices|brands|combos|articles}';
 
-    protected $description = 'بازیابیِ src تصاویرِ خرابِ محتوای دستگاه/برند/صفحات ترکیبی از روی wp-image-{ID} (دانلود در مدیا)';
+    protected $description = 'بازیابی/محلی‌سازیِ تصاویرِ محتوای دستگاه/برند/صفحات ترکیبی/مقالات از وردپرس (دانلود در مدیا)';
 
     private bool $apply = false;
+
+    private bool $wpAvailable = false;
 
     private string $prefix = 'wp_';
 
     private string $siteUrl = '';
 
+    private string $wpHost = '';
+
     private WpImageDownloader $images;
 
-    /** @var array<int, string|null> کشِ attachmentId → URLِ محلی (یا منبعِ WP در dry-run) */
-    private array $resolved = [];
+    /** @var array<int, string|null> کشِ attachmentId → URLِ منبع وردپرس */
+    private array $attachmentUrls = [];
 
     /** @var array<string, int> */
-    private array $stats = ['scanned' => 0, 'fixed' => 0, 'unresolved' => 0, 'models_updated' => 0];
+    private array $stats = ['scanned' => 0, 'localized' => 0, 'unresolved' => 0, 'records_updated' => 0];
 
     public function handle(): int
     {
-        $this->configureWpConnection();
-
-        try {
-            DB::connection('wp_blog')->getPdo();
-        } catch (\Throwable $e) {
-            $this->error('اتصال به WP DB ناموفق: '.$e->getMessage());
-            $this->line('چک کن env های WP_BLOG_DB_* در .env ست شده باشند.');
-
-            return self::FAILURE;
-        }
-
         $this->prefix = (string) env('WP_BLOG_DB_PREFIX', 'wp_');
         $this->siteUrl = rtrim((string) env('WP_BLOG_SITE_URL', ''), '/');
+        $this->wpHost = $this->siteUrl !== '' ? strtolower((string) parse_url($this->siteUrl, PHP_URL_HOST)) : '';
         $this->apply = (bool) $this->option('apply');
         $this->images = new WpImageDownloader;
+
+        // اتصال WP فقط برای حالت A (wp-image-{ID}) لازم است؛ نبودش fatal نیست.
+        $this->configureWpConnection();
+        try {
+            DB::connection('wp_blog')->getPdo();
+            $this->wpAvailable = true;
+        } catch (\Throwable $e) {
+            $this->warn('اتصال به WP DB برقرار نشد — حالتِ بازیابیِ wp-image-{ID} غیرفعال است (حالتِ محلی‌سازیِ لینک‌های مستقیم همچنان کار می‌کند).');
+        }
 
         $only = $this->option('only');
         $this->info($this->apply ? 'اعمال واقعی' : 'Dry-run (برای اعمال --apply بزن)');
 
         if (! $only || $only === 'devices') {
-            $this->processModel(Device::class, 'دستگاه', 'description');
+            $this->processHtml(Device::class, 'دستگاه', 'description');
         }
         if (! $only || $only === 'brands') {
-            $this->processModel(Brand::class, 'برند', 'description');
+            $this->processHtml(Brand::class, 'برند', 'description');
         }
         if (! $only || $only === 'combos') {
-            $this->processModel(DeviceBrandPage::class, 'صفحه‌ی ترکیبی', 'description');
+            $this->processHtml(DeviceBrandPage::class, 'صفحه‌ی ترکیبی', 'description');
+        }
+        if (! $only || $only === 'articles') {
+            $this->processHtml(Article::class, 'مقاله', 'content');
+            $this->processArticleCovers();
         }
 
         $this->newLine();
         $this->info(sprintf(
-            'نتیجه: %d تصویرِ بررسی‌شده، %d بازیابی، %d بدونِ مرجع (wp-image یافت نشد یا دانلود ناموفق) — %d رکورد به‌روز.',
+            'نتیجه: %d تصویرِ بررسی‌شده، %d محلی‌سازی، %d ناموفق/بدونِ مرجع — %d رکورد به‌روز.',
             $this->stats['scanned'],
-            $this->stats['fixed'],
+            $this->stats['localized'],
             $this->stats['unresolved'],
-            $this->stats['models_updated'],
+            $this->stats['records_updated'],
         ));
         if (! $this->apply) {
             $this->comment('این dry-run بود؛ هیچ تغییری ذخیره نشد و تصویری دانلود نشد.');
@@ -100,112 +106,184 @@ class RepairContentImages extends Command
     }
 
     /**
+     * پردازشِ یک ستونِ HTML برای همه‌ی رکوردهای یک مدل.
+     *
      * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
      */
-    private function processModel(string $modelClass, string $label, string $column): void
+    private function processHtml(string $modelClass, string $label, string $column): void
     {
         $this->newLine();
         $this->info("── {$label} ──");
 
         $modelClass::query()
             ->whereNotNull($column)
-            ->where($column, 'like', '%<img%wp-image-%')
+            ->where(function ($q) use ($column) {
+                $q->where($column, 'like', '%wp-image-%')
+                    ->orWhere($column, 'like', '%wp-content%');
+            })
             ->select(['id', $column])
             ->orderBy('id')
             ->chunkById(100, function ($rows) use ($column, $label) {
                 foreach ($rows as $row) {
                     $original = (string) $row->{$column};
                     $fixedHere = 0;
-                    $new = $this->repairHtml($original, $fixedHere, $label, $row->id);
+                    $new = $this->repairHtml($original, $fixedHere);
 
-                    if ($fixedHere > 0 && $new !== $original) {
-                        if ($this->apply) {
+                    if ($fixedHere > 0) {
+                        if ($this->apply && $new !== $original) {
                             $row->{$column} = $new;
                             $row->save();
+                            $this->stats['records_updated']++;
+                        } elseif (! $this->apply) {
+                            $this->stats['records_updated']++;
                         }
-                        $this->stats['models_updated']++;
-                        $this->line("  {$label} #{$row->id}: {$fixedHere} تصویر بازیابی شد".($this->apply ? '' : ' (dry-run)'));
+                        $this->line("  {$label} #{$row->id}: {$fixedHere} تصویر".($this->apply ? ' محلی شد' : ' (dry-run)'));
                     }
                 }
             });
     }
 
     /**
-     * تگ‌های <img>ِ بدونِ src را که wp-image-{ID} دارند بازیابی می‌کند.
+     * cover_imageِ مقالات که به وردپرس اشاره می‌کند را محلی می‌کند.
      */
-    private function repairHtml(string $html, int &$fixedHere, string $label, int|string $modelId): string
+    private function processArticleCovers(): void
+    {
+        $this->newLine();
+        $this->info('── کاورِ مقالات ──');
+
+        Article::query()
+            ->whereNotNull('cover_image')
+            ->where('cover_image', 'like', '%wp-content%')
+            ->select(['id', 'cover_image'])
+            ->orderBy('id')
+            ->chunkById(100, function ($rows) {
+                foreach ($rows as $row) {
+                    $url = trim((string) $row->cover_image);
+                    if (! $this->isWpHostedUrl($url)) {
+                        continue;
+                    }
+                    $this->stats['scanned']++;
+
+                    if (! $this->apply) {
+                        $this->stats['localized']++;
+                        $this->stats['records_updated']++;
+                        $this->line("  مقاله #{$row->id}: کاور (dry-run)");
+
+                        continue;
+                    }
+
+                    $media = $this->images->downloadAndStore($url);
+                    if (! $media) {
+                        $this->stats['unresolved']++;
+
+                        continue;
+                    }
+                    $row->cover_image = $media->url();
+                    $row->cover_media_id = $media->id;
+                    $row->save();
+                    $this->stats['localized']++;
+                    $this->stats['records_updated']++;
+                    $this->line("  مقاله #{$row->id}: کاور محلی شد");
+                }
+            });
+    }
+
+    /**
+     * هر <img> را بررسی و در صورت نیاز src را محلی می‌کند.
+     */
+    private function repairHtml(string $html, int &$fixedHere): string
     {
         return (string) preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$fixedHere) {
             $tag = $m[0];
 
-            // اگر src معتبر (http/https//) دارد، دست نزن.
-            if (preg_match('/\bsrc\s*=\s*["\'](https?:\/\/|\/)[^"\']+["\']/i', $tag)) {
+            // src فعلی (در صورت وجود)
+            $src = null;
+            if (preg_match('/\bsrc\s*=\s*["\']([^"\']*)["\']/i', $tag, $sm)) {
+                $src = trim($sm[1]);
+            }
+            $hasRealSrc = $src !== null && (bool) preg_match('#^(https?://|/)#i', $src);
+
+            // src معتبر که وردپرسی نیست (یعنی محلی یا خارجیِ مجاز) → دست نزن.
+            if ($hasRealSrc && ! $this->isWpHostedUrl($src)) {
                 return $tag;
             }
 
-            // wp-image-{ID} استخراج کن (تنها مرجعِ بازیابی)
-            if (! preg_match('/wp-image-(\d+)/', $tag, $mm)) {
-                $this->stats['scanned']++;
-                $this->stats['unresolved']++;
-
-                return $tag;
+            // منبعِ دانلود را تعیین کن:
+            //   B) src وردپرسی موجود → همان URL
+            //   A) src نامعتبر/خالی ولی wp-image-{ID} → از WP DB پیدا کن
+            $sourceUrl = null;
+            if ($hasRealSrc && $this->isWpHostedUrl($src)) {
+                $sourceUrl = $src;
+            } elseif (preg_match('/wp-image-(\d+)/', $tag, $mm)) {
+                $sourceUrl = $this->wpAttachmentUrl((int) $mm[1]);
             }
 
             $this->stats['scanned']++;
-            $attId = (int) $mm[1];
-            $url = $this->resolveUrl($attId);
-            if ($url === null) {
+            if ($sourceUrl === null) {
                 $this->stats['unresolved']++;
 
                 return $tag;
             }
 
-            $this->stats['fixed']++;
-            $fixedHere++;
-
-            // در dry-run محتوا تغییر نمی‌کند (فقط شمارش)
             if (! $this->apply) {
+                $this->stats['localized']++;
+                $fixedHere++;
+
+                return $tag; // dry-run: شمارش بدون تغییر
+            }
+
+            $local = $this->images->downloadAndStore($sourceUrl)?->url();
+            if ($local === null) {
+                $this->stats['unresolved']++;
+
                 return $tag;
             }
 
-            // src قبلیِ خراب (data:/خالی) را حذف و src محلی را بعد از <img بگذار.
+            $this->stats['localized']++;
+            $fixedHere++;
+
             $clean = (string) preg_replace('/\s+src\s*=\s*["\'][^"\']*["\']/i', '', $tag);
 
-            return (string) preg_replace('/<img\b/i', '<img src="'.$url.'"', $clean, 1);
-        }, $html);
+            return (string) preg_replace('/<img\b/i', '<img src="'.$local.'"', $clean, 1);
+        }, $html) ?? $html;
     }
 
     /**
-     * attachmentId وردپرس → URLِ محلیِ مدیا (apply) یا منبعِ WP (dry-run).
-     * نتیجه کش می‌شود (هر ID یک‌بار).
+     * آیا این URL از وردپرسِ قدیمی است (و باید محلی شود)؟
      */
-    private function resolveUrl(int $attId): ?string
+    private function isWpHostedUrl(string $url): bool
     {
-        if (array_key_exists($attId, $this->resolved)) {
-            return $this->resolved[$attId];
+        if ($url === '') {
+            return false;
+        }
+        // مسیرهای محلیِ خودمان را هرگز محلی نکن.
+        if (str_contains($url, '/media/')) {
+            return false;
+        }
+        if (stripos($url, '/wp-content/') !== false) {
+            return true;
+        }
+        if ($this->wpHost !== '') {
+            $host = parse_url($url, PHP_URL_HOST);
+
+            return is_string($host) && strtolower($host) === $this->wpHost;
         }
 
-        $wpUrl = $this->wpAttachmentUrl($attId);
-        if ($wpUrl === null) {
-            return $this->resolved[$attId] = null;
-        }
-
-        if (! $this->apply) {
-            // در dry-run فقط منبع را گزارش می‌کنیم (بدون دانلود).
-            return $this->resolved[$attId] = $wpUrl;
-        }
-
-        $media = $this->images->downloadAndStore($wpUrl);
-
-        return $this->resolved[$attId] = $media?->url();
+        return false;
     }
 
     /**
-     * آدرسِ فایلِ پیوستِ وردپرس را از روی ID پیدا می‌کند:
-     * اول _wp_attached_file (مطمئن‌تر) + siteUrl، سپس fallback به guid.
+     * attachmentId وردپرس → URLِ منبع (از _wp_attached_file یا guid). کش‌شده.
      */
     private function wpAttachmentUrl(int $attId): ?string
     {
+        if (! $this->wpAvailable) {
+            return null;
+        }
+        if (array_key_exists($attId, $this->attachmentUrls)) {
+            return $this->attachmentUrls[$attId];
+        }
+
         $file = DB::connection('wp_blog')
             ->table("{$this->prefix}postmeta")
             ->where('post_id', $attId)
@@ -213,7 +291,7 @@ class RepairContentImages extends Command
             ->value('meta_value');
 
         if (is_string($file) && trim($file) !== '' && $this->siteUrl !== '') {
-            return $this->siteUrl.'/wp-content/uploads/'.ltrim($file, '/');
+            return $this->attachmentUrls[$attId] = $this->siteUrl.'/wp-content/uploads/'.ltrim($file, '/');
         }
 
         $row = DB::connection('wp_blog')
@@ -224,7 +302,7 @@ class RepairContentImages extends Command
 
         $guid = $row?->guid;
 
-        return (is_string($guid) && preg_match('#^https?://#i', $guid)) ? $guid : null;
+        return $this->attachmentUrls[$attId] = (is_string($guid) && preg_match('#^https?://#i', $guid)) ? $guid : null;
     }
 
     private function configureWpConnection(): void
