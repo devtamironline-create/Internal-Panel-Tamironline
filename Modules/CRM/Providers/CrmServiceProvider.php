@@ -5,58 +5,59 @@ namespace Modules\CRM\Providers;
 use App\Models\Setting;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Modules\CRM\Models\CrmSetting;
 use Livewire\Livewire;
-use Modules\CRM\Console\Commands\BackfillInvoices;
-use Modules\CRM\Console\Commands\FixNonEnglishSlugs;
-use Modules\CRM\Console\Commands\RecomputeInvoices;
-use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ActivateTechniciansByName;
-use Modules\CRM\Console\Commands\ArchiveStaleTicketsCommand;
 use Modules\CRM\Console\Commands\ApplyFinalWalletBalances;
+use Modules\CRM\Console\Commands\ArchiveStaleTicketsCommand;
+use Modules\CRM\Console\Commands\BackfillInvoices;
+use Modules\CRM\Console\Commands\BackupWalletData;
+use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
+use Modules\CRM\Console\Commands\DiagnoseOrderSync;
+use Modules\CRM\Console\Commands\DiffOrderStatuses;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
+use Modules\CRM\Console\Commands\FixNonEnglishSlugs;
 use Modules\CRM\Console\Commands\FullRebuildFromWp;
+use Modules\CRM\Console\Commands\ImportDeviceThumbnailsFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\ImportTermContentFromWp;
-use Modules\CRM\Console\Commands\PullTechPercentFromWp;
+use Modules\CRM\Console\Commands\ImportWalletArchiveFromWp;
+use Modules\CRM\Console\Commands\InspectOrder;
 use Modules\CRM\Console\Commands\PullNewOrdersFromWp;
+use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
+use Modules\CRM\Console\Commands\RecomputeInvoices;
+use Modules\CRM\Console\Commands\RecomputeWalletBalances;
 use Modules\CRM\Console\Commands\ReimportAllWalletFromWp;
 use Modules\CRM\Console\Commands\RemoveManualAdjustments;
+use Modules\CRM\Console\Commands\RepairContentImages;
 use Modules\CRM\Console\Commands\ReplaceTechInfo;
 use Modules\CRM\Console\Commands\ResetWalletFromWp;
-use Modules\CRM\Console\Commands\ImportDeviceThumbnailsFromWp;
-use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
-use Modules\CRM\Console\Commands\RestoreWalletFromSnapshot;
-use Modules\CRM\Console\Commands\UndoRestoreAdjustments;
-use Modules\CRM\Console\Commands\SupersedeAllInvoices;
-use Modules\CRM\Console\Commands\UnsupersedeInvoices;
-use Modules\CRM\Console\Commands\VerifyInvoiceCalc;
 use Modules\CRM\Console\Commands\ResolveOrphanTechnicians;
+use Modules\CRM\Console\Commands\RestoreDeletedAdjustments;
+use Modules\CRM\Console\Commands\RestoreOrderStatuses;
+use Modules\CRM\Console\Commands\RestoreStatusFromEvents;
+use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
+use Modules\CRM\Console\Commands\RestoreWalletFromSnapshot;
 use Modules\CRM\Console\Commands\ResyncInvoices;
 use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
-use Modules\CRM\Console\Commands\RestoreTechPercentFromHistory;
+use Modules\CRM\Console\Commands\RetroCloseOrdersFromLog;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
-use Modules\CRM\Console\Commands\DiffOrderStatuses;
-use Modules\CRM\Console\Commands\BackupWalletData;
-use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
-use Modules\CRM\Console\Commands\DiagnoseOrderSync;
-use Modules\CRM\Console\Commands\ImportWalletArchiveFromWp;
-use Modules\CRM\Console\Commands\RetroCloseOrdersFromLog;
-use Modules\CRM\Console\Commands\InspectOrder;
-use Modules\CRM\Console\Commands\RestoreOrderStatuses;
-use Modules\CRM\Console\Commands\RestoreStatusFromEvents;
 use Modules\CRM\Console\Commands\SnapshotOrderStatuses;
 use Modules\CRM\Console\Commands\SnapshotTechnicians;
+use Modules\CRM\Console\Commands\SupersedeAllInvoices;
 use Modules\CRM\Console\Commands\TechMergeFromWp;
+use Modules\CRM\Console\Commands\UndoRestoreAdjustments;
+use Modules\CRM\Console\Commands\UnsupersedeInvoices;
+use Modules\CRM\Console\Commands\VerifyInvoiceCalc;
 use Modules\CRM\Console\Commands\WalletAudit;
 use Modules\CRM\Livewire\OrderWizard;
 use Modules\CRM\Livewire\ServiceAreaManager;
+use Modules\CRM\Models\CrmSetting;
 
 class CrmServiceProvider extends ServiceProvider
 {
@@ -88,9 +89,9 @@ class CrmServiceProvider extends ServiceProvider
                 'brandBanner' => Setting::get('tech_panel_banner'),
                 'brandHero' => Setting::get('tech_panel_hero'),
                 'brandDefaultAvatar' => Setting::get('tech_panel_default_avatar'),
-                'appName'            => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
-                'supportPhone'       => Setting::get('tech_panel_support_phone'),
-                'isFrozen'           => CrmSetting::get('tech_panel_readonly') === '1',
+                'appName' => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
+                'supportPhone' => Setting::get('tech_panel_support_phone'),
+                'isFrozen' => CrmSetting::get('tech_panel_readonly') === '1',
             ]);
         });
 
@@ -131,6 +132,7 @@ class CrmServiceProvider extends ServiceProvider
                 FullRebuildFromWp::class,
                 PullNewOrdersFromWp::class,
                 ImportTermContentFromWp::class,
+                RepairContentImages::class,
                 ImportDeviceThumbnailsFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,

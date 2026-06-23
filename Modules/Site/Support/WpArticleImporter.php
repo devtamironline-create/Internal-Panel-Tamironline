@@ -120,6 +120,8 @@ final class WpArticleImporter
             // 2) محتوا — shortcode strip + جایگزینی URL تصاویر inline + sanitize
             $content = (string) ($post['content'] ?? '');
             $content = WpShortcodeStripper::strip($content);
+            // آدرسِ واقعیِ تصاویرِ lazy را به src منتقل کن تا قبل از sanitize از دست نرود.
+            $content = (string) WpLazyImagePromoter::promote($content);
             if ($this->downloadImages && $this->apply) {
                 $content = $this->rewriteInlineImages($content);
             }
