@@ -116,10 +116,10 @@ class CatalogBrandController extends Controller
                             request()->getSchemeAndHttpHost()
                         ),
                     ],
-                    'faq' => [
-                        'enabled' => $enabled('faq', true),
-                        'items' => $this->buildFaq($brand, $template),
-                    ],
+                    'faq' => array_merge(
+                        ['enabled' => $enabled('faq', true)],
+                        $this->buildFaq($brand, $template),
+                    ),
                     'devices' => [
                         'enabled' => $enabled('devices', true),
                         'items' => $this->buildDevices($brand),
@@ -253,70 +253,61 @@ class CatalogBrandController extends Controller
     }
 
     /**
-     * union(دسته‌بندی‌های انتخابی، FAQهای منفرد انتخابی) → fallback به inline faq → template
+     * FAQ گروه‌بندی‌شده بر اساس دسته‌بندی (tab) + لیست مسطح items.
+     * owner: brand. legacy: ستون JSON brand->faq. fallback: template.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array{items: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
     private function buildFaq(Brand $brand, array $template): array
     {
-        $byCategory = collect();
-        if ($brand->faqCategories()->exists()) {
-            $catIds = $brand->faqCategories()->pluck('site_taxonomies.id')->all();
-            $byCategory = \Modules\Site\Models\Faq::query()
-                ->where('is_published', true)
-                ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
-                ->orderBy('sort_order')
-                ->orderByDesc('created_at')
-                ->get(['id', 'question', 'answer']);
-        }
-
-        $byIndividual = $brand->faqs()
-            ->where('faqs.is_published', true)
-            ->get(['faqs.id', 'faqs.question', 'faqs.answer']);
-
-        $merged = $byCategory->concat($byIndividual)->unique('id')->values();
-
-        if ($merged->isNotEmpty()) {
-            return $merged->map(fn ($f) => [
-                'id' => $f->id,
-                'question' => $f->question,
-                'answer' => $f->answer,
-            ])->all();
-        }
-
-        if (! empty($brand->faq)) {
-            return $brand->faq;
-        }
-
-        return CatalogMerger::templateFaq($template);
+        return \Modules\Site\Support\FaqSectionBuilder::build(
+            [$brand],
+            is_array($brand->faq) ? $brand->faq : [],
+            CatalogMerger::templateFaq($template),
+        );
     }
 
     /**
-     * لیست دستگاه‌هایی که این برند تعمیر می‌شود.
-     * اگر pivot خالی → fallback به همه‌ی دستگاه‌های فعال.
+     * منبعِ یگانه‌ی دستگاه‌های مرتبط = صفحات ترکیبیِ فعال (combo-manager).
+     * اگر برند هیچ صفحه‌ی ترکیبی‌ای نداشته باشد → fallbackِ legacy
+     * (pivot crm_device_brands، سپس همه‌ی دستگاه‌های فعال).
      *
      * @return array<int, array<string, mixed>>
      */
     private function buildDevices(Brand $brand): array
     {
-        $picked = $brand->devices()
-            ->where('crm_devices.is_active', true)
-            ->get(['crm_devices.id', 'crm_devices.name', 'crm_devices.slug', 'crm_devices.icon', 'crm_devices.thumbnail', 'crm_devices.tone']);
+        // وضعیتِ صفحات ترکیبیِ این برند: device_id => is_active
+        $comboRows = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('brand_id', $brand->id)
+            ->pluck('is_active', 'device_id');
 
-        if ($picked->isEmpty()) {
+        if ($comboRows->isNotEmpty()) {
+            // combo-manager این برند را مدیریت می‌کند → فقط دستگاه‌های combo-فعال.
+            $activeDeviceIds = $comboRows->filter()->keys()->all();
+            if (empty($activeDeviceIds)) {
+                return [];
+            }
             $picked = Device::query()
+                ->whereIn('id', $activeDeviceIds)
                 ->where('is_active', true)
                 ->orderByDesc('is_featured')
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
+        } else {
+            // legacy: pivot per-brand، سپس همه‌ی دستگاه‌های فعال.
+            $picked = $brand->devices()
+                ->where('crm_devices.is_active', true)
+                ->get(['crm_devices.id', 'crm_devices.name', 'crm_devices.slug', 'crm_devices.icon', 'crm_devices.thumbnail', 'crm_devices.tone']);
+            if ($picked->isEmpty()) {
+                $picked = Device::query()
+                    ->where('is_active', true)
+                    ->orderByDesc('is_featured')
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
+            }
         }
-
-        // وضعیتِ فعال‌بودنِ صفحه‌ی ترکیبی (device×brand) از combo-manager.
-        $comboActive = \Modules\CRM\Models\DeviceBrandPage::query()
-            ->where('brand_id', $brand->id)
-            ->whereIn('device_id', $picked->pluck('id')->all())
-            ->pluck('is_active', 'device_id');
 
         return $picked->map(fn ($d) => [
             'id' => (int) $d->id,
@@ -325,7 +316,7 @@ class CatalogBrandController extends Controller
             'href' => '/devices/'.$d->slug,
             // صفحه‌ی ترکیبیِ این دستگاه × برند.
             'combo_href' => '/services/'.$d->slug.'/'.$brand->slug,
-            'combo_active' => (bool) ($comboActive[$d->id] ?? false),
+            'combo_active' => (bool) ($comboRows[$d->id] ?? false),
             'icon' => $d->icon,
             'thumbnail' => MediaUrl::resolve($d->thumbnail),
             'tone' => $d->tone,

@@ -176,10 +176,10 @@ class CatalogDeviceController extends Controller
                             request()->getSchemeAndHttpHost()
                         ),
                     ],
-                    'faq' => [
-                        'enabled' => $enabled('faq', true),
-                        'items' => $this->buildFaq($device, $template),
-                    ],
+                    'faq' => array_merge(
+                        ['enabled' => $enabled('faq', true)],
+                        $this->buildFaq($device, $template),
+                    ),
                     'brands' => [
                         'enabled' => $enabled('brands', true),
                         'items' => $this->buildBrands($device),
@@ -310,71 +310,58 @@ class CatalogDeviceController extends Controller
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return array{items: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
     private function buildFaq(Device $device, array $template): array
     {
-        // اولویت ۱ (معتبرِ صریح): اگر ادمین برای این دستگاه دسته‌بندی یا سوالِ
-        // منفرد انتخاب کرده باشد، همان ملاک است و ستونِ قدیمیِ inline یا الگوی
-        // سراسری دیگر آن را override نمی‌کنند (حتی اگر نتیجه فعلاً خالی باشد).
-        $hasCategories = $device->faqCategories()->exists();
-        $hasIndividual = $device->faqs()->exists();
-
-        if ($hasCategories || $hasIndividual) {
-            $byCategory = collect();
-            if ($hasCategories) {
-                $catIds = $device->faqCategories()->pluck('site_taxonomies.id')->all();
-                $byCategory = \Modules\Site\Models\Faq::query()
-                    ->where('is_published', true)
-                    ->whereHas('taxonomies', fn ($q) => $q->whereIn('site_taxonomies.id', $catIds))
-                    ->orderBy('sort_order')
-                    ->orderByDesc('created_at')
-                    ->get(['id', 'question', 'answer']);
-            }
-
-            $byIndividual = $hasIndividual
-                ? $device->faqs()->where('faqs.is_published', true)->get(['faqs.id', 'faqs.question', 'faqs.answer'])
-                : collect();
-
-            return $byCategory->concat($byIndividual)->unique('id')->values()
-                ->map(fn ($f) => ['id' => $f->id, 'question' => $f->question, 'answer' => $f->answer])
-                ->all();
-        }
-
-        // اولویت ۲: ستون JSON قدیمیِ device->faq (legacy — import وردپرس).
-        if (! empty($device->faq)) {
-            return $device->faq;
-        }
-
-        // اولویت ۳: الگوی سراسری (page_sections.device.faq).
-        return CatalogMerger::templateFaq($template);
+        // owner: device (دسته‌بندی‌ها → tab، سوالات منفرد → tab «عمومی»).
+        // legacy: ستون JSON قدیمیِ device->faq. fallback: الگوی سراسری.
+        return \Modules\Site\Support\FaqSectionBuilder::build(
+            [$device],
+            is_array($device->faq) ? $device->faq : [],
+            CatalogMerger::templateFaq($template),
+        );
     }
 
     /**
+     * منبعِ یگانه‌ی برندهای مرتبط = صفحات ترکیبیِ فعال (combo-manager).
+     * اگر دستگاه هیچ صفحه‌ی ترکیبی‌ای نداشته باشد → fallbackِ legacy
+     * (pivot crm_device_brands، سپس همه‌ی برندهای فعال).
+     *
      * @return array<int, array<string, mixed>>
      */
     private function buildBrands(Device $device): array
     {
-        // اولویت ۱: انتخاب per-device از pivot crm_device_brands
-        $picked = $device->brands()
-            ->where('crm_brands.is_active', true)
-            ->get(['crm_brands.id', 'crm_brands.name', 'crm_brands.slug', 'crm_brands.logo']);
+        // وضعیتِ صفحات ترکیبیِ این دستگاه: brand_id => is_active
+        $comboRows = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('device_id', $device->id)
+            ->pluck('is_active', 'brand_id');
 
-        // اولویت ۲: همه‌ی برندهای فعال (default = all)
-        if ($picked->isEmpty()) {
+        if ($comboRows->isNotEmpty()) {
+            // combo-manager این دستگاه را مدیریت می‌کند → فقط برندهای combo-فعال.
+            $activeBrandIds = $comboRows->filter()->keys()->all();
+            if (empty($activeBrandIds)) {
+                return [];
+            }
             $picked = Brand::query()
+                ->whereIn('id', $activeBrandIds)
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'logo']);
+        } else {
+            // legacy: pivot per-device، سپس همه‌ی برندهای فعال.
+            $picked = $device->brands()
+                ->where('crm_brands.is_active', true)
+                ->get(['crm_brands.id', 'crm_brands.name', 'crm_brands.slug', 'crm_brands.logo']);
+            if ($picked->isEmpty()) {
+                $picked = Brand::query()
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'slug', 'logo']);
+            }
         }
-
-        // وضعیتِ فعال‌بودنِ صفحه‌ی ترکیبی (device×brand) از combo-manager —
-        // تا فرانت بداند کدام ترکیبی روی سایت منتشر است.
-        $comboActive = \Modules\CRM\Models\DeviceBrandPage::query()
-            ->where('device_id', $device->id)
-            ->whereIn('brand_id', $picked->pluck('id')->all())
-            ->pluck('is_active', 'brand_id');
 
         return $picked->map(fn ($b) => [
             'id' => (int) $b->id,
@@ -384,7 +371,7 @@ class CatalogDeviceController extends Controller
             // صفحه‌ی خودِ برند + صفحه‌ی ترکیبیِ این دستگاه × برند.
             'href' => '/brands/'.$b->slug,
             'combo_href' => '/services/'.$device->slug.'/'.$b->slug,
-            'combo_active' => (bool) ($comboActive[$b->id] ?? false),
+            'combo_active' => (bool) ($comboRows[$b->id] ?? false),
         ])->all();
     }
 
