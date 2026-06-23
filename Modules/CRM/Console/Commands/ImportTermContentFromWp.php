@@ -418,6 +418,8 @@ class ImportTermContentFromWp extends Command
     {
         $html = (string) WpShortcodeStripper::strip($html);
         $html = $this->stripBuilderWrappers($html);
+        // آدرسِ واقعیِ تصاویرِ lazy را به src منتقل کن تا قبل از sanitize از دست نرود.
+        $html = (string) \Modules\Site\Support\WpLazyImagePromoter::promote($html);
         if ($this->apply && $this->downloadImages) {
             $html = $this->rewriteInlineImages($html);
         }
