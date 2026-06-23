@@ -301,24 +301,33 @@ class CatalogDeviceBrandController extends Controller
      */
     private function buildTestimonials(?DeviceBrandPage $page, Device $device, Brand $brand, array $template): array
     {
+        // context برای جایگزینیِ placeholderهای موضوع ({device}، {brand} و …).
+        $ctx = [
+            'device' => $device->short_name ?? $device->name,
+            'device_label' => $device->name,
+            'device_slug' => $device->slug,
+            'brand' => $brand->name,
+            'brand_slug' => $brand->slug,
+        ];
+
         // اولویت ۱: page
         if ($page) {
             $picked = $page->reviews()->where('site_reviews.status', Review::STATUS_APPROVED)->get();
             if ($picked->isNotEmpty()) {
-                return $this->shapeReviews($picked);
+                return $this->shapeReviews($picked, $ctx);
             }
         }
 
         // اولویت ۲: device
         $picked = $device->reviews()->where('site_reviews.status', Review::STATUS_APPROVED)->get();
         if ($picked->isNotEmpty()) {
-            return $this->shapeReviews($picked);
+            return $this->shapeReviews($picked, $ctx);
         }
 
         // اولویت ۳: brand
         $picked = $brand->reviews()->where('site_reviews.status', Review::STATUS_APPROVED)->get();
         if ($picked->isNotEmpty()) {
-            return $this->shapeReviews($picked);
+            return $this->shapeReviews($picked, $ctx);
         }
 
         // اولویت ۴: template
@@ -328,7 +337,7 @@ class CatalogDeviceBrandController extends Controller
                 'id' => $t['id'] ?? null,
                 'type' => Review::TYPE_AUDIO,
                 'author_name' => $t['customer_name'] ?? null,
-                'topic' => $t['topic'] ?? null,
+                'topic' => \Modules\Site\Support\ReviewTopic::fill($t['topic'] ?? null, $ctx),
                 'rating' => isset($t['rating']) ? (int) $t['rating'] : null,
                 'audio_url' => $t['audio_url'] ?? null,
                 'duration_seconds' => $t['duration_seconds'] ?? null,
@@ -341,16 +350,19 @@ class CatalogDeviceBrandController extends Controller
             ->whereDoesntHave('devices')->whereDoesntHave('brands')
             ->orderByDesc('is_featured')->limit(12)->get();
 
-        return $this->shapeReviews($picked);
+        return $this->shapeReviews($picked, $ctx);
     }
 
-    private function shapeReviews($collection): array
+    /**
+     * @param  array<string, string|null>  $ctx
+     */
+    private function shapeReviews($collection, array $ctx = []): array
     {
         return $collection->map(fn (Review $r) => [
             'id' => $r->id,
             'type' => $r->type,
             'author_name' => $r->author_name,
-            'topic' => $r->topic,
+            'topic' => \Modules\Site\Support\ReviewTopic::fill($r->topic, $ctx),
             'rating' => (int) $r->rating,
             'audio_url' => $r->audio_url,
             'duration_seconds' => $r->duration_seconds,
