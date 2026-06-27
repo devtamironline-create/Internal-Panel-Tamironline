@@ -43,7 +43,7 @@
             </a>
 
             {{-- ── لینک عمومی + ارسال SMS ── --}}
-            @php $publicUrl = route('crm.invoice.public', $invoice->invoice_code); @endphp
+            @php $publicUrl = route('crm.invoice.public', $invoice->public_token); @endphp
             <div class="inline-flex items-center gap-2"
                  x-data="{ copied: false, copy() { navigator.clipboard.writeText('{{ $publicUrl }}').then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000); }); } }">
                 <button type="button" @click="copy()"

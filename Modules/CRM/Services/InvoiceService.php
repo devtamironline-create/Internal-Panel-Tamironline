@@ -24,9 +24,7 @@ use Modules\CRM\Models\WalletTransaction;
  */
 class InvoiceService
 {
-    public function __construct(protected CommissionCalculator $calc)
-    {
-    }
+    public function __construct(protected CommissionCalculator $calc) {}
 
     public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false): ?Invoice
     {
@@ -59,8 +57,8 @@ class InvoiceService
             $totals = $technician
                 ? $this->calc->calculate($order, $technician)
                 : ['total' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
-                   'tech_share' => 0, 'company_share' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
-                   'percent' => 0, 'calc_type' => null];
+                    'tech_share' => 0, 'company_share' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
+                    'percent' => 0, 'calc_type' => null];
 
             $invoice = Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
@@ -96,7 +94,7 @@ class InvoiceService
                     'type' => WalletTxType::Commission->value,
                     'amount' => $amount,
                     'balance_after' => $last + $amount,
-                    'note' => 'سهم شرکت از فاکتور ' . $invoice->invoice_code,
+                    'note' => 'سهم شرکت از فاکتور '.$invoice->invoice_code,
                     'created_by' => $createdBy,
                 ]);
 
@@ -133,12 +131,14 @@ class InvoiceService
             $order = $invoice->order;
             if (! $order) {
                 $log->warning('Auto invoice SMS skipped: order not found', ['invoice_id' => $invoice->id]);
+
                 return;
             }
 
             $mobile = $order->customer_mobile ?: $order->customer?->mobile;
             if (! $mobile) {
                 $log->warning('Auto invoice SMS skipped: customer has no mobile', ['order_id' => $order->id, 'invoice_id' => $invoice->id]);
+
                 return;
             }
 
@@ -146,24 +146,27 @@ class InvoiceService
             $template = \Modules\CRM\Models\SmsTemplate::where('trigger_key', $trigger->value)->first();
             if (! $template) {
                 $log->warning('Auto invoice SMS skipped: template row missing', ['trigger' => $trigger->value]);
+
                 return;
             }
             if (! $template->is_active) {
                 $log->warning('Auto invoice SMS skipped: template is inactive', ['trigger' => $trigger->value]);
+
                 return;
             }
             if (empty($template->kavenegar_template)) {
                 $log->warning('Auto invoice SMS skipped: kavenegar_template empty', ['trigger' => $trigger->value]);
+
                 return;
             }
 
             $order->loadMissing('customer');
             $vars = [
                 'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
-                'order_code'    => (string) ($order->order_code ?? ''),
-                'amount'        => (string) (int) $invoice->total_amount,
-                'invoice_code'  => (string) $invoice->invoice_code,
-                'receipt_url'   => route('crm.invoice.public', $invoice->invoice_code),
+                'order_code' => (string) ($order->order_code ?? ''),
+                'amount' => (string) (int) $invoice->total_amount,
+                'invoice_code' => (string) $invoice->invoice_code,
+                'receipt_url' => route('crm.invoice.public', $invoice->public_token),
             ];
             $tokens = $template->renderTokens($vars);
 
@@ -171,15 +174,15 @@ class InvoiceService
             $result = $sms->sendTemplate($mobile, $template->kavenegar_template, $tokens);
 
             \Modules\CRM\Models\SmsLog::create([
-                'order_id'         => $order->id,
-                'trigger_key'      => $trigger->value,
+                'order_id' => $order->id,
+                'trigger_key' => $trigger->value,
                 'recipient_mobile' => $mobile,
-                'recipient_role'   => 'customer',
-                'body'             => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
-                'status'           => $result['success'] ? 'success' : 'failed',
-                'response'         => $result['success'] ? null : ($result['message'] ?? null),
-                'sent_by'          => null,
-                'created_at'       => now(),
+                'recipient_role' => 'customer',
+                'body' => $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE),
+                'status' => $result['success'] ? 'success' : 'failed',
+                'response' => $result['success'] ? null : ($result['message'] ?? null),
+                'sent_by' => null,
+                'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Auto invoice SMS failed', [
