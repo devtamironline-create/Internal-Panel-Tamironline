@@ -20,8 +20,7 @@ class PaymentController extends Controller
         protected ZibalService $zibal,
         protected WalletService $wallet,
         protected MellatService $mellat,
-    ) {
-    }
+    ) {}
 
     // ─────────────── صفحه پیش‌نمایش فاکتور (GET، بدون لاگین) ───────────────
     /**
@@ -94,7 +93,7 @@ class PaymentController extends Controller
             callbackUrl: $callbackUrl,
             orderId: $invoice->invoice_code,
             mobile: $invoice->customer?->mobile,
-            description: 'پرداخت فاکتور ' . $invoice->invoice_code,
+            description: 'پرداخت فاکتور '.$invoice->invoice_code,
         );
 
         $payment = Payment::create([
@@ -274,10 +273,11 @@ class PaymentController extends Controller
                     technician: $tech,
                     type: WalletTxType::WalletCharge,
                     amount: (int) $payment->amount,
-                    note: 'شارژ کیف‌پول از درگاه — refid: ' . ($refNumber ?: $payment->track_id),
+                    note: 'شارژ کیف‌پول از درگاه — refid: '.($refNumber ?: $payment->track_id),
                     createdBy: null,
                 );
             }
+
             return;
         }
 
@@ -324,6 +324,7 @@ class PaymentController extends Controller
                 'status' => 'failed',
                 'result_message' => 'عدم تطابق RefId در callback درگاه ملت.',
             ]);
+
             return view('crm::payment.result', [
                 'ok' => false,
                 'message' => 'خطای امنیتی: اطلاعات تراکنش بازگشتی معتبر نیست.',
@@ -339,6 +340,7 @@ class PaymentController extends Controller
                 'result_code' => $resCode,
                 'result_message' => $this->mellat->resCodeMessage($resCode),
             ]);
+
             return view('crm::payment.result', [
                 'ok' => false,
                 'message' => $resCode === '17' ? 'پرداخت توسط کاربر لغو شد.' : $this->mellat->resCodeMessage($resCode),
@@ -381,6 +383,7 @@ class PaymentController extends Controller
             'result_code' => $vs['resCode'] ?? null,
             'result_message' => $vs['message'] ?? 'تایید پرداخت ناموفق.',
         ]);
+
         return view('crm::payment.result', [
             'ok' => false,
             'message' => $vs['message'] ?? 'تایید پرداخت ناموفق بود.',
@@ -399,6 +402,7 @@ class PaymentController extends Controller
             'mellatTerminalId' => CrmSetting::get('mellat_terminal_id') ?? '',
             'mellatUsername' => CrmSetting::get('mellat_username') ?? '',
             'mellatPassword' => CrmSetting::get('mellat_password') ?? '',
+            'invoicePublicUrlTemplate' => CrmSetting::get('invoice_public_url_template') ?? '',
         ]);
     }
 
@@ -411,7 +415,18 @@ class PaymentController extends Controller
             'mellat_terminal_id' => 'nullable|string|max:50',
             'mellat_username' => 'nullable|string|max:100',
             'mellat_password' => 'nullable|string|max:100',
+            'invoice_public_url_template' => 'nullable|string|max:300',
         ]);
+
+        // قالبِ لینکِ عمومیِ فاکتور: اگر مقدار داده شده، باید http(s) باشد و
+        // شاملِ {token} (وگرنه لینکِ پیامک می‌شکند). خالی = پیش‌فرضِ پنل.
+        $tpl = trim((string) ($validated['invoice_public_url_template'] ?? ''));
+        if ($tpl !== '' && (! preg_match('#^https?://#i', $tpl) || ! str_contains($tpl, '{token}'))) {
+            return back()->withInput()->withErrors([
+                'invoice_public_url_template' => 'قالبِ لینک باید با http(s) شروع شود و حتماً شاملِ {token} باشد. مثال: https://app.tamironline.com/invoice/{token}',
+            ]);
+        }
+        CrmSetting::set('invoice_public_url_template', $tpl);
 
         CrmSetting::set('payment_gateway', $validated['payment_gateway']);
         CrmSetting::set('zibal_merchant', $validated['zibal_merchant'] ?? '');

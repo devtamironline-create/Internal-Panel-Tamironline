@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
+use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CustomerApp\Support\InvoiceBuilder;
@@ -46,6 +47,45 @@ class InvoiceController extends Controller
                 ]);
                 // ادامه می‌دهیم — بدون invoice هم می‌توان payload draft برگرداند
             }
+        }
+
+        return response()->json([
+            'data' => InvoiceBuilder::build($order, $invoice),
+        ])->header('Cache-Control', 'private, max-age=60');
+    }
+
+    /**
+     * GET /v1/customer/invoices/{token}
+     *
+     * فاکتور را با توکنِ عمومی (همان که در لینکِ پیامک/اپ است) برمی‌گرداند —
+     * ولی فقط برای مشتریِ احرازشده‌ای که صاحبِ آن است. اگر فاکتور نباشد یا
+     * مالِ کاربر نباشد → 404 (تا حتی وجودِ فاکتور هم لو نرود).
+     */
+    public function showByToken(Request $request, string $token): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user instanceof Customer) {
+            abort(401, 'احراز هویت مشتری لازم است.');
+        }
+
+        // withoutGlobalScope('active') تا فاکتورِ superseded هم (مثلِ رسیدِ عمومی)
+        // برای صاحبش قابل دیدن باشد.
+        $invoice = Invoice::withoutGlobalScope('active')
+            ->with(['order.items', 'order.technician:id,first_name,last_name,firstname_tech,mobile', 'customer'])
+            ->where('public_token', $token)
+            ->first();
+
+        $owns = $invoice && (
+            (int) $invoice->customer_id === (int) $user->id
+            || (int) ($invoice->order?->customer_id ?? 0) === (int) $user->id
+        );
+        if (! $owns) {
+            abort(404, 'این فاکتور در دسترس شما نیست.');
+        }
+
+        $order = $invoice->order;
+        if (! $order) {
+            abort(404, 'سفارشِ این فاکتور یافت نشد.');
         }
 
         return response()->json([
