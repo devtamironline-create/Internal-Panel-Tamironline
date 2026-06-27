@@ -127,7 +127,7 @@ class RepairContentImages extends Command
                 foreach ($rows as $row) {
                     $original = (string) $row->{$column};
                     $fixedHere = 0;
-                    $new = $this->repairHtml($original, $fixedHere);
+                    $new = $this->repairHtml($original, $fixedHere, $label, $row->id);
 
                     if ($fixedHere > 0) {
                         if ($this->apply && $new !== $original) {
@@ -191,9 +191,9 @@ class RepairContentImages extends Command
     /**
      * هر <img> را بررسی و در صورت نیاز src را محلی می‌کند.
      */
-    private function repairHtml(string $html, int &$fixedHere): string
+    private function repairHtml(string $html, int &$fixedHere, string $label = '', int|string $recordId = ''): string
     {
-        return (string) preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$fixedHere) {
+        return (string) preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$fixedHere, $label, $recordId) {
             $tag = $m[0];
 
             // src فعلی (در صورت وجود)
@@ -208,19 +208,27 @@ class RepairContentImages extends Command
                 return $tag;
             }
 
+            // مرجعِ تصویر برای گزارش (id یا src)
+            $hasWpImage = (bool) preg_match('/wp-image-(\d+)/', $tag, $mm);
+            $ref = $hasWpImage ? "wp-image-{$mm[1]}" : ($src ?? 'بدون‌src');
+
             // منبعِ دانلود را تعیین کن:
             //   B) src وردپرسی موجود → همان URL
             //   A) src نامعتبر/خالی ولی wp-image-{ID} → از WP DB پیدا کن
             $sourceUrl = null;
             if ($hasRealSrc && $this->isWpHostedUrl($src)) {
                 $sourceUrl = $src;
-            } elseif (preg_match('/wp-image-(\d+)/', $tag, $mm)) {
+            } elseif ($hasWpImage) {
                 $sourceUrl = $this->wpAttachmentUrl((int) $mm[1]);
             }
 
             $this->stats['scanned']++;
             if ($sourceUrl === null) {
                 $this->stats['unresolved']++;
+                $reason = $hasWpImage
+                    ? ($this->wpAvailable ? 'در WP پیدا نشد' : 'WP DB در دسترس نیست')
+                    : 'بدونِ src و بدونِ wp-image (غیرقابل بازیابی)';
+                $this->warn("    {$label} #{$recordId}: {$ref} → {$reason}");
 
                 return $tag;
             }
@@ -228,6 +236,7 @@ class RepairContentImages extends Command
             if (! $this->apply) {
                 $this->stats['localized']++;
                 $fixedHere++;
+                $this->line("    {$label} #{$recordId}: {$ref} → {$sourceUrl}");
 
                 return $tag; // dry-run: شمارش بدون تغییر
             }
@@ -235,6 +244,7 @@ class RepairContentImages extends Command
             $local = $this->images->downloadAndStore($sourceUrl)?->url();
             if ($local === null) {
                 $this->stats['unresolved']++;
+                $this->warn("    {$label} #{$recordId}: {$ref} → دانلود ناموفق ({$sourceUrl})");
 
                 return $tag;
             }
