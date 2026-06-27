@@ -118,6 +118,11 @@ Route::prefix('v1/customer')
                 ->whereNumber('id')->name('api.customer.orders.invoice');
             Route::get('/orders/{id}/invoice.pdf', [InvoiceController::class, 'pdf'])
                 ->whereNumber('id')->name('api.customer.orders.invoice.pdf');
+            // Invoice با توکنِ عمومی — برای فلوی login-gatedِ اپ/PWA
+            // (لینک پیامک → /invoice/{token}). فقط فاکتورِ خودِ مشتری؛
+            // در غیر این صورت 404 (وجودِ فاکتور لو نرود).
+            Route::get('/invoices/{token}', [InvoiceController::class, 'showByToken'])
+                ->where('token', '[A-Za-z0-9]+')->name('api.customer.invoices.by-token');
 
             // Profile (full — جداگانه از /auth/me و /auth/complete-profile)
             Route::get('/profile', [ProfileController::class, 'show'])

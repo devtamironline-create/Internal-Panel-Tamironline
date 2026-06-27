@@ -190,7 +190,7 @@ class InvoiceController extends Controller
             'order_code' => (string) ($order->order_code ?? ''),
             'amount' => (string) (int) $invoice->total_amount,
             'invoice_code' => (string) $invoice->invoice_code,
-            'receipt_url' => route('crm.invoice.public', $invoice->public_token),
+            'receipt_url' => $invoice->publicUrl(),
         ];
         $tokens = $template->renderTokens($vars);
 

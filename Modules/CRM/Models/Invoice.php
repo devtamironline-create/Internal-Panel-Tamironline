@@ -178,9 +178,22 @@ class Invoice extends Model
         return $token;
     }
 
-    /** آدرسِ عمومیِ رسیدِ فاکتور — همیشه با توکن (نه با invoice_code). */
+    /**
+     * آدرسِ عمومیِ رسیدِ فاکتور (لینکی که با پیامک به مشتری می‌رود) — همیشه با
+     * توکن، نه با invoice_code.
+     *
+     * اگر تنظیمِ `invoice_public_url_template` ست شده باشد (مثلاً
+     * `https://app.tamironline.com/invoice/{token}`)، لینک به اپ/PWAی مشتری
+     * می‌رود؛ وگرنه به صفحه‌ی رسیدِ پنل. این‌طور وقتی PWA آماده شد، فقط با یک
+     * تنظیم (بدون دیپلوی) لینک سوییچ می‌شود.
+     */
     public function publicUrl(): string
     {
+        $template = trim((string) CrmSetting::get('invoice_public_url_template', ''));
+        if ($template !== '' && str_contains($template, '{token}')) {
+            return str_replace('{token}', (string) $this->public_token, $template);
+        }
+
         return route('crm.invoice.public', $this->public_token);
     }
 }

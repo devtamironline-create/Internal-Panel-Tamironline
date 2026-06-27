@@ -81,6 +81,22 @@
             <p class="mt-2 text-xs">برای ملت، این آدرس به‌صورت callBackUrl در هر تراکنش ارسال می‌شود. برای زیبال در پنل پذیرنده ثبت کنید.</p>
         </div>
 
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+            <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">قالبِ لینکِ عمومیِ فاکتور (اپ/PWA)</label>
+            <input type="text" name="invoice_public_url_template" dir="ltr"
+                   value="{{ old('invoice_public_url_template', $invoicePublicUrlTemplate ?? '') }}"
+                   placeholder="https://app.tamironline.com/invoice/{token}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm ltr">
+            <p class="text-xs text-gray-500 mt-1.5 leading-6">
+                لینکِ فاکتوری که با <b>پیامک</b> به مشتری می‌رود. <b>خالی بگذارید</b> تا همان رسیدِ امنِ پنل
+                (<code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">panel.tamironline.com/crm/receipt/{token}</code>) استفاده شود.
+                وقتی اپ/PWA آماده شد، اینجا
+                <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">https://app.tamironline.com/invoice/{token}</code>
+                بگذارید تا لینک به اپ برود (حتماً <code dir="ltr">{token}</code> داشته باشد).
+            </p>
+            @error('invoice_public_url_template')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+        </div>
+
         <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ذخیره تنظیمات</button>
     </form>
 
@@ -88,7 +104,7 @@
         <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">نحوه استفاده</h2>
         <ol class="text-sm text-gray-700 dark:text-gray-300 space-y-2 list-decimal ps-5">
             <li>پس از صدور فاکتور، لینک پرداخت از صفحه جزئیات فاکتور قابل دریافت است.</li>
-            <li>لینک به‌صورت <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">/crm/pay/{invoice_code}</code> عمومی است و نیاز به ورود ندارد.</li>
+            <li>لینک به‌صورت <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">/crm/pay/{token}</code> با یک توکنِ تصادفیِ غیرقابل‌حدس است (نه کدِ ترتیبی) و نیاز به ورود ندارد — تا کسی نتواند با تغییر کد فاکتورِ دیگران را ببیند.</li>
             <li>مشتری این لینک را باز می‌کند → به درگاه زیبال هدایت می‌شود → پس از پرداخت به صفحه نتیجه برمی‌گردد.</li>
             <li>در صورت موفقیت، فاکتور به‌صورت خودکار به وضعیت «پرداخت‌شده» تغییر می‌کند.</li>
         </ol>
