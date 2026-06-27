@@ -218,10 +218,12 @@ class OrderController extends Controller
         return $this->streamSpreadsheet('crm-orders-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
-    /** هم در index هم در export استفاده می‌شود — همان فیلترهای صفحه. */
+    /** فیلترهای خروجی اکسلِ سفارش‌ها — هم‌سو با لیست. */
     protected function buildIndexQuery(Request $request)
     {
-        $query = Order::query()->latest();
+        // فقط سفارش‌های واقعی؛ لیدها بخش جدا دارند و نباید در خروجی سفارش‌ها
+        // بیایند (هم‌سو با realOrders() در index()).
+        $query = Order::query()->realOrders()->latest();
 
         if ($s = trim((string) $request->string('q'))) {
             $query->search($s);
