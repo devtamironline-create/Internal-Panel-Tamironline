@@ -88,7 +88,7 @@
         <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">نحوه استفاده</h2>
         <ol class="text-sm text-gray-700 dark:text-gray-300 space-y-2 list-decimal ps-5">
             <li>پس از صدور فاکتور، لینک پرداخت از صفحه جزئیات فاکتور قابل دریافت است.</li>
-            <li>لینک به‌صورت <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">/crm/pay/{invoice_code}</code> عمومی است و نیاز به ورود ندارد.</li>
+            <li>لینک به‌صورت <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded" dir="ltr">/crm/pay/{token}</code> با یک توکنِ تصادفیِ غیرقابل‌حدس است (نه کدِ ترتیبی) و نیاز به ورود ندارد — تا کسی نتواند با تغییر کد فاکتورِ دیگران را ببیند.</li>
             <li>مشتری این لینک را باز می‌کند → به درگاه زیبال هدایت می‌شود → پس از پرداخت به صفحه نتیجه برمی‌گردد.</li>
             <li>در صورت موفقیت، فاکتور به‌صورت خودکار به وضعیت «پرداخت‌شده» تغییر می‌کند.</li>
         </ol>

@@ -136,7 +136,7 @@
                     درگاه پرداخت در حال حاضر فعال نیست. لطفاً با پشتیبانی تماس بگیرید.
                 </div>
             @else
-                <form method="POST" action="{{ route('crm.payment.initiate', $invoice->invoice_code) }}">
+                <form method="POST" action="{{ route('crm.payment.initiate', $invoice->public_token) }}">
                     @csrf
                     <button type="submit"
                             class="w-full py-4 rounded-xl text-white font-bold text-base transition flex items-center justify-center gap-2 shadow-lg active:scale-[.99]"

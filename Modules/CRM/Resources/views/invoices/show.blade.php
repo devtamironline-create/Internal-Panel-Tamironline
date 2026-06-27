@@ -78,10 +78,10 @@
                 <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">این لینک را برای مشتری بفرستید تا پرداخت کند (نیاز به ورود ندارد).</p>
             </div>
             <div class="flex items-center gap-2">
-                <input type="text" readonly value="{{ url('/crm/pay/' . $invoice->invoice_code) }}" dir="ltr"
+                <input type="text" readonly value="{{ url('/crm/pay/'.$invoice->public_token) }}" dir="ltr"
                        class="px-3 py-2 border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 rounded-lg text-xs w-80"
                        onclick="this.select()">
-                <a href="{{ url('/crm/pay/' . $invoice->invoice_code) }}" target="_blank" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs">باز کردن</a>
+                <a href="{{ url('/crm/pay/'.$invoice->public_token) }}" target="_blank" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs">باز کردن</a>
             </div>
         </div>
     </div>

@@ -32,7 +32,7 @@ class PaymentController extends Controller
     public function pay(string $invoiceCode)
     {
         $invoice = Invoice::with(['customer', 'order.technician', 'order.items', 'order.brand', 'order.device'])
-            ->where('invoice_code', $invoiceCode)
+            ->where('public_token', $invoiceCode)
             ->first();
 
         if (! $invoice) {
@@ -57,7 +57,7 @@ class PaymentController extends Controller
      */
     public function initiate(string $invoiceCode)
     {
-        $invoice = Invoice::with('customer')->where('invoice_code', $invoiceCode)->first();
+        $invoice = Invoice::with('customer')->where('public_token', $invoiceCode)->first();
 
         if (! $invoice) {
             return view('crm::payment.result', [

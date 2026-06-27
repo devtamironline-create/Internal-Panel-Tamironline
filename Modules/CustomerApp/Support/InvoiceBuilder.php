@@ -162,7 +162,7 @@ final class InvoiceBuilder
         $isPaid = $invoice?->status === 'paid';
         $paymentUrl = null;
         if ($invoice && ! $isPaid && $invoice->status === 'issued') {
-            $paymentUrl = route('crm.payment.pay', ['invoiceCode' => $invoice->invoice_code]);
+            $paymentUrl = route('crm.payment.pay', ['invoiceCode' => $invoice->public_token]);
         }
 
         return [
