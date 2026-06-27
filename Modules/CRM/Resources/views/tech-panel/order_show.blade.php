@@ -392,8 +392,16 @@
                 techPercent: {{ (int) ($technician->percent ?? 0) }},
                 techPerOfAll: {{ (int) ($technician->tech_per_of_all ?? 0) }},
                 techCalcType: '{{ (string) ($technician->type_of_calc_tech ?? '') }}',
+                saveAsDraft: {{ old('save_as_draft', $order->save_as_draft) ? 'true' : 'false' }},
+                isReturned: {{ is_null($order->return_type) ? 'false' : 'true' }},
                 get partsCost() { return this.pieces.reduce((s, p) => s + (Number(p.buy)||0), 0); },
                 get totalInvoice() { return Math.max(0, (Number(this.priceCustomer)||0) - this.partsCost); },
+                // جمع کل فاکتور نباید کمتر از هزینهٔ قطعات باشد (مگر پیش‌نویس/برگشتی).
+                get invoiceBelowParts() {
+                    return this.selected === '{{ OrderStatus::Completed->value }}'
+                        && !this.saveAsDraft && !this.isReturned
+                        && (Number(this.priceCustomer)||0) < this.partsCost;
+                },
                 // سهم تکنسین = price_customer × (۱۰۰ − درصد شرکت) / ۱۰۰
                 // درصد روی تکنسین («percent» یا «tech_per_of_all» در حالت internal)
                 // معنی «سهم شرکت از کل» را دارد، نه «سهم تکنسین». پایهٔ
@@ -470,6 +478,9 @@
                         <div class="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-900">
                             <span x-text="toWords(priceCustomer) + ' تومان'"></span>
                         </div>
+                        @error('price_customer')
+                            <p class="text-[10px] text-rose-600 mt-1 font-bold">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     {{-- قطعات استفاده‌شده — فقط نام + قیمت خرید (هم‌ارز WP) --}}
@@ -521,6 +532,12 @@
                             <span class="bg-emerald-500 -mx-3 -my-2.5 px-3 py-2.5 font-bold text-white">سهم شما از سفارش</span>
                             <span class="text-left font-bold text-emerald-700" x-text="fmt(techShare) + ' تومان'"></span>
                         </div>
+                    </div>
+
+                    {{-- هشدار: جمع فاکتور کمتر از هزینهٔ قطعات → پایان سفارش مسدود --}}
+                    <div x-show="invoiceBelowParts" x-cloak
+                         class="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-[11px] text-rose-700 font-bold leading-6">
+                        ⚠️ جمع کل مبلغ فاکتور نمی‌تواند کمتر از جمع هزینهٔ قطعات (<span x-text="fmt(partsCost)"></span> تومان) باشد. لطفاً «کل مبلغ دریافتی از مشتری» را اصلاح کنید.
                     </div>
 
                     {{-- total_invoice به‌صورت hidden — توسط JS برابر مانده ست می‌شود --}}
@@ -578,14 +595,14 @@
                     <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
                         <input type="hidden" name="save_as_draft" value="0">
                         <input type="checkbox" name="save_as_draft" value="1"
-                               {{ old('save_as_draft', $order->save_as_draft) ? 'checked' : '' }}
+                               x-model="saveAsDraft"
                                class="w-4 h-4 accent-brand-700">
                         ذخیره به‌عنوان پیش‌نویس (هنوز نهایی نشود)
                     </label>
                 </div>
 
                 <button type="submit"
-                        x-bind:disabled="!selected"
+                        x-bind:disabled="!selected || invoiceBelowParts"
                         class="w-full mt-3 py-3 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                         style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
                     ثبت تغییر وضعیت
