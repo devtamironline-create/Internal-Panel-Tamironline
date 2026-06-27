@@ -15,6 +15,7 @@ class Invoice extends Model
     protected $fillable = [
         'wp_id',
         'invoice_code',
+        'public_token',
         'order_id',
         'customer_id',
         'technician_id',
@@ -51,7 +52,15 @@ class Invoice extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('active', function (Builder $q) {
-            $q->whereNull($q->getModel()->getTable() . '.superseded_at');
+            $q->whereNull($q->getModel()->getTable().'.superseded_at');
+        });
+
+        // توکنِ عمومیِ غیرقابل‌حدس برای لینکِ فاکتور — جلوگیری از IDOR
+        // (نمی‌شود با تغییر invoice_code فاکتورِ دیگران را دید).
+        static::creating(function (self $invoice) {
+            if (empty($invoice->public_token)) {
+                $invoice->public_token = static::generatePublicToken();
+            }
         });
 
         // Push فاکتور به WP — وقتی فاکتور در پنل لاراول ساخته یا به‌روز
@@ -65,7 +74,9 @@ class Invoice extends Model
             // در طول inbound sync پاسخ ندهیم — pushInvoice که داخلش
             // pushOrder صدا می‌زند، می‌توانست status قدیمی Laravel را
             // به WP برگرداند و باعث «بسته نشدن سفارش از سمت WP» شود.
-            if (app()->bound('crm.suppress_outbound_push')) return;
+            if (app()->bound('crm.suppress_outbound_push')) {
+                return;
+            }
             try {
                 app(\Modules\CRM\Services\WpPushService::class)->pushInvoice($invoice);
             } catch (\Throwable $e) {
@@ -142,15 +153,34 @@ class Invoice extends Model
      */
     public static function generateInvoiceCode(): string
     {
-        $prefix = 'INV-' . date('ym') . '-';
+        $prefix = 'INV-'.date('ym').'-';
         // withoutGlobalScope تا فاکتورهای superseded هم شمرده شوند —
         // وگرنه ممکن است کد قبلی (که superseded شده) تکرار شود.
         $last = static::withoutGlobalScope('active')
-            ->where('invoice_code', 'like', $prefix . '%')
+            ->where('invoice_code', 'like', $prefix.'%')
             ->orderByDesc('id')
             ->value('invoice_code');
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
-        return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * توکنِ تصادفیِ یکتا برای لینکِ عمومیِ فاکتور (۴۰ کاراکتر = آنتروپیِ کافی
+     * تا حدس/شمارش ناممکن باشد).
+     */
+    public static function generatePublicToken(): string
+    {
+        do {
+            $token = \Illuminate\Support\Str::random(40);
+        } while (static::withoutGlobalScope('active')->where('public_token', $token)->exists());
+
+        return $token;
+    }
+
+    /** آدرسِ عمومیِ رسیدِ فاکتور — همیشه با توکن (نه با invoice_code). */
+    public function publicUrl(): string
+    {
+        return route('crm.invoice.public', $this->public_token);
     }
 }

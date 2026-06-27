@@ -15,9 +15,7 @@ class InvoiceController extends Controller
 {
     use ExportsListToFile;
 
-    public function __construct(protected InvoiceService $invoices)
-    {
-    }
+    public function __construct(protected InvoiceService $invoices) {}
 
     public function index(Request $request)
     {
@@ -66,7 +64,7 @@ class InvoiceController extends Controller
                     $i->customer?->display_name,
                     $i->customer?->mobile,
                     $i->technician
-                        ? trim($i->technician->firstname_tech ?: ($i->technician->first_name . ' ' . $i->technician->last_name))
+                        ? trim($i->technician->firstname_tech ?: ($i->technician->first_name.' '.$i->technician->last_name))
                         : null,
                     $i->total_amount,
                     $i->tech_share,
@@ -79,7 +77,7 @@ class InvoiceController extends Controller
             }
         };
 
-        return $this->streamSpreadsheet('crm-invoices-' . date('Ymd-His'), $format, $headers, $rows);
+        return $this->streamSpreadsheet('crm-invoices-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
     public function show(Invoice $invoice)
@@ -112,7 +110,7 @@ class InvoiceController extends Controller
         // نه برای حذف شدن از تاریخچه.
         $invoice = Invoice::withoutGlobalScope('active')
             ->with(['order.items', 'customer'])
-            ->where('invoice_code', $invoiceCode)
+            ->where('public_token', $invoiceCode)
             ->firstOrFail();
 
         return view('crm::invoices.print', compact('invoice'));
@@ -127,10 +125,10 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::withoutGlobalScope('active')
             ->with(['order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer'])
-            ->where('invoice_code', $invoiceCode)
+            ->where('public_token', $invoiceCode)
             ->firstOrFail();
 
-        $qrDataUri = InvoicePdf::qr(route('crm.invoice.public', $invoice->invoice_code));
+        $qrDataUri = InvoicePdf::qr(route('crm.invoice.public', $invoice->public_token));
 
         return view('crm::invoices.receipt-download', compact('invoice', 'qrDataUri'));
     }
@@ -142,7 +140,7 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::withoutGlobalScope('active')
             ->with(['order.items', 'customer'])
-            ->where('invoice_code', $invoiceCode)
+            ->where('public_token', $invoiceCode)
             ->firstOrFail();
 
         $pdf = InvoicePdf::render($invoice);
@@ -189,10 +187,10 @@ class InvoiceController extends Controller
         // به علاوهٔ invoice_code و receipt_url
         $vars = [
             'customer_name' => $order->customer_name ?: $order->customer?->display_name ?: '',
-            'order_code'    => (string) ($order->order_code ?? ''),
-            'amount'        => (string) (int) $invoice->total_amount,
-            'invoice_code'  => (string) $invoice->invoice_code,
-            'receipt_url'   => route('crm.invoice.public', $invoice->invoice_code),
+            'order_code' => (string) ($order->order_code ?? ''),
+            'amount' => (string) (int) $invoice->total_amount,
+            'invoice_code' => (string) $invoice->invoice_code,
+            'receipt_url' => route('crm.invoice.public', $invoice->public_token),
         ];
         $tokens = $template->renderTokens($vars);
 
@@ -200,61 +198,61 @@ class InvoiceController extends Controller
 
         // لاگ کامل
         \Modules\CRM\Models\SmsLog::create([
-            'order_id'         => $order->id,
-            'trigger_key'      => $trigger->value,
+            'order_id' => $order->id,
+            'trigger_key' => $trigger->value,
             'recipient_mobile' => $mobile,
-            'recipient_role'   => 'customer',
-            'body'             => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
-            'status'           => $result['success'] ? 'success' : 'failed',
-            'response'         => $result['success'] ? null : ($result['message'] ?? null),
-            'sent_by'          => auth()->id(),
-            'created_at'       => now(),
+            'recipient_role' => 'customer',
+            'body' => $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE),
+            'status' => $result['success'] ? 'success' : 'failed',
+            'response' => $result['success'] ? null : ($result['message'] ?? null),
+            'sent_by' => auth()->id(),
+            'created_at' => now(),
         ]);
 
         if (! empty($result['success'])) {
-            return back()->with('success', 'پیامک به ' . $mobile . ' ارسال شد.');
+            return back()->with('success', 'پیامک به '.$mobile.' ارسال شد.');
         }
 
-        return back()->with('error', 'ارسال پیامک ناموفق: ' . ($result['message'] ?? 'خطای ناشناخته از کاوه‌نگار'));
+        return back()->with('error', 'ارسال پیامک ناموفق: '.($result['message'] ?? 'خطای ناشناخته از کاوه‌نگار'));
     }
 
     /** صفحهٔ تنظیمات اطلاعات ارائه‌دهنده در صورتحساب چاپی. */
     public function settings()
     {
         return view('crm::invoices.settings', [
-            'providerName'    => CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین'),
+            'providerName' => CrmSetting::get('invoice_provider_name', 'تعمیرآنلاین'),
             'providerTagline' => CrmSetting::get('invoice_provider_tagline', 'مرکز تخصصی خدمات لوازم خانگی'),
-            'providerPhone'   => CrmSetting::get('invoice_provider_phone', ''),
-            'providerPostal'  => CrmSetting::get('invoice_provider_postal_code', ''),
+            'providerPhone' => CrmSetting::get('invoice_provider_phone', ''),
+            'providerPostal' => CrmSetting::get('invoice_provider_postal_code', ''),
             'providerAddress' => CrmSetting::get('invoice_provider_address', ''),
-            'printNotes'      => CrmSetting::get('invoice_print_notes', ''),
-            'logoPath'        => CrmSetting::get('invoice_provider_logo_path', ''),
-            'stampPath'       => CrmSetting::get('invoice_print_stamp_path', ''),
+            'printNotes' => CrmSetting::get('invoice_print_notes', ''),
+            'logoPath' => CrmSetting::get('invoice_provider_logo_path', ''),
+            'stampPath' => CrmSetting::get('invoice_print_stamp_path', ''),
         ]);
     }
 
     public function updateSettings(Request $request)
     {
         $validated = $request->validate([
-            'invoice_provider_name'        => 'nullable|string|max:120',
-            'invoice_provider_tagline'     => 'nullable|string|max:120',
-            'invoice_provider_phone'       => 'nullable|string|max:30',
+            'invoice_provider_name' => 'nullable|string|max:120',
+            'invoice_provider_tagline' => 'nullable|string|max:120',
+            'invoice_provider_phone' => 'nullable|string|max:30',
             'invoice_provider_postal_code' => 'nullable|string|max:20',
-            'invoice_provider_address'     => 'nullable|string|max:500',
-            'invoice_print_notes'          => 'nullable|string|max:2000',
-            'logo'                         => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:2048',
-            'stamp'                        => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
-            'remove_logo'                  => 'nullable|boolean',
-            'remove_stamp'                 => 'nullable|boolean',
+            'invoice_provider_address' => 'nullable|string|max:500',
+            'invoice_print_notes' => 'nullable|string|max:2000',
+            'logo' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'stamp' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'remove_logo' => 'nullable|boolean',
+            'remove_stamp' => 'nullable|boolean',
         ], [
-            'logo.image'  => 'فایل لوگو باید تصویر باشد.',
-            'logo.max'    => 'حجم لوگو حداکثر ۲ مگابایت.',
+            'logo.image' => 'فایل لوگو باید تصویر باشد.',
+            'logo.max' => 'حجم لوگو حداکثر ۲ مگابایت.',
             'stamp.image' => 'فایل مهر/امضا باید تصویر باشد.',
-            'stamp.max'   => 'حجم مهر/امضا حداکثر ۲ مگابایت.',
+            'stamp.max' => 'حجم مهر/امضا حداکثر ۲ مگابایت.',
         ]);
 
-        foreach (['invoice_provider_name','invoice_provider_tagline','invoice_provider_phone',
-                  'invoice_provider_postal_code','invoice_provider_address','invoice_print_notes'] as $key) {
+        foreach (['invoice_provider_name', 'invoice_provider_tagline', 'invoice_provider_phone',
+            'invoice_provider_postal_code', 'invoice_provider_address', 'invoice_print_notes'] as $key) {
             CrmSetting::set($key, $validated[$key] ?? '');
         }
 
@@ -296,7 +294,7 @@ class InvoiceController extends Controller
     public function serveAsset(string $type)
     {
         $key = match ($type) {
-            'logo'  => 'invoice_provider_logo_path',
+            'logo' => 'invoice_provider_logo_path',
             'stamp' => 'invoice_print_stamp_path',
             default => abort(404),
         };
@@ -324,7 +322,7 @@ class InvoiceController extends Controller
         }
 
         return redirect()->route('crm.invoices.show', $invoice)
-            ->with('success', 'فاکتور صادر شد: ' . $invoice->invoice_code);
+            ->with('success', 'فاکتور صادر شد: '.$invoice->invoice_code);
     }
 
     public function markPaid(Invoice $invoice)
@@ -367,15 +365,17 @@ class InvoiceController extends Controller
             $push->pushInvoice($invoice);
             $invoice->refresh();
             if ($invoice->wp_id) {
-                return back()->with('success', 'فاکتور به WP CRM ارسال شد (wp_id=' . $invoice->wp_id . ').');
+                return back()->with('success', 'فاکتور به WP CRM ارسال شد (wp_id='.$invoice->wp_id.').');
             }
+
             return back()->with('error', 'ارسال انجام نشد — جزئیات را در «لاگ سینک» ببین.');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('crm.invoice.push_to_wp_failed', [
                 'invoice_id' => $invoice->id,
                 'error' => $e->getMessage(),
             ]);
-            return back()->with('error', 'خطا در ارسال: ' . $e->getMessage());
+
+            return back()->with('error', 'خطا در ارسال: '.$e->getMessage());
         }
     }
 }

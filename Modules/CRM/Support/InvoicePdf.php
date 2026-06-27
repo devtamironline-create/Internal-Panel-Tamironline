@@ -12,7 +12,7 @@ use Modules\CRM\Models\Invoice;
 final class InvoicePdf
 {
     /**
-     * @return string  محتوای باینریِ PDF
+     * @return string محتوای باینریِ PDF
      */
     public static function render(Invoice $invoice): string
     {
@@ -24,7 +24,7 @@ final class InvoicePdf
         ]);
 
         // QR اعتبارسنجی (لینک عمومی رسید).
-        $qrDataUri = self::qr(route('crm.invoice.public', $invoice->invoice_code));
+        $qrDataUri = self::qr(route('crm.invoice.public', $invoice->public_token));
 
         // ۱) رندرِ دقیقِ طرح با Browsershot (Chrome) — همان HTML/CSS کامل
         // (flex/gradient/…). اگر Chrome/Node در دسترس نباشد، به mPDF می‌افتیم.
