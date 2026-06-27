@@ -238,38 +238,45 @@
         </div>
     </div>
     <script>
+    {{-- مقاوم به ناوبریِ SPA لایوویر: عناصر هر بار از DOM خوانده می‌شوند (نه cache)،
+         ack با event-delegation، و راه‌اندازی فقط یک‌بار روی realmِ پایدار. --}}
     (function () {
+        if (window.__techAnnInit) return; // realm در wire:navigate پایدار می‌ماند
+        window.__techAnnInit = true;
+
         var queue = [];
         var current = null;
         var known = {};
-        var modal = document.getElementById('techAnnModal');
-        var ackBtn = document.getElementById('techAnnAckBtn');
-        if (! modal || ! ackBtn) return;
-        var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var CSRF = meta ? meta.getAttribute('content') : '';
+
+        function el(id) { return document.getElementById(id); }
 
         function showNext() {
-            if (! queue.length) {
-                modal.style.display = 'none';
-                current = null;
-                return;
-            }
+            var modal = el('techAnnModal');
+            if (! modal) return;
+            if (! queue.length) { modal.style.display = 'none'; current = null; return; }
             current = queue.shift();
-            document.getElementById('techAnnTitle').textContent = current.title;
-            document.getElementById('techAnnBody').textContent = current.body;
-            document.getElementById('techAnnDate').textContent = current.date;
+            var t = el('techAnnTitle'), b = el('techAnnBody'), d = el('techAnnDate');
+            if (t) t.textContent = current.title;
+            if (b) b.textContent = current.body;
+            if (d) d.textContent = current.date;
             modal.style.display = 'flex';
         }
 
-        ackBtn.addEventListener('click', async function () {
-            if (! current) return;
-            ackBtn.disabled = true;
+        // delegation تا با مورفِ DOM در ناوبریِ SPA نشکند
+        document.addEventListener('click', async function (e) {
+            var btn = e.target.closest ? e.target.closest('#techAnnAckBtn') : null;
+            if (! btn || ! current) return;
+            btn.disabled = true;
+            var id = current.id;
             try {
-                await fetch('{{ url('/tech/announcements') }}/' + current.id + '/ack', {
+                await fetch('/tech/announcements/' + id + '/ack', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
                 });
-            } catch (e) {}
-            ackBtn.disabled = false;
+            } catch (err) {}
+            btn.disabled = false;
             showNext();
         });
 
@@ -284,7 +291,7 @@
                     queue.push(item);
                 });
                 // بج اعلانات روی داشبورد (اگر در صفحهٔ جاری وجود دارد)
-                var badge = document.getElementById('techAnnBadge');
+                var badge = el('techAnnBadge');
                 if (badge) {
                     var c = parseInt(json.count || 0, 10);
                     badge.textContent = c > 99 ? '99+' : c;
@@ -293,8 +300,14 @@
                 if (! current && queue.length) showNext();
             } catch (e) {}
         }
+
         poll();
-        setInterval(poll, 60000);
+        setInterval(poll, 30000);
+        // پس از هر ناوبریِ SPA: اگر مودال در صف مانده دوباره نشان بده + یک poll تازه
+        document.addEventListener('livewire:navigated', function () {
+            if (! current && queue.length) showNext();
+            poll();
+        });
     })();
     </script>
     @endif
