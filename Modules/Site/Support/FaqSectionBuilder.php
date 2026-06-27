@@ -15,7 +15,9 @@ use Modules\Site\Models\Faq;
  *   ]
  *
  * منطقِ اولویت: اولین owner (page → device → brand) که سوال دارد ملاک است؛
- * در نبودِ آن، legacy (مثل device->faq) و سپس template.
+ * در نبودِ آن، template (page-content) و در آخر legacyِ قدیمی (ستونِ JSON).
+ * توجه: template بر legacy مقدم است تا دادهٔ قدیمیِ وردپرس جلوی تب‌های
+ * page-content را نگیرد.
  */
 final class FaqSectionBuilder
 {
@@ -38,16 +40,33 @@ final class FaqSectionBuilder
             }
         }
 
-        if (! empty($legacy)) {
-            return ['items' => array_values($legacy), 'categories' => []];
+        // الگوی سراسری (page-content) بر legacyِ قدیمیِ وردپرس مقدم است — تا
+        // تب‌هایی که در page-content ثبت شده‌اند نمایش داده شوند و دادهٔ قدیمیِ
+        // ستونِ JSON جلوی آن را نگیرد. فقط وقتی template واقعاً محتوا دارد.
+        if (! empty($templateCategories) || ! empty($templateItems)) {
+            return [
+                'items' => array_values($templateItems),
+                'categories' => array_values($templateCategories),
+            ];
         }
 
-        // fallback به الگوی سراسری — هم لیستِ تخت، هم تب‌ها (دسته‌بندی‌هایی که
-        // در page-content ثبت شده‌اند) تا در فرانت tab نمایش داده شوند.
-        return [
-            'items' => array_values($templateItems),
-            'categories' => array_values($templateCategories),
-        ];
+        // آخرین چاره: legacy (ستونِ JSON). داخلِ یک تبِ «عمومی» می‌پیچیم تا مثل
+        // بقیه‌ی مسیرها categories داشته باشد و در فرانت بدونِ تب «خراب» نشود.
+        if (! empty($legacy)) {
+            $items = array_values($legacy);
+
+            return [
+                'items' => $items,
+                'categories' => [[
+                    'id' => null,
+                    'name' => 'عمومی',
+                    'slug' => 'general',
+                    'items' => $items,
+                ]],
+            ];
+        }
+
+        return ['items' => [], 'categories' => []];
     }
 
     /**
