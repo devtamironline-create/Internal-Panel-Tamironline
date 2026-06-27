@@ -116,9 +116,16 @@ class ComboManagerController extends Controller
             ? 'صفحهٔ ترکیبی فعال شد.'
             : 'صفحهٔ ترکیبی غیرفعال شد.';
 
-        // پاک‌سازیِ کشِ صفحهٔ ترکیبیِ متأثر (fire-and-forget).
-        app(\Modules\Site\Support\FrontendRevalidator::class)
-            ->purgePaths(['/services/'.$device->slug.'/'.$brand->slug]);
+        // پاک‌سازیِ کشِ صفحاتِ متأثر (fire-and-forget): خودِ صفحهٔ ترکیبی +
+        // صفحهٔ دستگاه/برند (لیستِ برندها/دستگاه‌ها از همین combo می‌آید) +
+        // خانه و /services (که «فعالیت زنده» هم آن‌ها را نشان می‌دهد).
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgePaths([
+            '/services/'.$device->slug.'/'.$brand->slug,
+            '/devices/'.$device->slug,
+            '/brands/'.$brand->slug,
+            '/services',
+            '/',
+        ]);
 
         return redirect()
             ->route('crm.combo-manager.index', ['device' => $device->id])
