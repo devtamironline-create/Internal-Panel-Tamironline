@@ -38,6 +38,7 @@ class SiteServiceProvider extends ServiceProvider
             $this->commands([
                 \Modules\Site\Console\Commands\ImportArticlesFromWp::class,
                 \Modules\Site\Console\Commands\BlogTaxonomyReport::class,
+                \Modules\Site\Console\Commands\BlogFilterCheck::class,
             ]);
         }
     }

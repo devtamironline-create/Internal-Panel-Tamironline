@@ -83,12 +83,16 @@ class DeviceBrandPage extends Model
     /**
      * تضمین وجود رکورد برای یک pair (device, brand). اگر قبلاً ساخته
      * شده باشد دست‌نخورده برمی‌گردد — overrideهای ادمین نباید پاک شوند.
+     *
+     * پیش‌فرض is_active=false: ترکیب فقط «ساخته» می‌شود تا در combo-manager قابل
+     * فعال‌سازی باشد، ولی تا وقتی ادمین صریحاً فعالش نکند روی سایت/فعالیت زنده
+     * نمایش داده نمی‌شود (جلوگیری از ترکیب‌های بی‌ربطِ خودکار).
      */
     public static function ensureForPair(int $deviceId, int $brandId): self
     {
         return static::firstOrCreate(
             ['device_id' => $deviceId, 'brand_id' => $brandId],
-            ['is_active' => true]
+            ['is_active' => false]
         );
     }
 }
