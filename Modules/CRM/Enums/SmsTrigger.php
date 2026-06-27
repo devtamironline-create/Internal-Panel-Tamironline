@@ -54,7 +54,10 @@ enum SmsTrigger: string
             // مراجعه» را دریافت می‌کند — نه هنگام تخصیص اولیه.
             OrderStatus::Coordinated => self::OrderAssigned,
             OrderStatus::Open => self::OrderInProgress,
-            OrderStatus::Completed => self::OrderCompleted,
+            // تکمیل عمداً اینجا نیست: موقعِ تکمیل، فاکتور ساخته می‌شود و
+            // پیامکِ «صدور فاکتور (مشتری)» با لینکِ امنِ public_token می‌رود.
+            // اگر order_completed هم اینجا برگردد، مشتری پیامکِ تکراری
+            // (و با لینکِ ناامن/قابل‌حدس) می‌گیرد. پس فقط همان یک پیامک.
             OrderStatus::Cancelled => self::OrderCancelled,
             default => null,
         };
