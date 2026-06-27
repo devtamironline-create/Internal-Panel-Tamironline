@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
@@ -14,9 +13,9 @@ use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
+use Modules\CRM\Models\Payment;
 use Modules\CRM\Models\TrainingCategory;
 use Modules\CRM\Models\TrainingVideo;
-use Modules\CRM\Models\Payment;
 use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
@@ -33,8 +32,7 @@ class DashboardController extends Controller
     public function __construct(
         protected OrderSmsNotifier $smsNotifier,
         protected InvoiceService $invoiceService,
-    ) {
-    }
+    ) {}
 
     public function index()
     {
@@ -92,6 +90,7 @@ class DashboardController extends Controller
             if ($created->lt($calendarStart) || $created->gt($calendarEnd)) {
                 return $todayKey; // قدیمی یا خیلی دور — به امروز bucket کن
             }
+
             return $created->toDateString();
         });
 
@@ -117,11 +116,11 @@ class DashboardController extends Controller
             }
 
             $calendarDays[] = [
-                'date'    => $d,
-                'count'   => $dayOrders->count() + $dayUnscheduled->count(),
+                'date' => $d,
+                'count' => $dayOrders->count() + $dayUnscheduled->count(),
                 'scheduledCount' => $dayOrders->count(),
                 'unscheduledCount' => $dayUnscheduled->count(),
-                'slots'   => [
+                'slots' => [
                     ['key' => 1, 'label' => $slots[1]['label'], 'orders' => $slotBuckets[1]],
                     ['key' => 2, 'label' => $slots[2]['label'], 'orders' => $slotBuckets[2]],
                     ['key' => 3, 'label' => $slots[3]['label'], 'orders' => $slotBuckets[3]],
@@ -171,7 +170,7 @@ class DashboardController extends Controller
             $d = $start->copy()->addDays($i);
             $key = $d->toDateString();
             $days[] = [
-                'date'   => $d,
+                'date' => $d,
                 'orders' => $byDay->get($key, collect()),
             ];
         }
@@ -308,11 +307,11 @@ class DashboardController extends Controller
         if ($description !== '') {
             $updates += match ($newStatus) {
                 OrderStatus::Coordinated => ['description_tech' => $description],
-                OrderStatus::Suspended   => ['description_tech1' => $description],
-                OrderStatus::Open        => ['description_tech2' => $description],
-                OrderStatus::Declined    => ['cancel_reason' => $description],
-                OrderStatus::Transit     => ['return_description' => $description],
-                default                  => [],
+                OrderStatus::Suspended => ['description_tech1' => $description],
+                OrderStatus::Open => ['description_tech2' => $description],
+                OrderStatus::Declined => ['cancel_reason' => $description],
+                OrderStatus::Transit => ['return_description' => $description],
+                default => [],
             };
         }
 
@@ -348,14 +347,14 @@ class DashboardController extends Controller
             // قطعات: ورودی به‌صورت آرایه‌ای از {title,buy_price,customer_price}
             // به سه آرایهٔ موازی WP تبدیل می‌شود.
             $pieces = collect($validated['pieces'] ?? [])
-                ->filter(fn($p) => filled($p['title'] ?? null))
+                ->filter(fn ($p) => filled($p['title'] ?? null))
                 ->values();
 
             if ($pieces->isNotEmpty()) {
                 $updates['piece_list'] = $pieces->pluck('title')->all();
-                $updates['buy_price_list'] = $pieces->map(fn($p) => (int) ($p['buy_price'] ?? 0))->all();
-                $updates['customer_price_list'] = $pieces->map(fn($p) => (int) ($p['customer_price'] ?? 0))->all();
-                $updates['cost_price'] = (int) $pieces->sum(fn($p) => (int) ($p['buy_price'] ?? 0));
+                $updates['buy_price_list'] = $pieces->map(fn ($p) => (int) ($p['buy_price'] ?? 0))->all();
+                $updates['customer_price_list'] = $pieces->map(fn ($p) => (int) ($p['customer_price'] ?? 0))->all();
+                $updates['cost_price'] = (int) $pieces->sum(fn ($p) => (int) ($p['buy_price'] ?? 0));
             } else {
                 $updates['cost_price'] = 0;
             }
@@ -373,6 +372,17 @@ class DashboardController extends Controller
             // به ورودی کاربر اعتماد کنیم چون مبنای محاسبه سهم تکنسین است.
             $effectivePriceCustomer = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
             $effectiveCostPrice = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+
+            // قاعده: جمع کل مبلغ فاکتور نباید کمتر از جمع هزینهٔ قطعات باشد.
+            // بدون این چک، max(0, …) پایین مقدار منفی را به صفر کلمپ می‌کرد و
+            // تکنسین می‌توانست فاکتوری زیرِ هزینهٔ قطعاتِ واردشده ببندد.
+            // پیش‌نویس و سفارش‌های برگشتی (خدمات رایگانِ تأییدشده) مستثنا هستند.
+            if (! $isDraft && ! $isReturned && $effectivePriceCustomer < $effectiveCostPrice) {
+                return back()->withInput()->withErrors([
+                    'price_customer' => 'جمع کل مبلغ فاکتور ('.number_format($effectivePriceCustomer).' تومان) نمی‌تواند کمتر از جمع هزینهٔ قطعات ('.number_format($effectiveCostPrice).' تومان) باشد.',
+                ]);
+            }
+
             $updates['total_invoice'] = max(0, $effectivePriceCustomer - $effectiveCostPrice);
 
             if (filled($validated['invoice_descripotion'] ?? null)) {
@@ -427,7 +437,7 @@ class DashboardController extends Controller
 
         return redirect()
             ->route('tech.orders.show', $order)
-            ->with('success', 'وضعیت سفارش به «' . $newStatus->label() . '» تغییر کرد.');
+            ->with('success', 'وضعیت سفارش به «'.$newStatus->label().'» تغییر کرد.');
     }
 
     /**
@@ -513,10 +523,11 @@ class DashboardController extends Controller
                 'order_id' => $order->id,
                 'from_status' => $order->status->value,
                 'to_status' => $order->status->value,
-                'note' => 'پاک کردن زمان مراجعه' . ($previous ? ' (قبلاً: ' . $previous . ')' : ''),
+                'note' => 'پاک کردن زمان مراجعه'.($previous ? ' (قبلاً: '.$previous.')' : ''),
                 'changed_by' => $tech->user_id,
                 'created_at' => now(),
             ]);
+
             return back()->with('success', 'زمان مراجعه پاک شد.');
         }
 
@@ -531,7 +542,7 @@ class DashboardController extends Controller
         ]);
 
         $slot = \Modules\CRM\Livewire\OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
-        $datetime = $validated['visit_date'] . ' ' . $slot['start'];
+        $datetime = $validated['visit_date'].' '.$slot['start'];
 
         // وضعیت قبلی را از DB تازه می‌خوانیم — جلوگیری از خواندن stale.
         $order->refresh();
@@ -551,8 +562,8 @@ class DashboardController extends Controller
             'from_status' => $previousStatus->value,
             'to_status' => ($autoCoordinated ? OrderStatus::Coordinated : $previousStatus)->value,
             'note' => $autoCoordinated
-                ? 'هماهنگی با مشتری: ' . $jalaliDate . ' — ' . $slot['label']
-                : 'به‌روزرسانی زمان مراجعه: ' . $jalaliDate . ' — ' . $slot['label'],
+                ? 'هماهنگی با مشتری: '.$jalaliDate.' — '.$slot['label']
+                : 'به‌روزرسانی زمان مراجعه: '.$jalaliDate.' — '.$slot['label'],
             'changed_by' => $tech->user_id,
             'created_at' => now(),
         ]);
@@ -616,10 +627,10 @@ class DashboardController extends Controller
         // حذف می‌شوند تا تکنسین حتی رادیو را نبیند. middleware هم
         // اگر کسی از API مستقیم زد، آن را بلاک می‌کند.
         if (\Modules\CRM\Models\CrmSetting::get('tech_panel_readonly') === '1') {
-            $base = array_filter($base, fn(OrderStatus $s) => ! $s->isFinal());
+            $base = array_filter($base, fn (OrderStatus $s) => ! $s->isFinal());
         }
 
-        return array_values(array_filter($base, fn(OrderStatus $s) => $s !== $order->status));
+        return array_values(array_filter($base, fn (OrderStatus $s) => $s !== $order->status));
     }
 
     protected function ensureOwnership(Order $order, $tech): void
@@ -645,9 +656,9 @@ class DashboardController extends Controller
         // مجموع‌های دسته‌بندی‌شده روی کل تاریخچه — مستقل از فیلتر فعلی.
         $stats = [
             'commission_sum' => (int) (clone $base)->where('type', WalletTxType::Commission->value)->sum('amount'),
-            'reward_sum'     => (int) (clone $base)->where('type', WalletTxType::Reward->value)->sum('amount'),
-            'penalty_sum'    => (int) (clone $base)->where('type', WalletTxType::Penalty->value)->sum('amount'),
-            'charge_sum'     => (int) (clone $base)->where('type', WalletTxType::WalletCharge->value)->sum('amount'),
+            'reward_sum' => (int) (clone $base)->where('type', WalletTxType::Reward->value)->sum('amount'),
+            'penalty_sum' => (int) (clone $base)->where('type', WalletTxType::Penalty->value)->sum('amount'),
+            'charge_sum' => (int) (clone $base)->where('type', WalletTxType::WalletCharge->value)->sum('amount'),
         ];
 
         $query = (clone $base)->with(['order', 'invoice']);
@@ -679,9 +690,9 @@ class DashboardController extends Controller
 
         // آمار کلی روی همه فاکتورهای تکنسین (مستقل از فیلتر).
         $stats = [
-            'count'         => (int) (clone $base)->count(),
-            'total_sum'     => (int) (clone $base)->sum('total_amount'),
-            'tech_share'    => (int) (clone $base)->sum('tech_share'),
+            'count' => (int) (clone $base)->count(),
+            'total_sum' => (int) (clone $base)->sum('total_amount'),
+            'tech_share' => (int) (clone $base)->sum('tech_share'),
             'company_share' => (int) (clone $base)->sum('company_share'),
         ];
 
@@ -724,7 +735,7 @@ class DashboardController extends Controller
         $minAmount = $isTest ? 10000 : 500000;
 
         $validated = $request->validate([
-            'amount' => ['required', 'integer', 'min:' . $minAmount, 'max:50000000'],
+            'amount' => ['required', 'integer', 'min:'.$minAmount, 'max:50000000'],
         ], [
             'amount.required' => 'مبلغ الزامی است.',
             'amount.min' => $isTest ? 'حداقل مبلغ تست ۱۰٬۰۰۰ تومان است.' : 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
@@ -733,7 +744,7 @@ class DashboardController extends Controller
 
         $amount = (int) $validated['amount'];
         $callbackUrl = route('crm.payment.callback');
-        $techName = trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) ?: ('تکنسین #' . $tech->id);
+        $techName = trim($tech->firstname_tech ?: ($tech->first_name.' '.($tech->last_name ?? ''))) ?: ('تکنسین #'.$tech->id);
         $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
 
         // ─── درگاه ملت ─────────────────────────────────────────────
@@ -742,7 +753,7 @@ class DashboardController extends Controller
                 return back()->with('error', 'درگاه ملت توسط ادمین تنظیم نشده است.');
             }
             // orderId عددی یکتا برای ملت (saleOrderId)
-            $orderId = (int) (now()->format('ymdHis') . random_int(10, 99));
+            $orderId = (int) (now()->format('ymdHis').random_int(10, 99));
 
             $response = $mellat->request(amount: $amount, callbackUrl: $callbackUrl, orderId: $orderId);
 
@@ -774,13 +785,13 @@ class DashboardController extends Controller
             return back()->with('error', 'درگاه پرداخت توسط ادمین تنظیم نشده است.');
         }
 
-        $orderId = 'TWC-' . $tech->id . '-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+        $orderId = 'TWC-'.$tech->id.'-'.now()->format('YmdHis').'-'.random_int(1000, 9999);
         $response = $zibal->request(
             amount: $amount,
             callbackUrl: $callbackUrl,
             orderId: $orderId,
             mobile: $tech->mobile,
-            description: 'شارژ کیف‌پول — ' . $techName,
+            description: 'شارژ کیف‌پول — '.$techName,
         );
 
         $payment = Payment::create([
@@ -830,10 +841,10 @@ class DashboardController extends Controller
         $uncategorizedCount = TrainingVideo::active()->whereNull('category_id')->count();
 
         return view('crm::tech-panel.training', [
-            'technician'        => $tech,
-            'categories'        => $categories,
+            'technician' => $tech,
+            'categories' => $categories,
             'uncategorizedCount' => $uncategorizedCount,
-            'progress'          => $tech->trainingProgress(),
+            'progress' => $tech->trainingProgress(),
         ]);
     }
 
@@ -850,8 +861,8 @@ class DashboardController extends Controller
 
         return view('crm::tech-panel.training-category', [
             'technician' => $tech,
-            'category'   => $category,
-            'videos'     => $videos,
+            'category' => $category,
+            'videos' => $videos,
         ]);
     }
 
@@ -862,10 +873,10 @@ class DashboardController extends Controller
         $videos = TrainingVideo::active()->whereNull('category_id')->ordered()->get();
 
         return view('crm::tech-panel.training-category', [
-            'technician'  => $tech,
-            'category'    => (object) ['name' => 'سایر', 'description' => null],
-            'videos'      => $videos,
-            'isVirtual'   => true,
+            'technician' => $tech,
+            'category' => (object) ['name' => 'سایر', 'description' => null],
+            'videos' => $videos,
+            'isVirtual' => true,
         ]);
     }
 
@@ -883,10 +894,10 @@ class DashboardController extends Controller
         $alreadyWatched = $tech->watchedVideos()->where('video_id', $video->id)->exists();
 
         return view('crm::tech-panel.training-show', [
-            'technician'     => $tech,
-            'video'          => $video,
+            'technician' => $tech,
+            'video' => $video,
             'alreadyWatched' => $alreadyWatched,
-            'progress'       => $tech->trainingProgress(),
+            'progress' => $tech->trainingProgress(),
         ]);
     }
 
@@ -910,7 +921,7 @@ class DashboardController extends Controller
         }
 
         return redirect()->route('tech.training')
-            ->with('success', 'ویدیو ثبت شد — ' . $progress['remaining'] . ' ویدیو باقی مانده.');
+            ->with('success', 'ویدیو ثبت شد — '.$progress['remaining'].' ویدیو باقی مانده.');
     }
 
     /**
