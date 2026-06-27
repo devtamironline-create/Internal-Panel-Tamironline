@@ -22,10 +22,11 @@ final class FaqSectionBuilder
     /**
      * @param  array<int, object|null>  $owners  مدل‌هایی با faqCategories() و faqs()
      * @param  array<int, array<string, mixed>>  $legacy  مثل ستونِ JSON قدیمیِ device->faq
-     * @param  array<int, array<string, mixed>>  $templateItems  FAQ الگوی سراسری
+     * @param  array<int, array<string, mixed>>  $templateItems  FAQ الگوی سراسری (تخت)
+     * @param  array<int, array<string, mixed>>  $templateCategories  FAQ الگو گروه‌بندی‌شده (تب)
      * @return array{items: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
-    public static function build(array $owners, array $legacy = [], array $templateItems = []): array
+    public static function build(array $owners, array $legacy = [], array $templateItems = [], array $templateCategories = []): array
     {
         foreach ($owners as $owner) {
             if (! $owner) {
@@ -41,7 +42,12 @@ final class FaqSectionBuilder
             return ['items' => array_values($legacy), 'categories' => []];
         }
 
-        return ['items' => array_values($templateItems), 'categories' => []];
+        // fallback به الگوی سراسری — هم لیستِ تخت، هم تب‌ها (دسته‌بندی‌هایی که
+        // در page-content ثبت شده‌اند) تا در فرانت tab نمایش داده شوند.
+        return [
+            'items' => array_values($templateItems),
+            'categories' => array_values($templateCategories),
+        ];
     }
 
     /**
