@@ -11,6 +11,7 @@ use Modules\CRM\Console\Commands\ApplyFinalWalletBalances;
 use Modules\CRM\Console\Commands\ArchiveStaleTicketsCommand;
 use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\BackupWalletData;
+use Modules\CRM\Console\Commands\CombosAudit;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
@@ -133,6 +134,7 @@ class CrmServiceProvider extends ServiceProvider
                 PullNewOrdersFromWp::class,
                 ImportTermContentFromWp::class,
                 RepairContentImages::class,
+                CombosAudit::class,
                 ImportDeviceThumbnailsFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,
