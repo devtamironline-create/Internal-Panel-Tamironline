@@ -191,6 +191,7 @@ class InvoiceController extends Controller
             'amount' => (string) (int) $invoice->total_amount,
             'invoice_code' => (string) $invoice->invoice_code,
             'receipt_url' => $invoice->publicUrl(),
+            'public_token' => (string) $invoice->public_token,
         ];
         $tokens = $template->renderTokens($vars);
 

@@ -31,11 +31,24 @@ class SmsTemplateController extends Controller
             'title' => 'required|string|max:255',
             'body' => 'required|string|max:2000',
             'is_active' => 'nullable|boolean',
+            // نامِ تمپلیتِ تأییدشدهٔ کاوه‌نگار (همان که در panel.kavenegar.com ثبت شده)
+            'kavenegar_template' => 'nullable|string|max:255',
+            // مَپِ توکن‌ها → متغیرها (مثل {customer_name} یا {public_token})
+            'token' => 'nullable|string|max:255',
+            'token2' => 'nullable|string|max:255',
+            'token3' => 'nullable|string|max:255',
         ]);
 
-        $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
-
-        $template->update($validated);
+        $template->title = $validated['title'];
+        $template->body = $validated['body'];
+        $template->is_active = (bool) ($request->input('is_active') ?? false);
+        $template->kavenegar_template = $validated['kavenegar_template'] ?? null;
+        $template->token_vars = [
+            'token' => $validated['token'] ?? '',
+            'token2' => $validated['token2'] ?? '',
+            'token3' => $validated['token3'] ?? '',
+        ];
+        $template->save();
 
         return redirect()->route('crm.sms.templates.index')->with('success', 'قالب ذخیره شد.');
     }
@@ -73,6 +86,8 @@ class SmsTemplateController extends Controller
             '{status}' => 'وضعیت فعلی سفارش',
             '{shop_name}' => 'نام فروشگاه (از تنظیمات)',
             '{visit_date}' => 'زمان مراجعه',
+            '{amount}' => 'مبلغ فاکتور (تومان)',
+            '{public_token}' => 'توکنِ امنِ فاکتور (برای لینکِ اپ/رسید)',
         ];
     }
 }

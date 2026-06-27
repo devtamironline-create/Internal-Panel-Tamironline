@@ -167,6 +167,10 @@ class InvoiceService
                 'amount' => (string) (int) $invoice->total_amount,
                 'invoice_code' => (string) $invoice->invoice_code,
                 'receipt_url' => $invoice->publicUrl(),
+                // توکنِ امنِ غیرقابل‌حدس — فقط همین در لینکِ پیامک می‌نشیند
+                // (دامنه/مسیر داخل تمپلیتِ تأییدشدهٔ کاوه‌نگار است). با مَپ‌کردنِ
+                // یکی از توکن‌ها به {public_token} لینک امن می‌شود.
+                'public_token' => (string) $invoice->public_token,
             ];
             $tokens = $template->renderTokens($vars);
 

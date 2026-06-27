@@ -30,6 +30,45 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">می‌توانید از متغیرهای ستون راست استفاده کنید — موقع ارسال جایگزین می‌شوند.</p>
                 </div>
 
+                @php($tv = $template->token_vars ?: [])
+                <div class="mb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نامِ تمپلیتِ کاوه‌نگار</label>
+                    <input type="text" name="kavenegar_template" dir="ltr"
+                           value="{{ old('kavenegar_template', $template->kavenegar_template) }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-6">
+                        دقیقاً همان نامِ تمپلیتِ <b>تأییدشده</b> در <code dir="ltr">panel.kavenegar.com</code>.
+                        متنِ پیامک (و دامنهٔ لینک) داخلِ همان تمپلیت قفل است؛ اینجا فقط نام و مقدارِ توکن‌ها تعیین می‌شود.
+                    </p>
+                    @error('kavenegar_template')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">token</label>
+                        <input type="text" name="token" dir="ltr" value="{{ old('token', $tv['token'] ?? '') }}"
+                               placeholder="{customer_name}"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">token2</label>
+                        <input type="text" name="token2" dir="ltr" value="{{ old('token2', $tv['token2'] ?? '') }}"
+                               placeholder="{amount}"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">token3</label>
+                        <input type="text" name="token3" dir="ltr" value="{{ old('token3', $tv['token3'] ?? '') }}"
+                               placeholder="{public_token}"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                    </div>
+                    <p class="md:col-span-3 text-xs text-gray-500 dark:text-gray-400 leading-6">
+                        هر توکن را به یک متغیر (ستونِ راست) مَپ کنید. برای لینکِ <b>امن</b>ِ فاکتور،
+                        توکنی که در تمپلیتِ کاوه‌نگار جای لینک است را به <code dir="ltr">{public_token}</code> مَپ کنید
+                        (نه <code dir="ltr">{invoice_code}</code> که قابل‌حدس است).
+                    </p>
+                </div>
+
                 <div class="mb-4">
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $template->is_active))

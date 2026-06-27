@@ -573,6 +573,11 @@ class WpPushService
         $resp = $this->sendTo('financial-upsert', [
             'wp_id'  => $invoice->wp_id ?: 0,
             'fields' => $fields,
+            // پیامکِ «صدور فاکتور» به مشتری حالا توسطِ پنلِ لاراول (با لینکِ امنِ
+            // اپ) ارسال می‌شود. این فلگ به افزونهٔ WP می‌گوید پیامکِ تکراریِ خود
+            // را نفرستد. (افزونهٔ WP باید این کلید را بخواند و در صورتِ '1' از
+            // ارسالِ پیامکِ مشتری صرف‌نظر کند.)
+            'suppress_customer_sms' => '1',
         ], ['entity_type' => 'invoice', 'entity_id' => $invoice->id]);
 
         if ($resp && ! $invoice->wp_id && ! empty($resp['wp_id'])) {
