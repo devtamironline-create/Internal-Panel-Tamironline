@@ -99,6 +99,61 @@ final class CatalogMerger
     }
 
     /**
+     * استخراج FAQِ template به‌صورتِ گروه‌بندی‌شده (تب‌ها) — تا دسته‌بندی‌هایی که
+     * در «page-content» ثبت شده‌اند در فرانت به‌شکلِ tab نمایش داده شوند.
+     * هر دستهٔ category_ids_items یک tab؛ سوالاتِ منفرد (faq_ids_items) یک تبِ
+     * «عمومی». اگر هیچ دسته‌ای نباشد، آرایهٔ خالی برمی‌گردد.
+     *
+     * خروجی هم‌شکلِ FaqSectionBuilder: [{id, name, slug, items:[{id,question,answer}]}, ...].
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function templateFaqCategories(array $sections): array
+    {
+        $faq = $sections['faq'] ?? [];
+        $out = [];
+
+        foreach ((array) ($faq['category_ids_items'] ?? []) as $cat) {
+            $items = [];
+            foreach ((array) ($cat['items'] ?? []) as $item) {
+                $items[] = [
+                    'id' => $item['id'] ?? null,
+                    'question' => $item['question'] ?? null,
+                    'answer' => $item['answer'] ?? null,
+                ];
+            }
+            if ($items === []) {
+                continue;
+            }
+            $out[] = [
+                'id' => isset($cat['id']) ? (int) $cat['id'] : null,
+                'name' => $cat['label'] ?? ($cat['name'] ?? null),
+                'slug' => $cat['slug'] ?? null,
+                'items' => $items,
+            ];
+        }
+
+        $general = [];
+        foreach ((array) ($faq['faq_ids_items'] ?? []) as $item) {
+            $general[] = [
+                'id' => $item['id'] ?? null,
+                'question' => $item['question'] ?? null,
+                'answer' => $item['answer'] ?? null,
+            ];
+        }
+        if ($general !== []) {
+            $out[] = [
+                'id' => null,
+                'name' => 'عمومی',
+                'slug' => 'general',
+                'items' => $general,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * استخراج آرایه‌ی stats از template (section.stats.items).
      */
     public static function templateStats(array $sections): array

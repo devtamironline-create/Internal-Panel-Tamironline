@@ -270,6 +270,7 @@ class CatalogDeviceBrandController extends Controller
             [$page, $device, $brand],
             is_array($device->faq) ? $device->faq : [],
             CatalogMerger::templateFaq($template),
+            CatalogMerger::templateFaqCategories($template),
         );
     }
 

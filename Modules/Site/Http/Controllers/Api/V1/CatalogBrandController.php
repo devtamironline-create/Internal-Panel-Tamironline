@@ -264,6 +264,7 @@ class CatalogBrandController extends Controller
             [$brand],
             is_array($brand->faq) ? $brand->faq : [],
             CatalogMerger::templateFaq($template),
+            CatalogMerger::templateFaqCategories($template),
         );
     }
 
