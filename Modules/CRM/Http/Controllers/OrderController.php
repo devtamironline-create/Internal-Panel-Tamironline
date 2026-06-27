@@ -992,8 +992,19 @@ class OrderController extends Controller
             // total_invoice = max(0, price_customer - cost_price) — هم‌سو با tech
             $effPC = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
             $effCP = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+            $isDraft = (bool) ($validated['save_as_draft'] ?? false);
+
+            // قاعده: جمع کل صورت‌حساب نباید کمتر از هزینهٔ قطعات باشد (مگر پیش‌نویس).
+            // خصوصاً وقتی هزینهٔ قطعات وارد شده ولی جمع کل صفر/خالی است، نباید
+            // بتوان سفارش را تکمیل کرد (وگرنه max(0,…) مانده را صفر می‌کند).
+            if (! $isDraft && $effPC < $effCP) {
+                return back()->withInput()->withErrors([
+                    'price_customer' => 'بدون وارد کردن «جمع کل صورت‌حساب» امکان تکمیل سفارش نیست؛ این مبلغ نباید کمتر از هزینهٔ قطعات ('.number_format($effCP).' تومان) باشد.',
+                ]);
+            }
+
             $updates['total_invoice'] = max(0, $effPC - $effCP);
-            $updates['save_as_draft'] = (bool) ($validated['save_as_draft'] ?? false);
+            $updates['save_as_draft'] = $isDraft;
 
             if ($request->hasFile('device_img1')) {
                 $path = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');

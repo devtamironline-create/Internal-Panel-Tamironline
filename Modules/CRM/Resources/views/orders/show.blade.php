@@ -1143,8 +1143,15 @@
                       enctype="multipart/form-data"
                       x-data="{
                           status: '',
+                          priceCustomer: {{ (int) old('price_customer', $order->price_customer ?? 0) }},
+                          costPrice: {{ (int) old('cost_price', $order->cost_price ?? 0) }},
+                          saveAsDraft: false,
                           isCompleted() { return this.status === 'completed'; },
                           isCancelled() { return this.status === 'cancelled' || this.status === 'declined'; },
+                          get invoiceBelowParts() {
+                              return this.isCompleted() && !this.saveAsDraft
+                                  && (Number(this.priceCustomer)||0) < (Number(this.costPrice)||0);
+                          },
                       }">
                     @csrf
                     <select name="status" required x-model="status"
@@ -1173,12 +1180,15 @@
                             <div>
                                 <label class="block text-[11px] text-gray-600 mb-1">جمع کل صورت‌حساب (تومان)</label>
                                 <input type="number" name="price_customer" min="0"
+                                       x-model.number="priceCustomer"
                                        value="{{ old('price_customer', $order->price_customer ?? '') }}"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
+                                @error('price_customer')<p class="text-[11px] text-rose-600 mt-1 font-bold">{{ $message }}</p>@enderror
                             </div>
                             <div>
                                 <label class="block text-[11px] text-gray-600 mb-1">هزینه قطعات (تومان)</label>
                                 <input type="number" name="cost_price" min="0"
+                                       x-model.number="costPrice"
                                        value="{{ old('cost_price', $order->cost_price ?? '') }}"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" dir="ltr">
                             </div>
@@ -1217,12 +1227,19 @@
                         </div>
 
                         <label class="inline-flex items-center gap-2 text-xs text-gray-700">
-                            <input type="checkbox" name="save_as_draft" value="1" class="w-4 h-4">
+                            <input type="checkbox" name="save_as_draft" value="1" x-model="saveAsDraft" class="w-4 h-4">
                             <span>پیش‌نویس (فاکتور صادر نمی‌شود — فقط ذخیره برای ویرایش بعدی)</span>
                         </label>
+
+                        {{-- هشدار: جمع کل صورت‌حساب کمتر از هزینهٔ قطعات → تکمیل مسدود --}}
+                        <div x-show="invoiceBelowParts" x-cloak
+                             class="bg-rose-50 border border-rose-200 rounded px-3 py-2 text-[11px] text-rose-700 font-bold leading-6">
+                            ⚠️ «جمع کل صورت‌حساب» نمی‌تواند کمتر از «هزینهٔ قطعات» (<span x-text="Number(costPrice||0).toLocaleString('fa-IR')"></span> تومان) باشد. بدون وارد کردن مبلغ کل، امکان تکمیل سفارش نیست.
+                        </div>
                     </div>
 
-                    <button class="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-bold">ثبت تغییر</button>
+                    <button x-bind:disabled="invoiceBelowParts"
+                            class="w-full px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">ثبت تغییر</button>
                 </form>
                 @endif
             </div>
