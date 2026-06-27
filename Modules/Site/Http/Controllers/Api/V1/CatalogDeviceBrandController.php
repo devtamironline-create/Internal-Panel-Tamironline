@@ -18,8 +18,8 @@ use Modules\Site\Support\MediaUrl;
  * /devices/dishwasher/samsung. ساختار section-based با fallback
  *  per-pair → per-device → per-brand → template.
  *
- * سکشن brand_other_devices لیست تمام دستگاه‌های پشتیبانی‌شده توسط
- * این برند را برمی‌گرداند (برای کارُسل brand_devices در فرانت).
+ * سکشن brand_other_devices دستگاه‌های کمبو-فعالِ این برند (combo-manager)
+ * را برمی‌گرداند (برای کارُسل brand_devices در فرانت).
  */
 class CatalogDeviceBrandController extends Controller
 {
@@ -34,23 +34,16 @@ class CatalogDeviceBrandController extends Controller
             return response()->json(['message' => 'Not Found'], 404);
         }
 
-        // منبعِ یگانه‌ی رابطه‌ی دستگاه↔برند: صفحه‌ی ترکیبی (DeviceBrandPage).
-        //  • اگر رکوردی برای این جفت هست، is_active آن تعیین‌کننده است (combo-manager).
-        //  • اگر اصلاً رکوردی نیست، به چکِ legacyِ pivot برمی‌گردیم (سازگاریِ داده‌ی قدیمی).
+        // منبعِ یگانه‌ی رابطه‌ی دستگاه↔برند: صفحه‌ی ترکیبیِ فعال (combo-manager).
+        // بدونِ fallbackِ legacyِ pivot — اگر صفحه‌ی ترکیبیِ فعالی برای این جفت
+        // نباشد، صفحه وجود ندارد (۴۰۴). این منبع را با combo-manager یکی می‌کند.
         $page = DeviceBrandPage::query()
             ->where('device_id', $device->id)
             ->where('brand_id', $brand->id)
             ->first();
 
-        if ($page) {
-            if (! $page->is_active) {
-                return response()->json(['message' => 'این صفحه‌ی ترکیبی غیرفعال است.'], 404);
-            }
-        } else {
-            $supports = $brand->devices()->where('crm_devices.id', $device->id)->exists();
-            if (! $supports) {
-                return response()->json(['message' => 'این برند این دستگاه را پشتیبانی نمی‌کند.'], 404);
-            }
+        if (! $page || ! $page->is_active) {
+            return response()->json(['message' => 'این صفحه‌ی ترکیبی فعال نیست.'], 404);
         }
 
         // Template با placeholder substitution — اولویت با device_brand
@@ -279,12 +272,24 @@ class CatalogDeviceBrandController extends Controller
      */
     private function buildBrandOtherDevices(Brand $brand): array
     {
-        $devices = $brand->devices()
-            ->where('crm_devices.is_active', true)
-            ->orderByDesc('crm_devices.is_featured')
-            ->orderBy('crm_devices.sort_order')
-            ->orderBy('crm_devices.name')
-            ->get(['crm_devices.id', 'crm_devices.name', 'crm_devices.slug', 'crm_devices.short_name', 'crm_devices.icon', 'crm_devices.thumbnail', 'crm_devices.tone']);
+        // منبعِ یگانه = combo-manager (DeviceBrandPageِ فعالِ این برند). بدونِ
+        // pivotِ legacy، تا با بقیه‌ی سایت هماهنگ باشد.
+        $activeDeviceIds = DeviceBrandPage::query()
+            ->where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->pluck('device_id')
+            ->all();
+        if (empty($activeDeviceIds)) {
+            return [];
+        }
+
+        $devices = Device::query()
+            ->whereIn('id', $activeDeviceIds)
+            ->where('is_active', true)
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'short_name', 'icon', 'thumbnail', 'tone']);
 
         return $devices->map(fn ($d) => [
             'id' => (int) $d->id,

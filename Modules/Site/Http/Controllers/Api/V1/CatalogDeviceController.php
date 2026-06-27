@@ -326,8 +326,7 @@ class CatalogDeviceController extends Controller
 
     /**
      * منبعِ یگانه‌ی برندهای مرتبط = صفحات ترکیبیِ فعال (combo-manager).
-     * اگر دستگاه هیچ صفحه‌ی ترکیبی‌ای نداشته باشد → fallbackِ legacy
-     * (pivot crm_device_brands، سپس همه‌ی برندهای فعال).
+     * هیچ fallbackِ legacy وجود ندارد؛ اگر کمبوی فعالی نباشد، خالی برمی‌گردد.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -338,31 +337,19 @@ class CatalogDeviceController extends Controller
             ->where('device_id', $device->id)
             ->pluck('is_active', 'brand_id');
 
-        if ($comboRows->isNotEmpty()) {
-            // combo-manager این دستگاه را مدیریت می‌کند → فقط برندهای combo-فعال.
-            $activeBrandIds = $comboRows->filter()->keys()->all();
-            if (empty($activeBrandIds)) {
-                return [];
-            }
-            $picked = Brand::query()
-                ->whereIn('id', $activeBrandIds)
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name', 'slug', 'logo']);
-        } else {
-            // legacy: pivot per-device، سپس همه‌ی برندهای فعال.
-            $picked = $device->brands()
-                ->where('crm_brands.is_active', true)
-                ->get(['crm_brands.id', 'crm_brands.name', 'crm_brands.slug', 'crm_brands.logo']);
-            if ($picked->isEmpty()) {
-                $picked = Brand::query()
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'slug', 'logo']);
-            }
+        // منبعِ یگانه = combo-manager (DeviceBrandPageِ فعال). بدونِ fallbackِ
+        // legacy (pivot یا «همه‌ی برندها») تا منبعِ سایت با combo-manager یکی
+        // باشد و تداخل پیش نیاید. اگر هیچ کمبوی فعالی نباشد → خالی.
+        $activeBrandIds = $comboRows->filter()->keys()->all();
+        if (empty($activeBrandIds)) {
+            return [];
         }
+        $picked = Brand::query()
+            ->whereIn('id', $activeBrandIds)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'logo']);
 
         return $picked->map(fn ($b) => [
             'id' => (int) $b->id,

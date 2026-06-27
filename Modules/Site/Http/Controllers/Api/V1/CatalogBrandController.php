@@ -270,8 +270,7 @@ class CatalogBrandController extends Controller
 
     /**
      * منبعِ یگانه‌ی دستگاه‌های مرتبط = صفحات ترکیبیِ فعال (combo-manager).
-     * اگر برند هیچ صفحه‌ی ترکیبی‌ای نداشته باشد → fallbackِ legacy
-     * (pivot crm_device_brands، سپس همه‌ی دستگاه‌های فعال).
+     * هیچ fallbackِ legacy وجود ندارد؛ اگر کمبوی فعالی نباشد، خالی برمی‌گردد.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -282,33 +281,20 @@ class CatalogBrandController extends Controller
             ->where('brand_id', $brand->id)
             ->pluck('is_active', 'device_id');
 
-        if ($comboRows->isNotEmpty()) {
-            // combo-manager این برند را مدیریت می‌کند → فقط دستگاه‌های combo-فعال.
-            $activeDeviceIds = $comboRows->filter()->keys()->all();
-            if (empty($activeDeviceIds)) {
-                return [];
-            }
-            $picked = Device::query()
-                ->whereIn('id', $activeDeviceIds)
-                ->where('is_active', true)
-                ->orderByDesc('is_featured')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
-        } else {
-            // legacy: pivot per-brand، سپس همه‌ی دستگاه‌های فعال.
-            $picked = $brand->devices()
-                ->where('crm_devices.is_active', true)
-                ->get(['crm_devices.id', 'crm_devices.name', 'crm_devices.slug', 'crm_devices.icon', 'crm_devices.thumbnail', 'crm_devices.tone']);
-            if ($picked->isEmpty()) {
-                $picked = Device::query()
-                    ->where('is_active', true)
-                    ->orderByDesc('is_featured')
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
-            }
+        // منبعِ یگانه = combo-manager (DeviceBrandPageِ فعال). بدونِ fallbackِ
+        // legacy (pivot یا «همه‌ی دستگاه‌ها») تا منبعِ سایت با combo-manager یکی
+        // باشد و تداخل پیش نیاید. اگر هیچ کمبوی فعالی نباشد → خالی.
+        $activeDeviceIds = $comboRows->filter()->keys()->all();
+        if (empty($activeDeviceIds)) {
+            return [];
         }
+        $picked = Device::query()
+            ->whereIn('id', $activeDeviceIds)
+            ->where('is_active', true)
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'tone']);
 
         return $picked->map(fn ($d) => [
             'id' => (int) $d->id,
