@@ -62,7 +62,10 @@ return [
         'brand' => [
             'model' => \Modules\CRM\Models\Brand::class,
             'slug' => 'slug',
-            'url' => '/services/brands/{slug}',
+            // مسیرِ واقعیِ فرانت: /brands/{slug} (نه /services/brands/...). بک‌اند
+            // مستقل است؛ این الگو باید با روتِ سایتِ اصلی یکی باشد وگرنه sitemap
+            // و canonical به URLِ ۴۰۴ اشاره می‌کنند.
+            'url' => '/brands/{slug}',
             'title_attr' => 'name',
             'excerpt_attr' => null,
             'published' => null,

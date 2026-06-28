@@ -47,13 +47,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/blog/topics', [BlogController::class, 'topics'])->name('api.v1.blog.topics');
         Route::get('/blog/filters', [BlogController::class, 'filters'])->name('api.v1.blog.filters');
         Route::get('/blog/articles', [BlogController::class, 'index'])->name('api.v1.blog.articles.index');
+        // slug ممکن است فارسی باشد (تداومِ SEO سایتِ قدیمی) → مثلِ forum از [^/]+
         Route::get('/blog/articles/{slug}', [BlogController::class, 'show'])
-            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->where('slug', '[^/]+')
             ->name('api.v1.blog.articles.show');
 
         // ── Comments (polymorphic — الان فقط Article) ───────────
         Route::get('/blog/articles/{slug}/comments', [CommentController::class, 'indexForArticle'])
-            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->where('slug', '[^/]+')
             ->name('api.v1.blog.articles.comments.index');
 
         // ── Banners (per-zone با cache 60s و ETag) ───────────
@@ -83,7 +84,7 @@ Route::prefix('v1')->group(function () {
     // ── کامنت‌ها — auth الزامی + throttle ────────────────────────
     Route::middleware(['auth:sanctum', 'throttle:5,1'])->group(function () {
         Route::post('/blog/articles/{slug}/comments', [CommentController::class, 'storeForArticle'])
-            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->where('slug', '[^/]+')
             ->name('api.v1.blog.articles.comments.store');
     });
     Route::middleware('throttle:30,1')->group(function () {

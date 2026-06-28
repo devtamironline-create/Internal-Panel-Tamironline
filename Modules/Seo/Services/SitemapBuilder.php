@@ -155,6 +155,11 @@ class SitemapBuilder
     {
         $base = rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
 
-        return $base.'/'.ltrim($path, '/');
+        // percent-encode هر segment (برای slugهای فارسی) تا <loc> معتبر بماند؛
+        // «/» حفظ می‌شود و ASCII بدونِ تغییر می‌ماند.
+        $path = '/'.ltrim($path, '/');
+        $encoded = implode('/', array_map('rawurlencode', explode('/', $path)));
+
+        return $base.$encoded;
     }
 }
