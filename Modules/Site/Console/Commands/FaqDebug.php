@@ -129,14 +129,15 @@ class FaqDebug extends Command
 
     private function resolveWinner(object $owner, array $legacy, array $tplCats, array $tplItems): string
     {
+        // ترتیب باید با FaqSectionBuilder::build یکی باشد: owner → template → legacy.
         if (! empty($this->ownerHasItems($owner))) {
             return 'owner (faqCategories/faqs اختصاصیِ این برند)';
         }
-        if (! empty($legacy)) {
-            return 'legacy (ستونِ JSON faq)';
-        }
         if (! empty($tplCats) || ! empty($tplItems)) {
             return 'template (page-content مشترکِ همه‌ی برندها)';
+        }
+        if (! empty($legacy)) {
+            return 'legacy (ستونِ JSON faq)';
         }
 
         return 'هیچ — این صفحه FAQ ندارد';
