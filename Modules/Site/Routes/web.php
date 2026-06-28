@@ -199,8 +199,10 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/', [FaqController::class, 'index'])->name('index');
         Route::get('/create', [FaqController::class, 'create'])->name('create');
         Route::post('/', [FaqController::class, 'store'])->name('store');
+        Route::post('/bulk', [FaqController::class, 'bulk'])->name('bulk');
         Route::get('/{id}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('/{id}', [FaqController::class, 'update'])->name('update');
+        Route::post('/{id}/duplicate', [FaqController::class, 'duplicate'])->name('duplicate');
         Route::delete('/{id}', [FaqController::class, 'destroy'])->name('destroy');
     });
 
