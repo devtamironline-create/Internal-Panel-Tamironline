@@ -24,12 +24,18 @@ class FaqDebug extends Command
 {
     protected $signature = 'site:faq-debug
                             {slug : slug برند یا دستگاه}
-                            {--type=brand : brand یا device}';
+                            {--type=brand : brand یا device}
+                            {--brand= : (حالتِ ترکیبی) slugِ برند — slug را دستگاه در نظر می‌گیرد}';
 
-    protected $description = 'تشخیصِ منبعِ FAQ یک صفحه‌ی برند/دستگاه (read-only)';
+    protected $description = 'تشخیصِ منبعِ FAQ یک صفحه‌ی برند/دستگاه/ترکیبی (read-only)';
 
     public function handle(PageSectionService $sections): int
     {
+        // حالتِ ترکیبی: site:faq-debug {deviceSlug} --brand={brandSlug}
+        if ($this->option('brand')) {
+            return $this->handleCombo($sections, (string) $this->argument('slug'), (string) $this->option('brand'));
+        }
+
         $type = $this->option('type') === 'device' ? 'device' : 'brand';
         $slug = (string) $this->argument('slug');
 
@@ -116,6 +122,78 @@ class FaqDebug extends Command
         $this->newLine();
         $this->info("منبعِ برنده: {$winner}");
         $this->line('(owner > legacy > template — اولین منبعی که آیتم دارد برنده است)');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * حالتِ ترکیبی — همان منطقِ CatalogDeviceBrandController::buildFaq را بازتولید
+     * می‌کند و نشان می‌دهد متنِ نهایی از کدام منبع می‌آید و آیا {brand} در آن هست.
+     */
+    private function handleCombo(PageSectionService $sections, string $deviceSlug, string $brandSlug): int
+    {
+        $device = Device::query()->where('slug', $deviceSlug)->first();
+        $brand = Brand::query()->where('slug', $brandSlug)->first();
+        if (! $device || ! $brand) {
+            $this->error('دستگاه یا برند پیدا نشد.');
+
+            return self::FAILURE;
+        }
+        $page = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('device_id', $device->id)->where('brand_id', $brand->id)->first();
+
+        $this->info("=== FAQ combo debug: {$deviceSlug} × {$brandSlug} ===");
+        $this->line('DeviceBrandPage: '.($page ? "id={$page->id}, is_active=".($page->is_active ? '1' : '0') : 'وجود ندارد'));
+
+        // منبع‌های owner به‌ترتیبِ اولویتِ واقعی: page → device → brand
+        foreach (['page' => $page, 'device' => $device, 'brand' => $brand] as $label => $owner) {
+            if (! $owner) {
+                $this->line("\n[owner:{$label}] —");
+
+                continue;
+            }
+            $r = FaqSectionBuilder::build([$owner]);
+            $first = $r['items'][0]['question'] ?? null;
+            $this->line("\n[owner:{$label}] items=".count($r['items']).' | نمونه‌سوال: '.($first ?? '—'));
+        }
+
+        // template (همان چیزی که controller لود می‌کند)
+        $context = [
+            'device' => $device->short_name ?? $device->name,
+            'device_label' => $device->name,
+            'device_slug' => $device->slug,
+            'brand' => $brand->name,
+            'brand_slug' => $brand->slug,
+        ];
+        $tpl = $sections->pageExists('device_brand')
+            ? $sections->loadForPublic('device_brand', $context)
+            : ($sections->pageExists('device') ? $sections->loadForPublic('device', $context) : []);
+        $usedTpl = $sections->pageExists('device_brand') ? 'device_brand' : ($sections->pageExists('device') ? 'device' : 'هیچ');
+        $tplCats = CatalogMerger::templateFaqCategories($tpl);
+        $tplItems = CatalogMerger::templateFaq($tpl);
+        $this->line("\n[template] استفاده‌شده: «{$usedTpl}» | tabs=".count($tplCats).' | flat='.count($tplItems));
+        if (! empty($tplItems)) {
+            $this->line('    نمونه‌سوالِ template (بعد از جایگذاریِ placeholder): '.($tplItems[0]['question'] ?? '—'));
+        }
+
+        // نتیجه‌ی نهایی — دقیقاً مثلِ controller
+        $result = FaqSectionBuilder::build(
+            [$page, $device, $brand],
+            is_array($device->faq) ? $device->faq : [],
+            $tplItems,
+            $tplCats,
+        );
+        $this->newLine();
+        $this->info('=== نتیجه‌ی نهایی (خروجیِ API combo) ===');
+        $this->line('items='.count($result['items']).' | categories='.count($result['categories']));
+        $firstQ = $result['items'][0]['question'] ?? '—';
+        $this->line('نمونه‌سوالِ نهایی: '.$firstQ);
+        $hasBrandPlaceholder = str_contains($firstQ, '{brand}');
+        $hasBrandWord = $brand->name !== '' && str_contains($firstQ, $brand->name);
+        $this->line('شاملِ {brand} خام؟ '.($hasBrandPlaceholder ? 'بله' : 'خیر').' | شاملِ نامِ برند («'.$brand->name.'»)؟ '.($hasBrandWord ? 'بله' : 'خیر'));
+        $this->newLine();
+        $this->comment('اگر «شاملِ {brand} خام = بله» → API خام می‌دهد و فرانت پُرش می‌کند (درست).');
+        $this->comment('اگر هر دو «خیر» → منبعِ این FAQ اصلاً {brand} ندارد (device-levelِ فقط {device}).');
 
         return self::SUCCESS;
     }
