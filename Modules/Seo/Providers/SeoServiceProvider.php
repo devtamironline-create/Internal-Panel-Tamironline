@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Modules\Seo\Console\Commands\CrawlCommand;
+use Modules\Seo\Console\Commands\ExportUrls;
 use Modules\Seo\Console\Commands\PingCommand;
 use Modules\Seo\Livewire\SeoMetaPanel;
 
@@ -29,7 +30,7 @@ class SeoServiceProvider extends ServiceProvider
         Livewire::component('seo.meta-panel', SeoMetaPanel::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([CrawlCommand::class, PingCommand::class]);
+            $this->commands([CrawlCommand::class, PingCommand::class, ExportUrls::class]);
         }
 
         // کرال زمان‌بندی‌شدهٔ روزانه (در صورت تنظیم‌بودن scheduler سیستم).
