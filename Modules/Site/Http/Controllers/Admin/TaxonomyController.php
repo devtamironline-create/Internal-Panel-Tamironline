@@ -33,11 +33,19 @@ class TaxonomyController extends Controller
         $this->assertType($type);
         $this->checkAccess($type);
 
-        $items = Taxonomy::ofType($type)->ordered()->withCount(
-            $type === Taxonomy::TYPE_FAQ ? 'faqs' : 'testimonials'
-        )->paginate(30);
+        $countRel = $type === Taxonomy::TYPE_FAQ ? 'faqs' : 'testimonials';
 
-        return view('site::admin.taxonomies.index', compact('items', 'type'));
+        $items = Taxonomy::ofType($type)->ordered()->withCount($countRel)->paginate(30);
+
+        $stats = [
+            'total' => Taxonomy::ofType($type)->count(),
+            'active' => Taxonomy::ofType($type)->where('is_active', true)->count(),
+            'items' => $type === Taxonomy::TYPE_FAQ
+                ? \Modules\Site\Models\Faq::query()->count()
+                : \Modules\Site\Models\Review::query()->count(),
+        ];
+
+        return view('site::admin.taxonomies.index', compact('items', 'type', 'stats'));
     }
 
     public function store(Request $request, string $type): RedirectResponse
@@ -87,6 +95,20 @@ class TaxonomyController extends Controller
         $taxonomy->update($data);
 
         return back()->with('success', 'دسته‌بندی به‌روز شد.');
+    }
+
+    /**
+     * تغییرِ سریعِ وضعیتِ فعال/غیرفعال (بدونِ نیاز به ارسالِ کلِ فرم).
+     */
+    public function toggle(string $type, int $id): RedirectResponse
+    {
+        $this->assertType($type);
+        $this->checkAccess($type);
+
+        $taxonomy = Taxonomy::ofType($type)->findOrFail($id);
+        $taxonomy->update(['is_active' => ! $taxonomy->is_active]);
+
+        return back()->with('success', $taxonomy->is_active ? 'دسته‌بندی فعال شد.' : 'دسته‌بندی غیرفعال شد.');
     }
 
     public function destroy(string $type, int $id): RedirectResponse

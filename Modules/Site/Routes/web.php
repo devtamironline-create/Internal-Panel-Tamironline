@@ -223,6 +223,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::get('/', [TaxonomyController::class, 'index'])->name('index');
             Route::post('/', [TaxonomyController::class, 'store'])->name('store');
             Route::put('/{id}', [TaxonomyController::class, 'update'])->whereNumber('id')->name('update');
+            Route::put('/{id}/toggle', [TaxonomyController::class, 'toggle'])->whereNumber('id')->name('toggle');
             Route::delete('/{id}', [TaxonomyController::class, 'destroy'])->whereNumber('id')->name('destroy');
         });
 
