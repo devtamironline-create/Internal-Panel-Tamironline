@@ -100,7 +100,7 @@ class CatalogDeviceController extends Controller
             'slug' => $c->slug,
             'icon' => $c->icon,
             'tone' => $c->tone,
-            'description' => InlineMediaUrl::absolutize($c->description, request()->getSchemeAndHttpHost()),
+            'description' => InlineMediaUrl::normalize($c->description, request()->getSchemeAndHttpHost()),
             'devices' => $c->devices->map(fn ($d) => [
                 'id' => (int) $d->id,
                 'label' => $d->name,
@@ -171,7 +171,7 @@ class CatalogDeviceController extends Controller
                     ],
                     'content' => [
                         'enabled' => $enabled('content', true),
-                        'html' => InlineMediaUrl::absolutize(
+                        'html' => InlineMediaUrl::normalize(
                             CatalogMerger::pick($device->description, $template['content']['html'] ?? null),
                             request()->getSchemeAndHttpHost()
                         ),

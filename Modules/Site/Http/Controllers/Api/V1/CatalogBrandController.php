@@ -111,7 +111,7 @@ class CatalogBrandController extends Controller
                     ],
                     'content' => [
                         'enabled' => $enabled('content', true),
-                        'html' => InlineMediaUrl::absolutize(
+                        'html' => InlineMediaUrl::normalize(
                             CatalogMerger::pick($brand->description, $template['content']['html'] ?? null),
                             request()->getSchemeAndHttpHost()
                         ),
