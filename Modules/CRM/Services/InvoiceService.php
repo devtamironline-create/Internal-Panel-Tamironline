@@ -28,6 +28,15 @@ class InvoiceService
 
     public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false): ?Invoice
     {
+        // گاردِ سفت: سفارش‌های legacy-closed (از لاگ قدیمیِ WP بسته شده‌اند و
+        // حسابداری‌شان قطعی‌ست) هرگز نباید فاکتور/wallet-tx بگیرند. اگر فاکتوری
+        // از قبل دارند همان برمی‌گردد؛ در غیر این صورت null — بدون ساختِ چیزی.
+        // این جلوی بازتولیدِ فاکتورِ سفارش‌های قدیمی (که دوره‌ی مالیِ بسته را
+        // به‌هم می‌ریزد) را در همه‌ی مسیرها می‌گیرد.
+        if ($order->is_legacy_closed) {
+            return Invoice::where('order_id', $order->id)->first();
+        }
+
         // اگر سفارش از قبل فاکتور active دارد:
         //   - بدون forceRegenerate: همان برمی‌گردد (idempotent برای double-click)
         //   - با forceRegenerate=true: فاکتور قبلی superseded و فاکتور جدید
