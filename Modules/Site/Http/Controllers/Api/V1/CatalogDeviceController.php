@@ -26,8 +26,10 @@ class CatalogDeviceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $limit = (int) $request->query('limit', 50);
-        $limit = max(1, min($limit, 100));
+        // مثلِ برندها: دایرکتوریِ کاملِ دستگاه‌ها — پیش‌فرض/سقف باید همه را بدهد
+        // تا دستگاه‌های انتهای الفبا حذف نشوند.
+        $limit = (int) $request->query('limit', 1000);
+        $limit = max(1, min($limit, 1000));
 
         $query = Device::query()
             ->active()
