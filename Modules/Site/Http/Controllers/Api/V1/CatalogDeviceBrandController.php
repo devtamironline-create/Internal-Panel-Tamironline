@@ -259,11 +259,35 @@ class CatalogDeviceBrandController extends Controller
      */
     private function buildFaq(?DeviceBrandPage $page, Device $device, Brand $brand, array $template): array
     {
+        $tplItems = CatalogMerger::templateFaq($template);
+        $tplCats = CatalogMerger::templateFaqCategories($template);
+
+        // صفحه‌ی ترکیبی: اگر الگوی اختصاصیِ «device_brand» وجود دارد و محتوا دارد،
+        // بر FAQِ سطحِ دستگاه/برند مقدم است — چون با {device} {brand} نوشته شده و
+        // مخصوصِ همین ترکیب است (وگرنه FAQِ سطحِ دستگاه که فقط {device} دارد سایه
+        // می‌اندازد و برند گم می‌شود). فقط FAQِ per-pairِ خودِ صفحه (page owner) از
+        // الگوی ترکیبی مهم‌تر است.
+        $hasComboTemplate = $this->sections->pageExists('device_brand')
+            && (! empty($tplItems) || ! empty($tplCats));
+
+        if ($hasComboTemplate) {
+            if ($page) {
+                $pageResult = \Modules\Site\Support\FaqSectionBuilder::build([$page]);
+                if (! empty($pageResult['items'])) {
+                    return $pageResult;
+                }
+            }
+
+            return ['items' => $tplItems, 'categories' => $tplCats];
+        }
+
+        // حالتِ معمول (الگوی device_brand نیست → fallback به الگوی device):
+        // owner (page → device → brand) → template → legacy
         return \Modules\Site\Support\FaqSectionBuilder::build(
             [$page, $device, $brand],
             is_array($device->faq) ? $device->faq : [],
-            CatalogMerger::templateFaq($template),
-            CatalogMerger::templateFaqCategories($template),
+            $tplItems,
+            $tplCats,
         );
     }
 
