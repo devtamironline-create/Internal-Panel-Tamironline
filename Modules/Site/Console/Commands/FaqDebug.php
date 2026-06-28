@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\Site\Models\Faq;
+use Modules\Site\Models\Taxonomy;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
 use Modules\Site\Support\FaqSectionBuilder;
@@ -71,9 +72,34 @@ class FaqDebug extends Command
         $tplItems = CatalogMerger::templateFaq($tpl);
         $faqSectionLoaded = array_key_exists('faq', $tpl);
         $this->line("\n[4] template page-content «{$type}» → سکشنِ faq منتشرشده/لودشده؟ ".($faqSectionLoaded ? 'بله' : 'خیر (منتشر نشده یا خالی)'));
-        $this->line("    templateFaqCategories: ".count($tplCats)." تب، templateFaq(flat): ".count($tplItems)." آیتم");
+        $this->line("    templateFaqCategories (در فرانت تب می‌شوند): ".count($tplCats)." | templateFaq(flat): ".count($tplItems)." آیتم");
         foreach ($tplCats as $c) {
-            $this->line("      - [{$c['slug']}] {$c['name']} ({".count($c['items'])." آیتم)");
+            $this->line("      ✓ [{$c['slug']}] {$c['name']} ({".count($c['items'])." آیتم)");
+        }
+
+        // ── ۴b) تحلیلِ دسته‌های انتخاب‌شده در page-content (چرا بعضی حذف شدند) ──
+        $admin = $sections->pageExists($type) ? $sections->loadForAdmin($type) : [];
+        $faqSection = $admin['faq'] ?? null;
+        $rawCatIds = array_values(array_filter((array) ($faqSection['payload']['category_ids'] ?? [])));
+        $sectionPublished = (bool) ($faqSection['is_published'] ?? false);
+
+        $this->line("\n[4b] page-content «{$type}» → سکشنِ faq منتشر شده؟ ".($sectionPublished ? 'بله' : 'خیر ❗ (تا منتشر نشود هیچ‌کدام در فرانت نمی‌آیند)'));
+        $this->line('    دسته‌های انتخاب‌شده در این سکشن: '.count($rawCatIds));
+        foreach ($rawCatIds as $cid) {
+            $cat = Taxonomy::ofType(Taxonomy::TYPE_FAQ)->find((int) $cid);
+            if (! $cat) {
+                $this->warn("      ✗ id={$cid}: دستهٔ FAQ یافت نشد (حذف‌شده؟) → حذف");
+
+                continue;
+            }
+            $pub = Faq::query()->where('is_published', true)
+                ->whereHas('taxonomies', fn ($q) => $q->where('site_taxonomies.id', $cat->id))
+                ->count();
+            $reason = ! $cat->is_active
+                ? 'غیرفعال → حذف'
+                : ($pub === 0 ? 'بدونِ سوالِ منتشرشده → حذف (تبِ خالی ساخته نمی‌شود)' : 'نمایش داده می‌شود ✓');
+            $flag = ($cat->is_active && $pub > 0) ? '✓' : '✗';
+            $this->line("      {$flag} [{$cat->slug}] {$cat->name}: ".($cat->is_active ? 'فعال' : 'غیرفعال').", {$pub} سوالِ منتشرشده → {$reason}");
         }
 
         // ── نتیجه‌ی نهایی: همان چیزی که API برمی‌گرداند ───────────────
