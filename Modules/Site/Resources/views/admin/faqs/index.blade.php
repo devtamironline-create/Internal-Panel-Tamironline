@@ -5,6 +5,7 @@
 @section('main')
 <div class="p-6"
      x-data="{
+        tab: 'all',
         selected: [],
         allIds: @js($allIds),
         get allChecked() { return this.allIds.length > 0 && this.selected.length === this.allIds.length; },
@@ -104,61 +105,83 @@
         </div>
     </div>
 
-    {{-- ─── Grouped by category ────────────────── --}}
+    {{-- ─── Category tabs ──────────────────────── --}}
     @if($faqs->isEmpty())
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
             <p class="text-gray-500 mb-3">سوالی مطابق فیلتر یافت نشد.</p>
             <a href="{{ route('site.admin.faqs.create') }}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">افزودن سوال</a>
         </div>
     @else
-        <div class="space-y-6">
+        @php($tabActive = 'border-blue-600 text-blue-600 font-bold')
+        @php($tabIdle = 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-200')
+
+        {{-- نوارِ تب‌ها --}}
+        <div class="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <button type="button" @click="tab = 'all'"
+                    class="shrink-0 px-4 py-2.5 text-sm border-b-2 transition whitespace-nowrap"
+                    :class="tab === 'all' ? '{{ $tabActive }}' : '{{ $tabIdle }}'">
+                همه
+                <span class="ms-1 px-1.5 py-0.5 rounded-full text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ $faqs->count() }}</span>
+            </button>
+
             @foreach($categories as $cat)
                 @php($group = $byCategory[$cat->id] ?? [])
                 @if(count($group) > 0)
-                    <section x-data="{ open: true }">
-                        <div class="flex items-center justify-between mb-2">
-                            <button type="button" @click="open = !open" class="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100">
-                                <svg class="w-4 h-4 transition" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                                {{ $cat->name }}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-700">{{ count($group) }}</span>
-                            </button>
-                            <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                                <input type="checkbox"
-                                       @change="$event.target.checked
-                                            ? selected = [...new Set([...selected, ...@js(collect($group)->pluck('id')->all())])]
-                                            : selected = selected.filter(i => ! @js(collect($group)->pluck('id')->all()).includes(i))"
-                                       class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded">
-                                انتخاب این دسته
-                            </label>
-                        </div>
-                        <div class="space-y-2" x-show="open">
-                            @foreach($group as $f)
-                                @include('site::admin.faqs._card', ['f' => $f])
-                            @endforeach
-                        </div>
-                    </section>
+                    <button type="button" @click="tab = 'cat-{{ $cat->id }}'"
+                            class="shrink-0 px-4 py-2.5 text-sm border-b-2 transition whitespace-nowrap inline-flex items-center"
+                            :class="tab === 'cat-{{ $cat->id }}' ? '{{ $tabActive }}' : '{{ $tabIdle }}'">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 ms-0 me-1.5"></span>
+                        {{ $cat->name }}
+                        <span class="ms-1 px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-50 text-indigo-600">{{ count($group) }}</span>
+                    </button>
                 @endif
             @endforeach
 
             @if(count($uncategorized) > 0)
-                <section x-data="{ open: true }">
-                    <div class="flex items-center gap-2 mb-2">
-                        <button type="button" @click="open = !open" class="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100">
-                            <svg class="w-4 h-4 transition" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                            <span class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                            بدونِ دسته‌بندی
-                            <span class="px-2 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-600">{{ count($uncategorized) }}</span>
-                        </button>
-                    </div>
-                    <div class="space-y-2" x-show="open">
-                        @foreach($uncategorized as $f)
-                            @include('site::admin.faqs._card', ['f' => $f])
-                        @endforeach
-                    </div>
-                </section>
+                <button type="button" @click="tab = 'uncat'"
+                        class="shrink-0 px-4 py-2.5 text-sm border-b-2 transition whitespace-nowrap"
+                        :class="tab === 'uncat' ? '{{ $tabActive }}' : '{{ $tabIdle }}'">
+                    بدونِ دسته
+                    <span class="ms-1 px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-600">{{ count($uncategorized) }}</span>
+                </button>
             @endif
         </div>
+
+        {{-- محتوای تب‌ها --}}
+        <div class="space-y-2" x-show="tab === 'all'">
+            @foreach($faqs as $f)
+                @include('site::admin.faqs._card', ['f' => $f])
+            @endforeach
+        </div>
+
+        @foreach($categories as $cat)
+            @php($group = $byCategory[$cat->id] ?? [])
+            @if(count($group) > 0)
+                <div class="space-y-2" x-show="tab === 'cat-{{ $cat->id }}'" x-cloak>
+                    <div class="flex justify-end">
+                        <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer mb-1">
+                            <input type="checkbox"
+                                   @change="$event.target.checked
+                                        ? selected = [...new Set([...selected, ...@js(collect($group)->pluck('id')->all())])]
+                                        : selected = selected.filter(i => ! @js(collect($group)->pluck('id')->all()).includes(i))"
+                                   class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded">
+                            انتخابِ همهٔ این دسته
+                        </label>
+                    </div>
+                    @foreach($group as $f)
+                        @include('site::admin.faqs._card', ['f' => $f])
+                    @endforeach
+                </div>
+            @endif
+        @endforeach
+
+        @if(count($uncategorized) > 0)
+            <div class="space-y-2" x-show="tab === 'uncat'" x-cloak>
+                @foreach($uncategorized as $f)
+                    @include('site::admin.faqs._card', ['f' => $f])
+                @endforeach
+            </div>
+        @endif
     @endif
 </div>
 @endsection
