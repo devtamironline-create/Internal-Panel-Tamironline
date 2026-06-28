@@ -37,7 +37,11 @@ final class InlineMediaUrl
             return self::absolutize($html, $base);
         }
 
-        $html = preg_replace_callback('/<img\b[^>]*>/i', fn ($m) => self::fixLazyImg($m[0]), $html) ?? $html;
+        $html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) {
+            $tag = self::fixLazyImg($m[0]);
+
+            return self::upgradeInsecureSrc($tag);
+        }, $html) ?? $html;
 
         return self::absolutize($html, $base);
     }
@@ -104,6 +108,20 @@ final class InlineMediaUrl
         }
 
         return $tag;
+    }
+
+    /**
+     * ارتقای src ناامنِ http:// به https:// — تصویرِ http روی صفحه‌ی https
+     * توسطِ مرورگر بلاک می‌شود (mixed content)؛ پس ارتقا فقط می‌تواند کمک کند
+     * یا بی‌اثر باشد (در هر دو حالت http هم بلاک بود). فقط srcِ مستقل را می‌زند.
+     */
+    private static function upgradeInsecureSrc(string $tag): string
+    {
+        return (string) preg_replace_callback(
+            '/((?<![-\w])src\s*=\s*)(["\'])http:\/\/([^"\']+)\2/i',
+            fn ($m) => $m[1].$m[2].'https://'.$m[3].$m[2],
+            $tag
+        );
     }
 
     private static function isPlaceholder(?string $src): bool
