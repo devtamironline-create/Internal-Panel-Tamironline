@@ -26,8 +26,11 @@ class CatalogBrandController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $limit = (int) $request->query('limit', 50);
-        $limit = max(1, min($limit, 100));
+        // دایرکتوریِ برندها کاملِ کاتالوگ است (نه صفحه‌بندی‌شده). پیش‌فرض و سقف
+        // باید همه‌ی برندها را پوشش دهد؛ سقفِ ۱۰۰ باعث می‌شد برندهای انتهای
+        // الفبا (مثلِ «هاشمی») هرگز برنگردند. cap بالا (۱۰۰۰) برای رشدِ آینده.
+        $limit = (int) $request->query('limit', 1000);
+        $limit = max(1, min($limit, 1000));
 
         $query = Brand::query()->active()->ordered();
 
