@@ -350,13 +350,24 @@ final class WpArticleImporter
 
     private function buildSlug(string $rawSlug, string $title, int $wpId): string
     {
-        $slug = Str::slug($rawSlug ?: $title, '-', null);
-        // اگر transliterate شکست خورد (فارسی) یا خالی شد → wp-{id}
-        if ($slug === '' || ! preg_match('/^[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?$/', $slug)) {
+        // post_nameِ وردپرس برای مطالبِ فارسی percent-encoded است (مثلِ
+        // «%d8%a7%d8%b1...»). اگر decode نشود، Str::slug علامتِ «%» را حذف می‌کند
+        // و slugِ خرابِ «d8a7d8b1...» (هگزِ بایت‌ها) می‌سازد. پس اول decode و سپس
+        // slugِ فارسی را *حفظ* می‌کنیم تا URL با سایتِ قدیمی یکی بماند (تداومِ SEO).
+        $raw = trim($rawSlug);
+        if ($raw !== '') {
+            $decoded = rawurldecode($raw);
+            if ($decoded !== '' && mb_check_encoding($decoded, 'UTF-8')) {
+                $raw = $decoded;
+            }
+        }
+
+        $slug = self::persianSlug($raw !== '' ? $raw : $title);
+        if ($slug === '') {
             $slug = 'wp-'.$wpId;
         }
         if (mb_strlen($slug) > 200) {
-            $slug = substr($slug, 0, 200);
+            $slug = trim(mb_substr($slug, 0, 200), '-');
         }
 
         // unique check — اگر slug توسط مقاله‌ی دیگری (با wp_id متفاوت) گرفته شده،
@@ -373,6 +384,25 @@ final class WpArticleImporter
         }
 
         return $slug;
+    }
+
+    /**
+     * slugِ فارسی‌دوست: حروف/ارقامِ فارسی و لاتین را نگه می‌دارد، فاصله/زیرخط را
+     * به خط‌تیره تبدیل و بقیه را حذف می‌کند. (بدونِ transliterate به لاتین.)
+     */
+    public static function persianSlug(string $text): string
+    {
+        $text = trim($text);
+        // فاصله و زیرخط → خط‌تیره
+        $text = (string) preg_replace('/[\s_]+/u', '-', $text);
+        // فقط حرف (هر زبان) + عدد + خط‌تیره
+        $text = (string) preg_replace('/[^\p{L}\p{N}\-]+/u', '', $text);
+        // جمع‌کردنِ خط‌تیره‌های پشت‌سرهم
+        $text = (string) preg_replace('/-+/', '-', $text);
+        $text = trim($text, '-');
+
+        // فقط بخشِ لاتین کوچک می‌شود (فارسی حالتِ بزرگ/کوچک ندارد).
+        return mb_strtolower($text, 'UTF-8');
     }
 
     private function uniqueTopicSlug(string $base): string
