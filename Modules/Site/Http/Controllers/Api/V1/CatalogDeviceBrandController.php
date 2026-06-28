@@ -110,7 +110,7 @@ class CatalogDeviceBrandController extends Controller
                     ],
                     'content' => [
                         'enabled' => $enabled('content', true),
-                        'html' => InlineMediaUrl::absolutize(
+                        'html' => InlineMediaUrl::normalize(
                             $this->merge(
                                 $page?->description,
                                 $device->description,
