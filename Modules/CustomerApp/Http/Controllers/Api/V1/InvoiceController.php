@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
-use Modules\CRM\Services\InvoiceService;
 use Modules\CustomerApp\Support\InvoiceBuilder;
 
 /**
@@ -32,23 +30,12 @@ class InvoiceController extends Controller
         $order->loadMissing(['items', 'technician:id,first_name,last_name,firstname_tech,mobile']);
         $invoice = $order->invoices()->latest('id')->first();
 
-        // اگر سفارش completed است ولی فاکتور هنوز ساخته نشده، اینجا lazy
-        // generation انجام می‌دهیم. این برای زمانی است که status از مسیری
-        // غیر از OrderController.changeStatus به Completed تغییر کرده باشد
-        // (مثلاً ویرایش مستقیم در DB یا flow دیگر). generateForOrder خود
-        // idempotent است (forceRegenerate=false) پس صدا زدن مجدد ضرری ندارد.
-        if (! $invoice && $order->status === OrderStatus::Completed) {
-            try {
-                $invoice = app(InvoiceService::class)->generateForOrder($order, null, false);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('customer_app.invoice_autogen_failed', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
-                ]);
-                // ادامه می‌دهیم — بدون invoice هم می‌توان payload draft برگرداند
-            }
-        }
-
+        // عمداً هیچ lazy-generation اینجا انجام نمی‌شود: مشاهده‌ی فاکتور توسط
+        // مشتری نباید فاکتورِ جدید بسازد. وگرنه برای سفارش‌های قدیمی (مثلاً
+        // یک سال پیش که حسابداری‌شان بسته شده) یک فاکتور و wallet-tx با تاریخِ
+        // «الان» ساخته می‌شد و دوره‌ی مالیِ بسته را به‌هم می‌ریخت. اگر فاکتوری
+        // نباشد، InvoiceBuilder یک payload «پیش‌نویس» (بدون ذخیره) برمی‌گرداند.
+        // صدور واقعیِ فاکتور فقط هنگام تکمیلِ سفارش یا با دکمه‌ی دستیِ ادمین.
         return response()->json([
             'data' => InvoiceBuilder::build($order, $invoice),
         ])->header('Cache-Control', 'private, max-age=60');
@@ -98,18 +85,8 @@ class InvoiceController extends Controller
         [$customer, $order] = $this->resolve($request, $id);
         $invoice = $order->invoices()->latest('id')->first();
 
-        // اگر completed است ولی فاکتور نیست → lazy generate (هم‌جنس show())
-        if (! $invoice && $order->status === OrderStatus::Completed) {
-            try {
-                $invoice = app(InvoiceService::class)->generateForOrder($order, null, false);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('customer_app.invoice_autogen_failed', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
+        // بدونِ lazy-generation (هم‌جنسِ show()): مشاهده نباید فاکتور بسازد.
+        // اگر فاکتوری صادر نشده، PDF هم وجود ندارد → 404.
         if (! $invoice) {
             abort(404, 'فاکتوری برای این سفارش صادر نشده است.');
         }
