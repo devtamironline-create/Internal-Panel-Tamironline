@@ -167,8 +167,10 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     // محتوای صفحات سایت — section-based
     Route::prefix('page-content')->name('page-content.')->group(function () {
         Route::get('/', [PageContentController::class, 'index'])->name('index');
-        Route::get('/{slug}', [PageContentController::class, 'edit'])->whereAlpha('slug')->name('edit');
-        Route::put('/{slug}', [PageContentController::class, 'update'])->whereAlpha('slug')->name('update');
+        // slugها lowercase با زیرخط‌اند (مثلِ device_brand) — whereAlpha زیرخط را
+        // رد می‌کرد و باعثِ ۴۰۴ می‌شد.
+        Route::get('/{slug}', [PageContentController::class, 'edit'])->where('slug', '[a-z_]+')->name('edit');
+        Route::put('/{slug}', [PageContentController::class, 'update'])->where('slug', '[a-z_]+')->name('update');
     });
 
     // مخزن مدیا (مرکزی — مثل WordPress)
