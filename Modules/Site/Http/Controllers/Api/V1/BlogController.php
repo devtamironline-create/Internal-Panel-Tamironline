@@ -44,9 +44,15 @@ class BlogController extends Controller
      * GET /v1/blog/filters — دستگاه‌ها و برندهایی که حداقل یک مقاله‌ی منتشرشده
      * دارند (با شمارش). برای ساخت ناوبری/فیلترِ «مقالات بر اساس دستگاه/برند».
      */
-    public function filters(): JsonResponse
+    public function filters(Request $request): JsonResponse
     {
         $now = now();
+
+        // فیلترهای فعال — تا facetها context-aware شوند (شمارش‌ها متناسب با فیلترِ
+        // دیگر). بدونِ پارامتر، رفتارِ قبلی (شمارشِ سراسری) حفظ می‌شود.
+        $activeDevice = trim((string) $request->query('device', ''));
+        $activeBrand = trim((string) $request->query('brand', ''));
+        $activeTopic = trim((string) $request->query('topic', ''));
 
         $publishedJoin = fn ($table, $entity, $fk) => DB::table($table.' as pivot')
             ->join('site_blog_articles as a', 'a.id', '=', 'pivot.article_id')
@@ -56,12 +62,53 @@ class BlogController extends Controller
             ->whereNotNull('a.published_at')
             ->where('a.published_at', '<=', $now);
 
-        $devices = $publishedJoin('site_blog_article_devices', 'crm_devices', 'device_id')
+        // محدودکننده‌ها: مقاله باید با دستگاه/برند/تاپیکِ فعال هم تگ‌خورده باشد.
+        $scopeDevice = function ($q) use ($activeDevice) {
+            if ($activeDevice === '') {
+                return;
+            }
+            $q->whereExists(fn ($s) => $s->from('site_blog_article_devices as pd')
+                ->join('crm_devices as d', 'd.id', '=', 'pd.device_id')
+                ->whereColumn('pd.article_id', 'a.id')
+                ->where('pd.is_active', true)
+                ->where('d.slug', $activeDevice));
+        };
+        $scopeBrand = function ($q) use ($activeBrand) {
+            if ($activeBrand === '') {
+                return;
+            }
+            $q->whereExists(fn ($s) => $s->from('site_blog_article_brands as pb')
+                ->join('crm_brands as b', 'b.id', '=', 'pb.brand_id')
+                ->whereColumn('pb.article_id', 'a.id')
+                ->where('pb.is_active', true)
+                ->where('b.slug', $activeBrand));
+        };
+        $scopeTopic = function ($q) use ($activeTopic) {
+            if ($activeTopic === '') {
+                return;
+            }
+            $q->whereExists(fn ($s) => $s->from('site_blog_article_topics as ptp')
+                ->join('site_blog_topics as t', 't.id', '=', 'ptp.topic_id')
+                ->whereColumn('ptp.article_id', 'a.id')
+                ->where('t.is_active', true)
+                ->where('t.slug', $activeTopic));
+        };
+
+        // facetِ دستگاه‌ها ← محدود به برند+تاپیکِ فعال (نه به دستگاهِ فعال، تا
+        // کاربر بتواند دستگاه را عوض کند).
+        $devicesQuery = $publishedJoin('site_blog_article_devices', 'crm_devices', 'device_id');
+        $scopeBrand($devicesQuery);
+        $scopeTopic($devicesQuery);
+        $devices = $devicesQuery
             ->groupBy('e.id', 'e.name', 'e.slug', 'e.thumbnail')
             ->select('e.id', 'e.name', 'e.slug', 'e.thumbnail', DB::raw('count(distinct a.id) as articles_count'))
             ->orderByDesc('articles_count')->orderBy('e.name')->get();
 
-        $brands = $publishedJoin('site_blog_article_brands', 'crm_brands', 'brand_id')
+        // facetِ برندها ← محدود به دستگاه+تاپیکِ فعال (نه به برندِ فعال).
+        $brandsQuery = $publishedJoin('site_blog_article_brands', 'crm_brands', 'brand_id');
+        $scopeDevice($brandsQuery);
+        $scopeTopic($brandsQuery);
+        $brands = $brandsQuery
             ->groupBy('e.id', 'e.name', 'e.slug', 'e.logo')
             ->select('e.id', 'e.name', 'e.slug', 'e.logo', DB::raw('count(distinct a.id) as articles_count'))
             ->orderByDesc('articles_count')->orderBy('e.name')->get();
