@@ -16,7 +16,8 @@ class SeoDefaultSettingsSeeder extends Seeder
         $defaults = [
             ['key' => 'site_name', 'value' => (string) config('app.name'), 'group' => 'general'],
             ['key' => 'separator', 'value' => '–', 'group' => 'general'],
-            ['key' => 'canonical_base_url', 'value' => rtrim((string) config('app.url'), '/'), 'group' => 'general'],
+            // مبنای canonical = سایتِ اصلیِ فرانت (نه APP_URLِ پنل).
+            ['key' => 'canonical_base_url', 'value' => rtrim((string) config('seo.site_url'), '/'), 'group' => 'general'],
             ['key' => 'twitter_card', 'value' => 'summary_large_image', 'group' => 'social'],
             ['key' => 'kg_type', 'value' => 'Organization', 'group' => 'knowledge_graph'],
             // §15 Facebook domain verification

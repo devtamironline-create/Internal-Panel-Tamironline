@@ -235,7 +235,7 @@ class MetaResolver
 
     private function absoluteUrl(string $path): string
     {
-        $base = rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
+        $base = SeoSetting::siteUrl();
 
         return $base.'/'.ltrim($path, '/');
     }
