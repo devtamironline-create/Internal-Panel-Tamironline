@@ -41,6 +41,9 @@
             <div class="flex items-center gap-2 shrink-0">
                 <button type="button" @click="expandAll()" class="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg">باز همه</button>
                 <button type="button" @click="collapseAll()" class="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg">بسته همه</button>
+                @if(Route::has('crm.service-prices.index'))
+                    <a href="{{ route('crm.service-prices.index', ['device' => $device->id]) }}" class="px-3 py-2 text-xs bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-lg">تعرفهٔ خدمات</a>
+                @endif
                 <a href="{{ route('crm.devices.index') }}" class="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg">انصراف</a>
                 <button type="submit" form="device-form"
                         class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm flex items-center gap-2">
