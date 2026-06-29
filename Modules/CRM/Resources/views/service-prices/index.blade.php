@@ -41,7 +41,7 @@
               class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
               x-data="{ free: false }">
             @csrf
-            <div class="md:col-span-5">
+            <div class="md:col-span-6">
                 <label class="block text-xs text-gray-500 mb-1">عنوان خدمت <span class="text-rose-500">*</span></label>
                 <input type="text" name="title" required maxlength="300" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm" placeholder="مثلاً: باز و بست کامل">
             </div>
@@ -49,11 +49,7 @@
                 <label class="block text-xs text-gray-500 mb-1">قیمت (تومان)</label>
                 <input type="number" name="price" min="0" :disabled="free" x-bind:class="free ? 'opacity-50' : ''" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm" dir="ltr">
             </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs text-gray-500 mb-1">قیمت قبلی</label>
-                <input type="number" name="compare_at_price" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm" dir="ltr">
-            </div>
-            <div class="md:col-span-2 flex items-center gap-2 pb-2">
+            <div class="md:col-span-3 flex items-center gap-2 pb-2">
                 <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                     <input type="checkbox" name="is_free" value="1" x-model="free" class="w-4 h-4 rounded"> رایگان
                 </label>
@@ -66,16 +62,17 @@
         {{-- List --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
             <div class="px-4 py-2 text-xs font-medium text-gray-500 grid grid-cols-12 gap-2">
-                <span class="col-span-5">عنوان</span><span class="col-span-2">قیمت</span><span class="col-span-2">قبلی</span><span class="col-span-1">ترتیب</span><span class="col-span-2">عملیات</span>
+                <span class="col-span-6">عنوان</span><span class="col-span-2">قیمت</span><span class="col-span-1">ترتیب</span><span class="col-span-3">عملیات</span>
             </div>
             @forelse($prices as $p)
                 @php($fid = 'sp'.$p->id)
                 <div class="px-4 py-2 grid grid-cols-12 gap-2 items-center" x-data="{ free: {{ $p->is_free ? 'true' : 'false' }} }">
-                    <input form="{{ $fid }}" type="text" name="title" value="{{ $p->title }}" required class="col-span-5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                    <input form="{{ $fid }}" type="text" name="title" value="{{ $p->title }}" required class="col-span-6 px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
                     <input form="{{ $fid }}" type="number" name="price" value="{{ $p->price }}" min="0" :disabled="free" dir="ltr" class="col-span-2 px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm" :class="free ? 'opacity-40' : ''">
-                    <input form="{{ $fid }}" type="number" name="compare_at_price" value="{{ $p->compare_at_price }}" min="0" dir="ltr" class="col-span-2 px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                    {{-- قیمتِ قبلی فقط در پنل مخفی است؛ مقدارش حفظ می‌شود (برای API/خط‌خورده). --}}
+                    <input form="{{ $fid }}" type="hidden" name="compare_at_price" value="{{ $p->compare_at_price }}">
                     <input form="{{ $fid }}" type="number" name="sort_order" value="{{ $p->sort_order }}" min="0" dir="ltr" class="col-span-1 px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
-                    <div class="col-span-2 flex items-center gap-2">
+                    <div class="col-span-3 flex items-center gap-2">
                         <label class="inline-flex items-center gap-1 text-[11px] text-gray-500"><input form="{{ $fid }}" type="checkbox" name="is_free" value="1" x-model="free" class="w-3.5 h-3.5 rounded">رایگان</label>
                         <button form="{{ $fid }}" class="text-blue-600 text-xs hover:underline">ذخیره</button>
                         <button form="{{ $fid }}d" class="text-rose-600 text-xs hover:underline">حذف</button>
