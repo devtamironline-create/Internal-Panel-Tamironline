@@ -122,6 +122,7 @@ function mediaLibrary(config) {
         nextId: 1,
         async uploadFiles(fileList) {
             const files = Array.from(fileList);
+            let anySuccess = false;
             for (const file of files) {
                 const id = this.nextId++;
                 const entry = { id, name: file.name, progress: 0, status: 'در حال آپلود...' };
@@ -135,19 +136,39 @@ function mediaLibrary(config) {
                         if (e.lengthComputable) entry.progress = Math.round(e.loaded / e.total * 100);
                     };
                     await new Promise((resolve, reject) => {
-                        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.response) : reject(new Error(xhr.statusText));
-                        xhr.onerror = () => reject(new Error('network'));
+                        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
+                            ? resolve(xhr.responseText)
+                            : reject({ status: xhr.status, body: xhr.responseText });
+                        xhr.onerror = () => reject({ status: 0, body: '' });
                         xhr.open('POST', config.uploadUrl);
+                        // مهم: تا Laravel خطای اعتبارسنجی را JSON برگرداند (نه ریدایرکتِ
+                        // back که XHR آن را ۲۰۰ می‌بیند و اشتباهاً «موفق» می‌پندارد).
+                        xhr.setRequestHeader('Accept', 'application/json');
+                        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                         xhr.send(fd);
                     });
                     entry.status = 'انجام شد ✓';
                     entry.progress = 100;
-                } catch (e) {
-                    entry.status = 'خطا';
+                    anySuccess = true;
+                } catch (err) {
+                    entry.status = this.uploadError(err);
                 }
             }
-            // ریلود صفحه پس از تکمیل همه
-            setTimeout(() => window.location.reload(), 800);
+            // فقط در صورتِ موفقیت ریلود کن تا گرید به‌روز شود؛ در خطا، پیام بماند.
+            if (anySuccess) {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        },
+        uploadError(err) {
+            if (err && err.status === 413) return 'حجمِ فایل از حدِ مجازِ سرور بیشتر است (post_max_size).';
+            if (err && err.body) {
+                try {
+                    const j = JSON.parse(err.body);
+                    if (j && j.message) return 'خطا: ' + j.message;
+                } catch (_) { /* پاسخِ غیرِ JSON (مثلاً صفحه‌ی خطای PHP) */ }
+            }
+            if (err && err.status === 0) return 'خطای شبکه یا قطعِ آپلود.';
+            return 'خطا در آپلود (کد ' + ((err && err.status) || '?') + ').';
         }
     };
 }
