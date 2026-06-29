@@ -79,9 +79,16 @@ class MediaController extends Controller
     {
         $this->checkUpload();
 
+        // سقفِ ۵۰۰ مگابایت برای ویدیو/فایل‌های بزرگ. سقفِ *واقعی* را php.ini سرور
+        // تعیین می‌کند (upload_max_filesize / post_max_size)؛ اگر فایل از آن بیشتر
+        // باشد، PHP پیش از Laravel آن را drop می‌کند و $_FILES خالی می‌شود →
+        // قانونِ required با پیامِ راهنما fail می‌شود.
         $request->validate([
-            'file' => 'required|file|max:20480',   // 20 MB
+            'file' => 'required|file|max:512000',
             'visibility' => 'nullable|in:public,private',
+        ], [
+            'file.max' => 'حجمِ فایل بیش از حدِ مجاز است (حداکثر ~۵۰۰ مگابایت).',
+            'file.required' => 'فایلی دریافت نشد. اگر فایل بزرگ است، احتمالاً از محدودیتِ آپلودِ سرور (post_max_size) بیشتر است — لطفاً محدودیتِ php.ini را افزایش دهید.',
         ]);
 
         $media = MediaStorage::store(
