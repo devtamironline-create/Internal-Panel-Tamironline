@@ -27,6 +27,18 @@ class SeoSetting extends Model
     }
 
     /**
+     * مبنایِ URLِ سایتِ اصلی (فرانت) برای canonical/sitemap/کرالِ مانیتورینگ.
+     * اولویت: تنظیمِ DB (canonical_base_url) ← config('seo.site_url') (FRONTEND_URL).
+     * عمداً به config('app.url')ِ پنل برنمی‌گردد تا مانیتورینگ/سئو پنل را هدف نگیرد.
+     */
+    public static function siteUrl(): string
+    {
+        $configured = trim((string) static::get('canonical_base_url', ''));
+
+        return rtrim($configured !== '' ? $configured : (string) config('seo.site_url'), '/');
+    }
+
+    /**
      * مقدار JSON یک کلید را به آرایه برمی‌گرداند.
      *
      * @return array<mixed>

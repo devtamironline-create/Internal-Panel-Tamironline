@@ -10,6 +10,12 @@
  */
 return [
 
+    // آدرسِ سایتِ اصلیِ عمومی (فرانت) — مبنای canonical/sitemap/کرالِ مانیتورینگ.
+    // بک‌اند (پنل) مستقل است؛ هرگز نباید APP_URLِ پنل مبنا باشد وگرنه مانیتورینگ
+    // پنلِ auth-walled را کرال می‌کند و sitemap لینکِ پنل می‌دهد. در .env با
+    // FRONTEND_URL قابلِ تنظیم است؛ تنظیمِ DB (canonical_base_url) بر این مقدم است.
+    'site_url' => rtrim((string) env('FRONTEND_URL', 'https://tamironline.com'), '/'),
+
     // جداکنندهٔ پیش‌فرض عنوان (مثل Rank Math %sep%). در تنظیمات سراسری
     // قابل override است (کلید seo_settings: separator).
     'separator' => '–',

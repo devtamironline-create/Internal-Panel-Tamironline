@@ -14,7 +14,7 @@ class RobotsController extends Controller
 {
     public function show(): Response
     {
-        $base = rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
+        $base = SeoSetting::siteUrl();
         $custom = trim((string) SeoSetting::get('robots_txt'));
 
         $body = $custom !== '' ? $custom : implode("\n", [

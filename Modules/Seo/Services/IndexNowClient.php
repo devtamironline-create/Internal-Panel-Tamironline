@@ -19,7 +19,7 @@ class IndexNowClient
 
     private function baseUrl(): string
     {
-        return rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
+        return SeoSetting::siteUrl();
     }
 
     /**

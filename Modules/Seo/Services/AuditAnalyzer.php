@@ -254,7 +254,7 @@ class AuditAnalyzer
     /** host دامنهٔ canonical سایت (lowercase) یا null. */
     private function siteHost(): ?string
     {
-        $base = (string) (SeoSetting::get('canonical_base_url') ?: config('app.url'));
+        $base = SeoSetting::siteUrl();
         $host = parse_url($base, PHP_URL_HOST);
 
         return $host ? strtolower($host) : null;

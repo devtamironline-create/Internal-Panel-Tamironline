@@ -153,7 +153,7 @@ class SitemapBuilder
 
     private function absoluteUrl(string $path): string
     {
-        $base = rtrim((string) (SeoSetting::get('canonical_base_url') ?: config('app.url')), '/');
+        $base = SeoSetting::siteUrl();
 
         // percent-encode هر segment (برای slugهای فارسی) تا <loc> معتبر بماند؛
         // «/» حفظ می‌شود و ASCII بدونِ تغییر می‌ماند.
