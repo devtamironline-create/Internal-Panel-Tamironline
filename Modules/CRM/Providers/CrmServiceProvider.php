@@ -13,6 +13,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\BackupWalletData;
 use Modules\CRM\Console\Commands\CombosAudit;
 use Modules\CRM\Console\Commands\ConsolidateDeviceSlugs;
+use Modules\CRM\Console\Commands\ImportServicePrices;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
@@ -137,6 +138,7 @@ class CrmServiceProvider extends ServiceProvider
                 RepairContentImages::class,
                 CombosAudit::class,
                 ConsolidateDeviceSlugs::class,
+                ImportServicePrices::class,
                 ImportDeviceThumbnailsFromWp::class,
                 ReplaceTechInfo::class,
                 TechMergeFromWp::class,
