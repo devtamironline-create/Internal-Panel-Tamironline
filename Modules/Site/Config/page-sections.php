@@ -596,6 +596,23 @@ return [
                             ],
                         ],
                     ],
+                    'services_link' => [
+                        'label' => 'لینکِ «لیست خدمات» (تاپ‌بار، بالا-راست)',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'url' => ['label' => 'لینک', 'type' => 'string', 'rules' => 'nullable|site_url|max:200'],
+                        ],
+                    ],
+                    'app_panel' => [
+                        'label' => 'بلوکِ «پنل کاربری» (تاپ‌بار، بالا-چپ)',
+                        'type' => 'group',
+                        'fields' => [
+                            'label' => ['label' => 'برچسب', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'subtitle' => ['label' => 'زیرنویس', 'type' => 'string', 'rules' => 'nullable|string|max:80'],
+                            'url' => ['label' => 'لینک (مثلاً https://app.tamironline.com/)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
                 ],
             ],
 
@@ -632,7 +649,8 @@ return [
                         'fields' => [
                             'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
                             'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
-                            'image' => ['label' => 'تصویر اپ (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
+                            'rating' => ['label' => 'امتیاز (مثلاً ۴.۸)', 'type' => 'string', 'rules' => 'nullable|string|max:10'],
+                            'image' => ['label' => 'تصویر/آیکنِ اپ (موبایل/دسکتاپ)', 'type' => 'responsive_image'],
                             'stores' => [
                                 'label' => 'فروشگاه‌ها (لینک دانلود)',
                                 'type' => 'repeater',
@@ -656,6 +674,16 @@ return [
                     ],
                     'copyright_text' => ['label' => 'متن حقوق', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
                     'enamad_code' => ['label' => 'کد HTML اعتماد الکترونیکی', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                    'trust_badges' => [
+                        'label' => 'نمادهای اعتماد (eNamad / ساماندهی / اصناف / ...)',
+                        'description' => 'اگر خالی بماند، نمادهای پیش‌فرضِ فرانت نمایش داده می‌شوند. اگر پر شود، جایگزینِ آن‌ها می‌شوند (به‌صورتِ لینکِ تأیید).',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'image' => ['label' => 'تصویرِ نماد', 'type' => 'image_url', 'rules' => 'nullable|site_url|max:500'],
+                            'url' => ['label' => 'لینکِ تأیید', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                            'alt' => ['label' => 'متن جایگزین (alt)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                        ],
+                    ],
                 ],
             ],
 
