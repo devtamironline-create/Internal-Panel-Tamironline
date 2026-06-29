@@ -82,6 +82,11 @@ class Device extends Model
         return $this->belongsTo(DeviceCategory::class, 'device_category_id');
     }
 
+    public function servicePrices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DeviceServicePrice::class, 'device_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

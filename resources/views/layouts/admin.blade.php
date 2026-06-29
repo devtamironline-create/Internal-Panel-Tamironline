@@ -786,6 +786,12 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                             برندها
                         </a>
+                        @if(Route::has('crm.service-prices.index'))
+                        <a href="{{ route('crm.service-prices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.service-prices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m-6 4h6m-3 8a9 9 0 110-18 9 9 0 010 18z"/></svg>
+                            تعرفهٔ خدمات
+                        </a>
+                        @endif
                         <a href="{{ route('crm.device-brand-pages.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.device-brand-pages.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
                             صفحات ترکیبی

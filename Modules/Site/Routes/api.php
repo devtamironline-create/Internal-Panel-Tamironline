@@ -38,6 +38,13 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.catalog.devices.index');
         Route::get('/catalog/device-categories', [CatalogDeviceController::class, 'categories'])
             ->name('api.v1.catalog.device-categories.index');
+
+        // تعرفهٔ خدمات (قیمت‌ها)
+        Route::get('/catalog/prices', [\Modules\Site\Http\Controllers\Api\V1\PricingController::class, 'index'])
+            ->name('api.v1.catalog.prices.index');
+        Route::get('/catalog/devices/{slug}/prices', [\Modules\Site\Http\Controllers\Api\V1\PricingController::class, 'device'])
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
+            ->name('api.v1.catalog.devices.prices');
         Route::get('/site/about-stats', [AboutStatController::class, 'index'])
             ->name('api.v1.site.about-stats.index');
         Route::get('/settings/global', [SettingsController::class, 'global'])
