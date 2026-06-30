@@ -368,6 +368,21 @@
         ])
     </x-crm::section-card>
 
+    {{-- ─── مشکلات رایج دستگاه (برای فعالیت زنده) ─── --}}
+    <x-crm::section-card sectionKey="issues" title="مشکلات رایج دستگاه" icon="🛠️"
+        count="{{ count(old('issues', $device->issues ?? [])) }}"
+        description="فهرستِ مشکلات/خرابی‌های رایجِ این دستگاه. در «فعالیت زنده» سایت به‌صورتِ واقعی نمایش داده می‌شوند (مثلاً «تعمیر لباسشویی سامسونگ – آبگیری نمی‌کند»). فقط «عنوان» در فعالیت زنده استفاده می‌شود؛ آن را کوتاه و واقعی بنویسید.">
+        @include('crm::partials.json-repeater', [
+            'name' => 'issues',
+            'label' => 'مشکلات رایج',
+            'items' => old('issues', $device->issues ?? []),
+            'item_fields' => [
+                'title' => ['label' => 'عنوان مشکل (در فعالیت زنده نمایش داده می‌شود)', 'type' => 'string'],
+                'description' => ['label' => 'توضیح (اختیاری — در فعالیت زنده استفاده نمی‌شود)', 'type' => 'textarea'],
+            ],
+        ])
+    </x-crm::section-card>
+
     {{-- ─── ۱۳) سئو ─── --}}
     <x-crm::section-card sectionKey="seo" title="سئو (Meta)" icon="🔍"
         description="Meta Title و Meta Description مخصوص این دستگاه">
@@ -387,15 +402,6 @@
 
     {{-- ─── فیلدهای legacy مخفی (هنوز submit می‌شوند) ─── --}}
     <div style="display:none">
-        @include('crm::partials.json-repeater', [
-            'name' => 'issues',
-            'label' => 'مشکلات (legacy)',
-            'items' => old('issues', $device->issues ?? []),
-            'item_fields' => [
-                'title' => ['label' => 'عنوان', 'type' => 'string'],
-                'description' => ['label' => 'توضیح', 'type' => 'textarea'],
-            ],
-        ])
         @include('crm::partials.json-repeater', [
             'name' => 'service_steps',
             'label' => 'مراحل (legacy)',

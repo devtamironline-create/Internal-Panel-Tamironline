@@ -20,9 +20,12 @@ use Modules\CRM\Models\Order;
  * «آبسال + ماشین لباسشویی»). اگر دستگاهی هیچ ترکیبِ فعالی نداشته باشد، فقط
  * نام دستگاه ارسال می‌شود (که همیشه درست است).
  *
- * منبع داده: device/brandهای فعال + DeviceBrandPageهای فعال + مناطقِ
- * config('site.activity-areas') + تولید تصادفیِ minutes_ago/status با seedِ
- * مبتنی بر دقیقه (هم‌خوان با کش ۶۰ ثانیه‌ای).
+ * منبع داده: device/brandهای فعال + DeviceBrandPageهای فعال + مشکلاتِ واقعیِ
+ * هر دستگاه (فیلدِ issues) + مناطقِ config('site.activity-areas') + تولید
+ * تصادفیِ minutes_ago/status با seedِ مبتنی بر دقیقه (هم‌خوان با کش ۶۰ ثانیه‌ای).
+ *
+ * مشکل (problem) فقط وقتی به آیتم اضافه می‌شود که برای آن دستگاه در پنل تعریف
+ * شده باشد — هیچ‌وقت مشکلِ ساختگی تولید نمی‌شود.
  *
  * بدون پارامتر:   home → دستگاهِ تصادفی + برندِ سازگار (یا بدون برند)
  * با ?device_slug: صفحه‌ی device → همان دستگاه + برندِ سازگار
@@ -95,12 +98,19 @@ class ActivityController extends Controller
         $data = [];
         $prevDeviceId = null;
         $prevArea = null;
+        $prevProblem = null;
         for ($i = 0; $i < $limit; $i++) {
             $device = $this->pickDistinct($devices, $prevDeviceId, $rng, fn ($d) => $d->id);
             $prevDeviceId = $device->id;
 
             $area = $this->pickDistinctScalar($areas, $prevArea, $rng);
             $prevArea = $area;
+
+            // مشکلِ واقعیِ این دستگاه (اگر تعریف شده باشد) — هیچ‌وقت مشکلِ ساختگی
+            // ساخته نمی‌شود؛ نبودِ مشکل ⇒ متن فقط «تعمیر دستگاه/برند» می‌ماند.
+            $problems = $this->problemTitles($device);
+            $problem = $problems === [] ? null : $this->pickDistinctScalar($problems, $prevProblem, $rng);
+            $prevProblem = $problem;
 
             // برندِ سازگار: اگر فیلتر شده، همان؛ وگرنه یکی از comboهای فعالِ این
             // دستگاه (با ۳۰٪ احتمال «بدون برند» برای تنوعِ طبیعی).
@@ -120,9 +130,11 @@ class ActivityController extends Controller
             $minutesAgo = $this->pickMinutesAgo($rng);
             $status = $rng->getInt(0, 100) < 75 ? 'completed' : 'in_progress';
 
-            $label = $rowBrand
+            // پایه: «تعمیر دستگاه [برند]» — و اگر مشکلِ واقعی داشت، با « – مشکل».
+            $base = $rowBrand
                 ? sprintf('تعمیر %s %s', $device->name, $rowBrand->name)
                 : sprintf('تعمیر %s', $device->name);
+            $label = $problem ? sprintf('%s – %s', $base, $problem) : $base;
 
             $data[] = [
                 'id' => 'act_'.substr(md5($seedKey.$i), 0, 16),
@@ -132,6 +144,7 @@ class ActivityController extends Controller
                 'brand' => $rowBrand?->name,
                 'brand_slug' => $rowBrand?->slug,
                 'brand_label' => $rowBrand?->name,
+                'problem' => $problem,
                 'area' => $area,
                 'status' => $status,
                 'minutes_ago' => $minutesAgo,
@@ -222,7 +235,34 @@ class ActivityController extends Controller
             $query->where('slug', $slug);
         }
 
-        return $query->get(['id', 'name', 'slug']);
+        // issues = مشکلاتِ رایجِ واقعیِ هر دستگاه ([{title, description}])؛ برای
+        // متنِ فعالیت زنده فقط عنوان‌های غیرخالی استفاده می‌شوند.
+        return $query->get(['id', 'name', 'slug', 'issues']);
+    }
+
+    /**
+     * عنوان‌های غیرخالیِ مشکلاتِ واقعیِ یک دستگاه (از فیلدِ issues).
+     * فقط رشته‌ها/{title:...} با عنوانِ ناتهی برگردانده می‌شوند.
+     *
+     * @return array<int, string>
+     */
+    private function problemTitles(Device $device): array
+    {
+        $issues = $device->issues;
+        if (! is_array($issues)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($issues as $issue) {
+            $title = is_array($issue) ? ($issue['title'] ?? '') : (is_string($issue) ? $issue : '');
+            $title = trim((string) $title);
+            if ($title !== '') {
+                $out[] = $title;
+            }
+        }
+
+        return $out;
     }
 
     /**
