@@ -25,6 +25,7 @@ class ImportServicePrices extends Command
                             {file? : مسیرِ فایلِ CSV}
                             {--apply : اعمالِ واقعی (پیش‌فرض dry-run)}
                             {--price=new : ستونِ قیمتِ زنده: new (قیمت جدید) یا current (هزینهٔ فعلی)}
+                            {--replace : قیمت‌های قبلیِ هر دستگاهِ موجود در فایل را اول پاک کن (جلوگیری از تکراری هنگام تغییرِ عنوان‌ها)}
                             {--list-devices : فقط لیستِ دستگاه‌ها (id، نام، slug) را چاپ کن و خارج شو}';
 
     protected $description = 'ایمپورتِ قیمتِ خدمات به‌ازای دستگاه از فایل CSV';
@@ -69,8 +70,9 @@ class ImportServicePrices extends Command
             return self::FAILURE;
         }
         $apply = (bool) $this->option('apply');
+        $replace = (bool) $this->option('replace');
         $useNew = $this->option('price') !== 'current';
-        $this->info(($apply ? 'اعمالِ واقعی' : 'Dry-run').' | قیمتِ زنده از ستونِ: '.($useNew ? '«قیمت جدید»' : '«هزینهٔ فعلی»'));
+        $this->info(($apply ? 'اعمالِ واقعی' : 'Dry-run').' | قیمتِ زنده از ستونِ: '.($useNew ? '«قیمت جدید» (با fallback به مبلغ عددی)' : '«هزینهٔ فعلی»').($replace ? ' | حالتِ replace' : ''));
 
         $rows = array_map('str_getcsv', file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
         array_shift($rows); // header
@@ -87,8 +89,10 @@ class ImportServicePrices extends Command
 
         $created = 0;
         $updated = 0;
+        $deleted = 0;
         $unmatched = [];
         $sortByDevice = [];
+        $wiped = [];
 
         foreach ($rows as $r) {
             $cat = trim((string) ($r[0] ?? ''));
@@ -104,8 +108,21 @@ class ImportServicePrices extends Command
                 continue;
             }
 
-            [$price, $isFree] = $this->parsePrice((string) ($r[$useNew ? 4 : 3] ?? ''));
+            // قیمتِ زنده: اگر --price=new ولی ستونِ «قیمت جدید» (ایندکس ۴) نبود/خالی
+            // بود، به «مبلغ عددی» (ایندکس ۳) برمی‌گردیم تا CSVهای ۴ستونی هم کار کنند.
+            $liveRaw = $useNew ? trim((string) ($r[4] ?? '')) : trim((string) ($r[3] ?? ''));
+            if ($liveRaw === '') {
+                $liveRaw = trim((string) ($r[3] ?? ''));
+            }
+            [$price, $isFree] = $this->parsePrice($liveRaw);
             [$compare] = $this->parsePrice((string) ($r[$useNew ? 3 : 4] ?? ''));
+
+            // حالتِ replace: قیمت‌های قبلیِ این دستگاه را یک‌بار پاک کن.
+            if ($apply && $replace && ! isset($wiped[$device->id])) {
+                $deleted += DeviceServicePrice::where('device_id', $device->id)->delete();
+                $wiped[$device->id] = true;
+                $sortByDevice[$device->id] = 0;
+            }
 
             $sortByDevice[$device->id] = ($sortByDevice[$device->id] ?? 0) + 1;
             $payload = [
@@ -132,7 +149,7 @@ class ImportServicePrices extends Command
         }
 
         $this->newLine();
-        $this->info("ساخته: {$created} | به‌روز: {$updated}");
+        $this->info("ساخته: {$created} | به‌روز: {$updated}".($replace ? " | پاک‌شده: {$deleted}" : ''));
         if (! empty($unmatched)) {
             $this->newLine();
             $this->warn('دسته‌بندی‌های بدونِ دستگاهِ متناظر (این خدمات وارد نشدند):');
