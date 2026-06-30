@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\View\View;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceServicePrice;
+use Modules\CRM\Support\ServicePriceDisclaimer;
 
 /**
  * مدیریتِ تعرفهٔ خدمات به‌ازای هر دستگاه (افزودن/ویرایش/حذف/مرتب‌سازی).
@@ -25,7 +26,31 @@ class ServicePriceController extends Controller
             ? DeviceServicePrice::where('device_id', $device->id)->ordered()->get()
             : collect();
 
-        return view('crm::service-prices.index', compact('devices', 'device', 'prices'));
+        $disclaimer = ServicePriceDisclaimer::forForm();
+
+        return view('crm::service-prices.index', compact('devices', 'device', 'prices', 'disclaimer'));
+    }
+
+    /**
+     * ذخیرهٔ «نکات مهم دربارهٔ تعرفه‌ها» (سایت‌گستر). پاراگراف‌ها با خطِ خالی
+     * از هم جدا می‌شوند. خالی‌گذاشتن → بازگشت به متنِ پیش‌فرضِ فرانت.
+     */
+    public function updateDisclaimer(Request $request): RedirectResponse
+    {
+        $v = $request->validate([
+            'title' => 'nullable|string|max:200',
+            'body' => 'nullable|string|max:8000',
+        ]);
+
+        // هر بلوکِ جداشده با یک خطِ خالی = یک پاراگراف.
+        $blocks = preg_split('/\R\s*\R/u', (string) ($v['body'] ?? '')) ?: [];
+        $paragraphs = array_values(array_filter(array_map('trim', $blocks), fn ($p) => $p !== ''));
+
+        ServicePriceDisclaimer::save($v['title'] ?? null, $paragraphs);
+
+        return back()->with('success', $paragraphs === []
+            ? 'نکات تعرفه پاک شد؛ سایت متنِ پیش‌فرض را نشان می‌دهد.'
+            : 'نکات مهم دربارهٔ تعرفه‌ها ذخیره شد.');
     }
 
     public function store(Request $request, Device $device): RedirectResponse

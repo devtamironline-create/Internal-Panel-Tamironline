@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceServicePrice;
+use Modules\CRM\Support\ServicePriceDisclaimer;
 
 /**
  * تعرفهٔ خدمات (قیمت‌ها) برای نمایش در سایت.
@@ -27,12 +28,12 @@ class PricingController extends Controller
             ->active()->ordered()
             ->get();
 
-        return response()->json([
+        return response()->json($this->withDisclaimer([
             'data' => [
                 'device' => ['slug' => $device->slug, 'name' => $device->name],
                 'items' => $items->map(fn (DeviceServicePrice $p) => $this->shape($p))->values(),
             ],
-        ])->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+        ]))->header('Cache-Control', 'public, max-age=600, s-maxage=600');
     }
 
     public function index(): JsonResponse
@@ -49,8 +50,26 @@ class PricingController extends Controller
             'items' => $d->servicePrices->map(fn (DeviceServicePrice $p) => $this->shape($p))->values(),
         ])->values();
 
-        return response()->json(['data' => $data])
+        return response()->json($this->withDisclaimer(['data' => $data]))
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * فیلدِ اختیاریِ disclaimer (نکات مهم دربارهٔ تعرفه‌ها) را — اگر در پنل
+     * ذخیره شده باشد — کنارِ data اضافه می‌کند. در غیرِ این صورت ارسال نمی‌شود
+     * و فرانت متنِ پیش‌فرضِ خودش را نمایش می‌دهد.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function withDisclaimer(array $payload): array
+    {
+        $disclaimer = ServicePriceDisclaimer::forApi();
+        if ($disclaimer !== null) {
+            $payload['disclaimer'] = $disclaimer;
+        }
+
+        return $payload;
     }
 
     /** @return array<string, mixed> */

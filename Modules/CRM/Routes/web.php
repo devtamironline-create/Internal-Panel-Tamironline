@@ -135,6 +135,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
         // تعرفهٔ خدمات (قیمت‌ها) — هم صفحهٔ اختصاصی، هم لینک از ویرایشِ دستگاه.
         Route::get('service-prices', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'index'])->name('service-prices.index');
+        Route::put('service-prices/disclaimer', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'updateDisclaimer'])->name('service-prices.disclaimer');
         Route::post('devices/{device}/service-prices', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'store'])->name('service-prices.store');
         Route::put('service-prices/{price}', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'update'])->whereNumber('price')->name('service-prices.update');
         Route::delete('service-prices/{price}', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'destroy'])->whereNumber('price')->name('service-prices.destroy');
