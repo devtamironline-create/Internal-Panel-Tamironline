@@ -21,6 +21,40 @@
         </div>
     @endif
 
+    {{-- نکات مهم دربارهٔ تعرفه‌ها (سایت‌گستر) --}}
+    <details class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            نکات مهم دربارهٔ تعرفه‌ها (زیرِ همهٔ تعرفه‌ها در سایت)
+            <span class="mr-auto text-[11px] font-normal px-2 py-0.5 rounded-full {{ $disclaimer['is_custom'] ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">
+                {{ $disclaimer['is_custom'] ? 'سفارشی (ذخیره‌شده)' : 'پیش‌فرض' }}
+            </span>
+        </summary>
+        <form method="POST" action="{{ route('crm.service-prices.disclaimer') }}" class="px-4 pb-4 pt-1 space-y-3">
+            @csrf @method('PUT')
+            <p class="text-xs text-gray-500 leading-relaxed">
+                این متن زیرِ تعرفه‌ها در صفحهٔ هر دستگاه، صفحهٔ برند×دستگاه و صفحهٔ <code dir="ltr">/pricing</code> نمایش داده می‌شود.
+                هر <b>پاراگراف</b> را با یک <b>خطِ خالی</b> از پاراگرافِ بعدی جدا کنید. اگر همه را خالی کنید، سایت متنِ پیش‌فرضِ خودش را نشان می‌دهد.
+            </p>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">عنوان</label>
+                <input type="text" name="title" maxlength="200" value="{{ old('title', $disclaimer['title']) }}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"
+                       placeholder="{{ \Modules\CRM\Support\ServicePriceDisclaimer::DEFAULT_TITLE }}">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">متن (هر پاراگراف با یک خطِ خالی جدا شود)</label>
+                <textarea name="body" rows="9" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm leading-relaxed">{{ old('body', implode("\n\n", $disclaimer['paragraphs'])) }}</textarea>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700">ذخیرهٔ نکات</button>
+                @if($disclaimer['is_custom'])
+                    <span class="text-[11px] text-gray-400">برای بازگشت به پیش‌فرض، متن را خالی کنید و ذخیره بزنید.</span>
+                @endif
+            </div>
+        </form>
+    </details>
+
     {{-- Device picker --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">انتخاب دستگاه</label>
