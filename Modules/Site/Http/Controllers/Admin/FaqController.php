@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Http\Requests\Admin\StoreFaqRequest;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Taxonomy;
@@ -74,12 +75,14 @@ class FaqController extends Controller
     {
         $this->checkAccess();
         $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_FAQ)->ordered()->get();
+
         return view('site::admin.faqs.create', compact('taxonomies'));
     }
 
     public function store(StoreFaqRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $data['answer'] = HtmlSanitizer::clean($data['answer']);
         $data['is_published'] = $request->boolean('is_published');
         $taxonomyIds = $this->validateTaxonomyIds($request);
         unset($data['taxonomy_ids']);
@@ -98,6 +101,7 @@ class FaqController extends Controller
         $faq = Faq::with('taxonomies:id')->findOrFail($id);
         $taxonomies = Taxonomy::ofType(Taxonomy::TYPE_FAQ)->ordered()->get();
         $selectedTaxonomies = $faq->taxonomies->pluck('id')->all();
+
         return view('site::admin.faqs.edit', compact('faq', 'taxonomies', 'selectedTaxonomies'));
     }
 
@@ -105,6 +109,7 @@ class FaqController extends Controller
     {
         $faq = Faq::findOrFail($id);
         $data = $request->validated();
+        $data['answer'] = HtmlSanitizer::clean($data['answer']);
         $data['is_published'] = $request->boolean('is_published');
         $taxonomyIds = $this->validateTaxonomyIds($request);
         unset($data['taxonomy_ids']);
@@ -127,6 +132,7 @@ class FaqController extends Controller
         if (empty($ids)) {
             return [];
         }
+
         return Taxonomy::ofType(Taxonomy::TYPE_FAQ)
             ->whereIn('id', $ids)
             ->pluck('id')

@@ -9,15 +9,17 @@ class StoreFaqRequest extends FormRequest
     public function authorize(): bool
     {
         $u = $this->user();
+
         return $u && ($u->can('manage-site-faqs') || $u->can('manage-site') || $u->can('manage-permissions'));
     }
 
     public function rules(): array
     {
         return [
-            'question'     => ['required', 'string', 'min:5', 'max:255'],
-            'answer'       => ['required', 'string', 'min:5', 'max:5000'],
-            'sort_order'   => ['nullable', 'integer', 'min:0'],
+            'question' => ['required', 'string', 'min:5', 'max:255'],
+            // پاسخ حالا HTML است (ادیتورِ کامل: لینک/استایل) → سقفِ بزرگ‌تر.
+            'answer' => ['required', 'string', 'min:5', 'max:50000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['nullable', 'boolean'],
         ];
     }
@@ -26,7 +28,7 @@ class StoreFaqRequest extends FormRequest
     {
         return [
             'question.required' => 'متن سوال الزامی است.',
-            'answer.required'   => 'متن پاسخ الزامی است.',
+            'answer.required' => 'متن پاسخ الزامی است.',
         ];
     }
 }

@@ -79,10 +79,10 @@
 
             <div>
                 <label class="block text-sm font-medium mb-1">پاسخ <span class="text-red-500">*</span></label>
-                <textarea name="answer" rows="7" required maxlength="5000"
-                          class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500"
+                <textarea name="answer" rows="10" required
+                          class="rich-editor w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500"
                           placeholder="پاسخ کامل سوال... می‌توانید از همان placeholderها استفاده کنید.">{{ old('answer', $f?->answer) }}</textarea>
-                <p class="text-xs text-gray-500 mt-1">حداکثر ۵٬۰۰۰ کاراکتر. حفظ newlineها در فرانت با CSS <code class="text-xs ltr" dir="ltr">white-space: pre-line</code> توصیه می‌شود.</p>
+                <p class="text-xs text-gray-500 mt-1">ادیتورِ کامل: می‌توانید لینک، لیست، جدول، پررنگ/ایتالیک، رنگ و عنوان اضافه کنید. خروجی به‌صورت HTML ذخیره و در فرانت رندر می‌شود. placeholderها همچنان داخلِ متن کار می‌کنند.</p>
             </div>
         </div>
     </div>
