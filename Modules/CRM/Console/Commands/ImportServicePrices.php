@@ -22,11 +22,15 @@ use Modules\CRM\Models\DeviceServicePrice;
 class ImportServicePrices extends Command
 {
     protected $signature = 'crm:import-service-prices
-                            {file : مسیرِ فایلِ CSV}
+                            {file? : مسیرِ فایلِ CSV}
                             {--apply : اعمالِ واقعی (پیش‌فرض dry-run)}
-                            {--price=new : ستونِ قیمتِ زنده: new (قیمت جدید) یا current (هزینهٔ فعلی)}';
+                            {--price=new : ستونِ قیمتِ زنده: new (قیمت جدید) یا current (هزینهٔ فعلی)}
+                            {--list-devices : فقط لیستِ دستگاه‌ها (id، نام، slug) را چاپ کن و خارج شو}';
 
     protected $description = 'ایمپورتِ قیمتِ خدمات به‌ازای دستگاه از فایل CSV';
+
+    /** @var \Illuminate\Support\Collection<int,\Modules\CRM\Models\Device> */
+    private $deviceList;
 
     /** دسته‌بندیِ CSV → slugِ دستگاه (fallback وقتی تطبیقِ نام نشد). */
     private const ALIAS = [
@@ -38,16 +42,28 @@ class ImportServicePrices extends Command
         'هود' => 'hood',
         'خشک کن' => 'dryer',
         'کولر گازی' => 'split-air-conditioner',
+        'اسپیلت' => 'split-air-conditioner',
+        'اسپلیت' => 'split-air-conditioner',
         'ماکروفر' => 'microwave',
         'پکیج' => 'wall-mounted-boiler',
         'آبگرمکن' => 'water-heater',
         'تصفیه آب' => 'water-purifier',
+        'تلویزیون' => 'tv',
+        'تلویزیون (lcd / led)' => 'tv',
     ];
 
     public function handle(): int
     {
+        if ($this->option('list-devices')) {
+            $rows = Device::query()->ordered()->get(['id', 'name', 'slug', 'is_active'])
+                ->map(fn ($d) => [$d->id, $d->name, $d->slug, $d->is_active ? 'فعال' : 'غیرفعال'])->all();
+            $this->table(['id', 'نام', 'slug', 'وضعیت'], $rows);
+
+            return self::SUCCESS;
+        }
+
         $file = (string) $this->argument('file');
-        if (! is_file($file)) {
+        if ($file === '' || ! is_file($file)) {
             $this->error("فایل پیدا نشد: {$file}");
 
             return self::FAILURE;
@@ -67,6 +83,7 @@ class ImportServicePrices extends Command
             $byName[$this->norm($d->name)] = $d;
             $bySlug[$d->slug] = $d;
         }
+        $this->deviceList = $devices;
 
         $created = 0;
         $updated = 0;
@@ -133,15 +150,40 @@ class ImportServicePrices extends Command
     private function resolveDevice(string $cat, array $byName, array $bySlug): ?Device
     {
         $n = $this->norm($cat);
+
+        // ۱) تطبیقِ دقیقِ نام
         if (isset($byName[$n])) {
             return $byName[$n];
         }
-        $slug = self::ALIAS[$cat] ?? null;
+
+        // ۲) alias (با کلیدِ خام یا نرمال‌شده)
+        $slug = self::ALIAS[$cat] ?? self::ALIAS[mb_strtolower($n)] ?? self::ALIAS[$n] ?? null;
         if ($slug && isset($bySlug[$slug])) {
             return $bySlug[$slug];
         }
 
+        // ۳) تطبیقِ هستهٔ کلمه: اولین واژهٔ دسته (قبل از «(» یا «-») داخلِ نامِ دستگاه
+        //    باشد. مثلاً «تلویزیون (LCD / LED)» → دستگاهی که نامش «تلویزیون» دارد.
+        $core = $this->coreWord($cat);
+        if (mb_strlen($core) >= 3) {
+            foreach ($this->deviceList as $d) {
+                $dn = $this->norm($d->name);
+                if ($dn === $core || str_contains($dn, $core) || str_contains($core, $dn)) {
+                    return $d;
+                }
+            }
+        }
+
         return null;
+    }
+
+    private function coreWord(string $cat): string
+    {
+        $head = (string) (preg_split('/[\(\-]/u', $cat)[0] ?? $cat);
+        $head = $this->norm($head);
+        $parts = preg_split('/\s+/u', $head) ?: [];
+
+        return (string) ($parts[0] ?? '');
     }
 
     /** @return array{0:?int,1:bool} [price, is_free] */
