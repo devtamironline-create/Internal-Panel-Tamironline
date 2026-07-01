@@ -156,6 +156,8 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @forelse($recentOrders as $o)
                         @php($tech = trim(($o->technician->first_name ?? '').' '.($o->technician->last_name ?? '')) ?: ($o->technician->firstname_tech ?? '—'))
+                        {{-- statusِ خام را می‌خوانیم تا castِ enum روی مقدارِ legacy خطا ندهد --}}
+                        @php($st = \Modules\CRM\Enums\OrderStatus::tryFrom((string) $o->getRawOriginal('status')))
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                             <td class="px-4 py-2 text-gray-800 dark:text-gray-100">
                                 @if(Route::has('crm.orders.show'))
@@ -167,7 +169,7 @@
                             <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $o->device->name ?? '—' }}{{ $o->brand ? ' / '.$o->brand->name : '' }}</td>
                             <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $tech }}</td>
                             <td class="px-4 py-2">
-                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs {{ $o->status?->badgeClass() ?? 'bg-gray-100 text-gray-700' }}">{{ $o->status?->label() ?? '—' }}</span>
+                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs {{ $st?->badgeClass() ?? 'bg-gray-100 text-gray-700' }}">{{ $st?->label() ?? '—' }}</span>
                             </td>
                             <td class="px-4 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $o->created_at ? \Morilog\Jalali\Jalalian::fromCarbon($o->created_at)->format('Y/m/d H:i') : '—' }}</td>
                         </tr>
