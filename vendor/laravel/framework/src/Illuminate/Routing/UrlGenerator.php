@@ -383,8 +383,6 @@ class UrlGenerator implements UrlGeneratorContract
      *
      * @param  mixed  $parameters
      * @return void
-     *
-     * @throws \InvalidArgumentException
      */
     protected function ensureSignedRouteParametersAreNotReserved($parameters)
     {
@@ -475,16 +473,10 @@ class UrlGenerator implements UrlGeneratorContract
 
         $keys = is_array($keys) ? $keys : [$keys];
 
-        $signature = $request->query('signature');
-
-        if (! is_string($signature)) {
-            return false;
-        }
-
         foreach ($keys as $key) {
             if (hash_equals(
                 hash_hmac('sha256', $original, $key),
-                $signature
+                (string) $request->query('signature', '')
             )) {
                 return true;
             }

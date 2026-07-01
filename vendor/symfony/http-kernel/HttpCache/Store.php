@@ -301,7 +301,7 @@ class Store implements StoreInterface
             return [];
         }
 
-        return unserialize($entries, ['allowed_classes' => false]) ?: [];
+        return unserialize($entries) ?: [];
     }
 
     /**

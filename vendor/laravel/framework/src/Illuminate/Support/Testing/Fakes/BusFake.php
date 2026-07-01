@@ -137,6 +137,7 @@ class BusFake implements Fake, QueueingDispatcher
      * Assert if a job was pushed exactly once.
      *
      * @param  string|\Closure  $command
+     * @param  int  $times
      * @return void
      */
     public function assertDispatchedOnce($command)
@@ -498,13 +499,11 @@ class BusFake implements Fake, QueueingDispatcher
     /**
      * Assert if a batch was dispatched based on a truth-test callback.
      *
-     * @param  array|callable(\Illuminate\Bus\PendingBatch): bool  $callback
+     * @param  callable(\Illuminate\Bus\PendingBatch): bool  $callback
      * @return void
      */
-    public function assertBatched(callable|array $callback)
+    public function assertBatched(callable $callback)
     {
-        $callback = is_array($callback) ? fn (PendingBatchFake $batch) => $batch->hasJobs($callback) : $callback;
-
         PHPUnit::assertTrue(
             $this->batched($callback)->count() > 0,
             'The expected batch was not dispatched.'

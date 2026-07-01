@@ -8,9 +8,6 @@ use Illuminate\Contracts\Console\PromptsForMissingInput;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Symfony\Component\Console\Completion\CompletionInput;
-use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Completion\Suggestion;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Finder\Finder;
 
@@ -125,6 +122,8 @@ abstract class GeneratorCommand extends Command implements PromptsForMissingInpu
 
     /**
      * Create a new generator command instance.
+     *
+     * @param  \Illuminate\Filesystem\Filesystem  $files
      */
     public function __construct(Filesystem $files)
     {
@@ -223,7 +222,8 @@ abstract class GeneratorCommand extends Command implements PromptsForMissingInpu
     /**
      * Qualify the given model class base name.
      *
-     * @return class-string
+     * @param  string  $model
+     * @return string
      */
     protected function qualifyModel(string $model)
     {
@@ -481,13 +481,7 @@ abstract class GeneratorCommand extends Command implements PromptsForMissingInpu
     /**
      * Get the console command arguments.
      *
-     * @return (InputArgument|array{
-     *    0: non-empty-string,
-     *    1?: InputArgument::REQUIRED|InputArgument::OPTIONAL|InputArgument::IS_ARRAY,
-     *    2?: string,
-     *    3?: mixed,
-     *    4?: list<string|Suggestion>|\Closure(CompletionInput, CompletionSuggestions): list<string|Suggestion>
-     * })[]
+     * @return array
      */
     protected function getArguments()
     {
@@ -499,7 +493,7 @@ abstract class GeneratorCommand extends Command implements PromptsForMissingInpu
     /**
      * Prompt for missing input arguments using the returned questions.
      *
-     * @return array<string, string|array{string, string}|\Closure(): (array<int, string>|string|int|bool)>
+     * @return array
      */
     protected function promptForMissingArgumentsUsing()
     {

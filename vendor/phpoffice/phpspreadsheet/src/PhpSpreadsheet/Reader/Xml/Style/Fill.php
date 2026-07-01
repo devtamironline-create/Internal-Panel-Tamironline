@@ -30,24 +30,9 @@ class Fill extends StyleBase
         ],
     ];
 
-    /** @return array{
-     *      fill?: array{
-     *          endColor?: array{rgb:string},
-     *          startColor?: array{rgb:string},
-     *          fillType?: string,
-     *      }
-     *   }
-     */
+    /** @return mixed[] */
     public function parseStyle(SimpleXMLElement $styleAttributes): array
     {
-        /** @var array{
-         *      fill?: array{
-         *          endColor?: array{rgb:string},
-         *          startColor?: array{rgb:string},
-         *          fillType?: string,
-         *      }
-         *  }
-         */
         $style = [];
 
         foreach ($styleAttributes as $styleAttributeKey => $styleAttributeValuex) {

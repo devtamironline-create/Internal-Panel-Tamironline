@@ -23,7 +23,6 @@ use Illuminate\Testing\Constraints\SeeInOrder;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Testing\TestResponseAssert as PHPUnit;
 use LogicException;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\StreamedJsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -374,7 +373,7 @@ class TestResponse implements ArrayAccess
         $actual = $this->headers->get($headerName);
 
         if (! is_null($value)) {
-            PHPUnit::withResponse($this)->assertEqualsIgnoringCase(
+            PHPUnit::withResponse($this)->assertEquals(
                 $value, $this->headers->get($headerName),
                 "Header [{$headerName}] was found, but value [{$actual}] does not match [{$value}]."
             );
@@ -696,7 +695,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given string or array of strings are contained within the response.
      *
-     * @param  string|list<string>  $value
+     * @param  string|array  $value
      * @param  bool  $escape
      * @return $this
      */
@@ -716,7 +715,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given HTML string or array of HTML strings are contained within the response.
      *
-     * @param  string|list<string>  $value
+     * @param  array|string  $value
      * @return $this
      */
     public function assertSeeHtml($value)
@@ -727,7 +726,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given strings are contained in order within the response.
      *
-     * @param  list<string>  $values
+     * @param  array  $values
      * @param  bool  $escape
      * @return $this
      */
@@ -743,7 +742,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given HTML strings are contained in order within the response.
      *
-     * @param  list<string>  $values
+     * @param  array  $values
      * @return $this
      */
     public function assertSeeHtmlInOrder(array $values)
@@ -754,7 +753,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given string or array of strings are contained within the response text.
      *
-     * @param  string|list<string>  $value
+     * @param  string|array  $value
      * @param  bool  $escape
      * @return $this
      */
@@ -776,7 +775,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given strings are contained in order within the response text.
      *
-     * @param  list<string>  $values
+     * @param  array  $values
      * @param  bool  $escape
      * @return $this
      */
@@ -792,7 +791,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given string or array of strings are not contained within the response.
      *
-     * @param  string|list<string>  $value
+     * @param  string|array  $value
      * @param  bool  $escape
      * @return $this
      */
@@ -812,7 +811,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given HTML string or array of HTML strings are not contained within the response.
      *
-     * @param  string|list<string>  $value
+     * @param  array|string  $value
      * @return $this
      */
     public function assertDontSeeHtml($value)
@@ -823,7 +822,7 @@ class TestResponse implements ArrayAccess
     /**
      * Assert that the given string or array of strings are not contained within the response text.
      *
-     * @param  string|list<string>  $value
+     * @param  string|array  $value
      * @param  bool  $escape
      * @return $this
      */
@@ -1260,7 +1259,7 @@ class TestResponse implements ArrayAccess
     }
 
     /**
-     * Get the decoded JSON body of the response as a collection.
+     * Get the JSON decoded body of the response as a collection.
      *
      * @param  string|null  $key
      * @return \Illuminate\Support\Collection
@@ -1342,20 +1341,14 @@ class TestResponse implements ArrayAccess
     /**
      * Get a piece of data from the original view.
      *
-     * @param  string|null  $key
+     * @param  string  $key
      * @return mixed
      */
-    public function viewData($key = null)
+    public function viewData($key)
     {
         $this->ensureResponseHasView();
 
-        $data = $this->original->gatherData();
-
-        if (is_null($key)) {
-            return $data;
-        }
-
-        return $data[$key];
+        return $this->original->gatherData()[$key];
     }
 
     /**
@@ -1565,22 +1558,12 @@ class TestResponse implements ArrayAccess
      */
     public function assertSessionHasAll(array $bindings)
     {
-        $actual = [];
-        $expected = [];
-
         foreach ($bindings as $key => $value) {
             if (is_int($key)) {
                 $this->assertSessionHas($value);
-            } elseif ($value instanceof Closure) {
-                $this->assertSessionHas($key, $value);
             } else {
-                $expected[$key] = $value;
-                $actual[$key] = $this->session()->get($key);
+                $this->assertSessionHas($key, $value);
             }
-        }
-
-        if (! empty($expected)) {
-            PHPUnit::withResponse($this)->assertEquals($expected, $actual);
         }
 
         return $this;
@@ -1896,7 +1879,7 @@ class TestResponse implements ArrayAccess
         }
 
         if (! $this->baseResponse instanceof StreamedResponse
-            && ! $this->baseResponse instanceof BinaryFileResponse) {
+            && ! $this->baseResponse instanceof StreamedJsonResponse) {
             PHPUnit::withResponse($this)->fail('The response is not a streamed response.');
         }
 

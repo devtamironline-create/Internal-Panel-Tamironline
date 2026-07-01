@@ -77,9 +77,7 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
      * @param  int  $from
      * @param  int  $to
      * @param  int  $step
-     * @return ($step is zero ? never : static<int, int>)
-     *
-     * @throws \InvalidArgumentException
+     * @return static<int, int>
      */
     public static function range($from, $to, $step = 1)
     {
@@ -688,26 +686,11 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
     /**
      * Determine if the collection contains a single item.
      *
-     * @param  (callable(TValue, TKey): bool)|null  $callback
      * @return bool
-     *
-     * @deprecated 12.49.0 Use the `hasSole()` method instead.
      */
-    public function containsOneItem(?callable $callback = null): bool
+    public function containsOneItem()
     {
-        return $this->hasSole($callback);
-    }
-
-    /**
-     * Determine if the collection contains multiple items.
-     *
-     * @return bool
-     *
-     * @deprecated 12.50.0 Use the `hasMany()` method instead.
-     */
-    public function containsManyItems(): bool
-    {
-        return $this->hasMany();
+        return $this->take(2)->count() === 1;
     }
 
     /**
@@ -914,16 +897,10 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
      *
      * @param  int  $step
      * @param  int  $offset
-     * @return ($step is positive-int ? static : never)
-     *
-     * @throws \InvalidArgumentException
+     * @return static
      */
     public function nth($step, $offset = 0)
     {
-        if ($step < 1) {
-            throw new InvalidArgumentException('Step value must be at least 1.');
-        }
-
         return new static(function () use ($step, $offset) {
             $position = 0;
 
@@ -1028,12 +1005,11 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
      * Get one or a specified number of items randomly from the collection.
      *
      * @param  int|null  $number
-     * @param  bool  $preserveKeys
      * @return static<int, TValue>|TValue
      *
      * @throws \InvalidArgumentException
      */
-    public function random($number = null, $preserveKeys = false)
+    public function random($number = null)
     {
         $result = $this->collect()->random(...func_get_args());
 
@@ -1304,16 +1280,10 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
 
     /**
      * {@inheritDoc}
-     *
-     * @throws \InvalidArgumentException
      */
     #[\Override]
     public function split($numberOfGroups)
     {
-        if ($numberOfGroups < 1) {
-            throw new InvalidArgumentException('Number of groups must be at least 1.');
-        }
-
         return $this->passthru(__FUNCTION__, func_get_args());
     }
 
@@ -1340,27 +1310,6 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
             ->take(2)
             ->collect()
             ->sole();
-    }
-
-    /**
-     * Determine if the collection contains a single item or a single item matching the given criteria.
-     *
-     * @param  (callable(TValue, TKey): bool)|string|null  $key
-     * @param  mixed  $operator
-     * @param  mixed  $value
-     * @return bool
-     */
-    public function hasSole($key = null, $operator = null, $value = null): bool
-    {
-        $filter = func_num_args() > 1
-            ? $this->operatorForWhere(...func_get_args())
-            : $key;
-
-        return $this
-            ->unless($filter == null)
-            ->filter($filter)
-            ->take(2)
-            ->count() === 1;
     }
 
     /**
@@ -1436,16 +1385,10 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
      * Split a collection into a certain number of groups, and fill the first groups completely.
      *
      * @param  int  $numberOfGroups
-     * @return ($numberOfGroups is positive-int ? static<int, static> : never)
-     *
-     * @throws \InvalidArgumentException
+     * @return static<int, static>
      */
     public function splitIn($numberOfGroups)
     {
-        if ($numberOfGroups < 1) {
-            throw new InvalidArgumentException('Number of groups must be at least 1.');
-        }
-
         return $this->chunk((int) ceil($this->count() / $numberOfGroups));
     }
 
@@ -1704,12 +1647,11 @@ class LazyCollection implements CanBeEscapedWhenCastToString, Enumerable
     /**
      * Flatten a multi-dimensional associative array with dots.
      *
-     * @param  int  $depth
      * @return static
      */
-    public function dot($depth = INF)
+    public function dot()
     {
-        return $this->passthru(__FUNCTION__, [$depth]);
+        return $this->passthru(__FUNCTION__, []);
     }
 
     /**

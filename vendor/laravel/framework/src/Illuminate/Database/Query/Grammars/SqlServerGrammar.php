@@ -7,7 +7,6 @@ use Illuminate\Database\Query\JoinLateralClause;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 class SqlServerGrammar extends Grammar
 {
@@ -111,22 +110,12 @@ class SqlServerGrammar extends Grammar
      * @param  \Illuminate\Database\Query\Builder  $query
      * @param  \Illuminate\Database\Query\IndexHint  $indexHint
      * @return string
-     *
-     * @throws \InvalidArgumentException
      */
     protected function compileIndexHint(Builder $query, $indexHint)
     {
-        if ($indexHint->type !== 'force') {
-            return '';
-        }
-
-        $index = $indexHint->index;
-
-        if (! preg_match('/^[a-zA-Z0-9_$]+$/', $index)) {
-            throw new InvalidArgumentException('Index name contains invalid characters.');
-        }
-
-        return "with (index([{$index}]))";
+        return $indexHint->type === 'force'
+            ? "with (index({$indexHint->index}))"
+            : '';
     }
 
     /**
@@ -143,18 +132,6 @@ class SqlServerGrammar extends Grammar
         $operator = str_replace('?', '??', $where['operator']);
 
         return '('.$this->wrap($where['column']).' '.$operator.' '.$value.') != 0';
-    }
-
-    /**
-     * Compile a "where null safe equals" clause.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @param  array  $where
-     * @return string
-     */
-    protected function whereNullSafeEquals(Builder $query, $where)
-    {
-        return 'exists (select '.$this->wrap($where['column']).' intersect select '.$this->parameter($where['value']).')';
     }
 
     /**

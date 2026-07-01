@@ -16,7 +16,7 @@ class ArrayChannelConnectionManager implements ChannelConnectionManager
     /**
      * The underlying connections.
      *
-     * @var array<string, ChannelConnection>
+     * @var array<string, \Laravel\Reverb\Protocols\Pusher\Channels\ChannelConnection>
      */
     protected $connections = [];
 
@@ -65,7 +65,7 @@ class ArrayChannelConnectionManager implements ChannelConnectionManager
     /**
      * Get all of the connections.
      *
-     * @return array<string, ChannelConnection>
+     * @return array<string, \Laravel\Reverb\Protocols\Pusher\Channels\ChannelConnection>
      */
     public function all(): array
     {

@@ -4,7 +4,6 @@ namespace Livewire\Mechanisms\PersistentMiddleware;
 
 use Illuminate\Routing\Router;
 use Livewire\Mechanisms\Mechanism;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use function Livewire\on;
 use Illuminate\Support\Str;
 use Livewire\Drawer\Utils;
@@ -147,12 +146,9 @@ class PersistentMiddleware extends Mechanism
 
     protected function getRouteFromRequest($request)
     {
-        try {
-            $route = app('router')->getRoutes()->match($request);
-            $request->setRouteResolver(fn() => $route);
-        } catch (NotFoundHttpException $e){
-            return null;
-        }
+        $route = app('router')->getRoutes()->match($request);
+
+        $request->setRouteResolver(fn() => $route);
 
         return $route;
     }

@@ -70,17 +70,17 @@ class Factory
      */
     public static function makePusherRouter(string $path): Router
     {
-        app()->singletonIf(
+        app()->singleton(
             ChannelManager::class,
             fn () => new ArrayChannelManager
         );
 
-        app()->bindIf(
+        app()->bind(
             ChannelConnectionManager::class,
             fn () => new ArrayChannelConnectionManager
         );
 
-        app()->singletonIf(
+        app()->singleton(
             PubSubIncomingMessageHandler::class,
             fn () => new PusherPubSubIncomingMessageHandler,
         );

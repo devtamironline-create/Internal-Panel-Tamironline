@@ -16,7 +16,7 @@ class Connection extends EventEmitter implements WebSocketConnection
     /**
      * The message buffer.
      *
-     * @var MessageBuffer
+     * @var \Ratchet\RFC6455\Messaging\MessageBuffer
      */
     protected $buffer;
 

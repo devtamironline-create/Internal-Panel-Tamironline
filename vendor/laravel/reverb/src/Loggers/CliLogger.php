@@ -13,7 +13,7 @@ class CliLogger implements Logger
     /**
      * The components factory instance.
      *
-     * @var Factory
+     * @var \Illuminate\Console\View\Components\Factory
      */
     protected $components;
 

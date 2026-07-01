@@ -39,9 +39,9 @@ class RateLimiter
     }
 
     /**
-     * Register a named rate limiter configuration.
+     * Register a named limiter configuration.
      *
-     * @param  \UnitEnum|string  $name
+     * @param  \BackedEnum|\UnitEnum|string  $name
      * @param  \Closure  $callback
      * @return $this
      */
@@ -57,7 +57,7 @@ class RateLimiter
     /**
      * Get the given named rate limiter.
      *
-     * @param  \UnitEnum|string  $name
+     * @param  \BackedEnum|\UnitEnum|string  $name
      * @return \Closure|null
      */
     public function limiter($name)
@@ -171,9 +171,9 @@ class RateLimiter
 
         $hits = (int) $this->cache->increment($key, $amount);
 
-        if (! $added && $hits == $amount) {
+        if (! $added && $hits == 1) {
             $this->withoutSerializationOrCompression(
-                fn () => $this->cache->put($key, $amount, $decaySeconds)
+                fn () => $this->cache->put($key, 1, $decaySeconds)
             );
         }
 
@@ -312,7 +312,7 @@ class RateLimiter
     /**
      * Resolve the rate limiter name.
      *
-     * @param  \UnitEnum|string  $name
+     * @param  \BackedEnum|\UnitEnum|string  $name
      * @return string
      */
     private function resolveLimiterName($name): string

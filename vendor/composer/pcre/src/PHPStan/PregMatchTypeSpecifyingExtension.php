@@ -57,38 +57,18 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
     {
         $args = $node->getArgs();
         $patternArg = $args[0] ?? null;
-        $subjectArg = $args[1] ?? null;
         $matchesArg = $args[2] ?? null;
         $flagsArg = $args[3] ?? null;
 
-        $subjectTypes = new SpecifiedTypes();
-        if ($patternArg === null) {
-            return $subjectTypes;
-        }
-
         if (
-            $subjectArg !== null
-            && $context->true()
-            && $scope->getType($subjectArg->value)->isString()->yes()
+            $patternArg === null || $matchesArg === null
         ) {
-            $subjectType = $this->regexShapeMatcher->matchSubjectExpr($patternArg->value, $scope);
-            if ($subjectType !== null) {
-                $subjectTypes = $this->typeSpecifier->create(
-                    $subjectArg->value,
-                    $subjectType,
-                    $context,
-                    $scope,
-                )->setRootExpr($node);
-            }
-        }
-
-        if ($matchesArg === null) {
-            return $subjectTypes;
+            return new SpecifiedTypes();
         }
 
         $flagsType = PregMatchFlags::getType($flagsArg, $scope);
         if ($flagsType === null) {
-            return $subjectTypes;
+            return new SpecifiedTypes();
         }
 
         if (stripos($methodReflection->getName(), 'matchAll') !== false) {
@@ -98,7 +78,7 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
         }
 
         if ($matchedType === null) {
-            return $subjectTypes;
+            return new SpecifiedTypes();
         }
 
         if (
@@ -113,13 +93,27 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
             $context = $context->negate();
         }
 
-        $specifiedTypes = $this->typeSpecifier->create(
+        // @phpstan-ignore function.alreadyNarrowedType
+        if (method_exists('PHPStan\Analyser\SpecifiedTypes', 'setRootExpr')) {
+            $typeSpecifier = $this->typeSpecifier->create(
+                $matchesArg->value,
+                $matchedType,
+                $context,
+                $scope
+            )->setRootExpr($node);
+
+            return $overwrite ? $typeSpecifier->setAlwaysOverwriteTypes() : $typeSpecifier;
+        }
+
+        // @phpstan-ignore arguments.count
+        return $this->typeSpecifier->create(
             $matchesArg->value,
             $matchedType,
             $context,
-            $scope
-        )->setRootExpr($node);
-
-        return $subjectTypes->unionWith($overwrite ? $specifiedTypes->setAlwaysOverwriteTypes() : $specifiedTypes);
+            // @phpstan-ignore argument.type
+            $overwrite,
+            $scope,
+            $node
+        );
     }
 }

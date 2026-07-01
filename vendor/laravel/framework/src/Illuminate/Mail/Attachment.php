@@ -6,10 +6,7 @@ use Closure;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
-use InvalidArgumentException;
 use RuntimeException;
 
 class Attachment
@@ -66,10 +63,6 @@ class Attachment
      */
     public static function fromUrl($url)
     {
-        if (! Str::isUrl($url, ['http', 'https'])) {
-            throw new InvalidArgumentException('Attachment URLs must use the http or https scheme.');
-        }
-
         return static::fromPath($url);
     }
 
@@ -105,7 +98,7 @@ class Attachment
     }
 
     /**
-     * Create a mail attachment from a file on the default storage disk.
+     * Create a mail attachment from a file in the default storage disk.
      *
      * @param  string  $path
      * @return static
@@ -116,7 +109,7 @@ class Attachment
     }
 
     /**
-     * Create a mail attachment from a file on the specified storage disk.
+     * Create a mail attachment from a file in the specified storage disk.
      *
      * @param  string|null  $disk
      * @param  string  $path
@@ -135,17 +128,6 @@ class Attachment
 
             return $dataStrategy(fn () => $storage->get($path), $attachment);
         });
-    }
-
-    /**
-     * Create a mail attachment from a file on the cloud storage disk.
-     *
-     * @param  string  $path
-     * @return static
-     */
-    public static function fromCloudStorage($path)
-    {
-        return self::fromStorageDisk(Storage::getDefaultCloudDriver(), $path);
     }
 
     /**

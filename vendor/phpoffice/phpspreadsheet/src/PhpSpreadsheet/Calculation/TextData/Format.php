@@ -96,13 +96,16 @@ class Format
         if ($decimals < 0) {
             $decimals = 0;
         }
+        if ($noCommas === false) {
+            $valueResult = number_format(
+                $valueResult,
+                $decimals,
+                StringHelper::getDecimalSeparator(),
+                StringHelper::getThousandsSeparator()
+            );
+        }
 
-        return number_format(
-            $valueResult,
-            $decimals,
-            StringHelper::getDecimalSeparator(),
-            $noCommas ? '' : StringHelper::getThousandsSeparator()
-        );
+        return (string) $valueResult;
     }
 
     /**

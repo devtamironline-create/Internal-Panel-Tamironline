@@ -81,7 +81,7 @@ class PaginatedResourceResponse extends ResourceResponse
     }
 
     /**
-     * Gather the metadata for the response.
+     * Gather the meta data for the response.
      *
      * @param  array  $paginated
      * @return array

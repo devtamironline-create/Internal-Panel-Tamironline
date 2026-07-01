@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -23,16 +23,18 @@ class ReflectionLanguageConstruct extends \ReflectionFunctionAbstract
      */
     private const LANGUAGE_CONSTRUCTS = [
         'isset' => [
-            'var'  => [],
-            'vars' => [
-                'isVariadic' => true,
+            'var' => [],
+            '...' => [
+                'isOptional'   => true,
+                'defaultValue' => null,
             ],
         ],
 
         'unset' => [
-            'var'  => [],
-            'vars' => [
-                'isVariadic' => true,
+            'var' => [],
+            '...' => [
+                'isOptional'   => true,
+                'defaultValue' => null,
             ],
         ],
 
@@ -42,26 +44,14 @@ class ReflectionLanguageConstruct extends \ReflectionFunctionAbstract
 
         'echo' => [
             'arg1' => [],
-            'args' => [
-                'isVariadic' => true,
+            '...'  => [
+                'isOptional'   => true,
+                'defaultValue' => null,
             ],
         ],
 
         'print' => [
             'arg' => [],
-        ],
-
-        'array' => [
-            'values' => [
-                'isVariadic' => true,
-            ],
-        ],
-
-        'list' => [
-            'var'  => [],
-            'vars' => [
-                'isVariadic' => true,
-            ],
         ],
 
         'die' => [
@@ -119,16 +109,6 @@ class ReflectionLanguageConstruct extends \ReflectionFunctionAbstract
         return false;
     }
 
-    public function hasReturnType(): bool
-    {
-        return false;
-    }
-
-    public function getReturnType(): ?\ReflectionType
-    {
-        return null;
-    }
-
     /**
      * Get language construct params.
      *
@@ -175,15 +155,5 @@ class ReflectionLanguageConstruct extends \ReflectionFunctionAbstract
     public static function isLanguageConstruct(string $keyword): bool
     {
         return \array_key_exists($keyword, self::LANGUAGE_CONSTRUCTS);
-    }
-
-    /**
-     * Get known language construct names.
-     *
-     * @return string[]
-     */
-    public static function getNames(): array
-    {
-        return \array_keys(self::LANGUAGE_CONSTRUCTS);
     }
 }

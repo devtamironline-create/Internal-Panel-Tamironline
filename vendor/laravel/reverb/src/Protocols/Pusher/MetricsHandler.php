@@ -19,10 +19,13 @@ class MetricsHandler
 
     /**
      * The metrics being gathered.
-     *
-     * @var array<string, PendingMetric>
      */
     protected array $metrics = [];
+
+    /**
+     * The total subscribers gathering metrics.
+     */
+    protected ?int $subscribers = null;
 
     /**
      * Create an instance of the metrics handler.
@@ -40,28 +43,21 @@ class MetricsHandler
      */
     public function gather(Application $application, string $type, array $options = []): PromiseInterface
     {
-        $metric = new PendingMetric(
-            Str::random(10),
-            $application,
-            MetricType::from($type),
-            $options
-        );
-
         return $this->serverProviderManager->subscribesToEvents()
-            ? $this->gatherMetricsFromSubscribers($metric)
-            : $this->promise($this->get($metric));
+            ? $this->gatherMetricsFromSubscribers($application, $type, $options)
+            : $this->promise($this->get($application, $type, $options));
     }
 
     /**
      * Get the metrics for the given type.
      */
-    public function get(PendingMetric $metric): array
+    public function get(Application $application, string $type, array $options): array
     {
-        return match ($metric->type()) {
-            MetricType::CHANNEL => $this->channel($metric),
-            MetricType::CHANNELS => $this->channels($metric),
-            MetricType::CHANNEL_USERS => $this->channelUsers($metric),
-            MetricType::CONNECTIONS => $this->connections($metric),
+        return match ($type) {
+            'channel' => $this->channel($application, $options),
+            'channels' => $this->channels($application, $options),
+            'channel_users' => $this->channelUsers($application, $options),
+            'connections' => $this->connections($application),
             default => [],
         };
     }
@@ -69,41 +65,41 @@ class MetricsHandler
     /**
      * Get the channel for the given application.
      */
-    protected function channel(PendingMetric $metric): array
+    protected function channel(Application $application, array $options): array
     {
-        return $this->info($metric->application(), $metric->option('channel'), $metric->option('info', ''));
+        return $this->info($application, $options['channel'], $options['info'] ?? '');
     }
 
     /**
      * Get the channels for the given application.
      */
-    protected function channels(PendingMetric $metric): array
+    protected function channels(Application $application, array $options): array
     {
-        if ($metric->option('channels')) {
-            return $this->infoForChannels($metric->application(), $metric->option('channels'), $metric->option('info', ''));
+        if (isset($options['channels'])) {
+            return $this->infoForChannels($application, $options['channels'], $options['info'] ?? '');
         }
 
-        $channels = collect($this->channels->for($metric->application())->all());
+        $channels = collect($this->channels->for($application)->all());
 
-        if ($filter = ($metric->option('filter', false))) {
+        if ($filter = ($options['filter'] ?? false)) {
             $channels = $channels->filter(fn ($channel) => Str::startsWith($channel->name(), $filter));
         }
 
         $channels = $channels->filter(fn ($channel) => count($channel->connections()) > 0);
 
         return $this->infoForChannels(
-            $metric->application(),
+            $application,
             $channels->all(),
-            $metric->option('info', '')
+            $options['info'] ?? ''
         );
     }
 
     /**
      * Get the channel users for the given application.
      */
-    protected function channelUsers(PendingMetric $metric): array
+    protected function channelUsers(Application $application, array $options): array
     {
-        $channel = $this->channels->for($metric->application())->find($metric->option('channel'));
+        $channel = $this->channels->for($application)->find($options['channel']);
 
         if (! $channel) {
             return [];
@@ -120,55 +116,51 @@ class MetricsHandler
     /**
      * Get the connections for the given application.
      */
-    protected function connections(PendingMetric $metric): array
+    protected function connections(Application $application): array
     {
-        return $this->channels->for($metric->application())->connections();
+        return $this->channels->for($application)->connections();
     }
 
     /**
      * Gather metrics from all subscribers for the given type.
      */
-    protected function gatherMetricsFromSubscribers(PendingMetric $metric): PromiseInterface
+    protected function gatherMetricsFromSubscribers(Application $application, string $type, array $options = []): PromiseInterface
     {
-        $this->metrics[$metric->key()] = $metric;
+        $deferred = $this->listenForMetrics($key = Str::random(10));
 
-        $deferred = $this->listenForMetrics($metric);
-
-        $this->requestMetricsFromSubscribers($metric);
+        $this->requestMetricsFromSubscribers($application, $key, $type, $options);
 
         return timeout($deferred->promise(), 10)->then(
             fn ($metrics) => $metrics,
-            fn () => $this->metrics[$metric->key()]?->resolve() ?? [],
-        )->then(
-            fn ($metrics) => $this->mergeSubscriberMetrics($metrics, $metric->type())
-        )->finally(
-            fn () => $this->stopListening($metric)
-        );
+            fn () => $this->metrics,
+        )->then(fn ($metrics) => $this->mergeSubscriberMetrics($metrics, $type));
     }
 
     /**
      * Request metrics from all subscribers.
      */
-    protected function requestMetricsFromSubscribers(PendingMetric $metric): void
+    protected function requestMetricsFromSubscribers(Application $application, string $key, string $type, ?array $options): void
     {
         $this->pubSubProvider->publish([
             'type' => 'metrics',
-            'payload' => serialize($metric),
-        ])->then(function ($total) use ($metric) {
-            $metric->setSubscriberCount($total);
+            'key' => $key,
+            'application' => serialize($application),
+            'payload' => ['type' => $type, 'options' => $options],
+        ])->then(function ($total) {
+            $this->subscribers = $total;
         });
     }
 
     /**
      * Merge the given metrics into a single result set.
      */
-    protected function mergeSubscriberMetrics(array $metrics, MetricType $type): array
+    protected function mergeSubscriberMetrics(array $metrics, string $type): array
     {
         return match ($type) {
-            MetricType::CONNECTIONS => array_reduce($metrics, fn ($carry, $item) => array_merge($carry, $item), []),
-            MetricType::CHANNELS => $this->mergeChannels($metrics),
-            MetricType::CHANNEL => $this->mergeChannel($metrics),
-            MetricType::CHANNEL_USERS => collect($metrics)->flatten(1)->unique()->all(),
+            'connections' => array_reduce($metrics, fn ($carry, $item) => array_merge($carry, $item), []),
+            'channels' => $this->mergeChannels($metrics),
+            'channel' => $this->mergeChannel($metrics),
+            'channel_users' => collect($metrics)->flatten(1)->unique()->all(),
             default => [],
         };
     }
@@ -214,16 +206,19 @@ class MetricsHandler
     /**
      * Listen for metrics from subscribers.
      */
-    protected function listenForMetrics(PendingMetric $metric): Deferred
+    protected function listenForMetrics(string $key): Deferred
     {
         $deferred = new Deferred;
 
-        $this->pubSubProvider->on($metric->key(), function ($payload) use ($metric, $deferred) {
-            $pending = $this->metrics[$metric->key()];
-            $pending->append($payload['payload']);
+        $this->pubSubProvider->on('metrics-retrieved', function ($payload) use ($key, $deferred) {
+            if ($payload['key'] !== $key) {
+                return;
+            }
 
-            if ($pending->resolvable()) {
-                $deferred->resolve($pending->resolve());
+            $this->metrics[] = $payload['payload'];
+
+            if ($this->subscribers !== null && count($this->metrics) === $this->subscribers) {
+                $deferred->resolve($this->metrics);
             }
         });
 
@@ -233,21 +228,14 @@ class MetricsHandler
     /**
      * Publish the metrics for the given type.
      */
-    public function publish(PendingMetric $metric): void
+    public function publish(Application $application, string $key, string $type, array $options = []): void
     {
         $this->pubSubProvider->publish([
-            'type' => $metric->key(),
-            'payload' => $this->get($metric),
+            'type' => 'metrics-retrieved',
+            'key' => $key,
+            'application' => serialize($application),
+            'payload' => $this->get($application, $type, $options),
         ]);
-    }
-
-    /**
-     * Stop listening for the given metric.
-     */
-    protected function stopListening(PendingMetric $metric): void
-    {
-        unset($this->metrics[$metric->key()]);
-        $this->pubSubProvider->stopListening($metric->key());
     }
 
     /**

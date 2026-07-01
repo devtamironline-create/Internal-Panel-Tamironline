@@ -176,7 +176,7 @@ class Gnumeric extends BaseReader
                         break;
                     }
                 }
-                $tmpInfo['lastColumnLetter'] = Coordinate::stringFromColumnIndex($tmpInfo['lastColumnIndex'] + 1, true);
+                $tmpInfo['lastColumnLetter'] = Coordinate::stringFromColumnIndex($tmpInfo['lastColumnIndex'] + 1);
                 $worksheetInfo[] = $tmpInfo;
             }
         }

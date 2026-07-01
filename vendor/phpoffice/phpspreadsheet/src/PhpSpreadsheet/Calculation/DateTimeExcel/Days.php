@@ -50,9 +50,11 @@ class Days
 
         $days = ExcelError::VALUE();
         $diff = $PHPStartDateObject->diff($PHPEndDateObject);
-        $days = $diff->days;
-        if ($diff->invert) {
-            $days = -$days;
+        if (!is_bool($diff->days)) {
+            $days = $diff->days;
+            if ($diff->invert) {
+                $days = -$days;
+            }
         }
 
         return $days;

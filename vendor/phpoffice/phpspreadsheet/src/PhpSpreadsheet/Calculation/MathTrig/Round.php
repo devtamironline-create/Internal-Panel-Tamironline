@@ -119,7 +119,7 @@ class Round
             return round(
                 (float) (string) $number,
                 $digits,
-                RoundingMode::TowardsZero
+                RoundingMode::TowardsZero //* @phpstan-ignore-line
             );
         }
 

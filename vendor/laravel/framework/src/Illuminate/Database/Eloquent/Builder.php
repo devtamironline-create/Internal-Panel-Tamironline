@@ -700,10 +700,10 @@ class Builder implements BuilderContract
      * Get the first record matching the attributes. If the record is not found, create it.
      *
      * @param  array  $attributes
-     * @param  (\Closure(): array)|array  $values
+     * @param  array  $values
      * @return TModel
      */
-    public function firstOrCreate(array $attributes = [], Closure|array $values = [])
+    public function firstOrCreate(array $attributes = [], array $values = [])
     {
         if (! is_null($instance = (clone $this)->where($attributes)->first())) {
             return $instance;
@@ -716,13 +716,13 @@ class Builder implements BuilderContract
      * Attempt to create the record. If a unique constraint violation occurs, attempt to find the matching record.
      *
      * @param  array  $attributes
-     * @param  (\Closure(): array)|array  $values
+     * @param  array  $values
      * @return TModel
      */
-    public function createOrFirst(array $attributes = [], Closure|array $values = [])
+    public function createOrFirst(array $attributes = [], array $values = [])
     {
         try {
-            return $this->withSavepointIfNeeded(fn () => $this->create(array_merge($attributes, value($values))));
+            return $this->withSavepointIfNeeded(fn () => $this->create(array_merge($attributes, $values)));
         } catch (UniqueConstraintViolationException $e) {
             return $this->useWritePdo()->where($attributes)->first() ?? throw $e;
         }
@@ -1109,7 +1109,7 @@ class Builder implements BuilderContract
      * @param  string  $pageName
      * @param  int|null  $page
      * @param  \Closure|int|null  $total
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int, TModel>
+     * @return \Illuminate\Pagination\LengthAwarePaginator
      *
      * @throws \InvalidArgumentException
      */
@@ -1138,7 +1138,7 @@ class Builder implements BuilderContract
      * @param  array|string  $columns
      * @param  string  $pageName
      * @param  int|null  $page
-     * @return \Illuminate\Pagination\Paginator<int, TModel>
+     * @return \Illuminate\Contracts\Pagination\Paginator
      */
     public function simplePaginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
     {
@@ -1164,7 +1164,7 @@ class Builder implements BuilderContract
      * @param  array|string  $columns
      * @param  string  $cursorName
      * @param  \Illuminate\Pagination\Cursor|string|null  $cursor
-     * @return \Illuminate\Pagination\CursorPaginator<int, TModel>
+     * @return \Illuminate\Contracts\Pagination\CursorPaginator
      */
     public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
     {
@@ -1298,7 +1298,7 @@ class Builder implements BuilderContract
     /**
      * Update the column's update timestamp.
      *
-     * @param  array|string|null  $column
+     * @param  string|null  $column
      * @return int|false
      */
     public function touch($column = null)
@@ -1306,9 +1306,7 @@ class Builder implements BuilderContract
         $time = $this->model->freshTimestamp();
 
         if ($column) {
-            $columns = (new BaseCollection(Arr::wrap($column)))->mapWithKeys(fn ($column) => [$column => $time])->all();
-
-            return $this->toBase()->update($columns);
+            return $this->toBase()->update([$column => $time]);
         }
 
         $column = $this->model->getUpdatedAtColumn();

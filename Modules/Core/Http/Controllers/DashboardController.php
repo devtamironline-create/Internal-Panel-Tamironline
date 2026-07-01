@@ -24,28 +24,63 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // ─── بازهٔ شمسی (پیش‌فرض: از اولِ ماهِ شمسی تا امروز) ───────
-        [$fromCarbon, $toCarbon, $fromJ, $toJ] = $this->resolveRange($request);
+        // کلِ ساختِ داشبورد در try/catch است تا صفحهٔ اولِ پنل تحتِ هیچ شرایطی
+        // ۵۰۰ نشود؛ در صورتِ خطا، داده‌های امنِ خالی نمایش داده می‌شوند.
+        try {
+            // ─── بازهٔ شمسی (پیش‌فرض: از اولِ ماهِ شمسی تا امروز) ───────
+            [$fromCarbon, $toCarbon, $fromJ, $toJ] = $this->resolveRange($request);
 
-        $stats = [
-            'snapshot' => $this->snapshotStats(),
-            'range' => $this->rangeStats($fromCarbon, $toCarbon),
-            'birthdays' => $this->getUpcomingBirthdays(),
-        ];
+            return view('admin.dashboard', [
+                'stats' => [
+                    'snapshot' => $this->snapshotStats(),
+                    'range' => $this->rangeStats($fromCarbon, $toCarbon),
+                    'birthdays' => $this->getUpcomingBirthdays(),
+                ],
+                'recentOrders' => $this->recentOrders(),
+                'hourly' => $this->hourlyToday(),
+                'trend' => $this->trendRange($fromCarbon, $toCarbon),
+                'statusBreakdown' => $this->statusBreakdownRange($fromCarbon, $toCarbon),
+                'topDevices' => $this->topDevicesRange($fromCarbon, $toCarbon),
+                'presets' => $this->presets(),
+                'activePreset' => $this->activePreset($fromJ, $toJ),
+                'fromJ' => $fromJ,
+                'toJ' => $toJ,
+                'user' => $user,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
 
-        return view('admin.dashboard', [
-            'stats' => $stats,
-            'recentOrders' => $this->recentOrders(),
-            'hourly' => $this->hourlyToday(),
-            'trend' => $this->trendRange($fromCarbon, $toCarbon),
-            'statusBreakdown' => $this->statusBreakdownRange($fromCarbon, $toCarbon),
-            'topDevices' => $this->topDevicesRange($fromCarbon, $toCarbon),
-            'presets' => $this->presets(),
-            'activePreset' => $this->activePreset($fromJ, $toJ),
-            'fromJ' => $fromJ,
-            'toJ' => $toJ,
+            return view('admin.dashboard', $this->safeFallback($user));
+        }
+    }
+
+    /**
+     * داده‌های امنِ خالی — وقتی ساختِ داشبورد با خطا مواجه شود، پنل به‌جای ۵۰۰
+     * با مقادیرِ صفر رندر می‌شود.
+     *
+     * @return array<string, mixed>
+     */
+    protected function safeFallback($user): array
+    {
+        $todayJ = Jalalian::now()->format('Y/m/d');
+
+        return [
+            'stats' => [
+                'snapshot' => ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0],
+                'range' => ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0],
+                'birthdays' => ['today' => [], 'upcoming' => [], 'total_upcoming' => 0],
+            ],
+            'recentOrders' => collect(),
+            'hourly' => ['labels' => [], 'total' => [], 'leads' => []],
+            'trend' => ['labels' => [], 'total' => [], 'leads' => []],
+            'statusBreakdown' => ['labels' => [], 'data' => [], 'colors' => []],
+            'topDevices' => ['labels' => [], 'data' => []],
+            'presets' => [],
+            'activePreset' => 'custom',
+            'fromJ' => $todayJ,
+            'toJ' => $todayJ,
             'user' => $user,
-        ]);
+        ];
     }
 
     /**
@@ -359,60 +394,64 @@ class DashboardController extends Controller
      */
     protected function getUpcomingBirthdays(): array
     {
-        $today = now()->startOfDay();
-        $endDate = now()->addDays(7)->endOfDay();
+        try {
+            $today = now()->startOfDay();
+            $endDate = now()->addDays(7)->endOfDay();
 
-        // Get all staff with birth dates
-        $users = User::staff()
-            ->where('is_active', true)
-            ->whereNotNull('birth_date')
-            ->get();
+            // Get all staff with birth dates
+            $users = User::staff()
+                ->where('is_active', true)
+                ->whereNotNull('birth_date')
+                ->get();
 
-        $upcomingBirthdays = [];
-        $todayBirthdays = [];
+            $upcomingBirthdays = [];
+            $todayBirthdays = [];
 
-        foreach ($users as $user) {
-            $birthDate = $user->birth_date;
+            foreach ($users as $user) {
+                $birthDate = $user->birth_date;
 
-            // Create a date for this year's birthday
-            $birthdayThisYear = $birthDate->copy()->year(now()->year)->startOfDay();
+                // Create a date for this year's birthday
+                $birthdayThisYear = $birthDate->copy()->year(now()->year)->startOfDay();
 
-            // If birthday has passed this year, check next year
-            if ($birthdayThisYear->lt($today)) {
-                $birthdayThisYear->addYear();
-            }
+                // If birthday has passed this year, check next year
+                if ($birthdayThisYear->lt($today)) {
+                    $birthdayThisYear->addYear();
+                }
 
-            // Check if birthday is within the next 7 days
-            if ($birthdayThisYear->between($today, $endDate)) {
-                $isToday = $birthdayThisYear->isSameDay($today);
-                $daysUntil = (int) $today->diffInDays($birthdayThisYear);
-                $age = $birthdayThisYear->year - $birthDate->year;
+                // Check if birthday is within the next 7 days
+                if ($birthdayThisYear->between($today, $endDate)) {
+                    $isToday = $birthdayThisYear->isSameDay($today);
+                    $daysUntil = (int) $today->diffInDays($birthdayThisYear);
+                    $age = $birthdayThisYear->year - $birthDate->year;
 
-                $birthdayData = [
-                    'id' => $user->id,
-                    'name' => $user->full_name,
-                    'date' => $birthdayThisYear->format('Y-m-d'),
-                    'jalali_date' => Jalalian::fromCarbon($birthdayThisYear)->format('j F'),
-                    'days_until' => $daysUntil,
-                    'age' => $age,
-                    'is_today' => $isToday,
-                ];
+                    $birthdayData = [
+                        'id' => $user->id,
+                        'name' => $user->full_name,
+                        'date' => $birthdayThisYear->format('Y-m-d'),
+                        'jalali_date' => Jalalian::fromCarbon($birthdayThisYear)->format('j F'),
+                        'days_until' => $daysUntil,
+                        'age' => $age,
+                        'is_today' => $isToday,
+                    ];
 
-                if ($isToday) {
-                    $todayBirthdays[] = $birthdayData;
-                } else {
-                    $upcomingBirthdays[] = $birthdayData;
+                    if ($isToday) {
+                        $todayBirthdays[] = $birthdayData;
+                    } else {
+                        $upcomingBirthdays[] = $birthdayData;
+                    }
                 }
             }
+
+            // Sort upcoming birthdays by days until
+            usort($upcomingBirthdays, fn ($a, $b) => $a['days_until'] <=> $b['days_until']);
+
+            return [
+                'today' => $todayBirthdays,
+                'upcoming' => array_slice($upcomingBirthdays, 0, 5), // Only show next 5
+                'total_upcoming' => count($upcomingBirthdays),
+            ];
+        } catch (\Throwable $e) {
+            return ['today' => [], 'upcoming' => [], 'total_upcoming' => 0];
         }
-
-        // Sort upcoming birthdays by days until
-        usort($upcomingBirthdays, fn ($a, $b) => $a['days_until'] <=> $b['days_until']);
-
-        return [
-            'today' => $todayBirthdays,
-            'upcoming' => array_slice($upcomingBirthdays, 0, 5), // Only show next 5
-            'total_upcoming' => count($upcomingBirthdays),
-        ];
     }
 }

@@ -63,7 +63,6 @@ use function Illuminate\Support\enum_value;
  * @method static string|false mimeType(string $path)
  * @method static string url(string $path)
  * @method static bool providesTemporaryUrls()
- * @method static bool providesTemporaryUploadUrls()
  * @method static string temporaryUrl(string $path, \DateTimeInterface $expiration, array $options = [])
  * @method static array temporaryUploadUrl(string $path, \DateTimeInterface $expiration, array $options = [])
  * @method static \League\Flysystem\FilesystemOperator getDriver()
@@ -71,7 +70,6 @@ use function Illuminate\Support\enum_value;
  * @method static array getConfig()
  * @method static void serveUsing(\Closure $callback)
  * @method static void buildTemporaryUrlsUsing(\Closure $callback)
- * @method static void buildTemporaryUploadUrlsUsing(\Closure $callback)
  * @method static \Illuminate\Filesystem\FilesystemAdapter|mixed when(\Closure|mixed|null $value = null, callable|null $callback = null, callable|null $default = null)
  * @method static \Illuminate\Filesystem\FilesystemAdapter|mixed unless(\Closure|mixed|null $value = null, callable|null $callback = null, callable|null $default = null)
  * @method static void macro(string $name, object|callable $macro)
@@ -94,9 +92,9 @@ class Storage extends Facade
     /**
      * Replace the given disk with a local testing disk.
      *
-     * @param  \UnitEnum|string|null  $disk
+     * @param  string|null  $disk
      * @param  array  $config
-     * @return \Illuminate\Filesystem\LocalFilesystemAdapter
+     * @return \Illuminate\Contracts\Filesystem\Filesystem
      */
     public static function fake($disk = null, array $config = [])
     {
@@ -112,27 +110,21 @@ class Storage extends Facade
             self::buildDiskConfiguration($disk, $config, root: $root)
         ));
 
-        return tap($fake, function ($fake) {
-            $fake->buildTemporaryUrlsUsing(function ($path, $expiration) {
-                return URL::to($path.'?expiration='.$expiration->getTimestamp());
-            });
-
-            $fake->buildTemporaryUploadUrlsUsing(function ($path, $expiration) {
-                return ['url' => URL::to($path.'?expiration='.$expiration->getTimestamp()), 'headers' => []];
-            });
+        return tap($fake)->buildTemporaryUrlsUsing(function ($path, $expiration) {
+            return URL::to($path.'?expiration='.$expiration->getTimestamp());
         });
     }
 
     /**
      * Replace the given disk with a persistent local testing disk.
      *
-     * @param  \UnitEnum|string|null  $disk
+     * @param  string|null  $disk
      * @param  array  $config
-     * @return \Illuminate\Filesystem\LocalFilesystemAdapter
+     * @return \Illuminate\Contracts\Filesystem\Filesystem
      */
     public static function persistentFake($disk = null, array $config = [])
     {
-        $disk = enum_value($disk) ?: static::$app['config']->get('filesystems.default');
+        $disk = $disk ?: static::$app['config']->get('filesystems.default');
 
         static::set($disk, $fake = static::createLocalDriver(
             self::buildDiskConfiguration($disk, $config, root: self::getRootPath($disk))

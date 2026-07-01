@@ -189,12 +189,15 @@ class BroadcastManager implements FactoryContract
                 : $dispatch();
         }
 
-        $queue = match (true) {
-            method_exists($event, 'broadcastQueue') => $event->broadcastQueue(),
-            isset($event->broadcastQueue) => $event->broadcastQueue,
-            isset($event->queue) => $event->queue,
-            default => null,
-        };
+        $queue = null;
+
+        if (method_exists($event, 'broadcastQueue')) {
+            $queue = $event->broadcastQueue();
+        } elseif (isset($event->broadcastQueue)) {
+            $queue = $event->broadcastQueue;
+        } elseif (isset($event->queue)) {
+            $queue = $event->queue;
+        }
 
         $broadcastEvent = new BroadcastEvent(clone $event);
 
@@ -328,7 +331,7 @@ class BroadcastManager implements FactoryContract
      */
     protected function createPusherDriver(array $config)
     {
-        return new PusherBroadcaster($this->pusher($config), $config['jsonp'] ?? false);
+        return new PusherBroadcaster($this->pusher($config));
     }
 
     /**

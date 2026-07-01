@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -19,8 +19,6 @@ namespace Psy\Manual;
 class V2Manual implements ManualInterface
 {
     private \PDO $db;
-    /** @var string[]|null */
-    private ?array $ids = null;
 
     /**
      * Constructor.
@@ -43,23 +41,6 @@ class V2Manual implements ManualInterface
         }
 
         return null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getIds(): array
-    {
-        if ($this->ids !== null) {
-            return $this->ids;
-        }
-
-        $result = $this->db->query('SELECT id FROM php_manual ORDER BY id');
-        if ($result === false) {
-            return $this->ids = [];
-        }
-
-        return $this->ids = $result->fetchAll(\PDO::FETCH_COLUMN, 0);
     }
 
     /**

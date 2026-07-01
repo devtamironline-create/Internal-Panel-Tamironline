@@ -89,7 +89,6 @@ class Percentiles
             return $e->getMessage();
         }
 
-        /** @var array<float|int|numeric-string> */
         $valueSet = self::rankFilterValues($valueSet);
         $valueCount = count($valueSet);
         if ($valueCount == 0) {
@@ -173,7 +172,6 @@ class Percentiles
             return $e->getMessage();
         }
 
-        /** @var array<float|int|numeric-string> */
         $valueSet = self::rankFilterValues($valueSet);
         if ($order === self::RANK_SORT_DESCENDING) {
             rsort($valueSet, SORT_NUMERIC);

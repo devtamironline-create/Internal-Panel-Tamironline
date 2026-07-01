@@ -214,7 +214,7 @@ class SqsQueue extends Queue implements QueueContract, ClearableQueue
      * @param  \DateTimeInterface|\DateInterval|int|null  $delay
      * @return array{DelaySeconds?: int, MessageGroupId?: string, MessageDeduplicationId?: string}
      */
-    public function getQueueableOptions($job, $queue, $payload, $delay = null): array
+    protected function getQueueableOptions($job, $queue, $payload, $delay = null): array
     {
         // Make sure we have a queue name to properly determine if it's a FIFO queue...
         $queue ??= $this->default;

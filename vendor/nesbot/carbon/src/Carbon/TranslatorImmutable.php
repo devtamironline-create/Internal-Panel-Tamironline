@@ -94,7 +94,7 @@ class TranslatorImmutable extends Translator
     private function disallowMutation($method)
     {
         if ($this->constructed) {
-            throw ImmutableException::fromMethod(static::class, $method);
+            throw new ImmutableException($method.' not allowed on '.static::class);
         }
     }
 }

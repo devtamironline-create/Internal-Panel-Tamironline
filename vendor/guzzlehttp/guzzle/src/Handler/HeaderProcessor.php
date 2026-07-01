@@ -24,14 +24,7 @@ final class HeaderProcessor
             throw new \RuntimeException('Expected a non-empty array of header data');
         }
 
-        $headers = self::getLastHeaderBlock(\array_values($headers));
-
-        $statusLine = \array_shift($headers);
-        if ($statusLine === null) {
-            throw new \RuntimeException('Expected a non-empty array of header data');
-        }
-
-        $parts = \explode(' ', $statusLine, 3);
+        $parts = \explode(' ', \array_shift($headers), 3);
         $version = \explode('/', $parts[0])[1] ?? null;
 
         if ($version === null) {
@@ -44,34 +37,6 @@ final class HeaderProcessor
             throw new \RuntimeException('HTTP status code missing from header data');
         }
 
-        if (!\preg_match('/^\d{3}$/', $status)) {
-            throw new \RuntimeException('HTTP status code is invalid');
-        }
-
-        foreach ($headers as $header) {
-            if (\strpos($header, ':') === false) {
-                throw new \RuntimeException('HTTP header line is invalid');
-            }
-        }
-
         return [$version, (int) $status, $parts[2] ?? null, Utils::headersFromLines($headers)];
-    }
-
-    /**
-     * @param non-empty-list<string> $headers
-     *
-     * @return list<string>
-     */
-    private static function getLastHeaderBlock(array $headers): array
-    {
-        $lastStatusLine = 0;
-
-        foreach ($headers as $index => $line) {
-            if (\preg_match('/^HTTP\/\S+\s+/i', $line)) {
-                $lastStatusLine = $index;
-            }
-        }
-
-        return \array_slice($headers, $lastStatusLine);
     }
 }

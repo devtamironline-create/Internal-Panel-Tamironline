@@ -52,10 +52,8 @@ class Value
             if (!empty($worksheet) && $cell->getWorksheet()->getParentOrThrow()->getSheetByName($worksheet) === null) {
                 return false;
             }
-
-            try {
-                [$column, $row] = Coordinate::indexesFromString($cellValue ?? '');
-            } catch (SpreadsheetException) {
+            [$column, $row] = Coordinate::indexesFromString($cellValue ?? '');
+            if ($column > 16384 || $row > 1048576) {
                 return false;
             }
 

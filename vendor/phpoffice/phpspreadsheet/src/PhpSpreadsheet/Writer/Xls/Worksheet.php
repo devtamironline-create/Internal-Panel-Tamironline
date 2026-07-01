@@ -4,7 +4,6 @@ namespace PhpOffice\PhpSpreadsheet\Writer\Xls;
 
 use Composer\Pcre\Preg;
 use GdImage;
-use PhpOffice\PhpSpreadsheet\Cell\AddressRange;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -215,7 +214,7 @@ class Worksheet extends BIFFwriter
         // BIFF8 DIMENSIONS record requires 0-based indices for both rows and columns
         // Row methods return 1-based values (Excel UI), so subtract 1 to convert to 0-based
         $this->firstRowIndex = $minR - 1;
-        $this->lastRowIndex = ($maxR > AddressRange::MAX_ROW_XLS) ? (AddressRange::MAX_ROW_XLS - 1) : ($maxR - 1);
+        $this->lastRowIndex = ($maxR > 65536) ? 65535 : ($maxR - 1);
 
         // Column methods return 1-based values (columnIndexFromString('A') = 1), so subtract 1
         $this->firstColumnIndex = Coordinate::columnIndexFromString($minC) - 1;
@@ -370,9 +369,6 @@ class Worksheet extends BIFFwriter
             $xfIndex = $cell->getXfIndex() + 15; // there are 15 cell style Xfs
 
             $cVal = $cell->getValue();
-            if ($cVal instanceof RichText && (string) $cVal === '') {
-                $cVal = '';
-            }
             if ($cVal instanceof RichText) {
                 $arrcRun = [];
                 $str_pos = 0;
@@ -432,7 +428,7 @@ class Worksheet extends BIFFwriter
                             match ($calctype) {
                                 'integer', 'double' => $this->writeNumber($row, $column, is_numeric($calculatedValue) ? ((float) $calculatedValue) : 0.0, $xfIndex),
                                 'string' => $this->writeString($row, $column, $calculatedValueString, $xfIndex),
-                                'boolean' => $this->writeBoolErr($row, $column, (int) $calculatedValue, 0, $xfIndex), // @phpstan-ignore-line
+                                'boolean' => $this->writeBoolErr($row, $column, (int) $calculatedValueString, 0, $xfIndex),
                                 default => $this->writeString($row, $column, $cell->getValueString(), $xfIndex),
                             };
                         }
@@ -517,14 +513,9 @@ class Worksheet extends BIFFwriter
         $this->storeEof();
     }
 
-    /** @deprecated 5.6.0 Use AddressRange::MAX_COLUMN_INT_XLS */
-    public const MAX_XLS_COLUMN = AddressRange::MAX_COLUMN_INT_XLS;
-
-    /** @deprecated 5.6.0 Use AddressRange::MAX_COLUMN_XLS */
-    public const MAX_XLS_COLUMN_STRING = AddressRange::MAX_COLUMN_XLS;
-
-    /** @deprecated 5.6.0 Use AddressRange::MAX_ROW_XLS */
-    public const MAX_XLS_ROW = AddressRange::MAX_ROW_XLS;
+    public const MAX_XLS_COLUMN = 256;
+    public const MAX_XLS_COLUMN_STRING = 'IV';
+    public const MAX_XLS_ROW = 65536;
 
     private static function limitRange(string $exploded): string
     {
@@ -532,13 +523,13 @@ class Worksheet extends BIFFwriter
         $ranges = Coordinate::getRangeBoundaries($exploded);
         $firstCol = Coordinate::columnIndexFromString($ranges[0][0]);
         $firstRow = (int) $ranges[0][1];
-        if ($firstCol <= AddressRange::MAX_COLUMN_INT_XLS && $firstRow <= AddressRange::MAX_ROW_XLS) {
+        if ($firstCol <= self::MAX_XLS_COLUMN && $firstRow <= self::MAX_XLS_ROW) {
             $retVal = $exploded;
             if (str_contains($exploded, ':')) {
                 $lastCol = Coordinate::columnIndexFromString($ranges[1][0]);
-                $ranges[1][1] = min(AddressRange::MAX_ROW_XLS, (int) $ranges[1][1]);
-                if ($lastCol > AddressRange::MAX_COLUMN_INT_XLS) {
-                    $ranges[1][0] = AddressRange::MAX_COLUMN_XLS;
+                $ranges[1][1] = min(self::MAX_XLS_ROW, (int) $ranges[1][1]);
+                if ($lastCol > self::MAX_XLS_COLUMN) {
+                    $ranges[1][0] = self::MAX_XLS_COLUMN_STRING;
                 }
                 $retVal = "{$ranges[0][0]}{$ranges[0][1]}:{$ranges[1][0]}{$ranges[1][1]}";
             }
@@ -613,9 +604,9 @@ class Worksheet extends BIFFwriter
             $lastCell = $explodes[1];
         }
         if (ctype_alpha($lastCell)) {
-            $lastCell .= (string) AddressRange::MAX_ROW_XLS;
+            $lastCell .= (string) self::MAX_XLS_ROW;
         } elseif (ctype_digit($lastCell)) {
-            $lastCell = AddressRange::MAX_COLUMN_XLS . $lastCell;
+            $lastCell = self::MAX_XLS_COLUMN_STRING . $lastCell;
         }
 
         $firstCellCoordinates = Coordinate::indexesFromString($firstCell); // e.g. [0, 1]
@@ -2183,8 +2174,6 @@ class Worksheet extends BIFFwriter
     /**
      * Insert a 24bit bitmap image in a worksheet.
      *
-     * @deprecated 5.5.0 No replacement.
-     *
      * @param int $row The row we are going to insert the bitmap into
      * @param int $col The column we are going to insert the bitmap into
      * @param GdImage|string $bitmap The bitmap filename or GD-image resource
@@ -2192,8 +2181,6 @@ class Worksheet extends BIFFwriter
      * @param int $y the vertical position (offset) of the image inside the cell
      * @param float $scale_x The horizontal scale
      * @param float $scale_y The vertical scale
-     *
-     * @codeCoverageIgnore
      */
     public function insertBitmap(int $row, int $col, GdImage|string $bitmap, int $x = 0, int $y = 0, float $scale_x = 1, float $scale_y = 1): void
     {
@@ -2201,6 +2188,10 @@ class Worksheet extends BIFFwriter
             ? $this->processBitmapGd($bitmap)
             : $this->processBitmap($bitmap);
         [$width, $height, $size, $data] = $bitmap_array;
+        /** @var int $width */
+        /** @var int $height */
+        /** @var int $size */
+        /** @var string $data */
 
         // Scale the frame of the image.
         $width *= $scale_x;
@@ -2263,16 +2254,12 @@ class Worksheet extends BIFFwriter
      * The SDK incorrectly states that the height should be expressed as a
      *        percentage of 1024.
      *
-     * @deprecated 5.5.0 No replacement.
-     *
      * @param int $col_start Col containing upper left corner of object
      * @param int $row_start Row containing top left corner of object
      * @param int $x1 Distance to left side of object
      * @param int $y1 Distance to top of object
      * @param int $width Width of image frame
      * @param int $height Height of image frame
-     *
-     * @codeCoverageIgnore
      */
     public function positionImage(int $col_start, int $row_start, int $x1, int $y1, int $width, int $height): void
     {
@@ -2332,8 +2319,6 @@ class Worksheet extends BIFFwriter
      * Store the OBJ record that precedes an IMDATA record. This could be generalised
      * to support other Excel objects.
      *
-     * @deprecated 5.5.0 No replacement.
-     *
      * @param int $colL Column containing upper left corner of object
      * @param int $dxL Distance from left side of cell
      * @param int $rwT Row containing top left corner of object
@@ -2342,8 +2327,6 @@ class Worksheet extends BIFFwriter
      * @param int $dxR Distance from right of cell
      * @param int $rwB Row containing bottom right corner of object
      * @param int $dyB Distance from bottom of cell
-     *
-     * @codeCoverageIgnore
      */
     private function writeObjPicture(int $colL, int $dxL, int $rwT, int|float $dyT, int $colR, int $dxR, int $rwB, int $dyB): void
     {
@@ -2413,13 +2396,9 @@ class Worksheet extends BIFFwriter
     /**
      * Convert a GD-image into the internal format.
      *
-     * @deprecated 5.5.0 No replacement.
-     *
      * @param GdImage $image The image to process
      *
-     * @return array{0: int, 1: int, 2: int, 3: string} Data and properties of the bitmap
-     *
-     * @codeCoverageIgnore
+     * @return array{0: float, 1: float, 2: int, 3: string} Data and properties of the bitmap
      */
     public function processBitmapGd(GdImage $image): array
     {
@@ -2451,13 +2430,9 @@ class Worksheet extends BIFFwriter
      * This is described in BITMAPCOREHEADER and BITMAPCOREINFO structures in the
      * MSDN library.
      *
-     * @deprecated 5.5.0 No replacement.
-     *
      * @param string $bitmap The bitmap to process
      *
-     * @return array{0: int, 1: int, 2: int, 3: string} Data and properties of the bitmap
-     *
-     * @codeCoverageIgnore
+     * @return mixed[] Array with data and properties of the bitmap
      */
     public function processBitmap(string $bitmap): array
     {
@@ -2500,9 +2475,7 @@ class Worksheet extends BIFFwriter
 
         // Read and remove the bitmap width and height. Verify the sizes.
         $width_and_height = unpack('V2', substr($data, 0, 8)) ?: [];
-        /** @var int */
         $width = $width_and_height[1];
-        /** @var int */
         $height = $width_and_height[2];
         $data = substr($data, 8);
         if ($width > 0xFFFF) {

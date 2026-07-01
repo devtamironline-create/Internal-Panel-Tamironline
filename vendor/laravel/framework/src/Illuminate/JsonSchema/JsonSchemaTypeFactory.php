@@ -60,14 +60,4 @@ class JsonSchemaTypeFactory extends JsonSchema implements JsonSchemaContract
     {
         return new Types\BooleanType;
     }
-
-    /**
-     * Create a new multi-type union instance.
-     *
-     * @param  array<int, string>  $types
-     */
-    public function union(array $types): Types\UnionType
-    {
-        return new Types\UnionType($types);
-    }
 }

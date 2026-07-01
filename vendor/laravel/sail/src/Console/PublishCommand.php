@@ -35,10 +35,8 @@ class PublishCommand extends Command
         $this->call('vendor:publish', ['--tag' => 'sail-docker']);
         $this->call('vendor:publish', ['--tag' => 'sail-database']);
 
-        $composePath = $this->composePath();
-
         file_put_contents(
-            $composePath,
+            $this->composePath(),
             str_replace(
                 [
                     './vendor/laravel/sail/runtimes/8.5',
@@ -47,7 +45,6 @@ class PublishCommand extends Command
                     './vendor/laravel/sail/runtimes/8.2',
                     './vendor/laravel/sail/runtimes/8.1',
                     './vendor/laravel/sail/runtimes/8.0',
-                    './vendor/laravel/sail/database/mariadb',
                     './vendor/laravel/sail/database/mysql',
                     './vendor/laravel/sail/database/pgsql'
                 ],
@@ -58,11 +55,10 @@ class PublishCommand extends Command
                     './docker/8.2',
                     './docker/8.1',
                     './docker/8.0',
-                    './docker/mariadb',
                     './docker/mysql',
                     './docker/pgsql'
                 ],
-                file_get_contents($composePath)
+                file_get_contents($this->composePath())
             )
         );
     }

@@ -42,11 +42,11 @@ class RequestException extends HttpClientException
      */
     public function __construct(Response $response, $truncateExceptionsAt = null)
     {
+        parent::__construct($this->prepareMessage($response), $response->status());
+
         $this->truncateExceptionsAt = $truncateExceptionsAt;
 
         $this->response = $response;
-
-        parent::__construct($this->prepareMessage($response), $response->status());
     }
 
     /**
@@ -108,15 +108,9 @@ class RequestException extends HttpClientException
 
         $truncateExceptionsAt = $this->truncateExceptionsAt ?? static::$truncateAt;
 
-        $psrResponse = $response->toPsrResponse();
-
-        $summary = null;
-
-        if (is_int($truncateExceptionsAt)) {
-            $summary = Message::bodySummary($psrResponse, $truncateExceptionsAt);
-        } elseif (($body = $psrResponse->getBody())->isSeekable() && $body->isReadable()) {
-            $summary = Message::toString($psrResponse);
-        }
+        $summary = is_int($truncateExceptionsAt)
+            ? Message::bodySummary($response->toPsrResponse(), $truncateExceptionsAt)
+            : Message::toString($response->toPsrResponse());
 
         return is_null($summary) ? $message : $message.":\n{$summary}\n";
     }
