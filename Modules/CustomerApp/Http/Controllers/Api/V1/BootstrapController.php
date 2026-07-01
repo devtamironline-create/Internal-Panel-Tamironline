@@ -76,7 +76,10 @@ class BootstrapController extends Controller
                 'active' => (bool) Setting::get('app_maintenance_active', config('app_status.maintenance.active', false)),
                 'message' => Setting::get('app_maintenance_message', config('app_status.maintenance.message')) ?: null,
             ],
-            'test_mode_active' => (bool) config('customerapp.test-mode.enabled', false),
+            // overlayِ «حالت تست» فقط در حالتِ فراگیر (بدونِ allowlist = staging).
+            // با allowlistِ production (شمارهٔ بازبینی)، برای کاربرانِ واقعی خاموش است.
+            'test_mode_active' => config('customerapp.test-mode.enabled', false)
+                && empty(config('customerapp.test-mode.allowed_mobiles', [])),
         ];
     }
 
