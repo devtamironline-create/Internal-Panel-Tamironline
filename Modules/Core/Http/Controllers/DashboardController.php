@@ -97,8 +97,9 @@ class DashboardController extends Controller
         $toG = $this->jalaliToGregorian($toJ);
 
         if (! $fromG) {
-            $fromCarbon = Jalalian::now()->getFirstDayOfMonth()->toCarbon()->startOfDay();
-            $fromJ = Jalalian::fromCarbon($fromCarbon)->format('Y/m/d');
+            // پیش‌فرض: امروز (هم‌خوان با پیش‌فرضِ «امروز» در دکمه‌ها).
+            $fromCarbon = now()->startOfDay();
+            $fromJ = Jalalian::now()->format('Y/m/d');
         } else {
             $fromCarbon = Carbon::parse($fromG)->startOfDay();
         }
@@ -262,11 +263,13 @@ class DashboardController extends Controller
         $colors = [];
 
         try {
+            // status را با alias می‌خوانیم تا cast enumِ مدل روی مقدارِ نامعتبر
+            // (مثلِ کدهای عددیِ legacy) ValueError پرتاب نکند.
             $rows = Order::realOrders()->whereBetween('created_at', [$from, $to])
-                ->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->get();
+                ->selectRaw('status as status_val, COUNT(*) as cnt')->groupBy('status')->get();
 
             foreach ($rows as $row) {
-                $case = OrderStatus::tryFrom((string) $row->status);
+                $case = OrderStatus::tryFrom((string) $row->status_val);
                 if (! $case || (int) $row->cnt === 0) {
                     continue;
                 }
@@ -310,28 +313,29 @@ class DashboardController extends Controller
     }
 
     /**
-     * پیش‌فرض‌های بازهٔ آماده (شمسی): امروز، ۷ روز، این ماه، ماهِ قبل.
+     * پیش‌فرض‌های بازهٔ آماده (شمسی): امروز، دیروز، هفتهٔ گذشته، ماهِ گذشته.
      *
      * @return array<string, array{label:string, from:string, to:string}>
      */
     protected function presets(): array
     {
         $todayJ = Jalalian::now()->format('Y/m/d');
+        $weekStart = Jalalian::now()->getFirstDayOfWeek(); // شنبهٔ همین هفته
 
         return [
             'today' => ['label' => 'امروز', 'from' => $todayJ, 'to' => $todayJ],
-            'week' => [
-                'label' => '۷ روزِ اخیر',
-                'from' => Jalalian::now()->subDays(6)->format('Y/m/d'),
-                'to' => $todayJ,
+            'yesterday' => [
+                'label' => 'دیروز',
+                'from' => Jalalian::now()->subDays(1)->format('Y/m/d'),
+                'to' => Jalalian::now()->subDays(1)->format('Y/m/d'),
             ],
-            'month' => [
-                'label' => 'این ماه',
-                'from' => Jalalian::now()->getFirstDayOfMonth()->format('Y/m/d'),
-                'to' => $todayJ,
+            'last_week' => [
+                'label' => 'هفتهٔ گذشته',
+                'from' => $weekStart->subDays(7)->format('Y/m/d'),
+                'to' => $weekStart->subDays(1)->format('Y/m/d'),
             ],
-            'prev_month' => [
-                'label' => 'ماهِ قبل',
+            'last_month' => [
+                'label' => 'ماهِ گذشته',
                 'from' => Jalalian::now()->subMonths(1)->getFirstDayOfMonth()->format('Y/m/d'),
                 'to' => Jalalian::now()->getFirstDayOfMonth()->subDays(1)->format('Y/m/d'),
             ],
