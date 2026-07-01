@@ -3,7 +3,9 @@
 namespace Modules\Core\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Order;
@@ -13,75 +15,93 @@ use Morilog\Jalali\Jalalian;
 class DashboardController extends Controller
 {
     /**
-     * داشبوردِ اولِ پنل — «وضعیت کلیِ خدمات تعمیرات» به‌همراهِ نمودارها.
+     * داشبوردِ اولِ پنل — «وضعیت کلیِ خدمات تعمیرات» با فیلترِ بازهٔ شمسی و نمودار.
      *
-     * همهٔ بازه‌های زمانی بر پایهٔ تقویمِ شمسی (Jalali) محاسبه می‌شوند:
-     * «امروز» = روزِ جاری، «این ماه» = ماهِ شمسیِ جاری (نه میلادی). آماره‌ها
-     * در try/catch‌اند تا صفحهٔ اولِ پنل هیچ‌وقت ۵۰۰ نشود.
+     * منطقِ آمار: «کل = ثبتِ سفارش + لید». بازه‌ها بر پایهٔ تقویمِ شمسی‌اند.
+     * آماره‌ها try/catch‌اند تا صفحهٔ اولِ پنل هیچ‌وقت ۵۰۰ نشود.
      */
-    public function admin()
+    public function admin(Request $request)
     {
         $user = auth()->user();
 
-        // ─── مرزهای زمانیِ شمسی ───────────────────────────────────
-        $todayStart = now()->startOfDay();                          // روزِ جاری (تهران)
-        $jMonthStart = Jalalian::now()->getFirstDayOfMonth()        // اولِ ماهِ شمسی
-            ->toCarbon()->startOfDay();
+        // ─── بازهٔ شمسی (پیش‌فرض: از اولِ ماهِ شمسی تا امروز) ───────
+        [$fromCarbon, $toCarbon, $fromJ, $toJ] = $this->resolveRange($request);
 
         $stats = [
-            'repair' => $this->repairStats($todayStart, $jMonthStart),
+            'snapshot' => $this->snapshotStats(),
+            'range' => $this->rangeStats($fromCarbon, $toCarbon),
             'birthdays' => $this->getUpcomingBirthdays(),
         ];
 
         return view('admin.dashboard', [
             'stats' => $stats,
             'recentOrders' => $this->recentOrders(),
-            'hourly' => $this->hourlyToday($todayStart),
-            'trend' => $this->trend14(),
-            'statusBreakdown' => $this->statusBreakdownMonth($jMonthStart),
-            'topDevices' => $this->topDevicesMonth($jMonthStart),
-            'jMonthLabel' => Jalalian::now()->format('F'),
+            'hourly' => $this->hourlyToday(),
+            'trend' => $this->trendRange($fromCarbon, $toCarbon),
+            'statusBreakdown' => $this->statusBreakdownRange($fromCarbon, $toCarbon),
+            'topDevices' => $this->topDevicesRange($fromCarbon, $toCarbon),
+            'presets' => $this->presets(),
+            'activePreset' => $this->activePreset($fromJ, $toJ),
+            'fromJ' => $fromJ,
+            'toJ' => $toJ,
             'user' => $user,
         ]);
     }
 
     /**
-     * آماره‌های کلیدیِ خدمات تعمیرات (تیله‌ها). بازهٔ ماه = ماهِ شمسیِ جاری.
+     * بازهٔ زمانی از روی درخواست (from_date/to_date شمسی). پیش‌فرض: اولِ ماهِ
+     * شمسیِ جاری تا امروز.
      *
-     * @return array<string, int|float>
+     * @return array{0:Carbon,1:Carbon,2:string,3:string}
      */
-    protected function repairStats(\Carbon\Carbon $todayStart, \Carbon\Carbon $monthStart): array
+    protected function resolveRange(Request $request): array
+    {
+        $fromJ = trim((string) $request->query('from_date', ''));
+        $toJ = trim((string) $request->query('to_date', ''));
+        $fromG = $this->jalaliToGregorian($fromJ);
+        $toG = $this->jalaliToGregorian($toJ);
+
+        if (! $fromG) {
+            $fromCarbon = Jalalian::now()->getFirstDayOfMonth()->toCarbon()->startOfDay();
+            $fromJ = Jalalian::fromCarbon($fromCarbon)->format('Y/m/d');
+        } else {
+            $fromCarbon = Carbon::parse($fromG)->startOfDay();
+        }
+
+        if (! $toG) {
+            $toCarbon = now()->endOfDay();
+            $toJ = Jalalian::now()->format('Y/m/d');
+        } else {
+            $toCarbon = Carbon::parse($toG)->endOfDay();
+        }
+
+        // اگر بازه برعکس وارد شد، جابه‌جا کن.
+        if ($fromCarbon->gt($toCarbon)) {
+            [$fromCarbon, $toCarbon] = [$toCarbon->copy()->startOfDay(), $fromCarbon->copy()->endOfDay()];
+            [$fromJ, $toJ] = [$toJ, $fromJ];
+        }
+
+        return [$fromCarbon, $toCarbon, $fromJ, $toJ];
+    }
+
+    /**
+     * آماره‌های لحظه‌ای (مستقل از بازه): باز، معطل، تکنسینِ فعال، مشتری‌ها.
+     *
+     * @return array<string, int>
+     */
+    protected function snapshotStats(): array
     {
         try {
-            $open = [
-                OrderStatus::New->value,
-                OrderStatus::Coordinated->value,
-                OrderStatus::Open->value,
-                OrderStatus::Suspended->value,
-            ];
-            $cancelled = [OrderStatus::Cancelled->value, OrderStatus::Declined->value];
             $threeDaysAgo = now()->subDays(3);
 
-            $monthTotal = Order::realOrders()->where('created_at', '>=', $monthStart)->count();
-            $monthCompleted = Order::realOrders()->where('created_at', '>=', $monthStart)
-                ->where('status', OrderStatus::Completed->value)->count();
-
             return [
-                'open' => Order::realOrders()->whereIn('status', $open)->count(),
-                'today_new' => Order::realOrders()->where('created_at', '>=', $todayStart)->count(),
-                'today_completed' => Order::realOrders()
-                    ->where('status', OrderStatus::Completed->value)
-                    ->where('completed_at', '>=', $todayStart)->count(),
-                'month_total' => $monthTotal,
-                'month_completed' => $monthCompleted,
-                'month_cancelled' => Order::realOrders()->where('created_at', '>=', $monthStart)
-                    ->whereIn('status', $cancelled)->count(),
-                'completion_rate' => $monthTotal > 0 ? round($monthCompleted / $monthTotal * 100) : 0,
+                'open' => Order::realOrders()->whereIn('status', [
+                    OrderStatus::New->value, OrderStatus::Coordinated->value,
+                    OrderStatus::Open->value, OrderStatus::Suspended->value,
+                ])->count(),
                 'delayed_open' => Order::realOrders()
                     ->whereIn('status', [
-                        OrderStatus::Coordinated->value,
-                        OrderStatus::Open->value,
-                        OrderStatus::Suspended->value,
+                        OrderStatus::Coordinated->value, OrderStatus::Open->value, OrderStatus::Suspended->value,
                     ])
                     ->whereNotNull('technician_id')
                     ->whereNotNull('assigned_at')
@@ -91,88 +111,111 @@ class DashboardController extends Controller
                 'customers_total' => Customer::count(),
             ];
         } catch (\Throwable $e) {
-            return array_fill_keys([
-                'open', 'today_new', 'today_completed', 'month_total', 'month_completed',
-                'month_cancelled', 'completion_rate', 'delayed_open', 'techs_active', 'customers_total',
-            ], 0);
+            return ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0];
         }
     }
 
     /**
-     * سفارش‌های امروز به تفکیکِ ساعت (۰ تا ۲۳) — ثبت‌شده و تکمیل‌شده.
+     * آماره‌های بازه: کل = سفارش + لید. (بدونِ آمارِ «تکمیل‌شده».)
      *
-     * @return array{labels:array<int,string>, created:array<int,int>, completed:array<int,int>}
+     * @return array<string, int>
      */
-    protected function hourlyToday(\Carbon\Carbon $todayStart): array
+    protected function rangeStats(Carbon $from, Carbon $to): array
+    {
+        try {
+            $orders = Order::realOrders()->whereBetween('created_at', [$from, $to])->count();
+            $leads = Order::leads()->whereBetween('created_at', [$from, $to])->count();
+
+            return [
+                'orders' => $orders,
+                'leads' => $leads,
+                'total' => $orders + $leads,
+                'cancelled' => Order::realOrders()->whereBetween('created_at', [$from, $to])
+                    ->whereIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])
+                    ->count(),
+            ];
+        } catch (\Throwable $e) {
+            return ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0];
+        }
+    }
+
+    /**
+     * سفارش‌های امروز به تفکیکِ ساعت — «کل» (سفارش+لید) و «لید».
+     *
+     * @return array{labels:array<int,string>, total:array<int,int>, leads:array<int,int>}
+     */
+    protected function hourlyToday(): array
     {
         $labels = [];
         for ($h = 0; $h < 24; $h++) {
             $labels[] = sprintf('%02d', $h);
         }
-        $created = array_fill(0, 24, 0);
-        $completed = array_fill(0, 24, 0);
+        $total = array_fill(0, 24, 0);
+        $leads = array_fill(0, 24, 0);
 
         try {
-            Order::realOrders()->where('created_at', '>=', $todayStart)
-                ->get(['created_at'])
-                ->each(function ($o) use (&$created) {
-                    if ($o->created_at) {
-                        $created[(int) $o->created_at->format('G')]++;
+            $todayStart = now()->startOfDay();
+            Order::query()->whereBetween('created_at', [$todayStart, now()->endOfDay()])
+                ->get(['created_at', 'is_lead'])
+                ->each(function ($o) use (&$total, &$leads) {
+                    if (! $o->created_at) {
+                        return;
                     }
-                });
-
-            Order::realOrders()->where('status', OrderStatus::Completed->value)
-                ->where('completed_at', '>=', $todayStart)
-                ->get(['completed_at'])
-                ->each(function ($o) use (&$completed) {
-                    if ($o->completed_at) {
-                        $completed[(int) $o->completed_at->format('G')]++;
+                    $h = (int) $o->created_at->format('G');
+                    $total[$h]++;
+                    if ($o->is_lead) {
+                        $leads[$h]++;
                     }
                 });
         } catch (\Throwable $e) {
             // آرایه‌های صفر
         }
 
-        return ['labels' => $labels, 'created' => array_values($created), 'completed' => array_values($completed)];
+        return ['labels' => $labels, 'total' => array_values($total), 'leads' => array_values($leads)];
     }
 
     /**
-     * روندِ ۱۴ روزِ اخیر (روزانه، برچسبِ شمسی): کل/تکمیل/لغو.
+     * روندِ بازه — «کل» (سفارش+لید) و «لید»؛ روزانه (≤۴۵ روز) وگرنه هفتگی.
+     * برچسب‌ها شمسی.
      *
-     * @return array{labels:array<int,string>, totals:array<int,int>, completed:array<int,int>, cancelled:array<int,int>}
+     * @return array{labels:array<int,string>, total:array<int,int>, leads:array<int,int>}
      */
-    protected function trend14(): array
+    protected function trendRange(Carbon $from, Carbon $to): array
     {
         $labels = [];
-        $totals = [];
-        $completed = [];
-        $cancelled = [];
-        $cancelledStatuses = [OrderStatus::Cancelled->value, OrderStatus::Declined->value];
+        $total = [];
+        $leads = [];
 
         try {
-            for ($i = 13; $i >= 0; $i--) {
-                $start = now()->subDays($i)->startOfDay();
-                $end = now()->subDays($i)->endOfDay();
-                $labels[] = Jalalian::fromCarbon($start)->format('m/d');
-                $totals[] = Order::realOrders()->whereBetween('created_at', [$start, $end])->count();
-                $completed[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
-                    ->where('status', OrderStatus::Completed->value)->count();
-                $cancelled[] = Order::realOrders()->whereBetween('created_at', [$start, $end])
-                    ->whereIn('status', $cancelledStatuses)->count();
+            $days = $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1;
+            $step = $days <= 45 ? 1 : 7;
+
+            $cursor = $from->copy()->startOfDay();
+            $limit = $to->copy()->endOfDay();
+            while ($cursor->lte($limit)) {
+                $s = $cursor->copy()->startOfDay();
+                $e = $step === 1 ? $cursor->copy()->endOfDay() : $cursor->copy()->addDays(6)->endOfDay();
+                if ($e->gt($limit)) {
+                    $e = $limit->copy();
+                }
+                $labels[] = Jalalian::fromCarbon($s)->format('m/d');
+                $total[] = Order::query()->whereBetween('created_at', [$s, $e])->count();
+                $leads[] = Order::leads()->whereBetween('created_at', [$s, $e])->count();
+                $cursor->addDays($step);
             }
         } catch (\Throwable $e) {
-            $labels = $totals = $completed = $cancelled = [];
+            $labels = $total = $leads = [];
         }
 
-        return compact('labels', 'totals', 'completed', 'cancelled');
+        return compact('labels', 'total', 'leads');
     }
 
     /**
-     * توزیعِ وضعیتِ سفارش‌های ماهِ شمسیِ جاری (برای نمودارِ donut).
+     * توزیعِ وضعیتِ سفارش‌های بازه (donut). فقط سفارش‌های واقعی.
      *
      * @return array{labels:array<int,string>, data:array<int,int>, colors:array<int,string>}
      */
-    protected function statusBreakdownMonth(\Carbon\Carbon $monthStart): array
+    protected function statusBreakdownRange(Carbon $from, Carbon $to): array
     {
         $hex = [
             'new' => '#9ca3af', 'coordinated' => '#3b82f6', 'open' => '#6366f1',
@@ -184,10 +227,8 @@ class DashboardController extends Controller
         $colors = [];
 
         try {
-            $rows = Order::realOrders()->where('created_at', '>=', $monthStart)
-                ->selectRaw('status, COUNT(*) as cnt')
-                ->groupBy('status')
-                ->get();
+            $rows = Order::realOrders()->whereBetween('created_at', [$from, $to])
+                ->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->get();
 
             foreach ($rows as $row) {
                 $case = OrderStatus::tryFrom((string) $row->status);
@@ -206,24 +247,21 @@ class DashboardController extends Controller
     }
 
     /**
-     * پرتکرارترین دستگاه‌ها در ماهِ شمسیِ جاری (برای نمودارِ میله‌ای).
+     * پرتکرارترین دستگاه‌ها در بازه (میله‌ای).
      *
      * @return array{labels:array<int,string>, data:array<int,int>}
      */
-    protected function topDevicesMonth(\Carbon\Carbon $monthStart): array
+    protected function topDevicesRange(Carbon $from, Carbon $to): array
     {
         $labels = [];
         $data = [];
 
         try {
-            $rows = Order::realOrders()->where('created_at', '>=', $monthStart)
+            $rows = Order::realOrders()->whereBetween('created_at', [$from, $to])
                 ->whereNotNull('device_id')
                 ->with('device:id,name')
                 ->selectRaw('device_id, COUNT(*) as cnt')
-                ->groupBy('device_id')
-                ->orderByDesc('cnt')
-                ->limit(7)
-                ->get();
+                ->groupBy('device_id')->orderByDesc('cnt')->limit(7)->get();
 
             foreach ($rows as $row) {
                 $labels[] = $row->device->name ?? '—';
@@ -234,6 +272,46 @@ class DashboardController extends Controller
         }
 
         return compact('labels', 'data');
+    }
+
+    /**
+     * پیش‌فرض‌های بازهٔ آماده (شمسی): امروز، ۷ روز، این ماه، ماهِ قبل.
+     *
+     * @return array<string, array{label:string, from:string, to:string}>
+     */
+    protected function presets(): array
+    {
+        $todayJ = Jalalian::now()->format('Y/m/d');
+
+        return [
+            'today' => ['label' => 'امروز', 'from' => $todayJ, 'to' => $todayJ],
+            'week' => [
+                'label' => '۷ روزِ اخیر',
+                'from' => Jalalian::now()->subDays(6)->format('Y/m/d'),
+                'to' => $todayJ,
+            ],
+            'month' => [
+                'label' => 'این ماه',
+                'from' => Jalalian::now()->getFirstDayOfMonth()->format('Y/m/d'),
+                'to' => $todayJ,
+            ],
+            'prev_month' => [
+                'label' => 'ماهِ قبل',
+                'from' => Jalalian::now()->subMonths(1)->getFirstDayOfMonth()->format('Y/m/d'),
+                'to' => Jalalian::now()->getFirstDayOfMonth()->subDays(1)->format('Y/m/d'),
+            ],
+        ];
+    }
+
+    protected function activePreset(string $fromJ, string $toJ): string
+    {
+        foreach ($this->presets() as $key => $p) {
+            if ($p['from'] === $fromJ && $p['to'] === $toJ) {
+                return $key;
+            }
+        }
+
+        return 'custom';
     }
 
     /**
@@ -256,6 +334,23 @@ class DashboardController extends Controller
                 ->get();
         } catch (\Throwable $e) {
             return collect();
+        }
+    }
+
+    private function jalaliToGregorian(?string $jalaliDate): ?string
+    {
+        if (! $jalaliDate || trim($jalaliDate) === '') {
+            return null;
+        }
+        $latin = strtr($jalaliDate, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        ]);
+        $latin = str_replace('-', '/', trim($latin));
+        try {
+            return Jalalian::fromFormat('Y/m/d', $latin)->toCarbon()->toDateString();
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 
