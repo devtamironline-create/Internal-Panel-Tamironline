@@ -60,8 +60,12 @@ class StatusController extends Controller
                     'active' => $maintenanceActive,
                     'message' => $maintenanceMsg ?: null,
                 ],
-                // فرانت بر اساس این فلگ overlay زرد «حالت تست» را نمایش دهد
-                'test_mode_active' => (bool) config('customerapp.test-mode.enabled', false),
+                // overlayِ زرد «حالت تست» فقط وقتی نمایش داده شود که حالت تست
+                // «فراگیر» باشد (بدونِ allowlist = محیطِ staging). اگر allowlist
+                // تعریف شده باشد (مثلِ شمارهٔ تیمِ بازبینیِ گوگل‌پلی در production)،
+                // برای کاربرانِ واقعی هیچ overlayی نمایش داده نمی‌شود.
+                'test_mode_active' => config('customerapp.test-mode.enabled', false)
+                    && empty(config('customerapp.test-mode.allowed_mobiles', [])),
                 'server_time' => now()->utc()->toIso8601String(),
                 'db' => $dbOk ? 'ok' : 'down',
             ],
