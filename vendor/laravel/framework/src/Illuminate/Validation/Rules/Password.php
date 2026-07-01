@@ -142,8 +142,6 @@ class Password implements DataAwareRule, ImplicitRule, IteratorAggregate, Rule, 
      *
      * @param  static|callable|null  $callback
      * @return static|void
-     *
-     * @throws \InvalidArgumentException
      */
     public static function defaults($callback = null)
     {

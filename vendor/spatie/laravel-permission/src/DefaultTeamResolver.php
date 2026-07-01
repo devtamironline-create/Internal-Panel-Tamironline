@@ -2,7 +2,6 @@
 
 namespace Spatie\Permission;
 
-use Illuminate\Database\Eloquent\Model;
 use Spatie\Permission\Contracts\PermissionsTeamResolver;
 
 class DefaultTeamResolver implements PermissionsTeamResolver
@@ -12,11 +11,11 @@ class DefaultTeamResolver implements PermissionsTeamResolver
     /**
      * Set the team id for teams/groups support, this id is used when querying permissions/roles
      *
-     * @param  int|string|Model|null  $id
+     * @param  int|string|\Illuminate\Database\Eloquent\Model|null  $id
      */
     public function setPermissionsTeamId($id): void
     {
-        if ($id instanceof Model) {
+        if ($id instanceof \Illuminate\Database\Eloquent\Model) {
             $id = $id->getKey();
         }
         $this->teamId = $id;

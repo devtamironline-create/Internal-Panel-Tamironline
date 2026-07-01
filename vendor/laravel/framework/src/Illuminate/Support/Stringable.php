@@ -249,12 +249,12 @@ class Stringable implements JsonSerializable, ArrayAccess, BaseStringable
     /**
      * Replace consecutive instances of a given character with a single character.
      *
-     * @param  array<string>|string  $characters
+     * @param  string  $character
      * @return static
      */
-    public function deduplicate(array|string $characters = ' ')
+    public function deduplicate(string $character = ' ')
     {
-        return new static(Str::deduplicate($this->value, $characters));
+        return new static(Str::deduplicate($this->value, $character));
     }
 
     /**
@@ -889,16 +889,6 @@ class Stringable implements JsonSerializable, ArrayAccess, BaseStringable
     public function headline()
     {
         return new static(Str::headline($this->value));
-    }
-
-    /**
-     * Convert the given string to only its initials.
-     *
-     * @return static
-     */
-    public function initials()
-    {
-        return new static(Str::initials($this->value));
     }
 
     /**

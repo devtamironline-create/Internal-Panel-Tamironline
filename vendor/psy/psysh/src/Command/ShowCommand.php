@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -102,8 +102,6 @@ HELP
 
     private function writeCodeContext(InputInterface $input, OutputInterface $output)
     {
-        $shellOutput = $this->shellOutput($output);
-
         try {
             list($target, $reflector) = $this->getTargetAndReflector($input->getArgument('target'), $output);
         } catch (UnexpectedTargetException $e) {
@@ -118,7 +116,7 @@ HELP
                     ]);
                 }
 
-                $shellOutput->page(CodeFormatter::formatCode($code));
+                $output->page(CodeFormatter::formatCode($code));
 
                 return;
             } else {
@@ -130,7 +128,7 @@ HELP
         $this->setCommandScopeVariables($reflector);
 
         try {
-            $shellOutput->page(CodeFormatter::format($reflector));
+            $output->page(CodeFormatter::format($reflector));
         } catch (RuntimeException $e) {
             $output->writeln(SignatureFormatter::format($reflector));
             throw $e;
@@ -169,12 +167,9 @@ HELP
         $this->lastException = $exception;
         $this->lastExceptionIndex = $index;
 
-        $shell = $this->getShell();
-
-        $shell->writeExceptionHeader($output, $exception);
-        $shell->writeSeparator($output);
+        $output->writeln($this->getShell()->formatException($exception));
+        $output->writeln('--');
         $this->writeTraceLine($output, $trace, $index);
-        $shell->writeSpacer($output);
         $this->writeTraceCodeSnippet($output, $trace, $index);
 
         $this->setCommandScopeVariablesFromContext($trace[$index]);

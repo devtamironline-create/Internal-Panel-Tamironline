@@ -12,14 +12,14 @@ class RedisPubSubProvider implements PubSubProvider
     /**
      * The Redis publisher client.
      *
-     * @var RedisPublishClient
+     * @var \Laravel\Reverb\Servers\Reverb\Publishing\RedisPublishClient
      */
     protected $publisher;
 
     /**
      * The Redis subscriber client.
      *
-     * @var RedisSubscribeClient
+     * @var \Laravel\Reverb\Servers\Reverb\Publishing\RedisSubscribeClient
      */
     protected $subscriber;
 
@@ -75,25 +75,13 @@ class RedisPubSubProvider implements PubSubProvider
      */
     public function on(string $event, callable $callback): void
     {
-        $this->messageHandler->listen($event, $callback);
-    }
+        $this->subscriber->on('message', function (string $channel, string $payload) use ($event, $callback) {
+            $payload = json_decode($payload, associative: true, flags: JSON_THROW_ON_ERROR);
 
-    /**
-     * Listen for the given event.
-     *
-     * @alias on
-     */
-    public function listen(string $event, callable $callback): void
-    {
-        $this->on($event, $callback);
-    }
-
-    /**
-     * Stop listening for the given event..
-     */
-    public function stopListening(string $event): void
-    {
-        $this->messageHandler->stopListening($event);
+            if (($payload['type'] ?? null) === $event) {
+                $callback($payload);
+            }
+        });
     }
 
     /**

@@ -34,10 +34,6 @@ final class SessionValueResolver implements ValueResolverInterface
             return [];
         }
 
-        if ($request->attributes->has($argument->getName())) {
-            return [];
-        }
-
         return $request->getSession() instanceof $type ? [$request->getSession()] : [];
     }
 }

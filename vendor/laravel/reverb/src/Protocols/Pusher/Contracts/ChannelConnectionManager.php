@@ -35,7 +35,7 @@ interface ChannelConnectionManager
     /**
      * Get all of the connections.
      *
-     * @return array<string, ChannelConnection>
+     * @return array<string, \Laravel\Reverb\Protocols\Pusher\Channels\ChannelConnection>
      */
     public function all(): array;
 

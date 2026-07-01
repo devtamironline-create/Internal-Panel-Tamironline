@@ -37,6 +37,18 @@ parameters:
 			path: src/Color/ColorSpaceRestrictor.php
 
 		-
+			message: '#^Binary operation "\+" between non\-empty\-string and 0 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/CssManager.php
+
+		-
+			message: '#^Variable \$tag might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/CssManager.php
+
+		-
 			message: '#^Method Mpdf\\Mpdf\:\:GetJspacing\(\) invoked with 4 parameters, 5 required\.$#'
 			identifier: arguments.count
 			count: 2
@@ -873,13 +885,13 @@ parameters:
 		-
 			message: '#^Offset int on array\{\} in isset\(\) does not exist\.$#'
 			identifier: isset.offset
-			count: 1
+			count: 2
 			path: src/Otl.php
 
 		-
 			message: '#^Offset int\<0, max\> on array\{\} in isset\(\) does not exist\.$#'
 			identifier: isset.offset
-			count: 1
+			count: 4
 			path: src/Otl.php
 
 		-

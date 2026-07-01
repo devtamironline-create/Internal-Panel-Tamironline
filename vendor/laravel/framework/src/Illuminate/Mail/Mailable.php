@@ -250,12 +250,8 @@ class Mailable implements MailableContract, Renderable
 
         $queueName = property_exists($this, 'queue') ? $this->queue : null;
 
-        $job = $this->newQueuedJob();
-
-        $job->delay($delay);
-
         return $queue->connection($connection)->laterOn(
-            $queueName ?: null, $delay, $job
+            $queueName ?: null, $delay, $this->newQueuedJob()
         );
     }
 
@@ -268,6 +264,7 @@ class Mailable implements MailableContract, Renderable
     {
         $messageGroup = $this->messageGroup ?? (method_exists($this, 'messageGroup') ? $this->messageGroup() : null);
 
+        /** @phpstan-ignore callable.nonNativeMethod (false positive since method_exists guard is used) */
         $deduplicator = $this->deduplicator ?? (method_exists($this, 'deduplicationId') ? $this->deduplicationId(...) : null);
 
         return Container::getInstance()->make(SendQueuedMailable::class, ['mailable' => $this])
@@ -1415,7 +1412,7 @@ class Mailable implements MailableContract, Renderable
      */
     public function assertSeeInHtml($string, $escape = true)
     {
-        $string = $escape ? EncodedHtmlString::convert($string, withQuote: true) : $string;
+        $string = $escape ? EncodedHtmlString::convert($string, withQuote: isset($this->markdown)) : $string;
 
         [$html] = $this->renderForAssertions();
 
@@ -1437,7 +1434,7 @@ class Mailable implements MailableContract, Renderable
      */
     public function assertDontSeeInHtml($string, $escape = true)
     {
-        $string = $escape ? EncodedHtmlString::convert($string, withQuote: true) : $string;
+        $string = $escape ? EncodedHtmlString::convert($string, withQuote: isset($this->markdown)) : $string;
 
         [$html] = $this->renderForAssertions();
 
@@ -1460,7 +1457,7 @@ class Mailable implements MailableContract, Renderable
     public function assertSeeInOrderInHtml($strings, $escape = true)
     {
         $strings = $escape ? array_map(function ($string) {
-            return EncodedHtmlString::convert($string, withQuote: true);
+            return EncodedHtmlString::convert($string, withQuote: isset($this->markdown));
         }, $strings) : $strings;
 
         [$html] = $this->renderForAssertions();

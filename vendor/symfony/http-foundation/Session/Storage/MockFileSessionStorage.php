@@ -142,7 +142,7 @@ class MockFileSessionStorage extends MockArraySessionStorage
             restore_error_handler();
         }
 
-        $this->data = $data ? unserialize($data, ['allowed_classes' => true]) : [];
+        $this->data = $data ? unserialize($data) : [];
 
         $this->loadSession();
     }

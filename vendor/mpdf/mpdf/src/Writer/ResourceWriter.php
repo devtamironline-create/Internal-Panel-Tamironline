@@ -121,7 +121,7 @@ final class ResourceWriter implements \Psr\Log\LoggerAwareInterface
 		$this->backgroundWriter->writePatterns();
 
 		// Resource dictionary
-		$this->mpdf->offsets[2] = $this->mpdf->buffer->getLength();
+		$this->mpdf->offsets[2] = strlen($this->mpdf->buffer);
 		$this->writer->write('2 0 obj');
 		$this->writer->write('<</ProcSet [/PDF /Text /ImageB /ImageC /ImageI]');
 

@@ -2,7 +2,6 @@
 
 namespace Laravel\Reverb\Pulse\Livewire;
 
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\View;
@@ -58,7 +57,7 @@ class Messages extends Card
     /**
      * Define any CSS that should be loaded for the component.
      *
-     * @return string|Htmlable|array<int, string|Htmlable>|null
+     * @return string|\Illuminate\Contracts\Support\Htmlable|array<int, string|\Illuminate\Contracts\Support\Htmlable>|null
      */
     protected function css(): HtmlString
     {

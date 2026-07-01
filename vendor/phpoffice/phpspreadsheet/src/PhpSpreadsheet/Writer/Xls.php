@@ -150,9 +150,6 @@ class Xls extends BaseWriter
                 /** @var Cell $cell */
                 $cell = $this->writerWorksheets[$i]->phpSheet->getCellCollection()->get($coordinate);
                 $cVal = $cell->getValue();
-                if ($cVal instanceof RichText && (string) $cVal === '') {
-                    $cVal = '';
-                }
                 if ($cVal instanceof RichText) {
                     $active = $this->spreadsheet->getActiveSheetIndex();
                     $sheet = $cell->getWorksheet();
@@ -794,7 +791,7 @@ class Xls extends BaseWriter
     private function writeSummaryProp(string $dataProp, int &$dataSection_NumProps, array &$dataSection, int $sumdata, int $typdata): void
     {
         if ($dataProp) {
-            $dataSection[] = [ // @phpstan-ignore-line
+            $dataSection[] = [
                 'summary' => ['pack' => 'V', 'data' => $sumdata],
                 'offset' => ['pack' => 'V'],
                 'type' => ['pack' => 'V', 'data' => $typdata], // null-terminated string prepended by dword string length
@@ -868,7 +865,7 @@ class Xls extends BaseWriter
         foreach ($dataSection as $dataProp) {
             /** @var array{data: array{data: string, length: int}, summary: array{pack: string, data: string}, offset: array{pack: string}, type: array{data: int, pack: string}} $dataProp */
             // Summary
-            $dataSection_Summary .= pack($dataProp['summary']['pack'], $dataProp['summary']['data']); // @phpstan-ignore-line
+            $dataSection_Summary .= pack($dataProp['summary']['pack'], $dataProp['summary']['data']);
             // Offset
             $dataSection_Summary .= pack($dataProp['offset']['pack'], $dataSection_Content_Offset);
             // DataType

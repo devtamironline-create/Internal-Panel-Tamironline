@@ -34,48 +34,47 @@ class Csv extends BaseReader
     /**
      * Input encoding.
      */
-    protected string $inputEncoding = 'UTF-8';
+    private string $inputEncoding = 'UTF-8';
 
     /**
      * Fallback encoding if guess strikes out.
      */
-    protected string $fallbackEncoding = self::DEFAULT_FALLBACK_ENCODING;
+    private string $fallbackEncoding = self::DEFAULT_FALLBACK_ENCODING;
 
     /**
      * Delimiter.
      */
-    protected ?string $delimiter = null;
+    private ?string $delimiter = null;
 
     /**
      * Enclosure.
      */
-    protected string $enclosure = '"';
+    private string $enclosure = '"';
 
     /**
      * Sheet index to read.
      */
-    protected int $sheetIndex = 0;
+    private int $sheetIndex = 0;
 
     /**
      * Load rows contiguously.
      */
-    protected bool $contiguous = false;
+    private bool $contiguous = false;
 
     /**
      * The character that can escape the enclosure.
      * This will probably become unsupported in Php 9.
      * Not yet ready to mark deprecated in order to give users
      * a migration path.
-     * Strongly encourage that this value be set to null-string.
      */
-    protected ?string $escapeCharacter = null;
+    private ?string $escapeCharacter = null;
 
     /**
      * Callback for setting defaults in construction.
      *
      * @var ?callable
      */
-    protected static $constructorCallback;
+    private static $constructorCallback;
 
     /** Changed from true to false in release 4.0.0 */
     public const DEFAULT_TEST_AUTODETECT = false;
@@ -83,23 +82,23 @@ class Csv extends BaseReader
     /**
      * Attempt autodetect line endings (deprecated after PHP8.1)?
      */
-    protected bool $testAutodetect = self::DEFAULT_TEST_AUTODETECT;
+    private bool $testAutodetect = self::DEFAULT_TEST_AUTODETECT;
 
     protected bool $castFormattedNumberToNumeric = false;
 
     protected bool $preserveNumericFormatting = false;
 
-    protected bool $preserveNullString = false;
+    private bool $preserveNullString = false;
 
-    protected bool $sheetNameIsFileName = false;
+    private bool $sheetNameIsFileName = false;
 
-    protected ?string $getTrue = null;
+    private string $getTrue = 'true';
 
-    protected ?string $getFalse = null;
+    private string $getFalse = 'false';
 
-    protected ?string $thousandsSeparator = null;
+    private string $thousandsSeparator = ',';
 
-    protected ?string $decimalSeparator = null;
+    private string $decimalSeparator = '.';
 
     /**
      * Create a new CSV Reader instance.
@@ -107,7 +106,7 @@ class Csv extends BaseReader
     public function __construct()
     {
         parent::__construct();
-        $callback = static::$constructorCallback;
+        $callback = self::$constructorCallback;
         if ($callback !== null) {
             $callback($this);
         }
@@ -121,12 +120,12 @@ class Csv extends BaseReader
      */
     public static function setConstructorCallback(?callable $callback): void
     {
-        static::$constructorCallback = $callback;
+        self::$constructorCallback = $callback;
     }
 
     public static function getConstructorCallback(): ?callable
     {
-        return static::$constructorCallback;
+        return self::$constructorCallback;
     }
 
     public function setInputEncoding(string $encoding): self
@@ -249,7 +248,7 @@ class Csv extends BaseReader
             $rowData = self::getCsv($fileHandle, 0, $delimiter, $this->enclosure, $this->escapeCharacter);
         }
 
-        $worksheetInfo[0]['lastColumnLetter'] = Coordinate::stringFromColumnIndex($worksheetInfo[0]['lastColumnIndex'] + 1, true);
+        $worksheetInfo[0]['lastColumnLetter'] = Coordinate::stringFromColumnIndex($worksheetInfo[0]['lastColumnIndex'] + 1);
         $worksheetInfo[0]['totalColumns'] = $worksheetInfo[0]['lastColumnIndex'] + 1;
         $worksheetInfo[0]['sheetState'] = Worksheet::SHEETSTATE_VISIBLE;
 
@@ -301,25 +300,16 @@ class Csv extends BaseReader
         }
         $this->openFile($filename);
         if ($this->inputEncoding !== 'UTF-8') {
-            $this->convertNonUtf8($filename);
+            fclose($this->fileHandle);
+            $entireFile = file_get_contents($filename);
+            $fileHandle = fopen('php://memory', 'r+b');
+            if ($fileHandle !== false && $entireFile !== false) {
+                $this->fileHandle = $fileHandle;
+                $data = StringHelper::convertEncoding($entireFile, 'UTF-8', $this->inputEncoding);
+                fwrite($this->fileHandle, $data);
+                $this->skipBOM();
+            }
         }
-    }
-
-    protected function convertNonUtf8(string $filename): void
-    {
-        fclose($this->fileHandle);
-        $entireFile = file_get_contents($filename);
-        if ($entireFile === false) {
-            throw new ReaderException("Unable to get contents of $filename"); // @codeCoverageIgnore
-        }
-        $fileHandle = fopen('php://memory', 'r+b');
-        if ($fileHandle === false) {
-            throw new ReaderException('Unable to open php://memory'); // @codeCoverageIgnore
-        }
-        $this->fileHandle = $fileHandle;
-        $data = StringHelper::convertEncoding($entireFile, 'UTF-8', $this->inputEncoding);
-        fwrite($this->fileHandle, $data);
-        $this->skipBOM();
     }
 
     public function setTestAutoDetect(bool $value): self
@@ -427,10 +417,10 @@ class Csv extends BaseReader
         $rowData = self::getCsv($fileHandle, 0, $delimiter, $this->enclosure, $this->escapeCharacter);
         $valueBinder = $this->valueBinder ?? Cell::getValueBinder();
         $preserveBooleanString = method_exists($valueBinder, 'getBooleanConversion') && $valueBinder->getBooleanConversion();
-        $this->getTrue ??= Calculation::getTRUE();
-        $this->getFalse ??= Calculation::getFALSE();
-        $this->thousandsSeparator ??= StringHelper::getThousandsSeparator();
-        $this->decimalSeparator ??= StringHelper::getDecimalSeparator();
+        $this->getTrue = Calculation::getTRUE();
+        $this->getFalse = Calculation::getFALSE();
+        $this->thousandsSeparator = StringHelper::getThousandsSeparator();
+        $this->decimalSeparator = StringHelper::getDecimalSeparator();
         while (is_array($rowData)) {
             $noOutputYet = true;
             $columnLetter = 'A';
@@ -475,9 +465,9 @@ class Csv extends BaseReader
     private function convertBoolean(mixed &$rowDatum): void
     {
         if (is_string($rowDatum)) {
-            if (strcasecmp((string) $this->getTrue, $rowDatum) === 0 || strcasecmp('true', $rowDatum) === 0) {
+            if (strcasecmp($this->getTrue, $rowDatum) === 0 || strcasecmp('true', $rowDatum) === 0) {
                 $rowDatum = true;
-            } elseif (strcasecmp((string) $this->getFalse, $rowDatum) === 0 || strcasecmp('false', $rowDatum) === 0) {
+            } elseif (strcasecmp($this->getFalse, $rowDatum) === 0 || strcasecmp('false', $rowDatum) === 0) {
                 $rowDatum = false;
             }
         } else {
@@ -493,15 +483,15 @@ class Csv extends BaseReader
         $numberFormatMask = '';
         if ($this->castFormattedNumberToNumeric === true && is_string($rowDatum)) {
             $numeric = str_replace(
-                [(string) $this->thousandsSeparator, (string) $this->decimalSeparator],
+                [$this->thousandsSeparator, $this->decimalSeparator],
                 ['', '.'],
                 $rowDatum
             );
 
             if (is_numeric($numeric)) {
-                $decimalPos = strpos($rowDatum, (string) $this->decimalSeparator);
+                $decimalPos = strpos($rowDatum, $this->decimalSeparator);
                 if ($this->preserveNumericFormatting === true) {
-                    $numberFormatMask = (str_contains($rowDatum, (string) $this->thousandsSeparator))
+                    $numberFormatMask = (str_contains($rowDatum, $this->thousandsSeparator))
                         ? '#,##0' : '0';
                     if ($decimalPos !== false) {
                         $decimals = strlen($rowDatum) - $decimalPos - 1;
@@ -768,33 +758,5 @@ class Csv extends BaseReader
     private static function getDefaultEscapeCharacter(int $version = PHP_VERSION_ID): string
     {
         return $version < 90000 ? '\\' : '';
-    }
-
-    public function setGetTrue(?string $getTrue): self
-    {
-        $this->getTrue = $getTrue;
-
-        return $this;
-    }
-
-    public function setGetFalse(?string $getFalse): self
-    {
-        $this->getFalse = $getFalse;
-
-        return $this;
-    }
-
-    public function setDecimalSeparator(?string $decimalSeparator): self
-    {
-        $this->decimalSeparator = $decimalSeparator;
-
-        return $this;
-    }
-
-    public function setThousandsSeparator(?string $thousandsSeparator): self
-    {
-        $this->thousandsSeparator = $thousandsSeparator;
-
-        return $this;
     }
 }

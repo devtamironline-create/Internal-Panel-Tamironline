@@ -86,15 +86,12 @@ class UrlMatcher implements UrlMatcherInterface, RequestMatcherInterface
     public function matchRequest(Request $request): array
     {
         $this->request = $request;
-        $originalContext = $this->context;
-        $this->context = (clone $originalContext)->fromRequest($request);
 
-        try {
-            return $this->match($request->getPathInfo());
-        } finally {
-            $this->context = $originalContext;
-            $this->request = null;
-        }
+        $ret = $this->match($request->getPathInfo());
+
+        $this->request = null;
+
+        return $ret;
     }
 
     public function addExpressionLanguageProvider(ExpressionFunctionProviderInterface $provider): void

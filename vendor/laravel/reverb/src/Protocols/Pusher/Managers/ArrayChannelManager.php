@@ -11,7 +11,6 @@ use Laravel\Reverb\Events\ChannelCreated;
 use Laravel\Reverb\Events\ChannelRemoved;
 use Laravel\Reverb\Protocols\Pusher\Channels\Channel;
 use Laravel\Reverb\Protocols\Pusher\Channels\ChannelBroker;
-use Laravel\Reverb\Protocols\Pusher\Channels\ChannelConnection;
 use Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager as ChannelManagerInterface;
 
 class ArrayChannelManager implements ChannelManagerInterface
@@ -21,14 +20,14 @@ class ArrayChannelManager implements ChannelManagerInterface
     /**
      * The underlying array of applications and their channels.
      *
-     * @var array<string, array<string, array<string, Channel>>>
+     * @var array<string, array<string, array<string, \Laravel\Reverb\Protocols\Pusher\Channels\Channel>>>
      */
     protected $applications = [];
 
     /**
      * The application instance.
      *
-     * @var Application
+     * @var \Laravel\Reverb\Application
      */
     protected $application;
 
@@ -43,7 +42,7 @@ class ArrayChannelManager implements ChannelManagerInterface
     /**
      * Get all the channels.
      *
-     * @return array<string, Channel>
+     * @return array<string, \Laravel\Reverb\Protocols\Pusher\Channels\Channel>
      */
     public function all(): array
     {
@@ -87,33 +86,15 @@ class ArrayChannelManager implements ChannelManagerInterface
     /**
      * Get all of the connections for the given channels.
      *
-     * @return array<string, ChannelConnection>
+     * @return array<string, \Laravel\Reverb\Protocols\Pusher\Channels\ChannelConnection>
      */
     public function connections(?string $channel = null): array
     {
         $channels = Arr::wrap($this->channels($channel));
 
-        $result = [];
-
-        foreach ($channels as $ch) {
-            $result += $ch->connections();
-        }
-
-        return $result;
-    }
-
-    /**
-     * Find a single connection by socket ID.
-     */
-    public function findConnection(string $socketId): ?ChannelConnection
-    {
-        foreach ($this->channels() as $channel) {
-            if ($connection = $channel->connections()[$socketId] ?? null) {
-                return $connection;
-            }
-        }
-
-        return null;
+        return array_reduce($channels, function ($carry, $channel) {
+            return $carry + $channel->connections();
+        }, []);
     }
 
     /**
@@ -147,7 +128,7 @@ class ArrayChannelManager implements ChannelManagerInterface
     /**
      * Get the channels for the application.
      *
-     * @return Channel|array<string, Channel>|null
+     * @return \Laravel\Reverb\Protocols\Pusher\Channels\Channel|array<string, \Laravel\Reverb\Protocols\Pusher\Channels\Channel>|null
      */
     public function channels(?string $channel = null): Channel|array|null
     {

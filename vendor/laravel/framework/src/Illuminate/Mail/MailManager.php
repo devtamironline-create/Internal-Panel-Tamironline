@@ -410,8 +410,6 @@ class MailManager implements FactoryContract
      * @param  array  $config
      * @param  class-string<TClass>  $class
      * @return TClass
-     *
-     * @throws \InvalidArgumentException
      */
     protected function createRoundrobinTransportOfClass(array $config, string $class)
     {

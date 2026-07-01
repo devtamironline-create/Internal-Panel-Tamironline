@@ -3,17 +3,13 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
 namespace Psy\Formatter;
-
-use Psy\Readline\Interactive\Layout\DisplayString;
-use Symfony\Component\Console\Formatter\OutputFormatterInterface;
-use Symfony\Component\Console\Helper\Helper;
 
 /**
  * A CJK and tag-aware text wrapper for manual content.
@@ -94,13 +90,6 @@ class ManualWrapper
         '\x{2014}\x{2026}\x{2025}\x{3033}\x{3034}\x{3035}',
     ];
 
-    private ?OutputFormatterInterface $outputFormatter;
-
-    public function __construct(?OutputFormatterInterface $outputFormatter = null)
-    {
-        $this->outputFormatter = $outputFormatter;
-    }
-
     /**
      * A tag-aware, CJK friendly version of wordwrap().
      *
@@ -116,14 +105,14 @@ class ManualWrapper
         $lines = [];
 
         foreach (\explode($break, $text) as $line) {
-            if ($this->width($line) <= $width) {
+            if (self::len($line) <= $width) {
                 $lines[] = $line;
                 continue;
             }
 
             $buf = '';
             foreach ($this->words($line) as $word) {
-                if ($this->width($buf.$word) <= $width) {
+                if (self::len($buf.$word) <= $width) {
                     $buf .= $word;
                     continue;
                 }
@@ -132,22 +121,12 @@ class ManualWrapper
                 $buf = $word;
             }
 
-            if ($this->width($buf) > 0) {
+            if (self::len($buf) > 0) {
                 $lines[] = $buf;
             }
         }
 
         return \implode($break, $lines);
-    }
-
-    public function longestWordWidth(string $line): int
-    {
-        $width = 1;
-        foreach ($this->words($line) as $word) {
-            $width = \max($width, $this->width($word));
-        }
-
-        return $width;
     }
 
     /**
@@ -156,34 +135,17 @@ class ManualWrapper
      * Full-width CJK characters count as 2 characters wide.
      * Tags are ignored for width calculation.
      *
-     * @deprecated use an instance of ManualWrapper so formatter-aware width can be used
-     *
      * @param string $text The text to measure
      *
      * @return int The apparent width
      */
     public static function len(string $text): int
     {
-        $text = \strip_tags($text);
-
-        // Match all full-width characters and replace them with 'xx', so that we can compute the apparent length
+        // Match all full-width characters and replace them with 'xx', so that we can compute the _apparent_ length
         // of the rendered string.
         $isFullWidth = \sprintf('/[%s]/u', \implode('', self::$fullWidthRanges));
 
-        return DisplayString::width(\rtrim(\preg_replace($isFullWidth, 'xx', $text)));
-    }
-
-    private function width(string $text): int
-    {
-        $text = $this->outputFormatter === null ? \strip_tags($text) : Helper::removeDecoration($this->outputFormatter, $text);
-        // Symfony 3.4 removes escaped "<" but leaves escaped ">" in place.
-        $text = \str_replace(['\\<', '\\>'], ['<', '>'], $text);
-
-        // Match all full-width characters and replace them with 'xx', so that we can compute the apparent length
-        // of the rendered string.
-        $isFullWidth = \sprintf('/[%s]/u', \implode('', self::$fullWidthRanges));
-
-        return DisplayString::width(\rtrim(\preg_replace($isFullWidth, 'xx', $text)));
+        return \mb_strlen(\rtrim(\preg_replace($isFullWidth, 'xx', \strip_tags($text))));
     }
 
     /**

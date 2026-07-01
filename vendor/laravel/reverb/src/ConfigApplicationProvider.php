@@ -19,7 +19,7 @@ class ConfigApplicationProvider implements ApplicationProvider
     /**
      * Get all of the configured applications as Application instances.
      *
-     * @return Collection<Application>
+     * @return \Illuminate\Support\Collection<\Laravel\Reverb\Application>
      */
     public function all(): Collection
     {
@@ -31,7 +31,7 @@ class ConfigApplicationProvider implements ApplicationProvider
     /**
      * Find an application instance by ID.
      *
-     * @throws InvalidApplication
+     * @throws \Laravel\Reverb\Exceptions\InvalidApplication
      */
     public function findById(string $id): Application
     {
@@ -41,7 +41,7 @@ class ConfigApplicationProvider implements ApplicationProvider
     /**
      * Find an application instance by key.
      *
-     * @throws InvalidApplication
+     * @throws \Laravel\Reverb\Exceptions\InvalidApplication
      */
     public function findByKey(string $key): Application
     {
@@ -51,7 +51,7 @@ class ConfigApplicationProvider implements ApplicationProvider
     /**
      * Find an application instance.
      *
-     * @throws InvalidApplication
+     * @throws \Laravel\Reverb\Exceptions\InvalidApplication
      */
     public function find(string $key, mixed $value): Application
     {
@@ -70,9 +70,6 @@ class ConfigApplicationProvider implements ApplicationProvider
             $app['allowed_origins'],
             $app['max_message_size'],
             $app['max_connections'] ?? null,
-            // If no setting is provided, default to allowing all client events...
-            $app['accept_client_events_from'] ?? 'all',
-            $app['rate_limiting'] ?? null,
             $app['options'] ?? [],
         );
     }

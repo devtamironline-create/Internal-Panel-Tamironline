@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -71,10 +71,7 @@ class ComposerAutoloadWarmer implements AutoloadWarmerInterface
 
     private const KNOWN_BAD_NAMESPACES = [
         'Psy\\Readline\\Hoa\\',
-        // Autoloading Composer classes breaks Composer autoloading :grimacing:
-        'Composer\\',
-        // DI is an optional Symfony Console dependency; prevent explosion
-        'Symfony\\Component\\Console\\DependencyInjection\\',
+        'Composer\\', // Autoloading Composer classes breaks Composer autoloading :grimacing:
     ];
 
     /**
@@ -373,7 +370,9 @@ class ComposerAutoloadWarmer implements AutoloadWarmerInterface
      */
     private function normalizeNamespaces(array $namespaces): array
     {
-        return \array_map(fn ($namespace) => \trim($namespace, '\\').'\\', $namespaces);
+        return \array_map(function ($namespace) {
+            return \trim($namespace, '\\').'\\';
+        }, $namespaces);
     }
 
     /**

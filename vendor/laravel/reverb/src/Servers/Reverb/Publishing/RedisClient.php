@@ -16,7 +16,7 @@ class RedisClient
     /**
      * Redis connection client.
      *
-     * @var Client
+     * @var \Clue\React\Redis\Client
      */
     protected $client;
 

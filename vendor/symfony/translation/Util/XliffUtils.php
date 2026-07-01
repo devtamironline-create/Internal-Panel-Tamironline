@@ -82,6 +82,31 @@ class XliffUtils
         return [];
     }
 
+    private static function shouldEnableEntityLoader(): bool
+    {
+        static $dom, $schema;
+        if (null === $dom) {
+            $dom = new \DOMDocument();
+            $dom->loadXML('<?xml version="1.0"?><test/>');
+
+            $tmpfile = tempnam(sys_get_temp_dir(), 'symfony');
+            register_shutdown_function(static function () use ($tmpfile) {
+                @unlink($tmpfile);
+            });
+            $schema = '<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:include schemaLocation="file:///'.str_replace('\\', '/', $tmpfile).'" />
+</xsd:schema>';
+            file_put_contents($tmpfile, '<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="test" type="testType" />
+  <xsd:complexType name="testType"/>
+</xsd:schema>');
+        }
+
+        return !@$dom->schemaValidateSource($schema);
+    }
+
     public static function getErrorsAsString(array $xmlErrors): string
     {
         $errorsAsString = '';
@@ -98,44 +123,6 @@ class XliffUtils
         }
 
         return $errorsAsString;
-    }
-
-    private static function shouldEnableEntityLoader(): bool
-    {
-        static $dom, $schema;
-        if (null === $dom) {
-            $dom = new \DOMDocument();
-            $dom->loadXML('<?xml version="1.0"?><test/>');
-
-            $tmpfile = tempnam(sys_get_temp_dir(), 'symfony');
-            register_shutdown_function(static function () use ($tmpfile) {
-                @unlink($tmpfile);
-            });
-            $schema = '<?xml version="1.0" encoding="utf-8"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <xsd:include schemaLocation="'.self::getFileUrl($tmpfile).'" />
-</xsd:schema>';
-            file_put_contents($tmpfile, '<?xml version="1.0" encoding="utf-8"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <xsd:element name="test" type="testType" />
-  <xsd:complexType name="testType"/>
-</xsd:schema>');
-        }
-
-        return !@$dom->schemaValidateSource($schema);
-    }
-
-    private static function getFileUrl(string $path): string
-    {
-        if ('\\' === \DIRECTORY_SEPARATOR) {
-            $parts = explode('/', str_replace('\\', '/', $path));
-            $drive = array_shift($parts).'/';
-        } else {
-            $parts = explode('/', $path);
-            $drive = '';
-        }
-
-        return 'file:///'.$drive.implode('/', array_map('rawurlencode', $parts));
     }
 
     private static function getSchema(string $xliffVersion): string
@@ -158,21 +145,22 @@ class XliffUtils
      */
     private static function fixXmlLocation(string $schemaSource, string $xmlUri): string
     {
-        $path = __DIR__.'/../Resources/schemas/xml.xsd';
-
-        if (0 === stripos($path, 'phar://')) {
-            if ($tmpfile = tempnam(sys_get_temp_dir(), 'symfony')) {
-                copy($path, $tmpfile);
-                $newPath = self::getFileUrl($tmpfile);
+        $newPath = str_replace('\\', '/', __DIR__).'/../Resources/schemas/xml.xsd';
+        $parts = explode('/', $newPath);
+        $locationstart = 'file:///';
+        if (0 === stripos($newPath, 'phar://')) {
+            $tmpfile = tempnam(sys_get_temp_dir(), 'symfony');
+            if ($tmpfile) {
+                copy($newPath, $tmpfile);
+                $parts = explode('/', str_replace('\\', '/', $tmpfile));
             } else {
-                $parts = explode('/', '\\' === \DIRECTORY_SEPARATOR ? str_replace('\\', '/', $path) : $path);
                 array_shift($parts);
-                $drive = '\\' === \DIRECTORY_SEPARATOR ? array_shift($parts).'/' : '';
-                $newPath = 'phar:///'.$drive.implode('/', array_map('rawurlencode', $parts));
+                $locationstart = 'phar:///';
             }
-        } else {
-            $newPath = self::getFileUrl($path);
         }
+
+        $drive = '\\' === \DIRECTORY_SEPARATOR ? array_shift($parts).'/' : '';
+        $newPath = $locationstart.$drive.implode('/', array_map('rawurlencode', $parts));
 
         return str_replace($xmlUri, $newPath, $schemaSource);
     }

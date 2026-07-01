@@ -12,7 +12,6 @@ use Illuminate\Support\Traits\Conditionable;
 use Laravel\SerializableClosure\SerializableClosure;
 use RuntimeException;
 use Throwable;
-use UnitEnum;
 
 use function Illuminate\Support\enum_value;
 
@@ -65,7 +64,7 @@ class PendingBatch
     {
         $this->container = $container;
 
-        $this->jobs = $jobs->filter()->values()->each(function (object|array $job) {
+        $this->jobs = $jobs->each(function (object|array $job) {
             $this->ensureJobIsBatchable($job);
         });
     }
@@ -232,7 +231,7 @@ class PendingBatch
      *
      * Optionally, add callbacks to be executed upon each job failure.
      *
-     * @phpstan-type TParam (Closure(\Illuminate\Bus\Batch, \Throwable|null): mixed)|(callable(\Illuminate\Bus\Batch, \Throwable|null): mixed)
+     * @template TParam of (Closure(\Illuminate\Bus\Batch, \Throwable|null): mixed)|(callable(\Illuminate\Bus\Batch, \Throwable|null): mixed)
      *
      * @param  bool|TParam|array<array-key, TParam>  $param
      * @return $this
@@ -300,12 +299,12 @@ class PendingBatch
     /**
      * Specify the queue connection that the batched jobs should run on.
      *
-     * @param  \UnitEnum|string  $connection
+     * @param  string  $connection
      * @return $this
      */
-    public function onConnection(UnitEnum|string $connection)
+    public function onConnection(string $connection)
     {
-        $this->options['connection'] = enum_value($connection);
+        $this->options['connection'] = $connection;
 
         return $this;
     }

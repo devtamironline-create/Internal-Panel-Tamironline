@@ -282,11 +282,11 @@ trait Localization
             }
 
             $$translationKey = array_merge(
-                $mode & CarbonInterface::TRANSLATE_MONTHS ? self::getTranslationArray($months, static::MONTHS_PER_YEAR, $timeString) : [],
-                $mode & CarbonInterface::TRANSLATE_MONTHS ? self::getTranslationArray($messages['months_short'] ?? [], static::MONTHS_PER_YEAR, $timeString) : [],
-                $mode & CarbonInterface::TRANSLATE_DAYS ? self::getTranslationArray($weekdays, static::DAYS_PER_WEEK, $timeString) : [],
-                $mode & CarbonInterface::TRANSLATE_DAYS ? self::getTranslationArray($messages['weekdays_short'] ?? [], static::DAYS_PER_WEEK, $timeString) : [],
-                $mode & CarbonInterface::TRANSLATE_DIFF ? self::translateWordsByKeys([
+                $mode & CarbonInterface::TRANSLATE_MONTHS ? static::getTranslationArray($months, static::MONTHS_PER_YEAR, $timeString) : [],
+                $mode & CarbonInterface::TRANSLATE_MONTHS ? static::getTranslationArray($messages['months_short'] ?? [], static::MONTHS_PER_YEAR, $timeString) : [],
+                $mode & CarbonInterface::TRANSLATE_DAYS ? static::getTranslationArray($weekdays, static::DAYS_PER_WEEK, $timeString) : [],
+                $mode & CarbonInterface::TRANSLATE_DAYS ? static::getTranslationArray($messages['weekdays_short'] ?? [], static::DAYS_PER_WEEK, $timeString) : [],
+                $mode & CarbonInterface::TRANSLATE_DIFF ? static::translateWordsByKeys([
                     'diff_now',
                     'diff_today',
                     'diff_yesterday',
@@ -294,7 +294,7 @@ trait Localization
                     'diff_before_yesterday',
                     'diff_after_tomorrow',
                 ], $messages, $key) : [],
-                $mode & CarbonInterface::TRANSLATE_UNITS ? self::translateWordsByKeys([
+                $mode & CarbonInterface::TRANSLATE_UNITS ? static::translateWordsByKeys([
                     'year',
                     'month',
                     'week',
@@ -345,7 +345,7 @@ trait Localization
      * @param string|null $locale
      * @param string      ...$fallbackLocales
      *
-     * @return ($locale is null ? string : static)
+     * @return $this|string
      */
     public function locale(?string $locale = null, string ...$fallbackLocales): static|string
     {
@@ -407,37 +407,14 @@ trait Localization
         $translator = static::getTranslator();
 
         if (method_exists($translator, 'setFallbackLocales')) {
-            $fallbackLocales = [$locale];
-
-            if (
-                method_exists($translator, 'getFallbackLocales')
-                && $fallbackLocales === $translator->getFallbackLocales()
-            ) {
-                return;
-            }
-
-            $translator->setFallbackLocales($fallbackLocales);
+            $translator->setFallbackLocales([$locale]);
 
             if ($translator instanceof Translator) {
                 $preferredLocale = $translator->getLocale();
-                $fallbackMessages = [];
-                $preferredMessages = $translator->getMessages($preferredLocale);
-
-                foreach (Translator::get($locale)->getMessages()[$locale] ?? [] as $key => $value) {
-                    if (
-                        preg_match('/^(?:a_)?(.+)_(?:standalone|ago|from_now|before|after|short|min)$/', $key, $match)
-                        && isset($preferredMessages[$match[1]])
-                    ) {
-                        continue;
-                    }
-
-                    $fallbackMessages[$key] = $value;
-                }
-
                 $translator->setMessages($preferredLocale, array_replace_recursive(
                     $translator->getMessages()[$locale] ?? [],
-                    $fallbackMessages,
-                    $preferredMessages,
+                    Translator::get($locale)->getMessages()[$locale] ?? [],
+                    $translator->getMessages($preferredLocale),
                 ));
             }
         }
@@ -596,7 +573,7 @@ trait Localization
      *
      * @return array
      */
-    public static function getAvailableLocales(): array
+    public static function getAvailableLocales()
     {
         $translator = static::getLocaleAwareTranslator();
 
@@ -611,10 +588,9 @@ trait Localization
      *
      * @return Language[]
      */
-    public static function getAvailableLocalesInfo(): array
+    public static function getAvailableLocalesInfo()
     {
         $languages = [];
-
         foreach (static::getAvailableLocales() as $id) {
             $languages[$id] = new Language($id);
         }

@@ -2,7 +2,6 @@
 
 namespace PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-use PhpOffice\PhpSpreadsheet\Cell\AddressRange;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\DefaultReadFilter;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
@@ -158,7 +157,7 @@ class ColumnAndRowAttributes extends BaseParserClass
                 for ($columnAddress = $startColumn; $columnAddress !== $endColumn; StringHelper::stringIncrement($columnAddress)) {
                     $columnAttributes[$columnAddress] = $this->readColumnRangeAttributes($column, $readDataOnly);
 
-                    if ((int) ($column['max']) === AddressRange::MAX_COLUMN_INT) {
+                    if ((int) ($column['max']) == 16384) {
                         break;
                     }
                 }
@@ -210,17 +209,10 @@ class ColumnAndRowAttributes extends BaseParserClass
     {
         $rowAttributes = [];
 
-        $rowIndex = 0;
         foreach ($worksheetRow as $rowx) {
             $row = $rowx->attributes();
-            ++$rowIndex;
             if ($row !== null && (!$ignoreRowsWithNoCells || isset($rowx->c))) {
-                if (isset($row['r'])) {
-                    $rowIndex = (int) $row['r'];
-                }
-                if ($rowIndex < 1 || $rowIndex > AddressRange::MAX_ROW) {
-                    continue;
-                }
+                $rowIndex = (int) $row['r'];
                 if (!$readDataOnly) {
                     if (isset($row['ht'])) {
                         $rowAttributes[$rowIndex]['rowHeight'] = (float) $row['ht'];

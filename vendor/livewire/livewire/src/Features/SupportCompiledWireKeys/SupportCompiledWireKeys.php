@@ -84,21 +84,6 @@ class SupportCompiledWireKeys extends ComponentHook
         ];
     }
     
-    // Increment the loop index for the current iteration. This mirrors how
-    // Laravel's Blade `$__env->incrementLoopIndices()` works for `@foreach`,
-    // but without depending on the `$loop` variable (which doesn't exist
-    // for `@for` and `@while` loops)...
-    public static function startLoopIteration() {
-        if (static::$currentLoop['index'] === null) {
-            static::$currentLoop['index'] = 0;
-        } else {
-            static::$currentLoop['index']++;
-        }
-    }
-
-    /**
-     * @deprecated Use startLoopIteration() instead. Kept for cached compiled views.
-     */
     public static function startLoop($index) {
         static::$currentLoop['index'] = $index;
     }
@@ -106,7 +91,7 @@ class SupportCompiledWireKeys extends ComponentHook
     public static function endLoop() {
         static::$currentLoop = [
             'count' => null,
-            'index' => static::$currentLoop['index'] ?? null,
+            'index' => null,
             'key' => null,
         ];
     }

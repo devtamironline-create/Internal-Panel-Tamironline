@@ -124,8 +124,6 @@ class CacheManager implements FactoryContract
      *
      * @param  array  $config
      * @return \Illuminate\Cache\Repository
-     *
-     * @throws \InvalidArgumentException
      */
     public function build(array $config)
     {
@@ -176,10 +174,7 @@ class CacheManager implements FactoryContract
      */
     protected function createArrayDriver(array $config)
     {
-        return $this->repository(new ArrayStore(
-            $config['serialize'] ?? false,
-            $this->getSerializableClasses($config),
-        ), $config);
+        return $this->repository(new ArrayStore($config['serialize'] ?? false), $config);
     }
 
     /**
@@ -199,7 +194,6 @@ class CacheManager implements FactoryContract
             $config['lock_table'] ?? 'cache_locks',
             $config['lock_lottery'] ?? [2, 100],
             $config['lock_timeout'] ?? 86400,
-            $this->getSerializableClasses($config),
         );
 
         return $this->repository(
@@ -227,8 +221,7 @@ class CacheManager implements FactoryContract
                 $config['attributes']['key'] ?? 'key',
                 $config['attributes']['value'] ?? 'value',
                 $config['attributes']['expiration'] ?? 'expires_at',
-                $this->getPrefix($config),
-                $this->getSerializableClasses($config),
+                $this->getPrefix($config)
             ),
             $config
         );
@@ -284,12 +277,7 @@ class CacheManager implements FactoryContract
     protected function createFileDriver(array $config)
     {
         return $this->repository(
-            (new FileStore(
-                $this->app['files'],
-                $config['path'],
-                $config['permission'] ?? null,
-                $this->getSerializableClasses($config),
-            ))
+            (new FileStore($this->app['files'], $config['path'], $config['permission'] ?? null))
                 ->setLockDirectory($config['lock_path'] ?? null),
             $config
         );
@@ -337,12 +325,7 @@ class CacheManager implements FactoryContract
 
         $connection = $config['connection'] ?? 'default';
 
-        $store = new RedisStore(
-            $redis,
-            $this->getPrefix($config),
-            $connection,
-            $this->getSerializableClasses($config),
-        );
+        $store = new RedisStore($redis, $this->getPrefix($config), $connection);
 
         return $this->repository(
             $store->setLockConnection($config['lock_connection'] ?? $connection),
@@ -437,17 +420,6 @@ class CacheManager implements FactoryContract
     protected function getPrefix(array $config)
     {
         return $config['prefix'] ?? $this->app['config']['cache.prefix'];
-    }
-
-    /**
-     * Get the classes that should be allowed during unserialization.
-     *
-     * @param  array  $config
-     * @return array|bool|null
-     */
-    protected function getSerializableClasses(array $config)
-    {
-        return $this->app['config']['cache.serializable_classes'] ?? null;
     }
 
     /**

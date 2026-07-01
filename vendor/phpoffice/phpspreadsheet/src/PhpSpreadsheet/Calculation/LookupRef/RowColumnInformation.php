@@ -5,7 +5,6 @@ namespace PhpOffice\PhpSpreadsheet\Calculation\LookupRef;
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\Calculation\Information\ErrorValue;
 use PhpOffice\PhpSpreadsheet\Calculation\Information\ExcelError;
-use PhpOffice\PhpSpreadsheet\Cell\AddressRange;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Exception as SpreadsheetException;
@@ -107,7 +106,7 @@ class RowColumnInformation
         if (self::cellAddressNullOrWhitespace($cellAddress)) {
             return 1;
         }
-        if (is_string($cellAddress) && ErrorValue::isError($cellAddress, true)) {
+        if (is_string($cellAddress) && ErrorValue::isError($cellAddress)) {
             return $cellAddress;
         }
         if (!is_array($cellAddress)) {
@@ -132,7 +131,7 @@ class RowColumnInformation
 
     private static function convert0ToName(int|string $result): int|string
     {
-        if (is_int($result) && ($result <= 0 || $result > AddressRange::MAX_ROW)) {
+        if (is_int($result) && ($result <= 0 || $result > 1048576)) {
             return ExcelError::NAME();
         }
 
@@ -212,7 +211,7 @@ class RowColumnInformation
         if (self::cellAddressNullOrWhitespace($cellAddress)) {
             return 1;
         }
-        if (is_string($cellAddress) && ErrorValue::isError($cellAddress, true)) {
+        if (is_string($cellAddress) && ErrorValue::isError($cellAddress)) {
             return $cellAddress;
         }
         if (!is_array($cellAddress)) {

@@ -6,6 +6,7 @@ use ArrayIterator;
 use Countable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use IteratorAggregate;
 use LogicException;

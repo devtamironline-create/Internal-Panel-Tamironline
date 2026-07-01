@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2026 Justin Hileman
+ * (c) 2012-2025 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -13,9 +13,11 @@ namespace Psy\Command;
 
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\Throw_;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Name\FullyQualified as FullyQualifiedName;
 use PhpParser\Node\Scalar\String_;
+use PhpParser\Node\Stmt\Expression;
 use PhpParser\PrettyPrinter\Standard as Printer;
 use Psy\Exception\ThrowUpException;
 use Psy\Input\CodeArgument;
@@ -77,8 +79,8 @@ HELP
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $args = $this->prepareArgs($input->getArgument('exception'));
-        $exception = new New_(new FullyQualifiedName(ThrowUpException::class), $args);
-        $throwCode = 'throw '.$this->printer->prettyPrintExpr($exception).';';
+        $throwStmt = new Expression(new Throw_(new New_(new FullyQualifiedName(ThrowUpException::class), $args)));
+        $throwCode = $this->printer->prettyPrint([$throwStmt]);
 
         $shell = $this->getShell();
         $shell->addCode($throwCode, !$shell->hasCode());

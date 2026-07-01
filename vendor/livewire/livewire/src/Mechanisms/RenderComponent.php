@@ -36,16 +36,15 @@ class RenderComponent extends Mechanism
 };
 [\$__name, \$__params] = \$__split($expression);
 
-\$__key = $key;
+\$key = $key;
 
-\$__key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey($deterministicBladeKey, \$__key);
+\$key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey($deterministicBladeKey, $key);
 
-\$__html = app('livewire')->mount(\$__name, \$__params, \$__key);
+\$__html = app('livewire')->mount(\$__name, \$__params, \$key);
 
 echo \$__html;
 
 unset(\$__html);
-unset(\$__key);
 unset(\$__name);
 unset(\$__params);
 unset(\$__split);

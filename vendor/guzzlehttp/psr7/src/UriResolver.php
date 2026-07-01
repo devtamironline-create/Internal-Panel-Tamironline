@@ -67,37 +67,41 @@ final class UriResolver
         }
 
         if ($rel->getAuthority() != '') {
-            return $rel
-                ->withScheme($base->getScheme())
-                ->withPath(self::removeDotSegments($rel->getPath()));
-        }
-
-        if ($rel->getPath() === '') {
-            $targetPath = $base->getPath();
-            $targetQuery = $rel->getQuery() != '' ? $rel->getQuery() : $base->getQuery();
+            $targetAuthority = $rel->getAuthority();
+            $targetPath = self::removeDotSegments($rel->getPath());
+            $targetQuery = $rel->getQuery();
         } else {
-            if ($rel->getPath()[0] === '/') {
-                $targetPath = $rel->getPath();
+            $targetAuthority = $base->getAuthority();
+            if ($rel->getPath() === '') {
+                $targetPath = $base->getPath();
+                $targetQuery = $rel->getQuery() != '' ? $rel->getQuery() : $base->getQuery();
             } else {
-                if ($base->getAuthority() != '' && $base->getPath() === '') {
-                    $targetPath = '/'.$rel->getPath();
+                if ($rel->getPath()[0] === '/') {
+                    $targetPath = $rel->getPath();
                 } else {
-                    $lastSlashPos = strrpos($base->getPath(), '/');
-                    if ($lastSlashPos === false) {
-                        $targetPath = $rel->getPath();
+                    if ($targetAuthority != '' && $base->getPath() === '') {
+                        $targetPath = '/'.$rel->getPath();
                     } else {
-                        $targetPath = substr($base->getPath(), 0, $lastSlashPos + 1).$rel->getPath();
+                        $lastSlashPos = strrpos($base->getPath(), '/');
+                        if ($lastSlashPos === false) {
+                            $targetPath = $rel->getPath();
+                        } else {
+                            $targetPath = substr($base->getPath(), 0, $lastSlashPos + 1).$rel->getPath();
+                        }
                     }
                 }
+                $targetPath = self::removeDotSegments($targetPath);
+                $targetQuery = $rel->getQuery();
             }
-            $targetPath = self::removeDotSegments($targetPath);
-            $targetQuery = $rel->getQuery();
         }
 
-        return $base
-            ->withPath($targetPath)
-            ->withQuery($targetQuery)
-            ->withFragment($rel->getFragment());
+        return new Uri(Uri::composeComponents(
+            $base->getScheme(),
+            $targetAuthority,
+            $targetPath,
+            $targetQuery,
+            $rel->getFragment()
+        ));
     }
 
     /**
