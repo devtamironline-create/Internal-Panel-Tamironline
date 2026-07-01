@@ -2,6 +2,7 @@
 
 namespace Livewire\Mechanisms\FrontendAssets;
 
+use Illuminate\Support\Facades\Vite;
 use Livewire\Drawer\Utils;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Blade;
@@ -96,7 +97,8 @@ class FrontendAssets extends Mechanism
     {
         app(static::class)->hasRenderedStyles = true;
 
-        $nonce = isset($options['nonce']) ? "nonce=\"{$options['nonce']}\" data-livewire-style" : '';
+        $nonce = static::nonce($options);
+        $nonce = $nonce ? "{$nonce} data-livewire-style" : '';
 
         $progressBarColor = config('livewire.navigate.progress_bar_color', '#2299dd');
 
@@ -180,15 +182,16 @@ class FrontendAssets extends Mechanism
         $url = (string) str($url)->when(! str($url)->isUrl(), fn($url) => $url->start('/'));
 
         // Add the build manifest hash to it...
-        $manifest = json_decode(file_get_contents(__DIR__.'/../../../dist/manifest.json'), true);
-        $versionHash = $manifest['/livewire.js'];
+        $manifestPath = __DIR__.'/../../../dist/manifest.json';
+        $manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : [];
+        $versionHash = $manifest['/livewire.js'] ?? 'dev';
         $url = "{$url}?id={$versionHash}";
 
         $token = app()->has('session.store') ? csrf_token() : '';
 
         $assetWarning = null;
 
-        $nonce = isset($options['nonce']) ? "nonce=\"{$options['nonce']}\"" : '';
+        $nonce = static::nonce($options);
 
         [$url, $assetWarning] = static::usePublishedAssetsIfAvailable($url, $manifest, $nonce);
 
@@ -209,7 +212,7 @@ class FrontendAssets extends Mechanism
     {
         app(static::class)->hasRenderedScripts = true;
 
-        $nonce = isset($options['nonce']) ? " nonce=\"{$options['nonce']}\"" : '';
+        $nonce = static::nonce($options);
 
         $progressBar = config('livewire.navigate.show_progress_bar', true) ? '' : 'data-no-progress-bar';
 
@@ -221,7 +224,7 @@ class FrontendAssets extends Mechanism
         ]);
 
         return <<<HTML
-        <script{$nonce} data-navigate-once="true">window.livewireScriptConfig = {$attributes};</script>
+        <script {$nonce} data-navigate-once="true">window.livewireScriptConfig = {$attributes};</script>
         HTML;
     }
 
@@ -263,5 +266,12 @@ class FrontendAssets extends Mechanism
     protected static function minify($subject)
     {
         return preg_replace('~(\v|\t|\s{2,})~m', '', $subject);
+    }
+
+    protected static function nonce($options = [])
+    {
+        $nonce = $options['nonce'] ?? Vite::cspNonce();
+
+        return $nonce ? "nonce=\"{$nonce}\"" : '';
     }
 }
