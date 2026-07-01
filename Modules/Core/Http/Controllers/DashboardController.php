@@ -3,137 +3,112 @@
 namespace Modules\Core\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\Attendance\Models\Attendance;
-use Modules\Attendance\Models\LeaveRequest;
-use Modules\Attendance\Models\EmployeeSetting;
-use Modules\Task\Models\Task;
-use Modules\Task\Models\Team;
-use Modules\Warehouse\Models\WarehouseOrder;
+use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Models\Customer;
+use Modules\CRM\Models\Order;
+use Modules\CRM\Models\Technician;
 
 class DashboardController extends Controller
 {
+    /**
+     * داشبوردِ اولِ پنل — «وضعیت کلیِ خدمات تعمیرات».
+     *
+     * تمرکزِ داشبورد روی سفارش‌های تعمیر (CRM) است: باز/امروز/این‌ماه،
+     * سفارش‌های معطل، تکنسین‌های فعال و مشتری‌ها. کارتابلِ پرسنلی/انبار/OKR از
+     * داشبورد حذف شده‌اند. آماره‌ها در try/catch‌اند تا صفحهٔ اولِ پنل هیچ‌وقت
+     * به‌خاطرِ یک خطای دیتا ۵۰۰ نشود.
+     */
     public function admin()
     {
         $user = auth()->user();
-        $stats = [];
 
-        // Staff stats (for managers/admins)
-        if ($user->can('view-staff') || $user->can('manage-staff') || $user->can('manage-permissions')) {
-            $stats['staff_count'] = User::staff()->count();
-            $stats['active_staff'] = User::staff()->where('is_active', true)->count();
-        }
-
-        // Attendance stats (for user's own attendance)
-        if ($user->can('view-attendance') || $user->can('manage-attendance')) {
-            $todayAttendance = Attendance::getTodayForUser($user->id);
-            $stats['attendance'] = [
-                'checked_in' => $todayAttendance && $todayAttendance->check_in,
-                'checked_out' => $todayAttendance && $todayAttendance->check_out,
-                'check_in_time' => $todayAttendance?->check_in,
-                'work_hours' => $todayAttendance?->work_hours ?? '-',
-            ];
-
-            // Monthly attendance for current user
-            $monthStart = now()->startOfMonth();
-            $monthEnd = now()->endOfMonth();
-            $stats['monthly_attendance'] = [
-                'present_days' => Attendance::where('user_id', $user->id)
-                    ->whereBetween('date', [$monthStart, $monthEnd])
-                    ->where('status', Attendance::STATUS_PRESENT)
-                    ->count(),
-                'absent_days' => Attendance::where('user_id', $user->id)
-                    ->whereBetween('date', [$monthStart, $monthEnd])
-                    ->where('status', Attendance::STATUS_ABSENT)
-                    ->count(),
-                'leave_days' => Attendance::where('user_id', $user->id)
-                    ->whereBetween('date', [$monthStart, $monthEnd])
-                    ->where('status', Attendance::STATUS_LEAVE)
-                    ->count(),
-            ];
-        }
-
-        // Attendance management stats
-        if ($user->can('manage-attendance')) {
-            $stats['attendance_management'] = [
-                'today_present' => Attendance::where('date', today())
-                    ->where('status', Attendance::STATUS_PRESENT)
-                    ->count(),
-                'today_checked_in' => Attendance::where('date', today())
-                    ->whereNotNull('check_in')
-                    ->count(),
-                'today_incomplete' => Attendance::where('date', today())
-                    ->whereNotNull('check_in')
-                    ->whereNull('check_out')
-                    ->count(),
-            ];
-        }
-
-        // Leave stats (for user's own leave)
-        if ($user->can('view-leave') || $user->can('request-leave')) {
-            $employeeSettings = EmployeeSetting::getOrCreate($user->id);
-            $stats['leave'] = [
-                'annual_balance' => $employeeSettings->annual_leave_balance ?? 0,
-                'sick_balance' => $employeeSettings->sick_leave_balance ?? 0,
-                'pending_requests' => LeaveRequest::where('user_id', $user->id)
-                    ->where('status', LeaveRequest::STATUS_PENDING)
-                    ->count(),
-            ];
-        }
-
-        // Leave management stats
-        if ($user->can('manage-leave')) {
-            $stats['leave_management'] = [
-                'pending_count' => LeaveRequest::where('status', LeaveRequest::STATUS_PENDING)->count(),
-                'today_on_leave' => Attendance::where('date', today())
-                    ->where('status', Attendance::STATUS_LEAVE)
-                    ->count(),
-            ];
-        }
-
-        // Task stats (for user's own tasks)
-        if ($user->can('view-tasks') || $user->can('create-tasks') || $user->can('manage-tasks')) {
-            $userTasks = Task::getUserStats($user->id);
-            $stats['tasks'] = [
-                'my_total' => $userTasks['total'],
-                'my_completed' => $userTasks['completed'],
-                'my_in_progress' => $userTasks['in_progress'],
-                'my_overdue' => $userTasks['overdue'],
-            ];
-        }
-
-        // Task management stats
-        if ($user->can('manage-tasks')) {
-            $stats['task_management'] = [
-                'total_tasks' => Task::count(),
-                'completed_tasks' => Task::where('status', Task::STATUS_DONE)->count(),
-                'overdue_tasks' => Task::overdue()->count(),
-                'teams_count' => Team::count(),
-            ];
-        }
-
-        // Team stats
-        if ($user->can('view-teams') || $user->can('manage-teams')) {
-            $stats['teams'] = Team::withCount('members', 'tasks')->get();
-        }
-
-        // Warehouse order stats
-        $stats['warehouse_orders'] = [
-            'pending' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PENDING)->count(),
-            'supply_wait' => WarehouseOrder::where('status', WarehouseOrder::STATUS_SUPPLY_WAIT)->count(),
-            'preparing' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PREPARING)->count(),
-            'packed' => WarehouseOrder::where('status', WarehouseOrder::STATUS_PACKED)->count(),
-            'shipped' => WarehouseOrder::where('status', WarehouseOrder::STATUS_SHIPPED)->count(),
-            'delivered' => WarehouseOrder::where('status', WarehouseOrder::STATUS_DELIVERED)->count(),
-            'returned' => WarehouseOrder::where('status', WarehouseOrder::STATUS_RETURNED)->count(),
-            'total' => WarehouseOrder::count(),
+        $stats = [
+            'repair' => $this->repairStats(),
+            'birthdays' => $this->getUpcomingBirthdays(),
         ];
 
-        // Birthday stats - show upcoming birthdays
-        $stats['birthdays'] = $this->getUpcomingBirthdays();
+        $recentOrders = $this->recentOrders();
 
-        return view('admin.dashboard', compact('stats'));
+        return view('admin.dashboard', compact('stats', 'recentOrders', 'user'));
+    }
+
+    /**
+     * آماره‌های خدمات تعمیرات. در صورتِ هر خطا آرایهٔ صفر برمی‌گرداند.
+     *
+     * @return array<string, int>
+     */
+    protected function repairStats(): array
+    {
+        try {
+            $openStatuses = [
+                OrderStatus::New->value,
+                OrderStatus::Coordinated->value,
+                OrderStatus::Open->value,
+                OrderStatus::Suspended->value,
+            ];
+            $cancelledStatuses = [OrderStatus::Cancelled->value, OrderStatus::Declined->value];
+
+            $todayStart = now()->startOfDay();
+            $monthStart = now()->startOfMonth();
+            $threeDaysAgo = now()->subDays(3);
+
+            return [
+                'open' => Order::realOrders()->whereIn('status', $openStatuses)->count(),
+                'today_new' => Order::realOrders()->where('created_at', '>=', $todayStart)->count(),
+                'today_completed' => Order::realOrders()
+                    ->where('status', OrderStatus::Completed->value)
+                    ->where('completed_at', '>=', $todayStart)->count(),
+                'month_total' => Order::realOrders()->where('created_at', '>=', $monthStart)->count(),
+                'month_completed' => Order::realOrders()
+                    ->where('created_at', '>=', $monthStart)
+                    ->where('status', OrderStatus::Completed->value)->count(),
+                'month_cancelled' => Order::realOrders()
+                    ->where('created_at', '>=', $monthStart)
+                    ->whereIn('status', $cancelledStatuses)->count(),
+                'delayed_open' => Order::realOrders()
+                    ->whereIn('status', [
+                        OrderStatus::Coordinated->value,
+                        OrderStatus::Open->value,
+                        OrderStatus::Suspended->value,
+                    ])
+                    ->whereNotNull('technician_id')
+                    ->whereNotNull('assigned_at')
+                    ->where('assigned_at', '<', $threeDaysAgo)
+                    ->count(),
+                'techs_active' => Technician::where('status', 'active')->count(),
+                'customers_total' => Customer::count(),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'open' => 0, 'today_new' => 0, 'today_completed' => 0,
+                'month_total' => 0, 'month_completed' => 0, 'month_cancelled' => 0,
+                'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0,
+            ];
+        }
+    }
+
+    /**
+     * آخرین سفارش‌های تعمیر برای نمایشِ سریع در داشبورد.
+     *
+     * @return \Illuminate\Support\Collection<int, \Modules\CRM\Models\Order>
+     */
+    protected function recentOrders()
+    {
+        try {
+            return Order::realOrders()
+                ->with([
+                    'customer:id,first_name,mobile',
+                    'device:id,name',
+                    'brand:id,name',
+                    'technician:id,first_name,last_name,firstname_tech',
+                ])
+                ->latest('created_at')
+                ->limit(8)
+                ->get();
+        } catch (\Throwable $e) {
+            return collect();
+        }
     }
 
     /**
@@ -189,7 +164,7 @@ class DashboardController extends Controller
         }
 
         // Sort upcoming birthdays by days until
-        usort($upcomingBirthdays, fn($a, $b) => $a['days_until'] <=> $b['days_until']);
+        usort($upcomingBirthdays, fn ($a, $b) => $a['days_until'] <=> $b['days_until']);
 
         return [
             'today' => $todayBirthdays,
