@@ -303,6 +303,273 @@
                     داشبورد
                 </a>
 
+                <!-- خدمات تعمیرات (CRM) -->
+                @if(Route::has('crm.dashboard'))
+                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            خدمات تعمیرات
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-collapse class="sidebar-submenu">
+                        @can('view-crm-dashboard')
+                        <a href="{{ route('crm.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد CRM
+                        </a>
+                        @endcan
+
+                        {{-- ── پنل تکنسین ── --}}
+                        @canany(['view-tech-dashboard', 'view-own-orders', 'view-own-wallet', 'view-own-invoices'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">پنل تکنسین</div>
+                        @can('view-tech-dashboard')
+                        <a href="{{ route('crm.tech.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                            داشبورد من
+                        </a>
+                        @endcan
+                        @can('view-own-orders')
+                        <a href="{{ route('crm.orders.my') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.my') || request()->routeIs('crm.tech.orders.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            سفارش‌های من
+                        </a>
+                        @endcan
+                        @can('view-own-wallet')
+                        <a href="{{ route('crm.tech.wallet') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.wallet') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2z"/></svg>
+                            کیف‌پول من
+                        </a>
+                        @endcan
+                        @can('view-own-invoices')
+                        <a href="{{ route('crm.tech.invoices') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.invoices') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            فاکتورهای من
+                        </a>
+                        @endcan
+                        @can('view-tech-dashboard')
+                        <a href="{{ route('crm.tech.profile') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.profile') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            پروفایل من
+                        </a>
+                        @endcan
+                        @endcanany
+
+                        {{-- ── عملیات ── --}}
+                        @canany(['view-crm-orders', 'create-crm-order', 'view-crm-customers', 'manage-crm-announcements'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">عملیات</div>
+                        @can('view-crm-orders')
+                        <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.index') || request()->routeIs('crm.orders.show') || request()->routeIs('crm.orders.edit') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            سفارش‌های تعمیر
+                        </a>
+                        <a href="{{ route('crm.leads.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.leads.index') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                            لیدها
+                        </a>
+                        <a href="{{ route('crm.leads.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.leads.dashboard') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            داشبورد لیدها
+                        </a>
+                        @endcan
+                        @can('create-crm-order')
+                        <a href="{{ route('crm.orders.create') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.create') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            افزودن سفارش
+                        </a>
+                        @endcan
+                        @can('manage-crm-financial')
+                        <a href="{{ route('crm.orders.missing-invoices') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.missing-invoices') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            فاکتورهای از قلم افتاده
+                        </a>
+                        @endcan
+                        @can('view-crm-customers')
+                        <a href="{{ route('crm.customers.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customers.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            مشتری‌ها
+                        </a>
+                        @endcan
+                        @can('view-crm-tickets')
+                        <a href="{{ route('crm.tickets.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tickets.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            تیکت‌های پشتیبانی
+                            @php
+                                // تعداد تیکت‌هایی که منتظر پاسخ ما هستند
+                                // (status=open یعنی تکنسین آخرین پیام را داده).
+                                $pendingTicketCount = \Modules\CRM\Models\Ticket::where('status', 'open')->count();
+                            @endphp
+                            @if($pendingTicketCount > 0)
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #10b981; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingTicketCount }}</span>
+                            @endif
+                        </a>
+                        @endcan
+                        @can('manage-crm-announcements')
+                        <a href="{{ route('crm.announcements.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.announcements.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            اعلانات تکنسین‌ها
+                        </a>
+                        @endcan
+                        @can('manage-crm-settings')
+                        <a href="{{ route('crm.lead-reasons.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.lead-reasons.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            دلایل عدم سفارش (لید)
+                        </a>
+                        <a href="{{ route('crm.objections-settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections-settings.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+                            ایرادات فرم سفارش
+                        </a>
+                        @endcan
+                        @auth
+                        <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"
+                           x-data="{ unread: 0 }"
+                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); setInterval(refresh, 20000); })()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            <span>گفت‌وگو با تکنسین‌ها</span>
+                            <span x-cloak x-show="unread > 0"
+                                  class="ms-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center"
+                                  x-text="unread > 99 ? '99+' : unread"></span>
+                        </a>
+                        @endauth
+                        @endcanany
+
+                        {{-- ── افراد ── --}}
+                        @canany(['view-crm-technicians', 'view-crm-financial', 'manage-crm-wallet'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">افراد</div>
+                        @can('view-crm-technicians')
+                        <a href="{{ route('crm.technicians.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63"/></svg>
+                            تکنسین‌های فعال
+                        </a>
+                        @endcan
+                        @can('view-crm-financial')
+                        <a href="{{ route('crm.wallet.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.index') || request()->routeIs('crm.wallet.show') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2zm7 5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            کیف‌پول تکنسین‌ها
+                        </a>
+                        @endcan
+                        @can('manage-crm-wallet')
+                        <a href="{{ route('crm.wallet.add') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.add') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            افزودن شارژ/پاداش/جریمه
+                        </a>
+                        @endcan
+                        @endcanany
+
+                        {{-- ── مالی ── --}}
+                        @canany(['view-crm-invoices', 'manage-crm-payment-gateway'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">مالی</div>
+                        @can('view-crm-invoices')
+                        <a href="{{ route('crm.invoices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.invoices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            فاکتورها
+                        </a>
+                        @endcan
+                        @can('manage-crm-payment-gateway')
+                        <a href="{{ route('crm.payments.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.payments.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                            پرداخت‌ها (زیبال)
+                        </a>
+                        @endcan
+                        @endcanany
+
+                        {{-- ── گزارش‌ها ── --}}
+                        @canany(['view-crm-reports', 'manage-crm-orphan-orders'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">گزارش‌ها</div>
+                        @can('view-crm-reports')
+                        <a href="{{ route('crm.reports.financial') }}" class="sidebar-menu-item {{ request()->routeIs('crm.reports.financial*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            گزارش مالی
+                        </a>
+                        <a href="{{ route('crm.reports.daily-activity') }}" class="sidebar-menu-item {{ request()->routeIs('crm.reports.daily-activity*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            فعالیت روزانه
+                        </a>
+                        @endcan
+                        @can('manage-crm-orphan-orders')
+                        <a href="{{ route('crm.orphan-orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orphan-orders.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            سفارش‌های یتیم
+                        </a>
+                        @endcan
+                        @endcanany
+
+                        {{-- ── پیکربندی ── --}}
+                        @canany(['view-crm-taxonomies', 'manage-crm-sms-templates'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">پیکربندی</div>
+                        @can('view-crm-taxonomies')
+                        <a href="{{ route('crm.brands.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.brands.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            برندها
+                        </a>
+                        <a href="{{ route('crm.devices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.devices.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25"/></svg>
+                            دستگاه‌ها
+                        </a>
+                        <a href="{{ route('crm.service-types.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.service-types.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/></svg>
+                            انواع خدمات
+                        </a>
+                        <a href="{{ route('crm.objections.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                            ایرادات
+                        </a>
+                        @endcan
+                        @can('manage-crm-settings')
+                        <a href="{{ route('crm.app-service-area.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.app-service-area.*') || request()->routeIs('crm.provinces.*') || request()->routeIs('crm.cities.*') || request()->routeIs('crm.regions.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            مناطق و محدودهٔ سرویس
+                        </a>
+                        @endcan
+                        @can('manage-crm-sms-templates')
+                        <a href="{{ route('crm.sms-management.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sms-management.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            مدیریت پیامک‌ها
+                        </a>
+                        @endcan
+                        @endcanany
+
+                        {{-- ── ابزارها ── --}}
+                        @canany(['manage-crm-sync', 'manage-permissions', 'manage-crm-settings'])
+                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">ابزارها</div>
+                        @can('manage-crm-sync')
+                        <a href="{{ route('crm.sync.settings') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sync.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            سینک وردپرس
+                        </a>
+                        <a href="{{ route('crm.sync-logs.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sync-logs.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                            لاگ سینک
+                        </a>
+                        <a href="{{ route('crm.data-tools.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.data-tools.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            ابزارهای داده
+                        </a>
+                        @endcan
+                        @can('manage-permissions')
+                        <a href="{{ route('crm.legacy-import.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.legacy-import.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            انتقال داده وردپرس
+                        </a>
+                        @endcan
+                        @can('manage-crm-settings')
+                        <a href="{{ route('crm.tech-panel-settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-panel-settings.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            ظاهر پنل تکنسین
+                        </a>
+                        <a href="{{ route('crm.training.admin.videos') }}" class="sidebar-menu-item {{ request()->routeIs('crm.training.admin.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            آموزش تکنسین
+                        </a>
+                        @endcan
+                        @endcanany
+                    </div>
+                </div>
+                @endcanany
+                @endif
+
                 <!-- پیام‌رسان -->
                 @canany(['use-messenger', 'manage-permissions'])
                 <a href="{{ route('admin.messenger') }}" class="sidebar-menu-item mb-2 {{ request()->routeIs('admin.messenger') ? 'sidebar-menu-item-active' : '' }}">
@@ -317,45 +584,6 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     پرسنل
                 </a>
-                @endcanany
-
-                <!-- کارتابل پرسنلی -->
-                @canany(['view-attendance', 'view-leave', 'manage-attendance', 'manage-leave', 'manage-permissions'])
-                <div class="mt-6" x-data="{ open: {{ request()->routeIs('attendance.*') || request()->routeIs('leave.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                            کارتابل پرسنلی
-                        </span>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-collapse class="sidebar-submenu">
-                        @canany(['view-attendance', 'manage-permissions'])
-                        <a href="{{ route('attendance.index') }}" class="sidebar-menu-item {{ request()->routeIs('attendance.index') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            حضور و غیاب
-                        </a>
-                        @endcanany
-                        @canany(['view-leave', 'request-leave', 'manage-permissions'])
-                        <a href="{{ route('leave.index') }}" class="sidebar-menu-item {{ request()->routeIs('leave.index') || request()->routeIs('leave.create') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            مرخصی
-                        </a>
-                        @endcanany
-                        @canany(['manage-attendance', 'manage-permissions'])
-                        <a href="{{ route('attendance.admin') }}" class="sidebar-menu-item {{ request()->routeIs('attendance.admin') || request()->routeIs('attendance.settings') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            مدیریت حضور و غیاب
-                        </a>
-                        @endcanany
-                        @canany(['manage-leave', 'manage-permissions'])
-                        <a href="{{ route('leave.approvals') }}" class="sidebar-menu-item {{ request()->routeIs('leave.approvals') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            مدیریت مرخصی
-                        </a>
-                        @endcanany
-                    </div>
-                </div>
                 @endcanany
 
                 <!-- کارتابل عملیاتی -->
@@ -403,40 +631,8 @@
                 </div>
                 @endcanany
 
-                <!-- OKR -->
-                @canany(['view-okr', 'manage-okr', 'manage-permissions'])
-                <div class="mt-2" x-data="{ open: {{ request()->routeIs('okr.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                            مدیریت OKR
-                        </span>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-collapse class="sidebar-submenu">
-                        <a href="{{ route('okr.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('okr.dashboard') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
-                            داشبورد OKR
-                        </a>
-                        @canany(['manage-okr', 'manage-permissions'])
-                        <a href="{{ route('okr.cycles.index') }}" class="sidebar-menu-item {{ request()->routeIs('okr.cycles.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            دوره‌ها
-                        </a>
-                        @endcanany
-                        <a href="{{ route('okr.objectives.index') }}" class="sidebar-menu-item {{ request()->routeIs('okr.objectives.index') || request()->routeIs('okr.objectives.show') || request()->routeIs('okr.objectives.create') || request()->routeIs('okr.objectives.edit') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                            اهداف سازمانی
-                        </a>
-                        <a href="{{ route('okr.objectives.my') }}" class="sidebar-menu-item {{ request()->routeIs('okr.objectives.my') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            اهداف من
-                        </a>
-                    </div>
-                </div>
-                @endcanany
-
-                <!-- Salary -->
+                <!-- Salary — به‌صورت موقت غیرفعال تا زمان بهره‌برداری مجدد -->
+                @if(false) {{-- حقوق و دستمزد موقتاً غیرفعال است تا زمان بهره‌برداری مجدد --}}
                 @canany(['view-salary', 'manage-salary', 'manage-permissions'])
                 <div class="mt-2" x-data="{ open: {{ request()->routeIs('salary.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
@@ -469,95 +665,6 @@
                 </div>
                 @endcanany
 
-                <!-- مدیریت انبار -->
-                @if(Route::has('warehouse.index'))
-                @canany(['view-warehouse', 'manage-warehouse', 'manage-permissions'])
-                <div class="mt-2" x-data="{ open: {{ request()->routeIs('warehouse.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                            مدیریت انبار
-                        </span>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-collapse class="sidebar-submenu">
-                        <a href="{{ route('warehouse.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.index') || request()->routeIs('warehouse.show') || request()->routeIs('warehouse.create') || request()->routeIs('warehouse.edit') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                            لیست سفارشات
-                        </a>
-                        @canany(['manage-warehouse', 'manage-permissions'])
-                        <a href="{{ route('warehouse.manual-order.create') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.manual-order.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            ثبت سفارش دستی
-                        </a>
-                        @endcanany
-                        @canany(['manage-warehouse', 'manage-permissions'])
-                        <a href="{{ route('warehouse.packing.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.packing.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                            ایستگاه بسته‌بندی
-                        </a>
-                        <a href="{{ route('warehouse.exit-scan.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.exit-scan.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1.5 12h11L19 8"/></svg>
-                            صف ارسال (اسکن)
-                        </a>
-                        @endcanany
-                        @can('warehouse.reprint-invoice')
-                        <a href="{{ route('warehouse.reprint-requests.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.reprint-requests.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                            <span>درخواست چاپ مجدد</span>
-                            @php
-                                try {
-                                    $pendingReprintCount = \Modules\Warehouse\Models\ReprintRequest::where('status', 'pending')->count();
-                                } catch (\Exception $e) {
-                                    $pendingReprintCount = 0;
-                                }
-                            @endphp
-                            @if($pendingReprintCount > 0)
-                            <span class="absolute left-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500 text-white">{{ $pendingReprintCount }}</span>
-                            @endif
-                        </a>
-                        @endcan
-                        @canany(['manage-warehouse', 'manage-permissions'])
-                        <a href="{{ route('warehouse.dispatch.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.dispatch.index') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                            مدیریت ارسال
-                        </a>
-                        <a href="{{ route('warehouse.woocommerce.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.woocommerce.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            اتصال ووکامرس
-                        </a>
-                        <a href="{{ route('warehouse.amadest.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.amadest.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            اتصال آمادست
-                        </a>
-                        <a href="{{ route('warehouse.tapin.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.tapin.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                            اتصال تاپین
-                        </a>
-                        <a href="{{ route('warehouse.postex.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.postex.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                            اتصال پستکس
-                        </a>
-                        <a href="{{ route('warehouse.cod24.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.cod24.index') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            اتصال COD24
-                        </a>
-                        <a href="{{ route('warehouse.cod24.city-map') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.cod24.city-map') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-                            نقشه شهر/استان
-                        </a>
-                        <a href="{{ route('warehouse.distribution.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.distribution.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            تقسیم‌بندی سفارشات
-                        </a>
-                        <a href="{{ route('warehouse.settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('warehouse.settings.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            تنظیمات انبار
-                        </a>
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
                 @endif
 
                 <!-- سئو -->
@@ -942,273 +1049,6 @@
                     </div>
                 </div>
                 @endcan
-                @endif
-
-                <!-- خدمات تعمیرات (CRM) -->
-                @if(Route::has('crm.dashboard'))
-                @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
-                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.*') ? 'true' : 'false' }} }">
-                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                            خدمات تعمیرات
-                        </span>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-collapse class="sidebar-submenu">
-                        @can('view-crm-dashboard')
-                        <a href="{{ route('crm.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.dashboard') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                            داشبورد CRM
-                        </a>
-                        @endcan
-
-                        {{-- ── پنل تکنسین ── --}}
-                        @canany(['view-tech-dashboard', 'view-own-orders', 'view-own-wallet', 'view-own-invoices'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">پنل تکنسین</div>
-                        @can('view-tech-dashboard')
-                        <a href="{{ route('crm.tech.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.dashboard') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                            داشبورد من
-                        </a>
-                        @endcan
-                        @can('view-own-orders')
-                        <a href="{{ route('crm.orders.my') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.my') || request()->routeIs('crm.tech.orders.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                            سفارش‌های من
-                        </a>
-                        @endcan
-                        @can('view-own-wallet')
-                        <a href="{{ route('crm.tech.wallet') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.wallet') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2z"/></svg>
-                            کیف‌پول من
-                        </a>
-                        @endcan
-                        @can('view-own-invoices')
-                        <a href="{{ route('crm.tech.invoices') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.invoices') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            فاکتورهای من
-                        </a>
-                        @endcan
-                        @can('view-tech-dashboard')
-                        <a href="{{ route('crm.tech.profile') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech.profile') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            پروفایل من
-                        </a>
-                        @endcan
-                        @endcanany
-
-                        {{-- ── عملیات ── --}}
-                        @canany(['view-crm-orders', 'create-crm-order', 'view-crm-customers', 'manage-crm-announcements'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">عملیات</div>
-                        @can('view-crm-orders')
-                        <a href="{{ route('crm.orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.index') || request()->routeIs('crm.orders.show') || request()->routeIs('crm.orders.edit') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                            سفارش‌های تعمیر
-                        </a>
-                        <a href="{{ route('crm.leads.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.leads.index') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-                            لیدها
-                        </a>
-                        <a href="{{ route('crm.leads.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('crm.leads.dashboard') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                            داشبورد لیدها
-                        </a>
-                        @endcan
-                        @can('create-crm-order')
-                        <a href="{{ route('crm.orders.create') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.create') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            افزودن سفارش
-                        </a>
-                        @endcan
-                        @can('manage-crm-financial')
-                        <a href="{{ route('crm.orders.missing-invoices') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orders.missing-invoices') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            فاکتورهای از قلم افتاده
-                        </a>
-                        @endcan
-                        @can('view-crm-customers')
-                        <a href="{{ route('crm.customers.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customers.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            مشتری‌ها
-                        </a>
-                        @endcan
-                        @can('view-crm-tickets')
-                        <a href="{{ route('crm.tickets.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tickets.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                            تیکت‌های پشتیبانی
-                            @php
-                                // تعداد تیکت‌هایی که منتظر پاسخ ما هستند
-                                // (status=open یعنی تکنسین آخرین پیام را داده).
-                                $pendingTicketCount = \Modules\CRM\Models\Ticket::where('status', 'open')->count();
-                            @endphp
-                            @if($pendingTicketCount > 0)
-                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: #10b981; color: white; font-size: 11px; font-weight: bold; padding: 1px 7px; border-radius: 9999px;">{{ $pendingTicketCount }}</span>
-                            @endif
-                        </a>
-                        @endcan
-                        @can('manage-crm-announcements')
-                        <a href="{{ route('crm.announcements.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.announcements.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                            اعلانات تکنسین‌ها
-                        </a>
-                        @endcan
-                        @can('manage-crm-settings')
-                        <a href="{{ route('crm.lead-reasons.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.lead-reasons.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                            دلایل عدم سفارش (لید)
-                        </a>
-                        <a href="{{ route('crm.objections-settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections-settings.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
-                            ایرادات فرم سفارش
-                        </a>
-                        @endcan
-                        @auth
-                        <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"
-                           x-data="{ unread: 0 }"
-                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); setInterval(refresh, 20000); })()">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                            <span>گفت‌وگو با تکنسین‌ها</span>
-                            <span x-cloak x-show="unread > 0"
-                                  class="ms-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center"
-                                  x-text="unread > 99 ? '99+' : unread"></span>
-                        </a>
-                        @endauth
-                        @endcanany
-
-                        {{-- ── افراد ── --}}
-                        @canany(['view-crm-technicians', 'view-crm-financial', 'manage-crm-wallet'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">افراد</div>
-                        @can('view-crm-technicians')
-                        <a href="{{ route('crm.technicians.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63"/></svg>
-                            تکنسین‌های فعال
-                        </a>
-                        @endcan
-                        @can('view-crm-financial')
-                        <a href="{{ route('crm.wallet.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.index') || request()->routeIs('crm.wallet.show') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m3-2h10a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2v-6a2 2 0 012-2zm7 5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            کیف‌پول تکنسین‌ها
-                        </a>
-                        @endcan
-                        @can('manage-crm-wallet')
-                        <a href="{{ route('crm.wallet.add') }}" class="sidebar-menu-item {{ request()->routeIs('crm.wallet.add') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                            افزودن شارژ/پاداش/جریمه
-                        </a>
-                        @endcan
-                        @endcanany
-
-                        {{-- ── مالی ── --}}
-                        @canany(['view-crm-invoices', 'manage-crm-payment-gateway'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">مالی</div>
-                        @can('view-crm-invoices')
-                        <a href="{{ route('crm.invoices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.invoices.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            فاکتورها
-                        </a>
-                        @endcan
-                        @can('manage-crm-payment-gateway')
-                        <a href="{{ route('crm.payments.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.payments.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                            پرداخت‌ها (زیبال)
-                        </a>
-                        @endcan
-                        @endcanany
-
-                        {{-- ── گزارش‌ها ── --}}
-                        @canany(['view-crm-reports', 'manage-crm-orphan-orders'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">گزارش‌ها</div>
-                        @can('view-crm-reports')
-                        <a href="{{ route('crm.reports.financial') }}" class="sidebar-menu-item {{ request()->routeIs('crm.reports.financial*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                            گزارش مالی
-                        </a>
-                        <a href="{{ route('crm.reports.daily-activity') }}" class="sidebar-menu-item {{ request()->routeIs('crm.reports.daily-activity*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            فعالیت روزانه
-                        </a>
-                        @endcan
-                        @can('manage-crm-orphan-orders')
-                        <a href="{{ route('crm.orphan-orders.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.orphan-orders.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                            سفارش‌های یتیم
-                        </a>
-                        @endcan
-                        @endcanany
-
-                        {{-- ── پیکربندی ── --}}
-                        @canany(['view-crm-taxonomies', 'manage-crm-sms-templates'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">پیکربندی</div>
-                        @can('view-crm-taxonomies')
-                        <a href="{{ route('crm.brands.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.brands.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                            برندها
-                        </a>
-                        <a href="{{ route('crm.devices.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.devices.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25"/></svg>
-                            دستگاه‌ها
-                        </a>
-                        <a href="{{ route('crm.service-types.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.service-types.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/></svg>
-                            انواع خدمات
-                        </a>
-                        <a href="{{ route('crm.objections.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.objections.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-                            ایرادات
-                        </a>
-                        @endcan
-                        @can('manage-crm-settings')
-                        <a href="{{ route('crm.app-service-area.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.app-service-area.*') || request()->routeIs('crm.provinces.*') || request()->routeIs('crm.cities.*') || request()->routeIs('crm.regions.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            مناطق و محدودهٔ سرویس
-                        </a>
-                        @endcan
-                        @can('manage-crm-sms-templates')
-                        <a href="{{ route('crm.sms-management.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sms-management.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                            مدیریت پیامک‌ها
-                        </a>
-                        @endcan
-                        @endcanany
-
-                        {{-- ── ابزارها ── --}}
-                        @canany(['manage-crm-sync', 'manage-permissions', 'manage-crm-settings'])
-                        <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">ابزارها</div>
-                        @can('manage-crm-sync')
-                        <a href="{{ route('crm.sync.settings') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sync.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            سینک وردپرس
-                        </a>
-                        <a href="{{ route('crm.sync-logs.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.sync-logs.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                            لاگ سینک
-                        </a>
-                        <a href="{{ route('crm.data-tools.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.data-tools.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            ابزارهای داده
-                        </a>
-                        @endcan
-                        @can('manage-permissions')
-                        <a href="{{ route('crm.legacy-import.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.legacy-import.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                            انتقال داده وردپرس
-                        </a>
-                        @endcan
-                        @can('manage-crm-settings')
-                        <a href="{{ route('crm.tech-panel-settings.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-panel-settings.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            ظاهر پنل تکنسین
-                        </a>
-                        <a href="{{ route('crm.training.admin.videos') }}" class="sidebar-menu-item {{ request()->routeIs('crm.training.admin.*') ? 'sidebar-menu-item-active' : '' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            آموزش تکنسین
-                        </a>
-                        @endcan
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
                 @endif
 
                 <!-- حسابداری — دسترسی فقط با اعطای صریح (حتی admin هم bypass ندارد) -->

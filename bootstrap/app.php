@@ -32,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // استاتیک — هر چیز دیگر redirect به صفحه ورود تکنسین می‌شود.
         $middleware->web(append: [
             \App\Http\Middleware\TechSubdomainScope::class,
+            // مسدودسازیِ بخش‌های بازنشسته/غیرفعالِ پنل (کارتابل پرسنلی، OKR،
+            // انبار، حقوق و دستمزد) حتی در برابرِ دسترسیِ مستقیم به URL.
+            \App\Http\Middleware\BlockRetiredSections::class,
         ]);
 
         // وقتی guest:tech middleware روی روت /tech فایر می‌شود و کاربر از
