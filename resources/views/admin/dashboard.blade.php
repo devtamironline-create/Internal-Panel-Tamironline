@@ -1,7 +1,8 @@
 @extends('layouts.admin')
 @section('page-title', 'داشبورد')
 @section('main')
-@php($r = $stats['repair'] ?? [])
+@php($snap = $stats['snapshot'] ?? [])
+@php($rng = $stats['range'] ?? [])
 <div class="space-y-6">
 
     {{-- ─── خوش‌آمد ─── --}}
@@ -24,86 +25,111 @@
 
     @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-reports', 'manage-permissions'])
 
-    {{-- ─── کاشی‌های وضعیت ─── --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($r['open'] ?? 0) }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">سفارش‌های باز</p>
+    {{-- ─── فیلترِ بازهٔ تاریخِ شمسی ─── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 flex items-center gap-2 flex-wrap border border-gray-100 dark:border-gray-700"
+         x-data="{ showCustom: {{ $activePreset === 'custom' ? 'true' : 'false' }} }">
+        @foreach($presets as $key => $p)
+            <a href="{{ route('admin.dashboard', ['from_date' => $p['from'], 'to_date' => $p['to']]) }}"
+               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ $activePreset === $key ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}">
+                {{ $p['label'] }}
+            </a>
+        @endforeach
+        <button type="button" @click="showCustom = !showCustom"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ $activePreset === 'custom' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}">
+            تاریخِ انتخابی
+        </button>
+
+        <form method="GET" x-show="showCustom" x-cloak class="flex items-end gap-2 flex-wrap border-r border-gray-300 dark:border-gray-600 pr-3 me-2">
+            <div>
+                <label class="block text-[10px] font-medium text-gray-500 mb-1">از</label>
+                <input type="text" name="from_date" value="{{ $fromJ }}" dir="ltr" placeholder="1405/04/01" readonly
+                       class="jalali-datepicker w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded cursor-pointer bg-white text-xs">
+            </div>
+            <div>
+                <label class="block text-[10px] font-medium text-gray-500 mb-1">تا</label>
+                <input type="text" name="to_date" value="{{ $toJ }}" dir="ltr" placeholder="1405/04/31" readonly
+                       class="jalali-datepicker w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded cursor-pointer bg-white text-xs">
+            </div>
+            <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold">اعمال</button>
+        </form>
+
+        <div class="text-[11px] text-gray-500 me-auto">
+            بازهٔ فعلی: <b dir="ltr">{{ $fromJ }}</b> تا <b dir="ltr">{{ $toJ }}</b>
+        </div>
+    </div>
+
+    {{-- ─── تیله‌های بازه: کل = سفارش + لید ─── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-blue-100 dark:border-blue-900/40">
+            <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($rng['total'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">کل (سفارش + لید)</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($r['today_new'] ?? 0) }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">ثبت‌شده امروز</p>
+            <p class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($rng['orders'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">ثبتِ سفارش</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($r['today_completed'] ?? 0) }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">تکمیل‌شده امروز</p>
+            <p class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($rng['leads'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">لید</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-3xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($r['month_total'] ?? 0) }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">سفارش‌های {{ $jMonthLabel }}</p>
+            <p class="text-3xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($rng['cancelled'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">لغو/رد‌شده</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border {{ ($r['delayed_open'] ?? 0) > 0 ? 'border-rose-200 dark:border-rose-800' : 'border-gray-100 dark:border-gray-700' }}">
-            <p class="text-3xl font-bold {{ ($r['delayed_open'] ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100' }}">{{ number_format($r['delayed_open'] ?? 0) }}</p>
+    </div>
+
+    {{-- ─── تیله‌های لحظه‌ای (مستقل از بازه) ─── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($snap['open'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">سفارش‌های باز (اکنون)</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border {{ ($snap['delayed_open'] ?? 0) > 0 ? 'border-rose-200 dark:border-rose-800' : 'border-gray-100 dark:border-gray-700' }}">
+            <p class="text-2xl font-bold {{ ($snap['delayed_open'] ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100' }}">{{ number_format($snap['delayed_open'] ?? 0) }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">معطل (+۳ روز)</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($r['techs_active'] ?? 0) }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">تکنسین فعال</p>
+            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($snap['techs_active'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">تکنسینِ فعال</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($snap['customers_total'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">کل مشتری‌ها</p>
         </div>
     </div>
 
-    {{-- ─── تحلیلِ ماه ─── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-sm text-gray-500 dark:text-gray-400">تکمیل‌شدهٔ {{ $jMonthLabel }}</p>
-            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ number_format($r['month_completed'] ?? 0) }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-sm text-gray-500 dark:text-gray-400">لغو/رد‌شدهٔ {{ $jMonthLabel }}</p>
-            <p class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ number_format($r['month_cancelled'] ?? 0) }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-sm text-gray-500 dark:text-gray-400">نرخِ تکمیل ({{ $jMonthLabel }})</p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ number_format($r['completion_rate'] ?? 0) }}٪</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <p class="text-sm text-gray-500 dark:text-gray-400">کل مشتری‌ها</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1">{{ number_format($r['customers_total'] ?? 0) }}</p>
-        </div>
-    </div>
-
-    {{-- ─── نمودارها: امروز به تفکیک ساعت + روند ۱۴ روز ─── --}}
+    {{-- ─── نمودارها: روندِ بازه + امروز به تفکیک ساعت ─── --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">سفارش‌های امروز به تفکیکِ ساعت</h3>
-            <p class="text-xs text-gray-400 mb-2">ثبت‌شده و تکمیل‌شده در هر ساعت</p>
-            <div id="chart-hourly"></div>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">روندِ سفارش‌ها در بازه</h3>
+            <p class="text-xs text-gray-400 mb-2">کل (سفارش + لید) و لید — تاریخِ شمسی</p>
+            <div id="chart-trend"></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">روندِ ۱۴ روزِ اخیر</h3>
-            <p class="text-xs text-gray-400 mb-2">کل / تکمیل‌شده / لغو‌شده (تاریخِ شمسی)</p>
-            <div id="chart-trend"></div>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">امروز به تفکیکِ ساعت</h3>
+            <p class="text-xs text-gray-400 mb-2">کل (سفارش + لید) و لید در هر ساعت</p>
+            <div id="chart-hourly"></div>
         </div>
     </div>
 
     {{-- ─── نمودارها: توزیعِ وضعیت + پرتکرارترین دستگاه‌ها ─── --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">توزیعِ وضعیتِ سفارش‌ها ({{ $jMonthLabel }})</h3>
-            <p class="text-xs text-gray-400 mb-2">سهمِ هر وضعیت از سفارش‌های این ماه</p>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">توزیعِ وضعیتِ سفارش‌ها</h3>
+            <p class="text-xs text-gray-400 mb-2">سهمِ هر وضعیت در بازهٔ انتخاب‌شده</p>
             @if(!empty($statusBreakdown['data']))
                 <div id="chart-status"></div>
             @else
-                <p class="text-center text-gray-400 py-10 text-sm">داده‌ای برای این ماه نیست.</p>
+                <p class="text-center text-gray-400 py-10 text-sm">داده‌ای در این بازه نیست.</p>
             @endif
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">پرتکرارترین دستگاه‌ها ({{ $jMonthLabel }})</h3>
-            <p class="text-xs text-gray-400 mb-2">بیشترین سفارشِ تعمیر در این ماه</p>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">پرتکرارترین دستگاه‌ها</h3>
+            <p class="text-xs text-gray-400 mb-2">بیشترین سفارشِ تعمیر در بازهٔ انتخاب‌شده</p>
             @if(!empty($topDevices['data']))
                 <div id="chart-devices"></div>
             @else
-                <p class="text-center text-gray-400 py-10 text-sm">داده‌ای برای این ماه نیست.</p>
+                <p class="text-center text-gray-400 py-10 text-sm">داده‌ای در این بازه نیست.</p>
             @endif
         </div>
     </div>
@@ -189,31 +215,30 @@ document.addEventListener('DOMContentLoaded', function () {
         legend: { position: 'top', fontSize: '11px' },
     };
 
-    // ۱) امروز به تفکیک ساعت
+    // ۱) روندِ بازه — کل (سفارش+لید) و لید
+    const trend = @json($trend);
+    new ApexCharts(document.querySelector('#chart-trend'), Object.assign({}, base, {
+        chart: Object.assign({ type: 'bar', height: 260 }, base.chart),
+        plotOptions: { bar: { columnWidth: '60%', borderRadius: 3 } },
+        series: [
+            { name: 'کل (سفارش+لید)', data: trend.total, color: '#3b82f6' },
+            { name: 'لید', data: trend.leads, color: '#f59e0b' },
+        ],
+        xaxis: { categories: trend.labels, labels: { style: { fontSize: '10px' } } },
+        yaxis: { labels: { style: { fontSize: '10px' }, formatter: (v) => Math.round(v) } },
+    })).render();
+
+    // ۲) امروز به تفکیک ساعت — کل و لید
     const hourly = @json($hourly);
     new ApexCharts(document.querySelector('#chart-hourly'), Object.assign({}, base, {
         chart: Object.assign({ type: 'area', height: 260 }, base.chart),
         stroke: { curve: 'smooth', width: 2 },
         fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
         series: [
-            { name: 'ثبت‌شده', data: hourly.created, color: '#3b82f6' },
-            { name: 'تکمیل‌شده', data: hourly.completed, color: '#10b981' },
+            { name: 'کل (سفارش+لید)', data: hourly.total, color: '#3b82f6' },
+            { name: 'لید', data: hourly.leads, color: '#f59e0b' },
         ],
         xaxis: { categories: hourly.labels, tickAmount: 12, labels: { style: { fontSize: '10px' } } },
-        yaxis: { labels: { style: { fontSize: '10px' }, formatter: (v) => Math.round(v) } },
-    })).render();
-
-    // ۲) روند ۱۴ روز
-    const trend = @json($trend);
-    new ApexCharts(document.querySelector('#chart-trend'), Object.assign({}, base, {
-        chart: Object.assign({ type: 'bar', height: 260 }, base.chart),
-        plotOptions: { bar: { columnWidth: '60%', borderRadius: 3 } },
-        series: [
-            { name: 'کل', data: trend.totals, color: '#6366f1' },
-            { name: 'تکمیل', data: trend.completed, color: '#10b981' },
-            { name: 'لغو', data: trend.cancelled, color: '#ef4444' },
-        ],
-        xaxis: { categories: trend.labels, labels: { style: { fontSize: '10px' } } },
         yaxis: { labels: { style: { fontSize: '10px' }, formatter: (v) => Math.round(v) } },
     })).render();
 
