@@ -9,18 +9,24 @@ use Modules\Site\Models\Comment;
 use Modules\Site\Models\Forum\Answer;
 use Modules\Site\Models\Forum\Question;
 use Modules\Site\Models\SiteSetting;
+use Modules\Site\Services\AiModerationService;
 use Modules\Site\Services\AiReplyService;
 
 /**
- * پاسخِ خودکارِ AI به کامنت‌ها و سوال‌های انجمن.
+ * خطِ لولهٔ خودکارِ AI برای کامنت‌ها و سوال‌های انجمن: «مودریشن سپس پاسخ».
+ *
+ * محتوای در‌انتظار ابتدا مودریت می‌شود (اسپم/رد → مخفی؛ سالم → تأیید)، سپس به
+ * محتوای سالم پاسخ داده می‌شود. این کاملاً hands-off است.
  *
  * حالت (ai_reply_mode):
  *   - off   : غیرفعال (پیش‌فرض)
- *   - draft : AI پاسخ می‌نویسد ولی «در انتظار» می‌ماند تا مدیر تأیید کند
+ *   - draft : پاسخ نوشته می‌شود ولی «در انتظار» می‌ماند (تأییدِ مدیر)
  *   - auto  : پاسخ بلافاصله منتشر می‌شود
+ * (توجه: مودریشنِ خودِ محتوا در هر دو حالت خودکار اعمال می‌شود؛ فقط انتشارِ
+ *  «پاسخ» تابعِ حالت است.)
  *
- * idempotent: هر آیتم فقط یک‌بار پردازش می‌شود (ردیابی با ai_decision_logs، task=reply).
- * برای اجرای دوره‌ای در scheduler ثبت شده است.
+ * idempotent: هر آیتم یک‌بار پردازش می‌شود (ai_decision_logs, task=reply). برای
+ * scheduler هر ۵ دقیقه ثبت شده است.
  */
 class AutoReplyCommand extends Command
 {
@@ -28,9 +34,9 @@ class AutoReplyCommand extends Command
                             {--limit=5 : تعداد آیتم در هر اجرا (برای هر بخش)}
                             {--days=30 : فقط محتوای جدیدتر از این تعداد روز}';
 
-    protected $description = 'پاسخِ خودکارِ AI به کامنت‌ها و سوال‌های انجمن (بر اساسِ حالتِ ai_reply_mode)';
+    protected $description = 'مودریشن + پاسخِ خودکارِ AI به کامنت‌ها و سوال‌های انجمن';
 
-    public function handle(AiReplyService $reply): int
+    public function handle(AiReplyService $reply, AiModerationService $moderation): int
     {
         $mode = SiteSetting::get('ai_reply_mode', 'off');
         if (! in_array($mode, ['draft', 'auto'], true)) {
@@ -44,25 +50,28 @@ class AutoReplyCommand extends Command
         $publish = $mode === 'auto';
         $author = SiteSetting::get('ai_reply_author', 'تیم تعمیرآنلاین') ?: 'تیم تعمیرآنلاین';
 
-        $c = $this->handleComments($reply, $limit, $days, $publish, $author);
-        $q = $this->handleQuestions($reply, $limit, $days, $publish);
+        $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author);
+        $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish);
 
-        $this->info("کامنت: {$c['replied']} پاسخ، {$c['skipped']} رد | انجمن: {$q['replied']} پاسخ"
-            .' | حالت: '.($publish ? 'منتشرشده' : 'پیش‌نویس'));
+        $this->info(
+            "کامنت: {$c['moderated']} مودریت، {$c['replied']} پاسخ، {$c['skipped']} بی‌نیاز | "
+            ."انجمن: {$q['moderated']} مودریت، {$q['replied']} پاسخ | "
+            .'حالتِ پاسخ: '.($publish ? 'منتشرشده' : 'پیش‌نویس')
+        );
 
         return self::SUCCESS;
     }
 
     /**
-     * @return array{replied:int, skipped:int}
+     * @return array{replied:int, skipped:int, moderated:int}
      */
-    private function handleComments(AiReplyService $reply, int $limit, int $days, bool $publish, string $author): array
+    private function handleComments(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $author): array
     {
         $morph = (new Comment)->getMorphClass();
         $table = (new Comment)->getTable();
 
         $comments = Comment::query()
-            ->where('status', Comment::STATUS_APPROVED)
+            ->whereIn('status', [Comment::STATUS_PENDING, Comment::STATUS_APPROVED])
             ->whereNull('parent_id')
             ->where('is_admin_reply', false)
             ->where('created_at', '>=', now()->subDays($days))
@@ -76,13 +85,31 @@ class AutoReplyCommand extends Command
 
         $replied = 0;
         $skipped = 0;
+        $moderated = 0;
         foreach ($comments as $comment) {
             try {
+                // ۱) مودریشنِ محتوای در‌انتظار
+                if ($comment->status === Comment::STATUS_PENDING) {
+                    $m = $moderation->analyze((string) $comment->content, ['type' => 'نظر']);
+                    if (! $m['ok']) {
+                        $this->warn("کامنت #{$comment->id}: مودریشن — ".$m['error']);
+
+                        continue;
+                    }
+                    $this->applyModeration($comment, $m['decision']);
+                    $this->logModeration($morph, $comment->id, $m);
+                    $moderated++;
+                    if ($m['decision'] !== 'approve') {
+                        continue; // اسپم/رد → بدونِ پاسخ
+                    }
+                }
+
+                // ۲) پاسخ به محتوای سالم
                 $res = $reply->reply((string) $comment->content, ['type' => 'نظر']);
                 if (! $res['ok']) {
-                    $this->warn("کامنت #{$comment->id}: ".$res['error']);
+                    $this->warn("کامنت #{$comment->id}: پاسخ — ".$res['error']);
 
-                    continue; // بدونِ لاگ → دفعهٔ بعد دوباره تلاش
+                    continue;
                 }
                 if ($res['skip']) {
                     $this->logReply($morph, $comment->id, $res, 'none', false, 'نیازی به پاسخ نداشت');
@@ -110,19 +137,19 @@ class AutoReplyCommand extends Command
             }
         }
 
-        return ['replied' => $replied, 'skipped' => $skipped];
+        return ['replied' => $replied, 'skipped' => $skipped, 'moderated' => $moderated];
     }
 
     /**
-     * @return array{replied:int}
+     * @return array{replied:int, moderated:int}
      */
-    private function handleQuestions(AiReplyService $reply, int $limit, int $days, bool $publish): array
+    private function handleQuestions(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish): array
     {
         $morph = (new Question)->getMorphClass();
         $table = (new Question)->getTable();
 
         $questions = Question::query()
-            ->where('status', Question::STATUS_APPROVED)
+            ->whereIn('status', [Question::STATUS_PENDING, Question::STATUS_APPROVED])
             ->where('created_at', '>=', now()->subDays($days))
             ->whereDoesntHave('answers')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
@@ -133,15 +160,31 @@ class AutoReplyCommand extends Command
             ->get();
 
         $replied = 0;
+        $moderated = 0;
         foreach ($questions as $question) {
             try {
+                if ($question->status === Question::STATUS_PENDING) {
+                    $m = $moderation->analyze(trim(($question->title ?? '')."\n".($question->body ?? '')), [
+                        'type' => 'سوالِ انجمن', 'title' => $question->title,
+                    ]);
+                    if (! $m['ok']) {
+                        $this->warn("سوال #{$question->id}: مودریشن — ".$m['error']);
+
+                        continue;
+                    }
+                    $this->applyModeration($question, $m['decision']);
+                    $this->logModeration($morph, $question->id, $m);
+                    $moderated++;
+                    if ($m['decision'] !== 'approve') {
+                        continue;
+                    }
+                }
+
                 $res = $reply->reply((string) $question->body, [
-                    'type' => 'سوالِ انجمن',
-                    'title' => $question->title,
-                    'must_reply' => true,
+                    'type' => 'سوالِ انجمن', 'title' => $question->title, 'must_reply' => true,
                 ]);
                 if (! $res['ok'] || ! $res['text']) {
-                    $this->warn("سوال #{$question->id}: ".($res['error'] ?? 'بدونِ متن'));
+                    $this->warn("سوال #{$question->id}: پاسخ — ".($res['error'] ?? 'بدونِ متن'));
 
                     continue;
                 }
@@ -156,7 +199,6 @@ class AutoReplyCommand extends Command
                 ]);
 
                 if ($publish) {
-                    // بازمحاسبهٔ شمارِ پاسخ‌های تأییدشده (idempotent).
                     $question->answers_count = $question->answers()->where('status', Answer::STATUS_APPROVED)->count();
                     $question->saveQuietly();
                 }
@@ -168,7 +210,38 @@ class AutoReplyCommand extends Command
             }
         }
 
-        return ['replied' => $replied];
+        return ['replied' => $replied, 'moderated' => $moderated];
+    }
+
+    /**
+     * اعمالِ تصمیمِ مودریشن روی وضعیتِ آیتم (کامنت/سوال).
+     */
+    private function applyModeration(\Illuminate\Database\Eloquent\Model $subject, string $decision): void
+    {
+        $status = ['approve' => 'approved', 'spam' => 'spam', 'reject' => 'rejected'][$decision] ?? 'pending';
+        $subject->update([
+            'status' => $status,
+            'approved_at' => $decision === 'approve' ? now() : null,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $m
+     */
+    private function logModeration(string $morph, int $subjectId, array $m): void
+    {
+        AiDecisionLog::create([
+            'ai_model_id' => $m['model']?->id,
+            'task' => 'moderation',
+            'subject_type' => $morph,
+            'subject_id' => $subjectId,
+            'decision' => $m['decision'],
+            'confidence' => $m['confidence'],
+            'reason' => $m['reason'],
+            'applied' => true,
+            'prompt_tokens' => $m['usage']['prompt_tokens'] ?? null,
+            'completion_tokens' => $m['usage']['completion_tokens'] ?? null,
+        ]);
     }
 
     /**
