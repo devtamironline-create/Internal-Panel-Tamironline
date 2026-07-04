@@ -148,6 +148,19 @@ class AiController extends Controller
         $res = $svc->analyze($text, $context);
 
         if (! $res['ok']) {
+            // لاگِ خطا (با پاسخِ خامِ مدل، در صورتِ وجود) برای عیب‌یابی.
+            AiDecisionLog::create([
+                'ai_model_id' => $res['model']?->id,
+                'task' => 'moderation',
+                'subject_type' => $subject->getMorphClass(),
+                'subject_id' => $subject->getKey(),
+                'decision' => null,
+                'reason' => mb_substr($res['error'] ?? '', 0, 500),
+                'applied' => false,
+                'raw_response' => ['content' => $res['raw'] ?? null],
+                'created_by_user_id' => auth()->id(),
+            ]);
+
             return ['error', 'AI: '.$res['error']];
         }
 
