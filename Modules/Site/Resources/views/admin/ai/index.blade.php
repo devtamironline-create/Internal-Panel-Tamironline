@@ -46,6 +46,45 @@
         </form>
     </div>
 
+    {{-- ─── پاسخِ خودکار به کامنت/انجمن ─── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">پاسخِ خودکارِ AI (کامنت‌ها و انجمن)</h2>
+        <p class="text-xs text-gray-500 mb-3">هر ۵ دقیقه، محتوای جدید بررسی و پاسخ داده می‌شود (نیازمندِ فعال بودنِ scheduler سرور).</p>
+        <form method="POST" action="{{ route('site.admin.ai.reply-settings') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            @csrf @method('PUT')
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">حالت</label>
+                <select name="reply_mode" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <option value="off" @selected($settings['reply_mode']==='off')>خاموش — پاسخِ خودکار نده</option>
+                    <option value="draft" @selected($settings['reply_mode']==='draft')>پیش‌نویس — بنویس ولی «در انتظار» بماند (تأییدِ مدیر)</option>
+                    <option value="auto" @selected($settings['reply_mode']==='auto')>خودکار — بلافاصله منتشر کن</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">مدلِ پاسخ</label>
+                <select name="reply_model" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <option value="">— مدلِ پیش‌فرض —</option>
+                    @foreach($models as $m)
+                        <option value="{{ $m->slug }}" @selected($settings['reply_model']===$m->slug)>{{ $m->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">نامِ نویسندهٔ پاسخ (نمایش در سایت)</label>
+                <input type="text" name="reply_author" value="{{ $settings['reply_author'] }}" maxlength="100"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm" placeholder="تیم تعمیرآنلاین">
+            </div>
+            <div class="md:col-span-3 flex items-center gap-3">
+                <button class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">ذخیرهٔ پاسخِ خودکار</button>
+                @if($settings['reply_mode']==='auto')
+                    <span class="text-[11px] text-rose-600">حالتِ «خودکار» پاسخ‌ها را مستقیم روی سایت منتشر می‌کند — با احتیاط.</span>
+                @elseif($settings['reply_mode']==='draft')
+                    <span class="text-[11px] text-gray-500">پاسخ‌ها «در انتظار» می‌مانند؛ در مدیریتِ کامنت‌ها/انجمن تأیید کنید.</span>
+                @endif
+            </div>
+        </form>
+    </div>
+
     {{-- ─── افزودنِ مدل ─── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">افزودنِ مدل</h2>

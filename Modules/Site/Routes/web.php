@@ -75,6 +75,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         $ai = \Modules\Site\Http\Controllers\Admin\AiController::class;
         Route::get('/', [$ai, 'index'])->name('index');
         Route::put('/settings', [$ai, 'saveSettings'])->name('settings');
+        Route::put('/reply-settings', [$ai, 'saveReplySettings'])->name('reply-settings');
         Route::post('/models', [$ai, 'storeModel'])->name('models.store');
         Route::put('/models/{model}', [$ai, 'updateModel'])->whereNumber('model')->name('models.update');
         Route::delete('/models/{model}', [$ai, 'destroyModel'])->whereNumber('model')->name('models.destroy');
