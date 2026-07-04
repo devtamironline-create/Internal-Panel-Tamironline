@@ -22,7 +22,19 @@ class LlmsController extends Controller
             $siteName = SeoSetting::get('site_name') ?: (string) config('app.name');
             $desc = trim((string) SeoSetting::get('site_description'));
 
-            $body = "# {$siteName}\n\n{$desc}\n\nImportant pages:\n- /services\n- /blog\n";
+            // فرمتِ استانداردِ llms.txt (llmstxt.org): H1 + خلاصهٔ blockquote +
+            // بخشی از لینک‌های Markdownِ مطلق. لینک‌ها باید [متن](url) باشند تا
+            // ابزارهای اعتبارسنجی «هیچ لینکی یافت نشد» گزارش ندهند.
+            $base = SeoSetting::siteUrl();
+
+            $body = "# {$siteName}\n\n";
+            if ($desc !== '') {
+                $body .= "> {$desc}\n\n";
+            }
+            $body .= "## Important pages\n\n"
+                ."- [خدمات تعمیرات]({$base}/services): فهرست خدمات و تعرفهٔ تعمیرات\n"
+                ."- [وبلاگ]({$base}/blog): مقالات و راهنمای تعمیرات\n"
+                ."- [صفحهٔ اصلی]({$base}/): معرفی تعمیرآنلاین\n";
         }
 
         return response($body, 200, [
