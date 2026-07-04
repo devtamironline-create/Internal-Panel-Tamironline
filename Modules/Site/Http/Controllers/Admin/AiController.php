@@ -41,6 +41,9 @@ class AiController extends Controller
             'mode' => SiteSetting::get('ai_moderation_mode', 'assist'),
             'model' => SiteSetting::get('ai_moderation_model', ''),
             'threshold' => (float) SiteSetting::get('ai_moderation_auto_threshold', '0.85'),
+            'reply_mode' => SiteSetting::get('ai_reply_mode', 'off'),
+            'reply_model' => SiteSetting::get('ai_reply_model', ''),
+            'reply_author' => SiteSetting::get('ai_reply_author', 'تیم تعمیرآنلاین'),
         ];
         $logs = AiDecisionLog::query()->with('aiModel:id,name')
             ->latest()->limit(20)->get();
@@ -116,6 +119,22 @@ class AiController extends Controller
         SiteSetting::set('ai_moderation_auto_threshold', (string) $data['threshold'], 'ai');
 
         return back()->with('success', 'تنظیماتِ مودریشن ذخیره شد.');
+    }
+
+    public function saveReplySettings(Request $request): RedirectResponse
+    {
+        $this->guard();
+        $data = $request->validate([
+            'reply_mode' => 'required|in:off,draft,auto',
+            'reply_model' => 'nullable|string|max:100',
+            'reply_author' => 'nullable|string|max:100',
+        ]);
+
+        SiteSetting::set('ai_reply_mode', $data['reply_mode'], 'ai');
+        SiteSetting::set('ai_reply_model', $data['reply_model'] ?? '', 'ai');
+        SiteSetting::set('ai_reply_author', trim($data['reply_author'] ?? '') ?: 'تیم تعمیرآنلاین', 'ai');
+
+        return back()->with('success', 'تنظیماتِ پاسخِ خودکار ذخیره شد.');
     }
 
     // ─── اجرای مودریشن ─────────────────────────────────────────────

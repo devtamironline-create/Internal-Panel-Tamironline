@@ -41,6 +41,7 @@ class SiteServiceProvider extends ServiceProvider
                 \Modules\Site\Console\Commands\BlogFilterCheck::class,
                 \Modules\Site\Console\Commands\FaqDebug::class,
                 \Modules\Site\Console\Commands\FixArticleSlugs::class,
+                \Modules\Site\Console\Commands\AutoReplyCommand::class,
             ]);
         }
     }
