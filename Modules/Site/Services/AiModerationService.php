@@ -47,21 +47,35 @@ class AiModerationService
         $res = $this->gateway->chat($model, [
             ['role' => 'system', 'content' => $this->systemPrompt()],
             ['role' => 'user', 'content' => $this->userPrompt($text, $context)],
-        ], ['temperature' => 0.1, 'max_tokens' => 300]);
+        ], ['temperature' => 0.1, 'max_tokens' => 600]);
 
         if (! $res['ok']) {
             return $this->fail($res['error'] ?? 'خطای نامشخصِ AI.', $model);
         }
 
-        $parsed = $this->parseJson((string) $res['content']);
-        $decision = in_array($parsed['decision'] ?? null, self::DECISIONS, true) ? $parsed['decision'] : null;
+        $content = (string) $res['content'];
+        $parsed = $this->parseJson($content);
+
+        // تصمیم را نرمال کن (انگلیسی/فارسی/با متنِ اضافه همگی پذیرفته می‌شوند).
+        $decision = $this->normalizeDecision($parsed['decision'] ?? null);
+        $confidence = isset($parsed['confidence']) ? max(0.0, min(1.0, (float) $parsed['confidence'])) : null;
+        $reason = isset($parsed['reason']) ? mb_substr(trim((string) $parsed['reason']), 0, 500) : null;
+
+        // اگر JSON نبود، از متنِ خامِ پاسخ استنتاج کن (اطمینانِ پایین).
         if ($decision === null) {
-            return $this->fail('پاسخِ AI قابلِ تفسیر نبود.', $model, $res['content']);
+            $decision = $this->inferDecisionFromText($content);
+            if ($decision !== null) {
+                $confidence ??= 0.5;
+                $reason ??= 'استنتاج از متنِ پاسخِ مدل';
+            }
         }
 
-        $confidence = isset($parsed['confidence']) ? (float) $parsed['confidence'] : null;
-        if ($confidence !== null) {
-            $confidence = max(0.0, min(1.0, $confidence));
+        if ($decision === null) {
+            return $this->fail(
+                'پاسخِ AI قابلِ تفسیر نبود. پاسخِ مدل: '.mb_substr(trim($content), 0, 180),
+                $model,
+                $content
+            );
         }
 
         return [
@@ -69,11 +83,67 @@ class AiModerationService
             'model' => $model,
             'decision' => $decision,
             'confidence' => $confidence,
-            'reason' => isset($parsed['reason']) ? mb_substr(trim((string) $parsed['reason']), 0, 500) : null,
+            'reason' => $reason,
             'usage' => $res['usage'],
-            'raw' => $res['content'],
+            'raw' => $content,
             'error' => null,
         ];
+    }
+
+    /**
+     * نرمال‌سازیِ مقدارِ تصمیم — انگلیسی/فارسی/با علائم یا متنِ اضافه.
+     */
+    private function normalizeDecision(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+        $v = trim(mb_strtolower($value));
+        $v = trim($v, " \t\n\r\0\x0B.،,\"'«»؛:()");
+
+        $map = [
+            'approve' => 'approve', 'approved' => 'approve', 'accept' => 'approve', 'ok' => 'approve',
+            'valid' => 'approve', 'publish' => 'approve', 'safe' => 'approve',
+            'تایید' => 'approve', 'تأیید' => 'approve', 'تاييد' => 'approve', 'قبول' => 'approve',
+            'سالم' => 'approve', 'مجاز' => 'approve', 'منتشر' => 'approve',
+            'spam' => 'spam', 'اسپم' => 'spam', 'هرزنامه' => 'spam', 'تبلیغ' => 'spam', 'تبليغ' => 'spam',
+            'reject' => 'reject', 'rejected' => 'reject', 'deny' => 'reject', 'denied' => 'reject',
+            'رد' => 'reject', 'توهین' => 'reject', 'توهين' => 'reject', 'نامناسب' => 'reject',
+            'مستهجن' => 'reject', 'مردود' => 'reject', 'حذف' => 'reject',
+        ];
+        if (isset($map[$v])) {
+            return $map[$v];
+        }
+        // مقدارِ حاویِ واژهٔ کلیدی (مثلِ "spam (advertising)")
+        foreach (['spam', 'reject', 'approve'] as $canon) {
+            if (str_contains($v, $canon)) {
+                return $canon;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * استنتاجِ تصمیم از متنِ خامِ پاسخ (وقتی JSON نبود). آخرین راهِ نجات.
+     */
+    private function inferDecisionFromText(string $content): ?string
+    {
+        $t = mb_strtolower($content);
+        $groups = [
+            'spam' => ['"spam"', 'spam', 'اسپم', 'هرزنامه', 'تبلیغ', 'تبليغ'],
+            'reject' => ['"reject"', 'reject', 'توهین', 'توهين', 'نامناسب', 'مستهجن', 'فحش', 'مردود'],
+            'approve' => ['"approve"', 'approve', 'سالم', 'قابل تایید', 'قابل تأیید', 'مجاز', 'منتشر'],
+        ];
+        foreach ($groups as $decision => $keywords) {
+            foreach ($keywords as $k) {
+                if (str_contains($t, $k)) {
+                    return $decision;
+                }
+            }
+        }
+
+        return null;
     }
 
     private function systemPrompt(): string
