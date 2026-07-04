@@ -7,11 +7,13 @@ use Modules\Identity\Http\Controllers\Api\V1\AuthController;
 // bootstrap/app.php با $request->is('v1/*') اطمینان می‌دهد که exceptionها به
 // JSON رندر شوند (به‌جای redirect HTML).
 Route::prefix('v1/auth')->group(function () {
-    // Public — rate-limited
-    Route::middleware('throttle:10,1')->group(function () {
-        Route::post('/send-otp', [AuthController::class, 'sendOtp'])->name('identity.send-otp');
-        Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('identity.verify-otp');
-    });
+    // Public — rate-limited بر اساسِ «شمارهٔ موبایل» (نه IP)، چون این مسیرها از
+    // BFF پراکسی می‌شوند و IP همهٔ کاربران یکسان است. تعریفِ limiterها در
+    // AppServiceProvider (otp-send / otp-verify).
+    Route::post('/send-otp', [AuthController::class, 'sendOtp'])
+        ->middleware('throttle:otp-send')->name('identity.send-otp');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
+        ->middleware('throttle:otp-verify')->name('identity.verify-otp');
 
     // Auth required
     Route::middleware('auth:sanctum')->group(function () {

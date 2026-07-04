@@ -84,6 +84,40 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        // ─── Rate limiter های OTP — بر اساسِ «شمارهٔ موبایل» نه IP ───────
+        // این مسیرها عمومی‌اند و از BFF (سرور Next.js) پراکسی می‌شوند؛ پس IPِ
+        // همهٔ کاربران یکسان است (کانتینر فرانت) و throttleِ per-IP خیلی زود پر
+        // می‌شد و «Too Many Attempts.» می‌داد. کلیدِ per-mobile مستقل از IP است
+        // و هم اسپمِ یک شماره را می‌گیرد هم مدلِ BFF را نمی‌شکند. شماره نرمال‌سازی
+        // می‌شود تا تغییرِ فرمت (۰۹.../+۹۸۹...) دورزدنِ محدودیت نباشد.
+        RateLimiter::for('otp-send', function (Request $request) {
+            $mobile = self::otpMobileKey($request);
+
+            return $mobile !== null
+                ? Limit::perMinute(5)->by('otp-send:'.$mobile)
+                : Limit::perMinute(30)->by($request->ip());
+        });
+
+        RateLimiter::for('otp-verify', function (Request $request) {
+            $mobile = self::otpMobileKey($request);
+
+            // برای امکانِ چند بار تلاشِ کدِ اشتباه، سقفِ بالاتر.
+            return $mobile !== null
+                ? Limit::perMinute(15)->by('otp-verify:'.$mobile)
+                : Limit::perMinute(30)->by($request->ip());
+        });
+    }
+
+    /**
+     * کلیدِ نرمال‌شدهٔ موبایل برای throttle (یا null اگر شماره‌ای نبود).
+     */
+    private static function otpMobileKey(Request $request): ?string
+    {
+        $raw = (string) $request->input('mobile');
+
+        return \Modules\Identity\Support\PhoneNormalizer::normalize($raw)
+            ?? (preg_replace('/\D/', '', $raw) ?: null);
     }
 
     /**
