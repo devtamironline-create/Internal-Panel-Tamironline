@@ -195,8 +195,8 @@
 
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
             <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">llms.txt</legend>
-            <p class="text-xs text-gray-500">اگر خالی بماند، نسخهٔ پیش‌فرض از روی نام/توضیح سایت تولید می‌شود. خروجی در <code class="font-mono ltr">/v1/seo/llms.txt</code> سرو می‌شود.</p>
-            <textarea name="llms_txt" rows="6" dir="ltr" placeholder="# {SiteName}&#10;&#10;{description}&#10;&#10;Important pages:&#10;- /services&#10;- /blog"
+            <p class="text-xs text-gray-500">اگر خالی بماند، نسخهٔ پیش‌فرض از روی نام/توضیح سایت تولید می‌شود. خروجی در <code class="font-mono ltr">/v1/seo/llms.txt</code> سرو می‌شود. فرمتِ استاندارد: یک تیترِ <code class="font-mono ltr">#</code> و لینک‌های Markdown به‌صورت <code class="font-mono ltr">[متن](https://...)</code>.</p>
+            <textarea name="llms_txt" rows="6" dir="ltr" placeholder="# SiteName&#10;&#10;> توضیح کوتاه سایت&#10;&#10;## Important pages&#10;&#10;- [خدمات](https://tamironline.com/services): توضیح&#10;- [وبلاگ](https://tamironline.com/blog): توضیح"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">{{ old('llms_txt', $settings['llms_txt'] ?? '') }}</textarea>
         </fieldset>
 
