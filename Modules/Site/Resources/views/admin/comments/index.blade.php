@@ -198,6 +198,13 @@
                                             @csrf @method('DELETE')<button class="text-red-700 hover:underline">حذف</button>
                                         </form>
                                     @endcan
+                                    @can('manage-ai')
+                                        @if(Route::has('site.admin.ai.moderate.comment'))
+                                        <form method="POST" action="{{ route('site.admin.ai.moderate.comment', $c->id) }}" class="inline">
+                                            @csrf<button class="text-violet-600 hover:underline">🤖 بررسی با AI</button>
+                                        </form>
+                                        @endif
+                                    @endcan
                                 </span>
                             </div>
                         </div>

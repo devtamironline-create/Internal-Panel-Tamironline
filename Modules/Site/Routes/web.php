@@ -70,6 +70,19 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::delete('/{id}', [AdminCommentController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 
+    // هوش مصنوعی (AI) — رجیستریِ مدل‌ها + تنظیماتِ مودریشن + اجرای مودریشن
+    Route::prefix('ai')->name('ai.')->middleware('can:manage-ai')->group(function () {
+        $ai = \Modules\Site\Http\Controllers\Admin\AiController::class;
+        Route::get('/', [$ai, 'index'])->name('index');
+        Route::put('/settings', [$ai, 'saveSettings'])->name('settings');
+        Route::post('/models', [$ai, 'storeModel'])->name('models.store');
+        Route::put('/models/{model}', [$ai, 'updateModel'])->whereNumber('model')->name('models.update');
+        Route::delete('/models/{model}', [$ai, 'destroyModel'])->whereNumber('model')->name('models.destroy');
+        Route::post('/models/{model}/test', [$ai, 'testModel'])->whereNumber('model')->name('models.test');
+        Route::post('/moderate/comment/{comment}', [$ai, 'moderateComment'])->whereNumber('comment')->name('moderate.comment');
+        Route::post('/moderate/question/{question}', [$ai, 'moderateQuestion'])->whereNumber('question')->name('moderate.question');
+    });
+
     // انجمن — سوالات و کارشناسان
     Route::prefix('forum')->name('forum.')->group(function () {
         // داشبورد و audit log

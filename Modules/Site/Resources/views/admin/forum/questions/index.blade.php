@@ -200,6 +200,13 @@
                                             @csrf @method('PUT')<button class="text-violet-600 hover:underline">{{ $q->is_featured ? 'حذف ویژه' : 'ویژه' }}</button>
                                         </form>
                                     @endcanany
+                                    @can('manage-ai')
+                                        @if(Route::has('site.admin.ai.moderate.question'))
+                                        <form method="POST" action="{{ route('site.admin.ai.moderate.question', $q->id) }}" class="inline">
+                                            @csrf<button class="text-fuchsia-600 hover:underline">🤖 بررسی با AI</button>
+                                        </form>
+                                        @endif
+                                    @endcan
                                 </span>
                             </div>
                         </div>
