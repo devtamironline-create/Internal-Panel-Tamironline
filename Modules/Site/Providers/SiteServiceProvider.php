@@ -22,6 +22,9 @@ class SiteServiceProvider extends ServiceProvider
         // Observers — auto-invalidate cache بنر
         \Modules\Site\Models\Banner::observe(\Modules\Site\Observers\BannerObserver::class);
 
+        // پیامکِ اطلاع‌رسانی هنگام پاسخ به کامنتِ کاربر (پاسخِ ادمین/AI تأییدشده).
+        \Modules\Site\Models\Comment::observe(\Modules\Site\Observers\CommentObserver::class);
+
         $this->mergeConfigFrom(
             module_path($this->name, 'Config/page-sections.php'),
             'site.page-sections'

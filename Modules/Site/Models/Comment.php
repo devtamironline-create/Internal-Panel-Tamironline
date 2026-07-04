@@ -23,6 +23,7 @@ class Comment extends Model
         'parent_id',
         'root_id',
         'user_id',
+        'customer_id',
         'author_name',
         'author_email',
         'author_avatar',
@@ -35,6 +36,7 @@ class Comment extends Model
         'user_agent',
         'approved_at',
         'approved_by_user_id',
+        'reply_sms_sent_at',
     ];
 
     protected $casts = [
@@ -42,6 +44,7 @@ class Comment extends Model
         'likes_count' => 'integer',
         'dislikes_count' => 'integer',
         'approved_at' => 'datetime',
+        'reply_sms_sent_at' => 'datetime',
     ];
 
     public const STATUS_PENDING = 'pending';
@@ -60,6 +63,11 @@ class Comment extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\CRM\Models\Customer::class, 'customer_id');
     }
 
     public function replies(): HasMany
