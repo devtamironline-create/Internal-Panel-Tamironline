@@ -56,11 +56,19 @@ class CatalogDeviceBrandController extends Controller
             'brand_slug' => $brand->slug,
             'page_title' => ($device->service_name ?? $device->name).' '.$brand->name,
         ];
-        $template = $this->sections->pageExists('device_brand')
+        $hasComboTemplate = $this->sections->pageExists('device_brand');
+        $template = $hasComboTemplate
             ? $this->sections->loadForPublic('device_brand', $context)
             : ($this->sections->pageExists('device')
                 ? $this->sections->loadForPublic('device', $context)
                 : []);
+
+        // Fallbackِ hero از «صفحه‌ی دستگاه»: وقتی الگوی ترکیبی (device_brand) جدا از
+        // الگوی دستگاه است و hero ترکیبی خالی می‌ماند، همان تصویری که صفحه‌ی دستگاه
+        // نشان می‌دهد (device.hero_image یا الگوی device) استفاده شود — تا هیرو خالی نماند.
+        $deviceHeroImage = ($hasComboTemplate && $this->sections->pageExists('device'))
+            ? ($this->sections->loadForPublic('device', $context)['hero']['image'] ?? null)
+            : null;
 
         $sectionsEnabled = array_replace(
             (array) ($brand->sections_enabled ?? []),
@@ -101,7 +109,7 @@ class CatalogDeviceBrandController extends Controller
                 ),
 
                 'sections' => [
-                    'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true)),
+                    'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true), $deviceHeroImage),
                     'steps' => $this->buildSteps($page, $device, $brand, $template, $enabled('steps', true)),
                     'live_activity' => [
                         'enabled' => $enabled('live_activity', true),
@@ -171,7 +179,7 @@ class CatalogDeviceBrandController extends Controller
         return null;
     }
 
-    private function buildHero(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled): array
+    private function buildHero(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled, $deviceTemplateImage = null): array
     {
         $heroTpl = $template['hero'] ?? [];
         $ctaPrimaryTpl = (array) ($heroTpl['cta_primary'] ?? []);
@@ -188,7 +196,7 @@ class CatalogDeviceBrandController extends Controller
             ),
             'subtitle' => $this->merge($page?->subtitle, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
             'caption' => $this->merge($page?->caption, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
-            'image' => $this->mergeHeroImage($device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null),
+            'image' => $this->mergeHeroImage($device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null, $deviceTemplateImage),
             'cta_primary' => [
                 'label' => $this->merge($page?->cta_primary_label, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
                 'url' => $this->merge($page?->cta_primary_url, $device->cta_primary_url, $brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
@@ -204,23 +212,26 @@ class CatalogDeviceBrandController extends Controller
 
     /**
      * Hero image — اولویت: device.hero_image > brand.hero_image > template.hero.image
-     * هر slot به‌صورت مستقل merge می‌شود.
+     * > الگوی صفحه‌ی دستگاه (deviceTemplate). هر slot به‌صورت مستقل merge می‌شود؛
+     * deviceTemplate تضمین می‌کند اگر همه خالی بودند همان هیروِ صفحه‌ی دستگاه بیاید.
      *
      * @param  mixed  $deviceImg
      * @param  mixed  $brandImg
      * @param  mixed  $template
+     * @param  mixed  $deviceTemplate
      */
-    private function mergeHeroImage($deviceImg, $brandImg, $template): array
+    private function mergeHeroImage($deviceImg, $brandImg, $template, $deviceTemplate = null): array
     {
         $svc = \Modules\Site\Services\PageSectionService::class;
         $d = $svc::normalizeHeroVisual($deviceImg);
         $b = $svc::normalizeHeroVisual($brandImg);
         $t = $svc::normalizeHeroVisual($template);
+        $dt = $svc::normalizeHeroVisual($deviceTemplate);
         $out = [];
         foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
             $out[$slot] = [
-                'url' => $d[$slot]['url'] ?: ($b[$slot]['url'] ?: $t[$slot]['url']),
-                'alt' => $d[$slot]['alt'] ?: ($b[$slot]['alt'] ?: $t[$slot]['alt']),
+                'url' => $d[$slot]['url'] ?: ($b[$slot]['url'] ?: ($t[$slot]['url'] ?: $dt[$slot]['url'])),
+                'alt' => $d[$slot]['alt'] ?: ($b[$slot]['alt'] ?: ($t[$slot]['alt'] ?: $dt[$slot]['alt'])),
             ];
         }
 
