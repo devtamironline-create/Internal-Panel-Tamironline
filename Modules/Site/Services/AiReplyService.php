@@ -41,13 +41,21 @@ class AiReplyService
 
         $mustReply = (bool) ($context['must_reply'] ?? false);
 
+        $messages = [
+            ['role' => 'system', 'content' => $this->systemPrompt()],
+            ['role' => 'user', 'content' => $this->userPrompt($text, $context)],
+        ];
+
         // سقفِ توکنِ بالا برای مدل‌های reasoning (مثلِ GPT-5-Mini): این مدل‌ها قبل
         // از خروجی، توکنِ «استدلال» مصرف می‌کنند؛ با سقفِ کم، content خالی
         // برمی‌گردد (finish_reason=length).
-        $res = $this->gateway->chat($model, [
-            ['role' => 'system', 'content' => $this->systemPrompt()],
-            ['role' => 'user', 'content' => $this->userPrompt($text, $context)],
-        ], ['temperature' => 0.4, 'max_tokens' => 2000]);
+        $res = $this->gateway->chat($model, $messages, ['temperature' => 0.4, 'max_tokens' => 2000]);
+
+        // اگر سقفِ توکن پر شد (استدلالِ طولانی)، یک‌بار با سقفِ دوبرابر تلاش کن —
+        // تا سوالِ سخت بی‌پاسخ نماند.
+        if (! $res['ok'] && str_contains((string) $res['error'], 'max_tokens')) {
+            $res = $this->gateway->chat($model, $messages, ['temperature' => 0.4, 'max_tokens' => 4000]);
+        }
 
         if (! $res['ok']) {
             return $this->fail($res['error'] ?? 'خطای نامشخصِ AI.', $model);
@@ -61,6 +69,12 @@ class AiReplyService
         // اگر پاسخ لازم نبود (فقط برای کامنت‌ها؛ سوالِ انجمن همیشه پاسخ می‌گیرد).
         if (! $mustReply && ($out === '' || mb_stripos($out, 'NO_REPLY') !== false)) {
             return ['ok' => true, 'skip' => true, 'text' => null, 'model' => $model, 'usage' => $res['usage'], 'error' => null];
+        }
+
+        // در حالتِ must_reply (انجمن) اگر مدل NO_REPLY داد، متنِ خام نباید منتشر
+        // شود — شکست تا در اجرای بعدی دوباره تلاش شود.
+        if ($mustReply && $out !== '' && mb_stripos($out, 'NO_REPLY') !== false) {
+            return $this->fail('مدل به‌جای پاسخ NO_REPLY برگرداند.', $model);
         }
 
         if ($out === '' || mb_strlen($out) < 3) {
