@@ -27,6 +27,7 @@ class CustomerAddress extends Model
         'postal_code',
         'phone',
         'is_default',
+        'is_transient',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class CustomerAddress extends Model
         'latitude' => 'float',
         'longitude' => 'float',
         'is_default' => 'boolean',
+        'is_transient' => 'boolean',
     ];
 
     public function customer(): BelongsTo

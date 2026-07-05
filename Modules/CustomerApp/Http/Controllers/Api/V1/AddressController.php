@@ -27,7 +27,10 @@ class AddressController extends Controller
     {
         $customer = $this->customer($request);
 
+        // آدرس‌های یک‌بارمصرف (transient) در دفترچه‌ی آدرسِ کاربر نمایش داده
+        // نمی‌شوند — فقط برای همان سفارشی که ساخته شده‌اند مصرف می‌شوند.
         $rows = $customer->addresses()
+            ->where('is_transient', false)
             ->with(['province:id,name', 'city:id,name', 'district:id,name'])
             ->get();
 
@@ -97,9 +100,10 @@ class AddressController extends Controller
 
         DB::transaction(function () use ($address, $customer, $wasDefault) {
             $address->delete();
-            // اگر default را حذف کردیم، اولین آدرس باقیمانده default می‌شود
+            // اگر default را حذف کردیم، اولین آدرسِ ماندگارِ باقیمانده default می‌شود
+            // (آدرس‌های transient هرگز پیش‌فرض نمی‌شوند).
             if ($wasDefault) {
-                $next = $customer->addresses()->orderBy('id')->first();
+                $next = $customer->addresses()->where('is_transient', false)->orderBy('id')->first();
                 $next?->forceFill(['is_default' => true])->save();
             }
         });
@@ -156,6 +160,9 @@ class AddressController extends Controller
             'postal_code' => 'nullable|string|size:10',
             'phone' => 'nullable|string|max:20',
             'is_default' => 'nullable|boolean',
+            // آدرسِ یک‌بارمصرف: هنگام ثبت سفارش با آدرسِ جدید که کاربر «ذخیره
+            // برای بعد» را نزده. در GET /addresses برنمی‌گردد.
+            'transient' => 'nullable|boolean',
         ], [
             'city_id.required' => 'انتخاب شهر الزامی است.',
             'latitude.required_with' => 'مختصات نقشه ناقص است.',
@@ -196,6 +203,14 @@ class AddressController extends Controller
 
         // استان همیشه سمت سرور از شهر ست می‌شود — ورودی کلاینت نادیده گرفته می‌شود
         $data['province_id'] = (int) $city->province_id;
+
+        // نگاشتِ transient → is_transient. آدرسِ یک‌بارمصرف هرگز پیش‌فرض نمی‌شود
+        // و پیش‌فرضِ فعلیِ کاربر را جابه‌جا نمی‌کند.
+        $data['is_transient'] = ! empty($data['transient']);
+        unset($data['transient']);
+        if ($data['is_transient']) {
+            $data['is_default'] = false;
+        }
 
         return $data;
     }
