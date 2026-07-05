@@ -61,6 +61,24 @@
             @csrf @method('DELETE')<button class="px-3 py-1.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700">حذف سوال</button>
         </form>
     </div>
+
+    {{-- انتسابِ موضوع (برای فیلترِ «بر اساس موضوع» سایت) --}}
+    <div class="mt-3 bg-white border border-gray-200 rounded-xl p-4">
+        <form method="POST" action="{{ route('site.admin.forum.questions.update-topic', $question->id) }}" class="flex items-center gap-2 flex-wrap">
+            @csrf @method('PUT')
+            <span class="text-xs text-gray-600">موضوع:</span>
+            <select name="topic_id" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <option value="">— بدون موضوع —</option>
+                @foreach(($topics ?? []) as $t)
+                    <option value="{{ $t->id }}" @selected($question->topic_id === $t->id)>{{ $t->label }}</option>
+                @endforeach
+            </select>
+            <button class="px-3 py-1.5 rounded-lg text-sm bg-blue-50 text-blue-700 hover:bg-blue-100">ذخیرهٔ موضوع</button>
+            @if($question->topic)
+                <span class="text-xs text-gray-400">فعلی: {{ $question->topic->label }}</span>
+            @endif
+        </form>
+    </div>
     @endcanany
 
     {{-- Answers --}}
