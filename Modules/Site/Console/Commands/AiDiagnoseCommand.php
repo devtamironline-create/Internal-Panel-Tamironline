@@ -210,6 +210,15 @@ class AiDiagnoseCommand extends Command
             ->whereDoesntHave('answers')
             ->latest()->limit($limit)->get();
 
+        // سوال‌های رد/اسپم‌شده عمداً پاسخ نمی‌گیرند — برای شفافیتِ اختلاف با
+        // شمارنده‌های پنل، جدا گزارش می‌شوند.
+        $rejected = Question::query()
+            ->whereIn('status', [Question::STATUS_REJECTED, Question::STATUS_SPAM])
+            ->count();
+        if ($rejected > 0) {
+            $this->line("ℹ️ {$rejected} سوالِ رد/اسپم‌شده وجود دارد — این‌ها به‌عمد پاسخ نمی‌گیرند.");
+        }
+
         if ($items->isEmpty()) {
             $this->line('سوالِ بی‌پاسخی نیست. ✅');
 
