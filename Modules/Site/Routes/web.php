@@ -117,6 +117,14 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/settings', [\Modules\Site\Http\Controllers\Admin\Forum\SettingsController::class, 'update'])->name('settings.update');
 
         // سوالات
+        Route::prefix('topics')->name('topics.')->group(function () {
+            Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'index'])->name('index');
+            Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'store'])->name('store');
+            Route::put('/{topic}', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'update'])->whereNumber('topic')->name('update');
+            Route::put('/{topic}/toggle', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'toggle'])->whereNumber('topic')->name('toggle');
+            Route::delete('/{topic}', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'destroy'])->whereNumber('topic')->name('destroy');
+        });
+
         Route::prefix('questions')->name('questions.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'index'])->name('index');
             Route::post('/bulk', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'bulk'])->name('bulk');
