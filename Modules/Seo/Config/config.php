@@ -99,7 +99,9 @@ return [
             'title_attr' => 'name',
             'excerpt_attr' => null,
             'published' => null,
-            'sitemap' => false,   // فقط ترکیب‌های دارای محتوای اختصاصی → فاز بعد
+            // فقط ترکیب‌هایی که ادمین در combo-manager «فعال» کرده (DeviceBrandPage.is_active)
+            // و دستگاه/برندشان فعال است وارد sitemap می‌شوند — منبعِ اختصاصی در SitemapBuilder.
+            'sitemap' => true,
             'default_schema' => 'Service',
         ],
         'taxonomy' => [
