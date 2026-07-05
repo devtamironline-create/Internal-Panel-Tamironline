@@ -57,6 +57,12 @@ class SitemapBuilder
             return [];
         }
 
+        // صفحاتِ ترکیبیِ دستگاه+برند ردیفِ مستقیمِ مدل ندارند؛ از combo-manager
+        // (DeviceBrandPageِ فعال) ساخته می‌شوند.
+        if (($cfg['resolver'] ?? null) === 'brand_device') {
+            return $this->brandDeviceUrls($cfg);
+        }
+
         /** @var class-string $modelClass */
         $modelClass = $cfg['model'];
         $query = $modelClass::query();
@@ -76,6 +82,43 @@ class SitemapBuilder
             $out[] = [
                 'loc' => $this->absoluteUrl($this->registry->pathFor($type, $model)),
                 'lastmod' => $this->lastmod($model),
+                'changefreq' => $changefreq,
+                'priority' => number_format($priority, 1),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * URLهای صفحاتِ ترکیبیِ فعال: فقط DeviceBrandPageهایی که ادمین is_active کرده
+     * و هم دستگاه و هم برندشان فعال است → /services/{deviceSlug}/{brandSlug}.
+     *
+     * @param  array<string, mixed>  $cfg
+     * @return list<array{loc:string,lastmod:?string,changefreq:string,priority:string}>
+     */
+    private function brandDeviceUrls(array $cfg): array
+    {
+        $priority = $this->numeric($cfg['priority'] ?? config('seo.sitemap.priority', 0.7));
+        $changefreq = (string) ($cfg['changefreq'] ?? config('seo.sitemap.changefreq', 'weekly'));
+        $pattern = (string) ($cfg['url'] ?? '/services/{device}/{brand}');
+
+        $out = [];
+        $rows = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('is_active', true)
+            ->with(['device:id,slug,is_active,updated_at', 'brand:id,slug,is_active,updated_at'])
+            ->cursor();
+
+        foreach ($rows as $page) {
+            $device = $page->device;
+            $brand = $page->brand;
+            if (! $device || ! $brand || ! $device->is_active || ! $brand->is_active) {
+                continue;
+            }
+            $path = str_replace(['{device}', '{brand}'], [$device->slug, $brand->slug], $pattern);
+            $out[] = [
+                'loc' => $this->absoluteUrl($path),
+                'lastmod' => $this->lastmod($page),
                 'changefreq' => $changefreq,
                 'priority' => number_format($priority, 1),
             ];
