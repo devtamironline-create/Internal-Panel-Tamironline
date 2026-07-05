@@ -152,7 +152,9 @@ class OrderController extends Controller
         // در DB باقی نمی‌ماند. تاریخچه‌ی باگ: قبلاً Resource خارج از تراکنش
         // ساخته می‌شد و خطای آن باعث می‌شد سفارش commit شده در DB بماند ولی
         // فرانت 500 ببیند و retry بزند → چند نسخه‌ی تکراری.
-        $payload = DB::transaction(function () use ($customer, $address, $data, $scheduledAt) {
+        $attribution = $this->sanitizeAttribution($data['attribution'] ?? null);
+
+        $payload = DB::transaction(function () use ($customer, $address, $data, $scheduledAt, $attribution) {
             // اگر کاربر «نحوه آشنایی» را پر نکرد، نشان دهیم سفارش از اپ آمده —
             // این به اپراتورهای CRM کمک می‌کند کانال ثبت را در لیست سفارش‌ها
             // فوراً تشخیص دهند.
@@ -166,6 +168,7 @@ class OrderController extends Controller
                 'customer_id' => $customer->id,
                 'subscription' => $customer->subscription ?? null,
                 'introduction' => $introduction,
+                'attribution' => $attribution,
 
                 'order_type' => $data['order_type'],
                 'device_id' => $data['device_id'],
@@ -379,6 +382,39 @@ class OrderController extends Controller
         }
 
         return array_values(array_unique($out));
+    }
+
+    /**
+     * فقط کلیدهای شناخته‌شده‌ی attribution نگه داشته می‌شوند (whitelist) تا
+     * دادهٔ دلخواه/بزرگ ذخیره نشود. مقادیر به رشته‌ی کوتاه محدود می‌شوند.
+     *
+     * @param  mixed  $raw
+     * @return array<string, string>|null
+     */
+    private function sanitizeAttribution($raw): ?array
+    {
+        if (! is_array($raw)) {
+            return null;
+        }
+
+        $allowed = [
+            'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid',
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+            'referrer', 'landing_page',
+        ];
+
+        $out = [];
+        foreach ($allowed as $key) {
+            if (! array_key_exists($key, $raw) || $raw[$key] === null) {
+                continue;
+            }
+            $val = trim((string) $raw[$key]);
+            if ($val !== '') {
+                $out[$key] = mb_substr($val, 0, 500);
+            }
+        }
+
+        return $out === [] ? null : $out;
     }
 
     private function resolveReasonText(int $reasonId, ?string $other): string
