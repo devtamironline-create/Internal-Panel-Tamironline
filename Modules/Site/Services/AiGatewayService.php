@@ -38,6 +38,7 @@ class AiGatewayService
             'response_format' => $opts['response_format'] ?? null,
         ], fn ($v) => $v !== null);
 
+        $t0 = microtime(true);
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'apikey '.$model->api_key,
@@ -47,13 +48,28 @@ class AiGatewayService
                 ->timeout((int) ($opts['timeout'] ?? 45))
                 ->post($model->chatUrl(), $payload);
         } catch (\Throwable $e) {
+            \Modules\Site\Support\AiLog::error('gateway.exception', [
+                'model' => $model->slug,
+                'ms' => (int) round((microtime(true) - $t0) * 1000),
+                'error' => $e->getMessage(),
+            ]);
             Log::warning('ai.gateway.exception', ['model' => $model->slug, 'error' => $e->getMessage()]);
 
             return $this->fail('خطا در ارتباط با سرویسِ AI: '.$e->getMessage());
         }
 
         $status = $response->status();
+        $ms = (int) round((microtime(true) - $t0) * 1000);
 
+        if (! $response->successful()) {
+            // بدنهٔ خطا فقط در «فایلِ» لاگِ ai ثبت می‌شود (نه DB) — برای عیب‌یابیِ دقیق.
+            \Modules\Site\Support\AiLog::error('gateway.http_error', [
+                'model' => $model->slug,
+                'status' => $status,
+                'ms' => $ms,
+                'body' => mb_substr((string) $response->body(), 0, 800),
+            ]);
+        }
         if ($status === 401) {
             return $this->fail('کلیدِ API نامعتبر است (401).', $status);
         }
@@ -68,13 +84,27 @@ class AiGatewayService
         $content = $json['choices'][0]['message']['content'] ?? null;
 
         if ($content === null || $content === '') {
+            \Modules\Site\Support\AiLog::warning('gateway.empty_content', [
+                'model' => $model->slug, 'status' => $status, 'ms' => $ms,
+                'body' => mb_substr((string) $response->body(), 0, 500),
+            ]);
+
             return $this->fail('پاسخِ خالی از مدل دریافت شد.', $status);
         }
+
+        $usage = (array) ($json['usage'] ?? []);
+        \Modules\Site\Support\AiLog::info('gateway.ok', [
+            'model' => $model->slug,
+            'ms' => $ms,
+            'prompt_tokens' => $usage['prompt_tokens'] ?? null,
+            'completion_tokens' => $usage['completion_tokens'] ?? null,
+            'content_excerpt' => mb_substr(trim((string) $content), 0, 200),
+        ]);
 
         return [
             'ok' => true,
             'content' => (string) $content,
-            'usage' => (array) ($json['usage'] ?? []),
+            'usage' => $usage,
             'status' => $status,
             'error' => null,
         ];

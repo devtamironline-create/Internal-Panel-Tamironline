@@ -55,8 +55,17 @@ class AutoReplyCommand extends Command
         $modMode = (string) SiteSetting::get('ai_moderation_mode', 'assist');
         $modThreshold = (float) SiteSetting::get('ai_moderation_auto_threshold', '0.85');
 
+        \Modules\Site\Support\AiLog::info('auto_reply.start', [
+            'mode' => $mode, 'limit' => $limit, 'days' => $days,
+            'moderation_mode' => $modMode, 'threshold' => $modThreshold,
+        ]);
+
         $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
         $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $modMode, $modThreshold);
+
+        \Modules\Site\Support\AiLog::info('auto_reply.done', [
+            'comments' => $c, 'questions' => $q, 'published' => $publish,
+        ]);
 
         $this->info(
             "کامنت: {$c['moderated']} مودریت، {$c['replied']} پاسخ، {$c['skipped']} بی‌نیاز | "
@@ -109,7 +118,7 @@ class AutoReplyCommand extends Command
                     $m = $moderation->analyze((string) $comment->content, array_filter(['type' => 'نظر', 'title' => $pageTitle]));
                     if (! $m['ok']) {
                         $this->warn("کامنت #{$comment->id}: مودریشن — ".$m['error']);
-                        \Illuminate\Support\Facades\Log::warning('ai_auto_reply.moderation_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $m['error']]);
+                        \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $m['error']]);
 
                         continue;
                     }
@@ -119,6 +128,10 @@ class AutoReplyCommand extends Command
                         $this->applyModeration($comment, $m['decision']);
                     }
                     $this->logModeration($morph, $comment->id, $m, $applied);
+                    \Modules\Site\Support\AiLog::info('auto_reply.comment.moderated', [
+                        'id' => $comment->id, 'decision' => $m['decision'],
+                        'confidence' => $m['confidence'], 'applied' => $applied, 'page' => $pageTitle,
+                    ]);
                     $moderated++;
                     if (! ($applied && $m['decision'] === 'approve')) {
                         continue; // اسپم/رد یا کم‌اطمینان → بدونِ پاسخ
@@ -129,12 +142,13 @@ class AutoReplyCommand extends Command
                 $res = $reply->reply((string) $comment->content, array_filter(['type' => 'نظر', 'page' => $pageTitle]));
                 if (! $res['ok']) {
                     $this->warn("کامنت #{$comment->id}: پاسخ — ".$res['error']);
-                    \Illuminate\Support\Facades\Log::warning('ai_auto_reply.reply_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $res['error']]);
+                    \Modules\Site\Support\AiLog::error('auto_reply.reply_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $res['error']]);
 
                     continue;
                 }
                 if ($res['skip']) {
                     $this->logReply($morph, $comment->id, $res, 'none', false, 'نیازی به پاسخ نداشت');
+                    \Modules\Site\Support\AiLog::info('auto_reply.comment.no_reply_needed', ['id' => $comment->id]);
                     $skipped++;
 
                     continue;
@@ -153,10 +167,14 @@ class AutoReplyCommand extends Command
                     'approved_at' => $publish ? now() : null,
                 ]);
                 $this->logReply($morph, $comment->id, $res, 'reply', $publish, mb_substr((string) $res['text'], 0, 300));
+                \Modules\Site\Support\AiLog::info('auto_reply.comment.replied', [
+                    'id' => $comment->id, 'published' => $publish, 'page' => $pageTitle,
+                    'reply_excerpt' => mb_substr((string) $res['text'], 0, 200),
+                ]);
                 $replied++;
             } catch (\Throwable $e) {
                 $this->warn("کامنت #{$comment->id}: خطا — ".$e->getMessage());
-                \Illuminate\Support\Facades\Log::warning('ai_auto_reply.exception', ['type' => 'comment', 'id' => $comment->id, 'error' => $e->getMessage()]);
+                \Modules\Site\Support\AiLog::error('auto_reply.exception', ['type' => 'comment', 'id' => $comment->id, 'error' => $e->getMessage()]);
             }
         }
 
@@ -197,7 +215,7 @@ class AutoReplyCommand extends Command
                     ]);
                     if (! $m['ok']) {
                         $this->warn("سوال #{$question->id}: مودریشن — ".$m['error']);
-                        \Illuminate\Support\Facades\Log::warning('ai_auto_reply.moderation_failed', ['type' => 'question', 'id' => $question->id, 'error' => $m['error']]);
+                        \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'question', 'id' => $question->id, 'error' => $m['error']]);
 
                         continue;
                     }
@@ -206,6 +224,10 @@ class AutoReplyCommand extends Command
                         $this->applyModeration($question, $m['decision']);
                     }
                     $this->logModeration($morph, $question->id, $m, $applied);
+                    \Modules\Site\Support\AiLog::info('auto_reply.question.moderated', [
+                        'id' => $question->id, 'decision' => $m['decision'],
+                        'confidence' => $m['confidence'], 'applied' => $applied, 'title' => $question->title,
+                    ]);
                     $moderated++;
                     if (! ($applied && $m['decision'] === 'approve')) {
                         continue;
@@ -217,12 +239,12 @@ class AutoReplyCommand extends Command
                 ]);
                 if (! $res['ok'] || ! $res['text']) {
                     $this->warn("سوال #{$question->id}: پاسخ — ".($res['error'] ?? 'بدونِ متن'));
-                    \Illuminate\Support\Facades\Log::warning('ai_auto_reply.reply_failed', ['type' => 'question', 'id' => $question->id, 'error' => $res['error'] ?? 'بدونِ متن']);
+                    \Modules\Site\Support\AiLog::error('auto_reply.reply_failed', ['type' => 'question', 'id' => $question->id, 'error' => $res['error'] ?? 'بدونِ متن']);
 
                     continue;
                 }
 
-                Answer::create([
+                $answer = Answer::create([
                     'question_id' => $question->id,
                     'body' => $res['text'],
                     'expert_id' => null,
@@ -234,13 +256,20 @@ class AutoReplyCommand extends Command
                 if ($publish) {
                     $question->answers_count = $question->answers()->where('status', Answer::STATUS_APPROVED)->count();
                     $question->saveQuietly();
+                    // همان اطلاع‌رسانیِ ایمیلیِ مسیرِ دستی — نویسندهٔ سوال باخبر شود
+                    // (خودش ایمن است: تنظیم/ایمیلِ خالی → بی‌صدا رد می‌شود).
+                    \Modules\Site\Support\ForumNotifier::notifyAuthorOfAnswer($question, $answer);
                 }
 
                 $this->logReply($morph, $question->id, $res, 'reply', $publish, mb_substr((string) $res['text'], 0, 300));
+                \Modules\Site\Support\AiLog::info('auto_reply.question.replied', [
+                    'id' => $question->id, 'published' => $publish, 'title' => $question->title,
+                    'reply_excerpt' => mb_substr((string) $res['text'], 0, 200),
+                ]);
                 $replied++;
             } catch (\Throwable $e) {
                 $this->warn("سوال #{$question->id}: خطا — ".$e->getMessage());
-                \Illuminate\Support\Facades\Log::warning('ai_auto_reply.exception', ['type' => 'question', 'id' => $question->id, 'error' => $e->getMessage()]);
+                \Modules\Site\Support\AiLog::error('auto_reply.exception', ['type' => 'question', 'id' => $question->id, 'error' => $e->getMessage()]);
             }
         }
 
