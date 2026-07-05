@@ -2,7 +2,6 @@
 
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
-use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
@@ -37,6 +36,16 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        // لاگِ اختصاصیِ AI — جزئیاتِ هر درخواستِ gateway و هر تصمیمِ خطِ لولهٔ
+        // خودکار در «فایل» (storage/logs/ai-YYYY-MM-DD.log)، جدا از laravel.log.
+        'ai' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ai.log'),
+            'level' => 'debug',
+            'days' => env('LOG_AI_DAYS', 30),
             'replace_placeholders' => true,
         ],
 
