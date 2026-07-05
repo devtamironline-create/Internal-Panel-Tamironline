@@ -175,7 +175,7 @@ class ForumController extends Controller
     /**
      * GET /v1/forum/questions/{slug}
      */
-    public function show(string $slug): JsonResponse
+    public function show(Request $request, string $slug): JsonResponse
     {
         $question = Question::query()->approved()
             ->where('slug', $slug)
@@ -187,6 +187,30 @@ class ForumController extends Controller
         }
 
         $question->incrementQuietly('view_count');
+
+        // my_vote — احرازِ اختیاری: اگر Bearer معتبر همراه بود، وضعیتِ رأیِ همین
+        // کاربر روی سوال و هر پاسخ برمی‌گردد (برای همگام‌سازیِ بینِ دستگاه‌ها).
+        $customer = $request->user() ?? $request->user('sanctum');
+        $myVote = null;
+        $answerUp = collect();
+        $answerDown = collect();
+        if ($customer instanceof \Modules\CRM\Models\Customer) {
+            try {
+                $qUp = DB::table('site_forum_question_upvotes')
+                    ->where('question_id', $question->id)->where('customer_id', $customer->id)->exists();
+                $qDown = ! $qUp && DB::table('site_forum_question_downvotes')
+                    ->where('question_id', $question->id)->where('customer_id', $customer->id)->exists();
+                $myVote = $qUp ? 'up' : ($qDown ? 'down' : null);
+
+                $answerIds = $question->approvedAnswers->pluck('id');
+                $answerUp = DB::table('site_forum_answer_upvotes')
+                    ->whereIn('answer_id', $answerIds)->where('customer_id', $customer->id)->pluck('answer_id')->flip();
+                $answerDown = DB::table('site_forum_answer_downvotes')
+                    ->whereIn('answer_id', $answerIds)->where('customer_id', $customer->id)->pluck('answer_id')->flip();
+            } catch (\Throwable $e) {
+                // ستونِ customer_id هنوز migrate نشده — my_vote=null، صفحه نشکند.
+            }
+        }
 
         $similar = Question::query()->approved()
             ->where('id', '!=', $question->id)
@@ -204,13 +228,19 @@ class ForumController extends Controller
             'body' => $question->body,
             'meta_title' => $question->title,
             'meta_description' => Str::limit(strip_tags($question->body), 160),
+            'my_vote' => $myVote,
             'answers' => $question->approvedAnswers
                 ->sortByDesc(fn (Answer $a) => $a->is_accepted ? PHP_INT_MAX : $a->upvotes_count)
                 ->values()
-                ->map(fn (Answer $a) => $this->shapeAnswer($a))
+                ->map(fn (Answer $a) => array_merge($this->shapeAnswer($a), [
+                    'my_vote' => $answerUp->has($a->id) ? 'up' : ($answerDown->has($a->id) ? 'down' : null),
+                ]))
                 ->all(),
             'similar_questions' => $similar->map(fn (Question $q) => $this->shapeListItem($q))->values(),
-        ]))->header('Cache-Control', 'public, max-age=120, s-maxage=120');
+            // پاسخِ شخصی‌شده (my_vote) نباید در CDN کش شود.
+        ]))->header('Cache-Control', $customer instanceof \Modules\CRM\Models\Customer
+            ? 'private, no-store'
+            : 'public, max-age=120, s-maxage=120');
     }
 
     /**
@@ -337,11 +367,15 @@ class ForumController extends Controller
      */
     public function upvoteAnswer(Request $request, int $id): JsonResponse
     {
+        $customer = $this->voteCustomer($request);
+        if (! $customer) {
+            return response()->json(['message' => 'برای رأی دادن وارد شوید.'], 401);
+        }
         $answer = Answer::query()->approved()->find($id);
         if (! $answer) {
             return response()->json(['message' => 'Not Found'], 404);
         }
-        $this->incrementUpvote('site_forum_answer_upvotes', 'answer_id', $answer, $request->ip());
+        $this->incrementVote('site_forum_answer_upvotes', 'answer_id', $answer, $customer->id, $request->ip(), 'upvotes_count');
 
         return response()->json(['upvotes' => (int) $answer->upvotes_count]);
     }
@@ -351,25 +385,33 @@ class ForumController extends Controller
      */
     public function upvoteQuestion(Request $request, int $id): JsonResponse
     {
+        $customer = $this->voteCustomer($request);
+        if (! $customer) {
+            return response()->json(['message' => 'برای رأی دادن وارد شوید.'], 401);
+        }
         $question = Question::query()->approved()->find($id);
         if (! $question) {
             return response()->json(['message' => 'Not Found'], 404);
         }
-        $this->incrementUpvote('site_forum_question_upvotes', 'question_id', $question, $request->ip());
+        $this->incrementVote('site_forum_question_upvotes', 'question_id', $question, $customer->id, $request->ip(), 'upvotes_count');
 
         return response()->json(['upvotes' => (int) $question->upvotes_count]);
     }
 
     /**
-     * POST /v1/forum/questions/{id}/downvote — مثلِ upvote، IP-based با ضدِ تکرار.
+     * POST /v1/forum/questions/{id}/downvote
      */
     public function downvoteQuestion(Request $request, int $id): JsonResponse
     {
+        $customer = $this->voteCustomer($request);
+        if (! $customer) {
+            return response()->json(['message' => 'برای رأی دادن وارد شوید.'], 401);
+        }
         $question = Question::query()->approved()->find($id);
         if (! $question) {
             return response()->json(['message' => 'Not Found'], 404);
         }
-        $this->incrementVote('site_forum_question_downvotes', 'question_id', $question, $request->ip(), 'downvotes_count');
+        $this->incrementVote('site_forum_question_downvotes', 'question_id', $question, $customer->id, $request->ip(), 'downvotes_count');
 
         return response()->json(['downvotes' => (int) $question->downvotes_count]);
     }
@@ -379,13 +421,27 @@ class ForumController extends Controller
      */
     public function downvoteAnswer(Request $request, int $id): JsonResponse
     {
+        $customer = $this->voteCustomer($request);
+        if (! $customer) {
+            return response()->json(['message' => 'برای رأی دادن وارد شوید.'], 401);
+        }
         $answer = Answer::query()->approved()->find($id);
         if (! $answer) {
             return response()->json(['message' => 'Not Found'], 404);
         }
-        $this->incrementVote('site_forum_answer_downvotes', 'answer_id', $answer, $request->ip(), 'downvotes_count');
+        $this->incrementVote('site_forum_answer_downvotes', 'answer_id', $answer, $customer->id, $request->ip(), 'downvotes_count');
 
         return response()->json(['downvotes' => (int) $answer->downvotes_count]);
+    }
+
+    /**
+     * مشتریِ احرازشده برای رأی — null یعنی 401.
+     */
+    private function voteCustomer(Request $request): ?\Modules\CRM\Models\Customer
+    {
+        $user = $request->user() ?? $request->user('sanctum');
+
+        return $user instanceof \Modules\CRM\Models\Customer ? $user : null;
     }
 
     /**
@@ -734,19 +790,17 @@ class ForumController extends Controller
         return $slug === '' ? (string) $id : $id.'-'.$slug;
     }
 
-    private function incrementUpvote(string $table, string $column, $owner, string $ip): void
-    {
-        $this->incrementVote($table, $column, $owner, $ip, 'upvotes_count');
-    }
-
     /**
-     * رأیِ IP-based با ضدِ تکرار (uniqueِ دیتابیسی) — مشترکِ upvote/downvote.
+     * رأیِ account-based با ضدِ تکرار (uniqueِ (id, customer_id) در دیتابیس) —
+     * مشترکِ upvote/downvote. IP فقط برای auditing ذخیره می‌شود. رأیِ تکراری
+     * idempotent است: همان شمارندهٔ فعلی برمی‌گردد.
      */
-    private function incrementVote(string $table, string $column, $owner, string $ip, string $counter): void
+    private function incrementVote(string $table, string $column, $owner, int $customerId, string $ip, string $counter): void
     {
         try {
             DB::table($table)->insert([
                 $column => $owner->id,
+                'customer_id' => $customerId,
                 'ip' => $ip,
                 'created_at' => now(),
             ]);

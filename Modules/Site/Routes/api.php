@@ -104,6 +104,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/comments/{id}/like', [CommentController::class, 'like'])
             ->whereNumber('id')
             ->name('api.v1.comments.like');
+        Route::post('/forum/answers/{id}/accept', [ForumController::class, 'acceptAnswer'])
+            ->whereNumber('id')->name('api.v1.forum.answers.accept');
+    });
+
+    // ── رأیِ انجمن — فقط کاربرِ واردشده (dedupe بر اساسِ حساب، نه IPِ مشترکِ BFF).
+    // throttle با auth به‌صورتِ per-user کلید می‌خورد (۳۰ رأی در دقیقه برای هر حساب).
+    Route::middleware(['auth:sanctum', 'throttle:30,1'])->group(function () {
         Route::post('/forum/answers/{id}/upvote', [ForumController::class, 'upvoteAnswer'])
             ->whereNumber('id')->name('api.v1.forum.answers.upvote');
         Route::post('/forum/questions/{id}/upvote', [ForumController::class, 'upvoteQuestion'])
@@ -112,8 +119,6 @@ Route::prefix('v1')->group(function () {
             ->whereNumber('id')->name('api.v1.forum.answers.downvote');
         Route::post('/forum/questions/{id}/downvote', [ForumController::class, 'downvoteQuestion'])
             ->whereNumber('id')->name('api.v1.forum.questions.downvote');
-        Route::post('/forum/answers/{id}/accept', [ForumController::class, 'acceptAnswer'])
-            ->whereNumber('id')->name('api.v1.forum.answers.accept');
     });
 
     // ── Forum writes (سوال جدید + پاسخ جدید) — auth الزامی + throttle ──
