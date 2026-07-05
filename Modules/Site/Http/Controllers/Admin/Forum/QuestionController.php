@@ -115,7 +115,10 @@ class QuestionController extends Controller
             'approved' => Question::where('status', 'approved')->count(),
             'rejected' => Question::where('status', 'rejected')->count(),
             'spam' => Question::where('status', 'spam')->count(),
-            'unanswered' => Question::where('resolution_status', 'unanswered')->count(),
+            // «بدون پاسخ» فقط برای محتوای قابلِ‌پاسخ معنا دارد — سوالِ رد/اسپم‌شده
+            // عمداً پاسخ نمی‌گیرد و نباید این شمارنده را بالا ببرد.
+            'unanswered' => Question::whereIn('status', ['pending', 'approved'])
+                ->where('resolution_status', 'unanswered')->count(),
             'hot' => Question::where('is_hot', true)->count(),
             'featured' => Question::where('is_featured', true)->count(),
         ];
