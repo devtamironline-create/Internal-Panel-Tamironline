@@ -38,6 +38,7 @@ class DashboardController extends Controller
                 ],
                 'recentOrders' => $this->recentOrders(),
                 'hourly' => $this->hourlyToday(),
+                'ordersByRegion' => $this->ordersByProvinceToday(),
                 'trend' => $this->trendRange($fromCarbon, $toCarbon),
                 'statusBreakdown' => $this->statusBreakdownRange($fromCarbon, $toCarbon),
                 'topDevices' => $this->topDevicesRange($fromCarbon, $toCarbon),
@@ -72,6 +73,7 @@ class DashboardController extends Controller
             ],
             'recentOrders' => collect(),
             'hourly' => ['labels' => [], 'total' => [], 'leads' => []],
+            'ordersByRegion' => ['labels' => [], 'data' => [], 'colors' => []],
             'trend' => ['labels' => [], 'total' => [], 'leads' => []],
             'statusBreakdown' => ['labels' => [], 'data' => [], 'colors' => []],
             'topDevices' => ['labels' => [], 'data' => []],
@@ -208,6 +210,52 @@ class DashboardController extends Controller
         }
 
         return ['labels' => $labels, 'total' => array_values($total), 'leads' => array_values($leads)];
+    }
+
+    /**
+     * سفارشاتِ امروز به تفکیکِ استانِ تحتِ پوشش — نمودارِ دایره‌ای.
+     * فعلاً فقط تهران و البرز فعال‌اند؛ استان‌های دیگر/بدونِ استان با برچسبِ
+     * خودشان/«نامشخص» می‌آیند. فقط سفارش‌های واقعی (بدونِ لید) شمرده می‌شوند.
+     *
+     * @return array{labels:array<int,string>, data:array<int,int>, colors:array<int,string>}
+     */
+    protected function ordersByProvinceToday(): array
+    {
+        $labels = [];
+        $data = [];
+        $colors = [];
+        $palette = [
+            '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6',
+            '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#94a3b8',
+        ];
+
+        try {
+            $rows = Order::realOrders()
+                ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+                ->selectRaw('province_id, COUNT(*) as cnt')
+                ->groupBy('province_id')
+                ->orderByDesc('cnt')
+                ->get();
+
+            $names = \Modules\CRM\Models\Province::query()
+                ->whereIn('id', $rows->pluck('province_id')->filter()->all())
+                ->pluck('name', 'id');
+
+            $i = 0;
+            foreach ($rows as $row) {
+                if ((int) $row->cnt === 0) {
+                    continue;
+                }
+                $labels[] = $row->province_id ? ($names[$row->province_id] ?? 'نامشخص') : 'نامشخص';
+                $data[] = (int) $row->cnt;
+                $colors[] = $palette[$i % count($palette)];
+                $i++;
+            }
+        } catch (\Throwable $e) {
+            $labels = $data = $colors = [];
+        }
+
+        return compact('labels', 'data', 'colors');
     }
 
     /**
