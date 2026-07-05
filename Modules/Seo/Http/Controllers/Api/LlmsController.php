@@ -4,6 +4,8 @@ namespace Modules\Seo\Http\Controllers\Api;
 
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
 use Modules\Seo\Models\SeoSetting;
 
 /**
@@ -35,6 +37,28 @@ class LlmsController extends Controller
                 ."- [خدمات تعمیرات]({$base}/services): فهرست خدمات و تعرفهٔ تعمیرات\n"
                 ."- [وبلاگ]({$base}/blog): مقالات و راهنمای تعمیرات\n"
                 ."- [صفحهٔ اصلی]({$base}/): معرفی تعمیرآنلاین\n";
+
+            // لینک‌های واقعیِ دستگاه‌ها و برندهای فعال — تا LLMها ساختارِ صفحاتِ
+            // خدمات را بشناسند. محدود و مرتب تا فایل قابل‌مدیریت بماند.
+            $devices = Device::query()->where('is_active', true)
+                ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('name')
+                ->limit(60)->get(['name', 'slug']);
+            if ($devices->isNotEmpty()) {
+                $body .= "\n## دستگاه‌ها (Devices)\n\n";
+                foreach ($devices as $d) {
+                    $body .= "- [تعمیر {$d->name}]({$base}/services/{$d->slug})\n";
+                }
+            }
+
+            $brands = Brand::query()->where('is_active', true)
+                ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('name')
+                ->limit(80)->get(['name', 'slug']);
+            if ($brands->isNotEmpty()) {
+                $body .= "\n## برندها (Brands)\n\n";
+                foreach ($brands as $b) {
+                    $body .= "- [خدمات {$b->name}]({$base}/brands/{$b->slug})\n";
+                }
+            }
         }
 
         return response($body, 200, [
