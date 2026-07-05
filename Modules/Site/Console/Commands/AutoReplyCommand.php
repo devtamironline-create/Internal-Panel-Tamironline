@@ -62,14 +62,16 @@ class AutoReplyCommand extends Command
 
         $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
         $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
+        $a = $this->handleUserAnswers($moderation, $limit, $days, $modMode, $modThreshold);
 
         \Modules\Site\Support\AiLog::info('auto_reply.done', [
-            'comments' => $c, 'questions' => $q, 'published' => $publish,
+            'comments' => $c, 'questions' => $q, 'user_answers' => $a, 'published' => $publish,
         ]);
 
         $this->info(
             "کامنت: {$c['moderated']} مودریت، {$c['replied']} پاسخ، {$c['skipped']} بی‌نیاز | "
             ."انجمن: {$q['moderated']} مودریت، {$q['replied']} پاسخ | "
+            ."پاسخ‌های کاربران: {$a['moderated']} مودریت | "
             .'حالتِ پاسخ: '.($publish ? 'منتشرشده' : 'پیش‌نویس')
         );
 
@@ -278,6 +280,66 @@ class AutoReplyCommand extends Command
         }
 
         return ['replied' => $replied, 'moderated' => $moderated];
+    }
+
+    /**
+     * مودریشنِ «پاسخ‌های کاربران» در انجمن (نه پاسخ‌های AI/ادمین) — این‌ها فقط
+     * تأیید/رد می‌شوند و پاسخِ AI نمی‌گیرند. پاسخِ پیش‌نویسِ AI (is_expert_reply)
+     * عمداً دست نمی‌خورد تا حالتِ draft (تأییدِ مدیر) معنا داشته باشد.
+     *
+     * @return array{moderated:int}
+     */
+    private function handleUserAnswers(AiModerationService $moderation, int $limit, int $days, string $modMode, float $modThreshold): array
+    {
+        $morph = (new Answer)->getMorphClass();
+        $table = (new Answer)->getTable();
+
+        $answers = Answer::query()
+            ->where('status', Answer::STATUS_PENDING)
+            ->where('is_expert_reply', false)
+            ->where('created_at', '>=', now()->subDays($days))
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
+                ->where('task', 'moderation')->where('subject_type', $morph)
+                ->where('applied', false)->whereIn('decision', ['spam', 'reject'])
+                ->whereColumn('subject_id', "{$table}.id"))
+            ->with('question:id,title')
+            ->latest()
+            ->limit($limit)
+            ->get();
+
+        $moderated = 0;
+        foreach ($answers as $answer) {
+            try {
+                $m = $moderation->analyze((string) $answer->body, array_filter([
+                    'type' => 'پاسخِ کاربر در انجمن',
+                    'title' => $answer->question?->title,
+                ]));
+                if (! $m['ok']) {
+                    $this->warn("پاسخِ کاربر #{$answer->id}: مودریشن — ".$m['error']);
+                    \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'answer', 'id' => $answer->id, 'error' => $m['error']]);
+
+                    continue;
+                }
+                $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
+                if ($applied) {
+                    $this->applyModeration($answer, $m['decision']);
+                    if ($m['decision'] === 'approve') {
+                        $answer->question?->recomputeResolution();
+                    }
+                }
+                $this->logModeration($morph, $answer->id, $m, $applied);
+                \Modules\Site\Support\AiLog::info('auto_reply.answer.moderated', [
+                    'id' => $answer->id, 'decision' => $m['decision'],
+                    'confidence' => $m['confidence'], 'applied' => $applied,
+                ]);
+                $moderated++;
+            } catch (\Throwable $e) {
+                $this->warn("پاسخِ کاربر #{$answer->id}: خطا — ".$e->getMessage());
+                \Modules\Site\Support\AiLog::error('auto_reply.exception', ['type' => 'answer', 'id' => $answer->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return ['moderated' => $moderated];
     }
 
     /**
