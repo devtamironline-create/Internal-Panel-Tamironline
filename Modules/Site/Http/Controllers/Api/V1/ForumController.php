@@ -470,9 +470,13 @@ class ForumController extends Controller
                         ->latest('id')->value('reason');
                 }
 
+                // slug فقط وقتی برگردد که صفحهٔ عمومی واقعاً باز می‌شود (منتشرشده)؛
+                // وگرنه null تا فرانت لینکِ ۴۰۴ نسازد (طبقِ قرارداد).
+                $isPublic = $q->status === Question::STATUS_APPROVED && $q->published_at !== null;
+
                 return [
                     'id' => (int) $q->id,
-                    'slug' => $q->slug,
+                    'slug' => $isPublic ? $q->slug : null,
                     'title' => $q->title,
                     'status' => $status,
                     'answer_count' => (int) $q->answers_count,
@@ -607,18 +611,28 @@ class ForumController extends Controller
                     ->where('site_forum_questions.status', Question::STATUS_APPROVED);
             })
             ->where('crm_devices.is_active', true)
-            ->groupBy('crm_devices.id', 'crm_devices.name', 'crm_devices.slug')
+            ->groupBy('crm_devices.id', 'crm_devices.name', 'crm_devices.slug', 'crm_devices.icon', 'crm_devices.tone', 'crm_devices.thumbnail')
             ->orderByRaw('COUNT(site_forum_questions.id) DESC')
             ->get([
                 'crm_devices.id',
                 'crm_devices.name',
                 'crm_devices.slug',
+                'crm_devices.icon',
+                'crm_devices.tone',
+                'crm_devices.thumbnail',
                 DB::raw('COUNT(site_forum_questions.id) as question_count'),
             ]);
 
         return response()->json([
             'data' => $rows->map(fn ($r) => [
-                'device' => ['slug' => $r->slug, 'name' => $r->name],
+                'device' => [
+                    'slug' => $r->slug,
+                    'name' => $r->name,
+                    'icon' => $r->icon,
+                    'tone' => $r->tone,
+                    // تصویر از همان «مدیریتِ دستگاه‌های» CRM (thumbnail) می‌آید.
+                    'thumbnail' => MediaUrl::resolve($r->thumbnail),
+                ],
                 'question_count' => (int) $r->question_count,
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=600, s-maxage=600');
