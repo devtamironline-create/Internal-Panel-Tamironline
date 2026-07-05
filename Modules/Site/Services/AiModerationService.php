@@ -19,6 +19,25 @@ class AiModerationService
 
     public function __construct(private AiGatewayService $gateway) {}
 
+    /**
+     * آیا تصمیمِ مودریشن به‌صورتِ خودکار اعمال شود؟ منطقِ مشترکِ ایمنی:
+     *   - approve: همیشه امن است (انتشارِ محتوای سالم).
+     *   - spam/reject (اقدامِ مخرب/مخفی‌کننده): در حالتِ «auto» همیشه؛ در بقیهٔ
+     *     حالت‌ها فقط وقتی اطمینانِ مدل ≥ آستانه باشد — وگرنه برای بازبینیِ
+     *     انسان «در انتظار» می‌ماند تا کامنتِ سالم به‌اشتباه مخفی نشود.
+     */
+    public static function shouldAutoApply(string $mode, string $decision, ?float $confidence, float $threshold): bool
+    {
+        if ($decision === 'approve') {
+            return true;
+        }
+        if ($mode === 'auto') {
+            return true;
+        }
+
+        return ($confidence ?? 0.0) >= $threshold;
+    }
+
     /** مدلِ انتخاب‌شده برای وظیفهٔ مودریشن. */
     public function model(): ?AiModel
     {

@@ -84,8 +84,11 @@ class AiReplyService
     {
         $type = $context['type'] ?? 'نظر';
         $title = isset($context['title']) ? "عنوانِ سوال: {$context['title']}\n" : '';
+        // صفحهٔ میزبان (نامِ دستگاه/برند یا مقاله) تا پاسخ به همان محصول/موضوع
+        // مرتبط و دقیق باشد.
+        $page = isset($context['page']) ? "این {$type} در صفحهٔ «{$context['page']}» ثبت شده است؛ پاسخ را به همین موضوع مرتبط کن.\n" : '';
 
-        return "به این «{$type}»ِ کاربر پاسخ بده:\n{$title}«««\n{$text}\n»»»";
+        return "به این «{$type}»ِ کاربر پاسخ بده:\n{$page}{$title}«««\n{$text}\n»»»";
     }
 
     /**
