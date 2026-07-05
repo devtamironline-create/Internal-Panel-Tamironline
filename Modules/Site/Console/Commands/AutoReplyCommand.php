@@ -82,8 +82,17 @@ class AutoReplyCommand extends Command
             ->where('is_admin_reply', false)
             ->where('created_at', '>=', now()->subDays($days))
             ->whereDoesntHave('replies', fn ($q) => $q->where('is_admin_reply', true))
+            // idempotency: فقط خروجیِ «موفق» (پاسخ داده/بی‌نیاز) مانعِ پردازشِ دوباره
+            // است — لاگِ خطاهای گذشته نباید آیتم را برای همیشه مسدود کند.
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
                 ->where('task', 'reply')->where('subject_type', $morph)
+                ->whereIn('decision', ['reply', 'none'])
+                ->whereColumn('subject_id', "{$table}.id"))
+            // آیتمی که گیتِ ایمنی نگه داشته (پیشنهادِ spam/rejectِ اعمال‌نشده) منتظرِ
+            // تصمیمِ انسان است — دوباره مودریت/پاسخ نمی‌شود تا توکن هدر نرود.
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
+                ->where('task', 'moderation')->where('subject_type', $morph)
+                ->where('applied', false)->whereIn('decision', ['spam', 'reject'])
                 ->whereColumn('subject_id', "{$table}.id"))
             ->latest()
             ->limit($limit)
@@ -100,6 +109,7 @@ class AutoReplyCommand extends Command
                     $m = $moderation->analyze((string) $comment->content, array_filter(['type' => 'نظر', 'title' => $pageTitle]));
                     if (! $m['ok']) {
                         $this->warn("کامنت #{$comment->id}: مودریشن — ".$m['error']);
+                        \Illuminate\Support\Facades\Log::warning('ai_auto_reply.moderation_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $m['error']]);
 
                         continue;
                     }
@@ -119,6 +129,7 @@ class AutoReplyCommand extends Command
                 $res = $reply->reply((string) $comment->content, array_filter(['type' => 'نظر', 'page' => $pageTitle]));
                 if (! $res['ok']) {
                     $this->warn("کامنت #{$comment->id}: پاسخ — ".$res['error']);
+                    \Illuminate\Support\Facades\Log::warning('ai_auto_reply.reply_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $res['error']]);
 
                     continue;
                 }
@@ -145,6 +156,7 @@ class AutoReplyCommand extends Command
                 $replied++;
             } catch (\Throwable $e) {
                 $this->warn("کامنت #{$comment->id}: خطا — ".$e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('ai_auto_reply.exception', ['type' => 'comment', 'id' => $comment->id, 'error' => $e->getMessage()]);
             }
         }
 
@@ -165,6 +177,11 @@ class AutoReplyCommand extends Command
             ->whereDoesntHave('answers')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
                 ->where('task', 'reply')->where('subject_type', $morph)
+                ->whereIn('decision', ['reply', 'none'])
+                ->whereColumn('subject_id', "{$table}.id"))
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
+                ->where('task', 'moderation')->where('subject_type', $morph)
+                ->where('applied', false)->whereIn('decision', ['spam', 'reject'])
                 ->whereColumn('subject_id', "{$table}.id"))
             ->latest()
             ->limit($limit)
@@ -180,6 +197,7 @@ class AutoReplyCommand extends Command
                     ]);
                     if (! $m['ok']) {
                         $this->warn("سوال #{$question->id}: مودریشن — ".$m['error']);
+                        \Illuminate\Support\Facades\Log::warning('ai_auto_reply.moderation_failed', ['type' => 'question', 'id' => $question->id, 'error' => $m['error']]);
 
                         continue;
                     }
@@ -199,6 +217,7 @@ class AutoReplyCommand extends Command
                 ]);
                 if (! $res['ok'] || ! $res['text']) {
                     $this->warn("سوال #{$question->id}: پاسخ — ".($res['error'] ?? 'بدونِ متن'));
+                    \Illuminate\Support\Facades\Log::warning('ai_auto_reply.reply_failed', ['type' => 'question', 'id' => $question->id, 'error' => $res['error'] ?? 'بدونِ متن']);
 
                     continue;
                 }
@@ -221,6 +240,7 @@ class AutoReplyCommand extends Command
                 $replied++;
             } catch (\Throwable $e) {
                 $this->warn("سوال #{$question->id}: خطا — ".$e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('ai_auto_reply.exception', ['type' => 'question', 'id' => $question->id, 'error' => $e->getMessage()]);
             }
         }
 
