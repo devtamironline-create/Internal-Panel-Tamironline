@@ -231,6 +231,10 @@ class AiController extends Controller
             if (in_array('approved_by_user_id', $subject->getFillable(), true)) {
                 $data['approved_by_user_id'] = auth()->id();
             }
+            // سوالِ انجمن بدونِ published_at در لیست‌های عمومی نمی‌آید (scopeApproved).
+            if (in_array('published_at', $subject->getFillable(), true)) {
+                $data['published_at'] = $subject->getAttribute('published_at') ?? now();
+            }
         }
         $subject->update($data);
     }
