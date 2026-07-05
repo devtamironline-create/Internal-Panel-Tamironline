@@ -22,3 +22,9 @@ Schedule::command('ai:auto-reply')
     ->everyFiveMinutes()
     ->onOneServer()
     ->withoutOverlapping();
+
+// ضربانِ زمان‌بند — هر اجرای schedule:run این زمان را ثبت می‌کند تا ai:diagnose
+// بتواند قطعی بگوید cron کار می‌کند یا نه (مثلاً وقتی cron با phpِ اشتباه است).
+Schedule::call(function () {
+    \Illuminate\Support\Facades\Cache::put('scheduler_heartbeat', now()->toDateTimeString(), now()->addDay());
+})->everyMinute()->name('scheduler-heartbeat');

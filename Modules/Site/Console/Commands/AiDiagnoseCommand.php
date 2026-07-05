@@ -103,11 +103,29 @@ class AiDiagnoseCommand extends Command
         } else {
             $this->line('هنوز هیچ لاگِ AI ثبت نشده است.');
         }
-        if (in_array($replyMode, ['draft', 'auto'], true)
-            && (! $lastLog || $lastLog->created_at?->lt(now()->subMinutes(30)))) {
-            $this->warn('⚠️ در ۳۰ دقیقهٔ اخیر فعالیتی نبوده. اگر آیتمِ در صف دارید، cronِ زمان‌بند را چک کنید:');
-            $this->line('   * * * * * php artisan schedule:run   (هر دقیقه)');
-            $this->line('   یا برای تستِ فوری: php artisan ai:auto-reply --limit=10');
+
+        // ضربانِ قطعیِ زمان‌بند (هر دقیقه توسطِ schedule:run ثبت می‌شود).
+        $heartbeatFresh = false;
+        try {
+            $beat = \Illuminate\Support\Facades\Cache::get('scheduler_heartbeat');
+        } catch (\Throwable $e) {
+            $beat = null;
+            $this->warn('⚠️ cache در دسترس نیست ('.$e->getMessage().') — ضربانِ زمان‌بند قابلِ خواندن نیست.');
+        }
+        if ($beat) {
+            $beatAt = \Illuminate\Support\Carbon::parse($beat);
+            $heartbeatFresh = $beatAt->gt(now()->subMinutes(10));
+            $heartbeatFresh
+                ? $this->line('✅ زمان‌بند (cron) فعال است — آخرین ضربان: '.$beatAt->diffForHumans())
+                : $this->error('⛔ زمان‌بند از '.$beatAt->diffForHumans().' اجرا نشده — cron خوابیده یا خطا می‌دهد.');
+        } else {
+            $this->warn('⚠️ هنوز هیچ ضربانی از زمان‌بند ثبت نشده — یا cron اجرا نمی‌شود، یا این نسخه تازه دیپلوی شده (۲ دقیقه صبر کنید و دوباره بزنید).');
+        }
+        if (! $heartbeatFresh) {
+            $issues++;
+            $this->line('   خطِ cron باید هر دقیقه با «همان PHPای که دستی می‌زنید» اجرا شود، مثلاً:');
+            $this->line('   * * * * * '.(PHP_BINARY ?: 'php').' '.base_path('artisan').' schedule:run >> /dev/null 2>&1');
+            $this->line('   ⚠️ اگر cron با phpِ پیش‌فرضِ سرور (نسخهٔ قدیمی) اجرا شود، بی‌صدا کرش می‌کند و هیچ‌چیز پردازش نمی‌شود.');
         }
 
         // آخرین خطاهای ثبت‌شده
@@ -122,21 +140,30 @@ class AiDiagnoseCommand extends Command
 
         // ─── ۵) کامنت‌های بی‌پاسخ ───────────────────────────────────
         $this->info('─── ۵) کامنت‌های بی‌پاسخ ───');
-        $this->diagnoseComments($days, $limit);
+        $queued = $this->diagnoseComments($days, $limit);
 
         // ─── ۶) سوال‌های بی‌پاسخِ انجمن ─────────────────────────────
         $this->info('─── ۶) سوال‌های بی‌پاسخِ انجمن ───');
-        $this->diagnoseQuestions($days, $limit);
+        $queued += $this->diagnoseQuestions($days, $limit);
 
         $this->newLine();
+        // cron سالم ولی صف خالی نمی‌شود → مظنونِ اصلی: قفلِ گیرکردهٔ withoutOverlapping
+        // (اجرای نیمه‌کارهٔ قبلی). پاک‌کردنِ cache قفل را آزاد می‌کند.
+        if ($heartbeatFresh && $queued > 0 && $lastLog && $lastLog->created_at?->lt(now()->subMinutes(15))) {
+            $this->warn('⚠️ زمان‌بند فعال است ولی صف پردازش نمی‌شود — احتمالاً قفلِ withoutOverlapping از اجرای نیمه‌کارهٔ قبلی مانده.');
+            $this->line('   رفع: php artisan cache:clear   سپس: php artisan ai:auto-reply --limit=20');
+            $issues++;
+        }
+
         $issues === 0
             ? $this->info('پیکربندی سالم است — ستونِ «تشخیص» دلیلِ هر آیتم را می‌گوید.')
-            : $this->error("{$issues} مشکلِ پیکربندی پیدا شد (بالا ⛔ خورده‌اند) — اول آن‌ها را برطرف کنید.");
+            : $this->error("{$issues} مشکل پیدا شد (بالا ⛔/⚠️ خورده‌اند) — اول آن‌ها را برطرف کنید.");
 
         return self::SUCCESS;
     }
 
-    private function diagnoseComments(int $days, int $limit): void
+    /** @return int تعدادِ آیتم‌های «در صف» */
+    private function diagnoseComments(int $days, int $limit): int
     {
         $morph = (new Comment)->getMorphClass();
 
@@ -146,12 +173,18 @@ class AiDiagnoseCommand extends Command
             ->whereDoesntHave('replies', fn ($q) => $q->where('is_admin_reply', true))
             ->latest()->limit($limit)->get();
 
+        $queued = 0;
         if ($items->isEmpty()) {
             $this->line('کامنتِ بی‌پاسخی نیست. ✅');
         } else {
-            $this->table(['#', 'وضعیت', 'تاریخ', 'تشخیص'], $items->map(fn ($c) => [
-                $c->id, $c->status, (string) $c->created_at, $this->blockReason($morph, $c, $days),
-            ])->all());
+            $this->table(['#', 'وضعیت', 'تاریخ', 'تشخیص'], $items->map(function ($c) use ($morph, $days, &$queued) {
+                $reason = $this->blockReason($morph, $c, $days);
+                if (str_starts_with($reason, '⏳')) {
+                    $queued++;
+                }
+
+                return [$c->id, $c->status, (string) $c->created_at, $reason];
+            })->all());
         }
 
         // کامنت‌هایی که پاسخِ پیش‌نویس دارند (خودشان یا پاسخ‌شان منتظرِ تأیید است).
@@ -163,9 +196,12 @@ class AiDiagnoseCommand extends Command
         if ($withDraft > 0) {
             $this->warn("⚠️ {$withDraft} کامنتِ در انتظار «پاسخِ پیش‌نویس» دارند — از پنل → مدیریتِ کامنت‌ها تأیید کنید.");
         }
+
+        return $queued;
     }
 
-    private function diagnoseQuestions(int $days, int $limit): void
+    /** @return int تعدادِ آیتم‌های «در صف» */
+    private function diagnoseQuestions(int $days, int $limit): int
     {
         $morph = (new Question)->getMorphClass();
 
@@ -177,11 +213,20 @@ class AiDiagnoseCommand extends Command
         if ($items->isEmpty()) {
             $this->line('سوالِ بی‌پاسخی نیست. ✅');
 
-            return;
+            return 0;
         }
-        $this->table(['#', 'وضعیت', 'تاریخ', 'تشخیص'], $items->map(fn ($q) => [
-            $q->id, $q->status, (string) $q->created_at, $this->blockReason($morph, $q, $days),
-        ])->all());
+
+        $queued = 0;
+        $this->table(['#', 'وضعیت', 'تاریخ', 'تشخیص'], $items->map(function ($q) use ($morph, $days, &$queued) {
+            $reason = $this->blockReason($morph, $q, $days);
+            if (str_starts_with($reason, '⏳')) {
+                $queued++;
+            }
+
+            return [$q->id, $q->status, (string) $q->created_at, $reason];
+        })->all());
+
+        return $queued;
     }
 
     /**
