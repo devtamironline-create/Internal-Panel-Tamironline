@@ -18,7 +18,8 @@ Schedule::command('crm:tickets:archive-stale')
 
 // پاسخِ خودکارِ AI به کامنت‌ها و سوال‌های انجمن. خودِ کامند اگر ai_reply_mode
 // روی off باشد سریع خارج می‌شود؛ پس زمان‌بندیِ همیشگی بی‌خطر است.
-Schedule::command('ai:auto-reply')
+// limit=20 تا صفِ عقب‌مانده در یک دور خالی شود (نه چند دورِ ۵دقیقه‌ای).
+Schedule::command('ai:auto-reply --limit=20')
     ->everyFiveMinutes()
     ->onOneServer()
     ->withoutOverlapping();
