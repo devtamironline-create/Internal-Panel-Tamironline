@@ -70,7 +70,8 @@ class AiModerationService
 
         // ابتدا با «JSON mode» تا مدل مجبور به خروجیِ JSON شود (نه گفتگو). اگر
         // gateway این پارامتر را نپذیرفت (۴۰۰)، بدونِ آن دوباره تلاش می‌کنیم.
-        $opts = ['temperature' => 0.1, 'max_tokens' => 600, 'response_format' => ['type' => 'json_object']];
+        // سقفِ توکن با فضای کافی برای «استدلالِ» مدل‌های reasoning + خروجیِ JSON.
+        $opts = ['temperature' => 0.1, 'max_tokens' => 1200, 'response_format' => ['type' => 'json_object']];
         $res = $this->gateway->chat($model, $messages, $opts);
         if (! $res['ok'] && ($res['status'] ?? null) === 400) {
             unset($opts['response_format']);
