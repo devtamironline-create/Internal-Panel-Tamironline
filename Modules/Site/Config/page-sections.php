@@ -157,7 +157,8 @@ return [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'highlight' => ['label' => 'بخش گرادیانت تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
-                    'popular_searches' => [
+                    // نامِ فیلد مطابقِ قراردادِ فرانت: hero.popular_searches_items
+                    'popular_searches_items' => [
                         'label' => 'جستجوهای محبوب (هر آیتم یک pill)',
                         'type' => 'repeater',
                         'item_fields' => [
@@ -177,6 +178,7 @@ return [
                     'show_app_promo' => ['label' => 'بنر اپ', 'type' => 'bool'],
                     'show_top_experts' => ['label' => 'کارشناسان برتر', 'type' => 'bool'],
                     'show_categories' => ['label' => 'دسته‌بندی خودکار (دستگاه/برند/ترکیبی)', 'type' => 'bool'],
+                    'show_category_shortcuts' => ['label' => 'جستجو بر اساس موضوع (کارت‌های موضوعی)', 'type' => 'bool'],
                     'show_expert_answers' => ['label' => 'پاسخ‌های کارشناسی', 'type' => 'bool'],
                     'show_final_cta' => ['label' => 'CTA پایانی', 'type' => 'bool'],
                 ],
@@ -195,6 +197,26 @@ return [
                 'fields' => [
                     'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
                     'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                ],
+            ],
+
+            'category_shortcuts' => [
+                'label' => 'جستجو بر اساس موضوع (کارت‌های موضوعی)',
+                'description' => 'کارت‌های «جستجو بر اساس موضوع» صفحه‌ی انجمن. اگر href خالی بماند، فرانت به فیلترِ ?topic=slug لینک می‌دهد (تاکسونومیِ موضوعاتِ انجمن). آیکن‌های مجاز: alert-circle | settings | shield-check | wrench | clipboard-check | zap | help-circle — tone: blue | rose | green | violet | amber | cyan.',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'کارت‌ها',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'slug' => ['label' => 'slug (برای فیلتر ?topic=)', 'type' => 'string', 'rules' => 'nullable|string|max:80'],
+                            'label' => ['label' => 'عنوان', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'description' => ['label' => 'توضیح', 'type' => 'string', 'rules' => 'nullable|string|max:300'],
+                            'icon' => ['label' => 'آیکن', 'type' => 'string', 'rules' => 'nullable|string|max:60'],
+                            'tone' => ['label' => 'tone', 'type' => 'string', 'rules' => 'nullable|string|max:30'],
+                            'href' => ['label' => 'لینک (اختیاری)', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                        ],
+                    ],
                 ],
             ],
 

@@ -124,6 +124,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::put('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'update'])->whereNumber('id')->name('update');
             Route::put('/{id}/status', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'updateStatus'])->whereNumber('id')->name('update-status');
             Route::put('/{id}/toggle/{flag}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'toggleFlag'])->whereNumber('id')->whereIn('flag', ['is_hot', 'is_featured'])->name('toggle-flag');
+            Route::put('/{id}/topic', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'updateTopic'])->whereNumber('id')->name('update-topic');
             Route::post('/{id}/admin-reply', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'adminReply'])->whereNumber('id')->name('admin-reply');
             Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'destroy'])->whereNumber('id')->name('destroy');
             // پاسخ‌های nested

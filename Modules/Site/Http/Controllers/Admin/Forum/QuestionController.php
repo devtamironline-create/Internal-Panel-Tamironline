@@ -126,10 +126,11 @@ class QuestionController extends Controller
     public function show(int $id): View
     {
         $this->checkView();
-        $question = Question::with(['device:id,name,slug', 'brand:id,name,slug', 'answers.expert'])->findOrFail($id);
+        $question = Question::with(['device:id,name,slug', 'brand:id,name,slug', 'topic:id,slug,label', 'answers.expert'])->findOrFail($id);
         $experts = Expert::active()->orderBy('name')->get(['id', 'name', 'title']);
+        $topics = \Modules\Site\Models\Forum\Topic::query()->active()->ordered()->get(['id', 'label']);
 
-        return view('site::admin.forum.questions.show', compact('question', 'experts'));
+        return view('site::admin.forum.questions.show', compact('question', 'experts', 'topics'));
     }
 
     public function updateStatus(Request $request, int $id): RedirectResponse
@@ -153,6 +154,28 @@ class QuestionController extends Controller
         );
 
         return back()->with('success', 'وضعیت سوال به‌روز شد.');
+    }
+
+    /**
+     * انتسابِ «موضوع» (تاکسونومیِ انجمن) به سوال — برای فیلترِ ?topic= سایت.
+     */
+    public function updateTopic(Request $request, int $id): RedirectResponse
+    {
+        $this->checkModerate();
+        $data = $request->validate([
+            'topic_id' => 'nullable|integer|exists:site_forum_topics,id',
+        ]);
+
+        $q = Question::findOrFail($id);
+        $q->update(['topic_id' => $data['topic_id'] ?? null]);
+
+        \Modules\Site\Support\ForumActivityLogger::log(
+            'topic:assign',
+            questionId: $q->id,
+            meta: ['topic_id' => $data['topic_id'] ?? null],
+        );
+
+        return back()->with('success', 'موضوعِ سوال به‌روز شد.');
     }
 
     public function toggleFlag(int $id, string $flag): RedirectResponse
