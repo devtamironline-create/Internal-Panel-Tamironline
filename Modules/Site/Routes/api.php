@@ -78,6 +78,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/forum/expert-answers', [ForumController::class, 'expertAnswers'])->name('api.v1.forum.expert-answers');
         Route::get('/forum/hot-problems', [ForumController::class, 'hotProblems'])->name('api.v1.forum.hot-problems');
         Route::get('/forum/device-stats', [ForumController::class, 'deviceStats'])->name('api.v1.forum.device-stats');
+        Route::get('/forum/topics', [ForumController::class, 'topics'])->name('api.v1.forum.topics');
+        Route::get('/forum/popular-searches', [ForumController::class, 'popularSearches'])->name('api.v1.forum.popular-searches');
 
         // pages + devices (public read)
         Route::get('/pages/{slug}', [PageController::class, 'show'])
@@ -106,6 +108,10 @@ Route::prefix('v1')->group(function () {
             ->whereNumber('id')->name('api.v1.forum.answers.upvote');
         Route::post('/forum/questions/{id}/upvote', [ForumController::class, 'upvoteQuestion'])
             ->whereNumber('id')->name('api.v1.forum.questions.upvote');
+        Route::post('/forum/answers/{id}/downvote', [ForumController::class, 'downvoteAnswer'])
+            ->whereNumber('id')->name('api.v1.forum.answers.downvote');
+        Route::post('/forum/questions/{id}/downvote', [ForumController::class, 'downvoteQuestion'])
+            ->whereNumber('id')->name('api.v1.forum.questions.downvote');
         Route::post('/forum/answers/{id}/accept', [ForumController::class, 'acceptAnswer'])
             ->whereNumber('id')->name('api.v1.forum.answers.accept');
     });
@@ -114,6 +120,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'throttle:3,10'])->group(function () {  // 3 سوال در هر 10 دقیقه
         Route::post('/forum/questions', [ForumController::class, 'store'])
             ->name('api.v1.forum.questions.store');
+    });
+    // «سوالاتِ من» — تاریخچهٔ سوال‌های کاربرِ واردشده (همهٔ وضعیت‌ها؛ خصوصی/no-store)
+    Route::middleware(['auth:sanctum', 'throttle:30,1'])->group(function () {
+        Route::get('/forum/my-questions', [ForumController::class, 'myQuestions'])
+            ->name('api.v1.forum.my-questions');
     });
     // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه (بدون login برای anonymous reporting)
     Route::middleware('throttle:5,1')->group(function () {

@@ -153,6 +153,7 @@ class ForumController extends Controller
             ->with(['device:id,name,slug', 'brand:id,name,slug']);
 
         $this->applyFilters($base, $request);
+        $this->logSearch($request);
         $base = $this->applyTab($base, $tab);
         $this->applySort($base, $request->query('sort', 'newest'));
 
@@ -360,6 +361,130 @@ class ForumController extends Controller
     }
 
     /**
+     * POST /v1/forum/questions/{id}/downvote — مثلِ upvote، IP-based با ضدِ تکرار.
+     */
+    public function downvoteQuestion(Request $request, int $id): JsonResponse
+    {
+        $question = Question::query()->approved()->find($id);
+        if (! $question) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+        $this->incrementVote('site_forum_question_downvotes', 'question_id', $question, $request->ip(), 'downvotes_count');
+
+        return response()->json(['downvotes' => (int) $question->downvotes_count]);
+    }
+
+    /**
+     * POST /v1/forum/answers/{id}/downvote
+     */
+    public function downvoteAnswer(Request $request, int $id): JsonResponse
+    {
+        $answer = Answer::query()->approved()->find($id);
+        if (! $answer) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+        $this->incrementVote('site_forum_answer_downvotes', 'answer_id', $answer, $request->ip(), 'downvotes_count');
+
+        return response()->json(['downvotes' => (int) $answer->downvotes_count]);
+    }
+
+    /**
+     * GET /v1/forum/topics — تاکسونومیِ موضوعات با شمارشِ سوال‌های منتشرشده.
+     */
+    public function topics(): JsonResponse
+    {
+        $rows = \Modules\Site\Models\Forum\Topic::query()
+            ->active()->ordered()
+            ->withCount(['questions as question_count' => fn ($q) => $q->approved()])
+            ->get();
+
+        return response()->json([
+            'data' => $rows->map(fn ($t) => [
+                'slug' => $t->slug,
+                'label' => $t->label,
+                'description' => $t->description,
+                'icon' => $t->icon,
+                'tone' => $t->tone,
+                'question_count' => (int) $t->question_count,
+                'sort_order' => (int) $t->sort_order,
+                'is_active' => (bool) $t->is_active,
+            ])->values(),
+        ])->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * GET /v1/forum/popular-searches?limit=6 — پرتکرارترین جستجوهای ۳۰ روزِ اخیر.
+     */
+    public function popularSearches(Request $request): JsonResponse
+    {
+        $limit = max(1, min((int) $request->query('limit', 6), 20));
+
+        $rows = DB::table('site_forum_search_logs')
+            ->selectRaw('query as text, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('query')
+            ->orderByDesc('count')
+            ->limit($limit)
+            ->get();
+
+        return response()->json(['data' => $rows])
+            ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * GET /v1/forum/my-questions — سوالاتِ خودِ کاربرِ احرازشده در همهٔ وضعیت‌ها.
+     * دادهٔ خصوصی است → no-store. جدیدترین اول.
+     */
+    public function myQuestions(Request $request): JsonResponse
+    {
+        $customer = $request->user();
+        if (! $customer instanceof \Modules\CRM\Models\Customer) {
+            return response()->json(['message' => 'برای مشاهدهٔ سوالاتِ خود وارد شوید.'], 401);
+        }
+
+        // customer_id برای سوال‌های جدید؛ author_phone برای سوال‌های قدیمیِ backfill‌نشده.
+        $rows = Question::query()
+            ->where(fn ($q) => $q->where('customer_id', $customer->id)
+                ->orWhere(fn ($qq) => $qq->whereNull('customer_id')->where('author_phone', $customer->mobile)))
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        $morph = (new Question)->getMorphClass();
+
+        return response()->json([
+            'data' => $rows->map(function (Question $q) use ($morph) {
+                $status = match ($q->status) {
+                    Question::STATUS_APPROVED => 'published',
+                    Question::STATUS_REJECTED, Question::STATUS_SPAM => 'rejected',
+                    default => 'pending',
+                };
+
+                // دلیلِ رد — از آخرین تصمیمِ مودریشنِ AI (اگر بوده).
+                $reason = null;
+                if ($status === 'rejected') {
+                    $reason = \Modules\Site\Models\AiDecisionLog::query()
+                        ->where('task', 'moderation')
+                        ->where('subject_type', $morph)->where('subject_id', $q->id)
+                        ->whereIn('decision', ['reject', 'spam'])
+                        ->latest('id')->value('reason');
+                }
+
+                return [
+                    'id' => (int) $q->id,
+                    'slug' => $q->slug,
+                    'title' => $q->title,
+                    'status' => $status,
+                    'answer_count' => (int) $q->answers_count,
+                    'view_count' => (int) $q->view_count,
+                    'created_at' => $q->created_at?->toIso8601String(),
+                    'rejection_reason' => $reason,
+                ];
+            })->values(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
      * POST /v1/forum/answers/{id}/accept
      * Header: X-Author-Token = توکن صاحب سوال (از response POST سوال)
      */
@@ -509,9 +634,16 @@ class ForumController extends Controller
         if ($brandSlug = trim((string) $request->query('brand', ''))) {
             $query->whereHas('brand', fn ($q) => $q->where('slug', $brandSlug));
         }
+        // فیلترِ موضوع (تاکسونومیِ انجمن) — ?topic=<slug>
+        if ($topicSlug = trim((string) $request->query('topic', ''))) {
+            $query->whereHas('topic', fn ($q) => $q->where('slug', $topicSlug)->where('is_active', true));
+        }
+        // جستجو روی عنوان + بدنه + تگ‌ها (tags ستونِ JSON است؛ در MySQL مقدارِ
+        // یونیکد نرمال ذخیره می‌شود و LIKE فارسی را هم پیدا می‌کند).
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where(fn ($qq) => $qq->where('title', 'like', "%{$q}%")
-                ->orWhere('body', 'like', "%{$q}%"));
+                ->orWhere('body', 'like', "%{$q}%")
+                ->orWhere('tags', 'like', "%{$q}%"));
         }
     }
 
@@ -590,16 +722,43 @@ class ForumController extends Controller
 
     private function incrementUpvote(string $table, string $column, $owner, string $ip): void
     {
+        $this->incrementVote($table, $column, $owner, $ip, 'upvotes_count');
+    }
+
+    /**
+     * رأیِ IP-based با ضدِ تکرار (uniqueِ دیتابیسی) — مشترکِ upvote/downvote.
+     */
+    private function incrementVote(string $table, string $column, $owner, string $ip, string $counter): void
+    {
         try {
             DB::table($table)->insert([
                 $column => $owner->id,
                 'ip' => $ip,
                 'created_at' => now(),
             ]);
-            $owner->increment('upvotes_count');
+            $owner->increment($counter);
             $owner->refresh();
         } catch (\Illuminate\Database\QueryException $e) {
             // duplicate — already voted
+        }
+    }
+
+    /**
+     * ثبتِ عبارتِ جستجو برای «جستجوهای محبوب» — بی‌صدا و بدونِ اثر روی پاسخ.
+     */
+    private function logSearch(Request $request): void
+    {
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 2 || mb_strlen($q) > 190) {
+            return;
+        }
+        try {
+            DB::table('site_forum_search_logs')->insert([
+                'query' => $q,
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // جدول هنوز migrate نشده یا خطای گذرا — جستجو نباید بشکند.
         }
     }
 

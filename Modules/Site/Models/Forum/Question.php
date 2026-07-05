@@ -17,11 +17,11 @@ class Question extends Model
 
     protected $fillable = [
         'slug', 'title', 'body', 'model', 'tags',
-        'device_id', 'brand_id',
-        'author_name', 'author_email', 'author_phone', 'author_token', 'user_id',
+        'device_id', 'brand_id', 'topic_id',
+        'author_name', 'author_email', 'author_phone', 'author_token', 'user_id', 'customer_id',
         'status', 'approved_at', 'approved_by_user_id',
         'resolution_status',
-        'view_count', 'upvotes_count', 'answers_count',
+        'view_count', 'upvotes_count', 'downvotes_count', 'answers_count',
         'is_hot', 'is_featured',
         'ip', 'user_agent',
         'published_at',
@@ -33,6 +33,7 @@ class Question extends Model
         'is_featured' => 'boolean',
         'view_count' => 'integer',
         'upvotes_count' => 'integer',
+        'downvotes_count' => 'integer',
         'answers_count' => 'integer',
         'published_at' => 'datetime',
         'approved_at' => 'datetime',
@@ -67,6 +68,16 @@ class Question extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class, 'topic_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\CRM\Models\Customer::class, 'customer_id');
     }
 
     public function answers(): HasMany
