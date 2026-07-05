@@ -134,6 +134,19 @@
         </div>
     </div>
 
+    {{-- ─── سفارشاتِ امروز به تفکیکِ منطقه (دایره‌ای) ─── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">سفارشاتِ امروز به تفکیکِ منطقه</h3>
+            <p class="text-xs text-gray-400 mb-2">سهمِ هر استانِ تحتِ پوشش از سفارش‌های امروز (فعلاً تهران و البرز)</p>
+            @if(!empty($ordersByRegion['data']))
+                <div id="chart-region"></div>
+            @else
+                <p class="text-center text-gray-400 py-10 text-sm">امروز هنوز سفارشی ثبت نشده.</p>
+            @endif
+        </div>
+    </div>
+
     {{-- ─── آخرین سفارش‌های تعمیر ─── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
@@ -267,6 +280,19 @@ document.addEventListener('DOMContentLoaded', function () {
             series: [{ name: 'سفارش', data: devices.data, color: '#8b5cf6' }],
             xaxis: { categories: devices.labels, labels: { style: { fontSize: '10px' } } },
         })).render();
+    }
+
+    // ۵) سفارشاتِ امروز به تفکیکِ منطقه (دایره‌ای)
+    const region = @json($ordersByRegion);
+    if (region.data && region.data.length) {
+        new ApexCharts(document.querySelector('#chart-region'), {
+            chart: { type: 'pie', height: 300, fontFamily: 'inherit', foreColor: axisColor },
+            series: region.data,
+            labels: region.labels,
+            colors: region.colors,
+            legend: { position: 'bottom', fontSize: '11px' },
+            dataLabels: { enabled: true, formatter: (v) => Math.round(v) + '٪' },
+        }).render();
     }
 });
 </script>
