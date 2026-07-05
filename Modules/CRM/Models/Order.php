@@ -15,7 +15,7 @@ class Order extends Model
     protected $fillable = [
         // پایه
         'order_code', 'wp_id',
-        'customer_id', 'subscription', 'introduction',
+        'customer_id', 'subscription', 'introduction', 'attribution',
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
         'source_of_truth',
         'customer_name', 'customer_mobile', 'customer_phone',
@@ -97,6 +97,7 @@ class Order extends Model
         'buy_price_list' => 'array',
         'hc_customer_data' => 'array',
         'hc_tech_data' => 'array',
+        'attribution' => 'array',
 
         'wp_id' => 'integer',
         'subscription' => 'integer',

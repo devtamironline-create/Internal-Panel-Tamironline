@@ -23,6 +23,13 @@ class RollingToken
     {
         $response = $next($request);
 
+        // renewal فقط روی پاسخِ موفقِ (2xx) endpointهای احرازشده — نه روی خطاها.
+        // تا فرانت مطمئن باشد X-Renewed-Token فقط در پاسخ‌های سالم می‌آید.
+        $status = $response->getStatusCode();
+        if ($status < 200 || $status >= 300) {
+            return $response;
+        }
+
         $user = $request->user();
         if (! $user instanceof Customer) {
             return $response;

@@ -70,6 +70,11 @@ class CreateOrderRequest extends FormRequest
 
             'address_id' => 'required|integer|exists:crm_customer_addresses,id',
             'introduction' => 'nullable|string|max:500',
+
+            // attribution — منبعِ تبلیغاتی (gclid، utm_* و…). آرایه‌ی key/value
+            // ساده؛ سرور فقط کلیدهای مجاز را نگه می‌دارد (sanitizeAttribution).
+            'attribution' => 'nullable|array',
+            'attribution.*' => 'nullable|string|max:500',
         ];
     }
 
