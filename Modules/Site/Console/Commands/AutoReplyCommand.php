@@ -285,10 +285,16 @@ class AutoReplyCommand extends Command
     private function applyModeration(\Illuminate\Database\Eloquent\Model $subject, string $decision): void
     {
         $status = ['approve' => 'approved', 'spam' => 'spam', 'reject' => 'rejected'][$decision] ?? 'pending';
-        $subject->update([
+        $data = [
             'status' => $status,
             'approved_at' => $decision === 'approve' ? now() : null,
-        ]);
+        ];
+        // سوالِ انجمن بدونِ published_at در هیچ لیستِ عمومی‌ای نمایش داده نمی‌شود
+        // (scopeApproved هر دو را می‌خواهد) — پس هنگامِ تأیید باید ست شود.
+        if ($decision === 'approve' && in_array('published_at', $subject->getFillable(), true)) {
+            $data['published_at'] = $subject->getAttribute('published_at') ?? now();
+        }
+        $subject->update($data);
     }
 
     /**

@@ -117,6 +117,32 @@ class PageSectionService
                 ->count();
         }
 
+        // ─── Auto-fallback مخصوص hero.popular_searches_items در صفحه‌ی forum ───
+        // اولویت: مقدارِ پنل (کلیدِ جدید) → payloadِ قدیمی (نامِ قبلیِ فیلد) →
+        // پرتکرارترین جستجوهای واقعیِ کاربران (۳۰ روزِ اخیر).
+        if ($pageSlug === 'forum') {
+            $items = $out['hero']['popular_searches_items'] ?? [];
+            if (empty($items)) {
+                $items = $out['hero']['popular_searches'] ?? [];
+            }
+            if (empty($items)) {
+                try {
+                    $items = \Illuminate\Support\Facades\DB::table('site_forum_search_logs')
+                        ->selectRaw('query, COUNT(*) as c')
+                        ->where('created_at', '>=', now()->subDays(30))
+                        ->groupBy('query')->orderByDesc('c')->limit(6)
+                        ->pluck('query')
+                        ->map(fn ($t) => ['text' => (string) $t, 'url' => null])
+                        ->all();
+                } catch (\Throwable $e) {
+                    $items = []; // جدول هنوز migrate نشده — فرانت fallback خودش را دارد
+                }
+            }
+            if (! empty($items)) {
+                $out['hero'] = array_merge($out['hero'] ?? [], ['popular_searches_items' => array_values($items)]);
+            }
+        }
+
         return $out;
     }
 
