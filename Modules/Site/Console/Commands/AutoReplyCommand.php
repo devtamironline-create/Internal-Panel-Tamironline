@@ -50,8 +50,13 @@ class AutoReplyCommand extends Command
         $publish = $mode === 'auto';
         $author = SiteSetting::get('ai_reply_author', 'تیم تعمیرآنلاین') ?: 'تیم تعمیرآنلاین';
 
-        $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author);
-        $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish);
+        // گیتِ ایمنیِ مودریشن — همان تنظیماتِ مسیرِ دستی. اقدامِ مخرب (spam/reject)
+        // با اطمینانِ پایین اعمال نمی‌شود و برای بازبینیِ انسان «در انتظار» می‌ماند.
+        $modMode = (string) SiteSetting::get('ai_moderation_mode', 'assist');
+        $modThreshold = (float) SiteSetting::get('ai_moderation_auto_threshold', '0.85');
+
+        $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
+        $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $modMode, $modThreshold);
 
         $this->info(
             "کامنت: {$c['moderated']} مودریت، {$c['replied']} پاسخ، {$c['skipped']} بی‌نیاز | "
@@ -65,12 +70,13 @@ class AutoReplyCommand extends Command
     /**
      * @return array{replied:int, skipped:int, moderated:int}
      */
-    private function handleComments(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $author): array
+    private function handleComments(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $author, string $modMode, float $modThreshold): array
     {
         $morph = (new Comment)->getMorphClass();
         $table = (new Comment)->getTable();
 
         $comments = Comment::query()
+            ->with('commentable')
             ->whereIn('status', [Comment::STATUS_PENDING, Comment::STATUS_APPROVED])
             ->whereNull('parent_id')
             ->where('is_admin_reply', false)
@@ -87,25 +93,30 @@ class AutoReplyCommand extends Command
         $skipped = 0;
         $moderated = 0;
         foreach ($comments as $comment) {
+            $pageTitle = $this->ownerLabel($comment->commentable);
             try {
                 // ۱) مودریشنِ محتوای در‌انتظار
                 if ($comment->status === Comment::STATUS_PENDING) {
-                    $m = $moderation->analyze((string) $comment->content, ['type' => 'نظر']);
+                    $m = $moderation->analyze((string) $comment->content, array_filter(['type' => 'نظر', 'title' => $pageTitle]));
                     if (! $m['ok']) {
                         $this->warn("کامنت #{$comment->id}: مودریشن — ".$m['error']);
 
                         continue;
                     }
-                    $this->applyModeration($comment, $m['decision']);
-                    $this->logModeration($morph, $comment->id, $m);
+                    // گیتِ ایمنی: اقدامِ مخربِ کم‌اطمینان اعمال نمی‌شود (در انتظارِ انسان).
+                    $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
+                    if ($applied) {
+                        $this->applyModeration($comment, $m['decision']);
+                    }
+                    $this->logModeration($morph, $comment->id, $m, $applied);
                     $moderated++;
-                    if ($m['decision'] !== 'approve') {
-                        continue; // اسپم/رد → بدونِ پاسخ
+                    if (! ($applied && $m['decision'] === 'approve')) {
+                        continue; // اسپم/رد یا کم‌اطمینان → بدونِ پاسخ
                     }
                 }
 
-                // ۲) پاسخ به محتوای سالم
-                $res = $reply->reply((string) $comment->content, ['type' => 'نظر']);
+                // ۲) پاسخ به محتوای سالم — با موضوعِ صفحه برای پاسخِ دقیق‌تر
+                $res = $reply->reply((string) $comment->content, array_filter(['type' => 'نظر', 'page' => $pageTitle]));
                 if (! $res['ok']) {
                     $this->warn("کامنت #{$comment->id}: پاسخ — ".$res['error']);
 
@@ -143,7 +154,7 @@ class AutoReplyCommand extends Command
     /**
      * @return array{replied:int, moderated:int}
      */
-    private function handleQuestions(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish): array
+    private function handleQuestions(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $modMode, float $modThreshold): array
     {
         $morph = (new Question)->getMorphClass();
         $table = (new Question)->getTable();
@@ -172,10 +183,13 @@ class AutoReplyCommand extends Command
 
                         continue;
                     }
-                    $this->applyModeration($question, $m['decision']);
-                    $this->logModeration($morph, $question->id, $m);
+                    $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
+                    if ($applied) {
+                        $this->applyModeration($question, $m['decision']);
+                    }
+                    $this->logModeration($morph, $question->id, $m, $applied);
                     $moderated++;
-                    if ($m['decision'] !== 'approve') {
+                    if (! ($applied && $m['decision'] === 'approve')) {
                         continue;
                     }
                 }
@@ -226,9 +240,23 @@ class AutoReplyCommand extends Command
     }
 
     /**
+     * برچسبِ صفحهٔ میزبانِ کامنت (نامِ دستگاه/برند یا عنوانِ مقاله) — برای
+     * مودریشن و پاسخِ دقیق‌تر. اگر یافت نشد null.
+     */
+    private function ownerLabel(?\Illuminate\Database\Eloquent\Model $owner): ?string
+    {
+        if (! $owner) {
+            return null;
+        }
+        $label = $owner->title ?? $owner->name ?? null;
+
+        return is_string($label) && trim($label) !== '' ? trim($label) : null;
+    }
+
+    /**
      * @param  array<string, mixed>  $m
      */
-    private function logModeration(string $morph, int $subjectId, array $m): void
+    private function logModeration(string $morph, int $subjectId, array $m, bool $applied = true): void
     {
         AiDecisionLog::create([
             'ai_model_id' => $m['model']?->id,
@@ -238,7 +266,7 @@ class AutoReplyCommand extends Command
             'decision' => $m['decision'],
             'confidence' => $m['confidence'],
             'reason' => $m['reason'],
-            'applied' => true,
+            'applied' => $applied,
             'prompt_tokens' => $m['usage']['prompt_tokens'] ?? null,
             'completion_tokens' => $m['usage']['completion_tokens'] ?? null,
         ]);
