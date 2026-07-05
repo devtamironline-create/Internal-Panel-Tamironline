@@ -146,6 +146,10 @@ class AiDiagnoseCommand extends Command
         $this->info('─── ۶) سوال‌های بی‌پاسخِ انجمن ───');
         $queued += $this->diagnoseQuestions($days, $limit);
 
+        // ─── ۷) پاسخ‌های کاربرانِ در انتظارِ مودریشن ─────────────────
+        $this->info('─── ۷) پاسخ‌های کاربرانِ در انتظار ───');
+        $queued += $this->diagnoseUserAnswers($days, $limit);
+
         $this->newLine();
         // cron سالم ولی صف خالی نمی‌شود → مظنونِ اصلی: قفلِ گیرکردهٔ withoutOverlapping
         // (اجرای نیمه‌کارهٔ قبلی). پاک‌کردنِ cache قفل را آزاد می‌کند.
@@ -233,6 +237,44 @@ class AiDiagnoseCommand extends Command
             }
 
             return [$q->id, $q->status, (string) $q->created_at, $reason];
+        })->all());
+
+        return $queued;
+    }
+
+    /** @return int تعدادِ آیتم‌های «در صف» */
+    private function diagnoseUserAnswers(int $days, int $limit): int
+    {
+        $morph = (new \Modules\Site\Models\Forum\Answer)->getMorphClass();
+
+        $items = \Modules\Site\Models\Forum\Answer::query()
+            ->where('status', \Modules\Site\Models\Forum\Answer::STATUS_PENDING)
+            ->where('is_expert_reply', false)
+            ->latest()->limit($limit)->get();
+
+        // پیش‌نویس‌های AI (is_expert_reply و pending) جدا شمارش می‌شوند — آن‌ها
+        // منتظرِ تأییدِ «مدیر»اند نه AI.
+        $drafts = \Modules\Site\Models\Forum\Answer::query()
+            ->where('status', \Modules\Site\Models\Forum\Answer::STATUS_PENDING)
+            ->where('is_expert_reply', true)->count();
+        if ($drafts > 0) {
+            $this->warn("⚠️ {$drafts} پاسخِ پیش‌نویسِ AI/ادمین منتظرِ تأییدِ مدیر است (پنل → انجمن).");
+        }
+
+        if ($items->isEmpty()) {
+            $this->line('پاسخِ کاربرِ در انتظاری نیست. ✅');
+
+            return 0;
+        }
+
+        $queued = 0;
+        $this->table(['#', 'سوال', 'تاریخ', 'تشخیص'], $items->map(function ($a) use ($morph, $days, &$queued) {
+            $reason = $this->blockReason($morph, $a, $days);
+            if (str_starts_with($reason, '⏳')) {
+                $queued++;
+            }
+
+            return [$a->id, 'Q#'.$a->question_id, (string) $a->created_at, $reason];
         })->all());
 
         return $queued;
