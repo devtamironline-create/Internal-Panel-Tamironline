@@ -41,10 +41,13 @@ class AiReplyService
 
         $mustReply = (bool) ($context['must_reply'] ?? false);
 
+        // سقفِ توکنِ بالا برای مدل‌های reasoning (مثلِ GPT-5-Mini): این مدل‌ها قبل
+        // از خروجی، توکنِ «استدلال» مصرف می‌کنند؛ با سقفِ کم، content خالی
+        // برمی‌گردد (finish_reason=length).
         $res = $this->gateway->chat($model, [
             ['role' => 'system', 'content' => $this->systemPrompt()],
             ['role' => 'user', 'content' => $this->userPrompt($text, $context)],
-        ], ['temperature' => 0.4, 'max_tokens' => 500]);
+        ], ['temperature' => 0.4, 'max_tokens' => 2000]);
 
         if (! $res['ok']) {
             return $this->fail($res['error'] ?? 'خطای نامشخصِ AI.', $model);

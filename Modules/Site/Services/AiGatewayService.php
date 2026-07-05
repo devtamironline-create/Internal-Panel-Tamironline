@@ -82,20 +82,31 @@ class AiGatewayService
 
         $json = $response->json();
         $content = $json['choices'][0]['message']['content'] ?? null;
+        $finishReason = $json['choices'][0]['finish_reason'] ?? null;
 
         if ($content === null || $content === '') {
             \Modules\Site\Support\AiLog::warning('gateway.empty_content', [
                 'model' => $model->slug, 'status' => $status, 'ms' => $ms,
+                'finish_reason' => $finishReason,
+                'usage' => (array) ($json['usage'] ?? []),
                 'body' => mb_substr((string) $response->body(), 0, 500),
             ]);
 
-            return $this->fail('پاسخِ خالی از مدل دریافت شد.', $status);
+            // finish_reason=length یعنی سقفِ توکن پر شده (مدلِ reasoning همهٔ
+            // بودجه را صرفِ استدلال کرده) — پیام باید علت را بگوید.
+            return $this->fail(
+                $finishReason === 'length'
+                    ? 'پاسخِ خالی: سقفِ توکن (max_tokens) پر شد — مقدارِ max_tokens مدل را بالاتر ببرید.'
+                    : 'پاسخِ خالی از مدل دریافت شد.',
+                $status
+            );
         }
 
         $usage = (array) ($json['usage'] ?? []);
         \Modules\Site\Support\AiLog::info('gateway.ok', [
             'model' => $model->slug,
             'ms' => $ms,
+            'finish_reason' => $finishReason,
             'prompt_tokens' => $usage['prompt_tokens'] ?? null,
             'completion_tokens' => $usage['completion_tokens'] ?? null,
             'content_excerpt' => mb_substr(trim((string) $content), 0, 200),

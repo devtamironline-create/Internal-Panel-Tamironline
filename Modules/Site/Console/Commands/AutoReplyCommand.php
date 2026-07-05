@@ -61,7 +61,7 @@ class AutoReplyCommand extends Command
         ]);
 
         $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
-        $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $modMode, $modThreshold);
+        $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
 
         \Modules\Site\Support\AiLog::info('auto_reply.done', [
             'comments' => $c, 'questions' => $q, 'published' => $publish,
@@ -184,7 +184,7 @@ class AutoReplyCommand extends Command
     /**
      * @return array{replied:int, moderated:int}
      */
-    private function handleQuestions(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $modMode, float $modThreshold): array
+    private function handleQuestions(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $author, string $modMode, float $modThreshold): array
     {
         $morph = (new Question)->getMorphClass();
         $table = (new Question)->getTable();
@@ -247,6 +247,9 @@ class AutoReplyCommand extends Command
                 $answer = Answer::create([
                     'question_id' => $question->id,
                     'body' => $res['text'],
+                    // ستونِ author_name در جدول اجباری است — همان نامِ نویسندهٔ
+                    // تنظیم‌شده برای پاسخ‌های AI (مثلِ مسیرِ دستیِ ادمین).
+                    'author_name' => $author,
                     'expert_id' => null,
                     'is_expert_reply' => true,
                     'status' => $publish ? Answer::STATUS_APPROVED : Answer::STATUS_PENDING,
