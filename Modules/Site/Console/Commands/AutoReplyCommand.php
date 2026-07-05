@@ -257,8 +257,9 @@ class AutoReplyCommand extends Command
                 ]);
 
                 if ($publish) {
-                    $question->answers_count = $question->answers()->where('status', Answer::STATUS_APPROVED)->count();
-                    $question->saveQuietly();
+                    // resolution_status + answers_count — همان مسیرِ استانداردِ بقیهٔ
+                    // پاسخ‌ها؛ وگرنه سوال با وجودِ پاسخ، «بی‌پاسخ» برچسب می‌خورد.
+                    $question->recomputeResolution();
                     // همان اطلاع‌رسانیِ ایمیلیِ مسیرِ دستی — نویسندهٔ سوال باخبر شود
                     // (خودش ایمن است: تنظیم/ایمیلِ خالی → بی‌صدا رد می‌شود).
                     \Modules\Site\Support\ForumNotifier::notifyAuthorOfAnswer($question, $answer);
