@@ -54,10 +54,13 @@ class CatalogDeviceController extends Controller
         $data = $devices->map(fn (Device $d) => [
             'id' => (int) $d->id,
             'label' => $d->name,
+            // aliasهای قراردادِ اپ (PWA): name و image — همان label/thumbnail.
+            'name' => $d->name,
             'slug' => $d->slug,
             'href' => '/devices/'.$d->slug,
             'icon' => $d->icon,
             'thumbnail' => MediaUrl::resolve($d->thumbnail),
+            'image' => MediaUrl::resolve($d->thumbnail),
             'tone' => $d->tone,
             // ترتیب نمایش (پنل) — لیست بر اساس is_featured DESC، سپس sort_order ASC،
             // سپس name مرتب می‌شود. فرانت برای حفظ همین ترتیب نیازی به مرتب‌سازی
