@@ -97,7 +97,7 @@ Route::prefix('v1')->group(function () {
             ->where('slug', '[^/]+')
             ->name('api.v1.blog.articles.comments.store');
     });
-    Route::middleware('throttle:30,1')->group(function () {
+    Route::middleware('throttle:public-write')->group(function () {
         Route::post('/banners/{id}/impression', [BannerController::class, 'impression'])
             ->name('api.v1.banners.impression');
         Route::post('/banners/{id}/click', [BannerController::class, 'click'])
@@ -134,8 +134,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/forum/my-answers', [ForumController::class, 'myAnswers'])
             ->name('api.v1.forum.my-answers');
     });
-    // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه (بدون login برای anonymous reporting)
-    Route::middleware('throttle:5,1')->group(function () {
+    // گزارش سوء استفاده — ۵ گزارش در دقیقه بر «کاربر یا IPِ واقعی» (نه IPِ مشترکِ BFF)
+    Route::middleware('throttle:forum-report')->group(function () {
         Route::post('/forum/report', [ForumController::class, 'storeReport'])
             ->name('api.v1.forum.report');
     });

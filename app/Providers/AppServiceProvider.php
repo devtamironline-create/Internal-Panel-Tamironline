@@ -85,6 +85,26 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->ip());
         });
 
+        // ─── نوشتنی‌های عمومیِ پشتِ BFF — کلید بر اساسِ کاربر یا IPِ واقعی ───
+        // request->ip() برای همهٔ کاربرانِ سایت یکی است (IPِ سرورِ فرانت)؛ throttleِ
+        // per-IP یعنی سقفِ مشترک برای کلِ سایت. کلید: کاربرِ واردشده → user id؛
+        // درخواستِ BFF → IPِ واقعی از X-Forwarded-For؛ وگرنه IP.
+        RateLimiter::for('forum-report', function (Request $request) {
+            $user = $request->user() ?? $request->user('sanctum');
+
+            return $user
+                ? Limit::perMinute(5)->by('report:u'.$user->getAuthIdentifier())
+                : Limit::perMinute(5)->by('report:ip'.\App\Support\ClientIp::resolve($request));
+        });
+
+        RateLimiter::for('public-write', function (Request $request) {
+            $user = $request->user() ?? $request->user('sanctum');
+
+            return $user
+                ? Limit::perMinute(30)->by('pw:u'.$user->getAuthIdentifier())
+                : Limit::perMinute(30)->by('pw:ip'.\App\Support\ClientIp::resolve($request));
+        });
+
         // ─── Rate limiter های OTP — بر اساسِ «شمارهٔ موبایل» نه IP ───────
         // این مسیرها عمومی‌اند و از BFF (سرور Next.js) پراکسی می‌شوند؛ پس IPِ
         // همهٔ کاربران یکسان است (کانتینر فرانت) و throttleِ per-IP خیلی زود پر

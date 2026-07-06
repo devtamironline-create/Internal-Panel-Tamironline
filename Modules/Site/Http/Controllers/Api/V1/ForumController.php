@@ -998,12 +998,20 @@ class ForumController extends Controller
             return response()->json(['ok' => false, 'message' => 'Target not found'], 404);
         }
 
-        // جلوگیری از duplicate همان IP روی همان target در ۲۴ ساعت
+        // dedupe در ۲۴ ساعت — کاربرِ واردشده بر اساسِ حساب؛ مهمان بر اساسِ IPِ
+        // واقعی (پشتِ BFF از X-Forwarded-For؛ وگرنه IPِ مشترکِ فرانت گزارشِ
+        // کاربرانِ مختلف را بی‌صدا می‌انداخت).
+        $customer = $request->user() ?? $request->user('sanctum');
+        $customerId = $customer instanceof \Modules\CRM\Models\Customer ? (int) $customer->id : null;
+        $clientIp = \App\Support\ClientIp::resolve($request);
+
         $duplicate = Report::query()
             ->where('reportable_type', $data['target_type'])
             ->where('reportable_id', $data['target_id'])
-            ->where('reporter_ip', $request->ip())
             ->where('created_at', '>=', now()->subDay())
+            ->where(fn ($q) => $customerId !== null
+                ? $q->where('reporter_customer_id', $customerId)
+                : $q->where('reporter_ip', $clientIp))
             ->exists();
 
         if ($duplicate) {
@@ -1017,7 +1025,8 @@ class ForumController extends Controller
             'notes' => $data['notes'] ?? null,
             'reporter_name' => $data['reporter_name'] ?? null,
             'reporter_email' => $data['reporter_email'] ?? null,
-            'reporter_ip' => $request->ip(),
+            'reporter_ip' => $clientIp,
+            'reporter_customer_id' => $customerId,
             'user_agent' => Str::limit((string) $request->userAgent(), 250, ''),
         ]);
 
