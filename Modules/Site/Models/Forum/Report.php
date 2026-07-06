@@ -12,7 +12,7 @@ class Report extends Model
 
     protected $fillable = [
         'reportable_type', 'reportable_id', 'reason', 'notes',
-        'reporter_name', 'reporter_email', 'reporter_ip', 'user_agent',
+        'reporter_name', 'reporter_email', 'reporter_ip', 'reporter_customer_id', 'user_agent',
         'status', 'reviewed_by_user_id', 'reviewed_at', 'admin_notes',
     ];
 

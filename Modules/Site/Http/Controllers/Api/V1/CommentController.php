@@ -60,7 +60,8 @@ class CommentController extends Controller
             return response()->json(['message' => 'Not Found'], 404);
         }
 
-        $ip = $request->ip();
+        // IPِ واقعیِ کاربر (پشتِ BFF از XFF) — وگرنه dedupeِ لایک برای کلِ سایت یکی می‌شد.
+        $ip = \App\Support\ClientIp::resolve($request);
 
         // INSERT IGNORE → اگر همین IP قبلاً واکنش داده، duplicate صرف‌نظر می‌شود
         $inserted = false;
