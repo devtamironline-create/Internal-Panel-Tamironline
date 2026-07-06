@@ -126,10 +126,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/forum/questions', [ForumController::class, 'store'])
             ->name('api.v1.forum.questions.store');
     });
-    // «سوالاتِ من» — تاریخچهٔ سوال‌های کاربرِ واردشده (همهٔ وضعیت‌ها؛ خصوصی/no-store)
+    // «سوالاتِ من» و «پاسخ‌های من» — تاریخچهٔ کاربرِ واردشده (همهٔ وضعیت‌ها؛ خصوصی/no-store)
     Route::middleware(['auth:sanctum', 'throttle:30,1'])->group(function () {
         Route::get('/forum/my-questions', [ForumController::class, 'myQuestions'])
             ->name('api.v1.forum.my-questions');
+        Route::get('/forum/my-answers', [ForumController::class, 'myAnswers'])
+            ->name('api.v1.forum.my-answers');
     });
     // گزارش سوء استفاده — ۵ گزارش از هر IP در دقیقه (بدون login برای anonymous reporting)
     Route::middleware('throttle:5,1')->group(function () {
