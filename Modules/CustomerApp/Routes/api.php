@@ -138,6 +138,18 @@ Route::prefix('v1/customer')
             Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])
                 ->name('api.customer.notifications.read');
 
+            // Forum (انجمن در اپ) — adapter روی انجمنِ سایت؛ حریمِ خصوصی سمتِ سرور
+            Route::get('/forum/topics', [\Modules\CustomerApp\Http\Controllers\Api\V1\ForumController::class, 'topics'])
+                ->name('api.customer.forum.topics');
+            Route::get('/forum/my-questions', [\Modules\CustomerApp\Http\Controllers\Api\V1\ForumController::class, 'myQuestions'])
+                ->name('api.customer.forum.my-questions');
+            Route::get('/forum/topics/{id}', [\Modules\CustomerApp\Http\Controllers\Api\V1\ForumController::class, 'topicShow'])
+                ->whereNumber('id')->name('api.customer.forum.topics.show');
+            // ~۵ سوال در ساعت برای هر کاربر (پیشنهادِ خودِ فرانت)
+            Route::post('/forum/topics/{id}/comments', [\Modules\CustomerApp\Http\Controllers\Api\V1\ForumController::class, 'storeComment'])
+                ->whereNumber('id')->middleware('throttle:5,60')
+                ->name('api.customer.forum.comments.store');
+
             // Addresses — multi-address per customer
             Route::get('/addresses', [AddressController::class, 'index'])
                 ->name('api.customer.addresses.index');

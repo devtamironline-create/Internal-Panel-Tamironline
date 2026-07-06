@@ -11,7 +11,7 @@ class Answer extends Model
 
     protected $fillable = [
         'question_id', 'body',
-        'author_name', 'author_email', 'author_phone', 'user_id',
+        'author_name', 'author_email', 'author_phone', 'user_id', 'customer_id',
         'expert_id', 'is_expert_reply',
         'status', 'rejection_reason', 'approved_at', 'approved_by_user_id', 'sms_sent_at',
         'is_accepted', 'accepted_at',
@@ -39,6 +39,11 @@ class Answer extends Model
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class, 'question_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\CRM\Models\Customer::class, 'customer_id');
     }
 
     public function expert(): BelongsTo
