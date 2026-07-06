@@ -59,6 +59,10 @@
                             $target = $answers[$report->reportable_id];
                             $targetTitle = '↳ پاسخ به: '.($target->question?->title ?? 'سوال حذف‌شده');
                             $targetUrl = $target->question ? route('site.admin.forum.questions.show', $target->question->id) : null;
+                        } elseif ($report->reportable_type === 'comment' && isset($comments[$report->reportable_id])) {
+                            $target = $comments[$report->reportable_id];
+                            $targetTitle = '💬 کامنت: '.\Illuminate\Support\Str::limit(strip_tags((string) $target->content), 60);
+                            $targetUrl = \Illuminate\Support\Facades\Route::has('site.admin.comments.index') ? route('site.admin.comments.index') : null;
                         }
                         $reasonLabel = \Modules\Site\Models\Forum\Report::REASONS[$report->reason] ?? $report->reason;
                     @endphp
