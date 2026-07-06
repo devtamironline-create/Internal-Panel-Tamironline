@@ -516,10 +516,11 @@ class ForumController extends Controller
                     default => 'pending',
                 };
 
-                // دلیلِ رد — از آخرین تصمیمِ مودریشنِ AI (اگر بوده).
+                // دلیلِ رد — اول ستونِ خودِ سوال (قابلِ‌نمایش به کاربر)، سپس
+                // fallback به آخرین تصمیمِ مودریشنِ AI (برای رکوردهای قدیمی).
                 $reason = null;
                 if ($status === 'rejected') {
-                    $reason = \Modules\Site\Models\AiDecisionLog::query()
+                    $reason = $q->rejection_reason ?: \Modules\Site\Models\AiDecisionLog::query()
                         ->where('task', 'moderation')
                         ->where('subject_type', $morph)->where('subject_id', $q->id)
                         ->whereIn('decision', ['reject', 'spam'])

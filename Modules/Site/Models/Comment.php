@@ -30,6 +30,7 @@ class Comment extends Model
         'is_admin_reply',
         'content',
         'status',
+        'rejection_reason',
         'likes_count',
         'dislikes_count',
         'ip',

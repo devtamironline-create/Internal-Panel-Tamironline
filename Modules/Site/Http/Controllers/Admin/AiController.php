@@ -193,7 +193,7 @@ class AiController extends Controller
             || ($mode === 'hybrid' && $decision === 'spam' && ($confidence ?? 0) >= $threshold);
 
         if ($apply) {
-            $this->applyDecision($subject, $decision);
+            $this->applyDecision($subject, $decision, $res['reason']);
         }
 
         AiDecisionLog::create([
@@ -218,7 +218,7 @@ class AiController extends Controller
         return ['success', ($apply ? '✅ AI اعمال شد: ' : '🤖 پیشنهادِ AI: ')."{$label}{$pct}{$reason}"];
     }
 
-    private function applyDecision(Model $subject, string $decision): void
+    private function applyDecision(Model $subject, string $decision, ?string $reason = null): void
     {
         $status = ['approve' => 'approved', 'reject' => 'rejected', 'spam' => 'spam'][$decision] ?? null;
         if (! $status) {
@@ -226,6 +226,12 @@ class AiController extends Controller
         }
 
         $data = ['status' => $status];
+        // علتِ ردِ قابلِ‌نمایش به کاربر — روی خودِ رکورد تا فرانت نشانش دهد.
+        if (in_array('rejection_reason', $subject->getFillable(), true)) {
+            $data['rejection_reason'] = in_array($status, ['rejected', 'spam'], true)
+                ? (mb_substr((string) $reason, 0, 500) ?: null)
+                : null;
+        }
         if ($status === 'approved') {
             $data['approved_at'] = now();
             if (in_array('approved_by_user_id', $subject->getFillable(), true)) {
