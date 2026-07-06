@@ -1226,7 +1226,7 @@ return [
             'content' => [
                 'label' => 'محتوای متنی کامل (پیش‌فرض ترکیبی)',
                 'fields' => [
-                    'html' => ['label' => 'محتوای HTML', 'type' => 'textarea', 'rules' => 'nullable|string|max:200000'],
+                    'html' => ['label' => 'محتوای HTML (با {device} و {brand})', 'type' => 'richtext', 'rules' => 'nullable|string|max:200000'],
                 ],
             ],
 

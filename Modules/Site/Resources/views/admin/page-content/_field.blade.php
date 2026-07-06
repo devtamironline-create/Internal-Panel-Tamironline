@@ -13,6 +13,13 @@
         <textarea name="{{ $name }}" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded text-sm">{{ old($name, $value ?? '') }}</textarea>
     </div>
 
+@elseif($type === 'richtext')
+    {{-- ادیتور TinyMCE — کلاس rich-editor در layouts.admin به‌صورت سراسری init می‌شود --}}
+    <div>
+        <label class="block text-sm mb-1">{{ $label }}</label>
+        <textarea name="{{ $name }}" rows="12" class="rich-editor w-full px-3 py-2 border border-gray-200 rounded text-sm">{{ old($name, $value ?? '') }}</textarea>
+    </div>
+
 @elseif($type === 'url')
     <div>
         <label class="block text-sm mb-1">{{ $label }}</label>
