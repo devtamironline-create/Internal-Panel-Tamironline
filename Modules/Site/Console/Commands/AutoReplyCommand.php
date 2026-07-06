@@ -62,7 +62,7 @@ class AutoReplyCommand extends Command
 
         $c = $this->handleComments($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
         $q = $this->handleQuestions($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
-        $a = $this->handleUserAnswers($moderation, $limit, $days, $modMode, $modThreshold);
+        $a = $this->handleUserAnswers($reply, $moderation, $limit, $days, $publish, $author, $modMode, $modThreshold);
 
         \Modules\Site\Support\AiLog::info('auto_reply.done', [
             'comments' => $c, 'questions' => $q, 'user_answers' => $a, 'published' => $publish,
@@ -71,7 +71,7 @@ class AutoReplyCommand extends Command
         $this->info(
             "کامنت: {$c['moderated']} مودریت، {$c['replied']} پاسخ، {$c['skipped']} بی‌نیاز | "
             ."انجمن: {$q['moderated']} مودریت، {$q['replied']} پاسخ | "
-            ."پاسخ‌های کاربران: {$a['moderated']} مودریت | "
+            ."پیگیری‌های کاربران: {$a['moderated']} مودریت، {$a['replied']} پاسخ، {$a['skipped']} بی‌نیاز | "
             .'حالتِ پاسخ: '.($publish ? 'منتشرشده' : 'پیش‌نویس')
         );
 
@@ -283,63 +283,139 @@ class AutoReplyCommand extends Command
     }
 
     /**
-     * مودریشنِ «پاسخ‌های کاربران» در انجمن (نه پاسخ‌های AI/ادمین) — این‌ها فقط
-     * تأیید/رد می‌شوند و پاسخِ AI نمی‌گیرند. پاسخِ پیش‌نویسِ AI (is_expert_reply)
-     * عمداً دست نمی‌خورد تا حالتِ draft (تأییدِ مدیر) معنا داشته باشد.
+     * «پاسخ‌های کاربران» در انجمن (پیگیری‌های زیرِ سوال): مودریشن سپس در صورتِ
+     * نیاز پاسخِ AI — با زمینهٔ کاملِ رشتهٔ گفتگو. تشکر/تأییدِ ساده پاسخ
+     * نمی‌گیرد (NO_REPLY). پیش‌نویس‌های AI (is_expert_reply) دست نمی‌خورند.
      *
-     * @return array{moderated:int}
+     * @return array{moderated:int, replied:int, skipped:int}
      */
-    private function handleUserAnswers(AiModerationService $moderation, int $limit, int $days, string $modMode, float $modThreshold): array
+    private function handleUserAnswers(AiReplyService $reply, AiModerationService $moderation, int $limit, int $days, bool $publish, string $author, string $modMode, float $modThreshold): array
     {
         $morph = (new Answer)->getMorphClass();
         $table = (new Answer)->getTable();
 
         $answers = Answer::query()
-            ->where('status', Answer::STATUS_PENDING)
+            ->whereIn('status', [Answer::STATUS_PENDING, Answer::STATUS_APPROVED])
             ->where('is_expert_reply', false)
             ->where('created_at', '>=', now()->subDays($days))
+            // idempotency: فقط خروجیِ موفقِ reply (پاسخ داده/بی‌نیاز) مانعِ تکرار است.
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
+                ->where('task', 'reply')->where('subject_type', $morph)
+                ->whereIn('decision', ['reply', 'none'])
+                ->whereColumn('subject_id', "{$table}.id"))
+            // نگه‌داشتهٔ گیتِ ایمنی → منتظرِ انسان.
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ai_decision_logs')
                 ->where('task', 'moderation')->where('subject_type', $morph)
                 ->where('applied', false)->whereIn('decision', ['spam', 'reject'])
                 ->whereColumn('subject_id', "{$table}.id"))
-            ->with('question:id,title')
+            ->with('question:id,title,body,status,published_at,answers_count,resolution_status')
             ->latest()
             ->limit($limit)
             ->get();
 
         $moderated = 0;
+        $replied = 0;
+        $skipped = 0;
         foreach ($answers as $answer) {
             try {
-                $m = $moderation->analyze((string) $answer->body, array_filter([
-                    'type' => 'پاسخِ کاربر در انجمن',
-                    'title' => $answer->question?->title,
+                // ۱) مودریشنِ پیگیریِ در انتظار
+                if ($answer->status === Answer::STATUS_PENDING) {
+                    $m = $moderation->analyze((string) $answer->body, array_filter([
+                        'type' => 'پاسخِ کاربر در انجمن',
+                        'title' => $answer->question?->title,
+                    ]));
+                    if (! $m['ok']) {
+                        $this->warn("پاسخِ کاربر #{$answer->id}: مودریشن — ".$m['error']);
+                        \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'answer', 'id' => $answer->id, 'error' => $m['error']]);
+
+                        continue;
+                    }
+                    $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
+                    if ($applied) {
+                        $this->applyModeration($answer, $m['decision'], $m['reason']);
+                        if ($m['decision'] === 'approve') {
+                            $answer->question?->recomputeResolution();
+                        }
+                    }
+                    $this->logModeration($morph, $answer->id, $m, $applied);
+                    \Modules\Site\Support\AiLog::info('auto_reply.answer.moderated', [
+                        'id' => $answer->id, 'decision' => $m['decision'],
+                        'confidence' => $m['confidence'], 'applied' => $applied,
+                    ]);
+                    $moderated++;
+                    if (! ($applied && $m['decision'] === 'approve')) {
+                        continue; // رد/اسپم یا نگه‌داشته → بدونِ پاسخ
+                    }
+                }
+
+                // ۲) پاسخ به پیگیریِ سالم — با زمینهٔ رشتهٔ گفتگو. تشکرِ ساده → NO_REPLY.
+                $question = $answer->question;
+                $res = $reply->reply((string) $answer->body, array_filter([
+                    'type' => 'پیگیریِ کاربر در گفتگوی انجمن',
+                    'title' => $question?->title,
+                    'thread' => $question ? $this->buildThread($question, $answer->id) : null,
                 ]));
-                if (! $m['ok']) {
-                    $this->warn("پاسخِ کاربر #{$answer->id}: مودریشن — ".$m['error']);
-                    \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'answer', 'id' => $answer->id, 'error' => $m['error']]);
+                if (! $res['ok']) {
+                    $this->warn("پاسخِ کاربر #{$answer->id}: پاسخ — ".$res['error']);
+                    \Modules\Site\Support\AiLog::error('auto_reply.reply_failed', ['type' => 'answer', 'id' => $answer->id, 'error' => $res['error']]);
 
                     continue;
                 }
-                $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
-                if ($applied) {
-                    $this->applyModeration($answer, $m['decision'], $m['reason']);
-                    if ($m['decision'] === 'approve') {
-                        $answer->question?->recomputeResolution();
-                    }
+                if ($res['skip'] || ! $res['text']) {
+                    $this->logReply($morph, $answer->id, $res, 'none', false, 'نیازی به پاسخ نداشت');
+                    \Modules\Site\Support\AiLog::info('auto_reply.answer.no_reply_needed', ['id' => $answer->id]);
+                    $skipped++;
+
+                    continue;
                 }
-                $this->logModeration($morph, $answer->id, $m, $applied);
-                \Modules\Site\Support\AiLog::info('auto_reply.answer.moderated', [
-                    'id' => $answer->id, 'decision' => $m['decision'],
-                    'confidence' => $m['confidence'], 'applied' => $applied,
+
+                $aiAnswer = Answer::create([
+                    'question_id' => $answer->question_id,
+                    'body' => $res['text'],
+                    'author_name' => $author,
+                    'expert_id' => null,
+                    'is_expert_reply' => true,
+                    'status' => $publish ? Answer::STATUS_APPROVED : Answer::STATUS_PENDING,
+                    'approved_at' => $publish ? now() : null,
                 ]);
-                $moderated++;
+                if ($publish && $question) {
+                    $question->recomputeResolution();
+                    \Modules\Site\Support\ForumNotifier::notifyAuthorOfAnswer($question, $aiAnswer);
+                }
+                $this->logReply($morph, $answer->id, $res, 'reply', $publish, mb_substr((string) $res['text'], 0, 300));
+                \Modules\Site\Support\AiLog::info('auto_reply.answer.replied', [
+                    'id' => $answer->id, 'published' => $publish,
+                    'reply_excerpt' => mb_substr((string) $res['text'], 0, 200),
+                ]);
+                $replied++;
             } catch (\Throwable $e) {
                 $this->warn("پاسخِ کاربر #{$answer->id}: خطا — ".$e->getMessage());
                 \Modules\Site\Support\AiLog::error('auto_reply.exception', ['type' => 'answer', 'id' => $answer->id, 'error' => $e->getMessage()]);
             }
         }
 
-        return ['moderated' => $moderated];
+        return ['moderated' => $moderated, 'replied' => $replied, 'skipped' => $skipped];
+    }
+
+    /**
+     * خلاصهٔ رشتهٔ گفتگو (سوالِ اصلی + پاسخ‌های تأییدشدهٔ قبلی) برای زمینهٔ پاسخ.
+     */
+    private function buildThread(Question $question, int $excludeAnswerId): string
+    {
+        $thread = 'سوالِ اصلی: '.$question->title."\n"
+            .\Illuminate\Support\Str::limit(trim(strip_tags((string) $question->body)), 300);
+
+        $prev = Answer::query()
+            ->where('question_id', $question->id)
+            ->where('status', Answer::STATUS_APPROVED)
+            ->where('id', '!=', $excludeAnswerId)
+            ->oldest()->limit(6)->get(['body', 'is_expert_reply']);
+        foreach ($prev as $p) {
+            $who = $p->is_expert_reply ? 'کارشناس' : 'کاربر';
+            $thread .= "\n{$who}: ".\Illuminate\Support\Str::limit(trim(strip_tags((string) $p->body)), 300);
+        }
+
+        return $thread;
     }
 
     /**
