@@ -37,6 +37,52 @@
     </div>
 
     <div class="p-4 lg:p-6">
+        {{-- ─── الگوی اختصاصی هر دستگاه (فقط صفحه‌ی ترکیبی) ─── --}}
+        @if(!empty($comboDevices))
+            <div class="mb-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
+                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200">قالبِ اختصاصیِ صفحات ترکیبی به تفکیک دستگاه</h3>
+                    @if(!empty($comboDevice))
+                        <a href="{{ route('site.admin.page-content.edit', 'device_brand') }}"
+                           class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200">
+                            → بازگشت به الگوی سراسری
+                        </a>
+                    @endif
+                </div>
+                <p class="text-xs text-gray-500 mb-3 leading-6">
+                    محتوایی که این‌جا برای یک دستگاه (مثلاً لباسشویی) وارد شود، در <b>همه‌ی صفحات ترکیبیِ همان دستگاه</b>
+                    (لباسشویی بوش، لباسشویی سامسونگ، …) یکسان نمایش داده می‌شود — کافی است در متن‌ها از
+                    <code class="px-1 rounded bg-gray-100 dark:bg-gray-700" dir="ltr">{brand}</code> و
+                    <code class="px-1 rounded bg-gray-100 dark:bg-gray-700" dir="ltr">{device}</code> استفاده کنید تا نام برند/دستگاه به‌صورت خودکار جایگزین شود.
+                    فیلدهای خالی از «الگوی سراسری» خوانده می‌شوند و محتوای per-pair (صفحه‌ی جزئیات هر ترکیب) همچنان بر همه اولویت دارد.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($comboDevices as $cd)
+                        @php $isCurrent = !empty($comboDevice) && $comboDevice->slug === $cd['slug']; @endphp
+                        <a href="{{ route('site.admin.page-content.edit', 'device_brand:'.$cd['slug']) }}"
+                           class="text-xs px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5
+                                  {{ $isCurrent
+                                      ? 'bg-blue-600 border-blue-600 text-white'
+                                      : ($cd['filled'] > 0
+                                          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100'
+                                          : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700') }}">
+                            {{ $cd['name'] }}
+                            @if($cd['filled'] > 0)
+                                <span class="text-[10px] px-1 rounded-full {{ $isCurrent ? 'bg-white/20' : 'bg-emerald-200/70 dark:bg-emerald-800' }}">{{ $cd['filled'] }} سکشن</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+                @if(!empty($comboDevice))
+                    <div class="mt-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-200 leading-6">
+                        در حال ویرایشِ الگوی اختصاصیِ <b>{{ $comboDevice->name }}</b> هستید.
+                        این مقادیر روی همه‌ی صفحات «{{ $comboDevice->name }} × برند» اعمال و بر الگوی سراسری مقدم می‌شوند؛
+                        سکشن‌ها/فیلدهای خالی یا منتشرنشده به‌صورت خودکار از الگوی سراسری پر می‌شوند.
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if(session('success'))
             <div class="mb-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
