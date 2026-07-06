@@ -341,10 +341,27 @@ class ForumController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|min:30|max:50000',
+            'parent_id' => 'nullable|integer',
         ]);
+
+        // ریپلای: والد باید پاسخی متعلق به «همین سوال» باشد.
+        $parentId = null;
+        if (! empty($data['parent_id'])) {
+            $parentId = (int) $data['parent_id'];
+            $parentOk = Answer::query()->whereKey($parentId)
+                ->where('question_id', $question->id)->exists();
+            if (! $parentOk) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'پیامِ موردِ پاسخ متعلق به این سوال نیست.',
+                    'errors' => ['parent_id' => ['پیامِ موردِ پاسخ معتبر نیست.']],
+                ], 422);
+            }
+        }
 
         $answer = Answer::create([
             'question_id' => $question->id,
+            'parent_id' => $parentId,
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
             'customer_id' => $customer->id,
             'author_name' => $customer->full_name,
@@ -357,6 +374,7 @@ class ForumController extends Controller
 
         return response()->json([
             'id' => (int) $answer->id,
+            'parent_id' => $answer->parent_id !== null ? (int) $answer->parent_id : null,
             'status' => $answer->status,
             'message' => 'پاسخ شما دریافت شد و پس از تأیید نمایش داده می‌شود.',
         ], 201);
@@ -914,6 +932,7 @@ class ForumController extends Controller
 
         return [
             'id' => (int) $a->id,
+            'parent_id' => $a->parent_id !== null ? (int) $a->parent_id : null,
             'body' => $a->body,
             'author' => $expert ? [
                 'name' => $expert->name,

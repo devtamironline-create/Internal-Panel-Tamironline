@@ -371,6 +371,8 @@ class AutoReplyCommand extends Command
 
                 $aiAnswer = Answer::create([
                     'question_id' => $answer->question_id,
+                    // ریپلایِ رشته‌ای: پاسخِ AI زیرِ همان پیگیریِ کاربر می‌نشیند.
+                    'parent_id' => $answer->id,
                     'body' => $res['text'],
                     'author_name' => $author,
                     'expert_id' => null,
