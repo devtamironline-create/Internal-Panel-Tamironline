@@ -13,7 +13,7 @@ class Answer extends Model
         'question_id', 'body',
         'author_name', 'author_email', 'author_phone', 'user_id',
         'expert_id', 'is_expert_reply',
-        'status', 'approved_at', 'approved_by_user_id',
+        'status', 'rejection_reason', 'approved_at', 'approved_by_user_id', 'sms_sent_at',
         'is_accepted', 'accepted_at',
         'upvotes_count',
         'ip', 'user_agent',
@@ -24,6 +24,7 @@ class Answer extends Model
         'is_accepted' => 'boolean',
         'upvotes_count' => 'integer',
         'approved_at' => 'datetime',
+        'sms_sent_at' => 'datetime',
         'accepted_at' => 'datetime',
     ];
 

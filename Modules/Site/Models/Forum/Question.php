@@ -19,7 +19,7 @@ class Question extends Model
         'slug', 'title', 'body', 'model', 'tags',
         'device_id', 'brand_id', 'topic_id',
         'author_name', 'author_email', 'author_phone', 'author_token', 'user_id', 'customer_id',
-        'status', 'approved_at', 'approved_by_user_id',
+        'status', 'rejection_reason', 'approved_at', 'approved_by_user_id',
         'resolution_status',
         'view_count', 'upvotes_count', 'downvotes_count', 'answers_count',
         'is_hot', 'is_featured',

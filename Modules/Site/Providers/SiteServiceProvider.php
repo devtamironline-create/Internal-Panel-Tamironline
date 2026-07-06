@@ -25,6 +25,9 @@ class SiteServiceProvider extends ServiceProvider
         // پیامکِ اطلاع‌رسانی هنگام پاسخ به کامنتِ کاربر (پاسخِ ادمین/AI تأییدشده).
         \Modules\Site\Models\Comment::observe(\Modules\Site\Observers\CommentObserver::class);
 
+        // پیامکِ اطلاع‌رسانی هنگام پاسخ‌گرفتنِ سوالِ انجمن (پاسخِ تأییدشده).
+        \Modules\Site\Models\Forum\Answer::observe(\Modules\Site\Observers\AnswerObserver::class);
+
         $this->mergeConfigFrom(
             module_path($this->name, 'Config/page-sections.php'),
             'site.page-sections'

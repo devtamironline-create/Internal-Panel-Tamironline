@@ -127,7 +127,7 @@ class AutoReplyCommand extends Command
                     // گیتِ ایمنی: اقدامِ مخربِ کم‌اطمینان اعمال نمی‌شود (در انتظارِ انسان).
                     $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
                     if ($applied) {
-                        $this->applyModeration($comment, $m['decision']);
+                        $this->applyModeration($comment, $m['decision'], $m['reason']);
                     }
                     $this->logModeration($morph, $comment->id, $m, $applied);
                     \Modules\Site\Support\AiLog::info('auto_reply.comment.moderated', [
@@ -223,7 +223,7 @@ class AutoReplyCommand extends Command
                     }
                     $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
                     if ($applied) {
-                        $this->applyModeration($question, $m['decision']);
+                        $this->applyModeration($question, $m['decision'], $m['reason']);
                     }
                     $this->logModeration($morph, $question->id, $m, $applied);
                     \Modules\Site\Support\AiLog::info('auto_reply.question.moderated', [
@@ -322,7 +322,7 @@ class AutoReplyCommand extends Command
                 }
                 $applied = AiModerationService::shouldAutoApply($modMode, $m['decision'], $m['confidence'], $modThreshold);
                 if ($applied) {
-                    $this->applyModeration($answer, $m['decision']);
+                    $this->applyModeration($answer, $m['decision'], $m['reason']);
                     if ($m['decision'] === 'approve') {
                         $answer->question?->recomputeResolution();
                     }
@@ -345,7 +345,7 @@ class AutoReplyCommand extends Command
     /**
      * اعمالِ تصمیمِ مودریشن روی وضعیتِ آیتم (کامنت/سوال).
      */
-    private function applyModeration(\Illuminate\Database\Eloquent\Model $subject, string $decision): void
+    private function applyModeration(\Illuminate\Database\Eloquent\Model $subject, string $decision, ?string $reason = null): void
     {
         $status = ['approve' => 'approved', 'spam' => 'spam', 'reject' => 'rejected'][$decision] ?? 'pending';
         $data = [
@@ -356,6 +356,12 @@ class AutoReplyCommand extends Command
         // (scopeApproved هر دو را می‌خواهد) — پس هنگامِ تأیید باید ست شود.
         if ($decision === 'approve' && in_array('published_at', $subject->getFillable(), true)) {
             $data['published_at'] = $subject->getAttribute('published_at') ?? now();
+        }
+        // علتِ ردِ قابلِ‌نمایش به کاربر — فرانت وضعیت + علت را نشان می‌دهد.
+        if (in_array('rejection_reason', $subject->getFillable(), true)) {
+            $data['rejection_reason'] = in_array($decision, ['reject', 'spam'], true)
+                ? mb_substr((string) $reason, 0, 500) ?: null
+                : null;
         }
         $subject->update($data);
     }
