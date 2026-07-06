@@ -97,7 +97,7 @@
                                 @if($report->admin_notes)
                                     <div class="mt-2 p-2 rounded bg-blue-50 dark:bg-blue-900/10 text-xs">
                                         <span class="font-bold">یادداشت ادمین:</span> {{ $report->admin_notes }}
-                                        @if($report->reviewer)<span class="text-gray-500"> — {{ $report->reviewer->name }}</span>@endif
+                                        @if($report->reviewer)<span class="text-gray-500"> — {{ $report->reviewer->full_name }}</span>@endif
                                     </div>
                                 @endif
                             </div>

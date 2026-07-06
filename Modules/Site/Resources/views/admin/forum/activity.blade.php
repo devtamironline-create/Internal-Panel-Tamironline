@@ -69,7 +69,7 @@
                                 <span class="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-mono">{{ $log->action }}</span>
                             </td>
                             <td class="px-4 py-3 text-xs">
-                                {{ $log->user?->name ?? '—' }}
+                                {{ $log->user?->full_name ?? '—' }}
                                 @if($log->user_id)<span class="text-gray-400 font-mono">#{{ $log->user_id }}</span>@endif
                             </td>
                             <td class="px-4 py-3 text-xs">

@@ -34,7 +34,7 @@ class BanlistController extends Controller
     {
         $this->checkView();
 
-        $query = BanlistEntry::query()->with('bannedBy:id,name')->orderByDesc('created_at');
+        $query = BanlistEntry::query()->with('bannedBy:id,first_name,last_name')->orderByDesc('created_at');
 
         if ($type = $request->query('type')) {
             $query->where('type', $type);

@@ -143,7 +143,7 @@
                                         </td>
                                         <td class="px-4 py-3 font-mono ltr text-xs" dir="ltr">{{ $entry->value }}</td>
                                         <td class="px-4 py-3 text-xs text-gray-600">{{ $entry->reason ?? '—' }}</td>
-                                        <td class="px-4 py-3 text-xs">{{ $entry->bannedBy?->name ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-xs">{{ $entry->bannedBy?->full_name ?? '—' }}</td>
                                         <td class="px-4 py-3 text-xs ltr font-mono" dir="ltr">
                                             @if($entry->expires_at)
                                                 {{ \Morilog\Jalali\Jalalian::fromCarbon($entry->expires_at)->format('Y/m/d H:i') }}

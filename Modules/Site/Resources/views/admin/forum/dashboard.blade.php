@@ -163,7 +163,7 @@
                                 <span class="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono shrink-0">{{ $log->action }}</span>
                                 <div class="flex-1 min-w-0">
                                     <div class="text-xs">
-                                        <span class="font-medium">{{ $log->user?->name ?? 'سیستم' }}</span>
+                                        <span class="font-medium">{{ $log->user?->full_name ?? 'سیستم' }}</span>
                                         @if($log->question)
                                             <span class="text-gray-500">→</span>
                                             <a href="{{ route('site.admin.forum.questions.show', $log->question->id) }}"
