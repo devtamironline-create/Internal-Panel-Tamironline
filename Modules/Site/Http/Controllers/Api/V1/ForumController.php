@@ -546,6 +546,55 @@ class ForumController extends Controller
     }
 
     /**
+     * GET /v1/forum/my-answers — پاسخ‌های خودِ کاربرِ احرازشده در همهٔ وضعیت‌ها.
+     * آینهٔ my-questions؛ دادهٔ خصوصی → no-store؛ جدیدترین اول.
+     */
+    public function myAnswers(Request $request): JsonResponse
+    {
+        $customer = $request->user();
+        if (! $customer instanceof \Modules\CRM\Models\Customer) {
+            return response()->json(['message' => 'برای مشاهدهٔ پاسخ‌هایِ خود وارد شوید.'], 401);
+        }
+
+        $rows = Answer::query()
+            ->where('is_expert_reply', false)
+            ->where(fn ($q) => $q->where('customer_id', $customer->id)
+                ->orWhere(fn ($qq) => $qq->whereNull('customer_id')->where('author_phone', $customer->mobile)))
+            ->with('question:id,slug,title,status,published_at')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        return response()->json([
+            'data' => $rows->map(function (Answer $a) {
+                $status = match ($a->status) {
+                    Answer::STATUS_APPROVED => 'published',
+                    Answer::STATUS_REJECTED, Answer::STATUS_SPAM => 'rejected',
+                    default => 'pending',
+                };
+                $q = $a->question;
+                $qPublished = $q && $q->status === Question::STATUS_APPROVED && $q->published_at !== null;
+
+                return [
+                    'id' => (int) $a->id,
+                    'status' => $status,
+                    'excerpt' => Str::limit(trim(strip_tags((string) $a->body)), 120),
+                    'created_at' => $a->created_at?->toIso8601String(),
+                    'rejection_reason' => $status === 'rejected' ? $a->rejection_reason : null,
+                    'upvotes' => (int) $a->upvotes_count,
+                    'question' => $q ? [
+                        'id' => (int) $q->id,
+                        // slug فقط وقتی صفحهٔ عمومی واقعاً باز می‌شود (مثلِ my-questions).
+                        'slug' => $qPublished ? $q->slug : null,
+                        'title' => $q->title,
+                        'status' => $qPublished ? 'published' : ($q->status === Question::STATUS_REJECTED || $q->status === Question::STATUS_SPAM ? 'rejected' : 'pending'),
+                    ] : null,
+                ];
+            })->values(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
      * POST /v1/forum/answers/{id}/accept
      * Header: X-Author-Token = توکن صاحب سوال (از response POST سوال)
      */
