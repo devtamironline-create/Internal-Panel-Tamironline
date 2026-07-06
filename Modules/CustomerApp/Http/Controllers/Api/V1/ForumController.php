@@ -101,14 +101,24 @@ class ForumController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|min:5|max:20000',
-            'parent_id' => 'nullable|integer', // فعلاً مدل flat است — نادیده گرفته می‌شود
+            'parent_id' => 'nullable|integer',
         ], [
             'body.required' => 'متنِ سوال الزامی است.',
             'body.min' => 'متنِ سوال خیلی کوتاه است.',
         ]);
 
+        // ریپلای: والد باید متعلق به همین گفتگو باشد؛ وگرنه سطحِ بالا ثبت می‌شود.
+        $parentId = null;
+        if (! empty($data['parent_id'])) {
+            $pid = (int) $data['parent_id'];
+            if (Answer::query()->whereKey($pid)->where('question_id', $question->id)->exists()) {
+                $parentId = $pid;
+            }
+        }
+
         $answer = Answer::create([
             'question_id' => $question->id,
+            'parent_id' => $parentId,
             'body' => HtmlSanitizer::clean($data['body']) ?? trim($data['body']),
             'customer_id' => $customer->id,
             'author_name' => $customer->full_name,
@@ -275,6 +285,7 @@ class ForumController extends Controller
 
         return [
             'id' => (int) $a->id,
+            'parent_id' => $a->parent_id !== null ? (int) $a->parent_id : null,
             'body' => (string) $a->body,
             'status' => $this->mapStatus($a->status),
             'is_answered' => false, // مدل flat — پاسخِ staff خودش یک کامنت با is_staff=true است

@@ -10,7 +10,7 @@ class Answer extends Model
     protected $table = 'site_forum_answers';
 
     protected $fillable = [
-        'question_id', 'body',
+        'question_id', 'parent_id', 'body',
         'author_name', 'author_email', 'author_phone', 'user_id', 'customer_id',
         'expert_id', 'is_expert_reply',
         'status', 'rejection_reason', 'approved_at', 'approved_by_user_id', 'sms_sent_at',
@@ -44,6 +44,12 @@ class Answer extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(\Modules\CRM\Models\Customer::class, 'customer_id');
+    }
+
+    /** پیامِ والد (ریپلایِ رشته‌ای) — null یعنی پاسخِ سطحِ بالا. */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
     public function expert(): BelongsTo
