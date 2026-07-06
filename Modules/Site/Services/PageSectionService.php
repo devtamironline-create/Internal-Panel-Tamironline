@@ -16,6 +16,20 @@ use Modules\Site\Models\PageSection;
 class PageSectionService
 {
     /**
+     * پیشوندِ slugِ مجازیِ «الگوی ترکیبیِ اختصاصیِ یک دستگاه»:
+     * device_brand:{device_slug}. schema همان device_brand سراسری است؛ فقط
+     * مقادیر (site_page_sections.page_slug) جدا ذخیره می‌شوند تا تیمِ محتوا
+     * برای هر دستگاه یک قالب با placeholder {brand} بنویسد و همه‌ی صفحاتِ
+     * ترکیبیِ همان دستگاه (بوش/سامسونگ/…) یک محتوا داشته باشند.
+     */
+    public const DEVICE_COMBO_PREFIX = 'device_brand:';
+
+    public static function deviceComboSlug(string $deviceSlug): string
+    {
+        return self::DEVICE_COMBO_PREFIX.$deviceSlug;
+    }
+
+    /**
      * بازگرداندن schema کامل (یا یک صفحه‌ی خاص).
      */
     public function schema(?string $pageSlug = null): array
@@ -23,6 +37,11 @@ class PageSectionService
         $all = config('site.page-sections', []);
         if ($pageSlug === null) {
             return $all;
+        }
+
+        // slug مجازیِ per-device → همان schema سراسریِ device_brand
+        if (str_starts_with($pageSlug, self::DEVICE_COMBO_PREFIX)) {
+            $pageSlug = 'device_brand';
         }
 
         return $all[$pageSlug] ?? [];
@@ -45,7 +64,9 @@ class PageSectionService
      */
     public function pageExists(string $pageSlug): bool
     {
-        return array_key_exists($pageSlug, $this->schema());
+        // از schema($pageSlug) استفاده می‌شود تا slugهای مجازیِ device_brand:{slug}
+        // هم به schema سراسری resolve شوند.
+        return $this->schema($pageSlug) !== [];
     }
 
     /**

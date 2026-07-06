@@ -69,7 +69,10 @@ class PageContentController extends Controller
             abort(404, 'صفحه‌ی مورد نظر در schema تعریف نشده است.');
         }
 
-        $title = $this->sections->pages()[$slug] ?? $slug;
+        $comboDevice = $this->resolveComboDevice($slug);
+        $title = $comboDevice
+            ? 'الگوی ترکیبی دستگاه — '.$comboDevice->name
+            : ($this->sections->pages()[$slug] ?? $slug);
         $schemaSections = $this->sections->sectionsOf($slug);
         $values = $this->sections->loadForAdmin($slug);
 
@@ -115,6 +118,8 @@ class PageContentController extends Controller
             'schemaSections' => $schemaSections,
             'values' => $values,
             'references' => $references,
+            'comboDevice' => $comboDevice,
+            'comboDevices' => $this->comboDeviceList($slug, $comboDevice),
         ]);
     }
 
@@ -126,13 +131,76 @@ class PageContentController extends Controller
             abort(404);
         }
 
+        $comboDevice = $this->resolveComboDevice($slug);
+
         $this->sections->saveAll($slug, (array) $request->input('sections', []));
 
         // پاک‌سازیِ کشِ فرانتِ همین صفحه (fire-and-forget؛ هرگز throw نمی‌کند).
-        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeTags(['page:'.$slug]);
+        // برای الگویِ per-device، صفحاتِ ترکیبیِ همان دستگاه هم purge می‌شوند.
+        $tags = ['page:'.$slug];
+        if ($comboDevice) {
+            $tags[] = 'page:device_brand';
+            $tags[] = 'device:'.$comboDevice->slug;
+        }
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeTags($tags);
 
         return redirect()
             ->route('site.admin.page-content.edit', $slug)
             ->with('success', 'محتوای صفحه ذخیره شد.');
+    }
+
+    /**
+     * دستگاهِ متناظر با slug مجازیِ «الگوی ترکیبیِ per-device»
+     * (device_brand:{device_slug}) — برای slugهای معمولی null.
+     */
+    private function resolveComboDevice(string $slug): ?Device
+    {
+        if (! str_starts_with($slug, PageSectionService::DEVICE_COMBO_PREFIX)) {
+            return null;
+        }
+
+        $deviceSlug = substr($slug, strlen(PageSectionService::DEVICE_COMBO_PREFIX));
+        $device = Device::query()->where('slug', $deviceSlug)->first();
+
+        if (! $device) {
+            abort(404, 'دستگاهِ این الگو پیدا نشد.');
+        }
+
+        return $device;
+    }
+
+    /**
+     * فهرست دستگاه‌ها برای پنلِ «الگوی اختصاصی هر دستگاه» — فقط روی صفحه‌ی
+     * device_brand (سراسری یا per-device). filled = تعداد سکشن‌های منتشرشده‌ی
+     * پرشده‌ی الگوی اختصاصیِ آن دستگاه.
+     *
+     * @return array<int, array{name: string, slug: string, filled: int}>|null
+     */
+    private function comboDeviceList(string $slug, ?Device $comboDevice): ?array
+    {
+        if ($slug !== 'device_brand' && ! $comboDevice) {
+            return null;
+        }
+
+        $filled = \Modules\Site\Models\PageSection::query()
+            ->where('page_slug', 'like', PageSectionService::DEVICE_COMBO_PREFIX.'%')
+            ->where('is_published', true)
+            ->get(['page_slug', 'payload'])
+            ->filter(fn ($r) => ! empty(array_filter((array) $r->payload, fn ($v) => $v !== null && $v !== '' && $v !== [])))
+            ->groupBy('page_slug')
+            ->map->count();
+
+        return Device::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug'])
+            ->map(fn ($d) => [
+                'name' => $d->name,
+                'slug' => $d->slug,
+                'filled' => (int) ($filled[PageSectionService::deviceComboSlug($d->slug)] ?? 0),
+            ])
+            ->all();
     }
 }

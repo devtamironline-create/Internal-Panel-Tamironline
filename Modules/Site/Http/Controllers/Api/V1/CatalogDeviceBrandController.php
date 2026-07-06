@@ -63,6 +63,20 @@ class CatalogDeviceBrandController extends Controller
                 ? $this->sections->loadForPublic('device', $context)
                 : []);
 
+        // الگوی اختصاصیِ ترکیبیِ همین دستگاه (device_brand:{slug}) — تیمِ محتوا
+        // یک‌بار برای هر دستگاه می‌نویسد (با {brand}) و همه‌ی صفحاتِ ترکیبیِ آن
+        // دستگاه یکسان می‌شوند. فیلد به فیلد بر الگوی سراسری مقدم است؛ فیلدهای
+        // خالی از الگوی سراسری پر می‌شوند.
+        if ($hasComboTemplate) {
+            $deviceCombo = $this->sections->loadForPublic(
+                PageSectionService::deviceComboSlug($device->slug),
+                $context
+            );
+            if ($deviceCombo !== []) {
+                $template = $this->mergeTemplates($deviceCombo, $template);
+            }
+        }
+
         // Fallbackِ hero از «صفحه‌ی دستگاه»: وقتی الگوی ترکیبی (device_brand) جدا از
         // الگوی دستگاه است و hero ترکیبی خالی می‌ماند، همان تصویری که صفحه‌ی دستگاه
         // نشان می‌دهد (device.hero_image یا الگوی device) استفاده شود — تا هیرو خالی نماند.
@@ -162,6 +176,33 @@ class CatalogDeviceBrandController extends Controller
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
+    }
+
+    /**
+     * ادغامِ الگوی per-device روی الگوی سراسری — مقدارِ غیرخالیِ override می‌بَرد،
+     * خالی‌ها از base می‌آیند. لیست‌ها (repeater مثل videos.items یا faq_ids)
+     * وقتی override چیزی دارد، یک‌جا جایگزین می‌شوند تا آیتم‌ها قاطی نشوند.
+     *
+     * @param  array<string, mixed>  $override
+     * @param  array<string, mixed>  $base
+     * @return array<string, mixed>
+     */
+    private function mergeTemplates(array $override, array $base): array
+    {
+        if (array_is_list($override) || array_is_list($base)) {
+            return $override !== [] ? $override : $base;
+        }
+
+        $out = $base;
+        foreach ($override as $key => $value) {
+            if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
+                $out[$key] = $this->mergeTemplates($value, $base[$key]);
+            } elseif ($value !== null && $value !== '' && $value !== []) {
+                $out[$key] = $value;
+            }
+        }
+
+        return $out;
     }
 
     /**
