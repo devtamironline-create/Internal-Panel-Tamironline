@@ -70,7 +70,7 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
-        $recentActivity = ActivityLog::with(['user:id,name', 'question:id,slug,title'])
+        $recentActivity = ActivityLog::with(['user:id,first_name,last_name', 'question:id,slug,title'])
             ->orderByDesc('created_at')
             ->limit(15)
             ->get();
@@ -90,7 +90,7 @@ class DashboardController extends Controller
     {
         $this->checkView();
 
-        $query = ActivityLog::with(['user:id,name', 'question:id,slug,title'])
+        $query = ActivityLog::with(['user:id,first_name,last_name', 'question:id,slug,title'])
             ->orderByDesc('created_at');
 
         if ($action = trim((string) $request->query('action', ''))) {
