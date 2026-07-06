@@ -49,6 +49,7 @@ class Report extends Model
         return match ($this->reportable_type) {
             'question' => Question::find($this->reportable_id),
             'answer' => Answer::find($this->reportable_id),
+            'comment' => \Modules\Site\Models\Comment::find($this->reportable_id),
             default => null,
         };
     }

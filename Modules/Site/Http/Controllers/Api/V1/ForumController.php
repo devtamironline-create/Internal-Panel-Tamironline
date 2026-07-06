@@ -963,10 +963,23 @@ class ForumController extends Controller
      *
      * Rate-limit: ۵ گزارش از یک IP در دقیقه (در routes.php).
      */
+    /**
+     * GET /v1/forum/report-reasons — لیستِ دلایلِ گزارش برای رندرِ داینامیکِ فرم.
+     */
+    public function reportReasons(): JsonResponse
+    {
+        return response()->json([
+            'data' => collect(Report::REASONS)
+                ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
+                ->values(),
+        ])->header('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    }
+
     public function storeReport(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'target_type' => 'required|in:question,answer',
+            // comment = کامنتِ مقالات/صفحات (site_comments) — گزارشِ محتوای نامناسب همه‌جا
+            'target_type' => 'required|in:question,answer,comment',
             'target_id' => 'required|integer|min:1',
             'reason' => 'required|in:'.implode(',', array_keys(Report::REASONS)),
             'notes' => 'nullable|string|max:1000',
@@ -975,9 +988,11 @@ class ForumController extends Controller
         ]);
 
         // اطمینان از وجود target
-        $exists = $data['target_type'] === 'question'
-            ? Question::where('id', $data['target_id'])->exists()
-            : Answer::where('id', $data['target_id'])->exists();
+        $exists = match ($data['target_type']) {
+            'question' => Question::where('id', $data['target_id'])->exists(),
+            'answer' => Answer::where('id', $data['target_id'])->exists(),
+            'comment' => \Modules\Site\Models\Comment::where('id', $data['target_id'])->exists(),
+        };
 
         if (! $exists) {
             return response()->json(['ok' => false, 'message' => 'Target not found'], 404);

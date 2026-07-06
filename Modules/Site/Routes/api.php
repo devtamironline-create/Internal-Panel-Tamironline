@@ -80,6 +80,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/forum/device-stats', [ForumController::class, 'deviceStats'])->name('api.v1.forum.device-stats');
         Route::get('/forum/topics', [ForumController::class, 'topics'])->name('api.v1.forum.topics');
         Route::get('/forum/popular-searches', [ForumController::class, 'popularSearches'])->name('api.v1.forum.popular-searches');
+        Route::get('/forum/report-reasons', [ForumController::class, 'reportReasons'])->name('api.v1.forum.report-reasons');
 
         // pages + devices (public read)
         Route::get('/pages/{slug}', [PageController::class, 'show'])

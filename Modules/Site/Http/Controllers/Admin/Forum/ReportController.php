@@ -55,6 +55,8 @@ class ReportController extends Controller
 
         $questions = Question::whereIn('id', $qIds)->get(['id', 'slug', 'title', 'status'])->keyBy('id');
         $answers = Answer::whereIn('id', $aIds)->with('question:id,slug,title')->get()->keyBy('id');
+        $cIds = $reports->where('reportable_type', 'comment')->pluck('reportable_id')->unique();
+        $comments = \Modules\Site\Models\Comment::whereIn('id', $cIds)->get(['id', 'content', 'status', 'commentable_type', 'commentable_id'])->keyBy('id');
 
         $counts = [
             'pending' => Report::where('status', Report::STATUS_PENDING)->count(),
@@ -63,7 +65,7 @@ class ReportController extends Controller
             'actioned' => Report::where('status', Report::STATUS_ACTIONED)->count(),
         ];
 
-        return view('site::admin.forum.reports.index', compact('reports', 'questions', 'answers', 'counts'));
+        return view('site::admin.forum.reports.index', compact('reports', 'questions', 'answers', 'counts', 'comments'));
     }
 
     public function update(Request $request, int $id): RedirectResponse
