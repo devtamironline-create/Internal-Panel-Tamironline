@@ -130,6 +130,11 @@ Route::prefix('v1/customer')
             Route::put('/profile', [ProfileController::class, 'update'])
                 ->name('api.customer.profile.update');
 
+            // حذفِ حساب توسطِ خودِ کاربر — soft delete + ابطالِ همه‌ی توکن‌ها.
+            // ادمین در پنل رکورد را می‌بیند و می‌تواند بازگرداند.
+            Route::post('/delete-account', [ProfileController::class, 'deleteAccount'])
+                ->name('api.customer.delete-account');
+
             // Notifications
             Route::get('/notifications', [NotificationController::class, 'index'])
                 ->name('api.customer.notifications.index');

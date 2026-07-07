@@ -229,7 +229,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('customers/export/{format}', [CustomerController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('customers.export');
-        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        // withTrashed: ادمین باید حسابِ حذف‌شده (delete-account از اپ) را هم ببیند.
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->withTrashed()->name('customers.show');
         // Endpoint Ajax برای لود شهرهای هر استان (فرم مشتری/سفارش در فازهای بعد)
         Route::get('provinces/{province}/cities', [CustomerController::class, 'citiesOfProvince'])
             ->name('provinces.cities');
@@ -248,6 +249,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+        // بازگردانیِ حسابِ حذف‌شده (soft delete — چه از اپ چه از پنل)
+        Route::post('customers/{customer}/restore', [CustomerController::class, 'restore'])
+            ->withTrashed()->name('customers.restore');
     });
 
     // ─── تکنسین‌های فعال ──────────────────────────────────────────

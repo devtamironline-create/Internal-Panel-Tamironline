@@ -15,8 +15,12 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $search = trim($request->string('q')->toString());
+        // فیلترِ «حذف‌شده‌ها»: حساب‌هایی که کاربر از اپ حذف کرده (soft delete) —
+        // برای دیدنِ اطلاعات و بازگردانی توسطِ ادمین.
+        $trashed = $request->boolean('trashed');
 
         $customers = Customer::query()
+            ->when($trashed, fn ($q) => $q->onlyTrashed())
             ->when($search !== '', function ($q) use ($search) {
                 // اگر یک عدد ≥ آفست شماره اشتراک بود، آن را شماره اشتراک تلقی کن.
                 // برای مشتریان sync‌شده از WP، subscription = wp_id + 10000.
@@ -39,7 +43,9 @@ class CustomerController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('crm::customers.index', compact('customers', 'search'));
+        $trashedCount = Customer::onlyTrashed()->count();
+
+        return view('crm::customers.index', compact('customers', 'search', 'trashed', 'trashedCount'));
     }
 
     public function export(Request $request, string $format)
@@ -120,6 +126,21 @@ class CustomerController extends Controller
 
         return redirect()->route('crm.customers.index')
             ->with('success', 'مشتری حذف شد.');
+    }
+
+    /**
+     * بازگردانیِ حسابِ حذف‌شده (soft delete — از اپ یا پنل). بعد از restore،
+     * کاربر دوباره می‌تواند با همان شماره وارد اپ/سایت شود.
+     */
+    public function restore(Customer $customer)
+    {
+        if ($customer->trashed()) {
+            $customer->restore();
+            $customer->forceFill(['delete_reason' => null])->save();
+        }
+
+        return redirect()->route('crm.customers.show', $customer)
+            ->with('success', 'حسابِ مشتری بازگردانی شد و ورودِ دوباره ممکن است.');
     }
 
     /**

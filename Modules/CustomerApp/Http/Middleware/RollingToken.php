@@ -35,6 +35,11 @@ class RollingToken
             return $response;
         }
 
+        // حسابِ همین الان حذف‌شده (delete-account) نباید توکنِ تازه بگیرد.
+        if ($user->trashed()) {
+            return $response;
+        }
+
         $token = $user->currentAccessToken();
         if (! $token instanceof PersonalAccessToken) {
             return $response;

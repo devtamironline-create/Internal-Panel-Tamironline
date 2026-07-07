@@ -11,12 +11,34 @@
             <p class="text-xs text-gray-500 mt-1">شماره اشتراک: <span dir="ltr" class="font-medium">{{ $customer->subscription }}</span></p>
         </div>
         <div class="flex items-center gap-2">
-            @can('edit-crm-customer')
-            <a href="{{ route('crm.customers.edit', $customer) }}" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ویرایش</a>
-            @endcan
+            @if(! $customer->trashed())
+                @can('edit-crm-customer')
+                <a href="{{ route('crm.customers.edit', $customer) }}" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ویرایش</a>
+                @endcan
+            @endif
             <a href="{{ route('crm.customers.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">بازگشت</a>
         </div>
     </div>
+
+    {{-- حسابِ حذف‌شده توسطِ کاربر (delete-account از اپ) — قابلِ بازگردانی --}}
+    @if($customer->trashed())
+    <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="text-sm text-rose-800 dark:text-rose-200 leading-6">
+            <div class="font-bold">این حساب حذف شده است.</div>
+            <div>تاریخِ حذف: {{ \Morilog\Jalali\Jalalian::fromCarbon($customer->deleted_at)->format('Y/m/d H:i') }}</div>
+            @if($customer->delete_reason)
+                <div>دلیلِ اعلام‌شده توسطِ کاربر: «{{ $customer->delete_reason }}»</div>
+            @endif
+            <div class="text-xs mt-1 text-rose-700 dark:text-rose-300">تا بازگردانی، کاربر نمی‌تواند با این شماره وارد اپ/سایت شود. اطلاعات و سفارش‌ها حفظ شده‌اند.</div>
+        </div>
+        @can('delete-crm-customer')
+        <form action="{{ route('crm.customers.restore', $customer->id) }}" method="POST" onsubmit="return confirm('حسابِ این مشتری بازگردانی شود؟');">
+            @csrf
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 whitespace-nowrap">بازگردانیِ حساب</button>
+        </form>
+        @endcan
+    </div>
+    @endif
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
         <div>
