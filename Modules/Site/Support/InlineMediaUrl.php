@@ -51,8 +51,8 @@ final class InlineMediaUrl
         if ($html === null || $html === '' || $base === null || $base === '') {
             return $html;
         }
-        // مسیر سریع: اگر اصلاً /media/ ندارد، کاری نکن
-        if (! str_contains($html, '/media/')) {
+        // مسیر سریع: اگر اصلاً media/ ندارد، کاری نکن
+        if (! str_contains($html, 'media/')) {
             return $html;
         }
 
@@ -62,9 +62,12 @@ final class InlineMediaUrl
             '/(<img\b[^>]*?\bsrc=)(["\'])(.*?)\2/i',
             function ($m) use ($base) {
                 $src = trim($m[3]);
-                // فقط src هایی که مسیرشان دقیقاً /media/{id}[/...] است
-                if (preg_match('#^(?:https?://[^/]+)?(/media/\d+(?:/[^"\'\s]*)?)$#i', $src, $mm)) {
-                    return $m[1].$m[2].$base.$mm[1].$m[2];
+                // srcهایی که مسیرشان به media/{id}[/...] ختم می‌شود — مطلق
+                // (https://host/media/…)، ریشه‌دار (/media/…)، یا نسبی
+                // (../../media/… و media/… — TinyMCEِ قدیمی نسبی ذخیره می‌کرد و
+                // مرورگرِ فرانت آن را نسبت به صفحه‌ی خودش resolve و ۴۰۴ می‌گرفت).
+                if (preg_match('#^(?:https?://[^/]+)?(?:(?:\.\./)+|\./|/)?(media/\d+(?:/[^"\'\s]*)?)$#i', $src, $mm)) {
+                    return $m[1].$m[2].$base.'/'.$mm[1].$m[2];
                 }
 
                 return $m[0];
