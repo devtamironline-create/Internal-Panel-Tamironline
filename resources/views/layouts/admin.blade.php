@@ -1452,6 +1452,12 @@
                     menubar: 'edit insert view format table tools',
                     branding: false,
                     promotion: false,
+                    // URLها را دست‌نخورده نگه دار — پیش‌فرضِ TinyMCE آدرس‌های
+                    // هم‌دامنه را نسبی (../storage/…) می‌کند و sanitizer سمتِ سرور
+                    // src بدونِ / یا http را حذف می‌کرد → عکس بعد از ثبت می‌پرید.
+                    convert_urls: false,
+                    relative_urls: false,
+                    remove_script_host: false,
                     browser_spellcheck: true,
                     contextmenu: 'link image table',
                     image_advtab: true,
@@ -1464,7 +1470,33 @@
                     quickbars_selection_toolbar: 'bold italic underline | h2 h3 | blockquote quicklink',
                     table_advtab: true,
                     table_appearance_options: true,
-                    paste_data_images: false,
+                    // آپلودِ تصویر به مخزنِ مدیا — دکمه‌ی image (تبِ Upload)،
+                    // drag&drop و paste همگی فایل را آپلود و URL نهایی را جایگذاری می‌کنند.
+                    paste_data_images: true,
+                    automatic_uploads: true,
+                    images_upload_handler: function (blobInfo) {
+                        return new Promise(function (resolve, reject) {
+                            var fd = new FormData();
+                            fd.append('file', blobInfo.blob(), blobInfo.filename());
+                            fetch(@json(route('site.admin.media.upload')), {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                    'Accept': 'application/json'
+                                },
+                                body: fd
+                            }).then(async function (r) {
+                                var j = await r.json().catch(function () { return {}; });
+                                if (!r.ok || !j.ok || !j.media || !j.media.url) {
+                                    reject({ message: (j.message || 'آپلود تصویر ناموفق بود'), remove: true });
+                                    return;
+                                }
+                                resolve(j.media.url);
+                            }).catch(function () {
+                                reject({ message: 'خطای شبکه هنگام آپلود تصویر', remove: true });
+                            });
+                        });
+                    },
                     block_formats: 'پاراگراف=p; تیتر ۱=h1; تیتر ۲=h2; تیتر ۳=h3; تیتر ۴=h4; تیتر ۵=h5; تیتر ۶=h6; نقل قول=blockquote; کد=pre',
                     font_size_formats: '12px 14px 16px 18px 20px 24px 28px 32px 40px',
                     codesample_languages: [
