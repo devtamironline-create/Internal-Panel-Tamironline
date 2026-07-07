@@ -395,9 +395,6 @@
                                @checked(in_array($d->id, $selectedDeviceIds ?? []))
                                class="w-4 h-4 accent-brand-600">
                         <span>{{ $d->name }}</span>
-                        @if(isset($d->is_active) && ! $d->is_active)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">غیرفعال</span>
-                        @endif
                     </label>
                 @endforeach
             </div>
