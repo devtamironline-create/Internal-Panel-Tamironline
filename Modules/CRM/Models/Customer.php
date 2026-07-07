@@ -3,6 +3,7 @@
 namespace Modules\CRM\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -20,6 +21,10 @@ class Customer extends Authenticatable
 {
     use HasApiTokens;
     use Notifiable;
+
+    // حذفِ نرمِ حساب (درخواستِ خودِ کاربر از اپ) — ادمین رکورد را می‌بیند و
+    // می‌تواند بازگرداند؛ سفارش‌ها/فاکتورها دست نمی‌خورند.
+    use SoftDeletes;
 
     protected $table = 'crm_customers';
 

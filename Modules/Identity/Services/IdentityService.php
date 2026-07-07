@@ -144,7 +144,15 @@ final class IdentityService
         // race-safe upsert — unique(mobile) + transaction جلوی duplicate در
         // درخواست‌های همزمان را می‌گیرد.
         [$customer, $isNew] = DB::transaction(function () use ($normalized): array {
-            $existing = Customer::query()->byMobile($normalized)->lockForUpdate()->first();
+            // withTrashed: حسابِ حذف‌شده (soft delete از اپ) نباید دوباره ساخته
+            // شود (unique mobile می‌شکست) و نباید بی‌سروصدا برگردد — بازگردانی
+            // فقط توسط ادمین از پنل انجام می‌شود.
+            $existing = Customer::query()->withTrashed()->byMobile($normalized)->lockForUpdate()->first();
+            if ($existing && $existing->trashed()) {
+                throw ValidationException::withMessages([
+                    'mobile' => 'این حساب به درخواستِ شما حذف شده است. برای بازگردانی با پشتیبانی تماس بگیرید.',
+                ]);
+            }
             if ($existing) {
                 if (! $existing->mobile_verified_at) {
                     $existing->forceFill(['mobile_verified_at' => now()])->save();

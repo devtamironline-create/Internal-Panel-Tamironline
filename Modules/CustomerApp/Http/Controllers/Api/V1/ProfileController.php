@@ -50,6 +50,41 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * حذفِ حساب توسطِ خودِ کاربر — POST /v1/customer/delete-account
+     *
+     * soft delete: رکورد (و سفارش‌ها/فاکتورها) حفظ می‌شود؛ ادمین در پنل مشتری را
+     * می‌بیند و می‌تواند بازگرداند. همه‌ی توکن‌های Sanctum باطل می‌شوند و تا
+     * بازگردانی توسطِ ادمین، ورودِ دوباره با همین شماره ممکن نیست.
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $customer = $this->customer($request);
+
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        \Illuminate\Support\Facades\Log::warning('customer.account_deleted', [
+            'customer_id' => $customer->id,
+            'mobile' => $customer->mobile,
+            'reason' => $data['reason'] ?? null,
+        ]);
+
+        $customer->forceFill([
+            'delete_reason' => isset($data['reason']) ? trim((string) $data['reason']) : null,
+        ])->save();
+
+        // ابطالِ همه‌ی نشست‌ها (همه‌ی دستگاه‌ها) و سپس حذفِ نرم.
+        $customer->tokens()->delete();
+        $customer->delete();
+
+        return response()->json([
+            'message' => 'حساب شما حذف شد. اگر منصرف شدید، پشتیبانی می‌تواند حساب را بازگرداند.',
+            'data' => ['deleted' => true],
+        ]);
+    }
+
     private function customer(Request $request): Customer
     {
         $user = $request->user();

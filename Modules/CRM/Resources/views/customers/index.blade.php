@@ -41,11 +41,27 @@
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg" dir="ltr">
             <p class="text-xs text-gray-500 mt-1">عددی از {{ \Modules\CRM\Models\Customer::SUBSCRIPTION_OFFSET }} به بالا = شماره اشتراک. در غیر این صورت = موبایل (تطابق دقیق).</p>
         </div>
+        @if($trashed ?? false)<input type="hidden" name="trashed" value="1">@endif
         <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">جستجو</button>
         @if($search)
-        <a href="{{ route('crm.customers.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">پاک کردن</a>
+        <a href="{{ route('crm.customers.index', ($trashed ?? false) ? ['trashed' => 1] : []) }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">پاک کردن</a>
         @endif
     </form>
+
+    {{-- فیلترِ حساب‌های حذف‌شده (delete-account از اپ) — برای بازبینی و بازگردانی --}}
+    <div class="flex items-center gap-2 text-sm">
+        <a href="{{ route('crm.customers.index') }}"
+           class="px-3 py-1.5 rounded-lg {{ ($trashed ?? false) ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200' : 'bg-brand-600 text-white' }}">
+            فعال‌ها
+        </a>
+        <a href="{{ route('crm.customers.index', ['trashed' => 1]) }}"
+           class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 {{ ($trashed ?? false) ? 'bg-rose-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200' }}">
+            حساب‌های حذف‌شده
+            @if(($trashedCount ?? 0) > 0)
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full {{ ($trashed ?? false) ? 'bg-white/20' : 'bg-rose-100 text-rose-700' }}">{{ $trashedCount }}</span>
+            @endif
+        </a>
+    </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table class="w-full">
@@ -72,16 +88,26 @@
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <a href="{{ route('crm.customers.show', $customer) }}" class="text-gray-600 hover:text-gray-900 text-sm">جزئیات</a>
-                            @can('edit-crm-customer')
-                            <a href="{{ route('crm.customers.edit', $customer) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
-                            @endcan
-                            @can('delete-crm-customer')
-                            <form action="{{ route('crm.customers.destroy', $customer) }}" method="POST" class="inline" onsubmit="return confirm('حذف این مشتری انجام شود؟');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm">حذف</button>
-                            </form>
-                            @endcan
+                            @if($customer->trashed())
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">حذف‌شده {{ \Morilog\Jalali\Jalalian::fromCarbon($customer->deleted_at)->format('Y/m/d') }}</span>
+                                @can('delete-crm-customer')
+                                <form action="{{ route('crm.customers.restore', $customer->id) }}" method="POST" class="inline" onsubmit="return confirm('حسابِ این مشتری بازگردانی شود؟');">
+                                    @csrf
+                                    <button type="submit" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium">بازگردانی</button>
+                                </form>
+                                @endcan
+                            @else
+                                @can('edit-crm-customer')
+                                <a href="{{ route('crm.customers.edit', $customer) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
+                                @endcan
+                                @can('delete-crm-customer')
+                                <form action="{{ route('crm.customers.destroy', $customer) }}" method="POST" class="inline" onsubmit="return confirm('حذف این مشتری انجام شود؟');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm">حذف</button>
+                                </form>
+                                @endcan
+                            @endif
                         </div>
                     </td>
                 </tr>
