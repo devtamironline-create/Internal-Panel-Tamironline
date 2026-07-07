@@ -89,7 +89,8 @@ class AutoReplyCommand extends Command
         $comments = Comment::query()
             ->with('commentable')
             ->whereIn('status', [Comment::STATUS_PENDING, Comment::STATUS_APPROVED])
-            ->whereNull('parent_id')
+            // ریپلای‌های کاربران (parent_id دار) هم مودریت/پاسخ می‌گیرند — زنجیرهٔ
+            // گفتگو در context ساخته می‌شود؛ فقط پاسخ‌های خودِ ادمین/AI مستثنا هستند.
             ->where('is_admin_reply', false)
             ->where('created_at', '>=', now()->subDays($days))
             ->whereDoesntHave('replies', fn ($q) => $q->where('is_admin_reply', true))
@@ -114,10 +115,14 @@ class AutoReplyCommand extends Command
         $moderated = 0;
         foreach ($comments as $comment) {
             $pageTitle = $this->ownerLabel($comment->commentable);
+            // زمینهٔ کامل: مقاله/صفحه (عنوان + خلاصه) + زنجیرهٔ کامنت تا والد —
+            // هم برای مودریشن هم برای پاسخ. بدونِ آن مدل «فراموش می‌کند» نظر زیرِ
+            // چه مقاله‌ای ثبت شده است.
+            $ctx = \Modules\Site\Support\AiContext::forComment($comment);
             try {
                 // ۱) مودریشنِ محتوای در‌انتظار
                 if ($comment->status === Comment::STATUS_PENDING) {
-                    $m = $moderation->analyze((string) $comment->content, array_filter(['type' => 'نظر', 'title' => $pageTitle]));
+                    $m = $moderation->analyze((string) $comment->content, array_filter(['type' => 'نظر', 'title' => $pageTitle, 'context' => $ctx]));
                     if (! $m['ok']) {
                         $this->warn("کامنت #{$comment->id}: مودریشن — ".$m['error']);
                         \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $m['error']]);
@@ -140,8 +145,8 @@ class AutoReplyCommand extends Command
                     }
                 }
 
-                // ۲) پاسخ به محتوای سالم — با موضوعِ صفحه برای پاسخِ دقیق‌تر
-                $res = $reply->reply((string) $comment->content, array_filter(['type' => 'نظر', 'page' => $pageTitle]));
+                // ۲) پاسخ به محتوای سالم — با زمینهٔ کاملِ مقاله + زنجیرهٔ گفتگو
+                $res = $reply->reply((string) $comment->content, array_filter(['type' => 'نظر', 'page' => $pageTitle, 'context' => $ctx]));
                 if (! $res['ok']) {
                     $this->warn("کامنت #{$comment->id}: پاسخ — ".$res['error']);
                     \Modules\Site\Support\AiLog::error('auto_reply.reply_failed', ['type' => 'comment', 'id' => $comment->id, 'error' => $res['error']]);
@@ -210,11 +215,13 @@ class AutoReplyCommand extends Command
         $replied = 0;
         $moderated = 0;
         foreach ($questions as $question) {
+            // متادیتای سوال (دستگاه/برند/مدل/تگ‌ها) — برای داوری و پاسخِ دقیق‌تر.
+            $ctx = \Modules\Site\Support\AiContext::forQuestion($question);
             try {
                 if ($question->status === Question::STATUS_PENDING) {
-                    $m = $moderation->analyze(trim(($question->title ?? '')."\n".($question->body ?? '')), [
-                        'type' => 'سوالِ انجمن', 'title' => $question->title,
-                    ]);
+                    $m = $moderation->analyze(trim(($question->title ?? '')."\n".($question->body ?? '')), array_filter([
+                        'type' => 'سوالِ انجمن', 'title' => $question->title, 'context' => $ctx,
+                    ]));
                     if (! $m['ok']) {
                         $this->warn("سوال #{$question->id}: مودریشن — ".$m['error']);
                         \Modules\Site\Support\AiLog::error('auto_reply.moderation_failed', ['type' => 'question', 'id' => $question->id, 'error' => $m['error']]);
@@ -236,9 +243,9 @@ class AutoReplyCommand extends Command
                     }
                 }
 
-                $res = $reply->reply((string) $question->body, [
-                    'type' => 'سوالِ انجمن', 'title' => $question->title, 'must_reply' => true,
-                ]);
+                $res = $reply->reply((string) $question->body, array_filter([
+                    'type' => 'سوالِ انجمن', 'title' => $question->title, 'context' => $ctx, 'must_reply' => true,
+                ]));
                 if (! $res['ok'] || ! $res['text']) {
                     $this->warn("سوال #{$question->id}: پاسخ — ".($res['error'] ?? 'بدونِ متن'));
                     \Modules\Site\Support\AiLog::error('auto_reply.reply_failed', ['type' => 'question', 'id' => $question->id, 'error' => $res['error'] ?? 'بدونِ متن']);
@@ -308,7 +315,8 @@ class AutoReplyCommand extends Command
                 ->where('task', 'moderation')->where('subject_type', $morph)
                 ->where('applied', false)->whereIn('decision', ['spam', 'reject'])
                 ->whereColumn('subject_id', "{$table}.id"))
-            ->with('question:id,title,body,status,published_at,answers_count,resolution_status')
+            // device_id/brand_id/model/tags برای متادیتای context (AiContext::forQuestion) لازم‌اند.
+            ->with('question:id,title,body,model,tags,device_id,brand_id,status,published_at,answers_count,resolution_status')
             ->latest()
             ->limit($limit)
             ->get();
@@ -317,12 +325,17 @@ class AutoReplyCommand extends Command
         $replied = 0;
         $skipped = 0;
         foreach ($answers as $answer) {
+            // زمینهٔ کاملِ رشته: سوالِ اصلی + پاسخ‌های قبلی + زنجیرهٔ parent —
+            // بدونِ آن، پیگیریِ کوتاهِ مرتبط (مثلِ «عالی بود مشکل حل شد») بی‌ربط
+            // به نظر می‌رسد و مودریشن به‌اشتباه ردش می‌کند.
+            $ctx = \Modules\Site\Support\AiContext::forAnswer($answer);
             try {
                 // ۱) مودریشنِ پیگیریِ در انتظار
                 if ($answer->status === Answer::STATUS_PENDING) {
                     $m = $moderation->analyze((string) $answer->body, array_filter([
                         'type' => 'پاسخِ کاربر در انجمن',
                         'title' => $answer->question?->title,
+                        'context' => $ctx,
                     ]));
                     if (! $m['ok']) {
                         $this->warn("پاسخِ کاربر #{$answer->id}: مودریشن — ".$m['error']);
@@ -348,12 +361,12 @@ class AutoReplyCommand extends Command
                     }
                 }
 
-                // ۲) پاسخ به پیگیریِ سالم — با زمینهٔ رشتهٔ گفتگو. تشکرِ ساده → NO_REPLY.
+                // ۲) پاسخ به پیگیریِ سالم — با زمینهٔ کاملِ رشته. تشکرِ ساده → NO_REPLY.
                 $question = $answer->question;
                 $res = $reply->reply((string) $answer->body, array_filter([
                     'type' => 'پیگیریِ کاربر در گفتگوی انجمن',
                     'title' => $question?->title,
-                    'thread' => $question ? $this->buildThread($question, $answer->id) : null,
+                    'context' => $ctx,
                 ]));
                 if (! $res['ok']) {
                     $this->warn("پاسخِ کاربر #{$answer->id}: پاسخ — ".$res['error']);
@@ -397,27 +410,6 @@ class AutoReplyCommand extends Command
         }
 
         return ['moderated' => $moderated, 'replied' => $replied, 'skipped' => $skipped];
-    }
-
-    /**
-     * خلاصهٔ رشتهٔ گفتگو (سوالِ اصلی + پاسخ‌های تأییدشدهٔ قبلی) برای زمینهٔ پاسخ.
-     */
-    private function buildThread(Question $question, int $excludeAnswerId): string
-    {
-        $thread = 'سوالِ اصلی: '.$question->title."\n"
-            .\Illuminate\Support\Str::limit(trim(strip_tags((string) $question->body)), 300);
-
-        $prev = Answer::query()
-            ->where('question_id', $question->id)
-            ->where('status', Answer::STATUS_APPROVED)
-            ->where('id', '!=', $excludeAnswerId)
-            ->oldest()->limit(6)->get(['body', 'is_expert_reply']);
-        foreach ($prev as $p) {
-            $who = $p->is_expert_reply ? 'کارشناس' : 'کاربر';
-            $thread .= "\n{$who}: ".\Illuminate\Support\Str::limit(trim(strip_tags((string) $p->body)), 300);
-        }
-
-        return $thread;
     }
 
     /**

@@ -142,7 +142,12 @@ class AiController extends Controller
     public function moderateComment(Comment $comment, AiModerationService $svc): RedirectResponse
     {
         $this->guard();
-        $msg = $this->runModeration($svc, $comment, (string) $comment->content, ['type' => 'نظر (کامنت)']);
+        // همان زمینه‌ای که مسیرِ خودکار می‌دهد (مقاله/صفحه + زنجیرهٔ گفتگو) —
+        // داوریِ «بی‌ربط بودن» هرگز نباید بدونِ context گرفته شود.
+        $msg = $this->runModeration($svc, $comment, (string) $comment->content, array_filter([
+            'type' => 'نظر (کامنت)',
+            'context' => \Modules\Site\Support\AiContext::forComment($comment),
+        ]));
 
         return back()->with($msg[0], $msg[1]);
     }
@@ -151,7 +156,11 @@ class AiController extends Controller
     {
         $this->guard();
         $text = trim(($question->title ?? '')."\n".($question->body ?? ''));
-        $msg = $this->runModeration($svc, $question, $text, ['type' => 'سوالِ انجمن', 'title' => $question->title]);
+        $msg = $this->runModeration($svc, $question, $text, array_filter([
+            'type' => 'سوالِ انجمن',
+            'title' => $question->title,
+            'context' => \Modules\Site\Support\AiContext::forQuestion($question),
+        ]));
 
         return back()->with($msg[0], $msg[1]);
     }
