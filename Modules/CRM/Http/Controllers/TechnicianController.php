@@ -211,7 +211,12 @@ class TechnicianController extends Controller
             'technician' => $technician,
             'allCities' => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
             'allBrands' => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
-            'allDevices' => \Modules\CRM\Models\Device::active()->ordered()->get(['id', 'name']),
+            // همه‌ی دستگاه‌های تعریف‌شده در پنل (نه فقط فعال‌ها) — تکنسین ممکن است
+            // دستگاهی را پوشش دهد که فعلاً روی سایت غیرفعال است؛ غیرفعال‌ها با
+            // برچسب مشخص می‌شوند و آخرِ لیست می‌آیند.
+            'allDevices' => \Modules\CRM\Models\Device::query()
+                ->orderByDesc('is_active')->orderBy('sort_order')->orderBy('name')
+                ->get(['id', 'name', 'is_active']),
             // مناطق (ردیف‌های فرزندِ crm_cities) گروه‌بندی‌شده بر اساس شهرِ والد.
             // crm_regions بازنشسته شد؛ پوشش منطقه روی همان crm_cities است.
             'allRegions' => \Modules\CRM\Models\City::query()
