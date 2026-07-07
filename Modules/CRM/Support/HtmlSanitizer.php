@@ -282,7 +282,16 @@ final class HtmlSanitizer
             }
         }
 
-        return false;
+        // URL نسبیِ بدونِ scheme (مثلِ storage/x.jpg یا ../media/1) امن است —
+        // خطر فقط در schemeهای اجرایی (javascript:, data:, …) است. TinyMCE
+        // پیش‌تر آدرس‌های هم‌دامنه را نسبی می‌کرد و src تصاویر این‌جا حذف می‌شد.
+        $firstColon = strpos($url, ':');
+        if ($firstColon === false) {
+            return true;
+        }
+        $delimiter = strcspn($url, '/?#');
+
+        return $firstColon > $delimiter;
     }
 
     private static function filterStyle(string $style): string
