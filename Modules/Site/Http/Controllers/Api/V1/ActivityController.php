@@ -137,6 +137,7 @@ class ActivityController extends Controller
 
             $minutesAgo = $this->pickMinutesAgo($rng);
             $status = $rng->getInt(0, 100) < 75 ? 'completed' : 'in_progress';
+            $timeLabel = $this->timeLabel($minutesAgo);
 
             // پایه: «تعمیر دستگاه [برند]» — و اگر مشکلِ واقعی داشت، با « – مشکل».
             $base = $rowBrand
@@ -156,6 +157,9 @@ class ActivityController extends Controller
                 'area' => $area,
                 'status' => $status,
                 'minutes_ago' => $minutesAgo,
+                // برچسبِ آماده‌ی نمایش: زیرِ یک ساعت «X دقیقه پیش»، بالاتر «X ساعت
+                // پیش» (تا سقفِ ۳ ساعت) — فرانت همین را مستقیم نشان دهد.
+                'time_label' => $timeLabel,
             ];
         }
 
@@ -304,8 +308,9 @@ class ActivityController extends Controller
     }
 
     /**
-     * توزیع زمان واقع‌نمایانه — ۶۰٪ احتمال در ۳۰ دقیقه اخیر،
-     * ۳۰٪ بین ۳۰ دقیقه تا ۶ ساعت، ۱۰٪ بین ۶ تا ۴۸ ساعت.
+     * توزیع زمان واقع‌نمایانه با سقفِ «۳ ساعت» — ۶۰٪ احتمال در ۳۰ دقیقه اخیر،
+     * ۳۰٪ بین ۳۰ تا ۹۰ دقیقه، ۱۰٪ بین ۹۰ دقیقه تا ۳ ساعت. سفارشِ قدیمی‌تر از
+     * ۳ ساعت هرگز نمایش داده نمی‌شود.
      */
     private function pickMinutesAgo(\Random\Randomizer $rng): int
     {
@@ -314,9 +319,26 @@ class ActivityController extends Controller
             return $rng->getInt(1, 30);
         }
         if ($r < 90) {
-            return $rng->getInt(30, 360);
+            return $rng->getInt(30, 90);
         }
 
-        return $rng->getInt(360, 2880);
+        return $rng->getInt(90, 180);
+    }
+
+    /**
+     * برچسبِ فارسیِ زمان: زیرِ ۶۰ دقیقه «X دقیقه پیش»، از آن به بعد بر حسبِ
+     * «ساعت» (۱ تا ۳ ساعت پیش) — به اسمِ ساعت، نه دقیقه.
+     */
+    private function timeLabel(int $minutesAgo): string
+    {
+        $fa = fn (int $n) => strtr((string) $n, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
+
+        if ($minutesAgo < 60) {
+            return $fa(max(1, $minutesAgo)).' دقیقه پیش';
+        }
+
+        $hours = min(3, max(1, (int) round($minutesAgo / 60)));
+
+        return $hours === 1 ? 'حدود یک ساعت پیش' : $fa($hours).' ساعت پیش';
     }
 }
