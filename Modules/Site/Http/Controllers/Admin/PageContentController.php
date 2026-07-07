@@ -136,13 +136,23 @@ class PageContentController extends Controller
         $this->sections->saveAll($slug, (array) $request->input('sections', []));
 
         // پاک‌سازیِ کشِ فرانتِ همین صفحه (fire-and-forget؛ هرگز throw نمی‌کند).
-        // برای الگویِ per-device، صفحاتِ ترکیبیِ همان دستگاه هم purge می‌شوند.
+        // برای الگویِ per-device، مسیرهای همه‌ی صفحاتِ ترکیبیِ فعالِ همان دستگاه هم
+        // purge می‌شوند (فرانت صفحات را path-based کش می‌کند — مثلِ purgeDeviceCache).
         $tags = ['page:'.$slug];
+        $paths = [];
         if ($comboDevice) {
             $tags[] = 'page:device_brand';
             $tags[] = 'device:'.$comboDevice->slug;
+            $brandSlugs = \Modules\CRM\Models\Brand::query()
+                ->whereIn('id', \Modules\CRM\Models\DeviceBrandPage::query()
+                    ->where('device_id', $comboDevice->id)->where('is_active', true)->pluck('brand_id'))
+                ->pluck('slug');
+            foreach ($brandSlugs as $b) {
+                $paths[] = '/services/'.$comboDevice->slug.'/'.$b;
+                $paths[] = '/devices/'.$comboDevice->slug.'/'.$b;
+            }
         }
-        app(\Modules\Site\Support\FrontendRevalidator::class)->purgeTags($tags);
+        app(\Modules\Site\Support\FrontendRevalidator::class)->purge($paths, $tags);
 
         return redirect()
             ->route('site.admin.page-content.edit', $slug)
