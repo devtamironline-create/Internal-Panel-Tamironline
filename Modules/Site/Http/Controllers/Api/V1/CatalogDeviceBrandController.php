@@ -65,8 +65,11 @@ class CatalogDeviceBrandController extends Controller
 
         // الگوی اختصاصیِ ترکیبیِ همین دستگاه (device_brand:{slug}) — تیمِ محتوا
         // یک‌بار برای هر دستگاه می‌نویسد (با {brand}) و همه‌ی صفحاتِ ترکیبیِ آن
-        // دستگاه یکسان می‌شوند. فیلد به فیلد بر الگوی سراسری مقدم است؛ فیلدهای
-        // خالی از الگوی سراسری پر می‌شوند.
+        // دستگاه یکسان می‌شوند. اولویت: per-pair → «الگوی این دستگاه» → فیلدهای
+        // device/brand → الگوی سراسری. (اگر الگوی دستگاه بعد از device میامد،
+        // description/عنوانِ خودِ دستگاه همیشه سایه می‌انداخت و محتوای واردشده
+        // هرگز نمایش داده نمی‌شد.)
+        $deviceCombo = [];
         if ($hasComboTemplate) {
             $deviceCombo = $this->sections->loadForPublic(
                 PageSectionService::deviceComboSlug($device->slug),
@@ -111,20 +114,22 @@ class CatalogDeviceBrandController extends Controller
 
                 'meta_title' => $this->merge(
                     $page?->meta_title,
+                    $deviceCombo['seo']['meta_title'] ?? null,
                     $device->meta_title,
                     $brand->meta_title,
                     $template['seo']['meta_title'] ?? null
                 ),
                 'meta_description' => $this->merge(
                     $page?->meta_description,
+                    $deviceCombo['seo']['meta_description'] ?? null,
                     $device->meta_description,
                     $brand->meta_description,
                     $template['seo']['meta_description'] ?? null
                 ),
 
                 'sections' => [
-                    'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true), $deviceHeroImage),
-                    'steps' => $this->buildSteps($page, $device, $brand, $template, $enabled('steps', true)),
+                    'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true), $deviceHeroImage, $deviceCombo),
+                    'steps' => $this->buildSteps($page, $device, $brand, $template, $enabled('steps', true), $deviceCombo),
                     'live_activity' => [
                         'enabled' => $enabled('live_activity', true),
                         'device_slug' => $device->slug,
@@ -135,6 +140,7 @@ class CatalogDeviceBrandController extends Controller
                         'html' => InlineMediaUrl::normalize(
                             $this->merge(
                                 $page?->description,
+                                $deviceCombo['content']['html'] ?? null,
                                 $device->description,
                                 $brand->description,
                                 $template['content']['html'] ?? null
@@ -157,13 +163,13 @@ class CatalogDeviceBrandController extends Controller
                     ],
                     'testimonials' => [
                         'enabled' => $enabled('testimonials', true),
-                        'items' => $this->buildTestimonials($page, $device, $brand, $template),
+                        'items' => $this->buildTestimonials($page, $device, $brand, $template, $deviceCombo),
                     ],
                     'videos' => [
                         'enabled' => $enabled('videos', true),
                         'title' => $template['videos']['title'] ?? null,
                         'subtitle' => $template['videos']['subtitle'] ?? null,
-                        'items' => $this->buildVideos($device, $brand, $template, $context),
+                        'items' => $this->buildVideos($device, $brand, $template, $context, $deviceCombo),
                     ],
                     'forum_questions' => [
                         'enabled' => $enabled('forum_questions', true),
@@ -220,85 +226,111 @@ class CatalogDeviceBrandController extends Controller
         return null;
     }
 
-    private function buildHero(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled, $deviceTemplateImage = null): array
+    /**
+     * @param  array<string, mixed>  $deviceCombo  سکشن‌های الگوی اختصاصیِ این
+     *                                             دستگاه — بعد از per-pair و قبل از
+     *                                             فیلدهای device/brand اولویت دارد.
+     */
+    private function buildHero(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled, $deviceTemplateImage = null, array $deviceCombo = []): array
     {
         $heroTpl = $template['hero'] ?? [];
         $ctaPrimaryTpl = (array) ($heroTpl['cta_primary'] ?? []);
         $ctaSecondaryTpl = (array) ($heroTpl['cta_secondary'] ?? []);
+        $dc = (array) ($deviceCombo['hero'] ?? []);
+        $dcCtaPrimary = (array) ($dc['cta_primary'] ?? []);
+        $dcCtaSecondary = (array) ($dc['cta_secondary'] ?? []);
 
         return [
             'enabled' => $enabled,
-            'badge' => $this->merge($page?->eyebrow, $device->eyebrow, $brand->eyebrow, $heroTpl['badge'] ?? null),
+            'badge' => $this->merge($page?->eyebrow, $dc['badge'] ?? null, $device->eyebrow, $brand->eyebrow, $heroTpl['badge'] ?? null),
             'title' => $this->merge(
                 $page?->title,
+                $dc['title'] ?? null,
                 $device->service_name,
                 $heroTpl['title'] ?? null,
                 ($device->name.' '.$brand->name)
             ),
-            'subtitle' => $this->merge($page?->subtitle, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
-            'caption' => $this->merge($page?->caption, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
-            'image' => $this->mergeHeroImage($device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null, $deviceTemplateImage),
+            'subtitle' => $this->merge($page?->subtitle, $dc['subtitle'] ?? null, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
+            'caption' => $this->merge($page?->caption, $dc['caption'] ?? null, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
+            'image' => $this->mergeHeroImage($dc['image'] ?? null, $device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null, $deviceTemplateImage),
             'cta_primary' => [
-                'label' => $this->merge($page?->cta_primary_label, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
-                'url' => $this->merge($page?->cta_primary_url, $device->cta_primary_url, $brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
-                'icon' => $this->merge($page?->cta_primary_icon, $device->cta_primary_icon, $brand->cta_primary_icon, $ctaPrimaryTpl['icon'] ?? null),
+                'label' => $this->merge($page?->cta_primary_label, $dcCtaPrimary['label'] ?? null, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
+                'url' => $this->merge($page?->cta_primary_url, $dcCtaPrimary['url'] ?? null, $device->cta_primary_url, $brand->cta_primary_url, $ctaPrimaryTpl['url'] ?? null),
+                'icon' => $this->merge($page?->cta_primary_icon, $dcCtaPrimary['icon'] ?? null, $device->cta_primary_icon, $brand->cta_primary_icon, $ctaPrimaryTpl['icon'] ?? null),
             ],
             'cta_secondary' => [
-                'label' => $this->merge($page?->cta_secondary_label, $device->cta_secondary_label, $brand->cta_secondary_label, $ctaSecondaryTpl['label'] ?? null),
-                'url' => $this->merge($page?->cta_secondary_url, $device->cta_secondary_url, $brand->cta_secondary_url, $ctaSecondaryTpl['url'] ?? null),
-                'icon' => $this->merge($page?->cta_secondary_icon, $device->cta_secondary_icon, $brand->cta_secondary_icon, $ctaSecondaryTpl['icon'] ?? null),
+                'label' => $this->merge($page?->cta_secondary_label, $dcCtaSecondary['label'] ?? null, $device->cta_secondary_label, $brand->cta_secondary_label, $ctaSecondaryTpl['label'] ?? null),
+                'url' => $this->merge($page?->cta_secondary_url, $dcCtaSecondary['url'] ?? null, $device->cta_secondary_url, $brand->cta_secondary_url, $ctaSecondaryTpl['url'] ?? null),
+                'icon' => $this->merge($page?->cta_secondary_icon, $dcCtaSecondary['icon'] ?? null, $device->cta_secondary_icon, $brand->cta_secondary_icon, $ctaSecondaryTpl['icon'] ?? null),
             ],
         ];
     }
 
     /**
-     * Hero image — اولویت: device.hero_image > brand.hero_image > template.hero.image
-     * > الگوی صفحه‌ی دستگاه (deviceTemplate). هر slot به‌صورت مستقل merge می‌شود؛
-     * deviceTemplate تضمین می‌کند اگر همه خالی بودند همان هیروِ صفحه‌ی دستگاه بیاید.
+     * Hero image — اولویت: الگوی اختصاصیِ دستگاه (deviceComboImg) > device.hero_image
+     * > brand.hero_image > template.hero.image > الگوی صفحه‌ی دستگاه (deviceTemplate).
+     * هر slot به‌صورت مستقل merge می‌شود؛ deviceTemplate تضمین می‌کند اگر همه خالی
+     * بودند همان هیروِ صفحه‌ی دستگاه بیاید.
      *
+     * @param  mixed  $deviceComboImg
      * @param  mixed  $deviceImg
      * @param  mixed  $brandImg
      * @param  mixed  $template
      * @param  mixed  $deviceTemplate
      */
-    private function mergeHeroImage($deviceImg, $brandImg, $template, $deviceTemplate = null): array
+    private function mergeHeroImage($deviceComboImg, $deviceImg, $brandImg, $template, $deviceTemplate = null): array
     {
         $svc = \Modules\Site\Services\PageSectionService::class;
-        $d = $svc::normalizeHeroVisual($deviceImg);
-        $b = $svc::normalizeHeroVisual($brandImg);
-        $t = $svc::normalizeHeroVisual($template);
-        $dt = $svc::normalizeHeroVisual($deviceTemplate);
+        $chain = [
+            $svc::normalizeHeroVisual($deviceComboImg),
+            $svc::normalizeHeroVisual($deviceImg),
+            $svc::normalizeHeroVisual($brandImg),
+            $svc::normalizeHeroVisual($template),
+            $svc::normalizeHeroVisual($deviceTemplate),
+        ];
         $out = [];
         foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
-            $out[$slot] = [
-                'url' => $d[$slot]['url'] ?: ($b[$slot]['url'] ?: ($t[$slot]['url'] ?: $dt[$slot]['url'])),
-                'alt' => $d[$slot]['alt'] ?: ($b[$slot]['alt'] ?: ($t[$slot]['alt'] ?: $dt[$slot]['alt'])),
-            ];
+            $out[$slot] = ['url' => null, 'alt' => null];
+            foreach (['url', 'alt'] as $field) {
+                foreach ($chain as $candidate) {
+                    if (! empty($candidate[$slot][$field])) {
+                        $out[$slot][$field] = $candidate[$slot][$field];
+                        break;
+                    }
+                }
+            }
         }
 
         return $out;
     }
 
-    private function buildSteps(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled): array
+    /**
+     * @param  array<string, mixed>  $deviceCombo
+     */
+    private function buildSteps(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, bool $enabled, array $deviceCombo = []): array
     {
         $stepsTpl = $template['steps'] ?? [];
         $tplImage = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($stepsTpl['image'] ?? null);
+        $dcSteps = (array) ($deviceCombo['steps'] ?? []);
+        $dcImage = \Modules\Site\Services\PageSectionService::normalizeResponsiveImage($dcSteps['image'] ?? null);
 
         return [
             'enabled' => $enabled,
             'image_desktop' => MediaUrl::resolve($this->merge(
                 $page?->steps_image_desktop,
+                $dcImage['desktop']['url'],
                 $device->steps_image_desktop,
                 $brand->steps_image_desktop,
                 $tplImage['desktop']['url']
             )),
             'image_mobile' => MediaUrl::resolve($this->merge(
                 $page?->steps_image_mobile,
+                $dcImage['mobile']['url'],
                 $device->steps_image_mobile,
                 $brand->steps_image_mobile,
                 $tplImage['mobile']['url']
             )),
-            'alt' => $stepsTpl['alt'] ?? null,
+            'alt' => $this->merge($dcSteps['alt'] ?? null, $stepsTpl['alt'] ?? null),
         ];
     }
 
@@ -381,7 +413,10 @@ class CatalogDeviceBrandController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function buildTestimonials(?DeviceBrandPage $page, Device $device, Brand $brand, array $template): array
+    /**
+     * @param  array<string, mixed>  $deviceCombo
+     */
+    private function buildTestimonials(?DeviceBrandPage $page, Device $device, Brand $brand, array $template, array $deviceCombo = []): array
     {
         // context برای جایگزینیِ placeholderهای موضوع ({device}، {brand} و …).
         $ctx = [
@@ -400,31 +435,28 @@ class CatalogDeviceBrandController extends Controller
             }
         }
 
-        // اولویت ۲: device
+        // اولویت ۲: الگوی اختصاصیِ این دستگاه (انتخابِ تیمِ محتوا برای صفحاتِ ترکیبی)
+        $dcItems = (array) ($deviceCombo['testimonials']['testimonial_ids_items'] ?? []);
+        if (! empty($dcItems)) {
+            return $this->shapeTemplateReviews($dcItems, $ctx);
+        }
+
+        // اولویت ۳: device
         $picked = $device->reviews()->where('site_reviews.status', Review::STATUS_APPROVED)->get();
         if ($picked->isNotEmpty()) {
             return $this->shapeReviews($picked, $ctx);
         }
 
-        // اولویت ۳: brand
+        // اولویت ۴: brand
         $picked = $brand->reviews()->where('site_reviews.status', Review::STATUS_APPROVED)->get();
         if ($picked->isNotEmpty()) {
             return $this->shapeReviews($picked, $ctx);
         }
 
-        // اولویت ۴: template
+        // اولویت ۵: template سراسری
         $tplItems = (array) ($template['testimonials']['testimonial_ids_items'] ?? []);
         if (! empty($tplItems)) {
-            return array_map(fn ($t) => [
-                'id' => $t['id'] ?? null,
-                'type' => Review::TYPE_AUDIO,
-                'author_name' => $t['customer_name'] ?? null,
-                'topic' => \Modules\Site\Support\ReviewTopic::fill($t['topic'] ?? null, $ctx),
-                'rating' => isset($t['rating']) ? (int) $t['rating'] : null,
-                'audio_url' => $t['audio_url'] ?? null,
-                'duration_seconds' => $t['duration_seconds'] ?? null,
-                'content' => null,
-            ], $tplItems);
+            return $this->shapeTemplateReviews($tplItems, $ctx);
         }
 
         // اولویت نهایی: audio generic
@@ -433,6 +465,27 @@ class CatalogDeviceBrandController extends Controller
             ->orderByDesc('is_featured')->limit(12)->get();
 
         return $this->shapeReviews($picked, $ctx);
+    }
+
+    /**
+     * نگاشتِ آیتم‌های hydrate‌شده‌ی الگو (testimonial_ids_items) به خروجیِ استاندارد.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @param  array<string, string|null>  $ctx
+     * @return array<int, array<string, mixed>>
+     */
+    private function shapeTemplateReviews(array $items, array $ctx): array
+    {
+        return array_map(fn ($t) => [
+            'id' => $t['id'] ?? null,
+            'type' => Review::TYPE_AUDIO,
+            'author_name' => $t['customer_name'] ?? null,
+            'topic' => \Modules\Site\Support\ReviewTopic::fill($t['topic'] ?? null, $ctx),
+            'rating' => isset($t['rating']) ? (int) $t['rating'] : null,
+            'audio_url' => $t['audio_url'] ?? null,
+            'duration_seconds' => $t['duration_seconds'] ?? null,
+            'content' => null,
+        ], $items);
     }
 
     /**
@@ -454,14 +507,21 @@ class CatalogDeviceBrandController extends Controller
 
     /**
      * منطق videos برای صفحه‌ی ترکیبی:
-     *   device.videos > brand.videos > template.videos.items
-     * placeholderهای `{device}` و `{brand}` روی هر سه سطح اعمال می‌شوند.
+     *   الگوی اختصاصیِ دستگاه > device.videos > brand.videos > template.videos.items
+     * placeholderهای `{device}` و `{brand}` روی همه‌ی سطح‌ها اعمال می‌شوند.
      *
      * @param  array<string, string>  $context
+     * @param  array<string, mixed>  $deviceCombo
      * @return array<int, array<string, mixed>>
      */
-    private function buildVideos(Device $device, Brand $brand, array $template, array $context): array
+    private function buildVideos(Device $device, Brand $brand, array $template, array $context, array $deviceCombo = []): array
     {
+        // الگوی اختصاصیِ این دستگاه — از قبل placeholder خورده (loadForPublic).
+        $dcVideos = array_values(array_filter((array) ($deviceCombo['videos']['items'] ?? []), fn ($v) => is_array($v) && ! empty(array_filter($v))));
+        if ($dcVideos !== []) {
+            return $this->shapeVideos($dcVideos);
+        }
+
         $deviceVideos = is_array($device->videos) ? array_values(array_filter($device->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
         if ($deviceVideos !== []) {
             return $this->shapeVideos($this->sections->applyPlaceholders($deviceVideos, $context));
