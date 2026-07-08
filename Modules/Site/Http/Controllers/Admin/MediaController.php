@@ -69,7 +69,39 @@ class MediaController extends Controller
             'audio' => Media::where('kind', 'audio')->count(),
         ];
 
-        return view('site::admin.media.index', compact('media', 'tags', 'counts'));
+        // تنظیماتِ بهینه‌سازی/سخت‌گیریِ آپلودِ تصویر — برای پنلِ تنظیمات.
+        $optimizeSettings = [
+            'allowed_types' => (string) \Modules\Site\Models\SiteSetting::get('media_image_allowed_types', ''),
+            'convert_webp' => (string) \Modules\Site\Models\SiteSetting::get('media_image_convert_webp', '1'),
+            'max_width' => (string) \Modules\Site\Models\SiteSetting::get('media_image_max_width', '1920'),
+            'max_kb' => (string) \Modules\Site\Models\SiteSetting::get('media_image_max_kb', '0'),
+        ];
+
+        return view('site::admin.media.index', compact('media', 'tags', 'counts', 'optimizeSettings'));
+    }
+
+    /**
+     * PUT /admin/site/media/settings — تنظیماتِ بهینه‌سازی/سخت‌گیریِ آپلودِ تصویر.
+     * فقط روی آپلودهای «جدید» اثر دارد؛ فایل‌های موجودِ مخزن دست نمی‌خورند.
+     */
+    public function saveSettings(Request $request): RedirectResponse
+    {
+        $this->checkManage();
+
+        $data = $request->validate([
+            'allowed_types' => 'nullable|string|max:120',
+            'convert_webp' => 'nullable|boolean',
+            'max_width' => 'nullable|integer|min:0|max:10000',
+            'max_kb' => 'nullable|integer|min:0|max:51200',
+        ]);
+
+        \Modules\Site\Models\SiteSetting::set('media_image_allowed_types', trim((string) ($data['allowed_types'] ?? '')), 'media');
+        \Modules\Site\Models\SiteSetting::set('media_image_convert_webp', ! empty($data['convert_webp']) ? '1' : '0', 'media');
+        \Modules\Site\Models\SiteSetting::set('media_image_max_width', (string) (int) ($data['max_width'] ?? 0), 'media');
+        \Modules\Site\Models\SiteSetting::set('media_image_max_kb', (string) (int) ($data['max_kb'] ?? 0), 'media');
+
+        return redirect()->route('site.admin.media.index')
+            ->with('success', 'تنظیماتِ بهینه‌سازیِ آپلود ذخیره شد (فقط روی آپلودهای جدید اعمال می‌شود).');
     }
 
     /**

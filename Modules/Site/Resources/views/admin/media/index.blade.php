@@ -27,6 +27,49 @@
     </div>
 
     @if(session('success'))<div class="mb-4 p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{{ session('success') }}</div>@endif
+    @if($errors->any())<div class="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">{{ $errors->first() }}</div>@endif
+
+    {{-- تنظیماتِ بهینه‌سازی/سخت‌گیریِ آپلودِ تصویر (فقط آپلودهای جدید) --}}
+    @if(auth()->user()?->can('manage-site-media') || auth()->user()?->can('manage-site') || auth()->user()?->can('manage-permissions'))
+    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-5" x-data="{ open: false }">
+        <button type="button" @click="open = !open" class="w-full flex items-center justify-between gap-2 text-right">
+            <span class="text-sm font-bold text-gray-800">⚙️ بهینه‌سازی و سخت‌گیریِ آپلودِ تصویر (سئو)</span>
+            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <form x-show="open" x-collapse method="POST" action="{{ route('site.admin.media.settings') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            @csrf @method('PUT')
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">تبدیلِ خودکار به WebP</label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                    <input type="hidden" name="convert_webp" value="0">
+                    <input type="checkbox" name="convert_webp" value="1" @checked(($optimizeSettings['convert_webp'] ?? '1') === '1') class="w-4 h-4 accent-purple-600">
+                    <span>jpg/png موقعِ آپلود به WebP تبدیل شود</span>
+                </label>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">بیشینه‌ی عرضِ تصویر (پیکسل — ۰ = بدونِ محدودیت)</label>
+                <input type="number" name="max_width" value="{{ $optimizeSettings['max_width'] ?? '1920' }}" min="0" max="10000"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" dir="ltr">
+                <p class="text-[11px] text-gray-400 mt-1">تصویرِ بزرگ‌تر خودکار کوچک می‌شود.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">سقفِ حجمِ نهایی (KB — ۰ = بدونِ محدودیت)</label>
+                <input type="number" name="max_kb" value="{{ $optimizeSettings['max_kb'] ?? '0' }}" min="0" max="51200"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" dir="ltr">
+                <p class="text-[11px] text-gray-400 mt-1">پس از بهینه‌سازی؛ بزرگ‌تر = ردِ آپلود.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">فرمت‌های مجازِ ورودی (خالی = همه)</label>
+                <input type="text" name="allowed_types" value="{{ $optimizeSettings['allowed_types'] ?? '' }}" placeholder="مثلاً: webp یا jpg,png,webp"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" dir="ltr">
+            </div>
+            <div class="md:col-span-2 lg:col-span-4 flex items-center gap-3">
+                <button class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium">ذخیره‌ی تنظیمات</button>
+                <span class="text-[11px] text-gray-500">فقط روی آپلودهای «جدید» اعمال می‌شود — فایل‌های موجودِ مخزن و لینک‌هایشان دست نمی‌خورند.</span>
+            </div>
+        </form>
+    </div>
+    @endif
 
     {{-- Stats + filters --}}
     @php
