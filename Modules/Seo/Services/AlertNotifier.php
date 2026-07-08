@@ -17,7 +17,10 @@ class AlertNotifier
 {
     public function afterRun(SeoAuditRun $run): void
     {
-        if ($run->critical_count <= 0 && $run->warning_count <= 0) {
+        $missing = (int) ($run->missing_in_sitemap_count ?? 0);
+        $stale = (int) ($run->stale_in_sitemap_count ?? 0);
+
+        if ($run->critical_count <= 0 && $run->warning_count <= 0 && $missing <= 0 && $stale <= 0) {
             return; // چیزی برای هشدار نیست
         }
 
@@ -29,6 +32,9 @@ class AlertNotifier
             $run->total_urls,
             $run->avg_score
         );
+        if ($missing > 0 || $stale > 0) {
+            $message .= sprintf(' پوششِ sitemap: %d صفحهٔ جاافتاده از sitemap، %d آدرسِ منسوخ در sitemap.', $missing, $stale);
+        }
 
         $this->send($message, $run);
     }
