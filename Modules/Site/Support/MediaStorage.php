@@ -62,7 +62,12 @@ final class MediaStorage
         $filename = $hash.'.'.$ext;
         $path = $dir.'/'.$filename;
 
-        Storage::disk('public')->put($path, (string) file_get_contents($sourcePath));
+        // stream (نه file_get_contents) — ویدیوی چندصدمگابایتی نباید کلِ حافظه را بخورد.
+        $stream = fopen($sourcePath, 'rb');
+        Storage::disk('public')->put($path, $stream);
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
         // chmod 0644 تا سرور بتواند بخواند (UMASK پیش‌فرض ممکن است 0600 بدهد)
         @chmod(Storage::disk('public')->path($path), 0644);
 
@@ -137,7 +142,11 @@ final class MediaStorage
             return false;   // فایل سرجایش است — نیازی به بازیابی نیست
         }
 
-        $disk->put($path, (string) file_get_contents($sourcePath));
+        $stream = fopen($sourcePath, 'rb');
+        $disk->put($path, $stream);
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
         @chmod($disk->path($path), 0644);
 
         // اگر path روی رکورد خالی بود، تثبیتش کن.
