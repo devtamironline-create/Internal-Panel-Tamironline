@@ -32,7 +32,8 @@ return [
     ],
 
     'otp' => [
-        'length' => 6,
+        // ۴ رقم (درخواستِ محصول — ورودِ سریع‌تر + autofill راحت‌تر). با env قابلِ برگشت.
+        'length' => (int) env('SMS_OTP_LENGTH', 4),
         // اعتبار کد به ثانیه — از SMS_OTP_EXPIRE_MINUTES (پیش‌فرض ۲ دقیقه) محاسبه می‌شود
         'expires_in' => (int) env('SMS_OTP_EXPIRE_MINUTES', 2) * 60,
         'max_attempts' => (int) env('SMS_OTP_MAX_ATTEMPTS', 5),

@@ -40,22 +40,14 @@ final class WpImageDownloader
             return $this->cache[$url];
         }
 
-        // اگر hash این URL قبلاً ذخیره شده (از run قبلی)، نیاز به دانلود نیست —
-        // ولی hash را فقط بعد از دانلود می‌دانیم. به‌جایش از filename guess می‌کنیم:
-        // اگر filename دقیقاً در DB موجود است، همان را برگردان. این یک shortcut
-        // اختیاری است برای جلوگیری از دانلود تکراری بین runها.
+        // ⚠️ dedupِ بر اساسِ «نامِ فایل» عمداً حذف شد: نامِ فایل هویتِ یکتا نیست.
+        // در وردپرس دو فایلِ کاملاً متفاوت (مثلاً عکسِ دستگاه و عکسی که تکنسین
+        // آپلود کرده) می‌توانند basename یکسان داشته باشند (پوشه‌های تاریخِ متفاوت،
+        // IMG_xxxx.jpg و…). آن shortcut جدیدترین رکوردِ هم‌نام را برمی‌گرداند و
+        // باعث می‌شد thumbnail دستگاه به عکسِ اشتباه (عکسِ تکنسین) وصل شود.
+        // dedupِ درست بر اساسِ hash در MediaStorage::store انجام می‌شود؛ هزینه‌اش
+        // فقط یک دانلودِ دوباره است که retry/backoff دارد.
         $guessName = basename(parse_url($url, PHP_URL_PATH) ?? '');
-        if ($guessName !== '') {
-            $existing = Media::where('filename', $guessName)->orderByDesc('id')->first();
-            // فقط وقتی short-circuit کن که فایلِ فیزیکی هم موجود باشد. اگر رکورد
-            // هست ولی فایل پاک شده، ادامه می‌دهیم تا دوباره دانلود و روی همان
-            // مسیر بازیابی شود (MediaStorage::store خودش بازیابی می‌کند).
-            if ($existing && $this->fileExists($existing)) {
-                $this->cache[$url] = $existing;
-
-                return $existing;
-            }
-        }
 
         $tmpPath = $this->downloadWithRetry($url);
         if ($tmpPath === null) {
@@ -81,13 +73,6 @@ final class WpImageDownloader
         } finally {
             @unlink($tmpPath);
         }
-    }
-
-    /** آیا فایلِ فیزیکیِ این Media روی disk موجود است؟ */
-    private function fileExists(Media $media): bool
-    {
-        return ! empty($media->path)
-            && \Illuminate\Support\Facades\Storage::disk('public')->exists($media->path);
     }
 
     private function downloadWithRetry(string $url): ?string
