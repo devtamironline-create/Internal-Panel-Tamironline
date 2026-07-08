@@ -25,6 +25,12 @@ class SiteCrawler
      */
     public function run(string $source = 'manual', ?int $limit = null, bool $cwv = false, ?callable $progress = null): SeoAuditRun
     {
+        // کرالِ ۱۰۰۰صفحه‌ای با سقفِ پیش‌فرضِ 128M سرور OOM می‌شود — سقف را بالا
+        // می‌بریم (همان الگوی ImageProcessor).
+        if (self::memoryLimitBytes() < 512 * 1024 * 1024) {
+            @ini_set('memory_limit', '512M');
+        }
+
         $run = SeoAuditRun::create([
             'status' => 'running',
             'source' => $source,
@@ -86,6 +92,13 @@ class SiteCrawler
 
                 if ($progress) {
                     $progress($url, $i + 1, $total);
+                }
+
+                // آزادسازیِ دوره‌ایِ چرخه‌های مرجعِ PHP — بدونِ آن، حافظه در
+                // کرال‌های طولانی به‌تدریج انباشته و OOM می‌شود.
+                unset($raw, $analysis);
+                if (($i + 1) % 25 === 0) {
+                    gc_collect_cycles();
                 }
             }
 
@@ -155,5 +168,23 @@ class SiteCrawler
             'word_count' => (int) ($raw['word_count'] ?? 0),
             'response_time_ms' => (int) ($raw['response_time_ms'] ?? 0),
         ];
+    }
+
+    /** memory_limit فعلی به بایت (−1 یعنی نامحدود → عددِ بزرگ). */
+    private static function memoryLimitBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw === '' || $raw === '-1') {
+            return PHP_INT_MAX;
+        }
+        $unit = strtolower($raw[strlen($raw) - 1]);
+        $num = (int) $raw;
+
+        return match ($unit) {
+            'g' => $num * 1024 * 1024 * 1024,
+            'm' => $num * 1024 * 1024,
+            'k' => $num * 1024,
+            default => (int) $raw,
+        };
     }
 }

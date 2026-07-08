@@ -48,8 +48,15 @@ class OnPageAuditor
         }
 
         $ms = (int) round((microtime(true) - $start) * 1000);
-        $html = $resp->body();
+        $html = (string) $resp->body();
+        // سقفِ اندازه‌ی HTML پردازشی — سیگنال‌های سئو در head و ابتدای body هستند؛
+        // صفحه‌های چندمگابایتی در کرالِ ۱۰۰۰صفحه‌ای حافظه را تمام می‌کردند (OOM).
+        if (strlen($html) > 2_000_000) {
+            $html = substr($html, 0, 2_000_000);
+        }
         $history = (string) $resp->header('X-Guzzle-Redirect-History');
+        $status = $resp->status();
+        unset($resp); // آزادسازیِ بدنه‌ی پاسخ پیش از پردازش‌های regex
         $hops = $history !== '' ? array_values(array_filter(explode(', ', $history))) : [];
         $redirectCount = count($hops);
         $finalUrl = $hops !== [] ? end($hops) : $url;
@@ -62,7 +69,7 @@ class OnPageAuditor
 
         return [
             'url' => $url,
-            'status_code' => $resp->status(),
+            'status_code' => $status,
             'final_url' => $finalUrl,
             'redirect_count' => $redirectCount,
             'title' => $title,
