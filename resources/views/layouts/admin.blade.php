@@ -1548,7 +1548,8 @@
                     link_default_target: '_blank',
                     link_assume_external_targets: 'https',
                     link_context_toolbar: true,
-                    quickbars_insert_toolbar: 'quickimage quicktable hr',
+                    // تولبارِ شناورِ درج (کلیک روی خطِ خالی): «مخزن عکس» اول، کنارِ درجِ پیش‌فرض.
+                    quickbars_insert_toolbar: 'mediapicker quickimage quicktable hr',
                     quickbars_selection_toolbar: 'bold italic underline | h2 h3 | blockquote quicklink',
                     table_advtab: true,
                     table_appearance_options: true,
@@ -1602,17 +1603,20 @@
                     setup: function(editor) {
                         editor.on('change input undo redo', function() { editor.save(); });
                         // دکمه‌ی مستقلِ «انتخاب از مخزن عکس» — بدونِ دیالوگِ واسطه.
+                        var openMediaLibrary = function () {
+                            tamirMediaPicker(function (url, meta) {
+                                var alt = (meta.alt || '').replace(/"/g, '&quot;');
+                                var dims = (meta.width && meta.height) ? ' width="' + meta.width + '" height="' + meta.height + '"' : '';
+                                editor.insertContent('<img src="' + url + '" alt="' + alt + '"' + dims + '>');
+                            });
+                        };
                         editor.ui.registry.addButton('mediapicker', {
                             icon: 'gallery',
-                            tooltip: 'انتخاب از مخزن عکس',
-                            onAction: function () {
-                                tamirMediaPicker(function (url, meta) {
-                                    var alt = (meta.alt || '').replace(/"/g, '&quot;');
-                                    var dims = (meta.width && meta.height) ? ' width="' + meta.width + '" height="' + meta.height + '"' : '';
-                                    editor.insertContent('<img src="' + url + '" alt="' + alt + '"' + dims + '>');
-                                });
-                            }
+                            tooltip: 'انتخاب از مخزن عکس (Ctrl+Shift+M)',
+                            onAction: openMediaLibrary
                         });
+                        // شورت‌کات: Ctrl+Shift+M (مک: Cmd+Shift+M) — بازکردنِ مخزن عکس.
+                        editor.addShortcut('meta+shift+m', 'انتخاب از مخزن عکس', openMediaLibrary);
                     }
                 });
             }
