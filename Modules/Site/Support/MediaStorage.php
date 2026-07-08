@@ -22,26 +22,47 @@ final class MediaStorage
      */
     public static function store(UploadedFile $file, ?int $userId = null, string $visibility = 'public'): Media
     {
-        $hash = hash_file('sha256', $file->getRealPath());
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $mime = $file->getMimeType() ?: 'application/octet-stream';
+        $size = (int) ($file->getSize() ?: 0);
+        $sourcePath = $file->getRealPath();
+        $optimizedTmp = null;
+
+        // بهینه‌سازی/سخت‌گیریِ تصاویر — فقط آپلودِ جدید؛ فایل‌های موجودِ مخزن
+        // هرگز تغییر نمی‌کنند. (نوعِ مجاز → تبدیل/downscale → سقفِ حجمِ نهایی)
+        if (ImageOptimizer::isImage($file)) {
+            ImageOptimizer::validateType($file);
+            if ($opt = ImageOptimizer::optimize($file)) {
+                $optimizedTmp = $opt['path'];
+                $sourcePath = $opt['path'];
+                $ext = $opt['extension'];
+                $mime = $opt['mime'];
+                $size = $opt['size'];
+            }
+            ImageOptimizer::enforceFinalSize($size);
+        }
+
+        $hash = hash_file('sha256', $sourcePath);
 
         if ($existing = Media::where('hash', $hash)->first()) {
             // dedup — همان فایل قبلاً آپلود شده. ولی اگر فایلِ فیزیکی پاک شده
             // باشد (پاک‌سازیِ دستیِ مخزن)، همین‌جا روی همان مسیر بازیابی‌اش
             // می‌کنیم تا URLهای موجود (مقالات/برندها) بدونِ تغییر دوباره کار کنند.
-            self::restoreMissingFile($existing, $file);
+            self::restoreMissingFile($existing, $sourcePath);
+            if ($optimizedTmp) {
+                @unlink($optimizedTmp);
+            }
 
             return $existing;   // dedup — همان فایل قبلاً آپلود شده
         }
 
-        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
-        $mime = $file->getMimeType() ?: 'application/octet-stream';
         $kind = self::kindFromMime($mime);
 
         $dir = 'site/media/'.substr($hash, 0, 2).'/'.substr($hash, 2, 2);
         $filename = $hash.'.'.$ext;
         $path = $dir.'/'.$filename;
 
-        Storage::disk('public')->putFileAs($dir, $file, $filename);
+        Storage::disk('public')->put($path, (string) file_get_contents($sourcePath));
         // chmod 0644 تا سرور بتواند بخواند (UMASK پیش‌فرض ممکن است 0600 بدهد)
         @chmod(Storage::disk('public')->path($path), 0644);
 
@@ -63,7 +84,7 @@ final class MediaStorage
             'filename' => $file->getClientOriginalName(),
             'mime' => $mime,
             'extension' => $ext,
-            'size_bytes' => $file->getSize() ?: 0,
+            'size_bytes' => $size,
             'width' => $width,
             'height' => $height,
             'aspect_ratio' => $aspect,
@@ -88,6 +109,10 @@ final class MediaStorage
             }
         }
 
+        if ($optimizedTmp) {
+            @unlink($optimizedTmp);
+        }
+
         return $media;
     }
 
@@ -96,14 +121,15 @@ final class MediaStorage
      * پاک شده. مسیر/نام از خودِ رکورد (یا بازساخت از hash) می‌آید تا URLهای
      * موجود دست‌نخورده بمانند. اگر فایل سرجایش باشد، کاری نمی‌کند.
      *
+     * @param  string  $sourcePath  مسیرِ محلیِ محتوایی که hashاش با رکورد یکی است
      * @return bool true اگر بازیابی انجام شد
      */
-    public static function restoreMissingFile(Media $media, UploadedFile $file): bool
+    public static function restoreMissingFile(Media $media, string $sourcePath): bool
     {
         $disk = Storage::disk('public');
 
         // مسیرِ مرجع: path موجود، وگرنه بازساخت از hash+extension (هم‌منطق با store).
-        $ext = $media->extension ?: strtolower($file->getClientOriginalExtension() ?: ($file->extension() ?: 'bin'));
+        $ext = $media->extension ?: 'bin';
         $path = $media->path
             ?: 'site/media/'.substr($media->hash, 0, 2).'/'.substr($media->hash, 2, 2).'/'.$media->hash.'.'.$ext;
 
@@ -111,7 +137,7 @@ final class MediaStorage
             return false;   // فایل سرجایش است — نیازی به بازیابی نیست
         }
 
-        $disk->putFileAs(dirname($path), $file, basename($path));
+        $disk->put($path, (string) file_get_contents($sourcePath));
         @chmod($disk->path($path), 0644);
 
         // اگر path روی رکورد خالی بود، تثبیتش کن.

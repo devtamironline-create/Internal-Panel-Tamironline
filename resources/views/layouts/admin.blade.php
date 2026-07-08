@@ -1435,6 +1435,88 @@
 
     <script src="/vendor/tinymce/js/tinymce/tinymce.min.js"></script>
     <script>
+        // ─── مخزنِ عکس برای TinyMCE — overlayِ ساده‌ی vanilla (بدونِ وابستگی) ───
+        // callback(url, meta) با URL نهایی (variant بزرگ اگر موجود باشد) صدا زده می‌شود.
+        function tamirMediaPicker(callback) {
+            var pickerUrl = @json(route('site.admin.media.picker'));
+            var state = { page: 1, q: '' };
+
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+            overlay.innerHTML =
+                '<div style="background:#fff;border-radius:14px;max-width:960px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;" dir="rtl">' +
+                '  <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;">' +
+                '    <strong style="flex:1;font-size:14px;">انتخاب از مخزن عکس</strong>' +
+                '    <input data-mp-q type="text" placeholder="جستجو…" style="border:1px solid #d1d5db;border-radius:8px;padding:6px 10px;font-size:13px;width:200px;">' +
+                '    <button type="button" data-mp-search style="background:#2563eb;color:#fff;border-radius:8px;padding:6px 14px;font-size:13px;">جستجو</button>' +
+                '    <button type="button" data-mp-close style="background:#f3f4f6;border-radius:8px;padding:6px 12px;font-size:13px;">✕</button>' +
+                '  </div>' +
+                '  <div data-mp-grid style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start;"></div>' +
+                '  <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;border-top:1px solid #e5e7eb;font-size:13px;">' +
+                '    <button type="button" data-mp-prev style="background:#f3f4f6;border-radius:8px;padding:5px 14px;">قبلی</button>' +
+                '    <span data-mp-info style="color:#6b7280;"></span>' +
+                '    <button type="button" data-mp-next style="background:#f3f4f6;border-radius:8px;padding:5px 14px;">بعدی</button>' +
+                '  </div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+
+            var grid = overlay.querySelector('[data-mp-grid]');
+            var info = overlay.querySelector('[data-mp-info]');
+            function close() { overlay.remove(); }
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+            overlay.querySelector('[data-mp-close]').addEventListener('click', close);
+            overlay.querySelector('[data-mp-search]').addEventListener('click', function () {
+                state.q = overlay.querySelector('[data-mp-q]').value.trim();
+                state.page = 1;
+                load();
+            });
+            overlay.querySelector('[data-mp-q]').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); overlay.querySelector('[data-mp-search]').click(); }
+            });
+            overlay.querySelector('[data-mp-prev]').addEventListener('click', function () { if (state.page > 1) { state.page--; load(); } });
+            overlay.querySelector('[data-mp-next]').addEventListener('click', function () { state.page++; load(); });
+
+            function load() {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:30px;">در حال بارگذاری…</div>';
+                fetch(pickerUrl + '?kind=image&page=' + state.page + '&q=' + encodeURIComponent(state.q), { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        var items = j.data || [];
+                        var meta = j.meta || {};
+                        if (state.page > (meta.last_page || 1)) { state.page = meta.last_page || 1; }
+                        info.textContent = 'صفحه ' + (meta.page || 1) + ' از ' + (meta.last_page || 1);
+                        if (!items.length) {
+                            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:30px;">تصویری یافت نشد.</div>';
+                            return;
+                        }
+                        grid.innerHTML = '';
+                        items.forEach(function (m) {
+                            var thumb = (m.variants && m.variants.thumb && m.variants.thumb.url) ? m.variants.thumb.url : m.url;
+                            // برای درجِ نهایی، نسخه‌ی بهینه‌ی large (اگر ساخته شده) بهتر از اصل است (سئو/سرعت).
+                            var lg = (m.variants && m.variants.large && m.variants.large.url) ? m.variants.large : null;
+                            var full = lg ? lg.url : m.url;
+                            var fullW = lg ? lg.width : m.width;
+                            var fullH = lg ? lg.height : m.height;
+                            var card = document.createElement('button');
+                            card.type = 'button';
+                            card.style.cssText = 'border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;text-align:center;padding:0;';
+                            card.innerHTML = '<div style="aspect-ratio:1;background:#f9fafb;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+                                '<img src="' + thumb + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;"></div>' +
+                                '<div style="font-size:11px;color:#6b7280;padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" dir="ltr">' + (m.title || m.alt || '') + '</div>';
+                            card.addEventListener('click', function () {
+                                close();
+                                callback(full, { alt: m.alt || m.title || '', width: fullW, height: fullH });
+                            });
+                            grid.appendChild(card);
+                        });
+                    })
+                    .catch(function () {
+                        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;padding:30px;">خطا در دریافت مخزن.</div>';
+                    });
+            }
+            load();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof tinymce !== 'undefined' && document.querySelector('.rich-editor')) {
                 tinymce.init({
@@ -1446,7 +1528,7 @@
                     plugins: 'advlist anchor autolink autoresize charmap code codesample directionality emoticons fullscreen help image insertdatetime link lists media nonbreaking pagebreak preview quickbars searchreplace table visualblocks visualchars wordcount',
                     toolbar: [
                         'undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor removeformat',
-                        'alignleft aligncenter alignright alignjustify | ltr rtl | bullist numlist outdent indent | link unlink anchor image media table',
+                        'alignleft aligncenter alignright alignjustify | ltr rtl | bullist numlist outdent indent | link unlink anchor image mediapicker media table',
                         'codesample blockquote hr pagebreak charmap emoticons | searchreplace visualblocks visualchars | code preview fullscreen help'
                     ].join(' | '),
                     menubar: 'edit insert view format table tools',
@@ -1512,7 +1594,26 @@
                     media_live_embeds: true,
                     media_alt_source: false,
                     content_style: 'body { font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; font-size: 15px; line-height: 1.9; } img { max-width: 100%; height: auto; } table { border-collapse: collapse; } table td, table th { border: 1px solid #ddd; padding: 6px 10px; } blockquote { border-right: 3px solid #999; padding: .25rem 1rem; color: #555; } pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; direction: ltr; text-align: left; }',
-                    setup: function(editor) { editor.on('change input undo redo', function() { editor.save(); }); }
+                    // «browse» داخلِ دیالوگِ تصویر هم مخزن را باز می‌کند.
+                    file_picker_types: 'image',
+                    file_picker_callback: function (callback) {
+                        tamirMediaPicker(function (url, meta) { callback(url, { alt: meta.alt || '' }); });
+                    },
+                    setup: function(editor) {
+                        editor.on('change input undo redo', function() { editor.save(); });
+                        // دکمه‌ی مستقلِ «انتخاب از مخزن عکس» — بدونِ دیالوگِ واسطه.
+                        editor.ui.registry.addButton('mediapicker', {
+                            icon: 'gallery',
+                            tooltip: 'انتخاب از مخزن عکس',
+                            onAction: function () {
+                                tamirMediaPicker(function (url, meta) {
+                                    var alt = (meta.alt || '').replace(/"/g, '&quot;');
+                                    var dims = (meta.width && meta.height) ? ' width="' + meta.width + '" height="' + meta.height + '"' : '';
+                                    editor.insertContent('<img src="' + url + '" alt="' + alt + '"' + dims + '>');
+                                });
+                            }
+                        });
+                    }
                 });
             }
         });

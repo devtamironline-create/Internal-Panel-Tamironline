@@ -201,6 +201,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
     Route::prefix('media')->name('media.')->group(function () {
         Route::get('/', [MediaController::class, 'index'])->name('index');
         Route::post('/upload', [MediaController::class, 'upload'])->name('upload');
+        Route::put('/settings', [MediaController::class, 'saveSettings'])->name('settings');
         Route::get('/picker', [MediaController::class, 'picker'])->name('picker');
         Route::get('/{id}', [MediaController::class, 'show'])->whereNumber('id')->name('show');
         Route::put('/{id}', [MediaController::class, 'update'])->whereNumber('id')->name('update');
