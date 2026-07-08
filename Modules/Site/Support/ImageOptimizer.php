@@ -81,17 +81,36 @@ final class ImageOptimizer
 
     /**
      * بهینه‌سازی: downscale تا سقفِ عرض + تبدیل به WebP طبقِ تنظیمات.
-     * خروجی null یعنی هیچ تغییری لازم نبود (فایلِ اصلی همان‌طور ذخیره شود).
+     * خروجی null یعنی «فایلِ اصلی همان‌طور ذخیره شود» — هر خطای پردازش هم به
+     * همین null ختم می‌شود؛ بهینه‌سازی هرگز نباید خودِ آپلود را بشکند.
      *
      * @return array{path: string, extension: string, mime: string, size: int}|null
      */
     public static function optimize(UploadedFile $file): ?array
+    {
+        try {
+            return self::doOptimize($file);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('image_optimizer.failed', [
+                'file' => $file->getClientOriginalName(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @return array{path: string, extension: string, mime: string, size: int}|null
+     */
+    private static function doOptimize(UploadedFile $file): ?array
     {
         $mime = strtolower((string) ($file->getMimeType() ?: ''));
         if (! in_array($mime, self::PROCESSABLE_MIMES, true)) {
             return null; // gif/svg/avif/... — دست‌نخورده
         }
 
+        $originalSize = (int) ($file->getSize() ?: 0);
         $info = @getimagesize($file->getRealPath());
         if ($info === false) {
             return null;
@@ -121,6 +140,14 @@ final class ImageOptimizer
             return null; // فایلِ خراب/غیرقابل‌خواندن — همان اصل ذخیره می‌شود
         }
 
+        // PNGهای indexed (palette) با imagewebp پشتیبانی نمی‌شوند →
+        // «imagewebp(): Palette image not supported» و شکستِ کلِ آپلود.
+        if (! imageistruecolor($src) && ! @imagepalettetotruecolor($src)) {
+            imagedestroy($src);
+
+            return null;
+        }
+
         if ($needResize) {
             $newWidth = $maxWidth;
             $newHeight = (int) round($height * ($maxWidth / $width));
@@ -139,15 +166,16 @@ final class ImageOptimizer
         if ($needConvert) {
             imagealphablending($src, false);
             imagesavealpha($src, true);
-            imagewebp($src, $tmp, ImageProcessor::QUALITY_WEBP);
+            $written = @imagewebp($src, $tmp, ImageProcessor::QUALITY_WEBP);
             $ext = 'webp';
             $outMime = 'image/webp';
         } else {
             // فقط resize — با همان فرمتِ اصلی ذخیره می‌شود
-            match ($mime) {
-                'image/jpeg', 'image/jpg' => imagejpeg($src, $tmp, ImageProcessor::QUALITY_JPEG),
-                'image/png' => imagepng($src, $tmp, ImageProcessor::QUALITY_PNG),
-                'image/webp' => imagewebp($src, $tmp, ImageProcessor::QUALITY_WEBP),
+            $written = match ($mime) {
+                'image/jpeg', 'image/jpg' => @imagejpeg($src, $tmp, ImageProcessor::QUALITY_JPEG),
+                'image/png' => @imagepng($src, $tmp, ImageProcessor::QUALITY_PNG),
+                'image/webp' => @imagewebp($src, $tmp, ImageProcessor::QUALITY_WEBP),
+                default => false,
             };
             $ext = strtolower($file->getClientOriginalExtension() ?: 'jpg');
             if ($ext === 'jpeg') {
@@ -158,7 +186,15 @@ final class ImageOptimizer
         imagedestroy($src);
 
         $size = (int) (@filesize($tmp) ?: 0);
-        if ($size <= 0) {
+        if ($written === false || $size <= 0) {
+            @unlink($tmp);
+
+            return null;
+        }
+
+        // اگر فقط تبدیل بود و خروجی از اصل بزرگ‌تر شد (مثلاً گرافیکِ سادهٔ PNG)،
+        // همان اصل بهینه‌تر است — برای سئو فایلِ کوچک‌تر می‌بَرد.
+        if (! $needResize && $originalSize > 0 && $size >= $originalSize) {
             @unlink($tmp);
 
             return null;
