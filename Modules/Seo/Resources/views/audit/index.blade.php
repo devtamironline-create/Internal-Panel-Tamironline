@@ -25,6 +25,7 @@
         </div>
     @else
         @include('seo::audit._summary', ['run' => $latest])
+        @include('seo::audit._coverage', ['run' => $latest])
 
         {{-- روند امتیاز سلامت --}}
         @if($trend->count() > 1)

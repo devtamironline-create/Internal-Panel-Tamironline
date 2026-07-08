@@ -17,6 +17,7 @@ class SiteCrawler
         private readonly AuditAnalyzer $analyzer,
         private readonly PageSpeedClient $pageSpeed,
         private readonly AlertNotifier $alerts,
+        private readonly SitemapCoverage $coverage,
     ) {}
 
     /**
@@ -31,8 +32,37 @@ class SiteCrawler
         ]);
 
         try {
-            $urls = $this->collectUrls($limit);
-            $run->update(['total_urls' => count($urls)]);
+            // پوششِ sitemap: مقایسهٔ دوطرفهٔ sitemapِ زندهٔ سایت با محتوای پنل.
+            // اگر sitemapِ زنده در دسترس بود، کرال از روی «زنده + جاافتاده‌ها»
+            // انجام می‌شود — یعنی همان چیزی که گوگل واقعاً می‌بیند + آنچه باید ببیند.
+            $coverage = null;
+            try {
+                $coverage = $this->coverage->analyze();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('seo.coverage_failed', ['error' => $e->getMessage()]);
+            }
+            $coverageAvailable = (bool) ($coverage['available'] ?? false);
+
+            if ($coverageAvailable) {
+                $urls = array_values(array_unique(array_merge($coverage['live'], $coverage['missing'])));
+                if ($limit) {
+                    $urls = array_slice($urls, 0, $limit);
+                }
+            } else {
+                $urls = $this->collectUrls($limit);
+            }
+
+            $run->update([
+                'total_urls' => count($urls),
+                'missing_in_sitemap_count' => $coverageAvailable ? count($coverage['missing']) : 0,
+                'stale_in_sitemap_count' => $coverageAvailable ? count($coverage['stale']) : 0,
+                'coverage' => $coverageAvailable ? [
+                    'live_count' => count($coverage['live']),
+                    'expected_count' => count($coverage['expected']),
+                    'missing' => array_slice($coverage['missing'], 0, SitemapCoverage::MAX_STORED),
+                    'stale' => array_slice($coverage['stale'], 0, SitemapCoverage::MAX_STORED),
+                ] : null,
+            ]);
 
             $counts = ['good' => 0, 'notice' => 0, 'warning' => 0, 'critical' => 0];
             $scoreSum = 0;

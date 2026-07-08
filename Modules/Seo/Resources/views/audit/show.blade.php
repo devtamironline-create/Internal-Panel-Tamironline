@@ -10,6 +10,7 @@
     </div>
 
     @include('seo::audit._summary', ['run' => $run])
+    @include('seo::audit._coverage', ['run' => $run])
 
     <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
         <div class="flex gap-1 text-xs">

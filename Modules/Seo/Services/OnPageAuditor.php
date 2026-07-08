@@ -11,6 +11,21 @@ use Illuminate\Support\Facades\Http;
 class OnPageAuditor
 {
     /**
+     * User-Agentِ کرالر — قابلِ تغییر از تنظیماتِ سئو (کلیدِ crawler_user_agent).
+     * پیش‌فرض شبیه‌سازیِ رفتارِ Googlebot با شناسهٔ شفافِ خودمان است؛ اگر خواستید
+     * دقیقاً UA گوگل باشد، مقدارِ تنظیم را عوض کنید (مراقبِ WAF/کلودفلر باشید —
+     * Googlebotِ جعلی ممکن است challenge بخورد).
+     */
+    public static function userAgent(): string
+    {
+        $custom = trim((string) \Modules\Seo\Models\SeoSetting::get('crawler_user_agent', ''));
+
+        return $custom !== ''
+            ? $custom
+            : 'Mozilla/5.0 (compatible; TamironlineSeoBot/1.0; like Googlebot; +https://tamironline.com)';
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function audit(string $url): array
@@ -20,7 +35,7 @@ class OnPageAuditor
 
         try {
             $resp = Http::timeout(20)
-                ->withHeaders(['User-Agent' => 'TamironlineSeoBot/1.0'])
+                ->withHeaders(['User-Agent' => self::userAgent()])
                 ->withOptions(['allow_redirects' => ['track_redirects' => true]])
                 ->get($url);
         } catch (\Throwable $e) {
