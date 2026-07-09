@@ -171,6 +171,8 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::get('/{article}/edit', [ArticleController::class, 'edit'])->name('edit');
             Route::put('/{article}', [ArticleController::class, 'update'])->name('update');
             Route::put('/{article}/toggle-publish', [ArticleController::class, 'togglePublish'])->name('toggle-publish');
+            // تغییرِ سریعِ دسته (دستگاه) یا برندِ مقاله از داخلِ جدولِ لیست.
+            Route::put('/{article}/quick-classify', [ArticleController::class, 'quickClassify'])->name('quick-classify');
             Route::put('/{article}/device/{device}/toggle-active', [ArticleController::class, 'toggleDeviceActive'])->name('device.toggle-active');
             Route::put('/{article}/brand/{brand}/toggle-active', [ArticleController::class, 'toggleBrandActive'])->name('brand.toggle-active');
             Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('destroy');

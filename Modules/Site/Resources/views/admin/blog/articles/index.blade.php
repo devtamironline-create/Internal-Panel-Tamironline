@@ -118,15 +118,39 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300">
-                            @if($a->devices->count())
-                                <div><span class="text-gray-400">دستگاه:</span> {{ $a->devices->pluck('name')->join('، ') }}</div>
-                            @endif
-                            @if($a->brands->count())
-                                <div class="mt-0.5"><span class="text-gray-400">برند:</span> {{ $a->brands->pluck('name')->join('، ') }}</div>
-                            @endif
-                            @if(! $a->devices->count() && ! $a->brands->count())
-                                <span class="text-gray-300">—</span>
+                        <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 w-56">
+                            @php
+                                $curDevice = (int) ($a->devices->first()->id ?? 0);
+                                $curBrand = (int) ($a->brands->first()->id ?? 0);
+                            @endphp
+                            {{-- دستهٔ مقاله (دستگاه) — تغییر سریع در همین جدول --}}
+                            <form method="POST" action="{{ route('site.admin.blog.articles.quick-classify', $a->id) }}" class="mb-1">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="type" value="device">
+                                <label class="block text-[10px] text-gray-400 mb-0.5">دسته (دستگاه)</label>
+                                <select name="id" onchange="this.form.submit()"
+                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-400">
+                                    <option value="">— بدون دستگاه —</option>
+                                    @foreach($devices as $d)
+                                        <option value="{{ $d->id }}" @selected($curDevice === (int) $d->id)>{{ $d->name }}</option>
+                                    @endforeach
+                                </select>
+                            </form>
+                            {{-- برند — تغییر سریع --}}
+                            <form method="POST" action="{{ route('site.admin.blog.articles.quick-classify', $a->id) }}">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="type" value="brand">
+                                <label class="block text-[10px] text-gray-400 mb-0.5">برند</label>
+                                <select name="id" onchange="this.form.submit()"
+                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-xs focus:ring-1 focus:ring-amber-400">
+                                    <option value="">— بدون برند —</option>
+                                    @foreach($brands as $b)
+                                        <option value="{{ $b->id }}" @selected($curBrand === (int) $b->id)>{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </form>
+                            @if($a->devices->count() > 1 || $a->brands->count() > 1)
+                                <p class="text-[9px] text-amber-600 mt-1 leading-4">این مقاله چند دستگاه/برند دارد؛ تغییر از این‌جا فقط یکی را نگه می‌دارد. برای چندتایی از ویرایش استفاده کنید.</p>
                             @endif
                         </td>
                         <td class="px-3 py-3 text-center">
