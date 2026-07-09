@@ -58,6 +58,22 @@ class ProformaService
     }
 
     /**
+     * ساخت + ارسالِ خودکارِ پیامک برای مشتری (رفتارِ پیش‌فرضِ پنل و اپ).
+     * پیامک بلافاصله پس از ساخت ارسال می‌شود؛ اگر ناموفق بود، پیش‌فاکتور
+     * ساخته‌شده باقی می‌ماند (قابلِ ارسالِ مجدد از دکمهٔ «ارسال پیامک»).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: Proforma, 1: bool, 2: string} [proforma, smsOk, smsMessage]
+     */
+    public function createAndSend(array $data, ?Order $order = null, ?int $userId = null, ?int $techId = null): array
+    {
+        $proforma = $this->create($data, $order, $userId, $techId);
+        [$ok, $message] = $this->sendSms($proforma);
+
+        return [$proforma, $ok, $message];
+    }
+
+    /**
      * ارسالِ لینکِ عمومیِ پیش‌فاکتور به موبایلِ مشتری (تمپلیتِ
      * customer_proforma_issued). خروجی: [ok(bool), message(string)].
      *

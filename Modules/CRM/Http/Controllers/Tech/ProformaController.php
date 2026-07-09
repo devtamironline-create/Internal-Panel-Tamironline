@@ -82,11 +82,17 @@ class ProformaController extends Controller
             return back()->withInput()->with('error', 'حداقل یک قلم با عنوان لازم است.');
         }
 
-        $proforma = $this->service->create($data, $order, null, $tech->id);
+        // ساخت + ارسالِ خودکارِ پیامک به مشتری (طبقِ سیاستِ پیش‌فاکتور).
+        [$proforma, $smsOk, $smsMessage] = $this->service->createAndSend($data, $order, null, $tech->id);
 
-        return redirect()
-            ->route('tech.proformas.show', $proforma)
-            ->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' ساخته شد.');
+        $redirect = redirect()->route('tech.proformas.show', $proforma);
+        if ($smsOk) {
+            return $redirect->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' ساخته و پیامک برای مشتری ارسال شد.');
+        }
+
+        return $redirect
+            ->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' ساخته شد.')
+            ->with('error', 'ارسالِ خودکارِ پیامک انجام نشد: '.$smsMessage.' — می‌توانید از دکمهٔ «ارسال پیامک» دوباره تلاش کنید.');
     }
 
     public function show(Proforma $proforma)
