@@ -82,17 +82,16 @@ class ProformaController extends Controller
             return back()->withInput()->with('error', 'حداقل یک قلم با عنوان لازم است.');
         }
 
-        // ساخت + ارسالِ خودکارِ پیامک به مشتری (طبقِ سیاستِ پیش‌فاکتور).
-        [$proforma, $smsOk, $smsMessage] = $this->service->createAndSend($data, $order, null, $tech->id);
-
-        $redirect = redirect()->route('tech.proformas.show', $proforma);
-        if ($smsOk) {
-            return $redirect->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' ساخته و پیامک برای مشتری ارسال شد.');
+        // سمتِ تکنسین پیامکی ارسال نمی‌شود (طبقِ سیاستِ شرکت). پیش‌فاکتور با
+        // ساخت «صادر» می‌شود و بلافاصله در اپِ مشتری (جزئیاتِ سفارش) دیده می‌شود.
+        $proforma = $this->service->create($data, $order, null, $tech->id);
+        if ($proforma->status === 'draft') {
+            $proforma->update(['status' => 'sent', 'sent_at' => now()]);
         }
 
-        return $redirect
-            ->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' ساخته شد.')
-            ->with('error', 'ارسالِ خودکارِ پیامک انجام نشد: '.$smsMessage.' — می‌توانید از دکمهٔ «ارسال پیامک» دوباره تلاش کنید.');
+        return redirect()
+            ->route('tech.proformas.show', $proforma)
+            ->with('success', 'پیش‌فاکتور '.$proforma->proforma_code.' صادر شد و برای مشتری در اپ قابلِ مشاهده است.');
     }
 
     public function show(Proforma $proforma)
@@ -104,16 +103,6 @@ class ProformaController extends Controller
             'technician' => $tech,
             'proforma' => $proforma->load('order'),
         ]);
-    }
-
-    public function sendSms(Proforma $proforma)
-    {
-        $tech = Auth::guard('tech')->user();
-        $this->ensureOwner($proforma, $tech);
-
-        [$ok, $message] = $this->service->sendSms($proforma);
-
-        return back()->with($ok ? 'success' : 'error', $message);
     }
 
     /**

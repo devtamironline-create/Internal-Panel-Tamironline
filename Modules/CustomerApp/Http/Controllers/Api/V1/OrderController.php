@@ -85,8 +85,10 @@ class OrderController extends Controller
             'district:id,name',
             'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'review',
-            // پیش‌فاکتورهای ارسال‌شده به مشتری (پیش‌نویس‌ها پنهان می‌مانند).
-            'proformas' => fn ($q) => $q->where('status', '!=', 'draft'),
+            // پیش‌فاکتورهای این سفارش — همه (به‌جز پیش‌نویسِ ناقص که هرگز صادر
+            // نشده). چون تکنسین دیگر پیامک نمی‌زند و پیش‌فاکتور با «صدور» در اپ
+            // دیده می‌شود، همهٔ مواردِ صادرشده نمایش داده می‌شوند.
+            'proformas',
         ]);
 
         return response()->json([

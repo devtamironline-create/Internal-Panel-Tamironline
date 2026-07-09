@@ -86,7 +86,9 @@ class ProformaController extends Controller
     /** رسیدِ عمومی (بدونِ لاگین) — با public_token. */
     public function publicReceipt(string $token)
     {
-        $proforma = Proforma::where('public_token', $token)->firstOrFail();
+        $proforma = Proforma::with(['order.province', 'order.city'])
+            ->where('public_token', $token)
+            ->firstOrFail();
 
         return view('crm::proformas.print', [
             'proforma' => $proforma,

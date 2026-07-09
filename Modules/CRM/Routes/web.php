@@ -686,7 +686,7 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('proformas/create', [$techPf, 'create'])->name('proformas.create');
         Route::post('proformas', [$techPf, 'store'])->name('proformas.store');
         Route::get('proformas/{proforma}', [$techPf, 'show'])->name('proformas.show')->whereNumber('proforma');
-        Route::post('proformas/{proforma}/send-sms', [$techPf, 'sendSms'])->name('proformas.send-sms')->whereNumber('proforma');
+        // سمتِ تکنسین پیامک ندارد (سیاستِ شرکت) — فقط ساخت/نمایش/نهایی‌سازی.
         Route::post('proformas/{proforma}/finalize', [$techPf, 'finalize'])->name('proformas.finalize')->whereNumber('proforma');
 
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
