@@ -17,8 +17,18 @@ class ProformaController extends Controller
 {
     public function __construct(protected ProformaService $service) {}
 
+    /**
+     * سیستمِ پیش‌فاکتورِ تکنسین فعلاً مخفی است. تا وقتی
+     * crm_settings.tech_proforma_enabled=1 نشود، همهٔ مسیرها 404 می‌دهند.
+     */
+    private function ensureEnabled(): void
+    {
+        abort_unless(\Modules\CRM\Models\CrmSetting::get('tech_proforma_enabled') === '1', 404);
+    }
+
     public function index()
     {
+        $this->ensureEnabled();
         $tech = Auth::guard('tech')->user();
 
         $proformas = Proforma::query()
@@ -34,6 +44,7 @@ class ProformaController extends Controller
 
     public function create(Request $request)
     {
+        $this->ensureEnabled();
         $tech = Auth::guard('tech')->user();
 
         $order = null;
@@ -50,6 +61,7 @@ class ProformaController extends Controller
 
     public function store(Request $request)
     {
+        $this->ensureEnabled();
         $tech = Auth::guard('tech')->user();
 
         $data = $request->validate([
@@ -96,6 +108,7 @@ class ProformaController extends Controller
 
     public function show(Proforma $proforma)
     {
+        $this->ensureEnabled();
         $tech = Auth::guard('tech')->user();
         $this->ensureOwner($proforma, $tech);
 
@@ -114,6 +127,7 @@ class ProformaController extends Controller
      */
     public function finalize(Proforma $proforma)
     {
+        $this->ensureEnabled();
         $tech = Auth::guard('tech')->user();
         $this->ensureOwner($proforma, $tech);
 
