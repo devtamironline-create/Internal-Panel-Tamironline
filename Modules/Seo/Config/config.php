@@ -166,13 +166,15 @@ return [
             'title' => 'تعمیر %title% %sep% %sitename%',
             'description' => 'تعمیر تخصصی %title% در محل با گارانتی — رزرو آنلاین.',
         ],
+        // پیش‌فرضِ صفحاتِ ترکیبی (دستگاه+برند). قابلِ override تک‌به‌تک از پنلِ سئو.
+        // %device% = نامِ دستگاه، %brand% = نامِ برند (مثلاً «لباسشویی سامسونگ»).
         'brand_device' => [
-            'title' => 'تعمیر %title% در %city% %sep% %sitename%',
-            'description' => 'تعمیر تخصصی %title% در %city% با اعزام تکنسین متخصص و پرداخت پس از تست نهایی دستگاه.',
+            'title' => 'تعمیر %device% %brand% | اعزام ۳ ساعته | ۱۸۰ روز ضمانت',
+            'description' => 'تعمیرات %device% %brand% در محل با ۱۸۰ روز ضمانت | اعزام ۳ ساعته | پشتیبانی ۷ روز هفته | رصد لحظه‌ای | تعرفه تعمیر %device% %brand%',
         ],
         'device_brand_page' => [
-            'title' => 'تعمیر %title% %sep% %sitename%',
-            'description' => 'تعمیر تخصصی %title% با اعزام تکنسین متخصص و پرداخت پس از تست نهایی دستگاه.',
+            'title' => 'تعمیر %device% %brand% | اعزام ۳ ساعته | ۱۸۰ روز ضمانت',
+            'description' => 'تعمیرات %device% %brand% در محل با ۱۸۰ روز ضمانت | اعزام ۳ ساعته | پشتیبانی ۷ روز هفته | رصد لحظه‌ای | تعرفه تعمیر %device% %brand%',
         ],
         'forum_question' => [
             'title' => '%title% %sep% %sitename%',
