@@ -79,14 +79,38 @@
             </div>
         </div>
 
-        {{-- طبقه‌بندی --}}
+        {{-- دسته‌بندی — دستگاهِ الصاق‌شده = دستهٔ مقاله --}}
         <div class="{{ $boxClass }}" x-data="accBox(true)">
             <button type="button" @click="toggle($event)" class="{{ $headBtn }}">
-                <h4 class="text-sm font-bold">طبقه‌بندی (تاپیک / دستگاه / برند)</h4>
+                <h4 class="text-sm font-bold">دسته‌بندی مقاله (دستگاه = دسته / برند)</h4>
                 <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
             <div x-show="open" x-collapse>
                 <div class="p-5 pt-0 space-y-6">
+                    <div class="rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 px-3 py-2 text-xs text-indigo-800 dark:text-indigo-200 leading-6">
+                        دستگاهِ الصاق‌شده به مقاله، <b>دستهٔ آن</b> است. اولین دستگاه = دستهٔ اصلی و مبنایِ مسیرِ سایت
+                        (خانه › مقالات › <b>مقالات {دستگاه}</b> › عنوانِ مقاله). فقط تایپ کنید و انتخاب کنید.
+                    </div>
+
+                    @include('crm::partials.multi-picker', [
+                        'name' => 'device_ids',
+                        'items' => $allDevices ?? collect(),
+                        'selectedIds' => $selectedDeviceIds ?? [],
+                        'label' => 'دستهٔ مقاله — دستگاه',
+                        'help' => 'دستگاهِ اصلی (اولین انتخاب) دستهٔ مقاله است. می‌توانید چند دستگاه هم بزنید.',
+                        'emptyText' => 'دستگاهی موجود نیست.',
+                    ])
+
+                    @include('crm::partials.multi-picker', [
+                        'name' => 'brand_ids',
+                        'items' => $allBrands ?? collect(),
+                        'selectedIds' => $selectedBrandIds ?? [],
+                        'label' => 'برند (اختیاری)',
+                        'help' => 'اگر مقاله دربارهٔ یک برندِ خاص است، آن را هم بزنید.',
+                        'emptyText' => 'برندی موجود نیست.',
+                    ])
+
+                    {{-- تاپیک‌ها اختیاری‌اند — دسته‌بندی با دستگاه انجام می‌شود. --}}
                     @php
                         $topicItems = ($allTopics ?? collect())->map(fn ($t) => (object) [
                             'id' => (int) $t->id,
@@ -101,27 +125,9 @@
                         'items' => $topicItems,
                         'selectedIds' => $selectedTopicIds ?? [],
                         'columns' => 'wide',
-                        'label' => 'تاپیک‌ها (عیب‌یابی، نگهداری، ...)',
-                        'help' => 'حداقل یک تاپیک انتخاب کنید — تاپیک اول به‌عنوان badge کارت لیست نمایش داده می‌شود.',
-                        'emptyText' => 'تاپیکی تعریف نشده. ابتدا از منوی تاپیک‌های بلاگ تاپیک ایجاد کنید.',
-                    ])
-
-                    @include('crm::partials.multi-picker', [
-                        'name' => 'device_ids',
-                        'items' => $allDevices ?? collect(),
-                        'selectedIds' => $selectedDeviceIds ?? [],
-                        'label' => 'دستگاه‌های مرتبط',
-                        'help' => 'دستگاه‌هایی که این مقاله درباره‌شان است.',
-                        'emptyText' => 'دستگاهی موجود نیست.',
-                    ])
-
-                    @include('crm::partials.multi-picker', [
-                        'name' => 'brand_ids',
-                        'items' => $allBrands ?? collect(),
-                        'selectedIds' => $selectedBrandIds ?? [],
-                        'label' => 'برندهای مرتبط',
-                        'help' => 'برندهایی که این مقاله درباره‌شان است.',
-                        'emptyText' => 'برندی موجود نیست.',
+                        'label' => 'تاپیک‌ها (اختیاری)',
+                        'help' => 'اختیاری — برای برچسب/فیلترِ فرعی. برای دسته‌بندی نیازی نیست؛ دسته‌بندی با دستگاه انجام می‌شود.',
+                        'emptyText' => 'تاپیکی تعریف نشده (اختیاری).',
                     ])
                 </div>
             </div>

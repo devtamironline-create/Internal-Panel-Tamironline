@@ -43,6 +43,10 @@ class ArticleController extends Controller
         if ($topicSlug = $request->query('topic')) {
             $query->whereHas('topics', fn ($q) => $q->where('site_blog_topics.slug', $topicSlug));
         }
+        // فیلترِ دسته = دستگاهِ الصاق‌شده (دسته‌بندیِ مقالات با دستگاه).
+        if ($deviceId = (int) $request->query('device_id')) {
+            $query->whereHas('devices', fn ($q) => $q->where('crm_devices.id', $deviceId));
+        }
 
         $articles = $query->paginate(15)->withQueryString();
         $topics = BlogTopic::query()->ordered()->get(['id', 'name', 'slug']);

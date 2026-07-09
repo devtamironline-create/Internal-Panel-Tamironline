@@ -25,8 +25,14 @@
     <form method="GET" class="mb-4 flex gap-2 flex-wrap items-center p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
         <input type="text" name="q" value="{{ request('q') }}" placeholder="جستجو در عنوان/خلاصه/slug..."
                class="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+        <select name="device_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            <option value="">همه دسته‌ها (دستگاه)</option>
+            @foreach($devices as $d)
+                <option value="{{ $d->id }}" @selected((int) request('device_id') === (int) $d->id)>{{ $d->name }}</option>
+            @endforeach
+        </select>
         <select name="topic" class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-            <option value="">همه تاپیک‌ها</option>
+            <option value="">همه تاپیک‌ها (اختیاری)</option>
             @foreach($topics as $t)
                 <option value="{{ $t->slug }}" @selected(request('topic') === $t->slug)>{{ $t->name }}</option>
             @endforeach

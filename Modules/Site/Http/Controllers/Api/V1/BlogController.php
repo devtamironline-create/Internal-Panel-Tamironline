@@ -276,11 +276,41 @@ class BlogController extends Controller
             'brands' => $a->activeBrands->map(fn ($b) => [
                 'id' => (int) $b->id, 'name' => $b->name, 'slug' => $b->slug,
             ])->values(),
+            // دستهٔ مقاله = دستگاهِ اصلی (اولین دستگاهِ فعال). مبنایِ URL/بردکرامبِ فرانت.
+            ...$this->articleCategory($a),
             'tags' => array_values(array_filter([
                 $a->activeDevices->first()?->name,
                 $a->activeBrands->first()?->name,
                 $a->topics->first()?->name,
             ])),
+        ];
+    }
+
+    /**
+     * دستهٔ مقاله بر اساسِ دستگاهِ الصاق‌شده + بردکرامبِ آماده. دستگاهِ اصلی
+     * (اولین دستگاهِ فعال) دستهٔ مقاله است؛ وقتی هست مسیر بر اساسِ دستگاه
+     * ساخته می‌شود: خانه › مقالات › مقالات {دستگاه} › {عنوان}.
+     *
+     * @return array<string, mixed>
+     */
+    private function articleCategory(Article $a): array
+    {
+        $device = $a->activeDevices->first();
+        $brand = $a->activeBrands->first();
+
+        $crumbs = [
+            ['label' => 'خانه', 'href' => '/'],
+            ['label' => 'مقالات', 'href' => '/blog'],
+        ];
+        if ($device) {
+            $crumbs[] = ['label' => 'مقالات '.$device->name, 'href' => '/blog?device='.$device->slug];
+        }
+        $crumbs[] = ['label' => $a->title, 'href' => '/blog/'.$a->slug];
+
+        return [
+            'category' => $device ? ['id' => (int) $device->id, 'name' => $device->name, 'slug' => $device->slug, 'href' => '/blog?device='.$device->slug] : null,
+            'category_brand' => $brand ? ['id' => (int) $brand->id, 'name' => $brand->name, 'slug' => $brand->slug] : null,
+            'breadcrumb' => $crumbs,
         ];
     }
 }
