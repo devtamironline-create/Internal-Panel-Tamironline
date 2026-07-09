@@ -687,6 +687,7 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('proformas', [$techPf, 'store'])->name('proformas.store');
         Route::get('proformas/{proforma}', [$techPf, 'show'])->name('proformas.show')->whereNumber('proforma');
         Route::post('proformas/{proforma}/send-sms', [$techPf, 'sendSms'])->name('proformas.send-sms')->whereNumber('proforma');
+        Route::post('proformas/{proforma}/finalize', [$techPf, 'finalize'])->name('proformas.finalize')->whereNumber('proforma');
 
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
         Route::post('profile', [TechPanelDashboardController::class, 'updateProfile'])->name('profile.update');
