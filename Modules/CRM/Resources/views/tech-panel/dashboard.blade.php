@@ -382,6 +382,23 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
+
+        {{-- پیش‌فاکتور — ساخت برآورد قیمت برای مشتری --}}
+        <a href="{{ route('tech.proformas.index') }}"
+           class="mt-3 bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3 hover:border-gray-200 transition">
+            <div class="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h4m1 6H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-bold text-gray-900">پیش‌فاکتور</div>
+                <div class="text-[10px] text-gray-400 mt-0.5">برآورد قیمت برای مشتری پیش از کار</div>
+            </div>
+            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
     </div>
 
     {{-- ─────── Quick stats — اعتبار پنل + وضعیت مالی ─────── --}}
