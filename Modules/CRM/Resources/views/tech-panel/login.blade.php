@@ -61,7 +61,7 @@
             <template x-if="otpSent">
                 <div class="space-y-1 mb-4">
                     <label class="text-sm font-medium text-gray-700">کد تایید (۶ رقم)</label>
-                    <input type="text" x-model="code" maxlength="6" inputmode="numeric" dir="ltr"
+                    <input type="text" x-model="code" maxlength="{{ (int) config('sms.otp.length', 4) }}" autocomplete="one-time-code" inputmode="numeric" dir="ltr"
                            class="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-lg tracking-[.5em] text-center placeholder:text-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition"
                            placeholder="------">
                 </div>
@@ -76,7 +76,7 @@
                 </svg>
             </button>
 
-            <button x-show="otpSent" @click="verifyOtp" :disabled="busy || code.length !== 6"
+            <button x-show="otpSent" @click="verifyOtp" :disabled="busy || code.length !== {{ (int) config('sms.otp.length', 4) }}"
                     class="w-full py-3.5 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition">
                 <span x-show="!busy">تایید و ورود</span>
                 <span x-show="busy">…</span>
