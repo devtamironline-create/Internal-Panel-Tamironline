@@ -22,7 +22,10 @@
     </div>
 
     {{-- بخشِ سئوِ حرفه‌ای — همان پنلی که صفحاتِ دستگاه و برند دارند
-         (عنوان/توضیح، کلمهٔ کلیدی، canonical، robots، OG/Twitter، امتیازِ سئو). --}}
-    <livewire:seo.meta-panel type="device_brand_page" :model-id="$page->id" :key="'seo-dbp-'.$page->id" />
+         (عنوان/توضیح، کلمهٔ کلیدی، canonical، robots، OG/Twitter، امتیازِ سئو).
+         مثلِ صفحاتِ دستگاه/برند فقط برای دارندگانِ دسترسیِ manage-seo. --}}
+    @can('manage-seo')
+        <livewire:seo.meta-panel type="device_brand_page" :model-id="$page->id" :key="'seo-dbp-'.$page->id" />
+    @endcan
 </div>
 @endsection
