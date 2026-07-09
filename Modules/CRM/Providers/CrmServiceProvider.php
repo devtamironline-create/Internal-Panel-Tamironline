@@ -13,16 +13,17 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\BackupWalletData;
 use Modules\CRM\Console\Commands\CombosAudit;
 use Modules\CRM\Console\Commands\ConsolidateDeviceSlugs;
-use Modules\CRM\Console\Commands\ImportServicePrices;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
 use Modules\CRM\Console\Commands\DiffOrderStatuses;
+use Modules\CRM\Console\Commands\ExpireStaleProformasCommand;
 use Modules\CRM\Console\Commands\FindWalletDuplicates;
 use Modules\CRM\Console\Commands\FixInvoicesFromWp;
 use Modules\CRM\Console\Commands\FixNonEnglishSlugs;
 use Modules\CRM\Console\Commands\FullRebuildFromWp;
 use Modules\CRM\Console\Commands\ImportDeviceThumbnailsFromWp;
 use Modules\CRM\Console\Commands\ImportInvoicesFromWp;
+use Modules\CRM\Console\Commands\ImportServicePrices;
 use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\ImportTermContentFromWp;
 use Modules\CRM\Console\Commands\ImportWalletArchiveFromWp;
@@ -122,6 +123,7 @@ class CrmServiceProvider extends ServiceProvider
                 RestoreTechPercentFromHistory::class,
                 RemoveManualAdjustments::class,
                 ArchiveStaleTicketsCommand::class,
+                ExpireStaleProformasCommand::class,
                 ResetWalletFromWp::class,
                 RestoreDeletedAdjustments::class,
                 UndoRestoreAdjustments::class,

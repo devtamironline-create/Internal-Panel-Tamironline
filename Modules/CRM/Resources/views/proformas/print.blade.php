@@ -26,6 +26,9 @@
 
     $items = is_array($proforma->items) ? $proforma->items : [];
 
+    $expiresAt = $proforma->expiresAt();
+    $isExpired = $proforma->isExpired();
+
     $faNum = fn ($n) => str_replace(
         ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
         ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
@@ -53,18 +56,18 @@
             position: relative; overflow: hidden;
         }
 
-        /* ─── واترمارکِ «پیش‌فاکتور» — تفاوتِ اصلی با فاکتور ─── */
+        /* ─── واترمارکِ پس‌زمینه: «غیرقابل استناد» (تایل‌شده) ─── */
         .watermark {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none; z-index: 0;
+            position: absolute; inset: -20%;
+            display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
+            gap: 26px 54px;
+            transform: rotate(-30deg);
+            pointer-events: none; z-index: 0; overflow: hidden;
         }
         .watermark span {
-            font-size: 120px; font-weight: 900;
-            color: rgba(30, 64, 175, 0.07);
-            transform: rotate(-32deg);
-            white-space: nowrap; letter-spacing: 8px;
-            user-select: none;
+            font-size: 30px; font-weight: 800;
+            color: rgba(190, 18, 60, 0.07);
+            white-space: nowrap; letter-spacing: 3px; user-select: none;
         }
         .page > *:not(.watermark) { position: relative; z-index: 1; }
 
@@ -131,7 +134,7 @@
             body { background: white; padding: 0; }
             .page { box-shadow: none; max-width: none; padding: 16px 20px; }
             .toolbar { display: none; }
-            .watermark span { color: rgba(30, 64, 175, 0.10); }
+            .watermark span { color: rgba(190, 18, 60, 0.10); }
             @page { size: A4; margin: 8mm; }
         }
     </style>
@@ -142,8 +145,10 @@
     </div>
 
     <div class="page">
-        {{-- واترمارک — نشان می‌دهد این سند «پیش‌فاکتور» است نه فاکتورِ نهایی --}}
-        <div class="watermark"><span>پیش‌فاکتور</span></div>
+        {{-- واترمارکِ پس‌زمینه: «غیرقابل استناد» — این سند سندِ رسمی/استنادپذیر نیست --}}
+        <div class="watermark">
+            @for($i = 0; $i < 40; $i++)<span>غیرقابل استناد</span>@endfor
+        </div>
 
         <div class="header">
             <div class="brand">
@@ -163,20 +168,28 @@
                     <div class="meta-value" dir="ltr">{{ $proforma->proforma_code }}</div>
                 </div>
                 <div class="meta-row">
-                    <div class="meta-label">تاریخ</div>
-                    <div class="meta-value" dir="ltr">@jdate($proforma->created_at)</div>
+                    <div class="meta-label">تاریخ صدور</div>
+                    <div class="meta-value" dir="ltr">@jdatetime($proforma->created_at)</div>
                 </div>
-                @if($proforma->valid_until)
+                @if($expiresAt)
                     <div class="meta-row">
-                        <div class="meta-label">معتبر تا</div>
-                        <div class="meta-value" dir="ltr">{{ \Morilog\Jalali\Jalalian::fromCarbon($proforma->valid_until)->format('Y/m/d') }}</div>
+                        <div class="meta-label">اعتبار تا</div>
+                        <div class="meta-value" dir="ltr">@jdatetime($expiresAt)</div>
                     </div>
                 @endif
             </div>
         </div>
 
         <h1 class="invoice-title">پیش‌فاکتور خدمات</h1>
-        <div class="proforma-hint">این سند «برآوردِ قیمت» است و فاکتورِ نهایی محسوب نمی‌شود.</div>
+        <div class="proforma-hint">
+            این سند «برآوردِ قیمت» و <b>غیرقابل استناد</b> است و فاکتورِ نهایی محسوب نمی‌شود.
+            اعتبارِ آن <b>۲۴ ساعت</b> از زمانِ صدور است.
+        </div>
+        @if($isExpired)
+            <div style="text-align:center; margin: 0 0 14px; padding: 8px 12px; border:1px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:6px; font-weight:bold; font-size:13px;">
+                این پیش‌فاکتور منقضی شده است (اعتبارِ ۲۴ ساعته به پایان رسیده).
+            </div>
+        @endif
 
         {{-- ارائه‌دهنده --}}
         <div class="party">
@@ -252,7 +265,7 @@
         @endif
 
         <div class="foot-note">
-            وضعیت: {{ $proforma->statusLabel() }}
+            وضعیت: {{ $isExpired ? 'منقضی' : $proforma->statusLabel() }}
             @if($providerPhone) · تماس: <span dir="ltr">{{ $providerPhone }}</span>@endif
             @if($notes){{ "\n".$notes }}@endif
         </div>

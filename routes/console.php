@@ -16,6 +16,13 @@ Schedule::command('crm:tickets:archive-stale')
     ->onOneServer()
     ->withoutOverlapping();
 
+// پیش‌فاکتورهای در جریان که ۲۴ ساعت از ساخت‌شان گذشته را خودکار «منقضی» کن.
+// idempotent؛ هر ساعت اجرا می‌شود.
+Schedule::command('crm:proformas:expire-stale')
+    ->hourly()
+    ->onOneServer()
+    ->withoutOverlapping();
+
 // پاسخِ خودکارِ AI به کامنت‌ها و سوال‌های انجمن. خودِ کامند اگر ai_reply_mode
 // روی off باشد سریع خارج می‌شود؛ پس زمان‌بندیِ همیشگی بی‌خطر است.
 // limit=20 تا صفِ عقب‌مانده در یک دور خالی شود (نه چند دورِ ۵دقیقه‌ای).
