@@ -73,6 +73,37 @@ class ArticleController extends Controller
     }
 
     /**
+     * تغییرِ سریعِ دسته (دستگاه) یا برندِ یک مقاله مستقیماً از جدولِ لیست.
+     * انتخابِ خالی = حذفِ اتصال. فقط همان تاکسونومیِ ارسال‌شده تغییر می‌کند
+     * (device یا brand)؛ دیگری دست‌نخورده می‌ماند.
+     */
+    public function quickClassify(Request $request, Article $article): RedirectResponse
+    {
+        $this->check();
+        $data = $request->validate([
+            'type' => 'required|in:device,brand',
+            'id' => 'nullable|integer',
+        ]);
+        $id = (int) ($data['id'] ?? 0);
+
+        if ($data['type'] === 'device') {
+            if ($id && ! Device::whereKey($id)->exists()) {
+                return back()->with('error', 'دستگاه نامعتبر است.');
+            }
+            $article->devices()->sync($id ? [$id => ['is_active' => true, 'sort_order' => 0]] : []);
+            $msg = $id ? 'دستهٔ مقاله به‌روزرسانی شد.' : 'دستگاهِ مقاله حذف شد.';
+        } else {
+            if ($id && ! Brand::whereKey($id)->exists()) {
+                return back()->with('error', 'برند نامعتبر است.');
+            }
+            $article->brands()->sync($id ? [$id => ['is_active' => true, 'sort_order' => 0]] : []);
+            $msg = $id ? 'برندِ مقاله به‌روزرسانی شد.' : 'برندِ مقاله حذف شد.';
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /**
      * عملیاتِ گروهی روی مقالاتِ انتخاب‌شده: انتشار/پیش‌نویس/حذف و اتصالِ
      * تاپیک/دستگاه/برند (attach بدون حذفِ موارد موجود).
      */
