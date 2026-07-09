@@ -12,6 +12,8 @@
         <div class="flex items-center gap-2">
             <a href="{{ route('crm.proforma.public', $proforma->public_token) }}" target="_blank"
                class="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">مشاهدهٔ رسید</a>
+            <a href="{{ route('crm.proforma.pdf', $proforma->public_token) }}" target="_blank"
+               class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm">دانلود PDF</a>
             <form method="POST" action="{{ route('crm.proformas.send-sms', $proforma) }}" onsubmit="return confirm('ارسال پیش‌فاکتور با پیامک به مشتری؟');">
                 @csrf
                 <button type="submit" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">ارسال پیامک به مشتری</button>

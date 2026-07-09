@@ -64,6 +64,7 @@
             @endif
         @endif
         <a href="{{ route('crm.proforma.public', $proforma->public_token) }}" target="_blank" class="block text-center py-3 text-brand-600 text-sm font-medium">مشاهدهٔ رسید مشتری ←</a>
+        <a href="{{ route('crm.proforma.pdf', $proforma->public_token) }}" target="_blank" class="block text-center pb-3 text-indigo-600 text-sm font-medium">دانلود PDF (بدونِ مهر و هولوگرام)</a>
     </div>
 </div>
 @include('crm::tech-panel._partials.bottom-nav', ['current' => 'tech.proformas.index'])
