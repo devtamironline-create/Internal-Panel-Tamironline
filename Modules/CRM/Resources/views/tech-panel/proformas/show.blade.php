@@ -43,10 +43,27 @@
             <div class="bg-white rounded-2xl p-4 shadow-sm text-sm text-gray-600 whitespace-pre-line">{{ $proforma->description }}</div>
         @endif
 
-        <form method="POST" action="{{ route('tech.proformas.send-sms', $proforma) }}" onsubmit="return confirm('ارسال پیش‌فاکتور با پیامک به مشتری؟');">
-            @csrf
-            <button type="submit" class="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-bold active:scale-95 transition">ارسال پیامک به مشتری</button>
-        </form>
+        @if($proforma->status === 'converted')
+            <div class="bg-purple-50 border border-purple-200 text-purple-800 rounded-2xl p-4 text-sm text-center">
+                این پیش‌فاکتور به <b>فاکتور نهایی</b> تبدیل شده است.
+                @if($proforma->order)<a href="{{ route('tech.orders.show', $proforma->order) }}" class="block mt-2 text-brand-600 font-bold">مشاهدهٔ سفارش ←</a>@endif
+            </div>
+        @else
+            <form method="POST" action="{{ route('tech.proformas.send-sms', $proforma) }}" onsubmit="return confirm('ارسال پیش‌فاکتور با پیامک به مشتری؟');">
+                @csrf
+                <button type="submit" class="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-bold active:scale-95 transition">ارسال پیامک به مشتری</button>
+            </form>
+
+            @if($proforma->order_id)
+                {{-- نهایی کردن: تأیید مشتری + رفتن به تکمیلِ سفارش با مبلغِ همین پیش‌فاکتور --}}
+                <form method="POST" action="{{ route('tech.proformas.finalize', $proforma) }}"
+                      onsubmit="return confirm('پیش‌فاکتور تأیید و برای تکمیلِ نهاییِ سفارش با همین مبلغ آماده شود؟');">
+                    @csrf
+                    <button type="submit" class="w-full py-3.5 bg-brand-600 text-white rounded-2xl font-bold active:scale-95 transition">نهایی کردن (تکمیل سفارش)</button>
+                </form>
+                <p class="text-[11px] text-gray-400 text-center px-4">با «نهایی کردن»، مبلغِ پیش‌فاکتور روی فرمِ تکمیلِ سفارش پیش‌پر می‌شود و پس از ثبت، فاکتور نهایی صادر می‌گردد.</p>
+            @endif
+        @endif
         <a href="{{ route('crm.proforma.public', $proforma->public_token) }}" target="_blank" class="block text-center py-3 text-brand-600 text-sm font-medium">مشاهدهٔ رسید مشتری ←</a>
     </div>
 </div>

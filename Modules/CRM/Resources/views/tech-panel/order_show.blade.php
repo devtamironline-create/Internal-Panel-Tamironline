@@ -84,6 +84,13 @@
             @endforeach
         </div>
     @endif
+    @if(request('proforma'))
+        <div class="mx-3 mt-3 px-4 py-3 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm">
+            پیش‌فاکتور <b dir="ltr">{{ request('proforma') }}</b> تأیید شد. مبلغِ پیشنهادی
+            (<span dir="ltr">{{ number_format((int) request('price', 0)) }}</span> تومان) در فرمِ تکمیل پیش‌پر شده —
+            وضعیت را «پایان سفارش» بگذارید و ثبت کنید تا فاکتور نهایی صادر شود.
+        </div>
+    @endif
 
     {{-- ─────── Hero header ─────── --}}
     <div class="relative overflow-hidden rounded-b-[40px] pb-24"
@@ -387,7 +394,7 @@
              x-data="{
                 selected: '{{ old('status', '') }}',
                 pieces: {{ \Illuminate\Support\Js::from($existingPieces) }},
-                priceCustomer: {{ (int) old('price_customer', $order->price_customer ?? 0) }},
+                priceCustomer: {{ (int) old('price_customer', request('price', $order->price_customer ?? 0)) }},
                 hire: 0, transportation: 0, discount: 0,
                 techPercent: {{ (int) ($technician->percent ?? 0) }},
                 techPerOfAll: {{ (int) ($technician->tech_per_of_all ?? 0) }},

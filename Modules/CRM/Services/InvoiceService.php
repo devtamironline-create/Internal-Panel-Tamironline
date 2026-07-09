@@ -117,6 +117,22 @@ class InvoiceService
             return $invoice;
         });
 
+        // ─── بستنِ چرخهٔ پیش‌فاکتور ──────────────────────────────────
+        // با صدورِ فاکتورِ نهاییِ سفارش، پیش‌فاکتورهای بازِ همان سفارش
+        // «تبدیل‌شده» علامت می‌خورند و به فاکتور لینک می‌شوند (چه از پلِ
+        // «نهایی کردن»ِ تکنسین آمده باشند چه دستی). idempotent.
+        if ($invoice) {
+            try {
+                \Modules\CRM\Models\Proforma::where('order_id', $order->id)
+                    ->whereIn('status', ['draft', 'sent', 'accepted'])
+                    ->update(['status' => 'converted', 'invoice_id' => $invoice->id]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('crm.proforma_convert_failed', [
+                    'order_id' => $order->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // ─── ارسال خودکار پیامک «صدور فاکتور» به مشتری ──────────────
         // فقط بعد از موفقیت transaction، و فقط برای فاکتورهای اولِ یک
         // سفارش (یعنی existing=null) — برای تکمیل مجدد سفارش بازگشتی

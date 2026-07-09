@@ -110,6 +110,41 @@ class ProformaController extends Controller
         return back()->with($ok ? 'success' : 'error', $message);
     }
 
+    /**
+     * «نهایی کردن» — پلِ به تکمیلِ سفارش. پیش‌فاکتور «تأیید مشتری» علامت
+     * می‌خورد و تکنسین به صفحهٔ تکمیلِ همان سفارش هدایت می‌شود با مبلغِ
+     * پیش‌فاکتور به‌عنوان پیشنهاد (پیش‌پرِ price_customer). فاکتورِ نهایی از
+     * همان مسیرِ استاندارد (کمیسیون/کیف‌پول) ساخته می‌شود؛ و با صدورِ فاکتور،
+     * InvoiceService این پیش‌فاکتور را «تبدیل‌شده» علامت می‌زند.
+     */
+    public function finalize(Proforma $proforma)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwner($proforma, $tech);
+
+        if (! $proforma->order_id) {
+            return back()->with('error', 'این پیش‌فاکتور به سفارشی متصل نیست؛ نهایی‌سازی از طریقِ تکمیلِ سفارش انجام می‌شود.');
+        }
+
+        $order = Order::find($proforma->order_id);
+        $this->ensureOwnership($order, $tech);
+
+        if ($proforma->status === 'converted') {
+            return redirect()->route('tech.orders.show', $order)->with('success', 'این پیش‌فاکتور قبلاً به فاکتور نهایی تبدیل شده است.');
+        }
+
+        // «تأیید مشتری» — قبل از تکمیل (خودِ فاکتور موقعِ تکمیلِ سفارش ساخته می‌شود).
+        if (in_array($proforma->status, ['draft', 'sent'], true)) {
+            $proforma->update(['status' => 'accepted', 'accepted_at' => now()]);
+        }
+
+        // مبلغِ پیشنهادی + کدِ پیش‌فاکتور را با query به صفحهٔ تکمیل می‌بریم؛
+        // فرمِ تکمیل price_customer را با این عدد پیش‌پر می‌کند (بدونِ ذخیرهٔ زودهنگام).
+        return redirect()
+            ->route('tech.orders.show', ['order' => $order, 'proforma' => $proforma->proforma_code, 'price' => (int) $proforma->total])
+            ->with('success', 'پیش‌فاکتور «تأیید مشتری» شد. اکنون سفارش را با همین مبلغ تکمیل کنید تا فاکتور نهایی صادر شود.');
+    }
+
     private function ensureOwnership(?Order $order, $tech): void
     {
         if (! $order || (int) $order->technician_id !== (int) $tech->id) {
