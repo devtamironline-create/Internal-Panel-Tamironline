@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
 use Modules\Site\Models\BlogTopic;
 
 class BlogTopicController extends Controller
@@ -23,20 +25,36 @@ class BlogTopicController extends Controller
     public function index(Request $request): View
     {
         $this->check();
-        $query = BlogTopic::query()->withCount('articles')->ordered();
+        $query = BlogTopic::query()
+            ->withCount('articles')
+            ->with(['device:id,name,slug', 'brand:id,name,slug'])
+            ->ordered();
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where(fn ($qq) => $qq->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"));
         }
+        if ($deviceId = (int) $request->query('device_id')) {
+            $query->where('device_id', $deviceId);
+        }
+        if ($brandId = (int) $request->query('brand_id')) {
+            $query->where('brand_id', $brandId);
+        }
         $topics = $query->paginate(20)->withQueryString();
 
-        return view('site::admin.blog.topics.index', compact('topics'));
+        return view('site::admin.blog.topics.index', [
+            'topics' => $topics,
+            'allDevices' => $this->allDevices(),
+            'allBrands' => $this->allBrands(),
+        ]);
     }
 
     public function create(): View
     {
         $this->check();
 
-        return view('site::admin.blog.topics.create');
+        return view('site::admin.blog.topics.create', [
+            'allDevices' => $this->allDevices(),
+            'allBrands' => $this->allBrands(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -53,7 +71,23 @@ class BlogTopicController extends Controller
     {
         $this->check();
 
-        return view('site::admin.blog.topics.edit', compact('topic'));
+        return view('site::admin.blog.topics.edit', [
+            'topic' => $topic,
+            'allDevices' => $this->allDevices(),
+            'allBrands' => $this->allBrands(),
+        ]);
+    }
+
+    /** همهٔ دستگاه‌های تعریف‌شده در پنل (فعال/غیرفعال بی‌ربط است). */
+    private function allDevices()
+    {
+        return Device::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+    }
+
+    /** همهٔ برندهای تعریف‌شده در پنل (فعال/غیرفعال بی‌ربط است). */
+    private function allBrands()
+    {
+        return Brand::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
     }
 
     public function update(Request $request, BlogTopic $topic): RedirectResponse
@@ -81,6 +115,8 @@ class BlogTopicController extends Controller
     {
         return $request->validate([
             'name' => 'required|string|max:120',
+            'device_id' => 'nullable|integer|exists:crm_devices,id',
+            'brand_id' => 'nullable|integer|exists:crm_brands,id',
             'slug' => 'nullable|string|max:120|unique:site_blog_topics,slug'.($id ? ','.$id : ''),
             'icon' => 'nullable|string|max:60',
             'color_bg' => 'nullable|string|max:9|regex:/^#[0-9a-fA-F]{3,8}$/',
@@ -100,5 +136,8 @@ class BlogTopicController extends Controller
         }
         $data['sort_order'] = $data['sort_order'] ?? 0;
         $data['is_active'] = (bool) ($data['is_active'] ?? ($isNew ? true : false));
+        // خالی → null (دستگاه/برند اختیاری‌اند)
+        $data['device_id'] = ($data['device_id'] ?? null) ?: null;
+        $data['brand_id'] = ($data['brand_id'] ?? null) ?: null;
     }
 }

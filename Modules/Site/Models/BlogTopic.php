@@ -3,7 +3,10 @@
 namespace Modules\Site\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\Device;
 use Modules\Seo\Concerns\HasSeoMeta;
 
 /**
@@ -19,6 +22,8 @@ class BlogTopic extends Model
         'wp_term_id',
         'slug',
         'name',
+        'device_id',
+        'brand_id',
         'icon',
         'color_bg',
         'color_fg',
@@ -32,7 +37,21 @@ class BlogTopic extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'wp_term_id' => 'integer',
+        'device_id' => 'integer',
+        'brand_id' => 'integer',
     ];
+
+    /** دستگاهِ گره‌خورده به این تاپیک (اختیاری). */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class, 'device_id');
+    }
+
+    /** برندِ گره‌خورده به این تاپیک (اختیاری). */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
 
     public function articles(): BelongsToMany
     {

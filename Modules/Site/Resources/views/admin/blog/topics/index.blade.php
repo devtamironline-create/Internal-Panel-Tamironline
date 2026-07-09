@@ -18,9 +18,24 @@
 
     @if(session('success'))<div class="mb-4 p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{{ session('success') }}</div>@endif
 
-    <form method="GET" class="mb-5 flex gap-2 items-center p-3 bg-white border border-gray-200 rounded-lg">
-        <input type="text" name="q" value="{{ request('q') }}" placeholder="جستجو..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+    <form method="GET" class="mb-5 flex flex-wrap gap-2 items-center p-3 bg-white border border-gray-200 rounded-lg">
+        <input type="text" name="q" value="{{ request('q') }}" placeholder="جستجو..." class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select name="device_id" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">همه دستگاه‌ها</option>
+            @foreach($allDevices as $d)
+                <option value="{{ $d->id }}" @selected((int) request('device_id') === (int) $d->id)>{{ $d->name }}</option>
+            @endforeach
+        </select>
+        <select name="brand_id" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">همه برندها</option>
+            @foreach($allBrands as $b)
+                <option value="{{ $b->id }}" @selected((int) request('brand_id') === (int) $b->id)>{{ $b->name }}</option>
+            @endforeach
+        </select>
         <button class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm">فیلتر</button>
+        @if(request('q') || request('device_id') || request('brand_id'))
+            <a href="{{ route('site.admin.blog.topics.index') }}" class="px-3 py-2 text-gray-500 text-sm hover:underline">پاک‌کردن</a>
+        @endif
     </form>
 
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -28,8 +43,8 @@
             <thead class="bg-gray-50 text-gray-600">
                 <tr>
                     <th class="px-4 py-2 text-right">تاپیک</th>
-                    <th class="px-4 py-2 text-right">slug</th>
-                    <th class="px-4 py-2 text-right">پیش‌نمایش</th>
+                    <th class="px-4 py-2 text-right">دستگاه / برند</th>
+                    <th class="px-4 py-2 text-right">مسیر سایت</th>
                     <th class="px-4 py-2 text-right">مقالات</th>
                     <th class="px-4 py-2 text-right">ترتیب</th>
                     <th class="px-4 py-2 text-right">وضعیت</th>
@@ -39,14 +54,19 @@
             <tbody>
                 @forelse($topics as $t)
                 <tr class="border-t border-gray-100">
-                    <td class="px-4 py-3 font-semibold">{{ $t->name }}</td>
-                    <td class="px-4 py-3 font-mono text-xs ltr" dir="ltr">{{ $t->slug }}</td>
                     <td class="px-4 py-3">
-                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold"
-                              style="background: {{ $t->color_bg ?? '#f3f4f6' }}; color: {{ $t->color_fg ?? '#374151' }}; border-color: {{ $t->color_border ?? '#e5e7eb' }};">
-                            @if($t->icon)<span class="font-mono text-[10px] ltr" dir="ltr">[{{ $t->icon }}]</span>@endif
-                            {{ $t->name }}
-                        </span>
+                        <div class="font-semibold">{{ $t->name }}</div>
+                        <div class="font-mono text-[11px] text-gray-400 ltr" dir="ltr">{{ $t->slug }}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        @if($t->device)<span class="inline-block px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 mb-1">{{ $t->device->name }}</span>@endif
+                        @if($t->brand)<span class="inline-block px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700">{{ $t->brand->name }}</span>@endif
+                        @if(! $t->device && ! $t->brand)<span class="text-gray-300 text-xs">— عمومی —</span>@endif
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-500">
+                        <span dir="rtl">مقالات</span>
+                        @if($t->device)<span class="text-gray-300">›</span> <span class="text-indigo-600">مقالات {{ $t->device->name }}</span>@endif
+                        <span class="text-gray-300">›</span> <span class="text-gray-800 font-medium">{{ $t->name }}</span>
                     </td>
                     <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">{{ $t->articles_count }}</span></td>
                     <td class="px-4 py-3">{{ $t->sort_order }}</td>
