@@ -375,6 +375,15 @@ class Order extends Model
     }
 
     /**
+     * پیش‌فاکتورهای این سفارش (برآوردِ قیمت). برای نمایش در اپِ مشتری
+     * فقط مواردِ ارسال‌شده (غیرِ پیش‌نویس) استفاده می‌شود.
+     */
+    public function proformas(): HasMany
+    {
+        return $this->hasMany(Proforma::class)->latest();
+    }
+
+    /**
      * ایرادات انتخاب‌شده از منوی dropdown اپ.
      */
     public function objections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

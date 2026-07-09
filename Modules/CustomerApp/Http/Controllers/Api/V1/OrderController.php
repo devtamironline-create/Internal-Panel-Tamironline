@@ -85,6 +85,8 @@ class OrderController extends Controller
             'district:id,name',
             'technician:id,first_name,last_name,firstname_tech,mobile,satisfaction_score',
             'review',
+            // پیش‌فاکتورهای ارسال‌شده به مشتری (پیش‌نویس‌ها پنهان می‌مانند).
+            'proformas' => fn ($q) => $q->where('status', '!=', 'draft'),
         ]);
 
         return response()->json([
