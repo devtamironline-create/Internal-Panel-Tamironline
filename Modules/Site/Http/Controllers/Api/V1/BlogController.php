@@ -20,8 +20,10 @@ class BlogController extends Controller
      */
     public function topics(): JsonResponse
     {
-        $topics = BlogTopic::query()->active()->ordered()->withCount(['articles' => fn ($q) => $q->where('is_published', true)])
-            ->get(['id', 'slug', 'name', 'icon', 'color_bg', 'color_fg', 'color_border']);
+        $topics = BlogTopic::query()->active()->ordered()
+            ->with(['device:id,name,slug', 'brand:id,name,slug'])
+            ->withCount(['articles' => fn ($q) => $q->where('is_published', true)])
+            ->get(['id', 'slug', 'name', 'device_id', 'brand_id', 'icon', 'color_bg', 'color_fg', 'color_border']);
 
         $data = $topics->map(fn (BlogTopic $t) => [
             'id' => (int) $t->id,
@@ -34,6 +36,9 @@ class BlogController extends Controller
                 'border' => $t->color_border,
             ],
             'articles_count' => (int) ($t->articles_count ?? 0),
+            // دستگاه/برندِ تاپیک — برای ساختِ URL و بردکرامبِ فرانت (وقتی دستگاه
+            // هست، مسیر بر اساسِ دستگاه است: /blog/{device.slug} › {topic}).
+            ...$this->topicTaxonomy($t),
         ])->values();
 
         return response()->json(['data' => $data])
@@ -141,7 +146,7 @@ class BlogController extends Controller
 
         $query = Article::query()
             ->published()
-            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'activeDevices:id,name,slug', 'activeBrands:id,name,slug']);
+            ->with(['topics:id,name,slug,device_id,brand_id,color_bg,color_fg,color_border', 'topics.device:id,name,slug', 'topics.brand:id,name,slug', 'activeDevices:id,name,slug', 'activeBrands:id,name,slug']);
 
         if ($topicSlug = trim((string) $request->query('topic', ''))) {
             $query->whereHas('topics', fn ($q) => $q->where('site_blog_topics.slug', $topicSlug)->where('is_active', true));
@@ -188,7 +193,7 @@ class BlogController extends Controller
         $article = Article::query()
             ->published()
             ->where('slug', $slug)
-            ->with(['topics:id,name,slug,color_bg,color_fg,color_border', 'activeDevices:id,name,slug,icon,thumbnail,tone', 'activeBrands:id,name,slug,logo'])
+            ->with(['topics:id,name,slug,device_id,brand_id,color_bg,color_fg,color_border', 'topics.device:id,name,slug', 'topics.brand:id,name,slug', 'activeDevices:id,name,slug,icon,thumbnail,tone', 'activeBrands:id,name,slug,logo'])
             ->first();
 
         if (! $article) {
@@ -217,6 +222,34 @@ class BlogController extends Controller
     }
 
     /**
+     * دستگاه/برندِ یک تاپیک + بردکرامبِ آماده. وقتی دستگاه هست، مسیر بر اساسِ
+     * دستگاه است: خانه › مقالات › مقالات {دستگاه} › {تاپیک}.
+     *
+     * @return array<string, mixed>
+     */
+    private function topicTaxonomy(BlogTopic $t): array
+    {
+        $device = $t->relationLoaded('device') ? $t->device : null;
+        $brand = $t->relationLoaded('brand') ? $t->brand : null;
+
+        $crumbs = [
+            ['label' => 'خانه', 'href' => '/'],
+            ['label' => 'مقالات', 'href' => '/blog'],
+        ];
+        if ($device) {
+            // صفحهٔ مقالاتِ دستگاه — با همان قراردادِ فیلترِ موجود (?device=slug).
+            $crumbs[] = ['label' => 'مقالات '.$device->name, 'href' => '/blog?device='.$device->slug];
+        }
+        $crumbs[] = ['label' => $t->name, 'href' => '/blog/topic/'.$t->slug];
+
+        return [
+            'device' => $device ? ['id' => (int) $device->id, 'name' => $device->name, 'slug' => $device->slug] : null,
+            'brand' => $brand ? ['id' => (int) $brand->id, 'name' => $brand->name, 'slug' => $brand->slug] : null,
+            'breadcrumb' => $crumbs,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function shapeListItem(Article $a): array
@@ -231,10 +264,10 @@ class BlogController extends Controller
             'cover_color' => $a->cover_color,
             'read_time_minutes' => $a->read_time_minutes,
             'published_at' => $a->published_at?->utc()->toIso8601ZuluString(),
-            'topics' => $a->topics->map(fn ($t) => [
+            'topics' => $a->topics->map(fn ($t) => array_merge([
                 'id' => (int) $t->id, 'slug' => $t->slug, 'name' => $t->name,
                 'colors' => ['bg' => $t->color_bg, 'fg' => $t->color_fg, 'border' => $t->color_border],
-            ])->values(),
+            ], $this->topicTaxonomy($t)))->values(),
             // دستگاه‌ها و برندهای مرتبطِ فعال — برای ساخت چیپ/لینکِ «مقالات بر
             // اساس دستگاه/برند» (slug برای فیلتر ?device=/?brand= استفاده می‌شود).
             'devices' => $a->activeDevices->map(fn ($d) => [
