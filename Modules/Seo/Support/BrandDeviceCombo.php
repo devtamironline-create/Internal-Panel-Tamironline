@@ -26,4 +26,15 @@ class BrandDeviceCombo extends Model
     public ?Device $deviceModel = null;
 
     public ?Brand $brandModel = null;
+
+    /**
+     * حاملِ متای سئو. این ترکیب ردیفِ خودش را ندارد، اما SeoableRegistry متای
+     * ذخیره‌شدهٔ ردیفِ DeviceBrandPageِ متناظر را با setRelation('seoMeta', …)
+     * روی همین می‌نشاند تا MetaResolver override را اعمال کند. این متد فقط
+     * برای عبور از method_exists() لازم است و مستقیم کوئری نمی‌شود.
+     */
+    public function seoMeta(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(\Modules\Seo\Models\SeoMeta::class, 'seoable');
+    }
 }

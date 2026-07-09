@@ -104,6 +104,18 @@ return [
             'sitemap' => true,
             'default_schema' => 'Service',
         ],
+        // صفحهٔ ترکیبیِ ادمین (ردیفِ DeviceBrandPage). پنلِ سئوِ حرفه‌ای روی همین
+        // ویرایش می‌شود؛ resolverِ فرانتِ brand_device همین seoMeta را می‌خواند.
+        'device_brand_page' => [
+            'model' => \Modules\CRM\Models\DeviceBrandPage::class,
+            'slug' => 'id',
+            'url' => '/services/{device_slug}/{brand_slug}',
+            'title_attr' => 'title',
+            'excerpt_attr' => null,
+            'published' => null,
+            'sitemap' => false,
+            'default_schema' => 'Service',
+        ],
         'taxonomy' => [
             'model' => \Modules\Site\Models\Taxonomy::class,
             'slug' => 'slug',
@@ -157,6 +169,10 @@ return [
         'brand_device' => [
             'title' => 'تعمیر %title% در %city% %sep% %sitename%',
             'description' => 'تعمیر تخصصی %title% در %city% با اعزام تکنسین متخصص و پرداخت پس از تست نهایی دستگاه.',
+        ],
+        'device_brand_page' => [
+            'title' => 'تعمیر %title% %sep% %sitename%',
+            'description' => 'تعمیر تخصصی %title% با اعزام تکنسین متخصص و پرداخت پس از تست نهایی دستگاه.',
         ],
         'forum_question' => [
             'title' => '%title% %sep% %sitename%',

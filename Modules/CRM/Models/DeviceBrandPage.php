@@ -5,6 +5,7 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Seo\Concerns\HasSeoMeta;
 
 /**
  * صفحه‌ی ترکیبی (device, brand) — برای URLهایی مانند
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class DeviceBrandPage extends Model
 {
+    use HasSeoMeta;
+
     protected $table = 'crm_device_brand_pages';
 
     protected $fillable = [
@@ -53,6 +56,17 @@ class DeviceBrandPage extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    /** توکن‌های URL برای پنلِ سئو (الگو: /services/{device_slug}/{brand_slug}). */
+    public function getDeviceSlugAttribute(): string
+    {
+        return (string) ($this->device->slug ?? '');
+    }
+
+    public function getBrandSlugAttribute(): string
+    {
+        return (string) ($this->brand->slug ?? '');
     }
 
     public function faqs(): BelongsToMany
