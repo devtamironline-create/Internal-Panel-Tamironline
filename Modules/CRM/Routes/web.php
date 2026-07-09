@@ -62,6 +62,9 @@ Route::middleware('web')->group(function () {
     // رسیدِ عمومیِ پیش‌فاکتور — با public_token (بدونِ لاگین، غیرقابل‌حدس).
     Route::get('/crm/proforma/{token}', [\Modules\CRM\Http\Controllers\ProformaController::class, 'publicReceipt'])
         ->where('token', '[A-Za-z0-9]+')->name('crm.proforma.public');
+    // خروجیِ PDFِ تمیز (بدونِ مهر/امضا/هولوگرام، با واترمارکِ «غیرقابل استناد»).
+    Route::get('/crm/proforma/{token}/pdf', [\Modules\CRM\Http\Controllers\ProformaController::class, 'pdf'])
+        ->where('token', '[A-Za-z0-9]+')->name('crm.proforma.pdf');
 
     // سرو لوگو/مهر فاکتور — public چون داخل لینک عمومی فاکتور هم لازم
     // می‌شود. دارایی‌های حساس نیستند (فقط برند شرکت‌اند).

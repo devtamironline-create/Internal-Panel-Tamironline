@@ -45,6 +45,10 @@ Route::prefix('v1/customer')
         Route::get('/proforma/{token}', [\Modules\CustomerApp\Http\Controllers\Api\V1\ProformaController::class, 'show'])
             ->where('token', '[A-Za-z0-9]+')
             ->name('api.customer.proforma.show');
+        // PDFِ تمیزِ پیش‌فاکتور (بدونِ مهر/هولوگرام) — اپ دکمهٔ دانلود را به این وصل کند.
+        Route::get('/proforma/{token}/pdf', [\Modules\CustomerApp\Http\Controllers\Api\V1\ProformaController::class, 'pdf'])
+            ->where('token', '[A-Za-z0-9]+')
+            ->name('api.customer.proforma.pdf');
 
         // Locations برای picker — public با cache بلندمدت
         // فلو: شهر → منطقه (استان از کاربر پرسیده نمی‌شود؛ سرور تشخیص می‌دهد)

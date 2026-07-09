@@ -140,9 +140,11 @@
     </style>
 </head>
 <body>
+    @unless($pdfMode ?? false)
     <div class="toolbar">
         <button class="btn-print" onclick="window.print()">پرینت / دانلود</button>
     </div>
+    @endunless
 
     <div class="page">
         {{-- واترمارکِ پس‌زمینه: «غیرقابل استناد» — این سند سندِ رسمی/استنادپذیر نیست --}}

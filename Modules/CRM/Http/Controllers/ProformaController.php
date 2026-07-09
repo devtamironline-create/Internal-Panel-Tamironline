@@ -96,6 +96,22 @@ class ProformaController extends Controller
         ]);
     }
 
+    /** خروجیِ PDFِ تمیزِ پیش‌فاکتور — بدونِ مهر/امضا/هولوگرام، با واترمارک. */
+    public function pdf(string $token)
+    {
+        $proforma = Proforma::with(['order.province', 'order.city'])
+            ->where('public_token', $token)
+            ->firstOrFail();
+
+        $pdf = \Modules\CRM\Support\ProformaPdf::render($proforma);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="proforma-'.$proforma->proforma_code.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
