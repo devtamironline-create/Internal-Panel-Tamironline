@@ -229,13 +229,22 @@ class DashboardController extends Controller
 
         $order->load([
             'customer', 'brand', 'device', 'province', 'city',
+            'customerAddress.province', 'customerAddress.city', 'customerAddress.district',
             'items', 'statusLogs.changer',
         ]);
+
+        // پیش‌فاکتورهای همین سفارش که خودِ تکنسین ساخته — برای دسترسی از صفحهٔ سفارش.
+        $proformas = \Modules\CRM\Models\Proforma::query()
+            ->where('order_id', $order->id)
+            ->where('created_by_tech_id', $tech->id)
+            ->latest()
+            ->get();
 
         return view('crm::tech-panel.order_show', [
             'technician' => $tech,
             'order' => $order,
             'allowedStatuses' => $this->allowedStatusesFor($order),
+            'proformas' => $proformas,
         ]);
     }
 
