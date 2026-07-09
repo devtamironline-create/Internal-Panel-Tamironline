@@ -32,7 +32,7 @@ return new class extends Migration
             if (Schema::hasColumn('crm_sms_templates', 'token_vars')) {
                 $update['token_vars'] = json_encode([
                     'token' => '{customer_name}',
-                    'token2' => '{public_token}',
+                    'token2' => '{receipt_url}',   // لینکِ کاملِ اپ (نه کدِ خام)
                     'token3' => '{amount}',
                 ], JSON_UNESCAPED_UNICODE);
             }
