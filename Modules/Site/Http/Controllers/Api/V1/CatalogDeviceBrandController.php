@@ -516,33 +516,36 @@ class CatalogDeviceBrandController extends Controller
      */
     private function buildVideos(Device $device, Brand $brand, array $template, array $context, array $deviceCombo = []): array
     {
+        $deviceFallback = \Modules\Site\Support\VideoDate::modelFallback($device);
+        $brandFallback = \Modules\Site\Support\VideoDate::modelFallback($brand);
+
         // الگوی اختصاصیِ این دستگاه — از قبل placeholder خورده (loadForPublic).
         $dcVideos = array_values(array_filter((array) ($deviceCombo['videos']['items'] ?? []), fn ($v) => is_array($v) && ! empty(array_filter($v))));
         if ($dcVideos !== []) {
-            return $this->shapeVideos($dcVideos);
+            return $this->shapeVideos($dcVideos, $deviceFallback);
         }
 
         $deviceVideos = is_array($device->videos) ? array_values(array_filter($device->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
         if ($deviceVideos !== []) {
-            return $this->shapeVideos($this->sections->applyPlaceholders($deviceVideos, $context));
+            return $this->shapeVideos($this->sections->applyPlaceholders($deviceVideos, $context), $deviceFallback);
         }
 
         $brandVideos = is_array($brand->videos) ? array_values(array_filter($brand->videos, fn ($v) => is_array($v) && ! empty(array_filter($v)))) : [];
         if ($brandVideos !== []) {
-            return $this->shapeVideos($this->sections->applyPlaceholders($brandVideos, $context));
+            return $this->shapeVideos($this->sections->applyPlaceholders($brandVideos, $context), $brandFallback);
         }
 
         // template.videos.items از قبل توسط loadForPublic placeholder خورده
         $tpl = (array) ($template['videos']['items'] ?? []);
 
-        return $this->shapeVideos($tpl);
+        return $this->shapeVideos($tpl, $deviceFallback);
     }
 
     /**
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
      */
-    private function shapeVideos(array $rows): array
+    private function shapeVideos(array $rows, ?string $fallbackDate = null): array
     {
         $rows = array_values(array_filter($rows, fn ($r) => is_array($r)));
 
@@ -553,6 +556,8 @@ class CatalogDeviceBrandController extends Controller
             'video_url' => $r['video_url'] ?? null,
             'description' => $r['description'] ?? null,
             'poster_url' => $r['poster_url'] ?? null,
+            // uploadDate برای اسکیمای VideoObject (ISO 8601).
+            'upload_date' => \Modules\Site\Support\VideoDate::iso($r, $fallbackDate),
         ], $rows);
     }
 }

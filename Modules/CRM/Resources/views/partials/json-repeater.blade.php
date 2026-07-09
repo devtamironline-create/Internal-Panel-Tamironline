@@ -159,6 +159,14 @@
                                             class="px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded text-xs">پاک</button>
                                 </div>
                             </div>
+                        @elseif($itemType === 'date')
+                            <input
+                                type="date"
+                                :name="`{{ $name }}[${i}][{{ $itemKey }}]`"
+                                x-model="item[@js($itemKey)]"
+                                dir="ltr"
+                                class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm ltr"
+                            >
                         @else
                             <input
                                 type="text"

@@ -364,6 +364,7 @@
                 'video_url' => ['label' => 'URL مستقیم (mp4)', 'type' => 'string'],
                 'description' => ['label' => 'توضیح کوتاه (با {device})', 'type' => 'textarea'],
                 'poster_url' => ['label' => 'تصویر cover — انتخاب از مخزن مدیا', 'type' => 'image'],
+                'upload_date' => ['label' => 'تاریخ انتشار ویدیو (اختیاری — برای اسکیمای VideoObject)', 'type' => 'date'],
             ],
         ])
     </x-crm::section-card>

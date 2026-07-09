@@ -297,6 +297,7 @@ class BrandController extends Controller
             'videos.*.video_url' => 'nullable|string|max:500',
             'videos.*.description' => 'nullable|string|max:600',
             'videos.*.poster_url' => 'nullable|string|max:500',
+            'videos.*.upload_date' => 'nullable|date',
 
             'hero_image' => 'nullable|array',
             'hero_image.desktop_left.url' => 'nullable|string|max:500',
