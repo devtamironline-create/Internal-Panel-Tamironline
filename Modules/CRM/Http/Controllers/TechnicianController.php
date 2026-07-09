@@ -210,7 +210,9 @@ class TechnicianController extends Controller
         return view('crm::technicians.edit', [
             'technician' => $technician,
             'allCities' => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
-            'allBrands' => \Modules\CRM\Models\Brand::active()->ordered()->get(['id', 'name']),
+            // همه‌ی برندهای تعریف‌شده در پنل (فعال و غیرفعال) — وضعیتِ سایت/اپ
+            // این‌جا بی‌ربط است؛ تخصصِ برندِ تکنسین مستقل از آن است.
+            'allBrands' => \Modules\CRM\Models\Brand::query()->ordered()->get(['id', 'name']),
             // همه‌ی دستگاه‌های تعریف‌شده در پنل — وضعیتِ فعال/غیرفعالِ سایت این‌جا
             // بی‌ربط است (سایت منبعِ ثبتِ سفارش نیست)؛ تخصصِ تکنسین مستقل از آن است.
             'allDevices' => \Modules\CRM\Models\Device::query()
