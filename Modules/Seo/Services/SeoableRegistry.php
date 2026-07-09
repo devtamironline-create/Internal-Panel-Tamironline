@@ -100,6 +100,16 @@ class SeoableRegistry
         $combo->deviceModel = $device;
         $combo->brandModel = $brand;
 
+        // اگر ادمین برای همین ترکیب یک ردیفِ DeviceBrandPage با متای سئو ساخته
+        // باشد، همان override را روی combo می‌نشانیم تا MetaResolver از پنلِ
+        // حرفه‌ای استفاده کند (نه فقط قالب‌ها).
+        $page = \Modules\CRM\Models\DeviceBrandPage::query()
+            ->where('device_id', $device->id)
+            ->where('brand_id', $brand->id)
+            ->with('seoMeta')
+            ->first();
+        $combo->setRelation('seoMeta', $page?->seoMeta);
+
         return $combo;
     }
 

@@ -20,5 +20,9 @@
             @include('crm::device-brand-pages._form')
         </form>
     </div>
+
+    {{-- بخشِ سئوِ حرفه‌ای — همان پنلی که صفحاتِ دستگاه و برند دارند
+         (عنوان/توضیح، کلمهٔ کلیدی، canonical، robots، OG/Twitter، امتیازِ سئو). --}}
+    <livewire:seo.meta-panel type="device_brand_page" :model-id="$page->id" :key="'seo-dbp-'.$page->id" />
 </div>
 @endsection
