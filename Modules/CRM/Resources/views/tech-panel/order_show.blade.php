@@ -195,21 +195,76 @@
     </div>
 
     {{-- ─────── Address card ─────── --}}
-    @if($order->address || $order->province || $order->city || $order->postal_code)
+    @php
+        // آدرسِ انتخاب‌شدهٔ مشتری از اپ (نشان/نقشه) با مختصات، در اولویت است؛
+        // اگر نبود، snapshot روی خودِ سفارش استفاده می‌شود.
+        $addr = $order->customerAddress;
+        $addrText = ($addr && filled($addr->full_address)) ? $addr->full_address : $order->address;
+        $addrProvince = $addr?->province?->name ?? $order->province?->name;
+        $addrCity = $addr?->city?->name ?? $order->city?->name;
+        $addrDistrict = $addr?->district?->name;
+        $addrPostal = $addr?->postal_code ?: $order->postal_code;
+        $hasCoords = $addr && $addr->hasCoordinates();
+        $lat = $hasCoords ? $addr->latitude : null;
+        $lng = $hasCoords ? $addr->longitude : null;
+    @endphp
+    @if($addrText || $addrProvince || $addrCity || $addrPostal || $hasCoords)
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
-            <div class="text-[11px] text-gray-400 mb-2">آدرس</div>
-            @if($order->province || $order->city)
+            <div class="text-[11px] text-gray-400 mb-2">آدرس مشتری</div>
+            @if($addrProvince || $addrCity)
                 <div class="text-sm text-gray-700">
-                    {{ $order->province?->name }}{{ $order->province && $order->city ? ' / ' : '' }}{{ $order->city?->name }}
+                    {{ $addrProvince }}{{ $addrProvince && $addrCity ? ' / ' : '' }}{{ $addrCity }}@if($addrDistrict) — {{ $addrDistrict }}@endif
                 </div>
             @endif
-            @if($order->address)
-                <div class="text-sm text-gray-900 mt-1.5 leading-7">{{ $order->address }}</div>
+            @if($addrText)
+                <div class="text-sm text-gray-900 mt-1.5 leading-7">{{ $addrText }}</div>
             @endif
-            @if($order->postal_code)
+            @if($addrPostal)
                 <div class="mt-2.5 flex items-center justify-between text-xs">
                     <span class="text-gray-400">کدپستی</span>
-                    <span class="text-gray-800 font-medium" dir="ltr">{{ $order->postal_code }}</span>
+                    <span class="text-gray-800 font-medium" dir="ltr">{{ $addrPostal }}</span>
+                </div>
+            @endif
+
+            {{-- موقعیتِ ثبت‌شده روی نقشه (اپ مشتری) — مسیریابی برای تکنسین --}}
+            @if($hasCoords)
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            موقعیت روی نقشه
+                        </span>
+                        <span dir="ltr" class="text-[10px] text-gray-400 font-mono">{{ $lat }}, {{ $lng }}</span>
+                    </div>
+
+                    {{-- پیش‌نمایشِ نقشه (بدونِ کلید — OpenStreetMap) --}}
+                    <div class="rounded-xl overflow-hidden border border-gray-200 mb-2">
+                        <iframe class="w-full h-40" loading="lazy" referrerpolicy="no-referrer"
+                                src="https://www.openstreetmap.org/export/embed.html?bbox={{ $lng - 0.004 }}%2C{{ $lat - 0.0025 }}%2C{{ $lng + 0.004 }}%2C{{ $lat + 0.0025 }}&layer=mapnik&marker={{ $lat }}%2C{{ $lng }}"></iframe>
+                    </div>
+
+                    {{-- دکمه‌های مسیریابی — نشان / گوگل‌مپ / بلد --}}
+                    <div class="grid grid-cols-3 gap-2">
+                        <a href="https://neshan.org/maps/@{{ $lat }},{{ $lng }},16z" target="_blank" rel="noopener"
+                           class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-[11px] font-bold active:bg-emerald-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            نشان
+                        </a>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ $lat }},{{ $lng }}" target="_blank" rel="noopener"
+                           class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-[11px] font-bold active:bg-blue-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            گوگل‌مپ
+                        </a>
+                        <a href="https://balad.ir/location?latitude={{ $lat }}&longitude={{ $lng }}&zoom=16" target="_blank" rel="noopener"
+                           class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-orange-50 text-orange-700 text-[11px] font-bold active:bg-orange-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+                            بلد
+                        </a>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-1.5 leading-5">با زدنِ هر دکمه، مسیریابی به موقعیتِ ثبت‌شدهٔ مشتری باز می‌شود.</p>
                 </div>
             @endif
         </div>
@@ -232,6 +287,48 @@
             @endif
         </div>
     @endif
+
+    {{-- ─────── Proforma (پیش‌فاکتور) ─────── --}}
+    <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-gray-900">پیش‌فاکتور</div>
+                    <div class="text-[11px] text-gray-500">برآوردِ قیمت را قبل از تکمیل برای مشتری بفرستید.</div>
+                </div>
+            </div>
+        </div>
+
+        @if($proformas->isNotEmpty())
+            <div class="space-y-2 mb-3">
+                @foreach($proformas as $pf)
+                    <a href="{{ route('tech.proformas.show', $pf) }}"
+                       class="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 active:bg-gray-100">
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-gray-800" dir="ltr">{{ $pf->proforma_code }}</div>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full {{ $pf->statusBadge() }}">{{ $pf->statusLabel() }}</span>
+                        </div>
+                        <div class="text-sm font-bold text-gray-900" dir="ltr">{{ number_format((int) $pf->total) }}</div>
+                    </a>
+                @endforeach
+            </div>
+        @endif
+
+        @if(! $order->status->isFinal())
+            <a href="{{ route('tech.proformas.create', ['order_id' => $order->id]) }}"
+               class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                پیش‌فاکتور جدید برای این سفارش
+            </a>
+        @elseif($proformas->isEmpty())
+            <p class="text-[11px] text-gray-400">این سفارش نهایی شده و پیش‌فاکتوری ثبت نشده است.</p>
+        @endif
+    </div>
 
     {{-- ─────── Tech descriptions ─────── --}}
     @if(count($techDescriptions))
