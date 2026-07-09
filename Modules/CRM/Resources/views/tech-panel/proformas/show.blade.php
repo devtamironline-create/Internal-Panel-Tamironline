@@ -49,10 +49,9 @@
                 @if($proforma->order)<a href="{{ route('tech.orders.show', $proforma->order) }}" class="block mt-2 text-brand-600 font-bold">مشاهدهٔ سفارش ←</a>@endif
             </div>
         @else
-            <form method="POST" action="{{ route('tech.proformas.send-sms', $proforma) }}" onsubmit="return confirm('ارسال پیش‌فاکتور با پیامک به مشتری؟');">
-                @csrf
-                <button type="submit" class="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-bold active:scale-95 transition">ارسال پیامک به مشتری</button>
-            </form>
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-2xl p-3 text-xs text-center leading-6">
+                این پیش‌فاکتور صادر شد و در اپِ مشتری (داخلِ جزئیاتِ سفارش) نمایش داده می‌شود.
+            </div>
 
             @if($proforma->order_id)
                 {{-- نهایی کردن: تأیید مشتری + رفتن به تکمیلِ سفارش با مبلغِ همین پیش‌فاکتور --}}
