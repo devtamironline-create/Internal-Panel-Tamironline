@@ -69,6 +69,17 @@ class DeviceBrandPage extends Model
         return (string) ($this->brand->slug ?? '');
     }
 
+    /** متغیرهای %device% / %brand% در قالب‌های سئو (هم‌ارزِ BrandDeviceCombo). */
+    public function getDeviceNameAttribute(): string
+    {
+        return (string) ($this->device->name ?? '');
+    }
+
+    public function getBrandNameAttribute(): string
+    {
+        return (string) ($this->brand->name ?? '');
+    }
+
     public function faqs(): BelongsToMany
     {
         return $this->belongsToMany(\Modules\Site\Models\Faq::class, 'crm_device_brand_page_faqs', 'page_id', 'faq_id')
