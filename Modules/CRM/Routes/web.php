@@ -59,6 +59,10 @@ Route::middleware('web')->group(function () {
     Route::get('/crm/receipt/{invoiceCode}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'publicReceipt'])
         ->where('invoiceCode', '[A-Za-z0-9\-]+')->name('crm.invoice.public');
 
+    // رسیدِ عمومیِ پیش‌فاکتور — با public_token (بدونِ لاگین، غیرقابل‌حدس).
+    Route::get('/crm/proforma/{token}', [\Modules\CRM\Http\Controllers\ProformaController::class, 'publicReceipt'])
+        ->where('token', '[A-Za-z0-9]+')->name('crm.proforma.public');
+
     // سرو لوگو/مهر فاکتور — public چون داخل لینک عمومی فاکتور هم لازم
     // می‌شود. دارایی‌های حساس نیستند (فقط برند شرکت‌اند).
     Route::get('/crm/invoice-asset/{type}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'serveAsset'])
@@ -426,6 +430,16 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print')->whereNumber('invoice');
         Route::post('invoices/{invoice}/send-sms', [InvoiceController::class, 'sendSms'])->name('invoices.send-sms')->whereNumber('invoice');
     });
+
+    // ─── پیش‌فاکتورها ──────────────────────────────────────────
+    Route::middleware('can:view-crm-invoices')->group(function () {
+        $pf = \Modules\CRM\Http\Controllers\ProformaController::class;
+        Route::get('proformas', [$pf, 'index'])->name('proformas.index');
+        Route::get('proformas/create', [$pf, 'create'])->name('proformas.create');
+        Route::post('proformas', [$pf, 'store'])->name('proformas.store');
+        Route::get('proformas/{proforma}', [$pf, 'show'])->name('proformas.show')->whereNumber('proforma');
+        Route::post('proformas/{proforma}/send-sms', [$pf, 'sendSms'])->name('proformas.send-sms')->whereNumber('proforma');
+    });
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');
         Route::post('invoices/settings', [InvoiceController::class, 'updateSettings'])->name('invoices.settings.update');
@@ -665,6 +679,15 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('wallet/recharge', [TechPanelDashboardController::class, 'walletRecharge'])->name('wallet.recharge');
         Route::post('wallet/recharge', [TechPanelDashboardController::class, 'walletRechargeInitiate'])->name('wallet.recharge.initiate');
         Route::get('invoices', [TechPanelDashboardController::class, 'invoices'])->name('invoices');
+
+        // ── پیش‌فاکتور (تکنسین برای سفارش‌های خودش) ──────────────
+        $techPf = \Modules\CRM\Http\Controllers\Tech\ProformaController::class;
+        Route::get('proformas', [$techPf, 'index'])->name('proformas.index');
+        Route::get('proformas/create', [$techPf, 'create'])->name('proformas.create');
+        Route::post('proformas', [$techPf, 'store'])->name('proformas.store');
+        Route::get('proformas/{proforma}', [$techPf, 'show'])->name('proformas.show')->whereNumber('proforma');
+        Route::post('proformas/{proforma}/send-sms', [$techPf, 'sendSms'])->name('proformas.send-sms')->whereNumber('proforma');
+
         Route::get('profile', [TechPanelDashboardController::class, 'profile'])->name('profile');
         Route::post('profile', [TechPanelDashboardController::class, 'updateProfile'])->name('profile.update');
         Route::post('profile/password', [TechPanelDashboardController::class, 'updatePassword'])->name('profile.password');

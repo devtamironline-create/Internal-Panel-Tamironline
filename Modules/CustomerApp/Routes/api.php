@@ -40,6 +40,12 @@ Route::prefix('v1/customer')
         // ─── Public — هیچ auth لازم نیست ─────────────────────────
         Route::get('/status', StatusController::class)->name('api.customer.status');
 
+        // پیش‌فاکتور — نمایشِ token-based (لینکِ پیامکِ مشتری). بدونِ auth؛
+        // خودِ public_tokenِ ۴۰کاراکتریِ غیرقابل‌حدس نقشِ احراز را دارد.
+        Route::get('/proforma/{token}', [\Modules\CustomerApp\Http\Controllers\Api\V1\ProformaController::class, 'show'])
+            ->where('token', '[A-Za-z0-9]+')
+            ->name('api.customer.proforma.show');
+
         // Locations برای picker — public با cache بلندمدت
         // فلو: شهر → منطقه (استان از کاربر پرسیده نمی‌شود؛ سرور تشخیص می‌دهد)
         Route::get('/locations/states', [LocationController::class, 'states'])

@@ -24,6 +24,7 @@ enum SmsTrigger: string
     case CustomerInvoiceIssued = 'customer_invoice_issued';
     case CustomerHappyCall = 'customer_happy_call';
     case CustomerInvoicePayLink = 'customer_invoice_pay_link';
+    case CustomerProformaIssued = 'customer_proforma_issued';  // پیش‌فاکتور
 
     public function label(): string
     {
@@ -43,6 +44,7 @@ enum SmsTrigger: string
             self::CustomerInvoiceIssued => 'صدور فاکتور (مشتری)',
             self::CustomerHappyCall => 'رضایت‌سنجی (مشتری)',
             self::CustomerInvoicePayLink => 'لینک پرداخت فاکتور (مشتری)',
+            self::CustomerProformaIssued => 'صدور پیش‌فاکتور (مشتری)',
         };
     }
 
