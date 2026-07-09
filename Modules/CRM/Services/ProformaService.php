@@ -162,6 +162,9 @@ class ProformaService
             'total' => (int) $proforma->total,
             'description' => $proforma->description,
             'valid_until' => $proforma->valid_until?->toDateString(),
+            // اعتبارِ ۲۴ ساعته از لحظهٔ ساخت — پس از آن خودکار «منقضی» می‌شود.
+            'expires_at' => $proforma->expiresAt()?->utc()->toIso8601String(),
+            'is_expired' => $proforma->isExpired(),
             'order_id' => $proforma->order_id,
             'order_code' => $proforma->order?->order_code,
             'public_url' => $proforma->publicUrl(),

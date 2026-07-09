@@ -25,6 +25,9 @@ class Proforma extends Model
 
     public const STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'converted'];
 
+    /** اعتبارِ هر پیش‌فاکتور از لحظهٔ ساخت (ساعت). پس از آن خودکار منقضی می‌شود. */
+    public const VALIDITY_HOURS = 24;
+
     protected $fillable = [
         'proforma_code',
         'public_token',
@@ -161,6 +164,30 @@ class Proforma extends Model
     public function isEditable(): bool
     {
         return in_array($this->status, ['draft', 'sent', 'rejected', 'expired'], true);
+    }
+
+    /** زمانِ انقضا = لحظهٔ ساخت + VALIDITY_HOURS. */
+    public function expiresAt(): ?\Illuminate\Support\Carbon
+    {
+        return $this->created_at?->copy()->addHours(self::VALIDITY_HOURS);
+    }
+
+    /**
+     * آیا این پیش‌فاکتور منقضی شده است؟ فقط مواردِ در جریان (draft/sent) با
+     * گذشتِ ۲۴ ساعت منقضی می‌شوند؛ accepted/converted/rejected مستثنا هستند.
+     * (وضعیتِ expired هم مستقیماً منقضی محسوب می‌شود.)
+     */
+    public function isExpired(): bool
+    {
+        if ($this->status === 'expired') {
+            return true;
+        }
+        if (! in_array($this->status, ['draft', 'sent'], true)) {
+            return false;
+        }
+        $expiry = $this->expiresAt();
+
+        return $expiry !== null && $expiry->isPast();
     }
 
     /** کدِ ماهانه: PF-YYMM-NNNNN */
