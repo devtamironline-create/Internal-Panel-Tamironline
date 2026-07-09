@@ -24,7 +24,7 @@ return new class extends Migration
             'trigger_key' => 'customer_proforma_issued',
             'title' => 'صدور پیش‌فاکتور (به مشتری)',
             'recipient' => 'customer',
-            'body' => "{customer_name} عزیز\nپیش‌فاکتور شما به مبلغ {amount} تومان صادر شد.\nمشاهده و تأیید: {receipt_url}",
+            'body' => "{customer_name} عزیز، پیش‌فاکتور شما در لینک زیر قابل مشاهده است:\n{receipt_url}\nتعمیرآنلاین",
             'is_active' => false,
         ];
 
