@@ -91,6 +91,15 @@ class OrderResource extends JsonResource
                 'reason' => $this->cancel_reason,
             ] : null,
 
+            // پیش‌فاکتورها (برآوردِ قیمت) — فقط مواردِ ارسال‌شده به مشتری.
+            // مبالغ به تومان (integer) هستند؛ token/public_url برای بازکردنِ رسید.
+            'proformas' => $this->whenLoaded('proformas', fn () => $this->proformas->map(function ($pf) {
+                // پیش‌گیری از N+1: relationِ order روی همین سفارش ست می‌شود.
+                $pf->setRelation('order', $this->resource);
+
+                return app(\Modules\CRM\Services\ProformaService::class)->shape($pf);
+            })->values()),
+
             // نظر — وضعیت واقعی review
             'review' => $this->reviewPayload($status),
 
