@@ -59,7 +59,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
-            'code' => ['required', 'string', 'size:6'],
+            'code' => ['required', 'string', 'digits:'.((int) config('sms.otp.length', 4))],
             'is_admin' => ['sometimes', 'boolean'],
         ]);
 

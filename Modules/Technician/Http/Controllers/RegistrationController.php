@@ -42,9 +42,9 @@ class RegistrationController extends Controller
             ->get();
 
         return view('technician::register', [
-            'brand_name'           => $brandName,
-            'brand_logo'           => $brandLogo,
-            'provinces'            => $provinces,
+            'brand_name' => $brandName,
+            'brand_logo' => $brandLogo,
+            'provinces' => $provinces,
             'appliance_categories' => $applianceCategories,
         ]);
     }
@@ -58,7 +58,7 @@ class RegistrationController extends Controller
             'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
         ], [
             'mobile.required' => 'شماره موبایل الزامی است.',
-            'mobile.regex'    => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
+            'mobile.regex' => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
         ]);
 
         $otpService = app(OTPService::class);
@@ -74,11 +74,11 @@ class RegistrationController extends Controller
     {
         $request->validate([
             'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
-            'code'   => ['required', 'string', 'size:6'],
+            'code' => ['required', 'string', 'digits:'.((int) config('sms.otp.length', 4))],
         ], [
             'mobile.required' => 'شماره موبایل الزامی است.',
-            'code.required'   => 'کد تایید الزامی است.',
-            'code.size'       => 'کد تایید باید ۶ رقم باشد.',
+            'code.required' => 'کد تایید الزامی است.',
+            'code.size' => 'کد تایید باید ۶ رقم باشد.',
         ]);
 
         $otpService = app(OTPService::class);
@@ -90,7 +90,7 @@ class RegistrationController extends Controller
         // مستقیم به step1 POST کرد و دور زد.
         if ($result['success'] ?? false) {
             \Illuminate\Support\Facades\Cache::put(
-                'tech_reg_otp_verified_' . $request->mobile,
+                'tech_reg_otp_verified_'.$request->mobile,
                 ['at' => time(), 'ip' => $request->ip()],
                 now()->addMinutes(20)
             );
@@ -101,28 +101,28 @@ class RegistrationController extends Controller
             $registration = TechnicianRegistration::where('mobile', $request->mobile)->first();
             if ($registration && $registration->identity_verified) {
                 $result['resume'] = [
-                    'current_step'             => $registration->current_step,
-                    'status'                   => $registration->status,
-                    'contract_signed'           => (bool) $registration->contract_signed_at,
-                    'documents_uploaded'        => (bool) $registration->documents_uploaded,
-                    'rejection_reason'          => $registration->rejection_reason,
-                    'archive_reason'            => $registration->archive_reason,
-                    'documents_reject_reason'   => $registration->documents_reject_reason,
-                    'contract_reject_reason'    => $registration->contract_reject_reason,
-                    'biometric_status'          => $registration->biometric_status,
-                    'biometric_reject_reason'   => $registration->biometric_reject_reason,
-                    'promissory_note_status'    => $registration->promissory_note_status,
+                    'current_step' => $registration->current_step,
+                    'status' => $registration->status,
+                    'contract_signed' => (bool) $registration->contract_signed_at,
+                    'documents_uploaded' => (bool) $registration->documents_uploaded,
+                    'rejection_reason' => $registration->rejection_reason,
+                    'archive_reason' => $registration->archive_reason,
+                    'documents_reject_reason' => $registration->documents_reject_reason,
+                    'contract_reject_reason' => $registration->contract_reject_reason,
+                    'biometric_status' => $registration->biometric_status,
+                    'biometric_reject_reason' => $registration->biometric_reject_reason,
+                    'promissory_note_status' => $registration->promissory_note_status,
                     'promissory_note_reject_reason' => $registration->promissory_note_reject_reason,
-                    'first_name'        => $registration->first_name,
-                    'last_name'         => $registration->last_name,
-                    'father_name'       => $registration->father_name,
+                    'first_name' => $registration->first_name,
+                    'last_name' => $registration->last_name,
+                    'father_name' => $registration->father_name,
                     'shenasname_number' => $registration->shenasname_number,
-                    'gender'            => $registration->gender,
-                    'marital_status'    => $registration->marital_status,
-                    'children_count'    => $registration->children_count,
-                    'province'          => $registration->province,
-                    'city'              => $registration->city,
-                    'address'           => $registration->address,
+                    'gender' => $registration->gender,
+                    'marital_status' => $registration->marital_status,
+                    'children_count' => $registration->children_count,
+                    'province' => $registration->province,
+                    'city' => $registration->city,
+                    'address' => $registration->address,
                 ];
             }
         }
@@ -136,35 +136,35 @@ class RegistrationController extends Controller
     public function storeStep1(Request $request)
     {
         $request->validate([
-            'mobile'        => ['required', 'regex:/^09[0-9]{9}$/'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
             'national_code' => ['required', 'regex:/^[0-9]{10}$/'],
-            'birth_date'    => ['required', 'regex:/^[0-9]{4}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/'],
+            'birth_date' => ['required', 'regex:/^[0-9]{4}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/'],
         ], [
-            'mobile.required'        => 'شماره موبایل الزامی است.',
-            'mobile.regex'           => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'mobile.regex' => 'شماره موبایل باید با 09 شروع شده و ۱۱ رقم باشد.',
             'national_code.required' => 'کد ملی الزامی است.',
-            'national_code.regex'    => 'کد ملی باید ۱۰ رقم باشد.',
-            'birth_date.required'    => 'تاریخ تولد الزامی است.',
-            'birth_date.regex'       => 'فرمت تاریخ تولد معتبر نیست.',
+            'national_code.regex' => 'کد ملی باید ۱۰ رقم باشد.',
+            'birth_date.required' => 'تاریخ تولد الزامی است.',
+            'birth_date.regex' => 'فرمت تاریخ تولد معتبر نیست.',
         ]);
 
         // قفل امنیتی: نشانهٔ OTP تأییدشدهٔ این موبایل باید در کش باشد.
         // بدون این، حتی اگر مهاجم Shahkar را با کد ملی صاحب موبایل بدهد،
         // نمی‌تواند بدون داشتن گوشی واقعی، ثبت‌نام را شروع کند.
-        if (! \Illuminate\Support\Facades\Cache::has('tech_reg_otp_verified_' . $request->mobile)) {
+        if (! \Illuminate\Support\Facades\Cache::has('tech_reg_otp_verified_'.$request->mobile)) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا کد تأیید (OTP) ارسالی به موبایل را وارد کنید.',
-                'field'   => 'mobile',
+                'field' => 'mobile',
             ], 403);
         }
 
         // اعتبارسنجی کد ملی
-        if (!$this->validateNationalCode($request->national_code)) {
+        if (! $this->validateNationalCode($request->national_code)) {
             return response()->json([
                 'success' => false,
                 'message' => 'کد ملی وارد شده معتبر نیست.',
-                'field'   => 'national_code',
+                'field' => 'national_code',
             ], 422);
         }
 
@@ -182,60 +182,60 @@ class RegistrationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $msg,
-                'field'   => $field,
+                'field' => $field,
             ], 422);
         }
 
-        $zohal = new ZohalService();
+        $zohal = new ZohalService;
 
         // ۱) شاهکار: تطابق موبایل و کد ملی
         $shahkar = $zohal->shahkar($request->mobile, $request->national_code);
 
-        if (!$shahkar['success']) {
+        if (! $shahkar['success']) {
             return response()->json([
                 'success' => false,
                 'message' => $shahkar['message'],
             ], 503);
         }
 
-        if (!$shahkar['matched']) {
+        if (! $shahkar['matched']) {
             return response()->json([
                 'success' => false,
                 'message' => 'شماره موبایل و کد ملی با هم مطابقت ندارند.',
-                'field'   => 'national_code',
+                'field' => 'national_code',
             ], 422);
         }
 
         // ۲) استعلام هویت: دریافت نام و نام خانوادگی
         $identity = $zohal->nationalIdentityInquiry($request->national_code, $request->birth_date);
 
-        if (!$identity['success']) {
+        if (! $identity['success']) {
             return response()->json([
                 'success' => false,
                 'message' => $identity['message'],
             ], 503);
         }
 
-        if (!$identity['matched']) {
+        if (! $identity['matched']) {
             return response()->json([
                 'success' => false,
                 'message' => 'کد ملی و تاریخ تولد با هم مطابقت ندارند.',
-                'field'   => 'birth_date',
+                'field' => 'birth_date',
             ], 422);
         }
 
         // ذخیره اطلاعات
         $registration = TechnicianRegistration::create([
-            'mobile'              => $request->mobile,
-            'national_code'       => $request->national_code,
-            'birth_date'          => $request->birth_date,
-            'first_name'          => $identity['first_name'],
-            'last_name'           => $identity['last_name'],
-            'father_name'         => $identity['father_name'],
-            'mobile_verified_at'  => now(),
-            'identity_verified'   => true,
-            'current_step'        => 2,
-            'status'              => 'incomplete',
+            'mobile' => $request->mobile,
+            'national_code' => $request->national_code,
+            'birth_date' => $request->birth_date,
+            'first_name' => $identity['first_name'],
+            'last_name' => $identity['last_name'],
+            'father_name' => $identity['father_name'],
+            'mobile_verified_at' => now(),
+            'identity_verified' => true,
+            'current_step' => 2,
+            'status' => 'incomplete',
         ]);
 
         Log::info('Technician registration step 1 completed', [
@@ -244,10 +244,10 @@ class RegistrationController extends Controller
         ]);
 
         return response()->json([
-            'success'     => true,
-            'message'     => 'اطلاعات هویتی با موفقیت تایید شد.',
-            'first_name'  => $identity['first_name'],
-            'last_name'   => $identity['last_name'],
+            'success' => true,
+            'message' => 'اطلاعات هویتی با موفقیت تایید شد.',
+            'first_name' => $identity['first_name'],
+            'last_name' => $identity['last_name'],
             'father_name' => $identity['father_name'],
         ]);
     }
@@ -261,44 +261,44 @@ class RegistrationController extends Controller
         $provinceNames = array_keys($provinces);
 
         $request->validate([
-            'mobile'            => ['required', 'regex:/^09[0-9]{9}$/'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
             'shenasname_number' => ['required', 'regex:/^[0-9]{1,10}$/'],
-            'gender'            => ['required', 'in:male,female'],
-            'marital_status'    => ['required', 'in:single,married'],
-            'children_count'    => ['nullable', 'integer', 'min:0', 'max:5'],
-            'province'          => ['required', 'string'],
-            'city'              => ['required', 'string'],
-            'address'           => ['required', 'string', 'min:10', 'max:1000'],
+            'gender' => ['required', 'in:male,female'],
+            'marital_status' => ['required', 'in:single,married'],
+            'children_count' => ['nullable', 'integer', 'min:0', 'max:5'],
+            'province' => ['required', 'string'],
+            'city' => ['required', 'string'],
+            'address' => ['required', 'string', 'min:10', 'max:1000'],
         ], [
-            'mobile.required'            => 'شماره موبایل الزامی است.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
             'shenasname_number.required' => 'شماره شناسنامه الزامی است.',
-            'shenasname_number.regex'    => 'شماره شناسنامه باید عددی باشد.',
-            'gender.required'            => 'انتخاب جنسیت الزامی است.',
-            'gender.in'                  => 'جنسیت انتخاب شده معتبر نیست.',
-            'marital_status.required'    => 'انتخاب وضعیت تاهل الزامی است.',
-            'marital_status.in'          => 'وضعیت تاهل انتخاب شده معتبر نیست.',
-            'province.required'          => 'انتخاب استان الزامی است.',
-            'city.required'              => 'انتخاب شهر الزامی است.',
-            'address.required'           => 'آدرس محل سکونت الزامی است.',
-            'address.min'                => 'آدرس باید حداقل ۱۰ کاراکتر باشد.',
+            'shenasname_number.regex' => 'شماره شناسنامه باید عددی باشد.',
+            'gender.required' => 'انتخاب جنسیت الزامی است.',
+            'gender.in' => 'جنسیت انتخاب شده معتبر نیست.',
+            'marital_status.required' => 'انتخاب وضعیت تاهل الزامی است.',
+            'marital_status.in' => 'وضعیت تاهل انتخاب شده معتبر نیست.',
+            'province.required' => 'انتخاب استان الزامی است.',
+            'city.required' => 'انتخاب شهر الزامی است.',
+            'address.required' => 'آدرس محل سکونت الزامی است.',
+            'address.min' => 'آدرس باید حداقل ۱۰ کاراکتر باشد.',
         ]);
 
         // اعتبارسنجی استان
-        if (!in_array($request->province, $provinceNames)) {
+        if (! in_array($request->province, $provinceNames)) {
             return response()->json([
                 'success' => false,
                 'message' => 'استان انتخاب شده معتبر نیست.',
-                'field'   => 'province',
+                'field' => 'province',
             ], 422);
         }
 
         // اعتبارسنجی شهر
         $cities = $provinces[$request->province] ?? [];
-        if (!in_array($request->city, $cities)) {
+        if (! in_array($request->city, $cities)) {
             return response()->json([
                 'success' => false,
                 'message' => 'شهر انتخاب شده معتبر نیست.',
-                'field'   => 'city',
+                'field' => 'city',
             ], 422);
         }
 
@@ -307,7 +307,7 @@ class RegistrationController extends Controller
             ->where('identity_verified', true)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا مرحله احراز هویت را تکمیل کنید.',
@@ -317,13 +317,13 @@ class RegistrationController extends Controller
         // به‌روزرسانی اطلاعات
         $registration->update([
             'shenasname_number' => $request->shenasname_number,
-            'gender'            => $request->gender,
-            'marital_status'    => $request->marital_status,
-            'children_count'    => $request->marital_status === 'married' ? $request->children_count : null,
-            'province'          => $request->province,
-            'city'              => $request->city,
-            'address'           => $request->address,
-            'current_step'      => 3,
+            'gender' => $request->gender,
+            'marital_status' => $request->marital_status,
+            'children_count' => $request->marital_status === 'married' ? $request->children_count : null,
+            'province' => $request->province,
+            'city' => $request->city,
+            'address' => $request->address,
+            'current_step' => 3,
         ]);
 
         Log::info('Technician registration step 2 completed', [
@@ -343,43 +343,43 @@ class RegistrationController extends Controller
     public function storeStep3(Request $request)
     {
         $request->validate([
-            'mobile'               => ['required', 'regex:/^09[0-9]{9}$/'],
-            'field_of_study'       => ['nullable', 'string', 'max:255'],
-            'education_level'      => ['required', 'in:below_diploma,diploma,associate,bachelor,master,doctorate'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'field_of_study' => ['nullable', 'string', 'max:255'],
+            'education_level' => ['required', 'in:below_diploma,diploma,associate,bachelor,master,doctorate'],
             'has_business_license' => ['required', 'in:0,1'],
-            'has_shop'             => ['required', 'in:0,1'],
-            'shop_address'         => ['nullable', 'required_if:has_shop,1', 'string', 'max:1000'],
-            'shop_phone'           => ['nullable', 'required_if:has_shop,1', 'string', 'max:20'],
-            'has_cooperation'      => ['nullable', 'in:0,1'],
+            'has_shop' => ['required', 'in:0,1'],
+            'shop_address' => ['nullable', 'required_if:has_shop,1', 'string', 'max:1000'],
+            'shop_phone' => ['nullable', 'required_if:has_shop,1', 'string', 'max:20'],
+            'has_cooperation' => ['nullable', 'in:0,1'],
             'cooperation_companies' => ['nullable', 'required_if:has_cooperation,1', 'string', 'max:1000'],
-            'referrer_name'        => ['nullable', 'string', 'max:255'],
-            'referrer_phone'       => ['nullable', 'string', 'max:20'],
-            'colleague1_name'      => ['nullable', 'string', 'max:255'],
-            'colleague1_phone'     => ['nullable', 'string', 'max:20'],
-            'colleague2_name'      => ['nullable', 'string', 'max:255'],
-            'colleague2_phone'     => ['nullable', 'string', 'max:20'],
-            'work_experiences'     => ['required', 'array', 'min:1', 'max:10'],
-            'work_experiences.*.title'    => ['required', 'string', 'max:255'],
-            'work_experiences.*.company'  => ['required', 'string', 'max:255'],
+            'referrer_name' => ['nullable', 'string', 'max:255'],
+            'referrer_phone' => ['nullable', 'string', 'max:20'],
+            'colleague1_name' => ['nullable', 'string', 'max:255'],
+            'colleague1_phone' => ['nullable', 'string', 'max:20'],
+            'colleague2_name' => ['nullable', 'string', 'max:255'],
+            'colleague2_phone' => ['nullable', 'string', 'max:20'],
+            'work_experiences' => ['required', 'array', 'min:1', 'max:10'],
+            'work_experiences.*.title' => ['required', 'string', 'max:255'],
+            'work_experiences.*.company' => ['required', 'string', 'max:255'],
             'work_experiences.*.duration' => ['required', 'string', 'max:100'],
-            'certificates'         => ['nullable', 'array', 'max:10'],
-            'certificates.*.title'       => ['required', 'string', 'max:255'],
+            'certificates' => ['nullable', 'array', 'max:10'],
+            'certificates.*.title' => ['required', 'string', 'max:255'],
             'certificates.*.institution' => ['required', 'string', 'max:255'],
         ], [
-            'mobile.required'              => 'شماره موبایل الزامی است.',
-            'education_level.required'     => 'انتخاب مقطع تحصیلی الزامی است.',
-            'work_experiences.required'    => 'حداقل یک سابقه شغلی الزامی است.',
-            'work_experiences.min'         => 'حداقل یک سابقه شغلی الزامی است.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'education_level.required' => 'انتخاب مقطع تحصیلی الزامی است.',
+            'work_experiences.required' => 'حداقل یک سابقه شغلی الزامی است.',
+            'work_experiences.min' => 'حداقل یک سابقه شغلی الزامی است.',
             'has_business_license.required' => 'وضعیت پروانه کسب الزامی است.',
-            'has_shop.required'             => 'وضعیت مغازه/دفتر الزامی است.',
-            'shop_address.required_if'      => 'آدرس مغازه/دفتر الزامی است.',
-            'shop_phone.required_if'        => 'تلفن مغازه/دفتر الزامی است.',
+            'has_shop.required' => 'وضعیت مغازه/دفتر الزامی است.',
+            'shop_address.required_if' => 'آدرس مغازه/دفتر الزامی است.',
+            'shop_phone.required_if' => 'تلفن مغازه/دفتر الزامی است.',
             'cooperation_companies.required_if' => 'نام شرکت‌ها الزامی است.',
-            'work_experiences.*.title.required'    => 'عنوان شغل الزامی است.',
-            'work_experiences.*.company.required'  => 'محل کار الزامی است.',
+            'work_experiences.*.title.required' => 'عنوان شغل الزامی است.',
+            'work_experiences.*.company.required' => 'محل کار الزامی است.',
             'work_experiences.*.duration.required' => 'مدت فعالیت الزامی است.',
-            'certificates.*.title.required'        => 'عنوان مدرک/دوره الزامی است.',
-            'certificates.*.institution.required'  => 'نام موسسه/مرکز الزامی است.',
+            'certificates.*.title.required' => 'عنوان مدرک/دوره الزامی است.',
+            'certificates.*.institution.required' => 'نام موسسه/مرکز الزامی است.',
         ]);
 
         // پیدا کردن رکورد ثبت‌نام
@@ -387,7 +387,7 @@ class RegistrationController extends Controller
             ->where('current_step', '>=', 3)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
@@ -396,23 +396,23 @@ class RegistrationController extends Controller
 
         // به‌روزرسانی اطلاعات
         $registration->update([
-            'field_of_study'       => $request->field_of_study,
-            'education_level'      => $request->education_level,
+            'field_of_study' => $request->field_of_study,
+            'education_level' => $request->education_level,
             'has_business_license' => (bool) $request->has_business_license,
-            'has_shop'             => (bool) $request->has_shop,
-            'shop_address'         => $request->has_shop ? $request->shop_address : null,
-            'shop_phone'           => $request->has_shop ? $request->shop_phone : null,
-            'has_cooperation'      => (bool) $request->has_cooperation,
+            'has_shop' => (bool) $request->has_shop,
+            'shop_address' => $request->has_shop ? $request->shop_address : null,
+            'shop_phone' => $request->has_shop ? $request->shop_phone : null,
+            'has_cooperation' => (bool) $request->has_cooperation,
             'cooperation_companies' => $request->has_cooperation ? $request->cooperation_companies : null,
-            'referrer_name'        => $request->referrer_name,
-            'referrer_phone'       => $request->referrer_phone,
-            'colleague1_name'      => $request->colleague1_name,
-            'colleague1_phone'     => $request->colleague1_phone,
-            'colleague2_name'      => $request->colleague2_name,
-            'colleague2_phone'     => $request->colleague2_phone,
-            'work_experiences'     => $request->work_experiences ?? [],
-            'certificates'         => $request->certificates ?? [],
-            'current_step'         => 4,
+            'referrer_name' => $request->referrer_name,
+            'referrer_phone' => $request->referrer_phone,
+            'colleague1_name' => $request->colleague1_name,
+            'colleague1_phone' => $request->colleague1_phone,
+            'colleague2_name' => $request->colleague2_name,
+            'colleague2_phone' => $request->colleague2_phone,
+            'work_experiences' => $request->work_experiences ?? [],
+            'certificates' => $request->certificates ?? [],
+            'current_step' => 4,
         ]);
 
         Log::info('Technician registration step 3 completed', [
@@ -432,15 +432,15 @@ class RegistrationController extends Controller
     public function storeStep4(Request $request)
     {
         $request->validate([
-            'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
-            'serves_tehran'          => ['nullable', 'in:0,1'],
-            'tehran_districts'       => ['nullable', 'array'],
-            'tehran_districts.*'     => ['integer', 'min:1', 'max:22'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'serves_tehran' => ['nullable', 'in:0,1'],
+            'tehran_districts' => ['nullable', 'array'],
+            'tehran_districts.*' => ['integer', 'min:1', 'max:22'],
             'tehran_province_cities' => ['nullable', 'array'],
             'tehran_province_cities.*' => ['string', 'max:255'],
-            'alborz_cities'          => ['nullable', 'array'],
-            'alborz_cities.*'        => ['string', 'max:255'],
-            'other_provinces_cities'  => ['nullable', 'string', 'max:2000'],
+            'alborz_cities' => ['nullable', 'array'],
+            'alborz_cities.*' => ['string', 'max:255'],
+            'other_provinces_cities' => ['nullable', 'string', 'max:2000'],
         ], [
             'mobile.required' => 'شماره موبایل الزامی است.',
         ]);
@@ -458,7 +458,7 @@ class RegistrationController extends Controller
             ->where('current_step', '>=', 4)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
@@ -467,11 +467,11 @@ class RegistrationController extends Controller
 
         // به‌روزرسانی اطلاعات
         $registration->update([
-            'tehran_districts'       => $request->serves_tehran == '1' ? ($request->tehran_districts ?? []) : [],
+            'tehran_districts' => $request->serves_tehran == '1' ? ($request->tehran_districts ?? []) : [],
             'tehran_province_cities' => $request->tehran_province_cities ?? [],
-            'alborz_cities'          => $request->alborz_cities ?? [],
-            'other_provinces_cities'  => $request->other_provinces_cities,
-            'current_step'           => 5,
+            'alborz_cities' => $request->alborz_cities ?? [],
+            'other_provinces_cities' => $request->other_provinces_cities,
+            'current_step' => 5,
         ]);
 
         Log::info('Technician registration step 4 completed', [
@@ -491,27 +491,27 @@ class RegistrationController extends Controller
     public function storeStep5(Request $request)
     {
         $request->validate([
-            'mobile'                => ['required', 'regex:/^09[0-9]{9}$/'],
-            'activity_type'         => ['required', 'in:install,repair,install_repair'],
-            'appliance_categories'  => ['required', 'array', 'min:1'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'activity_type' => ['required', 'in:install,repair,install_repair'],
+            'appliance_categories' => ['required', 'array', 'min:1'],
             'appliance_categories.*' => ['integer', 'exists:appliance_categories,id'],
             'transportation_method' => ['required', 'in:motorcycle,car,none'],
-            'repair_skill'          => ['required', 'in:board_repair,parts_only,both'],
+            'repair_skill' => ['required', 'in:board_repair,parts_only,both'],
             'board_repair_experience' => ['nullable', 'in:none,beginner,intermediate,advanced,expert'],
-            'additional_notes'      => ['nullable', 'string', 'max:2000'],
-            'agreement'             => ['required', 'in:yes'],
+            'additional_notes' => ['nullable', 'string', 'max:2000'],
+            'agreement' => ['required', 'in:yes'],
         ], [
-            'mobile.required'               => 'شماره موبایل الزامی است.',
-            'activity_type.required'        => 'انتخاب زمینه فعالیت الزامی است.',
-            'activity_type.in'              => 'زمینه فعالیت انتخاب شده معتبر نیست.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'activity_type.required' => 'انتخاب زمینه فعالیت الزامی است.',
+            'activity_type.in' => 'زمینه فعالیت انتخاب شده معتبر نیست.',
             'appliance_categories.required' => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
-            'appliance_categories.min'      => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
+            'appliance_categories.min' => 'لطفاً حداقل یک دستگاه را انتخاب کنید.',
             'transportation_method.required' => 'انتخاب نحوه ارائه خدمات الزامی است.',
-            'transportation_method.in'       => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
-            'repair_skill.required'         => 'لطفاً نوع تعمیرات خود را مشخص کنید.',
-            'repair_skill.in'               => 'نوع تعمیرات انتخاب شده معتبر نیست.',
-            'agreement.required'            => 'موافقت با شرایط همکاری الزامی است.',
-            'agreement.in'                  => 'موافقت با شرایط همکاری الزامی است.',
+            'transportation_method.in' => 'نحوه ارائه خدمات انتخاب شده معتبر نیست.',
+            'repair_skill.required' => 'لطفاً نوع تعمیرات خود را مشخص کنید.',
+            'repair_skill.in' => 'نوع تعمیرات انتخاب شده معتبر نیست.',
+            'agreement.required' => 'موافقت با شرایط همکاری الزامی است.',
+            'agreement.in' => 'موافقت با شرایط همکاری الزامی است.',
         ]);
 
         // پیدا کردن رکورد ثبت‌نام
@@ -519,7 +519,7 @@ class RegistrationController extends Controller
             ->where('current_step', '>=', 5)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا مراحل قبلی را تکمیل کنید.',
@@ -528,14 +528,14 @@ class RegistrationController extends Controller
 
         // به‌روزرسانی اطلاعات
         $registration->update([
-            'activity_type'           => $request->activity_type,
-            'appliance_categories'    => $request->appliance_categories,
-            'transportation_method'   => $request->transportation_method,
-            'repair_skill'            => $request->repair_skill,
+            'activity_type' => $request->activity_type,
+            'appliance_categories' => $request->appliance_categories,
+            'transportation_method' => $request->transportation_method,
+            'repair_skill' => $request->repair_skill,
             'board_repair_experience' => $request->board_repair_experience,
-            'additional_notes'        => $request->additional_notes,
-            'current_step'            => 6,
-            'status'                => 'pending',
+            'additional_notes' => $request->additional_notes,
+            'current_step' => 6,
+            'status' => 'pending',
         ]);
 
         Log::info('Technician registration step 5 completed', [
@@ -563,7 +563,7 @@ class RegistrationController extends Controller
             ->whereNull('contract_signed_at')
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'درخواست معتبر نیست.',
@@ -577,14 +577,16 @@ class RegistrationController extends Controller
             $commissionPercent = null;
             try {
                 $commissionPercent = $registration->commission_percent;
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
             $commissionPercent = $commissionPercent ?? TechnicianSetting::get('default_commission_percent', '');
 
             // مبلغ سفته: ابتدا مقدار اختصاصی تکنسین، سپس تنظیمات عمومی
             $promissoryNoteAmount = null;
             try {
                 $promissoryNoteAmount = $registration->promissory_note_amount;
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
             $promissoryNoteAmount = $promissoryNoteAmount ?? TechnicianSetting::get('default_promissory_note_amount', '');
 
             // عنوان جنسیت
@@ -593,7 +595,7 @@ class RegistrationController extends Controller
             // آدرس از استان و شهر
             $province = $registration->province ?? '';
             $city = $registration->city ?? '';
-            $address = $province && $city ? $province . '، ' . $city : ($province ?: $city);
+            $address = $province && $city ? $province.'، '.$city : ($province ?: $city);
 
             // تاریخ شمسی
             try {
@@ -627,7 +629,7 @@ class RegistrationController extends Controller
                 ],
                 [
                     $genderTitle,
-                    $registration->first_name . ' ' . $registration->last_name,
+                    $registration->first_name.' '.$registration->last_name,
                     $registration->father_name ?? '',
                     $registration->national_code,
                     $address,
@@ -653,7 +655,7 @@ class RegistrationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در بارگذاری قرارداد: ' . $e->getMessage(),
+                'message' => 'خطا در بارگذاری قرارداد: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -672,7 +674,7 @@ class RegistrationController extends Controller
             ->whereNull('contract_signed_at')
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'درخواست معتبر نیست.',
@@ -691,21 +693,21 @@ class RegistrationController extends Controller
     public function signContract(Request $request)
     {
         $request->validate([
-            'mobile'    => ['required', 'regex:/^09[0-9]{9}$/'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
             'signature' => ['required', 'string'],
-            'code'      => ['required', 'string', 'size:6'],
+            'code' => ['required', 'string', 'digits:'.((int) config('sms.otp.length', 4))],
         ], [
-            'mobile.required'    => 'شماره موبایل الزامی است.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
             'signature.required' => 'امضای شما الزامی است.',
-            'code.required'      => 'کد تایید الزامی است.',
-            'code.size'          => 'کد تایید باید ۶ رقم باشد.',
+            'code.required' => 'کد تایید الزامی است.',
+            'code.size' => 'کد تایید باید ۶ رقم باشد.',
         ]);
 
         // تایید کد OTP
         $otpService = app(OTPService::class);
         $otpResult = $otpService->verify($request->mobile, $request->code);
 
-        if (!($otpResult['success'] ?? false)) {
+        if (! ($otpResult['success'] ?? false)) {
             return response()->json([
                 'success' => false,
                 'message' => $otpResult['message'] ?? 'کد تایید نامعتبر است.',
@@ -718,7 +720,7 @@ class RegistrationController extends Controller
             ->whereNull('contract_signed_at')
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'درخواست معتبر نیست.',
@@ -732,10 +734,10 @@ class RegistrationController extends Controller
         $nextNumber = $lastNumber ? (int) $lastNumber + 1 : 405001;
 
         $registration->update([
-            'contract_signed_at'     => now(),
-            'contract_signature'     => $request->signature,
-            'contract_number'        => (string) $nextNumber,
-            'current_step'           => 8,
+            'contract_signed_at' => now(),
+            'contract_signature' => $request->signature,
+            'contract_number' => (string) $nextNumber,
+            'current_step' => 8,
             'contract_reject_reason' => null,   // پاک کردن دلیل رد قبلی (در صورت امضای مجدد)
         ]);
 
@@ -752,7 +754,7 @@ class RegistrationController extends Controller
                 $kavenegarService->sendTemplate(
                     $registration->mobile,
                     $smsTemplate,
-                    ['token' => $registration->first_name . ' ' . $registration->last_name]
+                    ['token' => $registration->first_name.' '.$registration->last_name]
                 );
             } catch (\Exception $e) {
                 Log::warning('Failed to send contract SMS', [
@@ -774,41 +776,41 @@ class RegistrationController extends Controller
     public function uploadDocuments(Request $request)
     {
         $request->validate([
-            'mobile'                 => ['required', 'regex:/^09[0-9]{9}$/'],
-            'national_card_front'    => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'national_card_back'     => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'birth_certificate_p1'   => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'birth_certificate_p2'   => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'criminal_record'        => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'photo_3x4'             => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'lease_agreement'        => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'utility_bill'           => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'national_card_front' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'national_card_back' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'birth_certificate_p1' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'birth_certificate_p2' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'criminal_record' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'photo_3x4' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'lease_agreement' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'utility_bill' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ], [
-            'mobile.required'                => 'شماره موبایل الزامی است.',
-            'national_card_front.required'   => 'تصویر روی کارت ملی الزامی است.',
-            'national_card_front.mimes'      => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'national_card_front.max'        => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'national_card_back.required'    => 'تصویر پشت کارت ملی الزامی است.',
-            'national_card_back.mimes'       => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'national_card_back.max'         => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p1.required'  => 'تصویر صفحه اول شناسنامه الزامی است.',
-            'birth_certificate_p1.mimes'     => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'birth_certificate_p1.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p2.required'  => 'تصویر صفحه دوم شناسنامه الزامی است.',
-            'birth_certificate_p2.mimes'     => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'birth_certificate_p2.max'       => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'criminal_record.required'       => 'تصویر گواهی سوپیشینه الزامی است.',
-            'criminal_record.mimes'          => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'criminal_record.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'photo_3x4.required'             => 'عکس ۳×۴ الزامی است.',
-            'photo_3x4.mimes'               => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'photo_3x4.max'                  => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'lease_agreement.required'       => 'تصویر اجاره‌نامه الزامی است.',
-            'lease_agreement.mimes'          => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'lease_agreement.max'            => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'utility_bill.required'          => 'تصویر قبض آب یا برق الزامی است.',
-            'utility_bill.mimes'             => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'utility_bill.max'               => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'national_card_front.required' => 'تصویر روی کارت ملی الزامی است.',
+            'national_card_front.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'national_card_front.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'national_card_back.required' => 'تصویر پشت کارت ملی الزامی است.',
+            'national_card_back.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'national_card_back.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'birth_certificate_p1.required' => 'تصویر صفحه اول شناسنامه الزامی است.',
+            'birth_certificate_p1.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'birth_certificate_p1.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'birth_certificate_p2.required' => 'تصویر صفحه دوم شناسنامه الزامی است.',
+            'birth_certificate_p2.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'birth_certificate_p2.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'criminal_record.required' => 'تصویر گواهی سوپیشینه الزامی است.',
+            'criminal_record.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'criminal_record.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'photo_3x4.required' => 'عکس ۳×۴ الزامی است.',
+            'photo_3x4.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'photo_3x4.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'lease_agreement.required' => 'تصویر اجاره‌نامه الزامی است.',
+            'lease_agreement.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'lease_agreement.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            'utility_bill.required' => 'تصویر قبض آب یا برق الزامی است.',
+            'utility_bill.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
+            'utility_bill.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
@@ -816,7 +818,7 @@ class RegistrationController extends Controller
             ->where('documents_uploaded', false)   // فقط تا زمانی که مدارک قبلاً آپلود نشده
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'درخواست معتبر نیست.',
@@ -825,7 +827,7 @@ class RegistrationController extends Controller
 
         try {
             // ذخیره فایل‌ها
-            $folder = 'technician-documents/' . $registration->id;
+            $folder = 'technician-documents/'.$registration->id;
 
             $docFields = [
                 'national_card_front', 'national_card_back',
@@ -837,18 +839,18 @@ class RegistrationController extends Controller
             $paths = [];
             foreach ($docFields as $field) {
                 $file = $request->file($field);
-                if (!$file) {
+                if (! $file) {
                     return response()->json([
                         'success' => false,
                         'message' => "فایل {$field} دریافت نشد.",
                     ], 422);
                 }
-                $paths['doc_' . $field] = $file->store($folder, 'public');
+                $paths['doc_'.$field] = $file->store($folder, 'public');
             }
 
             $registration->update(array_merge($paths, [
-                'documents_uploaded'      => true,
-                'current_step'            => 7,
+                'documents_uploaded' => true,
+                'current_step' => 7,
                 'documents_reject_reason' => null,   // پاک کردن دلیل رد قبلی (در صورت آپلود مجدد)
             ]));
 
@@ -869,7 +871,7 @@ class RegistrationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ذخیره مدارک: ' . $e->getMessage(),
+                'message' => 'خطا در ذخیره مدارک: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -880,24 +882,24 @@ class RegistrationController extends Controller
     public function submitBiometric(Request $request)
     {
         $request->validate([
-            'mobile'              => ['required', 'regex:/^09[0-9]{9}$/'],
+            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
             'national_card_serial' => ['required', 'string', 'regex:/^[0-9A-Za-z]{10}$/'],
-            'video'               => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:10240'],
+            'video' => ['required', 'file', 'mimetypes:video/webm,video/mp4', 'max:10240'],
         ], [
-            'mobile.required'              => 'شماره موبایل الزامی است.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
             'national_card_serial.required' => 'سریال کارت ملی الزامی است.',
-            'national_card_serial.regex'    => 'فرمت سریال کارت ملی معتبر نیست.',
-            'video.required'               => 'ویدیو سلفی الزامی است.',
-            'video.uploaded'               => 'آپلود ویدیو ناموفق بود. لطفاً مجدداً ضبط و ارسال کنید.',
-            'video.mimetypes'              => 'فرمت ویدیو معتبر نیست.',
-            'video.max'                    => 'حجم ویدیو نباید بیشتر از ۱۰ مگابایت باشد.',
+            'national_card_serial.regex' => 'فرمت سریال کارت ملی معتبر نیست.',
+            'video.required' => 'ویدیو سلفی الزامی است.',
+            'video.uploaded' => 'آپلود ویدیو ناموفق بود. لطفاً مجدداً ضبط و ارسال کنید.',
+            'video.mimetypes' => 'فرمت ویدیو معتبر نیست.',
+            'video.max' => 'حجم ویدیو نباید بیشتر از ۱۰ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
             ->where('identity_verified', true)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ابتدا مراحل احراز هویت اولیه را تکمیل کنید.',
@@ -913,20 +915,20 @@ class RegistrationController extends Controller
         }
 
         // ذخیره ویدیو به صورت محلی
-        $folder = 'technician-biometric/' . $registration->id;
+        $folder = 'technician-biometric/'.$registration->id;
         $videoPath = $request->file('video')->store($folder, 'public');
 
         $registration->update([
-            'national_card_serial'    => $request->national_card_serial,
-            'biometric_video_path'    => $videoPath,
-            'biometric_status'        => 'pending',
+            'national_card_serial' => $request->national_card_serial,
+            'biometric_video_path' => $videoPath,
+            'biometric_status' => 'pending',
             'biometric_reject_reason' => null,
-            'current_step'            => 9,
+            'current_step' => 9,
         ]);
 
         Log::info('Biometric video uploaded locally', [
             'registration_id' => $registration->id,
-            'video_path'      => $videoPath,
+            'video_path' => $videoPath,
         ]);
 
         // ارسال پیامک اطلاع‌رسانی ارسال ویدیو
@@ -937,7 +939,7 @@ class RegistrationController extends Controller
                 $kavenegarService->sendTemplate(
                     $registration->mobile,
                     $smsTemplate,
-                    ['token' => $registration->first_name . ' ' . $registration->last_name]
+                    ['token' => $registration->first_name.' '.$registration->last_name]
                 );
             } catch (\Exception $e) {
                 Log::warning('Failed to send biometric submitted SMS', [
@@ -966,7 +968,7 @@ class RegistrationController extends Controller
             ->whereNotNull('biometric_video_path')
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'ویدیو احراز هویت یافت نشد.',
@@ -975,8 +977,8 @@ class RegistrationController extends Controller
 
         return response()->json([
             'success' => true,
-            'status'  => $registration->biometric_status,
-            'reason'  => $registration->biometric_reject_reason,
+            'status' => $registration->biometric_status,
+            'reason' => $registration->biometric_reject_reason,
         ]);
     }
 
@@ -992,10 +994,10 @@ class RegistrationController extends Controller
             'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
             'promissory_note' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
         ], [
-            'mobile.required'              => 'شماره موبایل الزامی است.',
-            'promissory_note.required'     => 'فایل سفته الزامی است.',
-            'promissory_note.mimes'        => 'فایل باید تصویر (JPG، PNG، WEBP) یا PDF باشد.',
-            'promissory_note.max'          => 'حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.',
+            'mobile.required' => 'شماره موبایل الزامی است.',
+            'promissory_note.required' => 'فایل سفته الزامی است.',
+            'promissory_note.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) یا PDF باشد.',
+            'promissory_note.max' => 'حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.',
         ]);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
@@ -1003,11 +1005,11 @@ class RegistrationController extends Controller
             ->where('biometric_status', 'verified')
             ->where(function ($q) {
                 $q->whereNull('promissory_note_status')
-                  ->orWhere('promissory_note_status', 'rejected');
+                    ->orWhere('promissory_note_status', 'rejected');
             })
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'درخواست معتبر نیست. (مرحلهٔ احراز ویدیویی باید قبلاً تایید شده باشد.)',
@@ -1015,20 +1017,20 @@ class RegistrationController extends Controller
         }
 
         try {
-            $folder = 'technician-promissory-note/' . $registration->id;
+            $folder = 'technician-promissory-note/'.$registration->id;
             $path = $request->file('promissory_note')->store($folder, 'public');
 
             $registration->update([
-                'promissory_note_path'          => $path,
-                'promissory_note_uploaded_at'   => now(),
-                'promissory_note_status'        => 'pending',
+                'promissory_note_path' => $path,
+                'promissory_note_uploaded_at' => now(),
+                'promissory_note_status' => 'pending',
                 'promissory_note_reject_reason' => null,
-                'current_step'                  => 10,
+                'current_step' => 10,
             ]);
 
             Log::info('Technician promissory note uploaded', [
                 'registration_id' => $registration->id,
-                'mobile'          => $request->mobile,
+                'mobile' => $request->mobile,
             ]);
 
             return response()->json([
@@ -1038,12 +1040,12 @@ class RegistrationController extends Controller
         } catch (\Exception $e) {
             Log::error('Technician promissory note upload failed', [
                 'mobile' => $request->mobile,
-                'error'  => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ذخیره فایل: ' . $e->getMessage(),
+                'message' => 'خطا در ذخیره فایل: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1053,8 +1055,12 @@ class RegistrationController extends Controller
      */
     private function validateNationalCode(string $code): bool
     {
-        if (strlen($code) !== 10) return false;
-        if (preg_match('/^(\d)\1{9}$/', $code)) return false;
+        if (strlen($code) !== 10) {
+            return false;
+        }
+        if (preg_match('/^(\d)\1{9}$/', $code)) {
+            return false;
+        }
 
         $sum = 0;
         for ($i = 0; $i < 9; $i++) {

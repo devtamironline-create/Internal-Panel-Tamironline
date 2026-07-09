@@ -144,7 +144,7 @@
                             x-ref="codeInput"
                             class="w-full px-4 py-4 text-2xl font-bold tracking-[0.5em] text-center bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             placeholder="------"
-                            maxlength="6"
+                            maxlength="{{ (int) config('sms.otp.length', 4) }}"
                             dir="ltr"
                             :disabled="loading"
                         >
@@ -168,7 +168,7 @@
                     <button
                         type="submit"
                         class="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 transition-all"
-                        :disabled="loading || code.length !== 6"
+                        :disabled="loading || code.length !== {{ (int) config('sms.otp.length', 4) }}"
                     >
                         <span x-show="!loading">تایید و ورود</span>
                         <span x-show="loading">در حال بررسی...</span>
@@ -258,7 +258,7 @@
             },
 
             async verifyOTP() {
-                if (this.code.length !== 6 || this.loading) return;
+                if (this.code.length !== {{ (int) config('sms.otp.length', 4) }} || this.loading) return;
                 this.loading = true;
                 this.message = '';
 

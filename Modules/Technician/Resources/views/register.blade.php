@@ -196,18 +196,15 @@
             <div id="phaseB" class="phase">
                 <div class="mb-5">
                     <h2 class="text-base font-bold text-gray-800">کد تایید را وارد کنید</h2>
-                    <p class="text-xs text-gray-400 mt-1">کد ۶ رقمی به <span id="otpMobileDisplay" class="font-bold text-gray-600 dir-ltr"></span> ارسال شد</p>
+                    <p class="text-xs text-gray-400 mt-1">کد تایید به <span id="otpMobileDisplay" class="font-bold text-gray-600 dir-ltr"></span> ارسال شد</p>
                 </div>
 
                 <div class="space-y-4">
                     {{-- باکس‌های OTP --}}
                     <div class="flex justify-center gap-2 dir-ltr" dir="ltr">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="0">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="1">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="2">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="3">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="4">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" data-index="5">
+                        @for($i = 0; $i < (int) config('sms.otp.length', 4); $i++)
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-index="{{ $i }}">
+                        @endfor
                     </div>
                     <p id="otpError" class="text-red-500 text-xs text-center hidden"></p>
 
@@ -1077,7 +1074,7 @@
                         <div id="contractOtpSection" class="hidden mt-3">
                             <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
                                 <p class="text-xs text-gray-600 text-center mb-2">کد تایید به شماره موبایل شما ارسال شد</p>
-                                <input type="text" id="contractOtpCode" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+                                <input type="text" id="contractOtpCode" maxlength="{{ (int) config('sms.otp.length', 4) }}" inputmode="numeric" pattern="[0-9]*"
                                        class="w-full text-center text-lg font-bold tracking-[0.5em] border border-gray-300 rounded-lg py-2 focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
                                        placeholder="------">
                                 <button type="button" id="btnSubmitSignature" onclick="submitSignature()" class="w-full mt-2 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors">
@@ -1695,13 +1692,15 @@
             otpTimerInterval = setInterval(updateTimer, 1000);
         }
 
+        const OTP_LEN = {{ (int) config('sms.otp.length', 4) }};
+
         // ===== فاز B: تایید OTP =====
         function verifyOtp() {
             clearAllErrors();
             const code = getOtpCode();
 
-            if (code.length !== 6) {
-                showFieldError('otpError', 'لطفاً کد ۶ رقمی را کامل وارد کنید.');
+            if (code.length !== OTP_LEN) {
+                showFieldError('otpError', 'لطفاً کد تایید را کامل وارد کنید.');
                 return;
             }
 
@@ -3086,8 +3085,8 @@
             hideFieldError('signatureError');
 
             const code = $('#contractOtpCode').val().trim();
-            if (!code || code.length !== 6) {
-                showFieldError('signatureError', 'لطفاً کد تایید ۶ رقمی را وارد کنید.');
+            if (!code || code.length !== OTP_LEN) {
+                showFieldError('signatureError', 'لطفاً کد تایید را کامل وارد کنید.');
                 return;
             }
 
@@ -3219,11 +3218,11 @@
             // مدیریت اینپوت‌های OTP
             $('.otp-input').on('input', function() {
                 this.value = this.value.replace(/[^0-9]/g, '');
-                if (this.value && $(this).data('index') < 5) {
+                if (this.value && $(this).data('index') < OTP_LEN - 1) {
                     $(this).next('.otp-input').focus();
                 }
                 // اگر همه پر شدن، اتوماتیک verify
-                if (getOtpCode().length === 6) {
+                if (getOtpCode().length === OTP_LEN) {
                     verifyOtp();
                 }
             });
@@ -3238,11 +3237,11 @@
             // پیست کردن کد OTP
             $('.otp-input').first().on('paste', function(e) {
                 e.preventDefault();
-                const pasted = (e.originalEvent.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+                const pasted = (e.originalEvent.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, OTP_LEN);
                 pasted.split('').forEach(function(digit, i) {
                     $('.otp-input').eq(i).val(digit);
                 });
-                if (pasted.length === 6) verifyOtp();
+                if (pasted.length === OTP_LEN) verifyOtp();
             });
 
             // اینتر در فیلد موبایل

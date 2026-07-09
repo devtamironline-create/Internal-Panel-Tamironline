@@ -252,6 +252,14 @@
 
         function el(id) { return document.getElementById(id); }
 
+        function ack(id) {
+            // insertOrIgnore سمتِ سرور → تکرارِ درخواست بی‌ضرر است.
+            return fetch('/tech/announcements/' + id + '/ack', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+            }).catch(function () {});
+        }
+
         function showNext() {
             var modal = el('techAnnModal');
             if (! modal) return;
@@ -262,6 +270,10 @@
             if (b) b.textContent = current.body;
             if (d) d.textContent = current.date;
             modal.style.display = 'flex';
+            // «دیدن = تأیید»: همان لحظه‌ی نمایش ack ثبت می‌شود تا با رفرش/ناوبری
+            // دوباره نمایش داده نشود — قبلاً فقط با کلیکِ موفقِ دکمه ثبت می‌شد و
+            // اگر درخواست شکست می‌خورد یا کاربر صفحه را می‌بست، اعلان برمی‌گشت.
+            ack(current.id);
         }
 
         // delegation تا با مورفِ DOM در ناوبریِ SPA نشکند
@@ -269,13 +281,8 @@
             var btn = e.target.closest ? e.target.closest('#techAnnAckBtn') : null;
             if (! btn || ! current) return;
             btn.disabled = true;
-            var id = current.id;
-            try {
-                await fetch('/tech/announcements/' + id + '/ack', {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
-                });
-            } catch (err) {}
+            // ackِ دوباره به‌عنوانِ پشتیبان (اگر ackِ لحظه‌ی نمایش به خطای شبکه خورد)
+            await ack(current.id);
             btn.disabled = false;
             showNext();
         });
