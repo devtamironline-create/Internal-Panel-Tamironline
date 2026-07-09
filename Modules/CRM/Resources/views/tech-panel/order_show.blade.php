@@ -288,7 +288,8 @@
         </div>
     @endif
 
-    {{-- ─────── Proforma (پیش‌فاکتور) ─────── --}}
+    {{-- ─────── Proforma (پیش‌فاکتور) — فعلاً مخفی (tech_proforma_enabled) ─────── --}}
+    @if($techProformaEnabled ?? false)
     <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
         <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
@@ -329,6 +330,7 @@
             <p class="text-[11px] text-gray-400">این سفارش نهایی شده و پیش‌فاکتوری ثبت نشده است.</p>
         @endif
     </div>
+    @endif
 
     {{-- ─────── Tech descriptions ─────── --}}
     @if(count($techDescriptions))

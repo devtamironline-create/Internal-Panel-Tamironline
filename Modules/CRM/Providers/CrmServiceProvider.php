@@ -96,6 +96,9 @@ class CrmServiceProvider extends ServiceProvider
                 'appName' => Setting::get('tech_panel_name', 'تعمیرآنلاین'),
                 'supportPhone' => Setting::get('tech_panel_support_phone'),
                 'isFrozen' => CrmSetting::get('tech_panel_readonly') === '1',
+                // سیستمِ پیش‌فاکتورِ تکنسین فعلاً مخفی است — با ست‌کردنِ
+                // tech_proforma_enabled=1 در crm_settings دوباره فعال می‌شود.
+                'techProformaEnabled' => CrmSetting::get('tech_proforma_enabled') === '1',
             ]);
         });
 

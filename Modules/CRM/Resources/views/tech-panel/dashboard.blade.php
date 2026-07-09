@@ -383,7 +383,8 @@
             </svg>
         </a>
 
-        {{-- پیش‌فاکتور — ساخت برآورد قیمت برای مشتری --}}
+        {{-- پیش‌فاکتور — فعلاً مخفی (tech_proforma_enabled) --}}
+        @if($techProformaEnabled ?? false)
         <a href="{{ route('tech.proformas.index') }}"
            class="mt-3 bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3 hover:border-gray-200 transition">
             <div class="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
@@ -399,6 +400,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
+        @endif
     </div>
 
     {{-- ─────── Quick stats — اعتبار پنل + وضعیت مالی ─────── --}}
