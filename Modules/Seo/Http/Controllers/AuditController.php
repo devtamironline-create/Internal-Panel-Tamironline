@@ -43,12 +43,14 @@ class AuditController extends Controller
     {
         $limit = $request->integer('limit') ?: null;
 
-        // با QUEUE=sync، dispatch کلِ کرال را همین‌جا (همزمان) اجرا می‌کند. اگر
-        // خطایی رخ دهد به‌جای صفحهٔ خامِ ۵۰۰، پیامِ خوانا نشان داده می‌شود. برای
-        // سایت‌های بزرگ بهتر است کرال از CLI/کرون اجرا شود (php artisan seo:crawl)
-        // تا محدودیتِ زمانِ درخواستِ وب مانع نشود.
+        // dispatchSync کرال را همین لحظه (بدونِ صف) اجرا می‌کند — عمداً به‌جای
+        // dispatch، چون روی هاست معمولاً نه جدولِ `jobs` هست و نه queue worker
+        // اجرا می‌شود (پس dispatch یا خطای «jobs table» می‌دهد یا برای همیشه در صف
+        // می‌ماند). زمانِ اجرا را بالا می‌بریم چون کرال ممکن است طول بکشد؛ برای
+        // سایت‌های خیلی بزرگ CLI/کرون توصیه می‌شود (php artisan seo:crawl).
+        @set_time_limit(0);
         try {
-            CrawlSiteJob::dispatch('manual', $limit, $request->boolean('cwv'));
+            CrawlSiteJob::dispatchSync('manual', $limit, $request->boolean('cwv'));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('seo.crawl_run_failed', ['error' => $e->getMessage()]);
 
