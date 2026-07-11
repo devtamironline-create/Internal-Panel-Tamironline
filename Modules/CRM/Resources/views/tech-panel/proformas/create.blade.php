@@ -53,12 +53,8 @@
                 </template>
             </div>
             <div class="mt-3 pt-3 border-t border-gray-100 space-y-2 text-sm">
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">تخفیف (تومان)</label>
-                    <input type="number" name="discount" x-model.number="discount" min="0" value="{{ old('discount', 0) }}" dir="ltr" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                </div>
                 <div class="flex justify-between"><span class="text-gray-500">جمع اقلام</span><span dir="ltr" x-text="fmt(subtotal())"></span></div>
-                <div class="flex justify-between font-bold text-base"><span>مبلغ نهایی</span><span dir="ltr" class="text-brand-700" x-text="fmt(Math.max(0, subtotal()-(discount||0)))"></span></div>
+                <div class="flex justify-between font-bold text-base"><span>مبلغ نهایی</span><span dir="ltr" class="text-brand-700" x-text="fmt(subtotal())"></span></div>
             </div>
         </div>
 
@@ -75,7 +71,6 @@
 function techProforma() {
     return {
         rows: [{ title: '', quantity: 1, unit_price: 0 }],
-        discount: {{ (int) old('discount', 0) }},
         addRow() { this.rows.push({ title: '', quantity: 1, unit_price: 0 }); },
         subtotal() { return this.rows.reduce((s, r) => s + (r.quantity || 1) * (r.unit_price || 0), 0); },
         fmt(n) { return (n || 0).toLocaleString('en-US'); },
