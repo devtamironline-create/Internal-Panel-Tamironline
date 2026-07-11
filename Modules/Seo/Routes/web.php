@@ -57,6 +57,9 @@ Route::middleware(['auth', 'can:manage-seo'])
         // لینک‌های خراب (گرافِ لینک) + محلِ دقیق + کارگاهِ اصلاح
         Route::get('/broken-links', [BrokenLinkController::class, 'index'])->name('broken-links.index');
         Route::get('/broken-links/{target}', [BrokenLinkController::class, 'show'])->name('broken-links.show');
+        Route::post('/broken-links/{target}/redirect', [BrokenLinkController::class, 'redirect'])->name('broken-links.redirect');
+        Route::post('/broken-links/{target}/ignore', [BrokenLinkController::class, 'ignore'])->name('broken-links.ignore');
+        Route::post('/broken-links/{target}/unignore', [BrokenLinkController::class, 'unignore'])->name('broken-links.unignore');
 
         // سلامتِ لینک‌سازیِ داخلی + صفحاتِ Orphan
         Route::get('/internal-links', [InternalLinkController::class, 'index'])->name('internal-links.index');
