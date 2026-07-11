@@ -128,6 +128,15 @@
                     <span x-show="isSelected(item.id)">✓</span>
                 </span>
 
+                {{-- دکمهٔ حذفِ انتخاب — فقط وقتی انتخاب شده. span (نه button) تا
+                     کلیکِ label به آن forward نشود؛ stop تا کلیکِ کارت دوباره toggle نکند. --}}
+                <span x-show="isSelected(item.id)" role="button" tabindex="0"
+                      @click.stop.prevent="toggle(item.id, $event)"
+                      title="حذف از انتخاب"
+                      class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 flex items-center justify-center text-xs font-bold leading-none cursor-pointer select-none">
+                    ✕
+                </span>
+
                 {{-- تصویر یا placeholder --}}
                 <template x-if="item.image">
                     <img :src="item.image" :alt="item.label" loading="lazy"
@@ -170,6 +179,10 @@
             </template>
         </div>
     </div>
+
+    <p class="text-[11px] text-gray-400" x-show="selected.length > 0">
+        برای حذفِ یک مورد از انتخاب، روی دکمهٔ ✕ گوشهٔ آن بزنید (یا دوباره روی کارت کلیک کنید).
+    </p>
 
     {{-- hidden inputs برای ارسال در form — فقط برای انتخاب‌شده‌ها (DOM-stripped) --}}
     <template x-for="id in selected" :key="id">
