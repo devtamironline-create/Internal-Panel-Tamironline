@@ -6,7 +6,7 @@
     <a href="{{ route('site.admin.blog.articles.index') }}" class="text-sm text-blue-600 hover:underline">&larr; بازگشت</a>
     <div class="flex items-center justify-between mt-2 mb-4">
         <h1 class="text-xl font-bold">ویرایش: {{ $article->title }}</h1>
-        <a href="/blog/{{ $article->slug }}" target="_blank" class="text-sm text-blue-600 hover:underline">مشاهده در سایت ↗</a>
+        <a href="{{ \Modules\Seo\Models\SeoSetting::siteUrl() }}/blog/{{ rawurlencode($article->slug) }}" target="_blank" rel="noopener" class="text-sm text-blue-600 hover:underline">مشاهده در سایت ↗</a>
     </div>
     <form method="POST" action="{{ route('site.admin.blog.articles.update', $article->id) }}">
         @method('PUT')

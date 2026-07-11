@@ -110,7 +110,8 @@
                                 </div>
                                 <div class="min-w-0">
                                     <div class="font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">{{ $a->title }}</div>
-                                    <div class="text-[11px] text-gray-400 font-mono ltr mt-0.5" dir="ltr">/blog/{{ $a->slug }}</div>
+                                    <a href="{{ \Modules\Seo\Models\SeoSetting::siteUrl() }}/blog/{{ rawurlencode($a->slug) }}" target="_blank" rel="noopener"
+                                       class="text-[11px] text-blue-500 hover:underline font-mono ltr mt-0.5 inline-block" dir="ltr">/blog/{{ $a->slug }} ↗</a>
                                     @foreach($a->topics as $t)
                                         <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold mt-1 me-1"
                                               style="background: {{ $t->color_bg ?? '#f3f4f6' }}; color: {{ $t->color_fg ?? '#374151' }};">{{ $t->name }}</span>
