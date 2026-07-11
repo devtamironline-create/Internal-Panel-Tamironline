@@ -446,6 +446,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('invoices/settings', [InvoiceController::class, 'settings'])->name('invoices.settings');
         Route::post('invoices/settings', [InvoiceController::class, 'updateSettings'])->name('invoices.settings.update');
+        // تنظیماتِ عمومی (فلگ‌های امن)
+        Route::get('feature-flags', [\Modules\CRM\Http\Controllers\FeatureFlagsController::class, 'index'])->name('feature-flags.index');
+        Route::post('feature-flags', [\Modules\CRM\Http\Controllers\FeatureFlagsController::class, 'update'])->name('feature-flags.update');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');
