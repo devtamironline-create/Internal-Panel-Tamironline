@@ -25,9 +25,11 @@ class DataToolsController extends Controller
     {
         $techCount = Technician::count();
         $techPanelReadonly = CrmSetting::get('tech_panel_readonly') === '1';
+        $techProformaEnabled = CrmSetting::get('tech_proforma_enabled') === '1';
         $syncMode = CrmSetting::get('crm_sync_mode', 'full');
         $wpPushEnabled = CrmSetting::get('wp_push_enabled') === '1';
-        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly', 'syncMode', 'wpPushEnabled'));
+
+        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly', 'techProformaEnabled', 'syncMode', 'wpPushEnabled'));
     }
 
     /** Import یک تکنسین از WP. */
@@ -72,6 +74,7 @@ class DataToolsController extends Controller
         if ($request->boolean('laravel_only')) {
             $params['--laravel-only'] = true;
         }
+
         return $this->runArtisan('crm:resync-technicians', $params);
     }
 
@@ -79,9 +82,16 @@ class DataToolsController extends Controller
     public function resyncInvoices(Request $request)
     {
         $params = [];
-        if ($request->boolean('all')) $params['--all'] = true;
-        if ($request->boolean('with_superseded')) $params['--with-superseded'] = true;
-        if ($id = $request->input('id')) $params['--id'] = (int) $id;
+        if ($request->boolean('all')) {
+            $params['--all'] = true;
+        }
+        if ($request->boolean('with_superseded')) {
+            $params['--with-superseded'] = true;
+        }
+        if ($id = $request->input('id')) {
+            $params['--id'] = (int) $id;
+        }
+
         return $this->runArtisan('crm:resync-invoices', $params);
     }
 
@@ -89,9 +99,16 @@ class DataToolsController extends Controller
     public function resyncWalletTransactions(Request $request)
     {
         $params = [];
-        if ($request->boolean('all'))   $params['--all'] = true;
-        if ($request->boolean('force')) $params['--force'] = true;
-        if ($type = $request->input('type')) $params['--type'] = $type;
+        if ($request->boolean('all')) {
+            $params['--all'] = true;
+        }
+        if ($request->boolean('force')) {
+            $params['--force'] = true;
+        }
+        if ($type = $request->input('type')) {
+            $params['--type'] = $type;
+        }
+
         return $this->runArtisan('crm:resync-wallet-transactions', $params);
     }
 
@@ -102,6 +119,7 @@ class DataToolsController extends Controller
         if ($id = $request->input('technician')) {
             $params['--technician'] = (int) $id;
         }
+
         return $this->runArtisan('crm:wallet:recompute-balances', $params);
     }
 
@@ -109,17 +127,25 @@ class DataToolsController extends Controller
     public function resyncOrderStatuses(Request $request)
     {
         $request->validate([
-            'limit'  => 'nullable|integer|min:1',
+            'limit' => 'nullable|integer|min:1',
             'offset' => 'nullable|integer|min:0',
-            'since'  => 'nullable|date_format:Y-m-d',
+            'since' => 'nullable|date_format:Y-m-d',
             'dry_run' => 'nullable|boolean',
         ]);
 
         $params = [];
-        if ($request->filled('limit'))  $params['--limit']  = (int) $request->input('limit');
-        if ($request->filled('offset')) $params['--offset'] = (int) $request->input('offset');
-        if ($request->filled('since'))  $params['--since']  = $request->input('since');
-        if ($request->boolean('dry_run')) $params['--dry-run'] = true;
+        if ($request->filled('limit')) {
+            $params['--limit'] = (int) $request->input('limit');
+        }
+        if ($request->filled('offset')) {
+            $params['--offset'] = (int) $request->input('offset');
+        }
+        if ($request->filled('since')) {
+            $params['--since'] = $request->input('since');
+        }
+        if ($request->boolean('dry_run')) {
+            $params['--dry-run'] = true;
+        }
 
         return $this->runArtisan('crm:resync-order-statuses-from-wp', $params);
     }
@@ -129,7 +155,7 @@ class DataToolsController extends Controller
     {
         $request->validate([
             'tech_id' => 'nullable|integer|min:1',
-            'mobile'  => 'nullable|string|max:20',
+            'mobile' => 'nullable|string|max:20',
             'show_all' => 'nullable|boolean',
         ]);
 
@@ -163,7 +189,7 @@ class DataToolsController extends Controller
         // اگر orders_only یا disabled → outbound push هم خاموش
         if ($mode !== 'full') {
             CrmSetting::set('wp_push_enabled', '0');
-            $msg = '✓ حالت sync روی «' . $mode . '» — outbound push هم خاموش شد.';
+            $msg = '✓ حالت sync روی «'.$mode.'» — outbound push هم خاموش شد.';
         } else {
             $msg = '✓ حالت sync روی «full» — outbound push دستی می‌شود تنظیم کرد.';
         }
@@ -185,6 +211,20 @@ class DataToolsController extends Controller
         return back()->with('success', $msg);
     }
 
+    /** فعال/غیرفعال‌کردنِ سیستمِ پیش‌فاکتور در پنلِ تکنسین. */
+    public function toggleTechProforma(Request $request)
+    {
+        $current = CrmSetting::get('tech_proforma_enabled') === '1';
+        $next = $current ? '0' : '1';
+        CrmSetting::set('tech_proforma_enabled', $next);
+
+        $msg = $next === '1'
+            ? '✅ پیش‌فاکتور در پنل تکنسین فعال شد.'
+            : '🚫 پیش‌فاکتور در پنل تکنسین غیرفعال (مخفی) شد.';
+
+        return back()->with('success', $msg);
+    }
+
     /** فعال‌سازی گروهی تکنسین‌ها بر اساس لیست اسامی. */
     public function activateTechniciansByName(Request $request)
     {
@@ -192,6 +232,7 @@ class DataToolsController extends Controller
         if ($request->boolean('apply')) {
             $params['--apply'] = true;
         }
+
         return $this->runArtisan('crm:activate-technicians-by-name', $params);
     }
 
@@ -244,7 +285,7 @@ class DataToolsController extends Controller
                 $tech = $matches->first();
                 $entry['status'] = 'ok';
                 $entry['tech_id'] = $tech->id;
-                $entry['matched_name'] = $tech->firstname_tech ?: trim(($tech->first_name ?? '') . ' ' . ($tech->last_name ?? ''));
+                $entry['matched_name'] = $tech->firstname_tech ?: trim(($tech->first_name ?? '').' '.($tech->last_name ?? ''));
 
                 $currentBalance = (int) $tech->wallet_balance - (int) DB::table('crm_invoices')
                     ->where('technician_id', $tech->id)
@@ -287,7 +328,7 @@ class DataToolsController extends Controller
                         'type' => $type,
                         'amount' => $row['amount'],
                         'balance_after' => $row['amount'],
-                        'note' => 'موجودی افتتاحیه از WP CRM (تنظیم دستی توسط ادمین ' . now()->format('Y-m-d H:i') . ')',
+                        'note' => 'موجودی افتتاحیه از WP CRM (تنظیم دستی توسط ادمین '.now()->format('Y-m-d H:i').')',
                         'created_by' => auth()->id(),
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -308,7 +349,7 @@ class DataToolsController extends Controller
         // save backup if applied
         if ($action === 'apply' && ! empty($backup['techs'])) {
             \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory('crm');
-            $path = 'crm/wallet-bulk-balance-' . now()->format('Y-m-d_His') . '.json';
+            $path = 'crm/wallet-bulk-balance-'.now()->format('Y-m-d_His').'.json';
             \Illuminate\Support\Facades\Storage::disk('local')->put(
                 $path,
                 json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
@@ -337,15 +378,23 @@ class DataToolsController extends Controller
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '') continue;
-            if (str_contains($line, 'نام') || str_contains($line, 'مانده')) continue;
+            if ($line === '') {
+                continue;
+            }
+            if (str_contains($line, 'نام') || str_contains($line, 'مانده')) {
+                continue;
+            }
 
             // پیدا کردن عدد امضادار از انتها
-            if (! preg_match('/^(.+?)[\s\t]+(-?[0-9]+)\s*$/u', $line, $m)) continue;
+            if (! preg_match('/^(.+?)[\s\t]+(-?[0-9]+)\s*$/u', $line, $m)) {
+                continue;
+            }
             $name = trim($m[1]);
             $amount = (int) $m[2];
 
-            if ($name === '') continue;
+            if ($name === '') {
+                continue;
+            }
             $parsed[] = ['name' => $name, 'amount' => $amount];
         }
 
@@ -429,12 +478,12 @@ class DataToolsController extends Controller
                 'status' => $status,
                 'tech_id' => $tech?->id,
                 'wp_id' => $tech?->wp_id,
-                'matched_name' => $tech ? ($tech->firstname_tech ?: trim(($tech->first_name ?? '') . ' ' . ($tech->last_name ?? ''))) : null,
+                'matched_name' => $tech ? ($tech->firstname_tech ?: trim(($tech->first_name ?? '').' '.($tech->last_name ?? ''))) : null,
                 'mobile' => $tech?->mobile,
                 'current_percent' => $currentPercent,
                 'matches_count' => $matches->count(),
                 'sample_matches' => $matches->count() > 1
-                    ? $matches->take(5)->map(fn($t) => $t->firstname_tech ?: trim(($t->first_name ?? '') . ' ' . ($t->last_name ?? ''))) ->implode(' / ')
+                    ? $matches->take(5)->map(fn ($t) => $t->firstname_tech ?: trim(($t->first_name ?? '').' '.($t->last_name ?? '')))->implode(' / ')
                     : null,
             ];
 
@@ -472,16 +521,24 @@ class DataToolsController extends Controller
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '') continue;
+            if ($line === '') {
+                continue;
+            }
             // اولین کلمه «نام تکنسین» و «درصد کمیسیون» هدر است — skip
-            if (str_contains($line, 'درصد') || str_contains($line, 'تکنسین')) continue;
+            if (str_contains($line, 'درصد') || str_contains($line, 'تکنسین')) {
+                continue;
+            }
 
             // split از آخر — آخرین token عدد است، بقیه نام
-            if (! preg_match('/^(.+?)[\s\t]+([0-9]+)\s*$/u', $line, $m)) continue;
+            if (! preg_match('/^(.+?)[\s\t]+([0-9]+)\s*$/u', $line, $m)) {
+                continue;
+            }
             $name = trim($m[1]);
             $percent = (int) $m[2];
 
-            if ($name === '' || $percent < 0 || $percent > 100) continue;
+            if ($name === '' || $percent < 0 || $percent > 100) {
+                continue;
+            }
 
             $parsed[] = ['name' => $name, 'percent' => $percent];
         }
@@ -498,7 +555,9 @@ class DataToolsController extends Controller
 
         // اولویت ۱: exact match روی firstname_tech
         $exact = Technician::where('firstname_tech', $normalized)->get();
-        if ($exact->isNotEmpty()) return $exact;
+        if ($exact->isNotEmpty()) {
+            return $exact;
+        }
 
         // اولویت ۲: first_name + last_name exact
         $parts = explode(' ', $normalized, 2);
@@ -506,16 +565,20 @@ class DataToolsController extends Controller
             $exact2 = Technician::where('first_name', $parts[0])
                 ->where('last_name', $parts[1])
                 ->get();
-            if ($exact2->isNotEmpty()) return $exact2;
+            if ($exact2->isNotEmpty()) {
+                return $exact2;
+            }
         }
 
         // اولویت ۳: LIKE %name% روی firstname_tech
-        $like = Technician::where('firstname_tech', 'like', '%' . $normalized . '%')->get();
-        if ($like->isNotEmpty()) return $like;
+        $like = Technician::where('firstname_tech', 'like', '%'.$normalized.'%')->get();
+        if ($like->isNotEmpty()) {
+            return $like;
+        }
 
         // اولویت ۴: LIKE روی first_name + last_name
         return Technician::where(function ($q) use ($normalized) {
-            $q->whereRaw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) LIKE ?", ['%' . $normalized . '%']);
+            $q->whereRaw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) LIKE ?", ['%'.$normalized.'%']);
         })->get();
     }
 
@@ -536,7 +599,9 @@ class DataToolsController extends Controller
             ->update($panelUpdate);
 
         // WP فقط اگر wp_id داشته باشد و WP در دسترس باشد
-        if (! $wpAvailable || ! $tech->wp_id) return;
+        if (! $wpAvailable || ! $tech->wp_id) {
+            return;
+        }
 
         $wpUpdate = ['type_of_calc_tech' => $calcStored];
         if ($isInternal) {
@@ -568,13 +633,13 @@ class DataToolsController extends Controller
     private function configureWpConnection(): void
     {
         config(['database.connections.wp_crm' => [
-            'driver'    => 'mysql',
-            'host'      => env('WP_DB_HOST', '127.0.0.1'),
-            'port'      => (int) env('WP_DB_PORT', 3306),
-            'database'  => env('WP_DB_NAME', 'crmtamironline_db_new'),
-            'username'  => env('WP_DB_USER', 'crmtamironline_db_new'),
-            'password'  => env('WP_DB_PASS', 'Rayanew_0935'),
-            'charset'   => 'utf8mb4',
+            'driver' => 'mysql',
+            'host' => env('WP_DB_HOST', '127.0.0.1'),
+            'port' => (int) env('WP_DB_PORT', 3306),
+            'database' => env('WP_DB_NAME', 'crmtamironline_db_new'),
+            'username' => env('WP_DB_USER', 'crmtamironline_db_new'),
+            'password' => env('WP_DB_PASS', 'Rayanew_0935'),
+            'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
         ]]);
     }
@@ -586,25 +651,25 @@ class DataToolsController extends Controller
             @set_time_limit(600);
 
             // capture output
-            $output = new \Symfony\Component\Console\Output\BufferedOutput();
+            $output = new \Symfony\Component\Console\Output\BufferedOutput;
             $exit = Artisan::call($command, $params, $output);
             $log = $output->fetch();
 
             return back()
                 ->with('tool_output', $log)
-                ->with('tool_command', $command . ' ' . $this->formatParams($params))
+                ->with('tool_command', $command.' '.$this->formatParams($params))
                 ->with('tool_exit', $exit)
                 ->with($exit === 0 ? 'success' : 'error',
                     $exit === 0
                         ? 'دستور با موفقیت اجرا شد.'
-                        : 'دستور با خطا بسته شد (exit=' . $exit . ').'
+                        : 'دستور با خطا بسته شد (exit='.$exit.').'
                 );
         } catch (\Throwable $e) {
             return back()
-                ->with('tool_output', $e->getMessage() . "\n\n" . $e->getTraceAsString())
+                ->with('tool_output', $e->getMessage()."\n\n".$e->getTraceAsString())
                 ->with('tool_command', $command)
                 ->with('tool_exit', 1)
-                ->with('error', 'خطا در اجرا: ' . $e->getMessage());
+                ->with('error', 'خطا در اجرا: '.$e->getMessage());
         }
     }
 
@@ -612,9 +677,14 @@ class DataToolsController extends Controller
     {
         $parts = [];
         foreach ($params as $k => $v) {
-            if (is_bool($v) && $v) { $parts[] = $k; continue; }
-            $parts[] = is_int($k) ? (string) $v : ($k . '=' . $v);
+            if (is_bool($v) && $v) {
+                $parts[] = $k;
+
+                continue;
+            }
+            $parts[] = is_int($k) ? (string) $v : ($k.'='.$v);
         }
+
         return implode(' ', $parts);
     }
 }
