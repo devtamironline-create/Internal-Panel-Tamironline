@@ -18,6 +18,9 @@
     @if(session('success'))
         <div class="mb-4 p-3 rounded bg-emerald-50 text-emerald-700 text-sm">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">{{ session('error') }}</div>
+    @endif
 
     @if(! $latest)
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-10 text-center text-gray-500">
