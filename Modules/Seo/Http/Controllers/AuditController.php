@@ -4,10 +4,9 @@ namespace Modules\Seo\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Modules\Seo\Jobs\CrawlSiteJob;
-use Modules\Seo\Models\SeoAudit;
 use Modules\Seo\Models\SeoAuditRun;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * داشبورد گزارش‌های مانیتورینگ سئو.
@@ -43,9 +42,21 @@ class AuditController extends Controller
     public function run(Request $request)
     {
         $limit = $request->integer('limit') ?: null;
-        CrawlSiteJob::dispatch('manual', $limit, $request->boolean('cwv'));
 
-        return back()->with('success', 'کرال در صف اجرا قرار گرفت. نتایج پس از پایان نمایش داده می‌شود (نیازمند queue worker).');
+        // با QUEUE=sync، dispatch کلِ کرال را همین‌جا (همزمان) اجرا می‌کند. اگر
+        // خطایی رخ دهد به‌جای صفحهٔ خامِ ۵۰۰، پیامِ خوانا نشان داده می‌شود. برای
+        // سایت‌های بزرگ بهتر است کرال از CLI/کرون اجرا شود (php artisan seo:crawl)
+        // تا محدودیتِ زمانِ درخواستِ وب مانع نشود.
+        try {
+            CrawlSiteJob::dispatch('manual', $limit, $request->boolean('cwv'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.crawl_run_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'اجرای کرال با خطا مواجه شد: '.$e->getMessage()
+                .' — برای سایت‌های بزرگ، کرال را از خط فرمان اجرا کنید: php artisan seo:crawl');
+        }
+
+        return back()->with('success', 'کرال اجرا شد و نتایج ذخیره گردید.');
     }
 
     public function show(Request $request, SeoAuditRun $run)
