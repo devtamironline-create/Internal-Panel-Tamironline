@@ -26,9 +26,11 @@ class OnPageAuditor
     }
 
     /**
+     * @param  bool  $extractLinks  اگر true، گرافِ کاملِ لینک‌های صفحه هم زیرِ
+     *                              کلیدِ `_links` برگردانده می‌شود (برای Link Graph).
      * @return array<string, mixed>
      */
-    public function audit(string $url): array
+    public function audit(string $url, bool $extractLinks = false): array
     {
         $host = (string) (parse_url($url, PHP_URL_HOST) ?? '');
         $start = microtime(true);
@@ -67,8 +69,15 @@ class OnPageAuditor
         $title = $this->title($html);
         $desc = $this->meta($html, 'description');
 
+        // گرافِ لینک فقط وقتی خواسته شود (هزینهٔ اضافه‌ی پارسِ DOM را روی
+        // مسیرهایی که نیاز ندارند تحمیل نمی‌کند).
+        $links = $extractLinks && $status >= 200 && $status < 300
+            ? app(LinkExtractor::class)->extract($html, $finalUrl ?: $url)
+            : [];
+
         return [
             'url' => $url,
+            '_links' => $links,
             'status_code' => $status,
             'final_url' => $finalUrl,
             'redirect_count' => $redirectCount,
