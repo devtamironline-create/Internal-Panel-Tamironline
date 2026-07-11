@@ -33,6 +33,12 @@ class SiteCrawler
             @ini_set('memory_limit', '512M');
         }
 
+        // گرافِ لینک یک افزودنی است، نه هستهٔ کرال: فقط اگر جدول‌هایش مهاجرت
+        // شده باشند فعال می‌شود؛ در غیرِ این‌صورت کرال دقیقاً مثلِ قبل اجرا می‌شود
+        // (بدونِ 500 وقتی هنوز migrate اجرا نشده).
+        $linkGraph = \Illuminate\Support\Facades\Schema::hasTable('seo_links')
+            && \Illuminate\Support\Facades\Schema::hasTable('seo_link_targets');
+
         $run = SeoAuditRun::create([
             'status' => 'running',
             'source' => $source,
@@ -77,7 +83,7 @@ class SiteCrawler
             $total = count($urls);
 
             foreach ($urls as $i => $url) {
-                $raw = $this->auditor->audit($url, extractLinks: true);
+                $raw = $this->auditor->audit($url, extractLinks: $linkGraph);
                 $analysis = $this->analyzer->analyze($raw);
 
                 SeoAudit::create(array_merge($this->columns($raw), [
@@ -91,7 +97,15 @@ class SiteCrawler
 
                 // گرافِ لینکِ این صفحه را بلافاصله ذخیره و از حافظه آزاد کن
                 // (نگه‌داشتنِ لینک‌های همهٔ صفحات در حافظه → OOM در کرالِ بزرگ).
-                $this->linkStore->store((int) $run->id, (string) $url, $raw['_links'] ?? []);
+                // خطای گراف هرگز نباید کرالِ اصلی را بشکند.
+                if ($linkGraph) {
+                    try {
+                        $this->linkStore->store((int) $run->id, (string) $url, $raw['_links'] ?? []);
+                    } catch (\Throwable $e) {
+                        $linkGraph = false; // یک‌بار خطا → ادامهٔ کرال بدونِ گراف
+                        \Illuminate\Support\Facades\Log::warning('seo.link_store_failed', ['error' => $e->getMessage()]);
+                    }
+                }
 
                 $counts[$analysis['severity']]++;
                 $scoreSum += $analysis['score'];
@@ -124,11 +138,13 @@ class SiteCrawler
 
             // پاسِ گرافِ لینک: مقصدهای یکتا را چک و «لینکِ خراب» را علامت می‌زند،
             // سپس گرافِ کرال‌های قدیمی را هرس می‌کند (جلوگیری از رشدِ بی‌حد).
-            try {
-                $this->linkAnalyzer->analyze($run->refresh());
-                $this->linkStore->pruneOldRuns();
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('seo.link_graph_failed', ['error' => $e->getMessage()]);
+            if ($linkGraph) {
+                try {
+                    $this->linkAnalyzer->analyze($run->refresh());
+                    $this->linkStore->pruneOldRuns();
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('seo.link_graph_failed', ['error' => $e->getMessage()]);
+                }
             }
 
             $this->alerts->afterRun($run->refresh());
