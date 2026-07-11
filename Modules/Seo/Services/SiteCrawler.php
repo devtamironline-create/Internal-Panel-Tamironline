@@ -19,6 +19,7 @@ class SiteCrawler
         private readonly AlertNotifier $alerts,
         private readonly SitemapCoverage $coverage,
         private readonly LinkGraphStore $linkStore,
+        private readonly LinkGraphAnalyzer $linkAnalyzer,
     ) {}
 
     /**
@@ -120,6 +121,15 @@ class SiteCrawler
             // پاس پس از run: مشکلات canonical میان‌ردیفی (وابسته به سایر صفحات همین
             // کرال) را محاسبه و شمارش‌های run را بازمحاسبه می‌کند.
             $this->analyzer->analyzeRun($run->refresh());
+
+            // پاسِ گرافِ لینک: مقصدهای یکتا را چک و «لینکِ خراب» را علامت می‌زند،
+            // سپس گرافِ کرال‌های قدیمی را هرس می‌کند (جلوگیری از رشدِ بی‌حد).
+            try {
+                $this->linkAnalyzer->analyze($run->refresh());
+                $this->linkStore->pruneOldRuns();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('seo.link_graph_failed', ['error' => $e->getMessage()]);
+            }
 
             $this->alerts->afterRun($run->refresh());
         } catch (\Throwable $e) {
