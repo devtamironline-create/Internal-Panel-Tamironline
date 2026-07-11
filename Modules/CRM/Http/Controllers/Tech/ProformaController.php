@@ -71,7 +71,6 @@ class ProformaController extends Controller
             'device_name' => 'nullable|string|max:120',
             'brand_name' => 'nullable|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'discount' => 'nullable|integer|min:0',
             'valid_until' => 'nullable|date',
             'items' => 'required|array|min:1',
             'items.*.title' => 'required|string|max:200',
@@ -93,6 +92,9 @@ class ProformaController extends Controller
         if ($data['items'] === []) {
             return back()->withInput()->with('error', 'حداقل یک قلم با عنوان لازم است.');
         }
+
+        // تخفیف سمتِ تکنسین مجاز نیست — همیشه صفر (حتی اگر در درخواست دستکاری شود).
+        $data['discount'] = 0;
 
         // سمتِ تکنسین پیامکی ارسال نمی‌شود (طبقِ سیاستِ شرکت). پیش‌فاکتور با
         // ساخت «صادر» می‌شود و بلافاصله در اپِ مشتری (جزئیاتِ سفارش) دیده می‌شود.
