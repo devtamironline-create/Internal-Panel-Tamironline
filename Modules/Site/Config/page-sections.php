@@ -894,6 +894,105 @@ return [
         ],
     ],
 
+    // ─── صفحه‌ی «همکاری با تعمیرآنلاین» (استخدام تعمیرکار) ──────────
+    // فرانت: GET /v1/pages/join-technician → sections: hero, benefits,
+    // steps, requirements, faq, cta. فرانت fallback کاملِ استاتیک دارد؛
+    // هر سکشنِ منتشرنشده در پاسخ نمی‌آید و فرانت مقدارِ پیش‌فرضِ خود را نشان می‌دهد.
+    'join-technician' => [
+        'title' => 'صفحه‌ی همکاری با تعمیرآنلاین (استخدام تعمیرکار)',
+        'sections' => [
+
+            'hero' => [
+                'label' => 'Hero بالای صفحه',
+                'fields' => [
+                    'eyebrow' => ['label' => 'Eyebrow (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'string', 'rules' => 'nullable|string|max:300'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:1000'],
+                ],
+            ],
+
+            'benefits' => [
+                'label' => 'مزایای همکاری',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'موارد',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'text' => ['label' => 'متن', 'type' => 'textarea', 'rules' => 'nullable|string|max:400'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'steps' => [
+                'label' => 'مراحل همکاری',
+                'fields' => [
+                    'eyebrow' => ['label' => 'Eyebrow (بالای تیتر)', 'type' => 'string', 'rules' => 'nullable|string|max:120'],
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'مراحل',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'title' => ['label' => 'تیتر مرحله', 'type' => 'string', 'rules' => 'required|string|max:120'],
+                            'text' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:400'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'requirements' => [
+                'label' => 'شرایط و مدارک لازم',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'items' => [
+                        'label' => 'موارد (هر خط یک آیتم)',
+                        'type' => 'string_list',
+                        'rules' => 'nullable|string|max:300',
+                    ],
+                ],
+            ],
+
+            'faq' => [
+                'label' => 'سوالات متداول',
+                'fields' => [
+                    'title' => ['label' => 'تیتر سکشن', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'subtitle' => ['label' => 'زیرتیتر', 'type' => 'textarea', 'rules' => 'nullable|string|max:300'],
+                    'items' => [
+                        'label' => 'سوالات',
+                        'type' => 'repeater',
+                        'item_fields' => [
+                            'question' => ['label' => 'سوال', 'type' => 'string', 'rules' => 'required|string|max:300'],
+                            'answer' => ['label' => 'پاسخ', 'type' => 'textarea', 'rules' => 'nullable|string|max:2000'],
+                        ],
+                    ],
+                ],
+            ],
+
+            'cta' => [
+                'label' => 'بنر CTA پایین صفحه',
+                'fields' => [
+                    'title' => ['label' => 'تیتر', 'type' => 'string', 'rules' => 'nullable|string|max:160'],
+                    'description' => ['label' => 'توضیح', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                    'note' => ['label' => 'یادداشت (زیر دکمه)', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'register_url' => ['label' => 'لینک ثبت‌نام', 'type' => 'string', 'rules' => 'nullable|site_url|max:500'],
+                ],
+            ],
+
+            'seo' => [
+                'label' => 'سئو',
+                'fields' => [
+                    'meta_title' => ['label' => 'Meta Title', 'type' => 'string', 'rules' => 'nullable|string|max:200'],
+                    'meta_description' => ['label' => 'Meta Description', 'type' => 'textarea', 'rules' => 'nullable|string|max:500'],
+                ],
+            ],
+
+        ],
+    ],
+
     // ─── الگوی صفحه‌ی دستگاه (template برای همه دستگاه‌ها) ──────────
     // ادمین در /admin/site/page-content/device این متن‌های پیش‌فرض را
     // تنظیم می‌کند. در /v1/catalog/devices/{slug} هر فیلد per-device

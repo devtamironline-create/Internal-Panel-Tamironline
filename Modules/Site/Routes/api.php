@@ -83,8 +83,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/forum/report-reasons', [ForumController::class, 'reportReasons'])->name('api.v1.forum.report-reasons');
 
         // pages + devices (public read)
+        // slug ممکن است kebab-case باشد (مثلِ join-technician) → whereAlpha کافی نیست
         Route::get('/pages/{slug}', [PageController::class, 'show'])
-            ->whereAlpha('slug')
+            ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.pages.show');
         Route::get('/devices/{slug}', [DevicePageController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
