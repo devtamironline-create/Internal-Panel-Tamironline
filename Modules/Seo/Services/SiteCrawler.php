@@ -20,6 +20,7 @@ class SiteCrawler
         private readonly SitemapCoverage $coverage,
         private readonly LinkGraphStore $linkStore,
         private readonly LinkGraphAnalyzer $linkAnalyzer,
+        private readonly ContentLinkScanner $contentScanner,
     ) {}
 
     /**
@@ -140,6 +141,9 @@ class SiteCrawler
             // سپس گرافِ کرال‌های قدیمی را هرس می‌کند (جلوگیری از رشدِ بی‌حد).
             if ($linkGraph) {
                 try {
+                    // لینک‌های درون‌محتواییِ authored (متنِ مقالات) را هم به گراف
+                    // اضافه کن — این‌ها ممکن است در HTMLِ رندرشدهٔ فرانت نباشند.
+                    $this->contentScanner->scan((int) $run->id);
                     $this->linkAnalyzer->analyze($run->refresh());
                     $this->linkStore->pruneOldRuns();
                 } catch (\Throwable $e) {
