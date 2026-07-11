@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\AuditController;
+use Modules\Seo\Http\Controllers\BrokenLinkController;
 use Modules\Seo\Http\Controllers\CannibalizationController;
 use Modules\Seo\Http\Controllers\CanonicalController;
 use Modules\Seo\Http\Controllers\DashboardController;
+use Modules\Seo\Http\Controllers\InternalLinkController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
@@ -51,6 +53,16 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/audit/run/{run}', [AuditController::class, 'show'])->name('audit.show');
         Route::get('/audit/run/{run}/export/{format}', [AuditController::class, 'export'])
             ->where('format', 'csv|json')->name('audit.export');
+
+        // لینک‌های خراب (گرافِ لینک) + محلِ دقیق + کارگاهِ اصلاح
+        Route::get('/broken-links', [BrokenLinkController::class, 'index'])->name('broken-links.index');
+        Route::get('/broken-links/{target}', [BrokenLinkController::class, 'show'])->name('broken-links.show');
+        Route::post('/broken-links/{target}/redirect', [BrokenLinkController::class, 'redirect'])->name('broken-links.redirect');
+        Route::post('/broken-links/{target}/ignore', [BrokenLinkController::class, 'ignore'])->name('broken-links.ignore');
+        Route::post('/broken-links/{target}/unignore', [BrokenLinkController::class, 'unignore'])->name('broken-links.unignore');
+
+        // سلامتِ لینک‌سازیِ داخلی + صفحاتِ Orphan
+        Route::get('/internal-links', [InternalLinkController::class, 'index'])->name('internal-links.index');
 
         // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده
         Route::get('/canonical', [CanonicalController::class, 'index'])->name('canonical.index');

@@ -18,6 +18,8 @@ class SiteCrawler
         private readonly PageSpeedClient $pageSpeed,
         private readonly AlertNotifier $alerts,
         private readonly SitemapCoverage $coverage,
+        private readonly LinkGraphStore $linkStore,
+        private readonly LinkGraphAnalyzer $linkAnalyzer,
     ) {}
 
     /**
@@ -75,7 +77,7 @@ class SiteCrawler
             $total = count($urls);
 
             foreach ($urls as $i => $url) {
-                $raw = $this->auditor->audit($url);
+                $raw = $this->auditor->audit($url, extractLinks: true);
                 $analysis = $this->analyzer->analyze($raw);
 
                 SeoAudit::create(array_merge($this->columns($raw), [
@@ -86,6 +88,10 @@ class SiteCrawler
                     'score' => $analysis['score'],
                     'crawled_at' => now(),
                 ]));
+
+                // گرافِ لینکِ این صفحه را بلافاصله ذخیره و از حافظه آزاد کن
+                // (نگه‌داشتنِ لینک‌های همهٔ صفحات در حافظه → OOM در کرالِ بزرگ).
+                $this->linkStore->store((int) $run->id, (string) $url, $raw['_links'] ?? []);
 
                 $counts[$analysis['severity']]++;
                 $scoreSum += $analysis['score'];
@@ -115,6 +121,15 @@ class SiteCrawler
             // پاس پس از run: مشکلات canonical میان‌ردیفی (وابسته به سایر صفحات همین
             // کرال) را محاسبه و شمارش‌های run را بازمحاسبه می‌کند.
             $this->analyzer->analyzeRun($run->refresh());
+
+            // پاسِ گرافِ لینک: مقصدهای یکتا را چک و «لینکِ خراب» را علامت می‌زند،
+            // سپس گرافِ کرال‌های قدیمی را هرس می‌کند (جلوگیری از رشدِ بی‌حد).
+            try {
+                $this->linkAnalyzer->analyze($run->refresh());
+                $this->linkStore->pruneOldRuns();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('seo.link_graph_failed', ['error' => $e->getMessage()]);
+            }
 
             $this->alerts->afterRun($run->refresh());
         } catch (\Throwable $e) {
