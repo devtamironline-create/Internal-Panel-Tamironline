@@ -21,18 +21,19 @@ use Modules\SMS\Services\KavenegarService;
 class AuthController extends Controller
 {
     private const OTP_TTL_SECONDS = 300;       // ۵ دقیقه
+
     private const OTP_RESEND_DELAY = 60;       // ۱ دقیقه
+
     private const OTP_MAX_ATTEMPTS = 5;
 
-    public function __construct(protected KavenegarService $sms)
-    {
-    }
+    public function __construct(protected KavenegarService $sms) {}
 
     public function showLoginForm()
     {
         if (Auth::guard('tech')->check()) {
             return redirect()->route('tech.dashboard');
         }
+
         return view('crm::tech-panel.login');
     }
 
@@ -67,7 +68,10 @@ class AuthController extends Controller
             }
         }
 
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        // طولِ کد باید دقیقاً با اعتبارسنجیِ verifyOtp (digits: sms.otp.length)
+        // یکی باشد؛ وگرنه کدِ ارسال‌شده هرگز تأیید نمی‌شود (اختلافِ ۴/۶).
+        $otpLength = max(4, (int) config('sms.otp.length', 4));
+        $code = str_pad((string) random_int(0, (10 ** $otpLength) - 1), $otpLength, '0', STR_PAD_LEFT);
 
         Cache::put("tech_otp_{$mobile}", [
             'code' => $code,
@@ -92,6 +96,7 @@ class AuthController extends Controller
             // در local خطا باعث جلوگیری از تست نشود
             if (! app()->environment('local')) {
                 Cache::forget("tech_otp_{$mobile}");
+
                 return response()->json([
                     'success' => false,
                     'message' => 'خطا در ارسال پیامک',
@@ -128,6 +133,7 @@ class AuthController extends Controller
 
         if (($data['attempts'] ?? 0) >= self::OTP_MAX_ATTEMPTS) {
             Cache::forget($cacheKey);
+
             return response()->json([
                 'success' => false,
                 'message' => 'تعداد تلاش‌های مجاز تمام شد',
@@ -138,6 +144,7 @@ class AuthController extends Controller
             $data['attempts'] = ($data['attempts'] ?? 0) + 1;
             Cache::put($cacheKey, $data, self::OTP_TTL_SECONDS);
             $remaining = self::OTP_MAX_ATTEMPTS - $data['attempts'];
+
             return response()->json([
                 'success' => false,
                 'message' => "کد تایید اشتباه است ({$remaining} تلاش باقی‌مانده)",
@@ -184,6 +191,7 @@ class AuthController extends Controller
         Auth::guard('tech')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('tech.login');
     }
 
