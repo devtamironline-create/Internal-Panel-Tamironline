@@ -60,10 +60,10 @@
 
             <template x-if="otpSent">
                 <div class="space-y-1 mb-4">
-                    <label class="text-sm font-medium text-gray-700">کد تایید (۶ رقم)</label>
+                    <label class="text-sm font-medium text-gray-700">کد تایید ({{ str_replace(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'], (string) (int) config('sms.otp.length', 4)) }} رقم)</label>
                     <input type="text" x-model="code" maxlength="{{ (int) config('sms.otp.length', 4) }}" autocomplete="one-time-code" inputmode="numeric" dir="ltr"
                            class="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-lg tracking-[.5em] text-center placeholder:text-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition"
-                           placeholder="------">
+                           placeholder="{{ str_repeat('-', (int) config('sms.otp.length', 4)) }}">
                 </div>
             </template>
 
