@@ -41,10 +41,13 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Slug (خالی = خودکار از عنوان)</label>
-                            <input type="text" name="slug" value="{{ old('slug', $a?->slug) }}" maxlength="200" dir="ltr"
-                                   placeholder="iran-radiator-common-problems"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono ltr">
-                            <p class="text-xs text-gray-500 mt-1">URL: <code class="ltr" dir="ltr">/blog/{slug}</code></p>
+                            <input type="text" name="slug" value="{{ old('slug', $a?->slug) }}" maxlength="200" dir="auto"
+                                   placeholder="تعمیر-پکیج یا iran-radiator-common-problems"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">
+                            <p class="text-xs text-gray-500 mt-1">
+                                فارسی یا انگلیسی مجاز است (حروف، عدد، خط تیره). مثال: <code>تعمیر-پکیج</code>.
+                                آدرس در سایت: <code class="ltr" dir="ltr">{{ \Modules\Seo\Models\SeoSetting::siteUrl() }}/blog/{slug}</code>
+                            </p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">زمان مطالعه (دقیقه)</label>

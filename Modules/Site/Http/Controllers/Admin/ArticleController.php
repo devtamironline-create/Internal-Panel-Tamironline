@@ -5,7 +5,6 @@ namespace Modules\Site\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\CRM\Models\Brand;
@@ -312,9 +311,13 @@ class ArticleController extends Controller
 
     private function applyDefaults(array &$data, bool $isNew): void
     {
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
-        if (! preg_match('/^[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?$/', $data['slug'])) {
-            throw ValidationException::withMessages(['slug' => 'اسلاگ باید با حروف کوچک انگلیسی، عدد و خط تیره باشد.']);
+        // اسلاگِ مقاله می‌تواند فارسی باشد (مثلِ «تعمیر-پکیج») یا انگلیسی. خالی
+        // = ساختِ خودکار از عنوان. برخلافِ دستگاه/برند، این‌جا ASCII اجباری نیست.
+        $data['slug'] = $this->normalizeArticleSlug((string) ($data['slug'] ?: $data['title']));
+        if ($data['slug'] === '' || ! preg_match('/^[a-z0-9\x{0600}-\x{06FF}\x{200C}]+(?:-[a-z0-9\x{0600}-\x{06FF}\x{200C}]+)*$/u', $data['slug'])) {
+            throw ValidationException::withMessages([
+                'slug' => 'اسلاگ فقط می‌تواند شامل حروفِ فارسی یا انگلیسیِ کوچک، عدد و خط تیره باشد.',
+            ]);
         }
 
         // تاریخ انتشارِ شمسی → میلادی (ساعت = شروعِ روز). دیجیت‌های فارسی هم
@@ -347,6 +350,23 @@ class ArticleController extends Controller
         if (array_key_exists('content', $data)) {
             $data['content'] = HtmlSanitizer::clean($data['content']);
         }
+    }
+
+    /**
+     * نرمال‌سازیِ اسلاگِ مقاله — فارسی یا انگلیسی مجاز است.
+     * فاصله/زیرخط → خط تیره؛ حذفِ کاراکترهای غیرمجاز؛ جمع‌کردنِ خط‌تیره‌ها.
+     */
+    private function normalizeArticleSlug(string $raw): string
+    {
+        $s = mb_strtolower(trim($raw));
+        // فاصله‌ها و زیرخط → خط تیره
+        $s = preg_replace('/[\s_]+/u', '-', $s);
+        // فقط فارسی/انگلیسیِ کوچک/عدد/خط‌تیره/نیم‌فاصله (ZWNJ) بماند
+        $s = preg_replace('/[^a-z0-9\x{0600}-\x{06FF}\x{200C}\-]+/u', '', $s);
+        // خط‌تیره‌های پیاپی → یکی، و تریمِ خط‌تیرهٔ ابتدا/انتها
+        $s = preg_replace('/-+/', '-', $s);
+
+        return trim($s, '-');
     }
 
     /**
