@@ -125,6 +125,32 @@
         </div>
     </div>
 
+    {{-- ───── پیش‌فاکتور پنل تکنسین (روشن/خاموش) ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ $techProformaEnabled ? 'border-emerald-400' : 'border-gray-200 dark:border-gray-700' }}">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    🧾 پیش‌فاکتور در پنل تکنسین
+                    @if($techProformaEnabled)
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">فعال</span>
+                    @else
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold">غیرفعال — مخفی</span>
+                    @endif
+                </h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    وقتی فعال باشد، بخش «پیش‌فاکتور» در اپ/پنل تکنسین نمایش داده می‌شود و تکنسین می‌تواند برای مشتری پیش‌فاکتور بسازد. وقتی غیرفعال باشد، این بخش کاملاً مخفی و مسیرهایش بسته است. (پنل ادمین و اپ مشتری مستقل‌اند.)
+                </p>
+            </div>
+            <form method="POST" action="{{ route('crm.data-tools.toggle-tech-proforma') }}"
+                  onsubmit="return confirm('{{ $techProformaEnabled ? 'پیش‌فاکتور در پنل تکنسین غیرفعال (مخفی) شود؟' : 'پیش‌فاکتور در پنل تکنسین فعال شود؟' }}');">
+                @csrf
+                <button type="submit" class="px-5 py-2.5 {{ $techProformaEnabled ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700' }} text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                    {{ $techProformaEnabled ? 'غیرفعال‌سازی پیش‌فاکتور' : 'فعال‌سازی پیش‌فاکتور' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
     {{-- ───── تنظیم مانده کیف‌پول گروهی (paste WP balances) ───── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 border-rose-200 dark:border-rose-800">
         <div class="flex items-center justify-between gap-4 flex-wrap">
