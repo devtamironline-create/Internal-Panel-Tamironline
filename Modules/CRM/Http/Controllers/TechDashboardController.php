@@ -202,6 +202,10 @@ class TechDashboardController extends Controller
             abort(403);
         }
 
+        if (! \Modules\CRM\Services\TransferReceiptService::enabled()) {
+            return back()->with('error', 'قابلیتِ رسیدِ انتقال غیرفعال است.');
+        }
+
         $status = $order->status instanceof OrderStatus
             ? $order->status
             : OrderStatus::tryFrom((string) $order->status);
@@ -213,13 +217,10 @@ class TechDashboardController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $receipt = \Modules\CRM\Models\TransferReceipt::create([
-            'order_id' => $order->id,
-            'description' => $data['description'] ?? null,
-            'created_by_tech_id' => $tech->id,
-        ]);
+        $receipt = app(\Modules\CRM\Services\TransferReceiptService::class)
+            ->createAndNotify($order, $data['description'] ?? null, null, $tech->id);
 
-        return back()->with('success', 'رسیدِ انتقال ثبت شد: '.$receipt->code);
+        return back()->with('success', 'رسیدِ انتقال ثبت شد و لینکش برای مشتری پیامک شد: '.$receipt->code);
     }
 
     /**

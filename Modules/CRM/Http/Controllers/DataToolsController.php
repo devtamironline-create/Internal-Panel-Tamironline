@@ -26,10 +26,11 @@ class DataToolsController extends Controller
         $techCount = Technician::count();
         $techPanelReadonly = CrmSetting::get('tech_panel_readonly') === '1';
         $techProformaEnabled = CrmSetting::get('tech_proforma_enabled') === '1';
+        $transferReceiptEnabled = CrmSetting::get('transfer_receipt_enabled', '1') === '1';
         $syncMode = CrmSetting::get('crm_sync_mode', 'full');
         $wpPushEnabled = CrmSetting::get('wp_push_enabled') === '1';
 
-        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly', 'techProformaEnabled', 'syncMode', 'wpPushEnabled'));
+        return view('crm::data-tools.index', compact('techCount', 'techPanelReadonly', 'techProformaEnabled', 'transferReceiptEnabled', 'syncMode', 'wpPushEnabled'));
     }
 
     /** Import یک تکنسین از WP. */
@@ -221,6 +222,20 @@ class DataToolsController extends Controller
         $msg = $next === '1'
             ? '✅ پیش‌فاکتور در پنل تکنسین فعال شد.'
             : '🚫 پیش‌فاکتور در پنل تکنسین غیرفعال (مخفی) شد.';
+
+        return back()->with('success', $msg);
+    }
+
+    /** فعال/غیرفعال‌سازی «رسید انتقال» (ادمین + تکنسین). */
+    public function toggleTransferReceipt(Request $request)
+    {
+        $current = CrmSetting::get('transfer_receipt_enabled', '1') === '1';
+        $next = $current ? '0' : '1';
+        CrmSetting::set('transfer_receipt_enabled', $next);
+
+        $msg = $next === '1'
+            ? '✅ رسید انتقال فعال شد.'
+            : '🚫 رسید انتقال غیرفعال (مخفی) شد.';
 
         return back()->with('success', $msg);
     }

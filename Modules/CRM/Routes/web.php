@@ -628,6 +628,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('resync-order-statuses', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'resyncOrderStatuses'])->name('resync-order-statuses');
         Route::post('toggle-tech-readonly', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTechPanelReadonly'])->name('toggle-tech-readonly');
         Route::post('toggle-tech-proforma', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTechProforma'])->name('toggle-tech-proforma');
+        Route::post('toggle-transfer-receipt', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'toggleTransferReceipt'])->name('toggle-transfer-receipt');
         Route::post('set-sync-mode', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'setSyncMode'])->name('set-sync-mode');
         Route::post('wallet-audit', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'walletAudit'])->name('wallet-audit');
         Route::get('bulk-percent', [\Modules\CRM\Http\Controllers\DataToolsController::class, 'bulkPercentForm'])->name('bulk-percent');

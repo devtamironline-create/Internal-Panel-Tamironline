@@ -46,6 +46,21 @@ class FeatureFlagsController extends Controller
                 'default' => '',
                 'placeholder' => 'https://app.tamironline.com/proforma/{token}',
             ],
+            [
+                'key' => 'transfer_receipt_enabled',
+                'label' => 'رسید انتقال (ادمین + تکنسین)',
+                'help' => 'روشن = ثبت رسید انتقال ممکن است و لینکش با پیامک برای مشتری می‌رود. خاموش = ثبت رسید مخفی و بسته است.',
+                'type' => 'toggle',
+                'default' => '1',
+            ],
+            [
+                'key' => 'transfer_receipt_url_template',
+                'label' => 'قالب لینک عمومی رسید انتقال',
+                'help' => 'مثلاً https://app.tamironline.com/transfer-receipt/{token} — خالی یعنی به صفحهٔ رسیدِ پنل می‌رود. {token} حتماً باید در آدرس باشد.',
+                'type' => 'text',
+                'default' => '',
+                'placeholder' => 'https://app.tamironline.com/transfer-receipt/{token}',
+            ],
         ];
     }
 
