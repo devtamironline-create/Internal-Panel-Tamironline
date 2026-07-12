@@ -25,8 +25,7 @@ class TechDashboardController extends Controller
     public function __construct(
         protected OrderSmsNotifier $smsNotifier,
         protected InvoiceService $invoiceService,
-    ) {
-    }
+    ) {}
 
     protected function currentTechnician(): Technician
     {
@@ -188,7 +187,39 @@ class TechDashboardController extends Controller
             $this->smsNotifier->notify($order->refresh(), $trigger);
         }
 
-        return back()->with('success', 'وضعیت به "' . $newStatus->label() . '" تغییر کرد.');
+        return back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
+    }
+
+    /**
+     * ثبتِ رسیدِ انتقال توسطِ تکنسین — فقط روی سفارشِ خودش و فقط در وضعیتِ
+     * «انتقال به تعمیرگاه» (Open) یا «شروع تعمیر» (RepairStarted). تکنسین صرفاً
+     * یک متنِ توضیح می‌نویسد؛ قالبِ رسید از دادهٔ همان سفارش ساخته می‌شود.
+     */
+    public function storeTransferReceipt(Request $request, Order $order)
+    {
+        $tech = $this->currentTechnician();
+        if ($order->technician_id !== $tech->id) {
+            abort(403);
+        }
+
+        $status = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+        if (! in_array($status, [OrderStatus::Open, OrderStatus::RepairStarted], true)) {
+            return back()->with('error', 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.');
+        }
+
+        $data = $request->validate([
+            'description' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $receipt = \Modules\CRM\Models\TransferReceipt::create([
+            'order_id' => $order->id,
+            'description' => $data['description'] ?? null,
+            'created_by_tech_id' => $tech->id,
+        ]);
+
+        return back()->with('success', 'رسیدِ انتقال ثبت شد: '.$receipt->code);
     }
 
     /**

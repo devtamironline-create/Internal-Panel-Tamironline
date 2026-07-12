@@ -1256,8 +1256,39 @@
             </div>
             @endcan
 
+            {{-- رسیدِ انتقالِ دستگاه برای تعمیر --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">رسیدهای انتقال</h2>
+                @php $transferReceipts = $order->transferReceipts; @endphp
+                @if($transferReceipts->isNotEmpty())
+                <ul class="space-y-2 mb-4">
+                    @foreach($transferReceipts as $tr)
+                    <li class="flex items-center justify-between gap-3 text-sm border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
+                        <div class="min-w-0">
+                            <span class="font-mono text-gray-800 dark:text-gray-200" dir="ltr">{{ $tr->code }}</span>
+                            <span class="text-xs text-gray-400 ms-2">{{ \Morilog\Jalali\Jalalian::fromDateTime($tr->created_at)->format('Y/m/d H:i') }}</span>
+                            @if($tr->description)<p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $tr->description }}</p>@endif
+                        </div>
+                        <a href="{{ route('crm.transfer-receipts.print', $tr) }}" target="_blank" rel="noopener" class="text-brand-600 hover:underline text-xs whitespace-nowrap">چاپ ↗</a>
+                    </li>
+                    @endforeach
+                </ul>
+                @else
+                <p class="text-xs text-gray-400 mb-4">هنوز رسیدِ انتقالی برای این سفارش ثبت نشده است.</p>
+                @endif
+
+                @can('edit-crm-order')
+                <form action="{{ route('crm.orders.transfer-receipt.store', $order) }}" method="POST" class="space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                    @csrf
+                    <textarea name="description" rows="2" placeholder="توضیحاتِ انتقال (اختیاری)..."
+                              class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description') }}</textarea>
+                    <button class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-bold">ثبتِ رسیدِ انتقال</button>
+                </form>
+                @endcan
+            </div>
+
             {{-- پرچم‌های امنیتیِ سفارش: قفل + مشکوک به تقلب --}}
-            @can('edit-crm-order')
+            @can('manage-order-security')
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">کنترل‌های امنیتی</h2>
 

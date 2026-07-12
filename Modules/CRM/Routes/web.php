@@ -66,6 +66,10 @@ Route::middleware('web')->group(function () {
     Route::get('/crm/proforma/{token}/pdf', [\Modules\CRM\Http\Controllers\ProformaController::class, 'pdf'])
         ->where('token', '[A-Za-z0-9]+')->name('crm.proforma.pdf');
 
+    // نمای عمومیِ رسیدِ انتقال با token (تکنسین‌پنل + مبنایِ اپِ مشتری) — بدونِ لاگین.
+    Route::get('/crm/transfer-receipt/{token}', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'public'])
+        ->where('token', '[A-Za-z0-9]+')->name('crm.transfer-receipt.public');
+
     // سرو لوگو/مهر فاکتور — public چون داخل لینک عمومی فاکتور هم لازم
     // می‌شود. دارایی‌های حساس نیستند (فقط برند شرکت‌اند).
     Route::get('/crm/invoice-asset/{type}', [\Modules\CRM\Http\Controllers\InvoiceController::class, 'serveAsset'])
@@ -95,6 +99,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         });
         Route::middleware('can:update-own-order-status')->group(function () {
             Route::post('orders/{order}/status', [TechDashboardController::class, 'updateStatus'])->name('orders.status');
+            // رسیدِ انتقال — ثبت توسطِ تکنسین (فقط وضعیتِ انتقال/تعمیر، در کنترلر گارد می‌شود)
+            Route::post('orders/{order}/transfer-receipt', [TechDashboardController::class, 'storeTransferReceipt'])->name('orders.transfer-receipt');
         });
     });
 
@@ -253,8 +259,6 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-customer')->group(function () {
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
-        // بلاک/رفعِ بلاکِ مشتری (جلوگیری از ثبتِ سفارشِ جدید)
-        Route::post('customers/{customer}/block', [CustomerController::class, 'toggleBlock'])->name('customers.block');
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
@@ -319,6 +323,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // می‌تواند یادداشت اضافه/حذف کند (حذف فقط یادداشت خودش).
         Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
         Route::delete('orders/{order}/notes/{note}', [OrderController::class, 'destroyNote'])->name('orders.notes.destroy')->whereNumber('note');
+
+        // نمای چاپیِ رسیدِ انتقال
+        Route::get('transfer-receipts/{transferReceipt}/print', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'print'])->name('transfer-receipts.print')->whereNumber('transferReceipt');
     });
     Route::middleware('can:create-crm-order')->group(function () {
         Route::get('orders/create/new', [OrderController::class, 'create'])->name('orders.create');
@@ -332,9 +339,15 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('orders/{order}/items', [OrderItemController::class, 'store'])->name('orders.items.store');
         Route::delete('orders/{order}/items/{item}', [OrderItemController::class, 'destroy'])->name('orders.items.destroy');
 
-        // پرچم‌های امنیتی (قفل / مشکوک به تقلب)
+        // رسیدِ انتقال — ثبت توسطِ ادمین روی یک سفارش
+        Route::post('orders/{order}/transfer-receipt', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'store'])->name('orders.transfer-receipt.store');
+    });
+
+    // موارد امنیتی — دسترسیِ مستقل (پیش‌فرض فقط ادمین‌کل؛ قابلِ واگذاری به نقش‌های دیگر)
+    Route::middleware('can:manage-order-security')->group(function () {
         Route::post('orders/{order}/lock', [OrderController::class, 'toggleLock'])->name('orders.lock');
         Route::post('orders/{order}/fraud', [OrderController::class, 'toggleFraud'])->name('orders.fraud');
+        Route::post('customers/{customer}/block', [CustomerController::class, 'toggleBlock'])->name('customers.block');
     });
     Route::middleware('can:delete-crm-order')->group(function () {
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');

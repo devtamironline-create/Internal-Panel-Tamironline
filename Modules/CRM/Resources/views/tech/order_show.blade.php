@@ -136,6 +136,38 @@
             </div>
             @endif
 
+            {{-- رسیدِ انتقال — فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» --}}
+            @php
+                $canTransfer = $order->status instanceof \Modules\CRM\Enums\OrderStatus
+                    && in_array($order->status, [\Modules\CRM\Enums\OrderStatus::Open, \Modules\CRM\Enums\OrderStatus::RepairStarted], true);
+                $trReceipts = $order->transferReceipts;
+            @endphp
+            @if($canTransfer || $trReceipts->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">رسید انتقال</h2>
+                @if($trReceipts->isNotEmpty())
+                <ul class="space-y-2 mb-3">
+                    @foreach($trReceipts as $tr)
+                    <li class="flex items-center justify-between gap-2 text-sm border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
+                        <span class="font-mono text-gray-700 dark:text-gray-200" dir="ltr">{{ $tr->code }}</span>
+                        <a href="{{ route('crm.transfer-receipt.public', $tr->token) }}" target="_blank" rel="noopener" class="text-brand-600 hover:underline text-xs whitespace-nowrap">مشاهده/چاپ ↗</a>
+                    </li>
+                    @endforeach
+                </ul>
+                @endif
+                @if($canTransfer)
+                <form action="{{ route('crm.tech.orders.transfer-receipt', $order) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <textarea name="description" rows="3" placeholder="توضیح انتقال (مثلاً: دستگاه جهت تعویض برد به تعمیرگاه منتقل شد)"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
+                    <button class="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-bold">ثبت رسید انتقال</button>
+                </form>
+                @else
+                <p class="text-xs text-gray-400">ثبت رسید انتقال فقط در وضعیت «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.</p>
+                @endif
+            </div>
+            @endif
+
             {{-- خلاصه مالی (نمایش محدود) --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">مالی سفارش</h2>
