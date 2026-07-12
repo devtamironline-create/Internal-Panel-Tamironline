@@ -20,12 +20,43 @@ use Modules\Seo\Models\LinkFixRule;
  */
 class ContentLinkFixer
 {
+    /** کشِ per-request نتیجهٔ تطبیقِ فیلدها با ستون‌های واقعیِ جدول. */
+    private static ?array $resolvedSources = null;
+
     /**
      * منابعِ محتوا: مدل + فیلدهای متنی/HTML + فیلدهای JSON + برچسب.
      *
-     * @return array<string, array{model:class-string, string_fields:list<string>, json_fields:list<string>, label:string}>
+     * فیلدها هنگامِ اجرا با Schema::getColumnListing تطبیق داده می‌شوند تا
+     * اختلافِ اسکیما (ستونِ ناموجود) هرگز باعثِ خطای SQL نشود — فیلدِ غایب
+     * صرفاً از اسکن حذف می‌شود.
+     *
+     * @return array<string, array{model:class-string, string_fields:list<string>, json_fields:list<string>, label:string, prefilter:bool}>
      */
     public static function sources(): array
+    {
+        if (self::$resolvedSources !== null) {
+            return self::$resolvedSources;
+        }
+
+        $sources = self::declaredSources();
+        foreach ($sources as $type => $src) {
+            try {
+                $table = (new $src['model'])->getTable();
+                $columns = array_flip(\Illuminate\Support\Facades\Schema::getColumnListing($table));
+                $sources[$type]['string_fields'] = array_values(array_filter($src['string_fields'], fn ($f) => isset($columns[$f])));
+                $sources[$type]['json_fields'] = array_values(array_filter($src['json_fields'], fn ($f) => isset($columns[$f])));
+            } catch (\Throwable $e) {
+                // اگر لیستِ ستون‌ها در دسترس نبود، همان تعریفِ اعلامی می‌ماند.
+            }
+        }
+
+        return self::$resolvedSources = $sources;
+    }
+
+    /**
+     * @return array<string, array{model:class-string, string_fields:list<string>, json_fields:list<string>, label:string, prefilter:bool}>
+     */
+    private static function declaredSources(): array
     {
         return [
             // prefilter=true یعنی پیش‌فیلترِ LIKE در SQL (برای جدول‌های بزرگ)؛
@@ -33,7 +64,7 @@ class ContentLinkFixer
             // فارسیِ داخلِ JSON به‌صورت \uXXXX ذخیره شده و LIKE قابل‌اتکا نیست.
             'article' => [
                 'model' => \Modules\Site\Models\Article::class,
-                'string_fields' => ['content', 'description'],
+                'string_fields' => ['content', 'excerpt'],
                 'json_fields' => [],
                 'label' => 'title',
                 'prefilter' => true,
