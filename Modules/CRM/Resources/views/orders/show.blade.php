@@ -1256,6 +1256,42 @@
             </div>
             @endcan
 
+            {{-- کارشناسیِ برگشتیِ گارانتی — فقط روی سفارش‌های وضعیتِ «برگشتی گارانتی». --}}
+            @can('change-crm-order-status')
+            @if($order->status instanceof \Modules\CRM\Enums\OrderStatus && $order->status === \Modules\CRM\Enums\OrderStatus::Returned)
+            <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <h2 class="text-base font-bold text-orange-900 dark:text-orange-100">کارشناسیِ برگشتیِ گارانتی</h2>
+                </div>
+                @if($order->return_description)
+                <div class="bg-white dark:bg-gray-800 border border-orange-200 dark:border-orange-700 rounded-lg p-3 mb-3 text-sm">
+                    <div class="font-bold text-orange-800 dark:text-orange-200 mb-1">توضیحِ برگشتیِ ثبت‌شده:</div>
+                    <p class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $order->return_description }}</p>
+                </div>
+                @endif
+                <p class="text-xs text-orange-800 dark:text-orange-200 mb-4">
+                    تأیید: سفارش برای انجامِ خدمات دوباره به تکنسین ارجاع می‌شود («هماهنگ شده»).
+                    رد: برگشتی پذیرفته نمی‌شود و سفارش بسته می‌شود («تکمیل شده»).
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <form action="{{ route('crm.orders.return.approve', $order) }}" method="POST"
+                          onsubmit="return confirm('برگشتی تأیید و سفارش دوباره به تکنسین ارجاع شود؟');">
+                        @csrf
+                        <button class="w-full px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold">✓ تأیید برگشتی</button>
+                    </form>
+                    <form action="{{ route('crm.orders.return.reject', $order) }}" method="POST" class="space-y-2">
+                        @csrf
+                        <textarea name="note" rows="2" required placeholder="دلیلِ رد برگشتی (الزامی)..."
+                                  class="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 dark:bg-gray-700 rounded-lg text-sm">{{ old('note') }}</textarea>
+                        @error('note') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                        <button class="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold">✕ رد برگشتی</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+            @endcan
+
             {{-- بازگشت سفارش — هم‌ارز returnOrderStatus در WP CRM.
                  فقط روی سفارش‌های نهایی (انجام کار/کنسل/رد/ایاب و ذهاب)
                  نمایش داده می‌شود؛ روی سفارش جریانی این گزینه معنا ندارد. --}}

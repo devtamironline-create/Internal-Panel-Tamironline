@@ -349,6 +349,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:change-crm-order-status')->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
         Route::post('orders/{order}/return', [OrderController::class, 'returnOrder'])->name('orders.return');
+        // کارشناسیِ برگشتیِ گارانتی (روی سفارش‌های وضعیتِ «برگشتی گارانتی»)
+        Route::post('orders/{order}/return/approve', [OrderController::class, 'approveReturn'])->name('orders.return.approve');
+        Route::post('orders/{order}/return/reject', [OrderController::class, 'rejectReturn'])->name('orders.return.reject');
     });
 
     // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────

@@ -1045,6 +1045,78 @@ class OrderController extends Controller
     }
 
     /**
+     * کارشناسیِ برگشتیِ گارانتی — «تأیید». سفارشِ در وضعیتِ «برگشتی گارانتی»
+     * تأیید و برای انجامِ خدمات دوباره به تکنسین ارجاع می‌شود (وضعیت →
+     * «هماهنگ شده»، تکنسینِ فعلی حفظ می‌شود). qc_status='approved'.
+     */
+    public function approveReturn(Request $request, Order $order)
+    {
+        $current = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+
+        if ($current !== OrderStatus::Returned) {
+            return back()->with('error', 'کارشناسی فقط روی سفارش‌های «برگشتی گارانتی» ممکن است.');
+        }
+
+        $order->update([
+            'status' => OrderStatus::Coordinated->value,
+            'qc_status' => 'approved',
+        ]);
+
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::Returned->value,
+            'to_status' => OrderStatus::Coordinated->value,
+            'note' => 'تأیید برگشتیِ گارانتی — ارجاع دوباره به تکنسین.'
+                .(($n = trim((string) $request->input('note'))) !== '' ? ' '.$n : ''),
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'برگشتی تأیید شد و سفارش برای انجام خدمات به تکنسین ارجاع شد.');
+    }
+
+    /**
+     * کارشناسیِ برگشتیِ گارانتی — «رد». برگشتی پذیرفته نمی‌شود؛ فرآیندِ برگشتی
+     * خاتمه می‌یابد و سفارش به وضعیتِ «تکمیل شده»ی قبلی بازمی‌گردد (سفارش قبلاً
+     * انجام شده بوده). qc_status='rejected'. دلیل الزامی است.
+     */
+    public function rejectReturn(Request $request, Order $order)
+    {
+        $current = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+
+        if ($current !== OrderStatus::Returned) {
+            return back()->with('error', 'کارشناسی فقط روی سفارش‌های «برگشتی گارانتی» ممکن است.');
+        }
+
+        $validated = $request->validate([
+            'note' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'note.required' => 'برای ردِ برگشتی، دلیل الزامی است.',
+            'note.min' => 'دلیل باید حداقل ۳ نویسه باشد.',
+        ]);
+
+        $order->update([
+            'status' => OrderStatus::Completed->value,
+            'qc_status' => 'rejected',
+        ]);
+
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::Returned->value,
+            'to_status' => OrderStatus::Completed->value,
+            'note' => 'رد برگشتیِ گارانتی: '.$validated['note'],
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'برگشتی رد شد و سفارش بسته شد.');
+    }
+
+    /**
      * بازگشت سفارش — هم‌ارز return_order در libs/order.php (WP CRM).
      *
      * - return_type ∈ {1=برگشت انجام شده, 2=برگشت کنسل شده}
