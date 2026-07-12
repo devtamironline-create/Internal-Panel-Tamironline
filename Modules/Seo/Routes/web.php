@@ -64,6 +64,21 @@ Route::middleware(['auth', 'can:manage-seo'])
         // سلامتِ لینک‌سازیِ داخلی + صفحاتِ Orphan
         Route::get('/internal-links', [InternalLinkController::class, 'index'])->name('internal-links.index');
 
+        // اصلاحِ لینک‌های داخلیِ اشتباه در سطحِ دیتابیس (مقالات/دستگاه‌ها/برندها/ترکیبی)
+        Route::prefix('link-fixes')->name('link-fixes.')->group(function () {
+            Route::get('/', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'index'])->name('index');
+            Route::post('/', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'store'])->name('store');
+            Route::post('/import', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'import'])->name('import');
+            Route::post('/scan-all', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'scanAll'])->name('scan-all');
+            Route::post('/apply-all', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'applyAll'])->name('apply-all');
+            Route::get('/changes', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'changes'])->name('changes');
+            Route::post('/changes/{change}/revert', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'revert'])->name('revert');
+            Route::get('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'show'])->name('show')->whereNumber('rule');
+            Route::post('/{rule}/apply', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'apply'])->name('apply')->whereNumber('rule');
+            Route::put('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'update'])->name('update')->whereNumber('rule');
+            Route::delete('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'destroy'])->name('destroy')->whereNumber('rule');
+        });
+
         // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده
         Route::get('/canonical', [CanonicalController::class, 'index'])->name('canonical.index');
 
