@@ -685,6 +685,16 @@ class OrderWizard extends Component
                 $this->validateStep($s);
             }
 
+            // مشتریِ بلاک‌شده نمی‌تواند سفارشِ جدید ثبت کند (سوابقِ قبلی حفظ می‌شود).
+            if (! $this->showNewCustomerForm && $this->customerId) {
+                $selectedCustomer = Customer::find($this->customerId);
+                if ($selectedCustomer && $selectedCustomer->is_blocked) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'customerId' => 'این مشتری بلاک شده است و امکان ثبت سفارش برای او وجود ندارد.',
+                    ]);
+                }
+            }
+
             $createdOrders = DB::transaction(function () {
                 // ۱) مشتری — اگر فرم مشتری جدید پر شده، ولی شماره موبایل
                 //    تکراری است (مشتری از قبل وجود دارد)، همان را استفاده کن.

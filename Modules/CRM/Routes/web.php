@@ -253,6 +253,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-customer')->group(function () {
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        // بلاک/رفعِ بلاکِ مشتری (جلوگیری از ثبتِ سفارشِ جدید)
+        Route::post('customers/{customer}/block', [CustomerController::class, 'toggleBlock'])->name('customers.block');
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');

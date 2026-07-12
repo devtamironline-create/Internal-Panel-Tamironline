@@ -110,6 +110,40 @@ class CustomerController extends Controller
         return view('crm::customers.edit', compact('customer'));
     }
 
+    /**
+     * بلاک/رفعِ بلاکِ مشتری. مشتریِ بلاک‌شده نمی‌تواند سفارشِ جدید ثبت کند، اما
+     * سوابق و سفارش‌های قبلی‌اش کاملاً حفظ می‌شوند. دلیل هنگامِ بلاک الزامی است.
+     */
+    public function toggleBlock(Request $request, Customer $customer)
+    {
+        if ($customer->is_blocked) {
+            $customer->update([
+                'is_blocked' => false,
+                'block_reason' => null,
+                'blocked_by' => null,
+                'blocked_at' => null,
+            ]);
+
+            return back()->with('success', 'بلاکِ مشتری برداشته شد.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+        ], [
+            'reason.required' => 'برای بلاکِ مشتری، دلیل الزامی است.',
+            'reason.min' => 'دلیل باید حداقل ۳ نویسه باشد.',
+        ]);
+
+        $customer->update([
+            'is_blocked' => true,
+            'block_reason' => $validated['reason'],
+            'blocked_by' => auth()->id(),
+            'blocked_at' => now(),
+        ]);
+
+        return back()->with('success', 'مشتری بلاک شد. ثبتِ سفارشِ جدید برای این مشتری مسدود است (سوابقِ قبلی حفظ می‌شود).');
+    }
+
     public function update(Request $request, Customer $customer)
     {
         $validated = $this->validateCustomer($request, $customer->id);

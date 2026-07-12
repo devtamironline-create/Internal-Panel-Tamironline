@@ -298,6 +298,12 @@ class OrderController extends Controller
     {
         $validated = $this->validateOrder($request);
 
+        // مشتریِ بلاک‌شده نمی‌تواند سفارشِ جدید ثبت کند (سوابقِ قبلی حفظ می‌شود).
+        $targetCustomer = Customer::find($validated['customer_id']);
+        if ($targetCustomer && $targetCustomer->is_blocked) {
+            return back()->withInput()->with('error', 'این مشتری بلاک شده است و امکان ثبت سفارشِ جدید برای او وجود ندارد. ابتدا از صفحهٔ مشتری بلاک را بردارید.');
+        }
+
         $order = DB::transaction(function () use ($validated) {
             $customer = Customer::findOrFail($validated['customer_id']);
 
