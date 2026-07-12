@@ -1256,6 +1256,56 @@
             </div>
             @endcan
 
+            {{-- پرچم‌های امنیتیِ سفارش: قفل + مشکوک به تقلب --}}
+            @can('edit-crm-order')
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">کنترل‌های امنیتی</h2>
+
+                {{-- قفل --}}
+                @if($order->is_locked)
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <div class="flex items-center gap-2 text-sm font-bold text-red-800 dark:text-red-200 mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        سفارش قفل شده است
+                    </div>
+                    @if($order->lock_reason)<p class="text-xs text-red-700 dark:text-red-300 mb-1">دلیل: {{ $order->lock_reason }}</p>@endif
+                    @if($order->locked_at)<p class="text-[11px] text-red-500">{{ \Morilog\Jalali\Jalalian::fromDateTime($order->locked_at)->format('Y/m/d H:i') }}</p>@endif
+                    <form action="{{ route('crm.orders.lock', $order) }}" method="POST" class="mt-2">
+                        @csrf
+                        <button class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-bold">باز کردنِ قفل</button>
+                    </form>
+                </div>
+                @else
+                <form action="{{ route('crm.orders.lock', $order) }}" method="POST" class="space-y-2"
+                      onsubmit="return confirm('این سفارش قفل شود؟ تا باز نشود، ویرایش و تغییرِ وضعیت ممکن نیست.');">
+                    @csrf
+                    <input type="text" name="reason" placeholder="دلیلِ قفل (اختیاری)"
+                           class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <button class="px-3 py-1.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-xs font-bold">🔒 قفل‌کردنِ سفارش</button>
+                </form>
+                @endif
+
+                {{-- مشکوک به تقلب --}}
+                @if($order->is_suspected_fraud)
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <div class="text-sm font-bold text-amber-800 dark:text-amber-200 mb-1">⚠ مشکوک به تقلب</div>
+                    @if($order->fraud_note)<p class="text-xs text-amber-700 dark:text-amber-300 mb-2">{{ $order->fraud_note }}</p>@endif
+                    <form action="{{ route('crm.orders.fraud', $order) }}" method="POST">
+                        @csrf
+                        <button class="px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-xs font-bold">برداشتنِ علامت</button>
+                    </form>
+                </div>
+                @else
+                <form action="{{ route('crm.orders.fraud', $order) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <input type="text" name="note" placeholder="یادداشتِ تقلب (اختیاری)"
+                           class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                    <button class="px-3 py-1.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-200 text-xs font-bold">⚠ علامتِ مشکوک به تقلب</button>
+                </form>
+                @endif
+            </div>
+            @endcan
+
             {{-- کارشناسیِ برگشتیِ گارانتی — فقط روی سفارش‌های وضعیتِ «برگشتی گارانتی». --}}
             @can('change-crm-order-status')
             @if($order->status instanceof \Modules\CRM\Enums\OrderStatus && $order->status === \Modules\CRM\Enums\OrderStatus::Returned)

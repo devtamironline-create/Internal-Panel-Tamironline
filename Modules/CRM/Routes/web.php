@@ -329,6 +329,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // آیتم‌های سفارش (قطعه/خدمت/حمل/تخفیف)
         Route::post('orders/{order}/items', [OrderItemController::class, 'store'])->name('orders.items.store');
         Route::delete('orders/{order}/items/{item}', [OrderItemController::class, 'destroy'])->name('orders.items.destroy');
+
+        // پرچم‌های امنیتی (قفل / مشکوک به تقلب)
+        Route::post('orders/{order}/lock', [OrderController::class, 'toggleLock'])->name('orders.lock');
+        Route::post('orders/{order}/fraud', [OrderController::class, 'toggleFraud'])->name('orders.fraud');
     });
     Route::middleware('can:delete-crm-order')->group(function () {
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');

@@ -30,6 +30,10 @@ class Order extends Model
         'is_legacy_closed', 'legacy_tech_share', 'legacy_company_share',
         'is_lead', 'lead_reason_id', 'lead_notes',
 
+        // پرچم‌های امنیتی
+        'is_locked', 'locked_by', 'locked_at', 'lock_reason',
+        'is_suspected_fraud', 'fraud_flagged_by', 'fraud_flagged_at', 'fraud_note',
+
         // مالی
         'estimated_price', 'final_price', 'deposit',
         'customer_price', 'buy_price', 'price_customer', 'cost_price',
@@ -59,6 +63,10 @@ class Order extends Model
         'visit_scheduled_at' => 'datetime',
         'assigned_at' => 'datetime',
         'completed_at' => 'datetime',
+        'is_locked' => 'boolean',
+        'locked_at' => 'datetime',
+        'is_suspected_fraud' => 'boolean',
+        'fraud_flagged_at' => 'datetime',
 
         // financial — همه integer
         'estimated_price' => 'integer',
