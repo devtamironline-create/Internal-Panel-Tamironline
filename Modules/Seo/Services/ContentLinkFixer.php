@@ -262,6 +262,253 @@ class ContentLinkFixer
         return true;
     }
 
+    // ─── اسکن/اعمالِ تک‌گذر (برای «همه» — بهینه برای پروداکشن) ──────
+    //
+    // چرا: اسکنِ per-rule برای هر قاعده یک LIKE روی longTextِ کلِ مقالات
+    // می‌زند؛ با ~۲۹۰ قاعده یعنی ~۲۹۰ فول‌اسکن → timeout روی هاست. این‌جا هر
+    // جدول فقط «یک بار» chunk-به-chunk خوانده می‌شود و همهٔ قواعد هم‌زمان با
+    // regexِ ترکیبی چک می‌شوند.
+
+    /**
+     * اسکنِ همهٔ قواعدِ pending در یک گذر. matches_count هر قاعده به‌روزرسانی می‌شود.
+     *
+     * @return array{scanned:int, with_matches:int}
+     */
+    public function scanAllPending(): array
+    {
+        $rules = LinkFixRule::pending()->get();
+        if ($rules->isEmpty()) {
+            return ['scanned' => 0, 'with_matches' => 0];
+        }
+
+        $matcher = $this->buildMatcher($rules);
+        $counts = array_fill_keys($rules->pluck('id')->all(), 0);
+
+        foreach (self::sources() as $type => $src) {
+            $this->eachRecordLight($src, function ($record) use (&$counts, $matcher, $src, $type) {
+                $this->tallyRecord($record, $src, $type, $matcher, function (int $ruleId, int $n) use (&$counts) {
+                    $counts[$ruleId] += $n;
+                });
+            });
+        }
+
+        $withMatches = 0;
+        $now = now();
+        foreach ($rules as $rule) {
+            $total = $counts[$rule->id] ?? 0;
+            $rule->update(['matches_count' => $total, 'scanned_at' => $now]);
+            if ($total > 0) {
+                $withMatches++;
+            }
+        }
+
+        return ['scanned' => $rules->count(), 'with_matches' => $withMatches];
+    }
+
+    /**
+     * اعمالِ همهٔ قواعدِ آماده در یک گذر: اول رکوردهای دارای مورد پیدا می‌شوند
+     * (سبک)، بعد هر رکورد یک بار لود، همهٔ قواعدِ مرتبط رویش اجرا و یک بار
+     * ذخیره می‌شود.
+     *
+     * @return array{applied:int, records:int, rules:int}
+     */
+    public function applyAllPending(?int $userId = null): array
+    {
+        $rules = LinkFixRule::pending()
+            ->where('needs_review', false)
+            ->where('matches_count', '>', 0)
+            ->get()
+            ->keyBy('id');
+        if ($rules->isEmpty()) {
+            return ['applied' => 0, 'records' => 0, 'rules' => 0];
+        }
+
+        $matcher = $this->buildMatcher($rules);
+
+        // گذرِ سبک: نگاشتِ [type][record_id][rule_id] => true
+        $hits = [];
+        foreach (self::sources() as $type => $src) {
+            $this->eachRecordLight($src, function ($record) use (&$hits, $matcher, $src, $type) {
+                $this->tallyRecord($record, $src, $type, $matcher, function (int $ruleId) use (&$hits, $type, $record) {
+                    $hits[$type][$record->getKey()][$ruleId] = true;
+                });
+            });
+        }
+
+        $appliedTotal = 0;
+        $recordsTouched = 0;
+        $rulesApplied = [];  // rule_id => occurrences
+
+        foreach ($hits as $type => $records) {
+            $src = self::sources()[$type];
+            foreach ($records as $recordId => $ruleIds) {
+                $record = $src['model']::find($recordId);
+                if (! $record) {
+                    continue;
+                }
+
+                $dirtyChanges = []; // [field, before, occurrences, rule_id]
+                foreach (array_keys($ruleIds) as $ruleId) {
+                    $rule = $rules[$ruleId] ?? null;
+                    if (! $rule || $this->isSelfLink($type, $record, $rule)) {
+                        continue;
+                    }
+                    $variants = self::variants($rule->old_url);
+
+                    foreach ($src['string_fields'] as $field) {
+                        $val = $record->{$field};
+                        if (! is_string($val) || $val === '') {
+                            continue;
+                        }
+                        [$new, $count] = $this->transformString($val, $variants, $rule);
+                        if ($count > 0 && $new !== $val) {
+                            $dirtyChanges[] = [$field, $val, $count, $ruleId];
+                            $record->{$field} = $new;
+                        }
+                    }
+                    foreach ($src['json_fields'] as $field) {
+                        $val = $record->{$field};
+                        if (! is_array($val) || $val === []) {
+                            continue;
+                        }
+                        $count = 0;
+                        $new = $this->transformJson($val, $variants, $rule, $count);
+                        if ($count > 0) {
+                            $dirtyChanges[] = [$field, json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $count, $ruleId];
+                            $record->{$field} = $new;
+                        }
+                    }
+                }
+
+                if ($dirtyChanges === []) {
+                    continue;
+                }
+
+                DB::transaction(function () use ($record, $dirtyChanges, $src, $type, &$appliedTotal, &$rulesApplied) {
+                    foreach ($dirtyChanges as [$field, $before, $count, $ruleId]) {
+                        LinkFixChange::create([
+                            'rule_id' => $ruleId,
+                            'entity_type' => $type,
+                            'entity_id' => $record->getKey(),
+                            'entity_label' => mb_substr((string) ($record->{$src['label']} ?? ''), 0, 300),
+                            'field' => $field,
+                            'before' => (string) $before,
+                            'occurrences' => $count,
+                            'created_at' => now(),
+                        ]);
+                        $appliedTotal += $count;
+                        $rulesApplied[$ruleId] = ($rulesApplied[$ruleId] ?? 0) + $count;
+                    }
+                    $record->save();
+                });
+                $recordsTouched++;
+            }
+        }
+
+        // همهٔ قواعدِ شرکت‌داده‌شده «اعمال‌شده» علامت می‌خورند (حتی اگر قاعدهٔ
+        // هم‌پوشانِ http/https عملاً موردی برایش نمانده باشد).
+        foreach ($rules as $rule) {
+            $rule->update([
+                'status' => 'applied',
+                'applied_count' => $rulesApplied[$rule->id] ?? 0,
+                'applied_at' => now(),
+                'applied_by' => $userId,
+            ]);
+        }
+
+        return ['applied' => $appliedTotal, 'records' => $recordsTouched, 'rules' => count($rulesApplied)];
+    }
+
+    /**
+     * ساختِ تطبیق‌گرِ ترکیبی: نگاشتِ واریانت→قواعد + الگوهای regexِ chunkشده +
+     * گاردِ self-link برای مقالات.
+     *
+     * @param  \Illuminate\Support\Collection<int, LinkFixRule>  $rules
+     * @return array{map: array<string, list<int>>, patterns: list<string>, self_guard: array<int, string>}
+     */
+    private function buildMatcher($rules): array
+    {
+        $map = [];
+        $selfGuard = [];
+        foreach ($rules as $rule) {
+            foreach (self::variants($rule->old_url) as $v) {
+                $map[$v][] = $rule->id;
+            }
+            if ($rule->action === 'replace' && $rule->new_url) {
+                $path = rtrim(rawurldecode((string) (parse_url($rule->new_url, PHP_URL_PATH) ?: '')), '/');
+                if (str_starts_with($path, '/blog/')) {
+                    $selfGuard[$rule->id] = rawurldecode(substr($path, strlen('/blog/')));
+                }
+            }
+        }
+
+        $patterns = [];
+        foreach (array_chunk(array_keys($map), 150) as $chunk) {
+            // backslash در boundary لازم است: در blobِ JSONشده، URL داخلِ \" است.
+            $patterns[] = '~(?:'.implode('|', array_map(fn ($v) => preg_quote($v, '~'), $chunk)).')(?=["\'\s<>#?)\\\\]|$)~u';
+        }
+
+        return ['map' => $map, 'patterns' => $patterns, 'self_guard' => $selfGuard];
+    }
+
+    /** پیمایشِ سبکِ رکوردهای یک منبع: فقط ستون‌های لازم، chunkبندی‌شده. */
+    private function eachRecordLight(array $src, callable $callback): void
+    {
+        /** @var \Illuminate\Database\Eloquent\Model $model */
+        $model = new $src['model'];
+        $columns = array_values(array_unique(array_merge(
+            [$model->getKeyName(), $src['label']],
+            in_array('slug', $model->getFillable(), true) ? ['slug'] : [],
+            $src['string_fields'],
+            $src['json_fields'],
+        )));
+
+        $src['model']::query()->select($columns)->chunkById(100, function ($records) use ($callback) {
+            foreach ($records as $record) {
+                $callback($record);
+            }
+        });
+    }
+
+    /** شمارشِ برخوردهای همهٔ قواعد در یک رکورد (با regexِ ترکیبی). */
+    private function tallyRecord($record, array $src, string $type, array $matcher, callable $onHit): void
+    {
+        $texts = [];
+        foreach ($src['string_fields'] as $field) {
+            $val = $record->{$field};
+            if (is_string($val) && $val !== '') {
+                $texts[] = $val;
+            }
+        }
+        foreach ($src['json_fields'] as $field) {
+            $val = $record->{$field};
+            if (is_array($val) && $val !== []) {
+                $texts[] = (string) json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        }
+        if ($texts === []) {
+            return;
+        }
+
+        $blob = implode("\n", $texts);
+        foreach ($matcher['patterns'] as $pattern) {
+            if (! preg_match_all($pattern, $blob, $m)) {
+                continue;
+            }
+            $found = array_count_values($m[0]);
+            foreach ($found as $variant => $n) {
+                foreach ($matcher['map'][$variant] ?? [] as $ruleId) {
+                    // گاردِ self-link برای مقالات
+                    if ($type === 'article' && isset($matcher['self_guard'][$ruleId])
+                        && rawurldecode((string) ($record->slug ?? '')) === $matcher['self_guard'][$ruleId]) {
+                        continue;
+                    }
+                    $onHit($ruleId, (int) $n);
+                }
+            }
+        }
+    }
+
     // ─── هسته‌ی تبدیل ─────────────────────────────────────────────
 
     /**
