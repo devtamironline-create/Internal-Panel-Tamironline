@@ -70,6 +70,18 @@ class AppSettingsController extends Controller
     }
 
     /**
+     * پاک‌کردنِ کشِ اپ — نسخهٔ کش را bump می‌کند تا اپ در poll بعدیِ /status
+     * کشِ کاتالوگ/برند/بنر/استان‌وشهر را باطل و داده‌ی تازه بگیرد.
+     */
+    public function purgeCache(Request $request): RedirectResponse
+    {
+        \Modules\CustomerApp\Support\AppCacheVersion::bump();
+
+        return redirect()->route('customer-app.settings.index')
+            ->with('success', 'کشِ اپ باطل شد. اپ‌ها ظرفِ حدود ۶۰ ثانیه (یک چرخهٔ poll) داده‌ی تازه می‌گیرند.');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function currentValues(): array
