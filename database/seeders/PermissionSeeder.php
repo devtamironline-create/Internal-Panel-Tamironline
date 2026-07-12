@@ -74,6 +74,7 @@ class PermissionSeeder extends Seeder
             'view-tech-suggestions' => 'مشاهده پیشنهاد هوشمند تکنسین برای سفارش',
             'change-crm-order-status' => 'تغییر وضعیت سفارش CRM',
             'export-crm-orders' => 'خروجی Excel سفارش‌های CRM',
+            'manage-order-security' => 'مدیریت موارد امنیتی (قفل/مشکوک به تقلب سفارش + بلاک مشتری)',
 
             // CRM - سفارش داخلی + QC
             'view-crm-internal-orders' => 'مشاهده سفارش‌های داخلی CRM',
@@ -213,7 +214,7 @@ class PermissionSeeder extends Seeder
 
         // Assign admin role to first user if exists
         $firstUser = \App\Models\User::where('is_staff', true)->first();
-        if ($firstUser && !$firstUser->hasRole('admin')) {
+        if ($firstUser && ! $firstUser->hasRole('admin')) {
             $firstUser->assignRole('admin');
         }
     }

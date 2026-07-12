@@ -41,7 +41,7 @@
     @endif
 
     {{-- بلاکِ مشتری (جلوگیری از ثبتِ سفارشِ جدید؛ سوابق حفظ می‌شود) --}}
-    @can('edit-crm-customer')
+    @can('manage-order-security')
     @if($customer->is_blocked)
     <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="text-sm text-red-800 dark:text-red-200 leading-6">
