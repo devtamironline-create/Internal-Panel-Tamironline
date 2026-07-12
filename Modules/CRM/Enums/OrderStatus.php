@@ -20,13 +20,20 @@ enum OrderStatus: string
 {
     case New = 'new';                 // WP 0   — جدید
     case Coordinated = 'coordinated'; // WP 1   — هماهنگ شده
-    case Open = 'open';               // WP 2   — باز شده
+    case Open = 'open';               // WP 2   — باز شده (انتقال به تعمیرگاه)
     case Suspended = 'suspended';     // WP 3   — معلق
-    case Cancelled = 'cancelled';     // WP 4   — کنسل شده
+    case Cancelled = 'cancelled';     // WP 4   — لغو شده (فقط ادمین)
     case Completed = 'completed';     // WP 5   — انجام کار
     case Transit = 'transit';         // WP 10  — ایاب و ذهاب
-    case Returned = 'returned';       // WP 11  — برگشت‌خورده (لاراول‌اِسپِسیفیک)
-    case Declined = 'declined';       // WP 100 — رد سفارش
+    case Returned = 'returned';       // WP 11  — برگشتی گارانتی (لاراول‌اِسپِسیفیک)
+    case Declined = 'declined';       // WP 100 — رد شده (توسط تکنسین)
+
+    // ─── وضعیت‌های جدیدِ پنل (WP این‌ها را ندارد؛ wpCode امنِ نزدیک می‌گیرند) ───
+    case AwaitingCoordination = 'awaiting_coordination';       // در انتظار هماهنگی با مشتری
+    case NoAnswer = 'no_answer';                               // مشتری پاسخگو نیست
+    case RepairStarted = 'repair_started';                     // شروع تعمیر (گروهِ «در حال انجام»)
+    case AwaitingPart = 'awaiting_part';                       // در انتظار قطعه
+    case AwaitingCustomerApproval = 'awaiting_customer_approval'; // در انتظار تأیید مشتری
 
     public function label(): string
     {
@@ -38,8 +45,13 @@ enum OrderStatus: string
             self::Cancelled => 'کنسل شده',
             self::Completed => 'انجام کار',
             self::Transit => 'ایاب و ذهاب',
-            self::Returned => 'برگشت‌خورده',
-            self::Declined => 'رد سفارش',
+            self::Returned => 'برگشتی گارانتی',
+            self::Declined => 'رد شده',
+            self::AwaitingCoordination => 'در انتظار هماهنگی',
+            self::NoAnswer => 'مشتری پاسخگو نیست',
+            self::RepairStarted => 'شروع تعمیر',
+            self::AwaitingPart => 'در انتظار قطعه',
+            self::AwaitingCustomerApproval => 'در انتظار تأیید مشتری',
         };
     }
 
@@ -55,6 +67,11 @@ enum OrderStatus: string
             self::Transit => 'bg-amber-100 text-amber-800',
             self::Returned => 'bg-orange-100 text-orange-800',
             self::Declined => 'bg-red-200 text-red-900',
+            self::AwaitingCoordination => 'bg-cyan-100 text-cyan-800',
+            self::NoAnswer => 'bg-rose-100 text-rose-800',
+            self::RepairStarted => 'bg-purple-100 text-purple-800',
+            self::AwaitingPart => 'bg-teal-100 text-teal-800',
+            self::AwaitingCustomerApproval => 'bg-lime-100 text-lime-800',
         };
     }
 
@@ -71,6 +88,13 @@ enum OrderStatus: string
             self::Transit => 10,
             self::Returned => 11,
             self::Declined => 100,
+            // وضعیت‌های جدید در WP کدِ اختصاصی ندارند؛ به نزدیک‌ترین کدِ معنایی
+            // نگاشت می‌شوند تا پوش به WP هرگز کرش نکند (WP فعلاً اولویت نیست).
+            self::AwaitingCoordination => 0,   // مثلِ «جدید»
+            self::NoAnswer => 3,               // مثلِ «معلق»
+            self::RepairStarted => 2,          // مثلِ «باز شده / در حال انجام»
+            self::AwaitingPart => 3,           // مثلِ «معلق»
+            self::AwaitingCustomerApproval => 3, // مثلِ «معلق»
         };
     }
 
@@ -121,24 +145,59 @@ enum OrderStatus: string
     public function allowedTransitions(): array
     {
         return match ($this) {
-            // وضعیت‌های قابل ویرایش (working states)
-            self::New,
-            self::Coordinated,
-            self::Open,
-            self::Suspended,
-            self::Returned => [
-                self::Coordinated,
-                self::Open,
-                self::Suspended,
-                self::Cancelled,
-                self::Completed,
+            // ثبتِ اولیه → واردِ فرآیندِ هماهنگی/تخصیص می‌شود.
+            self::New => [
+                self::AwaitingCoordination, self::Coordinated, self::NoAnswer,
+                self::Cancelled, self::Declined,
             ],
 
-            // Declined عملاً final است، ولی ادمین می‌تواند آن را به
-            // Cancelled تبدیل کند (هر دو از خانوادهٔ «رد شده» هستند).
+            // در انتظار هماهنگی: نتیجهٔ تماس ثبت می‌شود.
+            self::AwaitingCoordination => [
+                self::Coordinated, self::NoAnswer, self::Suspended,
+                self::Cancelled, self::Declined,
+            ],
+
+            // مشتری پاسخگو نیست: تماسِ مجدد یا تعلیق.
+            self::NoAnswer => [
+                self::AwaitingCoordination, self::Coordinated, self::Suspended,
+                self::Cancelled, self::Declined,
+            ],
+
+            // هماهنگ شده: تکنسین در محل — شروعِ کار یا حالت‌های انتظار.
+            self::Coordinated => [
+                self::RepairStarted, self::Open, self::AwaitingPart,
+                self::AwaitingCustomerApproval, self::Suspended, self::NoAnswer,
+                self::Transit, self::Completed, self::Cancelled,
+            ],
+
+            // شروع تعمیر (در حال انجام).
+            self::RepairStarted => [
+                self::Open, self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::Suspended, self::Transit, self::Completed, self::Cancelled,
+            ],
+
+            // انتقال به تعمیرگاه.
+            self::Open => [
+                self::RepairStarted, self::AwaitingPart, self::Suspended,
+                self::Transit, self::Completed, self::Cancelled,
+            ],
+
+            // معلق / حالت‌های انتظار.
+            self::Suspended,
+            self::AwaitingPart,
+            self::AwaitingCustomerApproval => [
+                self::Coordinated, self::RepairStarted, self::Open,
+                self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::Completed, self::Cancelled,
+            ],
+
+            // برگشتی گارانتی: کارشناسی (تأیید → هماهنگ‌شده، رد → لغو).
+            self::Returned => [self::Coordinated, self::Cancelled],
+
+            // رد شده (تکنسین): ادمین می‌تواند به «لغو» تبدیل کند.
             self::Declined => [self::Cancelled],
 
-            // وضعیت‌های نهایی محض — فقط با returnOrder قابل خروج
+            // وضعیت‌های نهایی محض — فقط با «بازگشت سفارش» قابل خروج.
             self::Cancelled,
             self::Completed,
             self::Transit => [],
@@ -157,5 +216,32 @@ enum OrderStatus: string
             self::Cancelled, self::Completed, self::Transit, self::Declined => true,
             default => false,
         };
+    }
+
+    /**
+     * گروهِ گزارشیِ سه‌گانه — برای دسته‌بندیِ ساده‌ترِ تب‌ها و گزارش‌ها:
+     * in_progress (در حال انجام) | waiting (در انتظار) | finished (پایان یافته).
+     */
+    public function group(): string
+    {
+        return match ($this) {
+            self::Coordinated, self::RepairStarted => 'in_progress',
+
+            self::New, self::AwaitingCoordination, self::NoAnswer,
+            self::Suspended, self::Open, self::AwaitingPart,
+            self::AwaitingCustomerApproval, self::Returned => 'waiting',
+
+            self::Completed, self::Transit, self::Cancelled, self::Declined => 'finished',
+        };
+    }
+
+    /** برچسبِ فارسیِ گروه‌ها. */
+    public static function groupLabels(): array
+    {
+        return [
+            'in_progress' => 'در حال انجام',
+            'waiting' => 'در انتظار',
+            'finished' => 'پایان یافته',
+        ];
     }
 }

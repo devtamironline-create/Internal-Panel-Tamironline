@@ -270,21 +270,31 @@
                     {{ number_format($noTechCount) }}
                 </span>
             </a>
-            @foreach(OrderStatus::cases() as $case)
-                @php
-                    $isActive = $status === $case->value;
-                    $count = (int) ($statusCounts[$case->value] ?? 0);
-                    $url = route('crm.orders.index', array_merge($baseQuery, ['status' => $case->value]));
-                @endphp
-                <a href="{{ $url }}"
-                   class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
-                          {{ $isActive ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
-                    {{ $case->label() }}
-                    <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
-                                {{ $isActive ? 'bg-brand-100 text-brand-700' : ($count > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
-                        {{ number_format($count) }}
-                    </span>
-                </a>
+            {{-- تب‌های وضعیت، گروه‌بندی‌شده: در حال انجام / در انتظار / پایان یافته --}}
+            @php
+                $grouped = [];
+                foreach (OrderStatus::cases() as $case) { $grouped[$case->group()][] = $case; }
+            @endphp
+            @foreach(OrderStatus::groupLabels() as $gkey => $glabel)
+                @if(! empty($grouped[$gkey]))
+                    <span class="self-center ps-3 pe-1 text-[10px] font-bold text-gray-400 whitespace-nowrap border-s border-gray-200 dark:border-gray-700">{{ $glabel }}</span>
+                    @foreach($grouped[$gkey] as $case)
+                        @php
+                            $isActive = $status === $case->value;
+                            $count = (int) ($statusCounts[$case->value] ?? 0);
+                            $url = route('crm.orders.index', array_merge($baseQuery, ['status' => $case->value]));
+                        @endphp
+                        <a href="{{ $url }}"
+                           class="relative px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+                                  {{ $isActive ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200' }}">
+                            {{ $case->label() }}
+                            <span class="ms-1 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 text-xs font-bold rounded-full
+                                        {{ $isActive ? 'bg-brand-100 text-brand-700' : ($count > 0 ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400') }}">
+                                {{ number_format($count) }}
+                            </span>
+                        </a>
+                    @endforeach
+                @endif
             @endforeach
         </div>
     </div>
