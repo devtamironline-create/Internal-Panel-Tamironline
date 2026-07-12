@@ -98,5 +98,22 @@
         </form>
     </div>
 
+    {{-- پاک‌کردنِ کشِ اپ (Cache Purge) --}}
+    <div class="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl p-5">
+        <h2 class="text-base font-bold text-sky-900 dark:text-sky-200 mb-2">🔄 پاک‌کردنِ کشِ اپ</h2>
+        <p class="text-xs text-sky-700 dark:text-sky-300 mb-3">
+            اپ داده‌های نیمه‌ثابت (کاتالوگِ دستگاه‌ها، برندها، بنرها، استان/شهر) را برای سرعت کش می‌کند.
+            معمولاً با هر ویرایشِ این موارد در پنل، نسخهٔ کش <span class="font-medium">خودکار</span> بالا می‌رود و اپ ظرفِ ~۶۰ ثانیه تازه می‌شود.
+            اگر خواستید همین حالا دستی همه‌ی اپ‌ها را وادار به گرفتنِ داده‌ی تازه کنید، این دکمه را بزنید.
+        </p>
+        <p class="text-xs text-sky-800 dark:text-sky-200 mb-3">
+            نسخهٔ فعلی کش: <span class="font-mono" dir="ltr">{{ \Modules\CustomerApp\Support\AppCacheVersion::current() }}</span>
+        </p>
+        <form action="{{ route('customer-app.settings.purge-cache') }}" method="POST">
+            @csrf
+            <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">پاک‌کردنِ کشِ اپ</button>
+        </form>
+    </div>
+
 </div>
 @endsection

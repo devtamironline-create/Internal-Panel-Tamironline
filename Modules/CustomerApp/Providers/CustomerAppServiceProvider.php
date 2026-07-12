@@ -55,5 +55,16 @@ class CustomerAppServiceProvider extends ServiceProvider
         // می‌فرستد (در جدول notifications لاراول). جدا از WP push observer
         // در مدل Order تا منطق هر کانال مستقل بماند.
         \Modules\CRM\Models\Order::observe(\Modules\CustomerApp\Observers\CustomerOrderObserver::class);
+
+        // Observer: با هر تغییرِ داده‌های نیمه‌ثابتِ اپ، نسخهٔ کشِ اپ را bump می‌کند
+        // تا اپ (که /status را هر ۶۰ ثانیه poll می‌کند) کشِ محلیِ خود را باطل کند.
+        foreach ([
+            \Modules\CRM\Models\Device::class,
+            \Modules\CRM\Models\Brand::class,
+            \Modules\CRM\Models\City::class,
+            \Modules\Site\Models\Banner::class,
+        ] as $model) {
+            $model::observe(\Modules\CustomerApp\Observers\AppCacheBumpObserver::class);
+        }
     }
 }

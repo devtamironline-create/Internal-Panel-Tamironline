@@ -31,6 +31,7 @@ Route::middleware(['auth'])
             Route::get('/settings', [AppSettingsController::class, 'index'])->name('settings.index');
             Route::put('/settings', [AppSettingsController::class, 'update'])->name('settings.update');
             Route::post('/settings/force-reauth', [AppSettingsController::class, 'forceReauth'])->name('settings.force-reauth');
+            Route::post('/settings/purge-cache', [AppSettingsController::class, 'purgeCache'])->name('settings.purge-cache');
         });
 
         // Reviews moderation (Block 3)

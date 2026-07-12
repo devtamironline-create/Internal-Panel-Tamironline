@@ -67,6 +67,9 @@ class StatusController extends Controller
                 'test_mode_active' => config('customerapp.test-mode.enabled', false)
                     && empty(config('customerapp.test-mode.allowed_mobiles', [])),
                 'server_time' => now()->utc()->toIso8601String(),
+                // نسخهٔ کشِ اپ — اگر عوض شود، اپ کشِ کاتالوگ/برند/بنر/استان‌وشهر
+                // را باطل و داده‌ی تازه می‌گیرد (Cache Purge از سمتِ پنل).
+                'cache_version' => \Modules\CustomerApp\Support\AppCacheVersion::current(),
                 'db' => $dbOk ? 'ok' : 'down',
             ],
         ])->header('Cache-Control', 'no-store');
