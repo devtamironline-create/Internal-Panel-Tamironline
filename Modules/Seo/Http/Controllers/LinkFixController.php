@@ -111,28 +111,35 @@ class LinkFixController extends Controller
         return back()->with('success', 'قاعده اضافه شد. اسکن کنید تا موارد پیدا شوند.');
     }
 
-    /** اسکنِ همهٔ قواعدِ pending — هیچ تغییری اعمال نمی‌شود. */
+    /** اسکنِ همهٔ قواعدِ pending — تک‌گذر، هیچ تغییری اعمال نمی‌شود. */
     public function scanAll()
     {
-        @set_time_limit(0);
-        $scanned = 0;
-        $withMatches = 0;
-        foreach (LinkFixRule::pending()->cursor() as $rule) {
-            $res = $this->fixer->scan($rule);
-            $scanned++;
-            if ($res['total'] > 0) {
-                $withMatches++;
-            }
+        $this->raiseLimits();
+
+        try {
+            $res = $this->fixer->scanAllPending();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.link_fix_scan_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'اسکن با خطا مواجه شد: '.$e->getMessage());
         }
 
-        return back()->with('success', "اسکن تمام شد: {$scanned} قاعده بررسی شد، {$withMatches} قاعده مورد دارد. از «فقط دارای مورد» شروع کنید.");
+        return back()->with('success', "اسکن تمام شد: {$res['scanned']} قاعده بررسی شد، {$res['with_matches']} قاعده مورد دارد. از «فقط دارای مورد» شروع کنید.");
     }
 
     /** پیش‌نمایشِ یک قاعده — اسکنِ زنده با جزئیات. */
     public function show(LinkFixRule $rule)
     {
-        @set_time_limit(0);
-        $result = $this->fixer->scan($rule);
+        $this->raiseLimits();
+
+        try {
+            $result = $this->fixer->scan($rule);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.link_fix_preview_failed', ['rule_id' => $rule->id, 'error' => $e->getMessage()]);
+
+            return redirect()->route('seo.admin.link-fixes.index')
+                ->with('error', 'پیش‌نمایش با خطا مواجه شد: '.$e->getMessage());
+        }
         $changes = $rule->changes()->orderByDesc('id')->limit(100)->get();
 
         return view('seo::link-fixes.show', [
@@ -151,8 +158,15 @@ class LinkFixController extends Controller
             return back()->with('error', 'این قاعده «نیازمند بررسی» است (مقصدِ متفاوت در صفحاتِ مختلف) — ابتدا مقصد را مشخص/ویرایش کنید.');
         }
 
-        @set_time_limit(0);
-        $res = $this->fixer->apply($rule, auth()->id());
+        $this->raiseLimits();
+
+        try {
+            $res = $this->fixer->apply($rule, auth()->id());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.link_fix_apply_failed', ['rule_id' => $rule->id, 'error' => $e->getMessage()]);
+
+            return back()->with('error', 'اعمال با خطا مواجه شد: '.$e->getMessage());
+        }
 
         SeoChangeLog::record('applied', 'link_fix', $rule->old_url.' → '.($rule->new_url ?? 'حذف لینک').' ('.$res['applied'].' مورد)');
 
@@ -164,23 +178,32 @@ class LinkFixController extends Controller
         return back()->with('success', $msg);
     }
 
-    /** اعمالِ همهٔ قواعدِ آماده (pending، بدونِ نیاز به بررسی، دارای مورد). */
+    /** اعمالِ همهٔ قواعدِ آماده (pending، بدونِ نیاز به بررسی، دارای مورد) — تک‌گذر. */
     public function applyAll()
     {
-        @set_time_limit(0);
-        $appliedRules = 0;
-        $appliedTotal = 0;
-        foreach (LinkFixRule::pending()->where('needs_review', false)->where('matches_count', '>', 0)->cursor() as $rule) {
-            $res = $this->fixer->apply($rule, auth()->id());
-            if ($res['applied'] > 0) {
-                $appliedRules++;
-                $appliedTotal += $res['applied'];
-            }
+        $this->raiseLimits();
+
+        try {
+            $res = $this->fixer->applyAllPending(auth()->id());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.link_fix_apply_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'اعمالِ گروهی با خطا مواجه شد: '.$e->getMessage().' — تغییراتِ ثبت‌شده تا این لحظه در «تاریخچه» قابلِ مشاهده و بازگردانی‌اند.');
         }
 
-        SeoChangeLog::record('applied', 'link_fix_bulk', $appliedRules.' قاعده / '.$appliedTotal.' مورد');
+        SeoChangeLog::record('applied', 'link_fix_bulk', $res['rules'].' قاعده / '.$res['applied'].' مورد / '.$res['records'].' رکورد');
 
-        return back()->with('success', "اعمالِ گروهی تمام شد: {$appliedTotal} مورد در قالبِ {$appliedRules} قاعده. همه‌چیز قابلِ بازگردانی است.");
+        return back()->with('success', "اعمالِ گروهی تمام شد: {$res['applied']} مورد در {$res['records']} رکورد. همه‌چیز از «تاریخچهٔ تغییرات» قابلِ بازگردانی است.");
+    }
+
+    /** افزایشِ سقفِ زمان/حافظه برای عملیاتِ سنگین (الگوی SiteCrawler). */
+    private function raiseLimits(): void
+    {
+        @set_time_limit(0);
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw !== '-1' && (int) $raw < 512) {
+            @ini_set('memory_limit', '512M');
+        }
     }
 
     /** ویرایشِ قاعده (برای موارد «نیازمند بررسی» یا اصلاحِ مقصد). */
