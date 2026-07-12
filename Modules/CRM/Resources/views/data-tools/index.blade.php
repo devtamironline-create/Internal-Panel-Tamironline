@@ -151,6 +151,32 @@
         </div>
     </div>
 
+    {{-- ───── رسید انتقال (روشن/خاموش) ───── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 {{ $transferReceiptEnabled ? 'border-emerald-400' : 'border-gray-200 dark:border-gray-700' }}">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    📦 رسید انتقال
+                    @if($transferReceiptEnabled)
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">فعال</span>
+                    @else
+                        <span class="inline-block mr-2 px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold">غیرفعال — مخفی</span>
+                    @endif
+                </h2>
+                <p class="text-[11px] text-gray-500 mt-1 leading-6">
+                    وقتی فعال باشد، ثبتِ «رسید انتقال» در پنل ادمین و پنل تکنسین ممکن است و با هر ثبت، لینکِ رسید با پیامک برای مشتری ارسال می‌شود. وقتی غیرفعال باشد، ثبتِ رسید مخفی و مسیرهایش بسته است (رسیدهای قبلی همچنان قابلِ مشاهده‌اند).
+                </p>
+            </div>
+            <form method="POST" action="{{ route('crm.data-tools.toggle-transfer-receipt') }}"
+                  onsubmit="return confirm('{{ $transferReceiptEnabled ? 'رسید انتقال غیرفعال (مخفی) شود؟' : 'رسید انتقال فعال شود؟' }}');">
+                @csrf
+                <button type="submit" class="px-5 py-2.5 {{ $transferReceiptEnabled ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700' }} text-white rounded-lg text-sm font-bold whitespace-nowrap">
+                    {{ $transferReceiptEnabled ? 'غیرفعال‌سازی رسید انتقال' : 'فعال‌سازی رسید انتقال' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
     {{-- ───── تنظیم مانده کیف‌پول گروهی (paste WP balances) ───── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-2 border-rose-200 dark:border-rose-800">
         <div class="flex items-center justify-between gap-4 flex-wrap">

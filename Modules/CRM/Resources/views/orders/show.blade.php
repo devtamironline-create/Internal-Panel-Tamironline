@@ -1257,9 +1257,13 @@
             @endcan
 
             {{-- رسیدِ انتقالِ دستگاه برای تعمیر --}}
+            @php
+                $transferReceipts = $order->transferReceipts;
+                $transferReceiptEnabled = \Modules\CRM\Services\TransferReceiptService::enabled();
+            @endphp
+            @if($transferReceiptEnabled || $transferReceipts->isNotEmpty())
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">رسیدهای انتقال</h2>
-                @php $transferReceipts = $order->transferReceipts; @endphp
                 @if($transferReceipts->isNotEmpty())
                 <ul class="space-y-2 mb-4">
                     @foreach($transferReceipts as $tr)
@@ -1278,14 +1282,18 @@
                 @endif
 
                 @can('edit-crm-order')
+                @if($transferReceiptEnabled)
                 <form action="{{ route('crm.orders.transfer-receipt.store', $order) }}" method="POST" class="space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
                     @csrf
                     <textarea name="description" rows="2" placeholder="توضیحاتِ انتقال (اختیاری)..."
                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description') }}</textarea>
+                    <p class="text-[11px] text-gray-400">با ثبت، لینکِ رسید برای مشتری پیامک می‌شود.</p>
                     <button class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-bold">ثبتِ رسیدِ انتقال</button>
                 </form>
+                @endif
                 @endcan
             </div>
+            @endif
 
             {{-- پرچم‌های امنیتیِ سفارش: قفل + مشکوک به تقلب --}}
             @can('manage-order-security')

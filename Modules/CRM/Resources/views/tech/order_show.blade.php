@@ -138,7 +138,8 @@
 
             {{-- رسیدِ انتقال — فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» --}}
             @php
-                $canTransfer = $order->status instanceof \Modules\CRM\Enums\OrderStatus
+                $canTransfer = \Modules\CRM\Services\TransferReceiptService::enabled()
+                    && $order->status instanceof \Modules\CRM\Enums\OrderStatus
                     && in_array($order->status, [\Modules\CRM\Enums\OrderStatus::Open, \Modules\CRM\Enums\OrderStatus::RepairStarted], true);
                 $trReceipts = $order->transferReceipts;
             @endphp

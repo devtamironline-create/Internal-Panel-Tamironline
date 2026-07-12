@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\TransferReceipt;
+use Modules\CRM\Services\TransferReceiptService;
 
 /**
  * رسیدِ انتقالِ دستگاه برای تعمیر — سمتِ پنلِ ادمین:
@@ -17,19 +18,18 @@ class TransferReceiptController extends Controller
 {
     public function store(Request $request, Order $order)
     {
+        abort_unless(TransferReceiptService::enabled(), 404);
+
         $data = $request->validate([
             'description' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $receipt = TransferReceipt::create([
-            'order_id' => $order->id,
-            'description' => $data['description'] ?? null,
-            'created_by' => auth()->id(),
-        ]);
+        $receipt = app(TransferReceiptService::class)
+            ->createAndNotify($order, $data['description'] ?? null, auth()->id());
 
         return redirect()
             ->route('crm.orders.show', $order)
-            ->with('success', 'رسیدِ انتقال ثبت شد: '.$receipt->code);
+            ->with('success', 'رسیدِ انتقال ثبت شد و لینکش برای مشتری پیامک شد: '.$receipt->code);
     }
 
     public function print(TransferReceipt $transferReceipt)
