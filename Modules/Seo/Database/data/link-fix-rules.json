@@ -1,0 +1,2314 @@
+[
+    {
+        "old_url": "http://tamironline.com/repair/washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine",
+        "note": "صفحه خدمت جدید و دقیق تعمیر ماشین لباسشویی وجود دارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "https://tamironline.com/repair/washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine",
+        "note": "صفحه خدمت جدید و دقیق تعمیر ماشین لباسشویی وجود دارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی قطعات لباسشویی وجود ندارد؛ صفحه خدمات یا بلاگ عمومی جایگزین دقیق نیست.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/refrigerator-and-freezer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer",
+        "note": "صفحه خدمت جدید و دقیق تعمیر یخچال و فریزر وجود دارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/dishwasher/dishwasher-heat-pump/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "مقاله یا لندینگ مستقلی که دقیقاً درباره هیت‌پمپ ظرفشویی باشد پیدا نشد؛ مقالات ارورها فقط مرتبط‌اند، نه جایگزین دقیق.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/microswitch/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-میکروسوئیچ-ماشین-لباسشویی",
+        "note": "مقاله اختصاصی تعمیر و تعویض میکروسوئیچ لباسشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/solenoid-valve/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-و-تعویض-شیربرقی-لباسشویی",
+        "note": "مقاله اختصاصی تعمیر و تعویض شیر برقی لباسشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/detergents/dishwasher-tablets/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "برای جلوگیری از خودلینک یا انتخاب مقصد متفاوت، طبق شیت «404 ردیف‌به‌ردیف» اجرا شود.",
+        "source": "404",
+        "needs_review": true
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/washing-machine-pump/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "برای جلوگیری از خودلینک یا انتخاب مقصد متفاوت، طبق شیت «404 ردیف‌به‌ردیف» اجرا شود.",
+        "source": "404",
+        "needs_review": true
+    },
+    {
+        "old_url": "http://tamironline.com/products/جرمگیر-لباسشویی-و-ظرفشویی-بوش-آلمان/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "برای جلوگیری از خودلینک یا انتخاب مقصد متفاوت، طبق شیت «404 ردیف‌به‌ردیف» اجرا شود.",
+        "source": "404",
+        "needs_review": true
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/dishwasher/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی قطعات ظرفشویی وجود ندارد؛ صفحه خدمات جایگزین دقیق نیست.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/vacuum-cleaner/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی قطعات جاروبرقی وجود ندارد؛ صفحه خدمات جایگزین دقیق نیست.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/washing-machine-pump/bosch-pump/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خرید-پمپ-ماشین-لباسشویی-بوش",
+        "note": "مقاله اختصاصی پمپ ماشین لباسشویی بوش موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/washing-machine-straps/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مزایا-و-معایب-ماشین-لباسشویی-بدون-تسمه",
+        "note": "مقاله اختصاصی درباره تسمه و ماشین لباسشویی بدون تسمه موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/washing-machine-tires/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "برای جلوگیری از خودلینک یا انتخاب مقصد متفاوت، طبق شیت «404 ردیف‌به‌ردیف» اجرا شود.",
+        "source": "404",
+        "needs_review": true
+    },
+    {
+        "old_url": "http://tamironline.com/products/جرمگیر-5-عددی-لباسشویی-و-ظرفشویی-سامسون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مراحل-جرم-گیری-ماشین-ظرفشویی",
+        "note": "مقاله اختصاصی آموزش جرم‌گیری ماشین ظرفشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/cleaning-steamer/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "لندینگ فعلی تعمیر بخارشوی وجود ندارد؛ مقالات موجود آموزشی‌اند و جایگزین دقیق صفحه خدمت نیستند.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/ironing-machine/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "لندینگ فعلی تعمیر اتو یا اتوپرس وجود ندارد؛ مقالات موجود آموزشی‌اند و جایگزین دقیق صفحه خدمت نیستند.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/tag/washing-machine-errors/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "هاب عمومی و دقیق ارورهای همه لباسشویی‌ها در ساختار فعلی پیدا نشد؛ مقالات برندمحور جایگزین این تگ نیستند.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/detergents/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی مواد شوینده وجود ندارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/detergents/dishwasher-gel/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "مقاله یا صفحه مستقلی که دقیقاً درباره ژل شوینده ظرفشویی باشد پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/detergents/dishwasher-tablets/finish/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه مستقلی برای قرص فینیش با همان موضوع و نیت وجود ندارد؛ مقالات عمومی قرص جایگزین دقیق برند نیستند.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/refrigerator-side/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی قطعات یخچال و ساید وجود ندارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/vacuum-cleaner/vacuum-cleaner-filter/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نحوه-شستن-فیلتر-جاروبرقی-بوش",
+        "note": "مقاله اختصاصی شستن و نگهداری فیلتر جاروبرقی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products-category/washing-machine/door-handle/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/درب-لباسشویی-بوش",
+        "note": "مقاله اختصاصی باز کردن در و تعویض دستگیره لباسشویی بوش موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/تسمه-ماشین-لباسشویی-آاگ-1260-1262/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه یا مقاله دقیقی برای همین تسمه و مدل آاگ پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/خرطومی-جاپودری-ماشین-لباسشویی-بوش/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه یا مقاله مستقلی دقیقاً درباره خرطومی جاپودری بوش پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/فیلتر-ماشین-ظرفشویی-بوش-کد-قطعه-00645038/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/dishwasher-cleaning-filter",
+        "note": "مقاله اختصاصی تمیز کردن فیلتر ماشین ظرفشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/مایع-جلادهنده-فینیش-800-میل/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/وظیفه-مایع-جلادهنده-ظرفشویی",
+        "note": "مقاله اختصاصی وظیفه و نحوه استفاده از جلادهنده ظرفشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/هیت-پمپ-ماشین-ظرفشویی-بوش-سری-sms/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه یا مقاله مستقلی دقیقاً برای هیت‌پمپ بوش سری SMS پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/پمپ-ماشین-ظرفشویی-بوش-اینورتر-سری-sms/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه یا مقاله مستقلی دقیقاً برای پمپ اینورتر بوش سری SMS پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/کمک-فنر-ماشین-لباسشویی-80-نیوتون-2عدد/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه یا مقاله مستقلی دقیقاً برای کمک‌فنر ۸۰ نیوتون پیدا نشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/products/کیسه-نانو-جاروبرقی-دیاموند/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/پاکت-جاروبرقی",
+        "note": "مقاله دقیق درباره پاکت و کیسه جاروبرقی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/wp-admin/post.php?post=1291&amp;action=edit",
+        "action": "unlink",
+        "new_url": null,
+        "note": "لینک مدیریتی وردپرس نباید در محتوای عمومی وجود داشته باشد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "https://tamironline.com/category/appliances/water-heater/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog?topic=water-heater",
+        "note": "هاب جدید و دقیق مقالات آبگرمکن در ساختار فعلی بلاگ وجود دارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "https://tamironline.com/products-category/washing-machine/",
+        "action": "unlink",
+        "new_url": null,
+        "note": "صفحه فعلی فروشگاه یا هاب اختصاصی قطعات لباسشویی وجود ندارد؛ صفحه خدمات یا بلاگ عمومی جایگزین دقیق نیست.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "https://tamironline.com/products-category/washing-machine/solenoid-valve/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-و-تعویض-شیربرقی-لباسشویی",
+        "note": "مقاله اختصاصی تعمیر و تعویض شیر برقی لباسشویی موجود است.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "https://tamironline.com/repair/refrigerator-and-freezer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer",
+        "note": "صفحه خدمت جدید و دقیق تعمیر یخچال و فریزر وجود دارد.",
+        "source": "404",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/dishwasher/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/bosch-washing-machines-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/bosch",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/samsung-washing-machines-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/samsung",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/bosch-dishwasher-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/bosch",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/vacuum-cleaner/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/repair-washing-machine-lg/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/lg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/عدم-تخلیه-آب-در-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/عدم-تخلیه-آب-در-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-صدای-زیاد-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-صدای-زیاد-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-برد-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-برد-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نگهداری-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نگهداری-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/aeg-washing-machine-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/aeg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/samsung-dishwasher-service/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/samsung",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/bosch-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/bosch",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/bosch-washing-machine-errors/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/bosch-washing-machine-errors",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/no-water-washingmachine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/no-water-washingmachine",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارورهای-ماشین-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارورهای-ماشین-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/air-conditioner/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/split-air-conditioner",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/tv/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/tv",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/lg-dishwasher-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/lg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/اشتباهات-استفاده-از-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/اشتباهات-استفاده-از-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/قفل-شدن-درب-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/قفل-شدن-درب-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-برد-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-برد-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کیفیت-صفحه-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کیفیت-صفحه-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/side_by_side/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/side-by-side",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/after-sales-service-daewoo-laundry/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/daewoo",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/samsung-vacuum-cleaner-services/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/samsung",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-میکروسوئیچ-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-میکروسوئیچ-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/همه-چیز-درباره-تعمیر-موتور-ماشین-لباسش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/همه-چیز-درباره-تعمیر-موتور-ماشین-لباسش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/هیدرواستات-ماشین-لباسشویی-چیست؟/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/هیدرواستات-ماشین-لباسشویی-چیست؟",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کار-نکردن-خشک-کن-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کار-نکردن-خشک-کن-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/gas/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/aeg-dishwasher-repair-agency/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/aeg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/general-electric-refrigerator-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer/general-electric",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/philips-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/philips",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/samsung-refrigerator-and-side-by-side-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer/samsung",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-oe-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-oe-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نحوه-ریختن-نمک-در-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نحوه-ریختن-نمک-در-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/oven-and-microwave/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/microwave",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/aeg-vacuum-cleaner-dealer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/aeg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/bosch-side-by-side-refrigerator-freezer-repair-agency/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer/bosch",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/indesit-dishwasher-repair-agent/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/indesit",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/siemens-dishwasher-repair-agent/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/siemens",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/snowa-washing-machine-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/snowa",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارورهای-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارورهای-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/برفک-زدن-یخچال-فریزر/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/برفک-زدن-یخچال-فریزر",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تخلیه-نشدن-آب-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تخلیه-نشدن-آب-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تمیز-کردن-کف-اتو/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تمیز-کردن-کف-اتو",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تنظیم-دمای-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تنظیم-دمای-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-سوختن-بک-لایت-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-سوختن-بک-لایت-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-یخ-زدن-داخل-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-یخ-زدن-داخل-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/گرم-شدن-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/گرم-شدن-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/midea-washing-machine-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/midea",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/pakshoma-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/pakshoma",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/pars-khazar-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/pars-khazar",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/repair-gas-akhavan/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/akhavan",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/the-meaning-of-duvet-in-laundry/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/the-meaning-of-duvet-in-laundry",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-4e-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-4e-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-de-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-de-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-لباسشویی-آاگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-لباسشویی-آاگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/باقی-ماندن-پودر-روی-لباس/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/باقی-ماندن-پودر-روی-لباس",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بهترین-شوینده-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بهترین-شوینده-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تمیز-کردن-صفحه-گاز/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تمیز-کردن-صفحه-گاز",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خاموش-شدن-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خاموش-شدن-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/سوختگی-موتور-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/سوختگی-موتور-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/صدای-زیاد-جاروبرقی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/صدای-زیاد-جاروبرقی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علل-نچرخیدن-دیگ-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علل-نچرخیدن-دیگ-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مقایسه-تلویزیون‌-ایرانی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مقایسه-تلویزیون‌-ایرانی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مقدار-پودر-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مقدار-پودر-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نحوه-تمیز-کردن-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نحوه-تمیز-کردن-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/10-پرسش-اساسی-در-مورد-اسپلیت/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/10-پرسش-اساسی-در-مورد-اسپلیت",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/how-to-use-a-washing-machine-dryer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/how-to-use-a-washing-machine-dryer",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/leveling-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/leveling-washing-machine",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/robotic-vacuum-cleaner/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/robotic-vacuum-cleaner",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/samsung-washing-machine-ue-error/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/samsung-washing-machine-ue-error",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/aeg-refrigerator-and-side-by-side-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer/aeg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/alton-gas-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/alton",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/bosch-table-and-gas-stove-repair-agency/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/bosch",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/gas-repair-lofra/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/lofra",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/gas-repair-sinjer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/sinjer",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/lg-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/lg",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/siemens-washing-machine-repair-agent/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/siemens",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/steelalborz-gas-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/steel-alborz",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/tecnogas-gas-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/tecnogas",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/washing-curtains-with-a-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/washing-curtains-with-a-washing-machine",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/آبگیری-تخلیه-مداوم-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/آبگیری-تخلیه-مداوم-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/آسیب-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/آسیب-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/آموزش-تعویض-فیلتر-جنرال-الکتریک/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/آموزش-تعویض-فیلتر-جنرال-الکتریک",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-5e-ماشین-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-5e-ماشین-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-de-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-de-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-f43-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-f43-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-le-یا-ارور-e9-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-le-یا-ارور-e9-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-sud-ماشین-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-sud-ماشین-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-ظرفشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-ظرفشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور8e-لباسشویی-سامسونگ-و-روش-رفع-خطا/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور8e-لباسشویی-سامسونگ-و-روش-رفع-خطا",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/برنامه-شستشوی-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/برنامه-شستشوی-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بهترین-سایز-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بهترین-سایز-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تشخیص-نمک-ظرفشویی-اصلی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تشخیص-نمک-ظرفشویی-اصلی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-سیم-جمع-کن-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-سیم-جمع-کن-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-یخچال-جنرال-الکتریک/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-یخچال-جنرال-الکتریک",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعویض-لاستیک-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعویض-لاستیک-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تفاوت-ال-سی-دی-ال-ای-دی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تفاوت-ال-سی-دی-ال-ای-دی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تفاوت-تلویزیون-تخت-منحنی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تفاوت-تلویزیون-تخت-منحنی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تفاوت-پکیج-فن-دار-بدون-فن/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تفاوت-پکیج-فن-دار-بدون-فن",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/جمع-شدن-آب-ظرفشویی-خاموش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/جمع-شدن-آب-ظرفشویی-خاموش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خشک-نشدن-ظروف-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خشک-نشدن-ظروف-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خطای-ce-ماشین-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خطای-ce-ماشین-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/داغ-شدن-موتور-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/داغ-شدن-موتور-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/شستشوی-پتو-با-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/شستشوی-پتو-با-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/شستن-حوله-پتو-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/شستن-حوله-پتو-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/شستن-لباس-با-آب-سرد/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/شستن-لباس-با-آب-سرد",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/صدای-بلند-چرخ-گوشت/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/صدای-بلند-چرخ-گوشت",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-آبگیری-نکردن-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-آبگیری-نکردن-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-ارور-ue-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-ارور-ue-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-بسته-نشدن-درب-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-بسته-نشدن-درب-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-صدای-زیاد-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-صدای-زیاد-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-ماندن-کف-در-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-ماندن-کف-در-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-گرم-نشدن-آب-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-گرم-نشدن-آب-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/عمر-مفید-لوازم-خانگی-چقدر-است؟/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/عمر-مفید-لوازم-خانگی-چقدر-است؟",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/فیلتر-آب-ساید-بای-ساید/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/فیلتر-آب-ساید-بای-ساید",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/قرص-ماشین-ظرفشویی-2/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/قرص-ماشین-ظرفشویی-2",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/قفل-کودک-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/قفل-کودک-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/لباسشویی-درب-فضایی-چیست/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/لباسشویی-درب-فضایی-چیست",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/لرزش-زیاد-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/لرزش-زیاد-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نمایندگی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نمایندگی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نکات-نصب-تلویزیون-به-دیوار/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نکات-نصب-تلویزیون-به-دیوار",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/هزینه-تعویض-موتور-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/هزینه-تعویض-موتور-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کار-نکردن-فندک-اجاق-گاز/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کار-نکردن-فندک-اجاق-گاز",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/۵-علت-خاموش-شدن-صفحه-نمایش-یخچال-را-بشنا/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/۵-علت-خاموش-شدن-صفحه-نمایش-یخچال-را-بشنا",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/8-علت-روشن-نشدن-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/8-علت-روشن-نشدن-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/detergent-left-in-washing-machine-dispenser/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/detergent-left-in-washing-machine-dispenser",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/dishwasher-cleaning-filter/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/dishwasher-cleaning-filter",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/dishwasher-leaking/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/dishwasher-leaking",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/how-to-open-a-vacuum-cleaner/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/how-to-open-a-vacuum-cleaner",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/how-to-use-dishwasher-tablets/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/how-to-use-dishwasher-tablets",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/kenwood-washing-machine-errors/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/kenwood-washing-machine-errors",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/learning-how-to-wash-a-coat-with-a-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/learning-how-to-wash-a-coat-with-a-washing-machine",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/lg-washing-machine-words/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/lg-washing-machine-words",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/reasons-for-not-opening-the-washing-machine-filter/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/reasons-for-not-opening-the-washing-machine-filter",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/reasons-for-vacuum-cleaner-failure/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/reasons-for-vacuum-cleaner-failure",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/charging-vacume-cleaner/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/repair/package/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/wall-mounted-boiler",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/samsung-washing-machine-e7-error/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/samsung-washing-machine-e7-error",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/candy-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/candy",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/daewoo-refrigerator-and-side-by-side-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/refrigerator-freezer/daewoo",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/dishwasher-repair-electrolux/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/electrolux",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/dishwasher-repair-kenwood/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/kenwood",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/electrolux-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/electrolux",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/indesit-washing-machine-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/indesit",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/kenwood-laundry-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/kenwood",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/neff-dishwasher-repair-agency/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/neff",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/panasonic-vacuum-cleaner-repair/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/vacuum-cleaner/panasonic",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/repair-gas-can/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/gaz/can",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/repair-washing-machine-arj/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/washing-machine/arj",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/services/samsung-dishwasher-service/?preview=true",
+        "action": "replace",
+        "new_url": "https://tamironline.com/services/dishwasher/samsung?preview=true",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/the-meaning-of-spin-in-laundry/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/the-meaning-of-spin-in-laundry",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/washing-machine-scaling/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/washing-machine-scaling",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/washing-suits-with-washing-machine/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/washing-suits-with-washing-machine",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/what-is-airfryer/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/what-is-airfryer",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/آب-رفتن-در-موتور-جارو-برقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/آب-رفتن-در-موتور-جارو-برقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/آموزش-نصب-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/آموزش-نصب-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-ae-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-ae-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-ce-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-ce-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-cl-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-cl-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e01-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e01-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e04-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e04-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e07-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e07-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e09-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e09-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e10-لباسشویی-آاگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e10-لباسشویی-آاگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e11-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e11-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e14-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e14-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e15-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e15-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e17-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e17-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e18-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e18-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e24-در-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e24-در-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e25-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e25-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e40-لباسشویی-آاگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e40-لباسشویی-آاگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-e50-لباسشویی-آاگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-e50-لباسشویی-آاگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-ei-ae-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-ei-ae-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-f16-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-f16-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-f23-ماشین-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-f23-ماشین-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-f67-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-f67-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-fe-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-fe-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-hrs-یخچال-جنرال-الکتریک/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-hrs-یخچال-جنرال-الکتریک",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-le-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-le-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-oe-لباسشویی-الجی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-oe-لباسشویی-الجی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-pe-در-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-pe-در-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-se-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-se-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-te-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-te-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/ارور-یخچال-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/ارور-یخچال-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/از-بین-بردن-بوی-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/از-بین-بردن-بوی-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/افزایش-مکش-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/افزایش-مکش-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/المنت-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/المنت-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بازکردن-لوله-فاضلاب-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بازکردن-لوله-فاضلاب-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بخار-ندادن-بخارشوی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بخار-ندادن-بخارشوی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/برچسب-انرژی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/برچسب-انرژی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بهترین-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بهترین-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/بهترین-محل-نصب-ظرفشویی-در-آشپزخانه/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/بهترین-محل-نصب-ظرفشویی-در-آشپزخانه",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-ال-ای-دی-شکسته-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-ال-ای-دی-شکسته-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تعمیر-مین-برد-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تعمیر-مین-برد-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تفاوت-مهم-آبگرمکن-پکیج/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تفاوت-مهم-آبگرمکن-پکیج",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تلویزیون-4k-یا-full-hd/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تلویزیون-4k-یا-full-hd",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تمیز-کردن-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تمیز-کردن-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تمیز_نشستن_ظروف_ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تمیز_نشستن_ظروف_ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تنظیم-درجه-حرارت-اتو-انواع-پارچه/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تنظیم-درجه-حرارت-اتو-انواع-پارچه",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/تنظیم-فشار-آب-پکیج/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/تنظیم-فشار-آب-پکیج",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/جرم-گیری-ماشین-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/جرم-گیری-ماشین-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/جلو-نرفتن-تایمر-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/جلو-نرفتن-تایمر-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خاموش-شدن-ظرفشویی-حینکار/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خاموش-شدن-ظرفشویی-حینکار",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خرابی-پنل-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خرابی-پنل-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خرابی-یخساز-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خرابی-یخساز-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خرید-لاستیک-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خرید-لاستیک-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خطای-ie-در-ماشین-لباسشویی-ال-جی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خطای-ie-در-ماشین-لباسشویی-ال-جی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/خنک-نکردن-یخچال-جنرال-الکتریک/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/خنک-نکردن-یخچال-جنرال-الکتریک",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/درب-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/درب-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/دلایل-خاموش-شدن-ناگهانی-کولر-گازی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/دلایل-خاموش-شدن-ناگهانی-کولر-گازی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/دلایل-چرخ-نشدن-گوشت/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/دلایل-چرخ-نشدن-گوشت",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/راه-حل-خنک-کردن-موتور-یخچال/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/راه-حل-خنک-کردن-موتور-یخچال",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/راه-حل-های-تمیز-کردن-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/راه-حل-های-تمیز-کردن-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/راهکارهای-افرایش-طول-عمر-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/راهکارهای-افرایش-طول-عمر-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/رفع-بوی-بد-ماشین-ظرفشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/رفع-بوی-بد-ماشین-ظرفشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/روشن-نشدن-ماشین-لباسشویی-بوش/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/روشن-نشدن-ماشین-لباسشویی-بوش",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/سرد-بودن-آب-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/سرد-بودن-آب-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/شوره-کولر-آبی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/شوره-کولر-آبی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/شیر-برقی-ماشین-لباسشویی-چیست-و-چه-وظیفه/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/شیر-برقی-ماشین-لباسشویی-چیست-و-چه-وظیفه",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/صدا-بلند-کولر-گازی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/صدا-بلند-کولر-گازی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-آبگیری-نکردن-ماشین-ظرفشویی-2/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-آبگیری-نکردن-ماشین-ظرفشویی-2",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-جرقه-زدن-موتور-جاروبرقی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-جرقه-زدن-موتور-جاروبرقی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-خاموش-شدن-جاروبرقی-سامسونگ-و-راه-ها/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-خاموش-شدن-جاروبرقی-سامسونگ-و-راه-ها",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-روشن-نشدن-لباسشویی-سامسونگ/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-روشن-نشدن-لباسشویی-سامسونگ",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-شستشوی-طولانی-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-شستشوی-طولانی-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-صدای-زیاد-پکیج/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-صدای-زیاد-پکیج",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علت-کم-نور-شدن-صفحه-تلویزیون/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علت-کم-نور-شدن-صفحه-تلویزیون",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/علل-خرابی-میکروسوئیچ-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/علل-خرابی-میکروسوئیچ-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/لاستیک-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/لاستیک-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مراحل-جرم-گیری-ماشین-ظرفشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مراحل-جرم-گیری-ماشین-ظرفشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مزایا-و-معایب-ماشین-لباسشویی-بدون-تسمه/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مزایا-و-معایب-ماشین-لباسشویی-بدون-تسمه",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مقایسه-بخاری-پکیج/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مقایسه-بخاری-پکیج",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/مقایسه-لباسشویی-سامسونگ-الجی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/مقایسه-لباسشویی-سامسونگ-الجی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نبایدهای-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نبایدهای-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نحوه-تعویض-پمپ-تخلیه-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نحوه-تعویض-پمپ-تخلیه-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/نحوه-تمیز-کردن-کولر-گازی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/نحوه-تمیز-کردن-کولر-گازی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/چرا-درب-لباسشویی-باز-نمی-شود/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/چرا-درب-لباسشویی-باز-نمی-شود",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/چسبیدن-لباس-اتو/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/چسبیدن-لباس-اتو",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/چکیدن-آب-اتو/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/چکیدن-آب-اتو",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کاسه-نمد-ماشین-لباسشویی/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کاسه-نمد-ماشین-لباسشویی",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کاهش-گرد-خاک-کولر/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کاهش-گرد-خاک-کولر",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کم-شدن-بخار-اتو/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کم-شدن-بخار-اتو",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/کیفیت-تلویزیون-اسنوا/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/کیفیت-تلویزیون-اسنوا",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    },
+    {
+        "old_url": "http://tamironline.com/گرم-نشدن-آب-پکیج/",
+        "action": "replace",
+        "new_url": "https://tamironline.com/blog/گرم-نشدن-آب-پکیج",
+        "note": "زنجیره ریدایرکت → مقصد نهایی مستقیم",
+        "source": "redirect",
+        "needs_review": false
+    }
+]
