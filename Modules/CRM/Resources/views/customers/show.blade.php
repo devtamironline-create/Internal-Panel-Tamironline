@@ -40,6 +40,41 @@
     </div>
     @endif
 
+    {{-- بلاکِ مشتری (جلوگیری از ثبتِ سفارشِ جدید؛ سوابق حفظ می‌شود) --}}
+    @can('edit-crm-customer')
+    @if($customer->is_blocked)
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="text-sm text-red-800 dark:text-red-200 leading-6">
+            <div class="font-bold flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                این مشتری بلاک شده است — امکان ثبتِ سفارشِ جدید ندارد.
+            </div>
+            @if($customer->block_reason)<div>دلیل: «{{ $customer->block_reason }}»</div>@endif
+            @if($customer->blocked_at)<div class="text-xs text-red-600 dark:text-red-300">تاریخِ بلاک: {{ \Morilog\Jalali\Jalalian::fromDateTime($customer->blocked_at)->format('Y/m/d H:i') }}</div>@endif
+            <div class="text-xs mt-1 text-red-700 dark:text-red-300">سوابق و سفارش‌های قبلیِ مشتری حفظ شده‌اند.</div>
+        </div>
+        <form action="{{ route('crm.customers.block', $customer) }}" method="POST" onsubmit="return confirm('بلاکِ این مشتری برداشته شود؟');">
+            @csrf
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 whitespace-nowrap">رفعِ بلاک</button>
+        </form>
+    </div>
+    @else
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+        <form action="{{ route('crm.customers.block', $customer) }}" method="POST" class="flex flex-col sm:flex-row sm:items-end gap-3"
+              onsubmit="return confirm('این مشتری بلاک شود؟ پس از آن نمی‌تواند سفارشِ جدید ثبت کند.');">
+            @csrf
+            <div class="flex-1">
+                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">بلاکِ مشتری — دلیل (الزامی)</label>
+                <input type="text" name="reason" required placeholder="دلیلِ بلاک..."
+                       class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                @error('reason') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+            </div>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold whitespace-nowrap">بلاکِ مشتری</button>
+        </form>
+    </div>
+    @endif
+    @endcan
+
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
         <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">شماره اشتراک</div>

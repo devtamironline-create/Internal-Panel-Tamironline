@@ -298,6 +298,12 @@ class OrderController extends Controller
     {
         $validated = $this->validateOrder($request);
 
+        // مشتریِ بلاک‌شده نمی‌تواند سفارشِ جدید ثبت کند (سوابقِ قبلی حفظ می‌شود).
+        $targetCustomer = Customer::find($validated['customer_id']);
+        if ($targetCustomer && $targetCustomer->is_blocked) {
+            return back()->withInput()->with('error', 'این مشتری بلاک شده است و امکان ثبت سفارشِ جدید برای او وجود ندارد. ابتدا از صفحهٔ مشتری بلاک را بردارید.');
+        }
+
         $order = DB::transaction(function () use ($validated) {
             $customer = Customer::findOrFail($validated['customer_id']);
 
@@ -633,6 +639,9 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order)
     {
+        if ($r = $this->lockedResponse($order)) {
+            return $r;
+        }
         $validated = $this->validateOrder($request, updating: true, order: $order);
 
         // ── ویرایش اطلاعات مشتری (روی پروفایل Customer هم اعمال می‌شود).
@@ -917,6 +926,9 @@ class OrderController extends Controller
     // ───────────── تغییر وضعیت ─────────────────────────────────
     public function changeStatus(Request $request, Order $order)
     {
+        if ($r = $this->lockedResponse($order)) {
+            return $r;
+        }
         $rules = [
             'status' => ['required', 'string'],
             'note' => 'nullable|string|max:2000',
@@ -1045,6 +1057,161 @@ class OrderController extends Controller
     }
 
     /**
+     * قفل/بازکردنِ سفارش (پرچمِ امنیتی). سفارشِ قفل‌شده تا باز نشود ویرایش و
+     * تغییرِ وضعیت نمی‌پذیرد. toggle: اگر قفل است باز می‌شود و برعکس.
+     */
+    public function toggleLock(Request $request, Order $order)
+    {
+        if ($order->is_locked) {
+            $order->update(['is_locked' => false, 'locked_by' => null, 'locked_at' => null, 'lock_reason' => null]);
+            $this->logSecurity($order, 'قفلِ سفارش باز شد.');
+
+            return back()->with('success', 'قفلِ سفارش باز شد.');
+        }
+
+        $reason = trim((string) $request->input('reason'));
+        $order->update([
+            'is_locked' => true,
+            'locked_by' => auth()->id(),
+            'locked_at' => now(),
+            'lock_reason' => $reason !== '' ? mb_substr($reason, 0, 500) : null,
+        ]);
+        $this->logSecurity($order, 'سفارش قفل شد.'.($reason !== '' ? ' دلیل: '.$reason : ''));
+
+        return back()->with('success', 'سفارش قفل شد. تا باز نشود، ویرایش و تغییرِ وضعیت ممکن نیست.');
+    }
+
+    /**
+     * علامت‌گذاری/برداشتنِ «مشکوک به تقلب» (پرچمِ امنیتیِ مستقل — فقط برای بررسی؛
+     * جریانِ سفارش را مسدود نمی‌کند).
+     */
+    public function toggleFraud(Request $request, Order $order)
+    {
+        if ($order->is_suspected_fraud) {
+            $order->update(['is_suspected_fraud' => false, 'fraud_flagged_by' => null, 'fraud_flagged_at' => null, 'fraud_note' => null]);
+            $this->logSecurity($order, 'علامتِ «مشکوک به تقلب» برداشته شد.');
+
+            return back()->with('success', 'علامتِ مشکوک به تقلب برداشته شد.');
+        }
+
+        $note = trim((string) $request->input('note'));
+        $order->update([
+            'is_suspected_fraud' => true,
+            'fraud_flagged_by' => auth()->id(),
+            'fraud_flagged_at' => now(),
+            'fraud_note' => $note !== '' ? mb_substr($note, 0, 500) : null,
+        ]);
+        $this->logSecurity($order, 'سفارش «مشکوک به تقلب» علامت خورد.'.($note !== '' ? ' یادداشت: '.$note : ''));
+
+        return back()->with('success', 'سفارش مشکوک به تقلب علامت خورد.');
+    }
+
+    /**
+     * اگر سفارش قفل است، پاسخِ خطا برمی‌گرداند (برای مسدودکردنِ تغییرات)؛
+     * وگرنه null. در ابتدای اکشن‌های تغییردهنده صدا زده می‌شود.
+     */
+    private function lockedResponse(Order $order): ?\Illuminate\Http\RedirectResponse
+    {
+        if ($order->is_locked) {
+            return back()->with('error', 'این سفارش قفل شده است؛ برای هر تغییری ابتدا باید قفل باز شود.');
+        }
+
+        return null;
+    }
+
+    /** ثبتِ یک رویدادِ امنیتی در تاریخچهٔ سفارش (بدونِ تغییرِ وضعیت). */
+    private function logSecurity(Order $order, string $note): void
+    {
+        $s = $order->status instanceof OrderStatus ? $order->status->value : (string) $order->status;
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $s,
+            'to_status' => $s,
+            'note' => $note,
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+    }
+
+    /**
+     * کارشناسیِ برگشتیِ گارانتی — «تأیید». سفارشِ در وضعیتِ «برگشتی گارانتی»
+     * تأیید و برای انجامِ خدمات دوباره به تکنسین ارجاع می‌شود (وضعیت →
+     * «هماهنگ شده»، تکنسینِ فعلی حفظ می‌شود). qc_status='approved'.
+     */
+    public function approveReturn(Request $request, Order $order)
+    {
+        if ($r = $this->lockedResponse($order)) {
+            return $r;
+        }
+        $current = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+
+        if ($current !== OrderStatus::Returned) {
+            return back()->with('error', 'کارشناسی فقط روی سفارش‌های «برگشتی گارانتی» ممکن است.');
+        }
+
+        $order->update([
+            'status' => OrderStatus::Coordinated->value,
+            'qc_status' => 'approved',
+        ]);
+
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::Returned->value,
+            'to_status' => OrderStatus::Coordinated->value,
+            'note' => 'تأیید برگشتیِ گارانتی — ارجاع دوباره به تکنسین.'
+                .(($n = trim((string) $request->input('note'))) !== '' ? ' '.$n : ''),
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'برگشتی تأیید شد و سفارش برای انجام خدمات به تکنسین ارجاع شد.');
+    }
+
+    /**
+     * کارشناسیِ برگشتیِ گارانتی — «رد». برگشتی پذیرفته نمی‌شود؛ فرآیندِ برگشتی
+     * خاتمه می‌یابد و سفارش به وضعیتِ «تکمیل شده»ی قبلی بازمی‌گردد (سفارش قبلاً
+     * انجام شده بوده). qc_status='rejected'. دلیل الزامی است.
+     */
+    public function rejectReturn(Request $request, Order $order)
+    {
+        if ($r = $this->lockedResponse($order)) {
+            return $r;
+        }
+        $current = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+
+        if ($current !== OrderStatus::Returned) {
+            return back()->with('error', 'کارشناسی فقط روی سفارش‌های «برگشتی گارانتی» ممکن است.');
+        }
+
+        $validated = $request->validate([
+            'note' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'note.required' => 'برای ردِ برگشتی، دلیل الزامی است.',
+            'note.min' => 'دلیل باید حداقل ۳ نویسه باشد.',
+        ]);
+
+        $order->update([
+            'status' => OrderStatus::Completed->value,
+            'qc_status' => 'rejected',
+        ]);
+
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::Returned->value,
+            'to_status' => OrderStatus::Completed->value,
+            'note' => 'رد برگشتیِ گارانتی: '.$validated['note'],
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', 'برگشتی رد شد و سفارش بسته شد.');
+    }
+
+    /**
      * بازگشت سفارش — هم‌ارز return_order در libs/order.php (WP CRM).
      *
      * - return_type ∈ {1=برگشت انجام شده, 2=برگشت کنسل شده}
@@ -1058,6 +1225,9 @@ class OrderController extends Controller
      */
     public function returnOrder(Request $request, Order $order)
     {
+        if ($r = $this->lockedResponse($order)) {
+            return $r;
+        }
         // گارد: بازگشت سفارش فقط روی وضعیت‌های نهایی مجاز است (هم‌ارز
         // returnOrderStatus در WP CRM که فقط بعد از تکمیل/کنسل قابل
         // اجراست). برای سفارش جریانی، باید ابتدا با تغییر وضعیت اقدام

@@ -191,8 +191,9 @@ enum OrderStatus: string
                 self::Completed, self::Cancelled,
             ],
 
-            // برگشتی گارانتی: کارشناسی (تأیید → هماهنگ‌شده، رد → لغو).
-            self::Returned => [self::Coordinated, self::Cancelled],
+            // برگشتی گارانتی: کارشناسی (تأیید → هماهنگ‌شده، رد → تکمیل‌شده)،
+            // یا لغو در مواردِ خاص.
+            self::Returned => [self::Coordinated, self::Completed, self::Cancelled],
 
             // رد شده (تکنسین): ادمین می‌تواند به «لغو» تبدیل کند.
             self::Declined => [self::Cancelled],
@@ -229,9 +230,10 @@ enum OrderStatus: string
 
             self::New, self::AwaitingCoordination, self::NoAnswer,
             self::Suspended, self::Open, self::AwaitingPart,
-            self::AwaitingCustomerApproval, self::Returned => 'waiting',
+            self::AwaitingCustomerApproval => 'waiting',
 
-            self::Completed, self::Transit, self::Cancelled, self::Declined => 'finished',
+            self::Completed, self::Transit, self::Cancelled,
+            self::Declined, self::Returned => 'finished',
         };
     }
 

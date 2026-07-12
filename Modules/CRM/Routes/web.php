@@ -253,6 +253,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-customer')->group(function () {
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        // بلاک/رفعِ بلاکِ مشتری (جلوگیری از ثبتِ سفارشِ جدید)
+        Route::post('customers/{customer}/block', [CustomerController::class, 'toggleBlock'])->name('customers.block');
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
@@ -329,6 +331,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // آیتم‌های سفارش (قطعه/خدمت/حمل/تخفیف)
         Route::post('orders/{order}/items', [OrderItemController::class, 'store'])->name('orders.items.store');
         Route::delete('orders/{order}/items/{item}', [OrderItemController::class, 'destroy'])->name('orders.items.destroy');
+
+        // پرچم‌های امنیتی (قفل / مشکوک به تقلب)
+        Route::post('orders/{order}/lock', [OrderController::class, 'toggleLock'])->name('orders.lock');
+        Route::post('orders/{order}/fraud', [OrderController::class, 'toggleFraud'])->name('orders.fraud');
     });
     Route::middleware('can:delete-crm-order')->group(function () {
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
@@ -349,6 +355,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:change-crm-order-status')->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
         Route::post('orders/{order}/return', [OrderController::class, 'returnOrder'])->name('orders.return');
+        // کارشناسیِ برگشتیِ گارانتی (روی سفارش‌های وضعیتِ «برگشتی گارانتی»)
+        Route::post('orders/{order}/return/approve', [OrderController::class, 'approveReturn'])->name('orders.return.approve');
+        Route::post('orders/{order}/return/reject', [OrderController::class, 'rejectReturn'])->name('orders.return.reject');
     });
 
     // ─── قالب‌های SMS و گزارش ارسال ────────────────────────────

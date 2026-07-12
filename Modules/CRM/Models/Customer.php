@@ -46,6 +46,10 @@ class Customer extends Authenticatable
         'last_login_at',
         'last_login_ip',
         'notes',
+        'is_blocked',
+        'block_reason',
+        'blocked_by',
+        'blocked_at',
     ];
 
     protected $hidden = [
@@ -62,6 +66,8 @@ class Customer extends Authenticatable
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'is_blocked' => 'boolean',
+            'blocked_at' => 'datetime',
         ];
     }
 
