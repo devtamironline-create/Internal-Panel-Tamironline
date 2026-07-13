@@ -26,7 +26,8 @@ class LinkFixRule extends Model
     protected static function booted(): void
     {
         static::creating(function (self $rule) {
-            $rule->old_url_hash = sha1((string) $rule->old_url);
+            // هش روی کلیدِ نرمال — http/https و اسلشِ انتهایی یک قاعده‌اند.
+            $rule->old_url_hash = sha1(\Modules\Seo\Services\ContentLinkFixer::normalizedKey((string) $rule->old_url));
         });
     }
 

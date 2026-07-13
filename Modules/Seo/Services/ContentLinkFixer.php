@@ -101,6 +101,15 @@ class ContentLinkFixer
     ];
 
     /**
+     * کلیدِ نرمالِ یک URL برای یکتاییِ قواعد: بدونِ scheme و بدونِ اسلشِ
+     * انتهایی — یعنی http/https و با/بدونِ / یک قاعده محسوب می‌شوند.
+     */
+    public static function normalizedKey(string $url): string
+    {
+        return rtrim(strtolower((string) preg_replace('~^https?://~i', '', trim($url))), '/');
+    }
+
+    /**
      * واریانت‌های یک URL که باید در محتوا پیدا شوند: http/https، با/بدونِ
      * اسلشِ انتهایی، و شکلِ درصد-انکدشده/دیکد‌شدهٔ مسیرِ فارسی.
      *
