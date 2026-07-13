@@ -40,12 +40,12 @@
                 </a>
             </div>
             <div class="flex items-center gap-4 text-xs">
-                <span class="text-gray-500 dark:text-gray-400">جمعِ ادز: <b class="text-blue-600 dark:text-blue-400" dir="ltr">{{ number_format($chart['total_ad']) }}</b></span>
-                <span class="text-gray-500 dark:text-gray-400">جمعِ شارژ: <b class="text-amber-600 dark:text-amber-400" dir="ltr">{{ number_format($chart['total_wallet']) }}</b></span>
+                <span class="text-gray-500 dark:text-gray-400">جمعِ درآمد: <b class="text-green-600 dark:text-green-400" dir="ltr">{{ number_format($chart['total_income']) }}</b></span>
+                <span class="text-gray-500 dark:text-gray-400">جمعِ ادز: <b class="text-red-600 dark:text-red-400" dir="ltr">{{ number_format($chart['total_ad']) }}</b></span>
             </div>
         </div>
         <div id="gads-chart" wire:ignore></div>
-        <p class="text-[11px] text-gray-400 mt-1 text-center">میله‌ها به تفکیکِ روزِ ماه — آبی: هزینهٔ ادز، نارنجی: شارژِ کیف‌پول (تومان).</p>
+        <p class="text-[11px] text-gray-400 mt-1 text-center">به تفکیکِ روزِ ماه — سبز: درآمد (فاکتورها)، قرمز: هزینهٔ ادز (تومان).</p>
     </div>
 
     @push('scripts')
@@ -57,20 +57,23 @@
             var dark = document.documentElement.classList.contains('dark');
             var fmt = function (v) { return Number(v || 0).toLocaleString('fa-IR'); };
             new ApexCharts(el, {
-                chart: { type: 'bar', height: 300, fontFamily: 'inherit', toolbar: { show: false }, foreColor: dark ? '#9ca3af' : '#374151' },
+                chart: { type: 'line', height: 320, fontFamily: 'inherit', toolbar: { show: false }, foreColor: dark ? '#9ca3af' : '#374151', zoom: { enabled: false } },
                 theme: { mode: dark ? 'dark' : 'light' },
                 series: [
-                    { name: 'هزینهٔ ادز', data: @json($chart['ad_series']) },
-                    { name: 'شارژ کیف‌پول', data: @json($chart['wallet_series']) }
+                    { name: 'درآمد', data: @json($chart['income_series']) },
+                    { name: 'هزینهٔ ادز', data: @json($chart['ad_series']) }
                 ],
-                colors: ['#3b82f6', '#f59e0b'],
-                plotOptions: { bar: { columnWidth: '72%', borderRadius: 3 } },
+                colors: ['#16a34a', '#dc2626'],
+                stroke: { curve: 'smooth', width: 3 },
+                markers: { size: 0, hover: { size: 4 } },
                 dataLabels: { enabled: false },
-                stroke: { show: true, width: 2, colors: ['transparent'] },
-                xaxis: { categories: @json($chart['labels']), tickPlacement: 'on', axisTicks: { show: false } },
-                yaxis: { labels: { formatter: fmt } },
+                xaxis: { categories: @json($chart['labels']), tickPlacement: 'on', axisTicks: { show: false }, tooltip: { enabled: false } },
+                yaxis: [
+                    { seriesName: 'درآمد', labels: { formatter: fmt }, title: { text: 'درآمد' } },
+                    { seriesName: 'هزینهٔ ادز', opposite: true, labels: { formatter: fmt }, title: { text: 'هزینهٔ ادز' } }
+                ],
                 legend: { position: 'top', horizontalAlign: 'right' },
-                tooltip: { y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
+                tooltip: { shared: true, intersect: false, y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
                 grid: { borderColor: dark ? 'rgba(148,163,184,.15)' : 'rgba(148,163,184,.25)' },
                 noData: { text: 'داده‌ای برای این ماه نیست' }
             }).render();
