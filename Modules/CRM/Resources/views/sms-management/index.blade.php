@@ -62,6 +62,25 @@
                 </div>
             </div>
 
+            {{-- ─── تمپلیتِ کدِ ورود (OTP) — برای فعال‌کردنِ autofill/WebOTP ─── --}}
+            <div class="mt-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20">
+                <label class="block text-xs font-bold text-gray-800 dark:text-gray-100 mb-1">نام تمپلیتِ کاوه‌نگارِ کدِ ورود (OTP)</label>
+                <input type="text" name="otp_sms_template" value="{{ old('otp_sms_template', $settings['otp_sms_template']) }}"
+                       placeholder="مثلاً otp-webotp — خالی یعنی از env (پیش‌فرض: verify)" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                <div class="text-[11px] text-gray-600 dark:text-gray-300 mt-2 leading-6">
+                    برای فعال‌شدنِ پیشنهادِ خودکارِ کد (autofill) در اندروید، یک تمپلیتِ تأییدشدهٔ
+                    کاوه‌نگار بسازید که <b>خطِ آخرش دقیقاً</b> این باشد (بدونِ هیچ متنی بعد از آن):
+                    <div dir="ltr" class="mt-1 font-mono text-[11px] bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded px-2 py-1">
+                        &#64;app.tamironline.com #%token
+                    </div>
+                    قواعد: دامنه دقیقاً <span dir="ltr">app.tamironline.com</span> (بدون https/www/اسلش)،
+                    یک فاصله قبل از <span dir="ltr">#</span>، و <span dir="ltr">%token</span> همان کدِ عددی
+                    (انگلیسی). سپس نامِ همان تمپلیت را این‌جا وارد کنید. خالی بگذارید تا از
+                    <span dir="ltr">SMS_TEMPLATE_OTP</span>ی سرور استفاده شود.
+                </div>
+            </div>
+
             <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">
                 ذخیره تنظیمات
             </button>
