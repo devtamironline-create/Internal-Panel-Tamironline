@@ -1794,7 +1794,7 @@
     </script>
 
     <!-- Toast Notification Component -->
-    <div x-data="toastManager()" x-init="init()" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] space-y-2 flex flex-col items-center pointer-events-none">
+    <div x-data="toastManager()" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] space-y-2 flex flex-col items-center pointer-events-none">
         <template x-for="toast in toasts" :key="toast.id">
             <div x-show="toast.show"
                 x-transition:enter="transition ease-out duration-300"
