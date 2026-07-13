@@ -17,6 +17,7 @@
 
     $deviceName = optional($order?->device)->name ?? '—';
     $brandName  = optional($order?->brand)->name ?? '';
+    $techName   = trim((string) (optional($order?->technician)->display_name ?? ''));
     $provinceName = optional($order?->province)->name ?? '';
     $cityName     = optional($order?->city)->name ?? '';
     $orderAddr    = $order?->address ?? '';
@@ -81,6 +82,7 @@
             <tr><td class="label">نام مشتری</td><td>{{ $custName }}</td></tr>
             <tr><td class="label">موبایل</td><td dir="ltr">{{ $custMobile }}</td></tr>
             <tr><td class="label">دستگاه</td><td>{{ $deviceName }}@if($brandName) — {{ $brandName }}@endif</td></tr>
+            @if($techName)<tr><td class="label">تکنسین</td><td>{{ $techName }}</td></tr>@endif
             @if($custAddr)<tr><td class="label">آدرس</td><td>{{ $custAddr }}</td></tr>@endif
         </table>
 
