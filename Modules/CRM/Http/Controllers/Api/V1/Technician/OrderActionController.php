@@ -224,6 +224,25 @@ class OrderActionController extends Controller
         return response()->json(['success' => true, 'message' => 'یادداشت ثبت شد.']);
     }
 
+    /** POST /v1/technician/orders/{id}/deliver-sms — پیامکِ «آماده تحویل» (اگر مجاز). */
+    public function sendDeliverSms(Request $request, int $id): JsonResponse
+    {
+        $tech = $request->user();
+        $order = Order::query()->whereKey($id)->firstOrFail();
+        $this->authorizeOwnership($order, $tech);
+
+        if (! $tech->ready_for_delivery) {
+            abort(403, 'شما مجاز به ارسال پیامک آماده تحویل نیستید.');
+        }
+        if ($order->status !== OrderStatus::Completed) {
+            throw ValidationException::withMessages(['status' => 'این پیامک فقط برای سفارش‌های تکمیل‌شده ارسال می‌شود.']);
+        }
+
+        $this->smsNotifier->notify($order, SmsTrigger::OrderDelivered, $tech->user_id);
+
+        return response()->json(['success' => true, 'message' => 'پیامک آماده تحویل برای مشتری ارسال شد.']);
+    }
+
     /**
      * بلاکِ فاکتورِ Completed — اعتبارسنجی + محاسبهٔ total_invoice + قطعات + عکس.
      *
