@@ -556,6 +556,16 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('report', [\Modules\CRM\Http\Controllers\Accounting\ExpenseReportController::class, 'index'])->name('report');
         Route::get('{expense}/attachment', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'attachment'])->name('attachment')->whereNumber('expense');
     });
+    // ─── حسابداری — گوگل ادز (دفترِ روزانه) ───────────────────────
+    Route::middleware('can:view-crm-costs')->prefix('google-ads')->name('google-ads.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\Accounting\GoogleAdsController::class, 'index'])->name('index');
+    });
+    Route::middleware('can:manage-crm-costs')->prefix('google-ads')->name('google-ads.')->group(function () {
+        Route::post('/', [\Modules\CRM\Http\Controllers\Accounting\GoogleAdsController::class, 'store'])->name('store');
+        Route::put('{googleAd}', [\Modules\CRM\Http\Controllers\Accounting\GoogleAdsController::class, 'update'])->name('update')->whereNumber('googleAd');
+        Route::delete('{googleAd}', [\Modules\CRM\Http\Controllers\Accounting\GoogleAdsController::class, 'destroy'])->name('destroy')->whereNumber('googleAd');
+    });
+
     Route::middleware('can:manage-crm-costs')->prefix('costs')->name('costs.')->group(function () {
         Route::get('categories', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'index'])->name('categories.index');
         Route::post('categories', [\Modules\CRM\Http\Controllers\Accounting\ExpenseCategoryController::class, 'store'])->name('categories.store');
