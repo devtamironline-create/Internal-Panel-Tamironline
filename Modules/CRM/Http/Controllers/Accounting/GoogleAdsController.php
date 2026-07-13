@@ -57,7 +57,64 @@ class GoogleAdsController extends Controller
                 'ad_amount' => (int) GoogleAdsEntry::sum('ad_amount'),
                 'lira_count' => (float) GoogleAdsEntry::sum('lira_count'),
             ],
+            'chart' => $this->monthChart($request),
         ]);
+    }
+
+    /**
+     * دادهٔ نمودارِ یک ماهِ شمسی — برای هر روز دو میله: هزینهٔ ادز و شارژِ کیف‌پول.
+     *
+     * @return array<string, mixed>
+     */
+    private function monthChart(Request $request): array
+    {
+        // ماهِ انتخابی (Y/m شمسی) یا ماهِ جاری.
+        $now = \Morilog\Jalali\Jalalian::now();
+        [$jy, $jm] = [(int) $now->format('Y'), (int) $now->format('n')];
+        if (preg_match('/^(\d{4})\/(\d{1,2})$/', (string) $request->query('month'), $m)
+            && (int) $m[2] >= 1 && (int) $m[2] <= 12) {
+            [$jy, $jm] = [(int) $m[1], (int) $m[2]];
+        }
+
+        $startJ = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/01', $jy, $jm));
+        $daysInMonth = (int) $startJ->getMonthDays();
+        $start = $startJ->toCarbon()->startOfDay();
+        $end = $start->copy()->addDays($daysInMonth - 1)->endOfDay();
+        $startStr = $start->toDateString();
+        $endStr = $end->toDateString();
+
+        // هزینهٔ ادز هر روز (از ردیف‌های همین ماه).
+        $adByDate = GoogleAdsEntry::query()
+            ->whereBetween('date', [$startStr, $endStr])
+            ->get(['date', 'ad_amount'])
+            ->keyBy(fn ($e) => $e->date->toDateString())
+            ->map(fn ($e) => (int) $e->ad_amount);
+
+        // شارژِ کیف‌پولِ تکنسین هر روز.
+        $walletByDate = WalletTransaction::query()
+            ->where('type', WalletTxType::WalletCharge->value)
+            ->whereBetween(DB::raw('DATE(created_at)'), [$startStr, $endStr])
+            ->selectRaw('DATE(created_at) as d, SUM(amount) as s')
+            ->groupBy('d')->pluck('s', 'd');
+
+        $labels = $adSeries = $walletSeries = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $greg = $start->copy()->addDays($d - 1)->toDateString();
+            $labels[] = (string) $d;
+            $adSeries[] = (int) ($adByDate[$greg] ?? 0);
+            $walletSeries[] = (int) ($walletByDate[$greg] ?? 0);
+        }
+
+        return [
+            'month_label' => $startJ->format('F Y'),
+            'prev_month' => $startJ->subMonths(1)->format('Y/m'),
+            'next_month' => $startJ->addMonths(1)->format('Y/m'),
+            'labels' => $labels,
+            'ad_series' => $adSeries,
+            'wallet_series' => $walletSeries,
+            'total_ad' => array_sum($adSeries),
+            'total_wallet' => array_sum($walletSeries),
+        ];
     }
 
     public function store(Request $request)
