@@ -886,10 +886,6 @@
                             @endif
                             <div class="text-[10px] text-gray-400 mt-1" dir="ltr">
                                 @jdatetime($log->created_at)
-                                @if($log->changer)
-                                    <span class="text-gray-300">·</span>
-                                    <span dir="rtl" class="text-gray-500">{{ $log->changer->full_name }}</span>
-                                @endif
                             </div>
                         </div>
                     </li>
