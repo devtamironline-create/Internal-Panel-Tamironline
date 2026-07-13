@@ -7,6 +7,9 @@
     $providerAddress = CrmSetting::get('invoice_provider_address', '');
     $logoPath        = CrmSetting::get('invoice_provider_logo_path', '');
     $logoUrl         = $logoPath ? route('crm.invoice.asset', 'logo') : null;
+    // مهر و امضای مجموعه — همان دارایی فاکتور (invoice_print_stamp_path).
+    $stampPath       = CrmSetting::get('invoice_print_stamp_path', '');
+    $stampUrl        = $stampPath ? route('crm.invoice.asset', 'stamp') : null;
 
     $customer = $order?->customer;
     $custName   = $order?->customer_name   ?: ($customer->display_name ?? '—');
@@ -28,9 +31,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>رسید انتقال {{ $receipt->code }}</title>
+    <link href="/css/fonts.css" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Tahoma, 'IRANSans', sans-serif; color: #1f2937; margin: 0; padding: 16px; background: #fff; }
+        body { font-family: 'Vazirmatn', Tahoma, sans-serif; color: #1f2937; margin: 0; padding: 16px; background: #fff; }
         .sheet { max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
         .head { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 14px; }
         .brand { display: flex; align-items: center; gap: 10px; }
@@ -45,8 +49,10 @@
         .desc h3 { font-size: 13px; margin: 0 0 6px; }
         .desc .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-size: 13px; min-height: 54px; white-space: pre-wrap; line-height: 1.9; }
         .note { margin-top: 14px; font-size: 11px; color: #6b7280; line-height: 1.9; }
-        .sign { display: flex; justify-content: space-between; margin-top: 26px; font-size: 12px; color: #374151; }
-        .sign div { width: 45%; border-top: 1px dashed #9ca3af; padding-top: 6px; text-align: center; }
+        .stamp-box { margin-top: 24px; text-align: left; }
+        .stamp-box .label { font-size: 12px; color: #374151; margin-bottom: 6px; }
+        .stamp-box img { height: 110px; max-width: 200px; object-fit: contain; opacity: 0.95; }
+        .stamp-box .fallback { display: inline-block; border: 1px dashed #9ca3af; border-radius: 8px; padding: 22px 30px; font-size: 12px; color: #6b7280; }
         @media print { body { padding: 0; } .sheet { border: none; } .no-print { display: none; } }
     </style>
 </head>
@@ -87,9 +93,14 @@
             @if($providerAddress) — {{ $providerAddress }}@endif
         </div>
 
-        <div class="sign">
-            <div>امضای تکنسین</div>
-            <div>امضای مشتری</div>
+        {{-- مهر و امضای مجموعه — این رسید رسمی است و نیازی به امضای تکنسین ندارد. --}}
+        <div class="stamp-box">
+            <div class="label">مهر و امضای {{ $providerName }}</div>
+            @if($stampUrl)
+                <img src="{{ $stampUrl }}" alt="مهر و امضا">
+            @else
+                <div class="fallback">محل مهر و امضای مجموعه</div>
+            @endif
         </div>
     </div>
 
