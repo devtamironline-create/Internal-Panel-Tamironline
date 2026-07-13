@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\AuthController;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderActionController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderController;
 use Modules\CRM\Http\Middleware\EnsureTechnician;
 use Modules\CRM\Http\Middleware\TechRollingToken;
@@ -35,5 +36,10 @@ Route::prefix('v1/technician')->group(function () {
         // سفارش‌ها
         Route::get('/orders', [OrderController::class, 'index'])->name('api.tech.orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->whereNumber('id')->name('api.tech.orders.show');
+
+        // اکشن‌های سفارش (نوشتن)
+        Route::post('/orders/{id}/status', [OrderActionController::class, 'updateStatus'])->whereNumber('id')->name('api.tech.orders.status');
+        Route::post('/orders/{id}/schedule-visit', [OrderActionController::class, 'scheduleVisit'])->whereNumber('id')->name('api.tech.orders.schedule-visit');
+        Route::post('/orders/{id}/notes', [OrderActionController::class, 'addNote'])->whereNumber('id')->name('api.tech.orders.notes');
     });
 });
