@@ -25,6 +25,62 @@
         </div>
     @endif
 
+    {{-- نمودارِ ماهانه — هر روز دو میله: هزینهٔ ادز و شارژِ کیف‌پول --}}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div class="flex items-center gap-2">
+                <a href="{{ route('crm.google-ads.index', ['month' => $chart['next_month']]) }}"
+                   class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="ماه بعد">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </a>
+                <span class="text-sm font-bold text-gray-800 dark:text-gray-100 min-w-[110px] text-center">{{ $chart['month_label'] }}</span>
+                <a href="{{ route('crm.google-ads.index', ['month' => $chart['prev_month']]) }}"
+                   class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="ماه قبل">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+                <span class="text-gray-500 dark:text-gray-400">جمعِ ادز: <b class="text-blue-600 dark:text-blue-400" dir="ltr">{{ number_format($chart['total_ad']) }}</b></span>
+                <span class="text-gray-500 dark:text-gray-400">جمعِ شارژ: <b class="text-amber-600 dark:text-amber-400" dir="ltr">{{ number_format($chart['total_wallet']) }}</b></span>
+            </div>
+        </div>
+        <div id="gads-chart" wire:ignore></div>
+        <p class="text-[11px] text-gray-400 mt-1 text-center">میله‌ها به تفکیکِ روزِ ماه — آبی: هزینهٔ ادز، نارنجی: شارژِ کیف‌پول (تومان).</p>
+    </div>
+
+    @push('scripts')
+    <script>
+    (function () {
+        function initGadsChart() {
+            var el = document.getElementById('gads-chart');
+            if (!el || typeof ApexCharts === 'undefined') return;
+            var dark = document.documentElement.classList.contains('dark');
+            var fmt = function (v) { return Number(v || 0).toLocaleString('fa-IR'); };
+            new ApexCharts(el, {
+                chart: { type: 'bar', height: 300, fontFamily: 'inherit', toolbar: { show: false }, foreColor: dark ? '#9ca3af' : '#374151' },
+                theme: { mode: dark ? 'dark' : 'light' },
+                series: [
+                    { name: 'هزینهٔ ادز', data: @json($chart['ad_series']) },
+                    { name: 'شارژ کیف‌پول', data: @json($chart['wallet_series']) }
+                ],
+                colors: ['#3b82f6', '#f59e0b'],
+                plotOptions: { bar: { columnWidth: '72%', borderRadius: 3 } },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: { categories: @json($chart['labels']), tickPlacement: 'on', axisTicks: { show: false } },
+                yaxis: { labels: { formatter: fmt } },
+                legend: { position: 'top', horizontalAlign: 'right' },
+                tooltip: { y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
+                grid: { borderColor: dark ? 'rgba(148,163,184,.15)' : 'rgba(148,163,184,.25)' },
+                noData: { text: 'داده‌ای برای این ماه نیست' }
+            }).render();
+        }
+        if (document.readyState !== 'loading') initGadsChart();
+        else document.addEventListener('DOMContentLoaded', initGadsChart);
+    })();
+    </script>
+    @endpush
+
     {{-- فرمِ افزودنِ ردیفِ روز (فقط با دسترسیِ manage) --}}
     @if($canManage)
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
