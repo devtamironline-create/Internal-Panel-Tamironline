@@ -24,5 +24,9 @@ class RouteServiceProvider extends ServiceProvider
         Route::middleware(['api', VerifyWpSyncToken::class, EnforceSyncMode::class, LogWpSyncInbound::class])
             ->prefix('api/crm/sync')
             ->group(module_path($this->name, 'Routes/api.php'));
+
+        // API اپِ تکنسین (توکنِ Sanctum) — مسیرها زیرِ /v1/technician، مثلِ اپِ مشتری.
+        Route::middleware('api')
+            ->group(module_path($this->name, 'Routes/tech_api.php'));
     }
 }
