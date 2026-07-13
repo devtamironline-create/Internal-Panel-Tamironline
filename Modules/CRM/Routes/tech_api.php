@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\AuthController;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderController;
 use Modules\CRM\Http\Middleware\EnsureTechnician;
 use Modules\CRM\Http\Middleware\TechRollingToken;
 
@@ -30,5 +31,9 @@ Route::prefix('v1/technician')->group(function () {
     Route::middleware(['auth:sanctum', EnsureTechnician::class, TechRollingToken::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('api.tech.me');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.tech.auth.logout');
+
+        // سفارش‌ها
+        Route::get('/orders', [OrderController::class, 'index'])->name('api.tech.orders.index');
+        Route::get('/orders/{id}', [OrderController::class, 'show'])->whereNumber('id')->name('api.tech.orders.show');
     });
 });
