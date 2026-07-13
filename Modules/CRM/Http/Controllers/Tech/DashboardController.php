@@ -261,13 +261,13 @@ class DashboardController extends Controller
         ]);
 
         // توضیح فقط برای وضعیت‌هایی الزامی است که در view لیست شده‌اند
-        // (Coordinated, Suspended, Open, Declined, Transit). برای
-        // Completed/Cancelled و … توضیح اختیاری است چون فیلد جدا
+        // (Coordinated, Suspended, Declined, Transit). برای Open (انتقال به
+        // تعمیرگاه) اختیاری است — رسیدِ رسمی از سیستمِ «رسید انتقال» صادر
+        // می‌شود. برای Completed/Cancelled هم اختیاری است چون فیلد جدا
         // (invoice_descripotion) دارد یا اصلاً نیاز نیست.
         $statusesRequiringDescription = [
             OrderStatus::Coordinated->value,
             OrderStatus::Suspended->value,
-            OrderStatus::Open->value,
             OrderStatus::Declined->value,
             OrderStatus::Transit->value,
         ];

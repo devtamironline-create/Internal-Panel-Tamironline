@@ -100,6 +100,16 @@ class OrderResource extends JsonResource
                 return app(\Modules\CRM\Services\ProformaService::class)->shape($pf);
             })->values()),
 
+            // رسیدهای انتقالِ دستگاه به تعمیرگاه — قالبِ نمایشی/PDF سمتِ اپ از
+            // روی همین داده + دادهٔ سفارش ساخته می‌شود؛ print_url هم نمای
+            // آمادهٔ HTML است (بدونِ لاگین).
+            'transfer_receipts' => $this->whenLoaded('transferReceipts', fn () => $this->transferReceipts->map(fn ($tr) => [
+                'code' => $tr->code,
+                'description' => $tr->description,
+                'created_at' => $tr->created_at?->utc()->toIso8601String(),
+                'print_url' => \Modules\CRM\Services\TransferReceiptService::publicUrl($tr),
+            ])->values()),
+
             // نظر — وضعیت واقعی review
             'review' => $this->reviewPayload($status),
 
