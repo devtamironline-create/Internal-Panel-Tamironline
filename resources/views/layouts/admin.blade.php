@@ -1288,7 +1288,7 @@
                         </button>
 
                         <!-- Notifications -->
-                        <div class="relative" x-data="notificationPanel()" x-init="loadNotifications()">
+                        <div class="relative" x-data="notificationPanel()" x-init="loadNotifications(); startPolling()">
                             <button @click="open = !open; if(open) loadNotifications()" class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800">
                                 <span x-show="unreadCount > 0" class="absolute top-0.5 left-0 h-2 w-2 rounded-full bg-orange-400"></span>
                                 <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z"/></svg>
@@ -1753,6 +1753,11 @@
                     console.error('Notification error:', e);
                 }
             },
+            // اعلان‌های جدید به‌جای toastِ سمت چپ، در همین زنگِ بالای صفحه
+            // به‌روزرسانی می‌شوند (نقطهٔ نارنجی + لیست). هر ۳۰ ثانیه.
+            startPolling() {
+                setInterval(() => this.loadNotifications(), 30000);
+            },
             async markRead(id) {
                 try {
                     await fetch(`/admin/notifications/${id}/read`, {
@@ -1783,15 +1788,16 @@
     </script>
 
     <!-- Toast Notification Component -->
-    <div x-data="toastManager()" x-init="init()" class="fixed bottom-4 left-4 z-[100] space-y-2">
+    <div x-data="toastManager()" x-init="init()" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] space-y-2 flex flex-col items-center pointer-events-none">
         <template x-for="toast in toasts" :key="toast.id">
             <div x-show="toast.show"
                 x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 transform translate-x-full"
-                x-transition:enter-end="opacity-100 transform translate-x-0"
+                x-transition:enter-start="opacity-0 transform -translate-y-3"
+                x-transition:enter-end="opacity-100 transform translate-y-0"
                 x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100 transform translate-x-0"
-                x-transition:leave-end="opacity-0 transform translate-x-full"
+                x-transition:leave-start="opacity-100 transform translate-y-0"
+                x-transition:leave-end="opacity-0 transform -translate-y-3"
+                style="pointer-events:auto"
                 class="flex items-start gap-3 p-4 rounded-xl shadow-lg max-w-sm"
                 :class="{
                     'bg-green-500 text-white': toast.type === 'success',
@@ -1847,8 +1853,9 @@
                 this.addToast('info', '{{ session('info') }}');
                 @endif
 
-                // Poll for new notifications
-                this.pollNotifications();
+                // اعلان‌های زندهٔ سرور دیگر اینجا toast نمی‌شوند؛ در زنگِ
+                // اعلانِ بالای صفحه (notificationPanel) نمایش داده می‌شوند تا
+                // پیام‌های پشت‌سرهم مزاحمِ کار نشوند.
             },
 
             addToast(type, title, message = '', duration = 5000) {
@@ -1870,35 +1877,6 @@
                         this.toasts = this.toasts.filter(t => t.id !== id);
                     }, 200);
                 }
-            },
-
-            async pollNotifications() {
-                let lastCheck = Date.now();
-
-                setInterval(async () => {
-                    try {
-                        const response = await fetch('/admin/notifications?since=' + lastCheck, {
-                            headers: { 'Accept': 'application/json' }
-                        });
-                        const data = await response.json();
-
-                        if (data.new_notifications && data.new_notifications.length > 0) {
-                            data.new_notifications.forEach(notif => {
-                                let toastType = 'info';
-                                let duration = 5000;
-
-                                if (notif.type === 'leave_approved') { toastType = 'success'; }
-                                else if (notif.type === 'leave_rejected') { toastType = 'warning'; }
-                                else if (notif.type === 'wc_order_changed') { toastType = 'warning'; duration = 15000; }
-
-                                this.addToast(toastType, notif.title, notif.body || notif.message, duration);
-                            });
-                        }
-                        lastCheck = Date.now();
-                    } catch (e) {
-                        // Silent fail for polling
-                    }
-                }, 30000); // Check every 30 seconds
             }
         };
     }
@@ -2115,9 +2093,8 @@
     </script>
 
     @include('components.call-notification')
-    @if(!request()->routeIs('admin.messenger'))
-        @include('components.chat-widget')
-    @endif
+    {{-- ویجتِ شناورِ پیام‌رسان از همهٔ صفحات حذف شد (به‌درخواستِ کاربر). دسترسی
+         از منوی کناری «پیام‌رسان» یا صفحهٔ /admin/messenger انجام می‌شود. --}}
     @if(request()->routeIs('warehouse.*'))
         @include('components.order-search-widget')
     @endif
