@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 use Modules\CRM\Concerns\FiltersExpenses;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\GoogleAdsEntry;
+use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\WalletTransaction;
 
@@ -90,19 +91,19 @@ class GoogleAdsController extends Controller
             ->keyBy(fn ($e) => $e->date->toDateString())
             ->map(fn ($e) => (int) $e->ad_amount);
 
-        // شارژِ کیف‌پولِ تکنسین هر روز.
-        $walletByDate = WalletTransaction::query()
-            ->where('type', WalletTxType::WalletCharge->value)
-            ->whereBetween(DB::raw('DATE(created_at)'), [$startStr, $endStr])
-            ->selectRaw('DATE(created_at) as d, SUM(amount) as s')
+        // درآمدِ هر روز = مجموعِ فاکتورهای صادرشدهٔ آن روز (به‌جز لغوشده‌ها).
+        $incomeByDate = Invoice::query()
+            ->where('status', '!=', 'cancelled')
+            ->whereBetween(DB::raw('DATE(COALESCE(issued_at, created_at))'), [$startStr, $endStr])
+            ->selectRaw('DATE(COALESCE(issued_at, created_at)) as d, SUM(total_amount) as s')
             ->groupBy('d')->pluck('s', 'd');
 
-        $labels = $adSeries = $walletSeries = [];
+        $labels = $adSeries = $incomeSeries = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $greg = $start->copy()->addDays($d - 1)->toDateString();
             $labels[] = (string) $d;
             $adSeries[] = (int) ($adByDate[$greg] ?? 0);
-            $walletSeries[] = (int) ($walletByDate[$greg] ?? 0);
+            $incomeSeries[] = (int) ($incomeByDate[$greg] ?? 0);
         }
 
         return [
@@ -111,9 +112,9 @@ class GoogleAdsController extends Controller
             'next_month' => $startJ->addMonths(1)->format('Y/m'),
             'labels' => $labels,
             'ad_series' => $adSeries,
-            'wallet_series' => $walletSeries,
+            'income_series' => $incomeSeries,
             'total_ad' => array_sum($adSeries),
-            'total_wallet' => array_sum($walletSeries),
+            'total_income' => array_sum($incomeSeries),
         ];
     }
 
