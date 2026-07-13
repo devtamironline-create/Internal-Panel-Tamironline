@@ -37,10 +37,12 @@
     $statusDescPrompts = [
         OrderStatus::Coordinated->value => 'تاریخ و ساعت هماهنگی با مشتری را بنویسید',
         OrderStatus::Suspended->value   => 'دلیل نامشخص بودن وضعیت را شرح دهید',
-        OrderStatus::Open->value        => 'لیست اقلامی که از مشتری تحویل گرفته‌اید (به‌عنوان رسید)',
+        OrderStatus::Open->value        => 'لیست اقلام تحویل‌گرفته‌شده (اختیاری — رسید رسمی از «رسید انتقال» صادر می‌شود)',
         OrderStatus::Declined->value    => 'دلیل رد سفارش را بنویسید',
         OrderStatus::Transit->value     => 'دلیل ثبت ایاب و ذهاب و توضیحات لازم را بنویسید',
     ];
+    // برای Open توضیح اختیاری است؛ بقیه الزامی می‌مانند (هم‌سو با کنترلر).
+    $statusDescRequired = array_values(array_diff(array_keys($statusDescPrompts), [OrderStatus::Open->value]));
 
     // یادداشت‌های متعلق به همین تکنسین — مشابه فیلتر $author در پنل WP.
     $myNotes = collect($order->wp_notes ?? [])
@@ -557,11 +559,11 @@
                                  if (v !== lastStatus) { descValue = ''; lastStatus = v; }
                              })">
                     <label class="text-[11px] text-rose-700 font-bold mb-1 block">
-                        <span x-text="@js($statusDescPrompts)[selected] || ''"></span> *
+                        <span x-text="@js($statusDescPrompts)[selected] || ''"></span><span x-show="@js($statusDescRequired).includes(selected)"> *</span>
                     </label>
                     <textarea name="description" rows="3" maxlength="2000"
                               x-model="descValue"
-                              :required="@js(array_keys($statusDescPrompts)).includes(selected)"
+                              :required="@js($statusDescRequired).includes(selected)"
                               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-brand-400 focus:outline-none leading-7"
                               placeholder="دلیل و توضیح را شرح دهید..."></textarea>
                     @error('description')
