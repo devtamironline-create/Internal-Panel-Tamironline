@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\Log;
 class OTPService
 {
     protected KavenegarService $sms;
+
     protected int $length;
+
     protected int $expiresIn;
+
     protected int $maxAttempts;
+
     protected int $resendDelay;
 
     public function __construct(KavenegarService $sms)
@@ -30,30 +34,30 @@ class OTPService
     public function send(string $mobile): array
     {
         $mobile = $this->normalizeMobile($mobile);
-        
+
         $lastSentKey = "otp_last_sent_{$mobile}";
         $lastSent = Cache::get($lastSentKey);
-        
+
         if ($lastSent) {
             $waitTime = $this->resendDelay - (time() - $lastSent);
             if ($waitTime > 0) {
                 return [
                     'success' => false,
                     'message' => "لطفاً {$waitTime} ثانیه صبر کنید",
-                    'wait_time' => $waitTime
+                    'wait_time' => $waitTime,
                 ];
             }
         }
 
         $code = $this->generate();
         $cacheKey = "otp_{$mobile}";
-        
+
         Cache::put($cacheKey, [
             'code' => $code,
             'attempts' => 0,
-            'created_at' => time()
+            'created_at' => time(),
         ], $this->expiresIn);
-        
+
         Cache::put($lastSentKey, time(), $this->resendDelay);
 
         // در محیط توسعه، کد رو لاگ کن
@@ -61,7 +65,7 @@ class OTPService
             Log::info("OTP Code for {$mobile}: {$code}");
         }
 
-        $template = config('sms.templates.otp', 'verify');
+        $template = $this->resolveOtpTemplate();
         $result = $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
 
         if ($result['success']) {
@@ -70,15 +74,15 @@ class OTPService
                 'message' => 'کد تایید ارسال شد',
                 'expires_in' => $this->expiresIn,
                 // در حالت debug کد رو برگردون
-                'debug_code' => app()->environment('local') ? $code : null
+                'debug_code' => app()->environment('local') ? $code : null,
             ];
         }
 
         Cache::forget($cacheKey);
-        
+
         return [
             'success' => false,
-            'message' => $result['message'] ?? 'خطا در ارسال کد تایید'
+            'message' => $result['message'] ?? 'خطا در ارسال کد تایید',
         ];
     }
 
@@ -86,32 +90,34 @@ class OTPService
     {
         $mobile = $this->normalizeMobile($mobile);
         $cacheKey = "otp_{$mobile}";
-        
+
         $otpData = Cache::get($cacheKey);
-        
-        if (!$otpData) {
+
+        if (! $otpData) {
             return [
                 'success' => false,
-                'message' => 'کد تایید منقضی شده است'
+                'message' => 'کد تایید منقضی شده است',
             ];
         }
 
         if ($otpData['attempts'] >= $this->maxAttempts) {
             Cache::forget($cacheKey);
+
             return [
                 'success' => false,
-                'message' => 'تعداد تلاش‌های مجاز تمام شد'
+                'message' => 'تعداد تلاش‌های مجاز تمام شد',
             ];
         }
 
         if ($otpData['code'] !== $code) {
             $otpData['attempts']++;
             Cache::put($cacheKey, $otpData, $this->expiresIn);
-            
+
             $remaining = $this->maxAttempts - $otpData['attempts'];
+
             return [
                 'success' => false,
-                'message' => "کد تایید اشتباه است ({$remaining} تلاش باقی‌مانده)"
+                'message' => "کد تایید اشتباه است ({$remaining} تلاش باقی‌مانده)",
             ];
         }
 
@@ -119,22 +125,44 @@ class OTPService
 
         return [
             'success' => true,
-            'message' => 'تایید موفق'
+            'message' => 'تایید موفق',
         ];
+    }
+
+    /**
+     * نامِ تمپلیتِ کاوه‌نگارِ OTP — اولویت با تنظیمِ پنل (otp_sms_template در
+     * crm_settings، قابلِ ویرایش از «مدیریت پیامک») تا برای فعال‌کردنِ فرمتِ
+     * WebOTP نیازی به دستکاریِ env سرور نباشد؛ در نبودِ آن از config/env خوانده
+     * می‌شود. نبودِ کلاسِ CrmSetting هرگز نباید ارسال را بشکند.
+     */
+    protected function resolveOtpTemplate(): string
+    {
+        if (class_exists(\Modules\CRM\Models\CrmSetting::class)) {
+            try {
+                $override = trim((string) (\Modules\CRM\Models\CrmSetting::get('otp_sms_template', '') ?? ''));
+                if ($override !== '') {
+                    return $override;
+                }
+            } catch (\Throwable $e) {
+                // به config برمی‌گردیم
+            }
+        }
+
+        return (string) config('sms.templates.otp', 'verify');
     }
 
     protected function normalizeMobile(string $mobile): string
     {
         $mobile = preg_replace('/[^0-9]/', '', $mobile);
-        
+
         if (strlen($mobile) === 10 && str_starts_with($mobile, '9')) {
-            $mobile = '0' . $mobile;
+            $mobile = '0'.$mobile;
         } elseif (str_starts_with($mobile, '98')) {
-            $mobile = '0' . substr($mobile, 2);
+            $mobile = '0'.substr($mobile, 2);
         } elseif (str_starts_with($mobile, '+98')) {
-            $mobile = '0' . substr($mobile, 3);
+            $mobile = '0'.substr($mobile, 3);
         }
-        
+
         return $mobile;
     }
 
@@ -143,16 +171,16 @@ class OTPService
         $mobile = $this->normalizeMobile($mobile);
         $lastSentKey = "otp_last_sent_{$mobile}";
         $lastSent = Cache::get($lastSentKey);
-        
-        if (!$lastSent) {
+
+        if (! $lastSent) {
             return ['can_resend' => true, 'wait_time' => 0];
         }
-        
+
         $waitTime = $this->resendDelay - (time() - $lastSent);
-        
+
         return [
             'can_resend' => $waitTime <= 0,
-            'wait_time' => max(0, $waitTime)
+            'wait_time' => max(0, $waitTime),
         ];
     }
 }
