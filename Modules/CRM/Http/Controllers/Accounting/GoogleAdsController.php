@@ -105,13 +105,11 @@ class GoogleAdsController extends Controller
     {
         $validated = $request->validate([
             'date' => 'required|string|max:12',
-            'ad_amount' => 'required|string|max:20',
             'lira_count' => 'required|string|max:20',
             'lira_unit_price' => 'required|string|max:20',
             'note' => 'nullable|string|max:2000',
         ], [
             'date.required' => 'تاریخ الزامی است.',
-            'ad_amount.required' => 'مبلغِ تومنی الزامی است.',
             'lira_count.required' => 'تعداد لیر الزامی است.',
             'lira_unit_price.required' => 'قیمتِ هر لیر الزامی است.',
         ]);
@@ -121,11 +119,15 @@ class GoogleAdsController extends Controller
             throw ValidationException::withMessages(['date' => 'تاریخ شمسی نامعتبر است (مثال: 1405/04/22).']);
         }
 
+        // مبلغِ تومنی دیگر دستی وارد نمی‌شود؛ = تعداد لیر × قیمتِ هر لیر.
+        $liraCount = $this->normalizeDecimal($validated['lira_count']);
+        $liraUnitPrice = (int) ($this->normalizeAmount($validated['lira_unit_price']) ?? 0);
+
         return [
             'date' => $gregorian,
-            'ad_amount' => (int) ($this->normalizeAmount($validated['ad_amount']) ?? 0),
-            'lira_count' => $this->normalizeDecimal($validated['lira_count']),
-            'lira_unit_price' => (int) ($this->normalizeAmount($validated['lira_unit_price']) ?? 0),
+            'ad_amount' => (int) round($liraCount * $liraUnitPrice),
+            'lira_count' => $liraCount,
+            'lira_unit_price' => $liraUnitPrice,
             'note' => $validated['note'] ?? null,
         ];
     }

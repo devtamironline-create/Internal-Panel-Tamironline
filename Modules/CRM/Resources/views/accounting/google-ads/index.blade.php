@@ -29,7 +29,10 @@
     @if($canManage)
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
         <div class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">ثبتِ روزِ جدید <span class="text-[11px] font-normal text-gray-400">(معمولاً امروز برای دیروز)</span></div>
-        <form method="POST" action="{{ route('crm.google-ads.store') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <form method="POST" action="{{ route('crm.google-ads.store') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3"
+              x-data="{ lira: @js((float) old('lira_count', 0)), price: @js((int) old('lira_unit_price', 0)),
+                        get total(){ return Math.round((Number(this.lira)||0) * (Number(this.price)||0)); },
+                        fmt(n){ return Number(n||0).toLocaleString('fa-IR'); } }">
             @csrf
             <div>
                 <label class="block text-[11px] text-gray-500 mb-1">تاریخ (شمسی)</label>
@@ -37,19 +40,19 @@
                        class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center">
             </div>
             <div>
-                <label class="block text-[11px] text-gray-500 mb-1">مبلغِ تومنی</label>
-                <input type="text" name="ad_amount" value="{{ old('ad_amount') }}" dir="ltr" inputmode="numeric" placeholder="مثلاً 5000000"
-                       class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center">
-            </div>
-            <div>
                 <label class="block text-[11px] text-gray-500 mb-1">تعداد لیر</label>
-                <input type="text" name="lira_count" value="{{ old('lira_count') }}" dir="ltr" inputmode="decimal" placeholder="مثلاً 120"
+                <input type="text" name="lira_count" value="{{ old('lira_count') }}" x-model="lira" dir="ltr" inputmode="decimal" placeholder="مثلاً 120"
                        class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center">
             </div>
             <div>
                 <label class="block text-[11px] text-gray-500 mb-1">قیمتِ هر لیر</label>
-                <input type="text" name="lira_unit_price" value="{{ old('lira_unit_price') }}" dir="ltr" inputmode="numeric" placeholder="تومان"
+                <input type="text" name="lira_unit_price" value="{{ old('lira_unit_price') }}" x-model="price" dir="ltr" inputmode="numeric" placeholder="تومان"
                        class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center">
+            </div>
+            <div>
+                <label class="block text-[11px] text-gray-500 mb-1">مبلغِ تومنی (خودکار)</label>
+                <div dir="ltr" class="w-full px-3 py-2 border border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 rounded text-sm text-center font-bold text-emerald-700 dark:text-emerald-300"
+                     x-text="fmt(total)">۰</div>
             </div>
             <div class="flex items-end">
                 <button type="submit" class="w-full px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">ثبت ردیف</button>
@@ -102,16 +105,19 @@
                         @if($canManage)
                         <tr x-show="editId === {{ $e->id }}" x-cloak class="bg-sky-50/50 dark:bg-sky-900/10">
                             <td colspan="8" class="px-3 py-3">
-                                <form method="POST" action="{{ route('crm.google-ads.update', $e) }}" class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                                <form method="POST" action="{{ route('crm.google-ads.update', $e) }}" class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end"
+                                      x-data="{ lira: {{ (float) $e->lira_count }}, price: {{ (int) $e->lira_unit_price }},
+                                                get total(){ return Math.round((Number(this.lira)||0) * (Number(this.price)||0)); },
+                                                fmt(n){ return Number(n||0).toLocaleString('fa-IR'); } }">
                                     @csrf @method('PUT')
                                     <div><label class="block text-[11px] text-gray-500 mb-1">تاریخ</label>
                                         <input type="text" name="date" value="{{ Jalalian::fromCarbon($e->date)->format('Y/m/d') }}" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
-                                    <div><label class="block text-[11px] text-gray-500 mb-1">مبلغِ ادز</label>
-                                        <input type="text" name="ad_amount" value="{{ (int) $e->ad_amount }}" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
                                     <div><label class="block text-[11px] text-gray-500 mb-1">تعداد لیر</label>
-                                        <input type="text" name="lira_count" value="{{ (float) $e->lira_count }}" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
+                                        <input type="text" name="lira_count" value="{{ (float) $e->lira_count }}" x-model="lira" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
                                     <div><label class="block text-[11px] text-gray-500 mb-1">قیمتِ لیر</label>
-                                        <input type="text" name="lira_unit_price" value="{{ (int) $e->lira_unit_price }}" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
+                                        <input type="text" name="lira_unit_price" value="{{ (int) $e->lira_unit_price }}" x-model="price" dir="ltr" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm text-center"></div>
+                                    <div><label class="block text-[11px] text-gray-500 mb-1">مبلغِ ادز (خودکار)</label>
+                                        <div dir="ltr" class="w-full px-2 py-1.5 border border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 rounded text-sm text-center font-bold text-emerald-700 dark:text-emerald-300" x-text="fmt(total)"></div></div>
                                     <div class="md:col-span-2"><label class="block text-[11px] text-gray-500 mb-1">یادداشت</label>
                                         <input type="text" name="note" value="{{ $e->note }}" class="w-full px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm"></div>
                                     <div class="md:col-span-6">
