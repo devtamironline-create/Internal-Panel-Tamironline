@@ -17,6 +17,7 @@
 
     $deviceName = optional($order?->device)->name ?? '—';
     $brandName  = optional($order?->brand)->name ?? '';
+    $techName   = trim((string) (optional($order?->technician)->display_name ?? ''));
     $provinceName = optional($order?->province)->name ?? '';
     $cityName     = optional($order?->city)->name ?? '';
     $orderAddr    = $order?->address ?? '';
@@ -48,7 +49,9 @@
         .desc { margin-top: 14px; }
         .desc h3 { font-size: 13px; margin: 0 0 6px; }
         .desc .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-size: 13px; min-height: 54px; white-space: pre-wrap; line-height: 1.9; }
-        .note { margin-top: 14px; font-size: 11px; color: #6b7280; line-height: 1.9; }
+        .note { margin-top: 14px; font-size: 11px; color: #6b7280; line-height: 1.9; text-align: justify; }
+        .note p { margin: 0 0 8px; }
+        .note p:last-child { margin-bottom: 0; }
         .stamp-box { margin-top: 24px; text-align: left; }
         .stamp-box .label { font-size: 12px; color: #374151; margin-bottom: 6px; }
         .stamp-box img { height: 110px; max-width: 200px; object-fit: contain; opacity: 0.95; }
@@ -72,13 +75,14 @@
             </div>
         </div>
 
-        <div class="title">رسید انتقال دستگاه برای تعمیر</div>
+        <div class="title">رسید تحویل دستگاه / قطعه</div>
 
         <table>
             <tr><td class="label">کد سفارش</td><td dir="ltr">{{ $order?->order_code ?? '—' }}</td></tr>
             <tr><td class="label">نام مشتری</td><td>{{ $custName }}</td></tr>
             <tr><td class="label">موبایل</td><td dir="ltr">{{ $custMobile }}</td></tr>
             <tr><td class="label">دستگاه</td><td>{{ $deviceName }}@if($brandName) — {{ $brandName }}@endif</td></tr>
+            @if($techName)<tr><td class="label">تکنسین</td><td>{{ $techName }}</td></tr>@endif
             @if($custAddr)<tr><td class="label">آدرس</td><td>{{ $custAddr }}</td></tr>@endif
         </table>
 
@@ -88,9 +92,12 @@
         </div>
 
         <div class="note">
-            این رسید تأییدی است بر تحویلِ دستگاه به تکنسین برای انتقال به تعمیرگاه. پس از اتمامِ تعمیر، دستگاه به مشتری بازگردانده می‌شود.
-            @if($providerPhone) تماس: <span dir="ltr">{{ $providerPhone }}</span>@endif
-            @if($providerAddress) — {{ $providerAddress }}@endif
+            <p>بدین‌وسیله تأیید می‌شود دستگاه یا قطعه مشخص‌شده در این رسید، جهت انجام بررسی، عیب‌یابی، تعمیر یا ارائه خدمات، توسط کارشناس {{ $providerName }} از محل مشتری تحویل گرفته شده است.</p>
+            <p>این رسید صرفاً به‌منظور ثبت و تأیید تحویل دستگاه یا قطعه از محل مشتری صادر شده و به‌تنهایی بیانگر پذیرش گارانتی، تأیید نهایی وضعیت فنی، برآورد هزینه، انجام تعمیر، یا ایجاد هرگونه تعهد حقوقی و مالی برای طرفین نیست.</p>
+            <p>جزئیات دستگاه یا قطعه، مشخصات سفارش و اطلاعات ثبت‌شده در سامانه {{ $providerName }}، ملاک ارائه خدمات و پیگیری‌های بعدی خواهد بود.</p>
+            @if($providerPhone || $providerAddress)
+                <p>@if($providerPhone)تماس: <span dir="ltr">{{ $providerPhone }}</span>@endif @if($providerAddress)— {{ $providerAddress }}@endif</p>
+            @endif
         </div>
 
         {{-- مهر و امضای مجموعه — این رسید رسمی است و نیازی به امضای تکنسین ندارد. --}}

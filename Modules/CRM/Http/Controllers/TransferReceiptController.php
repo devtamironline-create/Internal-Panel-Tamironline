@@ -50,7 +50,7 @@ class TransferReceiptController extends Controller
      */
     private function viewData(TransferReceipt $receipt): array
     {
-        $receipt->load(['order.customer', 'order.brand', 'order.device', 'order.province', 'order.city']);
+        $receipt->load(['order.customer', 'order.brand', 'order.device', 'order.province', 'order.city', 'order.technician']);
 
         return [
             'receipt' => $receipt,
