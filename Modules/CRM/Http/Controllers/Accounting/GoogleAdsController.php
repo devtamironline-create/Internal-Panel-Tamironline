@@ -164,7 +164,9 @@ class GoogleAdsController extends Controller
             ->selectRaw('DATE(created_at) as d, SUM(amount) as s')
             ->groupBy('d')->pluck('s', 'd')->toArray();
 
+        // فقط سفارشِ واقعیِ ثبت‌شده — لیدها شمرده نمی‌شوند.
         $orders = Order::query()
+            ->realOrders()
             ->whereBetween(DB::raw('DATE(created_at)'), [$min, $max])
             ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
             ->groupBy('d')->pluck('c', 'd')->toArray();
