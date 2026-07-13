@@ -66,9 +66,9 @@ class LinkFixController extends Controller
             if ($old === '') {
                 continue;
             }
-            $exists = LinkFixRule::where('old_url_hash', sha1($old))->exists();
+            $exists = LinkFixRule::where('old_url_hash', sha1(ContentLinkFixer::normalizedKey($old)))->exists();
             if ($exists) {
-                continue;
+                continue; // شاملِ دوقلوهای http/https و اسلشِ انتهایی
             }
             LinkFixRule::create([
                 'old_url' => $old,
@@ -97,8 +97,8 @@ class LinkFixController extends Controller
             'new_url.required_if' => 'برای جایگزینی، آدرسِ مقصد الزامی است.',
         ]);
 
-        if (LinkFixRule::where('old_url_hash', sha1(trim($data['old_url'])))->exists()) {
-            return back()->with('error', 'قاعده‌ای برای این URL از قبل وجود دارد.');
+        if (LinkFixRule::where('old_url_hash', sha1(ContentLinkFixer::normalizedKey($data['old_url'])))->exists()) {
+            return back()->with('error', 'قاعده‌ای برای این URL (با هر scheme/اسلش) از قبل وجود دارد.');
         }
 
         LinkFixRule::create([
