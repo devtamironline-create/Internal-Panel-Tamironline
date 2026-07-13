@@ -444,6 +444,22 @@ class DashboardController extends Controller
             }
         }
 
+        // رسیدِ انتقال — وقتی تکنسین سفارش را به «انتقال به تعمیرگاه» (Open)
+        // می‌برد، رسیدِ انتقال به‌صورت خودکار از روی توضیحِ همان وضعیت ساخته و
+        // لینکش برای مشتری پیامک می‌شود (در اپ مشتری و همان سفارش دیده شود).
+        // فقط وقتی قابلیت فعال است؛ خرابیِ آن نباید ثبتِ وضعیت را بشکند.
+        if ($newStatus === OrderStatus::Open && \Modules\CRM\Services\TransferReceiptService::enabled()) {
+            try {
+                app(\Modules\CRM\Services\TransferReceiptService::class)
+                    ->createAndNotify($order->refresh(), $description !== '' ? $description : null, $tech->user_id, $tech->id);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('tech_panel.transfer_receipt_failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return redirect()
             ->route('tech.orders.show', $order)
             ->with('success', 'وضعیت سفارش به «'.$newStatus->label().'» تغییر کرد.');

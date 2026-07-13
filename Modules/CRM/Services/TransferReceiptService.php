@@ -42,7 +42,10 @@ class TransferReceiptService
         return $receipt;
     }
 
-    /** لینکِ عمومیِ رسید — قابلِ تنظیم با transfer_receipt_url_template ({token}). */
+    /**
+     * لینکِ عمومیِ رسید (نمای HTMLِ پنل) — مبنایِ دکمهٔ «دانلود PDF» در اپ و
+     * فیلدِ print_url در API. قابلِ تنظیم با transfer_receipt_url_template ({token}).
+     */
     public static function publicUrl(TransferReceipt $receipt): string
     {
         $template = trim((string) CrmSetting::get('transfer_receipt_url_template', ''));
@@ -51,6 +54,29 @@ class TransferReceiptService
         }
 
         return route('crm.transfer-receipt.public', $receipt->token);
+    }
+
+    /**
+     * لینکی که با پیامک به مشتری می‌رود — به صفحهٔ همان سفارش در اپ می‌رود تا
+     * مشتری رسید را داخلِ سفارش ببیند و در صورتِ نیاز PDF بگیرد. قابلِ تنظیم با
+     * transfer_receipt_app_url_template و placeholderهای {order_id}/{order_code}/{token}.
+     * اگر تنظیم خالی شود به نمای پنل fallback می‌کند (ایمن).
+     */
+    public static function appLink(Order $order, TransferReceipt $receipt): string
+    {
+        $template = trim((string) CrmSetting::get(
+            'transfer_receipt_app_url_template',
+            'https://app.tamironline.com/orders/{order_id}'
+        ));
+        if ($template === '') {
+            return self::publicUrl($receipt);
+        }
+
+        return strtr($template, [
+            '{order_id}' => (string) $order->id,
+            '{order_code}' => (string) ($order->order_code ?? ''),
+            '{token}' => (string) $receipt->token,
+        ]);
     }
 
     /** ارسالِ SMS با لینک — best-effort. */
@@ -62,7 +88,8 @@ class TransferReceiptService
         }
 
         $name = trim((string) ($order->customer_name ?: optional($order->customer)->display_name ?? ''));
-        $link = self::publicUrl($receipt);
+        // لینکِ پیامک → صفحهٔ سفارش در اپ (نه نمای پنل)؛ رسید داخلِ سفارش دیده می‌شود.
+        $link = self::appLink($order, $receipt);
 
         // تمپلیتِ «رسید انتقال» از صفحهٔ «مدیریت پیامک». اگر ثبت و فعال باشد و
         // نامِ تمپلیتِ کاوه‌نگار داشته باشد، از verify/lookup استفاده می‌شود؛
