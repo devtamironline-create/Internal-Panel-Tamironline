@@ -3,9 +3,11 @@
 namespace Modules\CRM\Services;
 
 use Illuminate\Support\Facades\Log;
+use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\SmsLog;
+use Modules\CRM\Models\SmsTemplate;
 use Modules\CRM\Models\TransferReceipt;
 use Modules\SMS\Services\KavenegarService;
 
@@ -61,11 +63,38 @@ class TransferReceiptService
 
         $name = trim((string) ($order->customer_name ?: optional($order->customer)->display_name ?? ''));
         $link = self::publicUrl($receipt);
+
+        // تمپلیتِ «رسید انتقال» از صفحهٔ «مدیریت پیامک». اگر ثبت و فعال باشد و
+        // نامِ تمپلیتِ کاوه‌نگار داشته باشد، از verify/lookup استفاده می‌شود؛
+        // در غیرِ این‌صورت به متنِ ساده (رفتارِ قبلی) برمی‌گردیم تا در
+        // پروداکشن چیزی خراب نشود.
+        $template = null;
+        try {
+            $template = SmsTemplate::where('trigger_key', SmsTrigger::CustomerTransferReceipt->value)->first();
+        } catch (\Throwable $e) {
+            // نبودِ جدول/تمپلیت نباید ثبتِ رسید را بشکند.
+        }
+
+        $useTemplate = $template && $template->is_active && ! empty($template->kavenegar_template);
+
         $body = ($name !== '' ? $name.' عزیز، ' : '')
             .'رسید انتقال دستگاه شما ثبت شد. مشاهده:'."\n".$link."\n".'تعمیرآنلاین';
+        $logBody = $body;
 
         try {
-            $result = $this->sms->send($mobile, $body);
+            if ($useTemplate) {
+                $vars = [
+                    'customer_name' => $name,
+                    'order_code' => (string) ($order->order_code ?? ''),
+                    'receipt_code' => (string) $receipt->code,
+                    'receipt_url' => $link,
+                ];
+                $tokens = $template->renderTokens($vars);
+                $logBody = $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE);
+                $result = $this->sms->sendTemplate($mobile, $template->kavenegar_template, $tokens);
+            } else {
+                $result = $this->sms->send($mobile, $body);
+            }
             $ok = ! empty($result['success']);
         } catch (\Throwable $e) {
             $result = ['message' => $e->getMessage()];
@@ -76,10 +105,10 @@ class TransferReceiptService
         try {
             SmsLog::create([
                 'order_id' => $order->id,
-                'trigger_key' => 'customer_transfer_receipt',
+                'trigger_key' => SmsTrigger::CustomerTransferReceipt->value,
                 'recipient_mobile' => $mobile,
                 'recipient_role' => 'customer',
-                'body' => $body,
+                'body' => $logBody,
                 'status' => $ok ? 'success' : 'failed',
                 'response' => $ok ? null : ($result['message'] ?? null),
                 'sent_by' => $userId,
