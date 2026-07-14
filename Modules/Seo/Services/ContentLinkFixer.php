@@ -90,6 +90,29 @@ class ContentLinkFixer
                 'label' => 'title',
                 'prefilter' => true,
             ],
+            // صفحاتِ ثابتِ سایت + انجمن — پوششِ کاملِ محتوایی برای اصلاحِ
+            // لینک‌های http/www و لینک‌های ریدایرکتی (گزارشِ SEMrush).
+            'page' => [
+                'model' => \Modules\Site\Models\Page::class,
+                'string_fields' => ['content'],
+                'json_fields' => [],
+                'label' => 'title',
+                'prefilter' => true,
+            ],
+            'forum_question' => [
+                'model' => \Modules\Site\Models\Forum\Question::class,
+                'string_fields' => ['body'],
+                'json_fields' => [],
+                'label' => 'title',
+                'prefilter' => true,
+            ],
+            'forum_answer' => [
+                'model' => \Modules\Site\Models\Forum\Answer::class,
+                'string_fields' => ['body'],
+                'json_fields' => [],
+                'label' => 'body',
+                'prefilter' => true,
+            ],
         ];
     }
 
@@ -98,6 +121,9 @@ class ContentLinkFixer
         'device' => 'دستگاه',
         'brand' => 'برند',
         'combo' => 'صفحه ترکیبی',
+        'page' => 'صفحه ثابت',
+        'forum_question' => 'پرسش انجمن',
+        'forum_answer' => 'پاسخ انجمن',
     ];
 
     /**
@@ -457,6 +483,151 @@ class ContentLinkFixer
         }
 
         return ['applied' => $appliedTotal, 'records' => $recordsTouched, 'rules' => count($rulesApplied)];
+    }
+
+    // ─── نرمال‌سازیِ دامنه (http/www → https بدونِ www) ────────────
+    //
+    // برای Issueِ SEMrush «Links lead to HTTP pages for HTTPS site»: هر لینکِ
+    // داخلی (متن، href، src تصویر، JSON) که با http:// یا www. شروع شود، در
+    // سطحِ دیتابیس به originِ نهایی (https://host) تبدیل می‌شود — مسیرِ بعد از
+    // دامنه دست‌نخورده می‌ماند. تغییرات مثل بقیهٔ قواعد ثبت و قابلِ بازگردانی‌اند.
+
+    /** هاستِ کانونیکالِ سایت (بدونِ www) از config. */
+    public static function canonicalHost(): string
+    {
+        $host = (string) (parse_url((string) config('seo.site_url', 'https://tamironline.com'), PHP_URL_HOST) ?: 'tamironline.com');
+
+        return (string) preg_replace('~^www\.~i', '', $host);
+    }
+
+    /**
+     * اسکن/اعمالِ نرمال‌سازیِ دامنه روی همهٔ منابع.
+     *
+     * @return array{total:int, records:int, by_type: array<string,int>}
+     */
+    public function domainNormalize(bool $apply = false, ?int $userId = null): array
+    {
+        $host = self::canonicalHost();
+        $target = 'https://'.$host;
+        // فقط پیشوندهای «غلط»: http:// (با/بدونِ www) و https://www — بعد از
+        // هاست باید مرزِ URL باشد تا زیر-دامنه/دامنهٔ مشابه گرفته نشود.
+        $pattern = '~(?:http://(?:www\.)?|https://www\.)'.preg_quote($host, '~').'(?=[/"\'\s<>#?)\\\\]|$)~iu';
+
+        $rule = $apply ? $this->domainNormalizeRule($host, $target, $userId) : null;
+
+        $total = 0;
+        $records = 0;
+        $byType = [];
+
+        foreach (self::sources() as $type => $src) {
+            $byType[$type] = 0;
+            $this->eachRecordLight($src, function ($record) use (&$total, &$records, &$byType, $type, $src, $pattern, $target, $apply, $rule) {
+                $dirty = []; // field => [new, before, count]
+
+                foreach ($src['string_fields'] as $field) {
+                    $val = $record->{$field};
+                    if (! is_string($val) || $val === '') {
+                        continue;
+                    }
+                    $new = preg_replace($pattern, $target, $val, -1, $c);
+                    if ($c > 0 && $new !== null && $new !== $val) {
+                        $dirty[$field] = [$new, $val, $c];
+                    }
+                }
+                foreach ($src['json_fields'] as $field) {
+                    $val = $record->{$field};
+                    if (! is_array($val) || $val === []) {
+                        continue;
+                    }
+                    $c = 0;
+                    $new = $this->replaceInJson($val, $pattern, $target, $c);
+                    if ($c > 0) {
+                        $dirty[$field] = [$new, json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $c];
+                    }
+                }
+
+                if ($dirty === []) {
+                    return;
+                }
+
+                $records++;
+                foreach ($dirty as [$new, $before, $c]) {
+                    $total += $c;
+                    $byType[$type] += $c;
+                }
+
+                if (! $apply) {
+                    return;
+                }
+
+                DB::transaction(function () use ($record, $dirty, $rule, $src, $type) {
+                    foreach ($dirty as $field => [$new, $before, $c]) {
+                        LinkFixChange::create([
+                            'rule_id' => $rule->id,
+                            'entity_type' => $type,
+                            'entity_id' => $record->getKey(),
+                            'entity_label' => mb_substr((string) ($record->{$src['label']} ?? ''), 0, 300),
+                            'field' => $field,
+                            'before' => (string) $before,
+                            'occurrences' => $c,
+                            'created_at' => now(),
+                        ]);
+                        $record->{$field} = $new;
+                    }
+                    $record->save();
+                });
+            });
+        }
+
+        if ($apply && $rule) {
+            $rule->update([
+                'status' => 'applied',
+                'matches_count' => $total,
+                'applied_count' => ($rule->applied_count ?? 0) + $total,
+                'applied_at' => now(),
+                'applied_by' => $userId,
+                'scanned_at' => now(),
+            ]);
+        }
+
+        return ['total' => $total, 'records' => $records, 'by_type' => array_filter($byType)];
+    }
+
+    /** قاعدهٔ نمایندهٔ نرمال‌سازیِ دامنه — برای ثبتِ تغییرات و بازگردانی. */
+    private function domainNormalizeRule(string $host, string $target, ?int $userId): LinkFixRule
+    {
+        $old = 'http://www.'.$host;
+
+        return LinkFixRule::firstOrCreate(
+            ['old_url_hash' => sha1(self::normalizedKey($old))],
+            [
+                'old_url' => $old,
+                'new_url' => $target,
+                'action' => 'replace',
+                'note' => 'نرمال‌سازی دامنه: http/www → '.$target.' (کل مسیرها)',
+                'source' => 'manual',
+                'needs_review' => false,
+                'status' => 'applied',
+            ],
+        );
+    }
+
+    /** جایگزینیِ بازگشتیِ regex در آرایهٔ JSON. */
+    private function replaceInJson(array $data, string $pattern, string $target, int &$count): array
+    {
+        foreach ($data as $k => $v) {
+            if (is_array($v)) {
+                $data[$k] = $this->replaceInJson($v, $pattern, $target, $count);
+            } elseif (is_string($v) && $v !== '') {
+                $new = preg_replace($pattern, $target, $v, -1, $c);
+                if ($c > 0 && $new !== null) {
+                    $data[$k] = $new;
+                    $count += $c;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**

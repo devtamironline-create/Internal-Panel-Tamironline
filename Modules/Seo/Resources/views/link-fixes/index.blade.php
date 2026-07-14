@@ -47,6 +47,34 @@
         </form>
     </div>
 
+    {{-- نرمال‌سازیِ دامنه + قواعد از ریدایرکت‌ها (گزارشِ SEMrush) --}}
+    <div class="mb-6 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-900/10 p-4">
+        <div class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">🌐 نرمال‌سازیِ دامنه (SEMrush: HTTP links / Permanent redirects)</div>
+        <p class="text-[12px] text-gray-600 dark:text-gray-300 leading-6 mb-3">
+            هر لینکِ داخلی با <span dir="ltr" class="font-mono">http://</span> یا <span dir="ltr" class="font-mono">www.</span>
+            (متن، تصویر، JSON، در همهٔ مقالات/دستگاه‌ها/برندها/ترکیبی/صفحات/انجمن) به
+            <span dir="ltr" class="font-mono">https://tamironline.com</span> تبدیل می‌شود.
+            «ساخت از ریدایرکت‌ها» هم برای هر ریدایرکتِ 301، قاعدهٔ «لینکِ داخلی → مقصدِ نهایی» می‌سازد.
+        </p>
+        <div class="flex flex-wrap gap-2">
+            <form method="POST" action="{{ route('seo.admin.link-fixes.normalize-domain') }}">
+                @csrf
+                <input type="hidden" name="mode" value="scan">
+                <button class="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-bold hover:bg-sky-700">اسکنِ دامنه (بدونِ تغییر)</button>
+            </form>
+            <form method="POST" action="{{ route('seo.admin.link-fixes.normalize-domain') }}"
+                  onsubmit="return confirm('همهٔ لینک‌های http/www داخلی به https بدونِ www تبدیل شوند؟ تغییرات ثبت و قابلِ بازگردانی است.');">
+                @csrf
+                <input type="hidden" name="mode" value="apply">
+                <button class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700">اصلاحِ دامنه (اعمال)</button>
+            </form>
+            <form method="POST" action="{{ route('seo.admin.link-fixes.import-redirects') }}">
+                @csrf
+                <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">ساختِ قاعده از ریدایرکت‌ها (301)</button>
+            </form>
+        </div>
+    </div>
+
     {{-- افزودنِ قاعدهٔ دستی --}}
     <details class="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
         <summary class="text-sm font-bold text-gray-700 dark:text-gray-200 cursor-pointer">➕ افزودنِ قاعدهٔ دستی (پیدا/حذف/جایگزینی)</summary>

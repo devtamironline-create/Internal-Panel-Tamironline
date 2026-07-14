@@ -69,6 +69,8 @@ Route::middleware(['auth', 'can:manage-seo'])
             Route::get('/', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'index'])->name('index');
             Route::post('/', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'store'])->name('store');
             Route::post('/import', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'import'])->name('import');
+            Route::post('/normalize-domain', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'normalizeDomain'])->name('normalize-domain');
+            Route::post('/import-redirects', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'importFromRedirects'])->name('import-redirects');
             Route::post('/scan-all', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'scanAll'])->name('scan-all');
             Route::post('/apply-all', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'applyAll'])->name('apply-all');
             Route::get('/changes', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'changes'])->name('changes');
