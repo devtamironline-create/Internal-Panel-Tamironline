@@ -61,8 +61,18 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::post('/broken-links/{target}/ignore', [BrokenLinkController::class, 'ignore'])->name('broken-links.ignore');
         Route::post('/broken-links/{target}/unignore', [BrokenLinkController::class, 'unignore'])->name('broken-links.unignore');
 
-        // سلامتِ لینک‌سازیِ داخلی + صفحاتِ Orphan
-        Route::get('/internal-links', [InternalLinkController::class, 'index'])->name('internal-links.index');
+        // لینک‌سازیِ داخلی — داشبورد + پیشنهادها (تأیید/رد/اعمال/بازگردانی)
+        Route::prefix('internal-links')->name('internal-links.')->group(function () {
+            Route::get('/', [InternalLinkController::class, 'index'])->name('index');
+            Route::get('/suggestions', [InternalLinkController::class, 'suggestions'])->name('suggestions');
+            Route::post('/generate', [InternalLinkController::class, 'generate'])->name('generate');
+            Route::post('/apply-approved', [InternalLinkController::class, 'applyApproved'])->name('apply-approved');
+            Route::post('/{suggestion}/approve', [InternalLinkController::class, 'approve'])->name('approve')->whereNumber('suggestion');
+            Route::post('/{suggestion}/reject', [InternalLinkController::class, 'reject'])->name('reject')->whereNumber('suggestion');
+            Route::put('/{suggestion}/anchor', [InternalLinkController::class, 'updateAnchor'])->name('anchor')->whereNumber('suggestion');
+            Route::post('/{suggestion}/apply', [InternalLinkController::class, 'apply'])->name('apply')->whereNumber('suggestion');
+            Route::post('/{suggestion}/revert', [InternalLinkController::class, 'revert'])->name('revert')->whereNumber('suggestion');
+        });
 
         // اصلاحِ لینک‌های داخلیِ اشتباه در سطحِ دیتابیس (مقالات/دستگاه‌ها/برندها/ترکیبی)
         Route::prefix('link-fixes')->name('link-fixes.')->group(function () {
