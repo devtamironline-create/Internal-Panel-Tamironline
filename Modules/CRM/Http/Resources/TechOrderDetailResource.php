@@ -1,0 +1,265 @@
+<?php
+
+namespace Modules\CRM\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Modules\CRM\Enums\OrderStatus;
+use Modules\CRM\Models\CrmSetting;
+use Modules\CRM\Models\Order;
+use Modules\CRM\Services\TransferReceiptService;
+
+/**
+ * جزئیاتِ کاملِ سفارش برای اپِ تکنسین — هم‌ترازِ صفحهٔ order_show پنل.
+ *
+ * @mixin Order
+ */
+class TechOrderDetailResource extends JsonResource
+{
+    /** برچسبِ اکشنِ هر وضعیت (رادیوهای تغییرِ وضعیت). */
+    private const ACTION_LABELS = [
+        'coordinated' => 'هماهنگ کردن سفارش',
+        'open' => 'انتقال به تعمیرگاه',
+        'suspended' => 'وضعیت نامشخص',
+        'completed' => 'پایان سفارش',
+        'declined' => 'رد سفارش',
+        'transit' => 'فقط ایاب و ذهاب',
+        'cancelled' => 'کنسل سفارش',
+    ];
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        /** @var OrderStatus|null $status */
+        $status = $this->status;
+        $isFinal = $status?->isFinal() ?? false;
+
+        return [
+            'id' => (int) $this->id,
+            'order_code' => $this->order_code,
+            'order_type' => $this->order_type,
+            'subscription' => $this->subscription,
+
+            'status' => $status?->value,
+            'status_label' => $status?->label(),
+            'status_badge' => $status?->badgeClass(),
+            'status_group' => $status?->group(),
+            'is_final' => $isFinal,
+            'is_returned' => ! is_null($this->return_type),
+            'return_type' => $this->return_type ? (int) $this->return_type : null,
+
+            'scheduled_at' => $this->visit_scheduled_at?->utc()->toIso8601String(),
+            'scheduled_date' => $this->visit_scheduled_at?->format('Y-m-d'),
+
+            'customer' => [
+                'name' => $this->customer_name ?: ($this->customer->display_name ?? null),
+                // روی سفارشِ نهایی، شماره‌ها ماسک می‌شوند (حریمِ خصوصی).
+                'mobile' => $isFinal ? $this->mask($this->customer_mobile) : $this->customer_mobile,
+                'phone' => $isFinal ? $this->mask($this->customer_phone) : $this->customer_phone,
+                'contact_locked' => $isFinal,
+            ],
+
+            'address' => $this->address(),
+            'device' => [
+                'name' => $this->device?->name,
+                'brand' => $this->brand?->name,
+            ],
+            'problem' => [
+                'title' => $this->problem_title,
+                'description' => $this->problem_description,
+            ],
+
+            'tech_notes' => array_values(array_filter([
+                ['key' => 'description_tech', 'label' => 'یادداشت تکنسین', 'value' => $this->description_tech],
+                ['key' => 'description_tech1', 'label' => 'دلیل وضعیت نامشخص', 'value' => $this->description_tech1],
+                ['key' => 'description_tech2', 'label' => 'لیست اقلام تحویل‌گرفته‌شده', 'value' => $this->description_tech2],
+            ], fn ($n) => filled($n['value']))),
+
+            'my_notes' => $this->myNotes($request),
+
+            'financial' => [
+                'price_customer' => (int) ($this->price_customer ?? 0) ?: null,
+                'cost_price' => (int) ($this->cost_price ?? 0) ?: null,
+                'total_invoice' => (int) ($this->total_invoice ?? 0) ?: null,
+                'hire' => (int) ($this->hire ?? 0) ?: null,
+                'transportation' => (int) ($this->transportation ?? 0) ?: null,
+                'discount' => (int) ($this->discount ?? 0) ?: null,
+                'final_price' => (int) ($this->final_price ?? 0) ?: null,
+                'invoice_description' => $this->invoice_descripotion,
+                'pieces' => $this->pieces(),
+            ],
+
+            'device_image_url' => $this->device_img1 ? storage_url($this->device_img1) : null,
+
+            'allowed_transitions' => $this->allowedTransitions($status),
+            'status_history' => $this->statusHistory(),
+
+            'proformas' => $this->whenLoaded('proformas', fn () => $this->proformas->map(fn ($pf) => [
+                'id' => (int) $pf->id,
+                'code' => $pf->proforma_code,
+                'status' => $pf->status,
+                'total' => (int) $pf->total,
+                'public_url' => method_exists($pf, 'publicUrl') ? $pf->publicUrl() : null,
+                'created_at' => $pf->created_at?->utc()->toIso8601String(),
+            ])->values()),
+
+            'transfer_receipts' => $this->whenLoaded('transferReceipts', fn () => $this->transferReceipts->map(fn ($tr) => [
+                'code' => $tr->code,
+                'description' => $tr->description,
+                'print_url' => TransferReceiptService::publicUrl($tr),
+                'created_at' => $tr->created_at?->utc()->toIso8601String(),
+            ])->values()),
+
+            'return_logs' => is_array($this->wp_return_logs) ? $this->wp_return_logs : [],
+
+            'created_at' => $this->created_at?->utc()->toIso8601String(),
+            'updated_at' => $this->updated_at?->utc()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function address(): ?array
+    {
+        $addr = $this->relationLoaded('customerAddress') ? $this->customerAddress : null;
+        $text = ($addr && filled($addr->full_address)) ? $addr->full_address : $this->address;
+        $hasCoords = $addr && method_exists($addr, 'hasCoordinates') && $addr->hasCoordinates();
+
+        if (! $text && ! $this->province_id && ! $this->city_id && ! $hasCoords) {
+            return null;
+        }
+
+        return [
+            'full_address' => $text,
+            'province' => $addr?->province?->name ?? $this->province?->name,
+            'city' => $addr?->city?->name ?? $this->city?->name,
+            'district' => $addr?->district?->name,
+            'postal_code' => $addr?->postal_code ?: $this->postal_code,
+            'latitude' => $hasCoords ? (float) $addr->latitude : null,
+            'longitude' => $hasCoords ? (float) $addr->longitude : null,
+            'has_coordinates' => (bool) $hasCoords,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function pieces(): array
+    {
+        $titles = is_array($this->piece_list) ? $this->piece_list : [];
+        $buys = is_array($this->buy_price_list) ? $this->buy_price_list : [];
+        $sells = is_array($this->customer_price_list) ? $this->customer_price_list : [];
+
+        $out = [];
+        foreach ($titles as $i => $t) {
+            $title = is_string($t) ? $t : (string) ($t['title'] ?? '');
+            if ($title === '') {
+                continue;
+            }
+            $out[] = [
+                'title' => $title,
+                'buy_price' => (int) ($buys[$i] ?? 0),
+                'customer_price' => (int) ($sells[$i] ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * یادداشت‌های همین تکنسین (author == صاحبِ توکن).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function myNotes(Request $request): array
+    {
+        $techId = (int) optional($request->user())->id;
+        $notes = is_array($this->wp_notes) ? $this->wp_notes : [];
+
+        return collect($notes)
+            ->filter(fn ($n) => isset($n['author']) && (int) $n['author'] === $techId)
+            ->map(fn ($n) => ['content' => $n['content'] ?? '', 'date' => $n['date'] ?? null])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * گذارهای مجاز برای تکنسین — هم‌سو با Tech\DashboardController::allowedStatusesFor.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function allowedTransitions(?OrderStatus $status): array
+    {
+        if (! $status || $status->isFinal()) {
+            return [];
+        }
+
+        $returnType = (int) ($this->return_type ?? 0);
+        if ($returnType === 1) {
+            $base = [OrderStatus::Completed];
+        } elseif ($returnType === 2) {
+            $base = [OrderStatus::Cancelled, OrderStatus::Completed];
+        } else {
+            $base = [
+                OrderStatus::Coordinated, OrderStatus::Open, OrderStatus::Suspended,
+                OrderStatus::Completed, OrderStatus::Declined, OrderStatus::Transit,
+            ];
+            if (CrmSetting::get('tech_panel_readonly') === '1') {
+                $base = array_filter($base, fn (OrderStatus $s) => ! $s->isFinal());
+            }
+        }
+
+        return collect($base)
+            ->filter(fn (OrderStatus $s) => $s !== $status)
+            ->map(fn (OrderStatus $s) => [
+                'value' => $s->value,
+                'label' => $s->label(),
+                'action_label' => self::ACTION_LABELS[$s->value] ?? $s->label(),
+                'badge' => $s->badgeClass(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * تاریخچهٔ وضعیت — بدونِ نامِ تغییردهنده (طبقِ خواستِ کاربر).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function statusHistory(): array
+    {
+        if (! $this->relationLoaded('statusLogs')) {
+            return [];
+        }
+
+        return $this->statusLogs->map(function ($log) {
+            $to = OrderStatus::tryFrom((string) $log->to_status);
+
+            return [
+                'from_label' => $log->fromLabel(),
+                'to_label' => $log->toLabel(),
+                'to_status' => $log->to_status,
+                'badge' => $to?->badgeClass() ?? 'bg-gray-100 text-gray-700',
+                'note' => $log->note,
+                'created_at' => $log->created_at?->utc()->toIso8601String(),
+            ];
+        })->values()->all();
+    }
+
+    private function mask(?string $number): ?string
+    {
+        if (! $number) {
+            return null;
+        }
+        $clean = preg_replace('/\s+/', '', $number);
+        $len = strlen($clean);
+        if ($len <= 7) {
+            return str_repeat('*', $len);
+        }
+
+        return substr($clean, 0, 4).str_repeat('*', $len - 8).substr($clean, -4);
+    }
+}
