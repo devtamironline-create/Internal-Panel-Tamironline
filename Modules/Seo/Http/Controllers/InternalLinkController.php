@@ -68,9 +68,13 @@ class InternalLinkController extends Controller
             ->orderByDesc('id')
             ->paginate(30)->withQueryString();
 
+        // نگاشتِ slug جزیره → نامِ فارسیِ دستگاه (برای نمایشِ خوانا)
+        $islandNames = \Modules\CRM\Models\Device::query()->pluck('name', 'slug')->toArray();
+
         return view('seo::internal-links.suggestions', [
             'suggestions' => $suggestions,
             'islands' => LinkSuggestion::query()->whereNotNull('island')->distinct()->pluck('island'),
+            'islandNames' => $islandNames,
             'filters' => [
                 'status' => $status,
                 'priority' => (string) $request->query('priority', ''),
