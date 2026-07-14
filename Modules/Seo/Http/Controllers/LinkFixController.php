@@ -263,6 +263,117 @@ class LinkFixController extends Controller
         return back()->with('success', 'فیلد به نسخهٔ قبل از اصلاح بازگردانده شد.');
     }
 
+    /**
+     * نرمال‌سازیِ دامنه (http/www → https بدونِ www) — mode=scan فقط می‌شمارد،
+     * mode=apply اعمال می‌کند (با ثبتِ تغییرات و قابلیتِ بازگردانی).
+     */
+    public function normalizeDomain(Request $request)
+    {
+        $this->raiseLimits();
+        $apply = $request->input('mode') === 'apply';
+
+        try {
+            $res = $this->fixer->domainNormalize($apply, auth()->id());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('seo.domain_normalize_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'نرمال‌سازی دامنه با خطا مواجه شد: '.$e->getMessage());
+        }
+
+        $byType = collect($res['by_type'])
+            ->map(fn ($n, $t) => (ContentLinkFixer::TYPE_LABELS[$t] ?? $t).': '.$n)
+            ->implode('، ');
+
+        if (! $apply) {
+            return back()->with('success', $res['total'] === 0
+                ? 'اسکن دامنه تمام شد: هیچ لینکِ http/www داخلی پیدا نشد. ✅'
+                : "اسکن دامنه: {$res['total']} موردِ http/www در {$res['records']} رکورد پیدا شد ({$byType}). برای اصلاح، «اصلاحِ دامنه» را بزنید.");
+        }
+
+        SeoChangeLog::record('applied', 'link_fix', 'domain-normalize: '.$res['total'].' occurrences');
+
+        return back()->with('success', $res['total'] === 0
+            ? 'چیزی برای اصلاح نبود — همهٔ لینک‌ها از قبل https و بدونِ www هستند. ✅'
+            : "نرمال‌سازی دامنه اعمال شد: {$res['total']} مورد در {$res['records']} رکورد ({$byType}). تغییرات از «تاریخچهٔ تغییرات» قابلِ بازگردانی است.");
+    }
+
+    /**
+     * ساختِ قاعدهٔ اصلاح از ریدایرکت‌های فعالِ 301/308 (فقط exact): لینکِ داخلی
+     * به URLِ ریدایرکتی → مقصدِ نهایی (زنجیره تا عمقِ ۵ دنبال می‌شود).
+     * قواعدِ ساخته‌شده pending هستند — مثل بقیه اول اسکن، بعد اعمال.
+     */
+    public function importFromRedirects()
+    {
+        $this->raiseLimits();
+
+        $host = ContentLinkFixer::canonicalHost();
+        $base = 'https://'.$host;
+        $abs = fn (string $u) => str_starts_with($u, 'http') ? $u : $base.'/'.ltrim($u, '/');
+
+        $redirects = \Modules\Seo\Models\SeoRedirect::query()
+            ->active()
+            ->where('match_type', 'exact')
+            ->whereIn('status_code', [301, 308])
+            ->whereNotNull('target')
+            ->get(['source', 'target']);
+
+        // نگاشت برای دنبال‌کردنِ زنجیره: source نرمال → target
+        $map = [];
+        foreach ($redirects as $r) {
+            $map[ContentLinkFixer::normalizedKey($abs((string) $r->source))] = (string) $r->target;
+        }
+
+        $created = 0;
+        $skipped = 0;
+        foreach ($redirects as $r) {
+            $old = $abs((string) $r->source);
+
+            // دنبال‌کردنِ زنجیره تا مقصدِ نهایی (حداکثر ۵ گام، با گاردِ حلقه).
+            $target = (string) $r->target;
+            $seen = [ContentLinkFixer::normalizedKey($old) => true];
+            for ($i = 0; $i < 5; $i++) {
+                $key = ContentLinkFixer::normalizedKey($abs($target));
+                if (! isset($map[$key]) || isset($seen[$key])) {
+                    break;
+                }
+                $seen[$key] = true;
+                $target = $map[$key];
+            }
+            $new = $abs($target);
+
+            if (ContentLinkFixer::normalizedKey($old) === ContentLinkFixer::normalizedKey($new)) {
+                $skipped++;
+
+                continue;
+            }
+
+            $hash = sha1(ContentLinkFixer::normalizedKey($old));
+            if (LinkFixRule::where('old_url_hash', $hash)->exists()) {
+                $skipped++;
+
+                continue;
+            }
+
+            LinkFixRule::create([
+                'old_url' => $old,
+                'old_url_hash' => $hash,
+                'new_url' => $new,
+                'action' => 'replace',
+                'note' => 'ساخته‌شده از ریدایرکت (لینکِ داخلی نباید به URLِ ریدایرکتی برود)',
+                'source' => 'redirect',
+                'needs_review' => false,
+                'status' => 'pending',
+            ]);
+            $created++;
+        }
+
+        if ($created === 0) {
+            return back()->with('success', "قاعدهٔ جدیدی لازم نبود ({$skipped} موردِ تکراری/بی‌اثر رد شد).");
+        }
+
+        return back()->with('success', "{$created} قاعده از ریدایرکت‌ها ساخته شد ({$skipped} رد شد). حالا «اسکنِ همه» و بعد «اعمالِ همه» را بزنید.");
+    }
+
     private function seedPath(): string
     {
         return module_path('Seo', 'Database/data/link-fix-rules.json');
