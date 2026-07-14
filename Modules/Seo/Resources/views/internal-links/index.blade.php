@@ -28,6 +28,20 @@
     @if(session('success'))<div class="mb-4 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="mb-4 px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">{{ session('error') }}</div>@endif
 
+    {{-- راهنمای سیستم --}}
+    <details class="mb-5 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/10 p-4">
+        <summary class="text-sm font-bold text-blue-800 dark:text-blue-300 cursor-pointer">📘 راهنمای سیستم — هر شاخص یعنی چه و چطور کار کنم؟</summary>
+        <div class="mt-3 grid md:grid-cols-2 gap-x-8 gap-y-2 text-[12px] text-gray-700 dark:text-gray-300 leading-7">
+            <div><b>امتیاز لینک‌سازی (۰–۱۰۰):</b> کیفیتِ اتصالِ هر صفحه به بقیهٔ سایت. فرمول: لینکِ ورودی (تا ۴۰ امتیاز، هر لینک ۸)، داشتنِ حداقل یک لینکِ خروجی (۲۰)، نزدیکی به منو/عمقِ کم (تا ۲۰)، و اتصال به صفحهٔ مادرِ جزیره (۲۰). <span class="text-emerald-600 font-bold">۷۰+</span> خوب، <span class="text-amber-600 font-bold">۴۰–۶۹</span> متوسط، <span class="text-rose-600 font-bold">زیر ۴۰</span> ضعیف.</div>
+            <div><b>صفحهٔ یتیم:</b> صفحه‌ای که <u>هیچ</u> صفحهٔ دیگری از داخلِ محتوا به آن لینک نداده — گوگل سخت پیدایش می‌کند. راه‌حل: از مقالات/صفحاتِ مرتبط به آن لینک بدهید (بخشِ پیشنهادها همین کار را می‌کند).</div>
+            <div><b>عمق خزش:</b> حداقل تعدادِ کلیک از منوی اصلی تا آن صفحه. صفحاتِ مادرِ خدمات (در منو) عمقِ ۱ هستند. «۵+» یعنی از هیچ مسیری قابلِ رسیدن نیست. صفحاتِ مهم باید عمقِ ≤۳ داشته باشند.</div>
+            <div><b>جزیره:</b> خوشهٔ موضوعیِ هر دستگاه — صفحهٔ مادر (مثلاً «تعمیر لباسشویی») + صفحاتِ برندِ همان دستگاه + مقالاتِ مرتبط. هدف: همهٔ اعضای جزیره به مادر لینک بدهند و مادر به برندها.</div>
+            <div><b>لینک به ریدایرکت:</b> لینکِ داخلی که به URLِ ۳۰۱‌شده می‌رود؛ باید مستقیم به مقصدِ نهایی اصلاح شود (از بخشِ «اصلاح لینک‌های داخلی» → «ساختِ قاعده از ریدایرکت‌ها»).</div>
+            <div><b>جریانِ کار:</b> ۱) «تولید پیشنهادها» را بزنید ۲) در صفحهٔ پیشنهادها هر مورد را تأیید/رد کنید (انکر قابلِ ویرایش است) ۳) «اعمال» بزنید — لینک فقط روی اولین تکرارِ انکر در متنِ آزاد اضافه می‌شود ۴) هر اعمال قابلِ «بازگردانی» است.</div>
+        </div>
+        <p class="mt-2 text-[11px] text-gray-500">📄 مستندِ کامل: <code dir="ltr">docs/SEO_INTERNAL_LINKING.md</code> — تحلیل هر ۱۵ دقیقه کش می‌شود؛ «بروزرسانی داده‌ها» آن را تازه می‌کند.</p>
+    </details>
+
     {{-- کارت‌های آمار --}}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
@@ -64,7 +78,12 @@
             <div id="island-chart"></div>
             <table class="w-full text-[11px] mt-2">
                 <thead class="text-gray-500"><tr class="text-center">
-                    <th class="py-1 text-right">جزیره</th><th>اعضا</th><th>مقالات</th><th>متصل به مادر</th><th>یتیم</th><th>میانگین</th>
+                    <th class="py-1 text-right" title="خوشهٔ موضوعیِ هر دستگاه">جزیره (دستگاه)</th>
+                    <th title="مجموعِ صفحاتِ عضو: مادر + برندها + مقالاتِ مرتبط">تعداد صفحات</th>
+                    <th title="مقالاتِ بلاگِ مرتبط با این دستگاه">مقالات</th>
+                    <th title="اعضایی که به صفحهٔ مادرِ خدمات لینک داده‌اند">لینک به صفحهٔ مادر</th>
+                    <th title="اعضای بدونِ هیچ لینکِ ورودی">صفحات یتیم</th>
+                    <th title="میانگینِ امتیازِ لینک‌سازیِ اعضای جزیره (۰–۱۰۰)">میانگین امتیاز</th>
                 </tr></thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @foreach($islands as $slug => $i)
@@ -117,7 +136,12 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead class="text-gray-500"><tr class="text-center">
-                        <th class="py-2 text-right">صفحه</th><th>نوع</th><th>امتیاز</th><th>عمق</th><th>ورودی</th><th>خروجی</th>
+                        <th class="py-2 text-right">صفحه</th>
+                        <th>نوع صفحه</th>
+                        <th title="امتیازِ لینک‌سازیِ داخلی از ۱۰۰ — فرمول در «راهنمای سیستم»">امتیاز لینک‌سازی</th>
+                        <th title="تعداد کلیک از منوی اصلی تا این صفحه">عمق خزش</th>
+                        <th title="چند صفحهٔ دیگر به این صفحه لینک داده‌اند — ۰ یعنی یتیم">لینک ورودی</th>
+                        <th title="این صفحه به چند صفحهٔ داخلیِ دیگر لینک داده">لینک خروجی</th>
                     </tr></thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @foreach($needsAction as $p)

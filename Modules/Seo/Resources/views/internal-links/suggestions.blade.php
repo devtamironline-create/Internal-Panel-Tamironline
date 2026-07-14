@@ -27,6 +27,20 @@
     @if(session('success'))<div class="mb-4 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="mb-4 px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">{{ session('error') }}</div>@endif
 
+    {{-- راهنمای کوتاه --}}
+    <details class="mb-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/10 p-3">
+        <summary class="text-xs font-bold text-blue-800 dark:text-blue-300 cursor-pointer">📘 راهنما — هر پیشنهاد یعنی چه و «اعمال» دقیقاً چه می‌کند؟</summary>
+        <div class="mt-2 text-[12px] text-gray-700 dark:text-gray-300 leading-7">
+            هر کارت یعنی: «در صفحهٔ نام‌برده، متنِ <b>انکر</b> را به <b>مقصد</b> لینک کن» — با دلیلِ پیشنهاد.
+            <b>تأیید</b> فقط علامت‌گذاری است و چیزی را تغییر نمی‌دهد؛ <b>اعمال</b> لینک را واقعاً به محتوا اضافه می‌کند:
+            فقط <u>اولین</u> تکرارِ انکر در متنِ آزاد لینک می‌شود (هرگز داخلِ لینک/تگِ موجود). اگر انکر در متن پیدا نشود،
+            اعمال ناموفق است — با «✏️ انکر» متن را به عبارتی که واقعاً در مقاله هست تغییر دهید.
+            هر اعمال، نسخهٔ کاملِ قبلی را ذخیره می‌کند و با «↩ بازگردانی» برمی‌گردد.
+            وضعیت‌ها: <b>در انتظار</b> = هنوز تصمیم نگرفته‌اید · <b>تأییدشده</b> = آمادهٔ اعمال (با دکمهٔ ⚡ دسته‌ای هم اعمال می‌شود) ·
+            <b>اعمال‌شده</b> = لینک در محتواست · <b>ردشده</b> = نادیده گرفته شده (قابلِ بازگشت).
+        </div>
+    </details>
+
     {{-- فیلترها --}}
     <div class="flex flex-wrap items-center gap-2 mb-4 text-xs">
         @foreach(['pending' => 'در انتظار', 'approved' => 'تأییدشده', 'applied' => 'اعمال‌شده', 'rejected' => 'ردشده', 'all' => 'همه'] as $st => $label)
@@ -44,9 +58,9 @@
                 @endforeach
             </select>
             <select name="island" onchange="this.form.submit()" class="px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-xs">
-                <option value="">همه جزیره‌ها</option>
+                <option value="">همه جزیره‌ها (دستگاه‌ها)</option>
                 @foreach($islands as $i)
-                    <option value="{{ $i }}" @selected($filters['island'] === $i)>{{ $i }}</option>
+                    <option value="{{ $i }}" @selected($filters['island'] === $i)>{{ $islandNames[$i] ?? $i }}</option>
                 @endforeach
             </select>
         </form>
@@ -67,7 +81,7 @@
                                 {{ ['pending' => 'bg-blue-100 text-blue-700', 'approved' => 'bg-emerald-100 text-emerald-700', 'applied' => 'bg-emerald-600 text-white', 'rejected' => 'bg-gray-200 text-gray-600'][$s->status] ?? '' }}">
                                 {{ LinkSuggestion::STATUS_LABELS[$s->status] ?? $s->status }}
                             </span>
-                            @if($s->island)<span class="text-[10px] text-gray-400">جزیره: {{ $s->island }}</span>@endif
+                            @if($s->island)<span class="text-[10px] text-gray-400">جزیره: {{ $islandNames[$s->island] ?? $s->island }}</span>@endif
                         </div>
                         <div class="text-sm text-gray-800 dark:text-gray-100 leading-7">
                             در <b>{{ $s->page_label }}</b> <span dir="ltr" class="font-mono text-[10px] text-gray-400">{{ $s->page_path }}</span><br>
