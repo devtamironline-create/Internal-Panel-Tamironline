@@ -395,7 +395,7 @@
             }
         @endphp
 
-        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+        <div id="schedule-visit" class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
             <div class="flex items-center gap-2 mb-3">
                 <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -932,6 +932,82 @@
 
     <div class="h-4"></div>
 </div>
+
+{{-- ─────── مودالِ اجباریِ «نتیجهٔ تماس» ───────
+     وقتی تکنسین روی شمارهٔ مشتری می‌زند (tel:) و به صفحه برمی‌گردد، این مودال
+     باز می‌شود و تا انتخابِ نتیجه بسته نمی‌شود. --}}
+@if(! $orderIsLocked)
+<div id="call-result-modal" class="fixed inset-0 z-[300] hidden items-end sm:items-center justify-center bg-black/60 p-4">
+    <div class="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl">
+        <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            </div>
+            <div class="text-base font-bold text-gray-900">نتیجهٔ تماس با مشتری؟</div>
+        </div>
+        <p class="text-xs text-gray-500 leading-6 mb-4">ثبتِ نتیجهٔ تماس الزامی است تا وضعیتِ سفارش به‌روز بماند.</p>
+
+        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}" onsubmit="clearCallPending()">
+            @csrf
+            <input type="hidden" name="result" value="coordinated">
+            <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm mb-2"
+                    style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                ✓ هماهنگ شد — ثبت زمان مراجعه
+            </button>
+        </form>
+        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}" onsubmit="clearCallPending()">
+            @csrf
+            <input type="hidden" name="result" value="no_answer">
+            <button type="submit" class="w-full py-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold text-sm">
+                ✗ مشتری پاسخگو نبود
+            </button>
+        </form>
+
+        <button type="button" onclick="dismissCallModal()" class="w-full mt-3 text-[11px] text-gray-400 underline">
+            تماس برقرار نشد / اشتباه لمس شد
+        </button>
+    </div>
+</div>
+
+<script>
+(function () {
+    var KEY = 'tech_call_pending_{{ $order->id }}';
+    var MIN_AWAY_MS = 5000; // حداقل زمانِ خارج‌بودن از صفحه تا «تماسِ واقعی» فرض شود
+
+    // کلیک روی هر لینکِ tel: → علامت‌گذاریِ «تماسِ در جریان»
+    document.querySelectorAll('a[href^="tel:"]').forEach(function (a) {
+        a.addEventListener('click', function () {
+            try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) {}
+        });
+    });
+
+    function maybeAsk() {
+        var ts;
+        try { ts = parseInt(sessionStorage.getItem(KEY) || '0', 10); } catch (e) { return; }
+        if (!ts) return;
+        if (Date.now() - ts < MIN_AWAY_MS) return; // برگشتِ فوری = شماره‌گیر باز نشده
+        var m = document.getElementById('call-result-modal');
+        if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') maybeAsk();
+    });
+    window.addEventListener('pageshow', maybeAsk);
+    // اگر با تبِ باز برگشته باشد (reload بعد از تماس)
+    maybeAsk();
+
+    window.clearCallPending = function () {
+        try { sessionStorage.removeItem(KEY); } catch (e) {}
+    };
+    window.dismissCallModal = function () {
+        window.clearCallPending();
+        var m = document.getElementById('call-result-modal');
+        if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    };
+})();
+</script>
+@endif
 
 @include('crm::tech-panel._partials.bottom-nav', ['current' => 'tech.orders'])
 

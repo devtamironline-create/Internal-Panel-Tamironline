@@ -171,7 +171,9 @@ class OrderActionController extends Controller
 
         $order->refresh();
         $previous = $order->status;
-        $autoCoordinated = $previous === OrderStatus::New;
+        $autoCoordinated = in_array($previous, [
+            OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
+        ], true);
 
         $order->update(array_filter([
             'visit_scheduled_at' => $datetime,
@@ -222,6 +224,65 @@ class OrderActionController extends Controller
         $order->update(['order_note_content' => json_encode($existing, JSON_UNESCAPED_UNICODE)]);
 
         return response()->json(['success' => true, 'message' => 'یادداشت ثبت شد.']);
+    }
+
+    /**
+     * POST /v1/technician/orders/{id}/call-result — نتیجهٔ تماسِ تلفنی با مشتری.
+     * result: coordinated (→ اپ باید فرمِ زمانِ مراجعه را باز کند) | no_answer
+     * (→ در فازِ هماهنگی، وضعیت «مشتری پاسخگو نیست» می‌شود؛ وگرنه فقط لاگ).
+     */
+    public function callResult(Request $request, int $id): JsonResponse
+    {
+        $tech = $request->user();
+        $order = Order::query()->whereKey($id)->firstOrFail();
+        $this->authorizeOwnership($order, $tech);
+
+        $validated = $request->validate(['result' => 'required|in:coordinated,no_answer']);
+
+        if ($order->status->isFinal()) {
+            throw ValidationException::withMessages(['result' => 'این سفارش نهایی شده است.']);
+        }
+
+        $order->refresh();
+        $previous = $order->status;
+        $coordinationPhase = in_array($previous, [
+            OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
+        ], true);
+
+        if ($validated['result'] === 'no_answer') {
+            if ($coordinationPhase && $previous !== OrderStatus::NoAnswer) {
+                $order->update(['status' => OrderStatus::NoAnswer->value]);
+            }
+            OrderStatusLog::create([
+                'order_id' => $order->id,
+                'from_status' => $previous->value,
+                'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
+                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود.',
+                'changed_by' => $tech->user_id,
+                'created_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'نتیجهٔ تماس ثبت شد: مشتری پاسخگو نیست.',
+                'data' => ['status' => $order->fresh()->status?->value, 'next_action' => null],
+            ]);
+        }
+
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $previous->value,
+            'to_status' => $previous->value,
+            'note' => 'نتیجهٔ تماس تلفنی: با مشتری هماهنگ شد — در انتظار ثبت زمان مراجعه.',
+            'changed_by' => $tech->user_id,
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'حالا زمانِ مراجعه را ثبت کنید تا وضعیت «هماهنگ شده» شود.',
+            'data' => ['status' => $previous->value, 'next_action' => 'schedule_visit'],
+        ]);
     }
 
     /** POST /v1/technician/orders/{id}/deliver-sms — پیامکِ «آماده تحویل» (اگر مجاز). */
