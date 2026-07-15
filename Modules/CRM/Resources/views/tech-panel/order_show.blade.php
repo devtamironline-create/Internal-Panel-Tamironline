@@ -125,7 +125,7 @@
             <div class="text-white text-xl font-bold mt-1" dir="ltr">{{ $order->order_code }}</div>
 
             <div class="flex items-center gap-2 mt-3 flex-wrap">
-                <span class="px-3 py-1 text-xs font-bold rounded-full {{ $order->status->badgeClass() }}">
+                <span id="order-status-badge" class="px-3 py-1 text-xs font-bold rounded-full {{ $order->status->badgeClass() }}">
                     {{ $order->status->label() }}
                 </span>
                 @if($order->return_type)
@@ -947,7 +947,7 @@
         </div>
         <p class="text-xs text-gray-500 leading-6 mb-4">ثبتِ نتیجهٔ تماس الزامی است تا وضعیتِ سفارش به‌روز بماند.</p>
 
-        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}" onsubmit="clearCallPending()">
+        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}">
             @csrf
             <input type="hidden" name="result" value="coordinated">
             <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm mb-2"
@@ -955,7 +955,7 @@
                 ✓ هماهنگ شد — ثبت زمان مراجعه
             </button>
         </form>
-        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}" onsubmit="clearCallPending()">
+        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}">
             @csrf
             <input type="hidden" name="result" value="no_answer">
             <button type="submit" class="w-full py-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold text-sm">
@@ -972,39 +972,112 @@
 <script>
 (function () {
     var KEY = 'tech_call_pending_{{ $order->id }}';
-    var MIN_AWAY_MS = 5000; // حداقل زمانِ خارج‌بودن از صفحه تا «تماسِ واقعی» فرض شود
+    var HIDDEN_KEY = KEY + '_hid';
+    var MIN_AWAY_MS = 2500;   // اگر صفحه مخفی شد (شماره‌گیر باز شد)
+    var FALLBACK_MS = 8000;   // اگر هیچ رویدادِ مخفی‌شدن نگرفتیم، بعد از ۸ ثانیه بپرس
+
+    function get(k) { try { return parseInt(sessionStorage.getItem(k) || '0', 10); } catch (e) { return 0; } }
+    function set(k, v) { try { sessionStorage.setItem(k, String(v)); } catch (e) {} }
+    function del(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
 
     // کلیک روی هر لینکِ tel: → علامت‌گذاریِ «تماسِ در جریان»
     document.querySelectorAll('a[href^="tel:"]').forEach(function (a) {
         a.addEventListener('click', function () {
-            try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) {}
+            set(KEY, Date.now());
+            del(HIDDEN_KEY);
         });
     });
 
+    // ثبتِ لحظهٔ مخفی‌شدنِ صفحه (رفتن به شماره‌گیر)
+    function markHidden() { if (get(KEY)) set(HIDDEN_KEY, Date.now()); }
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') markHidden(); else maybeAsk();
+    });
+    window.addEventListener('blur', markHidden);
+    window.addEventListener('pagehide', markHidden);
+    window.addEventListener('focus', maybeAsk);
+    window.addEventListener('pageshow', maybeAsk);
+    document.addEventListener('resume', maybeAsk);
+
+    // پشتیبانِ قطعی: هر ثانیه چک می‌شود — حتی اگر هیچ رویدادی از دست برود،
+    // مودال حداکثر یک ثانیه بعد از شرط ظاهر می‌شود (بدونِ نیاز به رفرش).
+    var poller = setInterval(maybeAsk, 1000);
+
     function maybeAsk() {
-        var ts;
-        try { ts = parseInt(sessionStorage.getItem(KEY) || '0', 10); } catch (e) { return; }
-        if (!ts) return;
-        if (Date.now() - ts < MIN_AWAY_MS) return; // برگشتِ فوری = شماره‌گیر باز نشده
+        var ts = get(KEY);
+        if (!ts || document.visibilityState !== 'visible') return;
+        var wentAway = get(HIDDEN_KEY) > 0;
+        var elapsed = Date.now() - ts;
+        // یا صفحه واقعاً مخفی شده و برگشته، یا از کلیک به‌قدر کافی گذشته
+        if (!((wentAway && elapsed >= MIN_AWAY_MS) || elapsed >= FALLBACK_MS)) return;
         var m = document.getElementById('call-result-modal');
-        if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        if (m && m.classList.contains('hidden')) { m.classList.remove('hidden'); m.classList.add('flex'); }
     }
 
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') maybeAsk();
-    });
-    window.addEventListener('pageshow', maybeAsk);
-    // اگر با تبِ باز برگشته باشد (reload بعد از تماس)
-    maybeAsk();
-
-    window.clearCallPending = function () {
-        try { sessionStorage.removeItem(KEY); } catch (e) {}
-    };
-    window.dismissCallModal = function () {
-        window.clearCallPending();
+    function clearPending() { del(KEY); del(HIDDEN_KEY); }
+    function hideModal() {
         var m = document.getElementById('call-result-modal');
         if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
-    };
+    }
+    function toast(msg, ok) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:400;max-width:92vw;'
+            + 'padding:10px 18px;border-radius:14px;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25);'
+            + 'background:' + (ok ? 'linear-gradient(135deg,#059669,#10b981)' : '#e11d48');
+        document.body.appendChild(t);
+        setTimeout(function () { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; }, 3500);
+        setTimeout(function () { t.remove(); }, 4000);
+    }
+
+    // ارسالِ AJAX — بدونِ reload صفحه
+    document.querySelectorAll('#call-result-modal form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                clearPending();
+                hideModal();
+                toast(data.message || 'ثبت شد.', !!data.success);
+
+                // به‌روزرسانیِ بَجِ وضعیت در همان صفحه (بدونِ رفرش)
+                if (data.status && data.status.label) {
+                    var badge = document.getElementById('order-status-badge');
+                    if (badge) {
+                        badge.textContent = data.status.label;
+                        badge.className = 'px-3 py-1 text-xs font-bold rounded-full ' + (data.status.badge || 'bg-gray-100 text-gray-800');
+                    }
+                }
+
+                // هماهنگ شد → اسکرولِ نرم به فرمِ زمانِ مراجعه + هایلایت
+                if (data.next_action === 'schedule_visit') {
+                    var sv = document.getElementById('schedule-visit');
+                    if (sv) {
+                        sv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        sv.style.boxShadow = '0 0 0 3px #10b981';
+                        sv.style.transition = 'box-shadow .3s';
+                        setTimeout(function () { sv.style.boxShadow = ''; }, 2600);
+                    }
+                }
+            })
+            .catch(function () {
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                toast('خطا در ثبت — دوباره تلاش کنید.', false);
+            });
+        });
+    });
+
+    window.clearCallPending = clearPending;
+    window.dismissCallModal = function () { clearPending(); hideModal(); };
 })();
 </script>
 @endif
