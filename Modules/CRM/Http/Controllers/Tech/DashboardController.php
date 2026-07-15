@@ -20,6 +20,7 @@ use Modules\CRM\Models\WalletTransaction;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
 use Modules\CRM\Services\ZibalService;
+use Modules\CRM\Support\TechImageStorage;
 
 /**
  * کنترلر داشبورد + صفحات اصلی پنل تکنسین.
@@ -297,7 +298,7 @@ class DashboardController extends Controller
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
-            'device_img1' => 'nullable|image|max:10240',
+            'device_img1' => 'nullable|image|max:30720',
         ], [
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',
@@ -406,9 +407,9 @@ class DashboardController extends Controller
 
             $updates['save_as_draft'] = (bool) ($validated['save_as_draft'] ?? false);
 
-            // آپلود تصویر دستگاه
+            // آپلود تصویر دستگاه — بهینه‌سازیِ سخت؛ فایلِ اصلیِ تکنسین ذخیره نمی‌شود.
             if ($request->hasFile('device_img1')) {
-                $path = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');
+                $path = TechImageStorage::store($request->file('device_img1'), "crm/orders/{$order->id}");
                 $updates['device_img1'] = $path;
             }
         }
@@ -1076,10 +1077,10 @@ class DashboardController extends Controller
         }
 
         $validated = $request->validate([
-            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072',
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:30720',
         ]);
 
-        $path = $request->file('avatar')->store('tech-avatars', 'public');
+        $path = TechImageStorage::store($request->file('avatar'), 'tech-avatars');
         $tech->forceFill(['img_personal' => $path])->save();
 
         return redirect()

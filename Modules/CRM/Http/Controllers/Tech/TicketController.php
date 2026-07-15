@@ -9,6 +9,7 @@ use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Ticket;
 use Modules\CRM\Models\TicketCategory;
 use Modules\CRM\Models\TicketReply;
+use Modules\CRM\Support\TechImageStorage;
 
 /**
  * تیکت‌های پشتیبانی — سمت پنل تکنسین.
@@ -59,11 +60,11 @@ class TicketController extends Controller
             'category_id' => 'required|exists:crm_ticket_categories,id',
             'subject' => 'nullable|string|max:200',
             'body' => 'required|string|max:5000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:30720',
         ], [
             'body.required' => 'متن تیکت الزامی است.',
             'category_id.required' => 'دسته‌بندی را انتخاب کنید.',
-            'image.max' => 'حجم تصویر حداکثر ۱۰ مگابایت.',
+            'image.max' => 'حجم تصویر حداکثر ۳۰ مگابایت.',
         ]);
 
         // اگر سفارشی انتخاب شده، باید متعلق به همین تکنسین باشد
@@ -78,7 +79,7 @@ class TicketController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store("crm/tickets", 'public');
+            $imagePath = TechImageStorage::store($request->file('image'), 'crm/tickets');
         }
 
         $ticket = Ticket::create([
@@ -121,15 +122,15 @@ class TicketController extends Controller
 
         $validated = $request->validate([
             'body' => 'required|string|max:5000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:30720',
         ], [
             'body.required' => 'متن پاسخ الزامی است.',
-            'image.max' => 'حجم تصویر حداکثر ۱۰ مگابایت.',
+            'image.max' => 'حجم تصویر حداکثر ۳۰ مگابایت.',
         ]);
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store("crm/tickets", 'public');
+            $imagePath = TechImageStorage::store($request->file('image'), 'crm/tickets');
         }
 
         TicketReply::create([

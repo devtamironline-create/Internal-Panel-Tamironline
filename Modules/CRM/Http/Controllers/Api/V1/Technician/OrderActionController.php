@@ -16,6 +16,7 @@ use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\OrderSmsNotifier;
 use Modules\CRM\Services\TransferReceiptService;
+use Modules\CRM\Support\TechImageStorage;
 
 /**
  * اکشن‌های سفارشِ اپِ تکنسین — تغییرِ وضعیت (+بلاکِ فاکتور)، هماهنگیِ زمانِ
@@ -56,7 +57,7 @@ class OrderActionController extends Controller
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
-            'device_img1' => 'nullable|image|max:10240',
+            'device_img1' => 'nullable|image|max:30720',
         ], [
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
@@ -372,7 +373,8 @@ class OrderActionController extends Controller
         $updates['save_as_draft'] = $isDraft;
 
         if ($request->hasFile('device_img1')) {
-            $updates['device_img1'] = $request->file('device_img1')->store("crm/orders/{$order->id}", 'public');
+            // بهینه‌سازیِ سخت؛ فایلِ اصلیِ تکنسین ذخیره نمی‌شود.
+            $updates['device_img1'] = TechImageStorage::store($request->file('device_img1'), "crm/orders/{$order->id}");
         }
 
         return $updates;
