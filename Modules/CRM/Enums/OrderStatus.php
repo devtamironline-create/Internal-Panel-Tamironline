@@ -206,6 +206,28 @@ enum OrderStatus: string
     }
 
     /**
+     * وضعیت‌هایی که «تکنسین» مجازِ تنظیمِ آن‌هاست: گذارِ مرحله‌ایِ معتبر از
+     * وضعیتِ فعلی (allowedTransitions) ∩ نقش‌های مجازِ تکنسین. لغو (Cancelled)
+     * و وضعیت‌های فازِ ثبت/هماهنگیِ خودکار (New/AwaitingCoordination/NoAnswer)
+     * دستیِ تکنسین نیستند — NoAnswer فقط از «نتیجهٔ تماس» ست می‌شود.
+     *
+     * @return array<int, self>
+     */
+    public function technicianTransitions(): array
+    {
+        $whitelist = [
+            self::Coordinated, self::RepairStarted, self::Open,
+            self::AwaitingPart, self::AwaitingCustomerApproval,
+            self::Suspended, self::Completed, self::Declined, self::Transit,
+        ];
+
+        return array_values(array_filter(
+            $this->allowedTransitions(),
+            fn (self $s) => in_array($s, $whitelist, true)
+        ));
+    }
+
+    /**
      * آیا این وضعیت نهایی است؟ explicitly از allowedTransitions جدا
      * می‌کنیم — Declined با وجود داشتن transition به Cancelled، همچنان
      * «نهایی» محسوب می‌شود (یعنی در UI به‌عنوان قفل/return-target ظاهر

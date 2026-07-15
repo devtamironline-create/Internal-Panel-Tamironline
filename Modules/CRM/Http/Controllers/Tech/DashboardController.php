@@ -744,21 +744,12 @@ class DashboardController extends Controller
             return [OrderStatus::Cancelled, OrderStatus::Completed];
         }
 
-        $base = [
-            OrderStatus::Coordinated,
-            OrderStatus::RepairStarted,
-            OrderStatus::Open,
-            OrderStatus::AwaitingPart,
-            OrderStatus::AwaitingCustomerApproval,
-            OrderStatus::Suspended,
-            OrderStatus::Completed,
-            OrderStatus::Declined,
-            OrderStatus::Transit,
-        ];
+        // گذارِ مرحله‌ای: فقط وضعیت‌هایی که از وضعیتِ فعلی «منطقاً» ممکن‌اند و
+        // تکنسین مجازِ آن‌هاست — هم UX تمیزتر، هم امنیت (کنترلر همین لیست را
+        // برای اعتبارسنجی استفاده می‌کند، پس گذارِ نامعتبر از API هم رد می‌شود).
+        $base = $order->status->technicianTransitions();
 
-        // در حالت freeze، وضعیت‌های نهایی (نهایی‌سازی سفارش) از لیست
-        // حذف می‌شوند تا تکنسین حتی رادیو را نبیند. middleware هم
-        // اگر کسی از API مستقیم زد، آن را بلاک می‌کند.
+        // در حالت freeze، وضعیت‌های نهایی (نهایی‌سازی سفارش) از لیست حذف می‌شوند.
         if (\Modules\CRM\Models\CrmSetting::get('tech_panel_readonly') === '1') {
             $base = array_filter($base, fn (OrderStatus $s) => ! $s->isFinal());
         }
