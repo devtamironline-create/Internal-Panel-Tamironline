@@ -160,6 +160,160 @@ class SitemapBuilder
         return $out;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | لایهٔ منطبق‌بر‌اسپکِ سئو (v2) — کنارِ index()/urlsForType قدیمی
+    |--------------------------------------------------------------------------
+    | ساختارِ درخواستیِ سئو: sitemap.xml (index) → sitemaps/sitemap-{name}.xml.
+    | تفاوت‌ها با نسخهٔ قدیمی:
+    |   - نام‌گذاری و مسیرِ اسپک (sitemap-pages, sitemap-service-brands, …)
+    |   - بدونِ changefreq / priority / lastmod
+    |   - فیلترِ canonical-self (اگر canonical به URLِ دیگری اشاره کند حذف می‌شود)
+    |   - sitemap-pages شاملِ هاب‌ها/صفحاتِ ثابتِ اصلی هم هست
+    */
+
+    /** نگاشتِ نامِ فایلِ سایت‌مپ (اسپک) → نوعِ داخلیِ رجیستری. ترتیب = ترتیبِ index. */
+    public const SPEC_FILES = [
+        'pages' => 'page',
+        'services' => 'device',
+        'service-brands' => 'brand_device',
+        'brands' => 'brand',
+        'articles' => 'article',
+        'blog-topics' => 'blog_topic',
+        'faq-taxonomies' => 'taxonomy',
+        'forum' => 'forum_question',
+    ];
+
+    /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-pages باشند (بندِ ۵ اسپک). */
+    public const STATIC_PATHS = [
+        '/', '/services', '/brands', '/blog', '/faq', '/forum', '/about', '/guarantee', '/pricing',
+    ];
+
+    /**
+     * آیتم‌های <sitemapindex> با نام‌گذاری و مسیرِ اسپک. همهٔ ۸ فایل معرفی می‌شوند.
+     *
+     * @return list<array{loc:string}>
+     */
+    public function specIndex(): array
+    {
+        $out = [];
+        foreach (array_keys(self::SPEC_FILES) as $name) {
+            $out[] = ['loc' => $this->absoluteUrl('/sitemaps/sitemap-'.$name.'.xml')];
+        }
+
+        return $out;
+    }
+
+    /**
+     * URLهای یک فایلِ سایت‌مپِ اسپک (فقط <loc>؛ بدونِ lastmod/changefreq/priority).
+     *
+     * @return list<array{loc:string}>
+     */
+    public function specUrls(string $name): array
+    {
+        if (! array_key_exists($name, self::SPEC_FILES)) {
+            return [];
+        }
+
+        return $name === 'pages'
+            ? $this->specPageUrls()
+            : $this->specTypeUrls(self::SPEC_FILES[$name]);
+    }
+
+    /** آیا نامِ فایل معتبر است؟ (برای ۴۰۴ در کنترلر). */
+    public function specFileExists(string $name): bool
+    {
+        return array_key_exists($name, self::SPEC_FILES);
+    }
+
+    /**
+     * URLهای یک نوعِ مدل‌محور با شرایطِ اسپک: منتشرشده/فعال، بدونِ noindex،
+     * و canonical به خودِ صفحه (نه URLِ دیگر).
+     *
+     * @return list<array{loc:string}>
+     */
+    private function specTypeUrls(string $type): array
+    {
+        $cfg = $this->registry->config($type);
+        if (! $cfg) {
+            return [];
+        }
+
+        // صفحاتِ ترکیبیِ دستگاه×برند — canonical همیشه به خودشان است (بدونِ override).
+        if (($cfg['resolver'] ?? null) === 'brand_device') {
+            return array_map(fn ($u) => ['loc' => $u['loc']], $this->brandDeviceUrls($cfg));
+        }
+
+        /** @var class-string $modelClass */
+        $modelClass = $cfg['model'];
+        $query = $modelClass::query();
+        if (method_exists($modelClass, 'seoMeta')) {
+            $query->with('seoMeta');
+        }
+        $publishedCol = $cfg['published'] ?? null;
+
+        $out = [];
+        foreach ($query->cursor() as $model) {
+            if (! $this->isIndexable($model, $publishedCol)) {
+                continue;
+            }
+            $loc = $this->absoluteUrl($this->registry->pathFor($type, $model));
+            if ($this->canonicalConflicts($model, $loc)) {
+                continue; // canonical به URLِ دیگری اشاره می‌کند → از سایت‌مپ حذف
+            }
+            $out[] = ['loc' => $loc];
+        }
+
+        return $out;
+    }
+
+    /**
+     * صفحاتِ فایلِ «pages»: هاب‌ها/صفحاتِ ثابتِ اصلی + صفحاتِ CMS (site_pages)
+     * که در فهرستِ ثابت نیستند. dedupe بر اساسِ مسیرِ نرمال‌شده.
+     *
+     * @return list<array{loc:string}>
+     */
+    private function specPageUrls(): array
+    {
+        $out = [];
+        $seen = [];
+
+        foreach (self::STATIC_PATHS as $path) {
+            $loc = $this->absoluteUrl($path);
+            $seen[$this->pathKey($loc)] = true;
+            $out[] = ['loc' => $loc];
+        }
+
+        foreach ($this->specTypeUrls('page') as $u) {
+            $key = $this->pathKey($u['loc']);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $u;
+        }
+
+        return $out;
+    }
+
+    /** آیا canonicalِ ثبت‌شده با URLِ خودِ صفحه فرق دارد؟ (بدونِ override → خیر). */
+    private function canonicalConflicts(object $model, string $url): bool
+    {
+        $meta = method_exists($model, 'seoMeta') ? $model->seoMeta : null;
+        $canonical = ($meta && filled($meta->canonical)) ? trim((string) $meta->canonical) : '';
+        if ($canonical === '') {
+            return false;
+        }
+
+        return rtrim($canonical, '/') !== rtrim($url, '/');
+    }
+
+    /** کلیدِ dedupe: مسیرِ بدونِ اسلشِ انتهایی. */
+    private function pathKey(string $url): string
+    {
+        return rtrim($url, '/');
+    }
+
     private function isIndexable(object $model, ?string $publishedCol): bool
     {
         // آیتمی که در متای خودش noindex خورده، از sitemap حذف می‌شود.

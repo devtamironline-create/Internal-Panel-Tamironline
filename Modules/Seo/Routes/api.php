@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Seo\Http\Controllers\Api\LlmsController;
 use Modules\Seo\Http\Controllers\Api\MetaController;
+use Modules\Seo\Http\Controllers\Api\NotFoundController;
+use Modules\Seo\Http\Controllers\Api\RedirectController;
 use Modules\Seo\Http\Controllers\Api\RobotsController;
 use Modules\Seo\Http\Controllers\Api\SettingsController;
 use Modules\Seo\Http\Controllers\Api\SitemapController;
-use Modules\Seo\Http\Controllers\Api\RedirectController;
-use Modules\Seo\Http\Controllers\Api\NotFoundController;
 
 /*
  * API هدلس سئو — هم‌راستا با کنوانسیون پروژه: prefix «v1» و بدون «/api».
@@ -20,6 +20,14 @@ Route::prefix('v1/seo')->group(function () {
     // throttle 120 خیلی زود پر می‌شد و «Too Many Attempts» می‌داد. سقفِ سخاوتمند
     // (600/min) چون پاسخ‌ها کش‌شونده و فقط‌خواندنی‌اند امن است.
     Route::middleware('throttle:600,1')->group(function () {
+        // ── سایت‌مپِ منطبق‌بر‌اسپکِ سئو (v2) ──
+        // Index اصلی → tamironline.com/sitemap.xml (فرانت به این rewrite می‌کند)
+        Route::get('/sitemap.xml', [SitemapController::class, 'specIndex'])->name('api.v1.seo.sitemap.spec-index');
+        // فایل‌های نام‌دار → tamironline.com/sitemaps/sitemap-{name}.xml
+        Route::get('/sitemaps/sitemap-{name}.xml', [SitemapController::class, 'specNamed'])
+            ->where('name', '[a-z\-]+')->name('api.v1.seo.sitemap.spec-file');
+
+        // ── نسخهٔ قدیمی (دست‌نخورده تا تستِ نسخهٔ جدید در Search Console) ──
         Route::get('/sitemap-index.xml', [SitemapController::class, 'index'])->name('api.v1.seo.sitemap-index');
         // فایلِ بزرگ به chunkهای ۵۰هزارتایی تقسیم می‌شود: {type}-{page}.xml
         Route::get('/sitemap/{type}-{page}.xml', [SitemapController::class, 'show'])
