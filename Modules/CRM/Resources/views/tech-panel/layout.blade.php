@@ -319,6 +319,47 @@
     </script>
     @endif
 
+    {{-- ─── پاپ‌آپِ بدهی بعد از اتمامِ سفارش ───────────────────────────
+         وقتی تکنسین سفارشی را «پایان» می‌دهد و سهمِ شرکت (بدهی) ایجاد می‌شود،
+         بلافاصله یادآوری می‌شود که کیف‌پول را شارژ کند. یک‌بار (flash) نمایش
+         داده می‌شود؛ با «شارژ» یا «بعداً» بسته می‌شود. --}}
+    @if(session('debt_popup'))
+        @php($__debt = session('debt_popup'))
+        <div id="techDebtModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/50" style="backdrop-filter: blur(2px);"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5 border-t-4 border-rose-500">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                    </div>
+                    <div class="font-bold text-gray-900 text-sm">بدهی این سفارش</div>
+                </div>
+
+                <p class="text-xs text-gray-700 leading-7 mb-3">
+                    بابتِ سفارش <span class="font-bold" dir="ltr">{{ $__debt['order_code'] ?? '' }}</span>
+                    مبلغِ <span class="font-extrabold text-rose-600">{{ number_format((int) ($__debt['order_debt'] ?? 0)) }}</span> تومان
+                    به شرکت بدهکار شدید.
+                    @if((int) ($__debt['total_debt'] ?? 0) > 0)
+                        <br>مجموعِ بدهیِ فعلیِ شما:
+                        <span class="font-extrabold text-rose-600">{{ number_format((int) $__debt['total_debt']) }}</span> تومان.
+                    @endif
+                    <br>لطفاً هرچه سریع‌تر کیف‌پول را شارژ کنید.
+                </p>
+
+                <a href="{{ route('tech.wallet.recharge') }}"
+                   class="block text-center w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold active:scale-95 transition">
+                    شارژ کیف پول
+                </a>
+                <button type="button" onclick="var m=document.getElementById('techDebtModal'); if(m) m.remove();"
+                        class="mt-2 w-full py-2.5 rounded-xl text-gray-500 text-xs font-medium">
+                    بعداً
+                </button>
+            </div>
+        </div>
+    @endif
+
     @stack('scripts')
 </body>
 </html>

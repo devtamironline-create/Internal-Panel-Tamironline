@@ -10,6 +10,7 @@ use Illuminate\Validation\Rules\Password;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
 use Modules\CRM\Enums\WalletTxType;
+use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
@@ -437,7 +438,19 @@ class DashboardController extends Controller
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
             // forceRegenerate=true → اگر فاکتور قبلی برای این سفارش هست،
             // superseded شود و فاکتور جدید با قیمت/قطعات فعلی ساخته شود.
-            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
+            $invoice = $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
+
+            // پاپ‌آپِ بدهی: اگر این فاکتور سهمِ شرکت (بدهیِ تکنسین) ایجاد کرد،
+            // بلافاصله بعدِ اتمامِ سفارش به تکنسین یادآوری شود که کیف‌پول را شارژ
+            // کند. قابلِ خاموش‌کردن با تنظیمِ tech_debt_popup_enabled.
+            $orderDebt = $invoice ? (int) ($invoice->company_share ?? 0) : 0;
+            if ($orderDebt > 0 && CrmSetting::get('tech_debt_popup_enabled', '1') === '1') {
+                session()->flash('debt_popup', [
+                    'order_debt' => $orderDebt,
+                    'total_debt' => (int) $tech->fresh()->invoice_debt,
+                    'order_code' => $order->order_code,
+                ]);
+            }
         }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
