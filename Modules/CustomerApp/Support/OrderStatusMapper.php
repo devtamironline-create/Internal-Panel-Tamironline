@@ -44,6 +44,14 @@ final class OrderStatusMapper
             OrderStatus::Transit => 'in_progress',
             OrderStatus::Returned => 'in_progress',
             OrderStatus::Declined => 'declined',
+            // وضعیت‌های جدید (زیروضعیت‌های پنل) — به نزدیک‌ترین رشتهٔ شناخته‌شدهٔ
+            // اپِ فعلی نگاشت می‌شوند تا نسخهٔ productionِ اپ هرگز کرش نکند؛
+            // برچسبِ دقیقِ فارسی همیشه در status_label می‌آید.
+            OrderStatus::AwaitingCoordination => 'pending',
+            OrderStatus::NoAnswer => 'pending',
+            OrderStatus::RepairStarted => 'in_progress',
+            OrderStatus::AwaitingPart => 'suspended',
+            OrderStatus::AwaitingCustomerApproval => 'suspended',
         };
     }
 
@@ -59,6 +67,12 @@ final class OrderStatusMapper
             OrderStatus::Transit => 6,
             OrderStatus::Returned => 7,
             OrderStatus::Declined => 9,
+            // وضعیت‌های جدید — هم‌ارزِ عددیِ همان نگاشتِ بالا.
+            OrderStatus::AwaitingCoordination => 0,
+            OrderStatus::NoAnswer => 0,
+            OrderStatus::RepairStarted => 6,
+            OrderStatus::AwaitingPart => 3,
+            OrderStatus::AwaitingCustomerApproval => 3,
         };
     }
 
