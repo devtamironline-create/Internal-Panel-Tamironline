@@ -98,6 +98,10 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/cannibalization', [CannibalizationController::class, 'index'])->name('cannibalization.index');
 
         // ابزارها: Import/Export + Audit log
+        // خروجیِ ممیزیِ Sitemap (CSVهای صفحات و ریدایرکت‌ها — از دیتابیس)
+        Route::get('/tools/audit/pages.csv', [\Modules\Seo\Http\Controllers\SitemapAuditController::class, 'pages'])->name('tools.audit.pages');
+        Route::get('/tools/audit/redirects.csv', [\Modules\Seo\Http\Controllers\SitemapAuditController::class, 'redirects'])->name('tools.audit.redirects');
+
         Route::get('/tools', [SeoToolsController::class, 'index'])->name('tools.index');
         Route::get('/tools/export', [SeoToolsController::class, 'export'])->name('tools.export');
         Route::post('/tools/import', [SeoToolsController::class, 'import'])->name('tools.import');

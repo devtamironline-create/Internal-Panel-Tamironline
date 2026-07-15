@@ -9,6 +9,21 @@
     @if(session('success'))<div class="mb-4 p-3 rounded bg-emerald-50 text-emerald-700 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="mb-4 p-3 rounded bg-rose-50 text-rose-700 text-sm">{{ session('error') }}</div>@endif
 
+    {{-- ممیزیِ Sitemap — خروجیِ CSV مستقیم از دیتابیس --}}
+    <div class="bg-sky-50/60 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800 rounded-xl p-4 mb-6">
+        <h2 class="font-bold text-gray-800 dark:text-gray-100 mb-1">🗺️ خروجیِ ممیزیِ Sitemap (برای بازطراحی)</h2>
+        <p class="text-xs text-gray-600 dark:text-gray-300 leading-6 mb-3">
+            CSVهای کاملِ صفحات و ریدایرکت‌ها، مستقیم از دیتابیس (با encodingِ UTF-8 مناسبِ اکسل).
+            فایلِ صفحات <b>همهٔ</b> ردیف‌ها را شامل می‌شود — فعال/غیرفعال/پیش‌نویس/حذف‌شده/ریدایرکت‌شده —
+            با ستون‌های وضعیت، http_status، canonical، meta_robots و is_indexable.
+        </p>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('seo.admin.tools.audit.pages') }}" class="inline-block px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">دانلود CSV صفحات</a>
+            <a href="{{ route('seo.admin.tools.audit.redirects') }}" class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold">دانلود CSV ریدایرکت‌ها</a>
+        </div>
+        <p class="text-[11px] text-gray-500 mt-2">📄 راهنمای فنیِ کامل (robots.txt، ساختار sitemap، Routeها، مسیرهای خصوصی، استک): <code dir="ltr">docs/SITEMAP_AUDIT.md</code></p>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
             <h2 class="font-bold text-gray-800 dark:text-gray-100 mb-2">خروجی (Export)</h2>
