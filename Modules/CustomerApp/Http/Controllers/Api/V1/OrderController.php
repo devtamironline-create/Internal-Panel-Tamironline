@@ -3,6 +3,7 @@
 namespace Modules\CustomerApp\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Support\Analytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -231,6 +232,17 @@ class OrderController extends Controller
 
             return (new OrderResource($order))->resolve();
         });
+
+        // ثبتِ رویدادِ تحلیلی (خارج از transaction؛ خطا هرگز سفارش را rollback نمی‌کند).
+        Analytics::trackFromRequest($request, 'order_created', [
+            'source' => 'app',
+            'subject_type' => 'order',
+            'subject_id' => $payload['id'] ?? null,
+            'device_id' => $data['device_id'] ?? null,
+            'brand_id' => $data['brand_id'] ?? null,
+            'customer_id' => $customer->id,
+            'props' => ['order_type' => $data['order_type'] ?? null],
+        ]);
 
         return response()->json([
             'message' => 'سفارش با موفقیت ثبت شد.',
