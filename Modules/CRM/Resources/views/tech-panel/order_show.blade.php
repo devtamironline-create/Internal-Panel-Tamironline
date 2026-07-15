@@ -38,7 +38,8 @@
         OrderStatus::Cancelled->value   => 'کنسل سفارش',
     ];
     $statusDescPrompts = [
-        OrderStatus::Coordinated->value => 'تاریخ و ساعت هماهنگی با مشتری را بنویسید',
+        // «هماهنگ کردن سفارش» توضیح ندارد — به‌جای آن تقویمِ انتخابِ روز/ساعت
+        // نمایش داده می‌شود (پایین، فرمِ schedule-visit).
         OrderStatus::Suspended->value   => 'دلیل نامشخص بودن وضعیت را شرح دهید',
         OrderStatus::Open->value        => 'لیست اقلام تحویل‌گرفته‌شده (اختیاری — رسید رسمی از «رسید انتقال» صادر می‌شود)',
         OrderStatus::RepairStarted->value => 'توضیح شروع تعمیر (اختیاری)',
@@ -725,13 +726,61 @@
                     </label>
                 </div>
 
+                {{-- دکمهٔ ثبت برای همهٔ وضعیت‌ها به‌جز «هماهنگ کردن سفارش» (آن یکی
+                     تقویمِ اختصاصیِ خودش را دارد که به schedule-visit ثبت می‌شود). --}}
                 <button type="submit"
+                        x-show="selected !== '{{ OrderStatus::Coordinated->value }}'"
                         x-bind:disabled="!selected || invoiceBelowParts"
                         class="w-full mt-3 py-3 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                         style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
                     ثبت تغییر وضعیت
                 </button>
             </form>
+
+            {{-- تقویمِ «هماهنگ کردن سفارش» — به‌جای باکسِ توضیح. با ثبت، وضعیت
+                 خودکار «هماهنگ شده» می‌شود و پیامک برای مشتری می‌رود. اگر مشتری
+                 هنگام ثبتِ سفارش زمان داده بود، این‌جا پیش‌پر است. --}}
+            <div x-show="selected === '{{ OrderStatus::Coordinated->value }}'" x-cloak class="mt-3 pt-3 border-t border-gray-100">
+                <div class="text-[11px] text-emerald-700 font-bold mb-2">
+                    روز و بازهٔ مراجعه را انتخاب کنید
+                    @if($order->visit_scheduled_at)<span class="text-gray-400 font-normal">(زمانِ پیشنهادیِ مشتری پیش‌پر شده — می‌توانید تغییر دهید)</span>@endif
+                </div>
+                <form method="POST" action="{{ route('tech.orders.schedule-visit', $order) }}" class="space-y-3">
+                    @csrf
+                    <div>
+                        <div class="text-[11px] text-gray-500 mb-2">روز مراجعه</div>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            @foreach($visitDays as $d)
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="visit_date" value="{{ $d['value'] }}" @checked($currentVisitDate === $d['value']) required class="peer sr-only">
+                                    <div class="p-2 border-2 border-gray-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition text-center">
+                                        <div class="text-[10px] text-gray-500">{{ $d['weekday'] }}</div>
+                                        <div class="text-base font-bold text-gray-900 my-0.5">{{ $d['day'] }}</div>
+                                        <div class="text-[10px] text-gray-500">{{ $d['month'] }}</div>
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[11px] text-gray-500 mb-2">بازه ساعت</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach($visitSlots as $key => $slot)
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="visit_slot" value="{{ $key }}" @checked($currentSlotKey === $key) required class="peer sr-only">
+                                    <div class="p-2.5 border-2 border-gray-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition text-center text-xs font-medium text-gray-800">
+                                        {{ $slot['label'] }}
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm"
+                            style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                        ثبت هماهنگی و زمان مراجعه
+                    </button>
+                </form>
+            </div>
         </div>
 
     @elseif($order->status->isFinal())

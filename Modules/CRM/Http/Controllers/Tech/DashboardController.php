@@ -578,10 +578,10 @@ class DashboardController extends Controller
         // وضعیت قبلی را از DB تازه می‌خوانیم — جلوگیری از خواندن stale.
         $order->refresh();
         $previousStatus = $order->status;
-        // ثبتِ زمانِ مراجعه از وضعیت‌های فازِ هماهنگی → خودکار «هماهنگ شده».
-        $autoCoordinated = in_array($previousStatus, [
-            OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
-        ], true);
+        // اگر «هماهنگ شده» گذارِ مجازِ تکنسین از وضعیتِ فعلی باشد، ثبتِ زمان
+        // خودکار وضعیت را «هماهنگ شده» می‌کند (هم‌سو با state-machine).
+        $autoCoordinated = $previousStatus !== OrderStatus::Coordinated
+            && in_array(OrderStatus::Coordinated, $previousStatus->technicianTransitions(), true);
 
         $updates = ['visit_scheduled_at' => $datetime];
         if ($autoCoordinated) {

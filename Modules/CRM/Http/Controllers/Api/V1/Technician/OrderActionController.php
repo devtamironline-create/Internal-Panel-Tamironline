@@ -171,9 +171,8 @@ class OrderActionController extends Controller
 
         $order->refresh();
         $previous = $order->status;
-        $autoCoordinated = in_array($previous, [
-            OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
-        ], true);
+        $autoCoordinated = $previous !== OrderStatus::Coordinated
+            && in_array(OrderStatus::Coordinated, $previous->technicianTransitions(), true);
 
         $order->update(array_filter([
             'visit_scheduled_at' => $datetime,
