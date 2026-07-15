@@ -184,20 +184,36 @@ class SitemapBuilder
         'forum' => 'forum_question',
     ];
 
+    /**
+     * فایل‌هایی که فعلاً در sitemap.xml اصلی معرفی می‌شوند (فازِ اول).
+     * blog-topics / faq-taxonomies / forum عمداً معرفی نمی‌شوند تا کیفیتِ
+     * محتوای مستقلِ آن‌ها بررسی شود (کدشان می‌ماند و از مسیرِ نام‌دار سرو می‌شوند).
+     */
+    public const INDEX_FILES = ['pages', 'services', 'service-brands', 'brands', 'articles'];
+
     /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-pages باشند (بندِ ۵ اسپک). */
     public const STATIC_PATHS = [
         '/', '/services', '/brands', '/blog', '/faq', '/forum', '/about', '/guarantee', '/pricing',
     ];
 
+    /** پیشوندهای مسیر که تحتِ هیچ شرایطی نباید وارد سایت‌مپ شوند (blacklist صریح). */
+    public const BLACKLIST_PREFIXES = [
+        '/login', '/register', '/profile', '/dashboard', '/admin', '/api',
+        '/orders', '/payment', '/otp', '/search', '/filter',
+    ];
+
+    /** قطعاتِ مسیرِ archive/pagination که باید حذف شوند. */
+    public const BLACKLIST_SEGMENTS = ['/page/', '/tag/', '/author/', '/archive/'];
+
     /**
-     * آیتم‌های <sitemapindex> با نام‌گذاری و مسیرِ اسپک. همهٔ ۸ فایل معرفی می‌شوند.
+     * آیتم‌های <sitemapindex> — فعلاً فقط فایل‌های فازِ اول (INDEX_FILES).
      *
      * @return list<array{loc:string}>
      */
     public function specIndex(): array
     {
         $out = [];
-        foreach (array_keys(self::SPEC_FILES) as $name) {
+        foreach (self::INDEX_FILES as $name) {
             $out[] = ['loc' => $this->absoluteUrl('/sitemaps/sitemap-'.$name.'.xml')];
         }
 
@@ -241,7 +257,14 @@ class SitemapBuilder
 
         // صفحاتِ ترکیبیِ دستگاه×برند — canonical همیشه به خودشان است (بدونِ override).
         if (($cfg['resolver'] ?? null) === 'brand_device') {
-            return array_map(fn ($u) => ['loc' => $u['loc']], $this->brandDeviceUrls($cfg));
+            $out = [];
+            foreach ($this->brandDeviceUrls($cfg) as $u) {
+                if ($this->passesGuard($u['loc'])) {
+                    $out[] = ['loc' => $u['loc']];
+                }
+            }
+
+            return $out;
         }
 
         /** @var class-string $modelClass */
@@ -250,6 +273,14 @@ class SitemapBuilder
         if (method_exists($modelClass, 'seoMeta')) {
             $query->with('seoMeta');
         }
+
+        // فورَم: فقط پرسش‌های منتشر+تأییدشده که حداقل یک «پاسخِ تخصصیِ تأییدشده»
+        // دارند (بندِ ۲ اسپک). شرط‌های کیفیِ محتوایی/۲۰۰ در crawlِ زنده کنترل می‌شوند.
+        if ($type === 'forum_question') {
+            $query->approved()
+                ->whereHas('approvedAnswers', fn ($q) => $q->where('is_expert_reply', true));
+        }
+
         $publishedCol = $cfg['published'] ?? null;
 
         $out = [];
@@ -261,10 +292,45 @@ class SitemapBuilder
             if ($this->canonicalConflicts($model, $loc)) {
                 continue; // canonical به URLِ دیگری اشاره می‌کند → از سایت‌مپ حذف
             }
+            if (! $this->passesGuard($loc)) {
+                continue; // مسیرِ blacklist / پارامتردار / fragment / archive
+            }
             $out[] = ['loc' => $loc];
         }
 
         return $out;
+    }
+
+    /**
+     * گاردِ سراسری: هیچ URLی با query/fragment، پیشوندِ blacklist، یا قطعهٔ
+     * archive/pagination نباید وارد سایت‌مپ شود. مکملِ فیلترِ موجودیتِ DB.
+     */
+    private function passesGuard(string $loc): bool
+    {
+        // query string یا fragment → حذف
+        if (str_contains($loc, '?') || str_contains($loc, '#')) {
+            return false;
+        }
+
+        $path = parse_url($loc, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return true;
+        }
+        $path = '/'.ltrim(rawurldecode($path), '/');
+        $lower = mb_strtolower($path);
+
+        foreach (self::BLACKLIST_PREFIXES as $prefix) {
+            if ($lower === $prefix || str_starts_with($lower, $prefix.'/')) {
+                return false;
+            }
+        }
+        foreach (self::BLACKLIST_SEGMENTS as $seg) {
+            if (str_contains($lower, $seg)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -280,6 +346,9 @@ class SitemapBuilder
 
         foreach (self::STATIC_PATHS as $path) {
             $loc = $this->absoluteUrl($path);
+            if (! $this->passesGuard($loc)) {
+                continue;
+            }
             $seen[$this->pathKey($loc)] = true;
             $out[] = ['loc' => $loc];
         }
