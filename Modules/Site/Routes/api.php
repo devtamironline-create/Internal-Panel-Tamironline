@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Site\Http\Controllers\Api\V1\AboutStatController;
 use Modules\Site\Http\Controllers\Api\V1\ActivityController;
+use Modules\Site\Http\Controllers\Api\V1\AnalyticsController;
 use Modules\Site\Http\Controllers\Api\V1\BannerController;
 use Modules\Site\Http\Controllers\Api\V1\BlogController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
@@ -99,6 +100,9 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.blog.articles.comments.store');
     });
     Route::middleware('throttle:public-write')->group(function () {
+        // رویدادنویسِ تحلیلیِ سراسری — fire-and-forget از سمتِ کلاینت
+        Route::post('/analytics/track', [AnalyticsController::class, 'track'])
+            ->name('api.v1.analytics.track');
         Route::post('/banners/{id}/impression', [BannerController::class, 'impression'])
             ->name('api.v1.banners.impression');
         Route::post('/banners/{id}/click', [BannerController::class, 'click'])
