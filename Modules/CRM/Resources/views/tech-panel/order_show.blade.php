@@ -63,6 +63,11 @@
     // قفل دسترسی به اطلاعات تماس و امکان ویرایش پس از نهایی شدن سفارش —
     // جلوگیری از سواستفاده/تماس مستقیم تکنسین با مشتری بعد از تسویه.
     $orderIsLocked = $order->status->isFinal();
+    // مودالِ «نتیجهٔ تماس» فقط در فازِ هماهنگی پرسیده می‌شود (جدید/در انتظار
+    // هماهنگی/مشتری پاسخگو نیست) — نه وقتی کار در جریان یا نهایی است.
+    $askCallResult = in_array($order->status, [
+        OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
+    ], true);
     $maskContact = function (?string $number): ?string {
         if (! $number) return null;
         $clean = preg_replace('/\s+/', '', $number);
@@ -933,37 +938,45 @@
     <div class="h-4"></div>
 </div>
 
-{{-- ─────── مودالِ اجباریِ «نتیجهٔ تماس» ───────
+{{-- ─────── مودالِ اجباریِ «نتیجهٔ تماس» (فقط فازِ هماهنگی) ───────
      وقتی تکنسین روی شمارهٔ مشتری می‌زند (tel:) و به صفحه برمی‌گردد، این مودال
-     باز می‌شود و تا انتخابِ نتیجه بسته نمی‌شود. --}}
-@if(! $orderIsLocked)
-<div id="call-result-modal" class="fixed inset-0 z-[300] hidden items-end sm:items-center justify-center bg-black/60 p-4">
+     باز می‌شود و تا انتخابِ نتیجه بسته نمی‌شود. مرحلهٔ دوم برای دلیلِ عدم‌پاسخ. --}}
+@if($askCallResult)
+<div id="call-result-modal" class="fixed inset-0 z-[300] hidden items-end sm:items-center justify-center bg-black/60 p-4"
+     data-action="{{ route('tech.orders.call-result', $order) }}">
     <div class="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl">
         <div class="flex items-center gap-2 mb-1.5">
             <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
             </div>
             <div class="text-base font-bold text-gray-900">نتیجهٔ تماس با مشتری؟</div>
         </div>
-        <p class="text-xs text-gray-500 leading-6 mb-4">ثبتِ نتیجهٔ تماس الزامی است تا وضعیتِ سفارش به‌روز بماند.</p>
 
-        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}">
-            @csrf
-            <input type="hidden" name="result" value="coordinated">
-            <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm mb-2"
+        {{-- مرحلهٔ ۱ — انتخابِ نتیجه --}}
+        <div id="crm-step1">
+            <p class="text-xs text-gray-500 leading-6 mb-4">ثبتِ نتیجهٔ تماس الزامی است تا وضعیتِ سفارش به‌روز بماند.</p>
+            <button type="button" data-cr="coordinated" class="w-full py-3 rounded-xl text-white font-bold text-sm mb-2"
                     style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
                 ✓ هماهنگ شد — ثبت زمان مراجعه
             </button>
-        </form>
-        <form method="POST" action="{{ route('tech.orders.call-result', $order) }}">
-            @csrf
-            <input type="hidden" name="result" value="no_answer">
-            <button type="submit" class="w-full py-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold text-sm">
+            <button type="button" data-cr="no_answer_step" class="w-full py-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold text-sm">
                 ✗ مشتری پاسخگو نبود
             </button>
-        </form>
+        </div>
 
-        <button type="button" onclick="dismissCallModal()" class="w-full mt-3 text-[11px] text-gray-400 underline">
+        {{-- مرحلهٔ ۲ — دلیلِ عدم‌پاسخ --}}
+        <div id="crm-step2" class="hidden">
+            <label class="block text-xs font-bold text-rose-700 mb-1.5">دلیلِ عدم پاسخگویی *</label>
+            <textarea id="crm-reason" rows="3" maxlength="1000" placeholder="مثلاً: گوشی خاموش بود / جواب نداد / شمارهٔ اشتباه"
+                      class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-rose-300 focus:outline-none leading-7"></textarea>
+            <p id="crm-reason-err" class="text-[11px] text-rose-600 mt-1 hidden">لطفاً دلیل را بنویسید (حداقل ۳ حرف).</p>
+            <div class="flex items-center gap-2 mt-3">
+                <button type="button" data-cr="no_answer_submit" class="flex-1 py-3 rounded-xl bg-rose-600 text-white font-bold text-sm">ثبت عدم پاسخ</button>
+                <button type="button" data-cr="back" class="px-4 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium">بازگشت</button>
+            </div>
+        </div>
+
+        <button type="button" data-cr="dismiss" class="w-full mt-3 text-[11px] text-gray-400 underline">
             تماس برقرار نشد / اشتباه لمس شد
         </button>
     </div>
@@ -1026,54 +1039,76 @@
             + 'padding:10px 18px;border-radius:14px;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25);'
             + 'background:' + (ok ? 'linear-gradient(135deg,#059669,#10b981)' : '#e11d48');
         document.body.appendChild(t);
-        setTimeout(function () { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; }, 3500);
-        setTimeout(function () { t.remove(); }, 4000);
+        setTimeout(function () { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; }, 3800);
+        setTimeout(function () { t.remove(); }, 4300);
     }
 
-    // ارسالِ AJAX — بدونِ reload صفحه
-    document.querySelectorAll('#call-result-modal form').forEach(function (form) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            var btn = form.querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+    var modal = document.getElementById('call-result-modal');
+    var step1 = document.getElementById('crm-step1');
+    var step2 = document.getElementById('crm-step2');
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '{{ csrf_token() }}';
 
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form),
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin'
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                clearPending();
-                hideModal();
-                toast(data.message || 'ثبت شد.', !!data.success);
+    function submitResult(result, reason, btn) {
+        if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+        var body = new FormData();
+        body.append('_token', csrf);
+        body.append('result', result);
+        if (reason) body.append('reason', reason);
 
-                // به‌روزرسانیِ بَجِ وضعیت در همان صفحه (بدونِ رفرش)
-                if (data.status && data.status.label) {
-                    var badge = document.getElementById('order-status-badge');
-                    if (badge) {
-                        badge.textContent = data.status.label;
-                        badge.className = 'px-3 py-1 text-xs font-bold rounded-full ' + (data.status.badge || 'bg-gray-100 text-gray-800');
-                    }
+        fetch(modal.getAttribute('data-action'), {
+            method: 'POST', body: body,
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+            if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+            if (!res.ok || !res.d.success) { toast((res.d && res.d.message) || 'خطا در ثبت.', false); return; }
+            var data = res.d;
+            clearPending();
+            hideModal();
+            toast(data.message || 'ثبت شد.', true);
+
+            if (data.status && data.status.label) {
+                var badge = document.getElementById('order-status-badge');
+                if (badge) {
+                    badge.textContent = data.status.label;
+                    badge.className = 'px-3 py-1 text-xs font-bold rounded-full ' + (data.status.badge || 'bg-gray-100 text-gray-800');
                 }
+            }
 
-                // هماهنگ شد → اسکرولِ نرم به فرمِ زمانِ مراجعه + هایلایت
-                if (data.next_action === 'schedule_visit') {
-                    var sv = document.getElementById('schedule-visit');
-                    if (sv) {
-                        sv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        sv.style.boxShadow = '0 0 0 3px #10b981';
-                        sv.style.transition = 'box-shadow .3s';
-                        setTimeout(function () { sv.style.boxShadow = ''; }, 2600);
-                    }
+            // هماهنگ شد → اسکرولِ نرم به فرمِ زمانِ مراجعه + هایلایت (تقویم پیش‌پر
+            // است اگر مشتری زمان داده بود؛ وگرنه خالی برای انتخاب).
+            if (data.next_action === 'schedule_visit') {
+                var sv = document.getElementById('schedule-visit');
+                if (sv) {
+                    sv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    sv.style.boxShadow = '0 0 0 3px #10b981';
+                    sv.style.transition = 'box-shadow .3s';
+                    setTimeout(function () { sv.style.boxShadow = ''; }, 2600);
                 }
-            })
-            .catch(function () {
-                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-                toast('خطا در ثبت — دوباره تلاش کنید.', false);
-            });
+            }
+        })
+        .catch(function () {
+            if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+            toast('خطا در ثبت — دوباره تلاش کنید.', false);
         });
+    }
+
+    modal.addEventListener('click', function (e) {
+        var el = e.target.closest('[data-cr]'); if (!el) return;
+        var act = el.getAttribute('data-cr');
+        if (act === 'coordinated') { submitResult('coordinated', null, el); }
+        else if (act === 'no_answer_step') { step1.classList.add('hidden'); step2.classList.remove('hidden'); document.getElementById('crm-reason').focus(); }
+        else if (act === 'back') { step2.classList.add('hidden'); step1.classList.remove('hidden'); }
+        else if (act === 'no_answer_submit') {
+            var reason = (document.getElementById('crm-reason').value || '').trim();
+            var err = document.getElementById('crm-reason-err');
+            if (reason.length < 3) { err.classList.remove('hidden'); return; }
+            err.classList.add('hidden');
+            submitResult('no_answer', reason, el);
+        }
+        else if (act === 'dismiss') { clearPending(); hideModal(); }
     });
 
     window.clearCallPending = clearPending;

@@ -639,6 +639,11 @@ class DashboardController extends Controller
 
         $validated = $request->validate([
             'result' => 'required|in:coordinated,no_answer',
+            // دلیلِ عدم‌پاسخ الزامی است (گوشی خاموش بود، جواب نداد و ...).
+            'reason' => 'required_if:result,no_answer|nullable|string|min:3|max:1000',
+        ], [
+            'reason.required_if' => 'لطفاً دلیل عدم پاسخگویی را بنویسید.',
+            'reason.min' => 'دلیل را کمی کامل‌تر بنویسید.',
         ]);
 
         if ($order->status->isFinal()) {
@@ -657,11 +662,12 @@ class DashboardController extends Controller
                 $order->update(['status' => OrderStatus::NoAnswer->value]);
             }
 
+            $reason = trim((string) ($validated['reason'] ?? ''));
             OrderStatusLog::create([
                 'order_id' => $order->id,
                 'from_status' => $previous->value,
                 'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
-                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود.',
+                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود'.($reason !== '' ? ' — '.$reason : '').'.',
                 'changed_by' => $tech->user_id,
                 'created_at' => now(),
             ]);
@@ -691,12 +697,18 @@ class DashboardController extends Controller
             'created_at' => now(),
         ]);
 
-        $message = 'عالی! حالا روز و ساعت مراجعه را ثبت کنید تا وضعیت «هماهنگ شده» شود.';
+        // اگر مشتری هنگام ثبتِ سفارش (از اپ) روز/ساعت داده بود، در فرمِ زمانِ
+        // مراجعه از قبل پیش‌پر است → پیامِ «تأیید»؛ وگرنه «انتخاب».
+        $hasDefaultTime = $order->visit_scheduled_at !== null;
+        $message = $hasDefaultTime
+            ? 'عالی! زمانِ پیشنهادیِ مشتری پیش‌پر شده — بررسی و «ثبت زمان مراجعه» را بزنید تا «هماهنگ شده» شود.'
+            : 'عالی! حالا روز و ساعت مراجعه را انتخاب و ثبت کنید تا وضعیت «هماهنگ شده» شود.';
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => $message,
                 'next_action' => 'schedule_visit',
+                'has_default_time' => $hasDefaultTime,
                 'status' => ['value' => $previous->value, 'label' => $previous->label(), 'badge' => $previous->badgeClass()],
             ]);
         }
