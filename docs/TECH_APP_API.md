@@ -150,6 +150,19 @@ Body: `{ "note": "..." }`. روی سفارشِ نهایی مجاز نیست (`42
 ### `POST /v1/technician/orders/{id}/deliver-sms`  (auth)
 پیامکِ «آماده تحویل» به مشتری. فقط اگر تکنسین `is_ready_for_delivery` و سفارش `completed`. Res: `{ success, message }`.
 
+### `POST /v1/technician/orders/{id}/call-result`  (auth) — نتیجهٔ تماس
+**الزامِ UX:** وقتی تکنسین روی شمارهٔ مشتری (`tel:`) می‌زند و به اپ برمی‌گردد،
+باید یک مودالِ **اجباری** «نتیجهٔ تماس؟» نشان داده شود (تشخیصِ برگشت:
+`visibilitychange`/`AppState` + حداقل ~۵ ثانیه غیبت) با دو گزینه:
+- Body: `{ "result": "coordinated" }` → پاسخ `data.next_action = "schedule_visit"` —
+  اپ باید بلافاصله فرمِ «ثبتِ زمانِ مراجعه» را باز کند (خودِ schedule-visit وضعیت
+  را «هماهنگ شده» می‌کند و پیامک می‌فرستد).
+- Body: `{ "result": "no_answer" }` → اگر سفارش در فازِ هماهنگی باشد، وضعیت
+  «مشتری پاسخگو نیست» می‌شود؛ وگرنه فقط در تاریخچه ثبت می‌شود.
+- یک راهِ فرارِ کوچک («تماس برقرار نشد») هم بگذارید که فقط مودال را می‌بندد و
+  چیزی نمی‌فرستد.
+Res: `{ success, message, data: { status, next_action } }`.
+
 ### `POST /v1/technician/orders/{id}/transfer-receipt`  (auth)
 ثبتِ **دستیِ** رسیدِ انتقال (علاوه بر ساختِ خودکار هنگامِ `open`). فقط وقتی قابلیت
 فعال و سفارش در `open|repair_started` است. Body: `{ "description": "..." }` (اختیاری).

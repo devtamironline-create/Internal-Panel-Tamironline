@@ -578,7 +578,10 @@ class DashboardController extends Controller
         // وضعیت قبلی را از DB تازه می‌خوانیم — جلوگیری از خواندن stale.
         $order->refresh();
         $previousStatus = $order->status;
-        $autoCoordinated = $previousStatus === OrderStatus::New;
+        // ثبتِ زمانِ مراجعه از وضعیت‌های فازِ هماهنگی → خودکار «هماهنگ شده».
+        $autoCoordinated = in_array($previousStatus, [
+            OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
+        ], true);
 
         $updates = ['visit_scheduled_at' => $datetime];
         if ($autoCoordinated) {
@@ -617,6 +620,70 @@ class DashboardController extends Controller
             : 'زمان مراجعه به‌روزرسانی شد.';
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * ثبتِ نتیجهٔ تماسِ تلفنیِ تکنسین با مشتری — بعد از برگشت از شماره‌گیر،
+     * مودالِ اجباری این را می‌فرستد.
+     *
+     *  - no_answer: اگر سفارش در فازِ هماهنگی است (جدید/در انتظار هماهنگی/
+     *    پاسخگو نیست) → وضعیت «مشتری پاسخگو نیست» می‌شود؛ در غیر این صورت
+     *    فقط در تاریخچه ثبت می‌شود (وضعیتِ کار دست نمی‌خورد).
+     *  - coordinated: وضعیت همین‌جا عوض نمی‌شود — تکنسین به فرمِ «هماهنگی
+     *    زمان مراجعه» هدایت می‌شود که خودش Coordinated + پیامک را انجام می‌دهد.
+     */
+    public function callResult(Request $request, Order $order)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwnership($order, $tech);
+
+        $validated = $request->validate([
+            'result' => 'required|in:coordinated,no_answer',
+        ]);
+
+        if ($order->status->isFinal()) {
+            return back()->with('error', 'این سفارش نهایی شده است.');
+        }
+
+        $order->refresh();
+        $previous = $order->status;
+
+        if ($validated['result'] === 'no_answer') {
+            $coordinationPhase = in_array($previous, [
+                OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
+            ], true);
+
+            if ($coordinationPhase && $previous !== OrderStatus::NoAnswer) {
+                $order->update(['status' => OrderStatus::NoAnswer->value]);
+            }
+
+            OrderStatusLog::create([
+                'order_id' => $order->id,
+                'from_status' => $previous->value,
+                'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
+                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود.',
+                'changed_by' => $tech->user_id,
+                'created_at' => now(),
+            ]);
+
+            return redirect()
+                ->route('tech.orders.show', $order)
+                ->with('success', 'نتیجهٔ تماس ثبت شد: مشتری پاسخگو نیست. بعداً دوباره تماس بگیرید.');
+        }
+
+        // coordinated — ثبتِ نتیجه در تاریخچه + هدایت به فرمِ زمانِ مراجعه.
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $previous->value,
+            'to_status' => $previous->value,
+            'note' => 'نتیجهٔ تماس تلفنی: با مشتری هماهنگ شد — در انتظار ثبت زمان مراجعه.',
+            'changed_by' => $tech->user_id,
+            'created_at' => now(),
+        ]);
+
+        return redirect()
+            ->to(route('tech.orders.show', $order).'#schedule-visit')
+            ->with('success', 'عالی! حالا روز و ساعت مراجعه را در فرم «هماهنگی زمان مراجعه» ثبت کنید تا وضعیت «هماهنگ شده» شود.');
     }
 
     /**
