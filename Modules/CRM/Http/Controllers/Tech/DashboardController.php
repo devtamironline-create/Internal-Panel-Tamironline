@@ -55,6 +55,9 @@ class DashboardController extends Controller
             OrderStatus::Coordinated->value,
             OrderStatus::Open->value,
             OrderStatus::Suspended->value,
+            OrderStatus::RepairStarted->value,
+            OrderStatus::AwaitingPart->value,
+            OrderStatus::AwaitingCustomerApproval->value,
         ];
 
         // ۱) سفارش‌های دارای زمان مراجعه (در بازهٔ ۷ روز پیشِ‌رو) —
@@ -156,6 +159,9 @@ class DashboardController extends Controller
                 OrderStatus::Coordinated->value,
                 OrderStatus::Open->value,
                 OrderStatus::Suspended->value,
+                OrderStatus::RepairStarted->value,
+                OrderStatus::AwaitingPart->value,
+                OrderStatus::AwaitingCustomerApproval->value,
             ])
             ->whereBetween('visit_scheduled_at', [$start, $end])
             ->with(['customer', 'brand', 'device'])
@@ -641,7 +647,10 @@ class DashboardController extends Controller
 
         $base = [
             OrderStatus::Coordinated,
+            OrderStatus::RepairStarted,
             OrderStatus::Open,
+            OrderStatus::AwaitingPart,
+            OrderStatus::AwaitingCustomerApproval,
             OrderStatus::Suspended,
             OrderStatus::Completed,
             OrderStatus::Declined,

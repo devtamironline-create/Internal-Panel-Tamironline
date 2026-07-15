@@ -325,8 +325,9 @@ class OrderActionController extends Controller
         }
 
         $base = [
-            OrderStatus::Coordinated, OrderStatus::Open, OrderStatus::Suspended,
-            OrderStatus::Completed, OrderStatus::Declined, OrderStatus::Transit,
+            OrderStatus::Coordinated, OrderStatus::RepairStarted, OrderStatus::Open,
+            OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval,
+            OrderStatus::Suspended, OrderStatus::Completed, OrderStatus::Declined, OrderStatus::Transit,
         ];
         if (CrmSetting::get('tech_panel_readonly') === '1') {
             $base = array_filter($base, fn (OrderStatus $s) => ! $s->isFinal());

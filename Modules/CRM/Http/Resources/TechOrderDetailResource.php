@@ -19,7 +19,10 @@ class TechOrderDetailResource extends JsonResource
     /** برچسبِ اکشنِ هر وضعیت (رادیوهای تغییرِ وضعیت). */
     private const ACTION_LABELS = [
         'coordinated' => 'هماهنگ کردن سفارش',
+        'repair_started' => 'شروع تعمیر',
         'open' => 'انتقال به تعمیرگاه',
+        'awaiting_part' => 'در انتظار قطعه',
+        'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
         'suspended' => 'وضعیت نامشخص',
         'completed' => 'پایان سفارش',
         'declined' => 'رد سفارش',
@@ -204,8 +207,9 @@ class TechOrderDetailResource extends JsonResource
             $base = [OrderStatus::Cancelled, OrderStatus::Completed];
         } else {
             $base = [
-                OrderStatus::Coordinated, OrderStatus::Open, OrderStatus::Suspended,
-                OrderStatus::Completed, OrderStatus::Declined, OrderStatus::Transit,
+                OrderStatus::Coordinated, OrderStatus::RepairStarted, OrderStatus::Open,
+                OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval,
+                OrderStatus::Suspended, OrderStatus::Completed, OrderStatus::Declined, OrderStatus::Transit,
             ];
             if (CrmSetting::get('tech_panel_readonly') === '1') {
                 $base = array_filter($base, fn (OrderStatus $s) => ! $s->isFinal());
