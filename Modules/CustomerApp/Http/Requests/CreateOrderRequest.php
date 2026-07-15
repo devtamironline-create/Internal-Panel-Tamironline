@@ -54,7 +54,11 @@ class CreateOrderRequest extends FormRequest
 
         return [
             'order_type' => ['required', 'string', Rule::in($serviceTypeSlugs)],
-            'device_id' => 'required|integer|exists:crm_devices,id,is_active,1',
+            // دستگاه باید در «اپ» فعال باشد (is_active_app) — همان فلگی که
+            // ServiceController::categories برای نمایشِ لیستِ دستگاه‌ها استفاده می‌کند.
+            // اگر با is_active (فلگِ سایت) بسنجیم، دستگاهی که در اپ نمایش داده می‌شود
+            // ولی سایتش خاموش است (مثلِ تلویزیون) در مرحلهٔ آخر «نامعتبر» می‌شود.
+            'device_id' => 'required|integer|exists:crm_devices,id,is_active_app,1',
             'brand_id' => 'nullable|integer|exists:crm_brands,id,is_active,1',
 
             'objection_ids' => 'nullable|array|max:10',
