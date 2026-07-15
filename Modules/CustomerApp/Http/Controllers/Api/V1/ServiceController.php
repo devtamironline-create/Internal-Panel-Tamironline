@@ -141,7 +141,24 @@ class ServiceController extends Controller
             }
         }
 
-        $rows = $query->get(['id', 'name', 'slug', 'logo', 'tone', 'bg']);
+        $rows = $query->get(['id', 'name', 'slug', 'logo', 'tone', 'bg', 'is_featured', 'sort_order']);
+
+        // مرتب‌سازی بر اساسِ «پراستفاده‌بودن» از دادهٔ واقعیِ سفارش‌ها: تعداد
+        // سفارشِ ثبت‌شده برای هر برند (اگر device_id باشد، محدود به همان دستگاه).
+        $countsQuery = \Modules\CRM\Models\Order::query()->whereNotNull('brand_id');
+        if ($deviceId > 0) {
+            $countsQuery->where('device_id', $deviceId);
+        }
+        $orderCounts = $countsQuery->selectRaw('brand_id, COUNT(*) as c')
+            ->groupBy('brand_id')->pluck('c', 'brand_id');
+
+        // اولویت: برندِ pin‌شده (is_featured) → پراستفاده‌ترین → sort_order دستی → نام.
+        $rows = $rows->sortBy(fn (Brand $b) => [
+            $b->is_featured ? 0 : 1,
+            -1 * (int) ($orderCounts[$b->id] ?? 0),
+            (int) ($b->sort_order ?? 0),
+            (string) $b->name,
+        ])->values();
 
         $data = $rows->map(fn (Brand $b) => [
             'id' => (int) $b->id,
@@ -150,6 +167,8 @@ class ServiceController extends Controller
             'logo' => MediaUrl::resolve($b->logo),
             'icon' => null,
             'badge' => null,
+            // شمارِ سفارشِ واقعی برای تحلیل/رتبه‌بندی (مبنای «پراستفاده»).
+            'orders_count' => (int) ($orderCounts[$b->id] ?? 0),
         ])->values();
 
         return response()->json([
@@ -157,9 +176,10 @@ class ServiceController extends Controller
             'meta' => [
                 'device_id' => $deviceId > 0 ? $deviceId : null,
                 'category_id' => $deviceId > 0 ? $deviceId : null,
+                'sorted_by' => 'popularity',
                 'total' => $data->count(),
             ],
-        ])->header('Cache-Control', 'public, max-age=3600');
+        ])->header('Cache-Control', 'public, max-age=1800');
     }
 
     /**
