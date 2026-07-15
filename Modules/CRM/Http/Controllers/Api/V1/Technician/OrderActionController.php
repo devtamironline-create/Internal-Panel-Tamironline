@@ -237,7 +237,12 @@ class OrderActionController extends Controller
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
 
-        $validated = $request->validate(['result' => 'required|in:coordinated,no_answer']);
+        $validated = $request->validate([
+            'result' => 'required|in:coordinated,no_answer',
+            'reason' => 'required_if:result,no_answer|nullable|string|min:3|max:1000',
+        ], [
+            'reason.required_if' => 'لطفاً دلیل عدم پاسخگویی را بنویسید.',
+        ]);
 
         if ($order->status->isFinal()) {
             throw ValidationException::withMessages(['result' => 'این سفارش نهایی شده است.']);
@@ -253,11 +258,12 @@ class OrderActionController extends Controller
             if ($coordinationPhase && $previous !== OrderStatus::NoAnswer) {
                 $order->update(['status' => OrderStatus::NoAnswer->value]);
             }
+            $reason = trim((string) ($validated['reason'] ?? ''));
             OrderStatusLog::create([
                 'order_id' => $order->id,
                 'from_status' => $previous->value,
                 'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
-                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود.',
+                'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود'.($reason !== '' ? ' — '.$reason : '').'.',
                 'changed_by' => $tech->user_id,
                 'created_at' => now(),
             ]);
@@ -278,10 +284,14 @@ class OrderActionController extends Controller
             'created_at' => now(),
         ]);
 
+        $hasDefaultTime = $order->visit_scheduled_at !== null;
+
         return response()->json([
             'success' => true,
-            'message' => 'حالا زمانِ مراجعه را ثبت کنید تا وضعیت «هماهنگ شده» شود.',
-            'data' => ['status' => $previous->value, 'next_action' => 'schedule_visit'],
+            'message' => $hasDefaultTime
+                ? 'زمانِ پیشنهادیِ مشتری پیش‌پر است — تأیید کنید تا «هماهنگ شده» شود.'
+                : 'حالا زمانِ مراجعه را انتخاب و ثبت کنید تا وضعیت «هماهنگ شده» شود.',
+            'data' => ['status' => $previous->value, 'next_action' => 'schedule_visit', 'has_default_time' => $hasDefaultTime],
         ]);
     }
 
