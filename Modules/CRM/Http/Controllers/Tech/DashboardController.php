@@ -666,9 +666,19 @@ class DashboardController extends Controller
                 'created_at' => now(),
             ]);
 
-            return redirect()
-                ->route('tech.orders.show', $order)
-                ->with('success', 'نتیجهٔ تماس ثبت شد: مشتری پاسخگو نیست. بعداً دوباره تماس بگیرید.');
+            $message = 'نتیجهٔ تماس ثبت شد: مشتری پاسخگو نیست. بعداً دوباره تماس بگیرید.';
+            if ($request->expectsJson()) {
+                $current = $order->fresh()->status;
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'next_action' => null,
+                    'status' => ['value' => $current?->value, 'label' => $current?->label(), 'badge' => $current?->badgeClass()],
+                ]);
+            }
+
+            return redirect()->route('tech.orders.show', $order)->with('success', $message);
         }
 
         // coordinated — ثبتِ نتیجه در تاریخچه + هدایت به فرمِ زمانِ مراجعه.
@@ -681,9 +691,19 @@ class DashboardController extends Controller
             'created_at' => now(),
         ]);
 
+        $message = 'عالی! حالا روز و ساعت مراجعه را ثبت کنید تا وضعیت «هماهنگ شده» شود.';
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'next_action' => 'schedule_visit',
+                'status' => ['value' => $previous->value, 'label' => $previous->label(), 'badge' => $previous->badgeClass()],
+            ]);
+        }
+
         return redirect()
             ->to(route('tech.orders.show', $order).'#schedule-visit')
-            ->with('success', 'عالی! حالا روز و ساعت مراجعه را در فرم «هماهنگی زمان مراجعه» ثبت کنید تا وضعیت «هماهنگ شده» شود.');
+            ->with('success', $message);
     }
 
     /**
