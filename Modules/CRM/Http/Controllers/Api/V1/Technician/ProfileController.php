@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Http\Resources\TechnicianResource;
+use Modules\CRM\Support\TechImageStorage;
 
 /**
  * پروفایلِ تکنسین — آواتار (یک‌بار) و تغییرِ رمز. ویرایشِ اطلاعاتِ تماس مجاز
@@ -27,9 +28,10 @@ class ProfileController extends Controller
             ]);
         }
 
-        $request->validate(['avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072']);
+        $request->validate(['avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:30720']);
 
-        $path = $request->file('avatar')->store('tech-avatars', 'public');
+        // بهینه‌سازیِ سخت؛ فایلِ اصلیِ تکنسین ذخیره نمی‌شود.
+        $path = TechImageStorage::store($request->file('avatar'), 'tech-avatars');
         $tech->forceFill(['img_personal' => $path])->save();
 
         return response()->json([
