@@ -72,7 +72,7 @@ class DashboardController extends Controller
                 'birthdays' => ['today' => [], 'upcoming' => [], 'total_upcoming' => 0],
             ],
             'recentOrders' => collect(),
-            'hourly' => ['labels' => [], 'total' => [], 'leads' => []],
+            'hourly' => ['labels' => [], 'total' => [], 'leads' => [], 'orders' => []],
             'ordersByRegion' => ['labels' => [], 'data' => [], 'colors' => []],
             'trend' => ['labels' => [], 'total' => [], 'leads' => []],
             'statusBreakdown' => ['labels' => [], 'data' => [], 'colors' => []],
@@ -178,9 +178,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * سفارش‌های امروز به تفکیکِ ساعت — «کل» (سفارش+لید) و «لید».
+     * سفارش‌های امروز به تفکیکِ ساعت — «کل» (سفارش+لید)، «لید» و «سفارشِ ثبت‌شده».
      *
-     * @return array{labels:array<int,string>, total:array<int,int>, leads:array<int,int>}
+     * @return array{labels:array<int,string>, total:array<int,int>, leads:array<int,int>, orders:array<int,int>}
      */
     protected function hourlyToday(): array
     {
@@ -190,12 +190,13 @@ class DashboardController extends Controller
         }
         $total = array_fill(0, 24, 0);
         $leads = array_fill(0, 24, 0);
+        $orders = array_fill(0, 24, 0);
 
         try {
             $todayStart = now()->startOfDay();
             Order::query()->whereBetween('created_at', [$todayStart, now()->endOfDay()])
                 ->get(['created_at', 'is_lead'])
-                ->each(function ($o) use (&$total, &$leads) {
+                ->each(function ($o) use (&$total, &$leads, &$orders) {
                     if (! $o->created_at) {
                         return;
                     }
@@ -203,13 +204,20 @@ class DashboardController extends Controller
                     $total[$h]++;
                     if ($o->is_lead) {
                         $leads[$h]++;
+                    } else {
+                        $orders[$h]++; // سفارشِ واقعیِ ثبت‌شده (غیرِ لید)
                     }
                 });
         } catch (\Throwable $e) {
             // آرایه‌های صفر
         }
 
-        return ['labels' => $labels, 'total' => array_values($total), 'leads' => array_values($leads)];
+        return [
+            'labels' => $labels,
+            'total' => array_values($total),
+            'leads' => array_values($leads),
+            'orders' => array_values($orders),
+        ];
     }
 
     /**

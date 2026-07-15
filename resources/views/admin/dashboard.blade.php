@@ -107,7 +107,7 @@
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
             <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">امروز به تفکیکِ ساعت</h3>
-            <p class="text-xs text-gray-400 mb-2">کل (سفارش + لید) و لید در هر ساعت</p>
+            <p class="text-xs text-gray-400 mb-2">کل (سفارش + لید) و سفارش ثبت‌شده در هر ساعت</p>
             <div id="chart-hourly"></div>
         </div>
     </div>
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
         series: [
             { name: 'کل (سفارش+لید)', data: hourly.total, color: '#3b82f6' },
-            { name: 'لید', data: hourly.leads, color: '#f59e0b' },
+            { name: 'سفارش ثبت‌شده', data: hourly.orders, color: '#f59e0b' },
         ],
         xaxis: { categories: hourly.labels, tickAmount: 12, labels: { style: { fontSize: '10px' } } },
         yaxis: { labels: { style: { fontSize: '10px' }, formatter: (v) => Math.round(v) } },
