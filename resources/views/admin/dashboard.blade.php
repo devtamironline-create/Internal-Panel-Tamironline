@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
         series: [
             { name: 'کل (سفارش+لید)', data: hourly.total, color: '#3b82f6' },
-            { name: 'سفارش ثبت‌شده', data: hourly.orders, color: '#f59e0b' },
+            { name: 'سفارش ثبت‌شده', data: hourly.orders, color: '#10b981' },
         ],
         xaxis: { categories: hourly.labels, tickAmount: 12, labels: { style: { fontSize: '10px' } } },
         yaxis: { labels: { style: { fontSize: '10px' }, formatter: (v) => Math.round(v) } },
