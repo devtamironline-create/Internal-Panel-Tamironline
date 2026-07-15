@@ -113,7 +113,8 @@ class ServiceController extends Controller
      */
     public function brands(Request $request): JsonResponse
     {
-        $categoryId = $request->integer('category_id');
+        // category_id و device_id هر دو یک دستگاه را نشان می‌دهند (سازگاریِ عقب‌رو).
+        $deviceId = $request->integer('device_id') ?: $request->integer('category_id');
 
         $query = Brand::query()
             ->where('is_active', true)
@@ -121,8 +122,23 @@ class ServiceController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name');
 
-        if ($categoryId > 0) {
-            $query->whereHas('devices', fn ($q) => $q->where('crm_devices.id', $categoryId));
+        if ($deviceId > 0) {
+            // فقط برندهایی که برای این دستگاه صفحهٔ ترکیبیِ فعال دارند
+            // (همان صفحاتِ /services/{device}/{brand}) — یعنی برندهایی که واقعاً
+            // برای این دستگاه سرویس می‌دهیم. اگر هیچ ترکیبی ساخته نشده باشد،
+            // به رابطهٔ device↔brand برمی‌گردیم تا لیست خالی نماند.
+            $brandIds = \Modules\CRM\Models\DeviceBrandPage::query()
+                ->where('device_id', $deviceId)
+                ->where('is_active', true)
+                ->pluck('brand_id')
+                ->unique()
+                ->values();
+
+            if ($brandIds->isNotEmpty()) {
+                $query->whereIn('id', $brandIds);
+            } else {
+                $query->whereHas('devices', fn ($q) => $q->where('crm_devices.id', $deviceId));
+            }
         }
 
         $rows = $query->get(['id', 'name', 'slug', 'logo', 'tone', 'bg']);
@@ -139,7 +155,8 @@ class ServiceController extends Controller
         return response()->json([
             'data' => $data,
             'meta' => [
-                'category_id' => $categoryId > 0 ? $categoryId : null,
+                'device_id' => $deviceId > 0 ? $deviceId : null,
+                'category_id' => $deviceId > 0 ? $deviceId : null,
                 'total' => $data->count(),
             ],
         ])->header('Cache-Control', 'public, max-age=3600');
