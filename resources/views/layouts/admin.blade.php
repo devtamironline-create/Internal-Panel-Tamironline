@@ -2104,5 +2104,27 @@
     @if(request()->routeIs('warehouse.*'))
         @include('components.order-search-widget')
     @endif
+
+    {{-- گزینهٔ فعالِ سایدبار را در دیدِ کاربر بیاور: پس از هر لود/ناوبری، اسکرولِ
+         منوی کناری طوری تنظیم می‌شود که آیتمِ فعال وسطِ سایدبار قرار گیرد (UX). --}}
+    <script>
+    (function () {
+        function revealActiveMenu() {
+            var nav = document.querySelector('nav.overflow-y-auto.no-scrollbar');
+            if (! nav) return;
+            var active = nav.querySelector('.sidebar-menu-item-active');
+            if (! active) return;
+            var navRect = nav.getBoundingClientRect();
+            var aRect = active.getBoundingClientRect();
+            // اگر آیتمِ فعال از قبل کاملاً در دید است، دست نزن.
+            if (aRect.top >= navRect.top && aRect.bottom <= navRect.bottom) return;
+            var offset = (aRect.top - navRect.top) - (nav.clientHeight / 2 - active.offsetHeight / 2);
+            nav.scrollTop += offset;
+        }
+        // بعد از settle شدنِ layout (منوهای بازشونده) اجرا شود.
+        window.addEventListener('load', function () { requestAnimationFrame(revealActiveMenu); });
+        document.addEventListener('livewire:navigated', function () { requestAnimationFrame(revealActiveMenu); });
+    })();
+    </script>
 </body>
 </html>
