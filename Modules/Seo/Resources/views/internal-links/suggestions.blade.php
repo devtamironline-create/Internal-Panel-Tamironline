@@ -27,9 +27,9 @@
     @if(session('success'))<div class="mb-4 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="mb-4 px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">{{ session('error') }}</div>@endif
 
-    {{-- راهنمای کوتاه --}}
-    <details class="mb-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/10 p-3">
-        <summary class="text-xs font-bold text-blue-800 dark:text-blue-300 cursor-pointer">📘 راهنما — هر پیشنهاد یعنی چه و «اعمال» دقیقاً چه می‌کند؟</summary>
+    {{-- راهنمای کوتاه — به‌صورت پیش‌فرض باز تا کاربر گیج نشود --}}
+    <details open class="mb-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/10 p-3">
+        <summary class="text-xs font-bold text-blue-800 dark:text-blue-300 cursor-pointer">📘 راهنما — هر پیشنهاد یعنی چه و هر دکمه چه می‌کند؟ (برای بستن کلیک کنید)</summary>
         <div class="mt-2 text-[12px] text-gray-700 dark:text-gray-300 leading-7">
             هر کارت یعنی: «در صفحهٔ نام‌برده، متنِ <b>انکر</b> را به <b>مقصد</b> لینک کن» — با دلیلِ پیشنهاد.
             <b>تأیید</b> فقط علامت‌گذاری است و چیزی را تغییر نمی‌دهد؛ <b>اعمال</b> لینک را واقعاً به محتوا اضافه می‌کند:
@@ -38,6 +38,13 @@
             هر اعمال، نسخهٔ کاملِ قبلی را ذخیره می‌کند و با «↩ بازگردانی» برمی‌گردد.
             وضعیت‌ها: <b>در انتظار</b> = هنوز تصمیم نگرفته‌اید · <b>تأییدشده</b> = آمادهٔ اعمال (با دکمهٔ ⚡ دسته‌ای هم اعمال می‌شود) ·
             <b>اعمال‌شده</b> = لینک در محتواست · <b>ردشده</b> = نادیده گرفته شده (قابلِ بازگشت).
+            <div class="mt-2 pt-2 border-t border-blue-200/60 dark:border-blue-800/60 grid gap-1">
+                <div><span class="inline-block px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold">اعمال لینک</span> = لینک را <b>همین الان در متنِ مقاله می‌گذارد</b> (اگر «در انتظار» بود، اول خودکار تأیید می‌شود). قابلِ بازگردانی.</div>
+                <div><span class="inline-block px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold">✓ تأیید</span> = فقط علامت می‌زند «این خوب است»؛ <b>محتوا تغییر نمی‌کند</b>. بعداً با ⚡ دسته‌ای اعمال می‌شود.</div>
+                <div><span class="inline-block px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">✗ رد</span> = این پیشنهاد را نادیده بگیر (بعداً قابلِ بازگشت).</div>
+                <div><span class="inline-block px-2 py-0.5 rounded border border-gray-300 text-gray-600 text-[10px] font-bold">✏️ انکر</span> = عبارتی که قرار است لینک شود را ویرایش کن (باید دقیقاً در متنِ مقاله وجود داشته باشد).</div>
+                <div class="text-blue-800 dark:text-blue-300">⚡ <b>اعمال تأییدشده‌ها</b> (بالای صفحه) = همهٔ «تأییدشده‌ها» را یک‌جا در محتوا اعمال می‌کند.</div>
+            </div>
         </div>
     </details>
 

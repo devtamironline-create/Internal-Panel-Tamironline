@@ -51,7 +51,10 @@ class InternalLinkAnalyzer
             $pages['/services/'.$d->slug] = $this->page('device', $d->name, $d->id, $d->slug);
         }
 
-        $combos = DeviceBrandPage::query()->get(['id', 'device_id', 'brand_id', 'title', 'description', 'cta_primary_url', 'cta_secondary_url']);
+        // فقط صفحاتِ ترکیبیِ «فعال» صفحهٔ واقعی/منتشرشده‌اند (هم‌سو با sitemap و
+        // combo-manager). ترکیبی‌های غیرفعال نباید در آمار/گرافِ لینک شمرده شوند.
+        $combos = DeviceBrandPage::query()->where('is_active', true)
+            ->get(['id', 'device_id', 'brand_id', 'title', 'description', 'cta_primary_url', 'cta_secondary_url']);
         $deviceById = $devices->keyBy('id');
         foreach ($combos as $c) {
             $d = $deviceById[$c->device_id] ?? null;
@@ -286,7 +289,7 @@ class InternalLinkAnalyzer
 
         $devices = Device::query()->where('is_active', true)->get(['id', 'name', 'slug'])->keyBy('slug');
         $brandNames = Brand::query()->get(['id', 'name', 'slug'])->keyBy('id');
-        $combosByDevice = DeviceBrandPage::query()->get(['id', 'device_id', 'brand_id'])
+        $combosByDevice = DeviceBrandPage::query()->where('is_active', true)->get(['id', 'device_id', 'brand_id'])
             ->groupBy('device_id');
 
         $created = 0;
