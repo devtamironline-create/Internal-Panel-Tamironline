@@ -21,7 +21,7 @@ class TechnicianAdminController extends Controller
 {
     private function checkAccess(): void
     {
-        if (!auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
+        if (! auth()->user()->can('manage-technicians') && ! auth()->user()->can('manage-permissions')) {
             abort(403);
         }
     }
@@ -36,9 +36,9 @@ class TechnicianAdminController extends Controller
     {
         $u = auth()->user();
         if (! $u || (
-            !$u->can('edit-technician-registration')
-            && !$u->can('manage-technicians')
-            && !$u->can('manage-permissions')
+            ! $u->can('edit-technician-registration')
+            && ! $u->can('manage-technicians')
+            && ! $u->can('manage-permissions')
         )) {
             abort(403, 'برای ویرایش اطلاعات این درخواست دسترسی ندارید.');
         }
@@ -54,37 +54,37 @@ class TechnicianAdminController extends Controller
         $defaults = TechnicianSetting::defaults();
 
         $settings = [
-            'page_title'         => TechnicianSetting::get('page_title',         $defaults['page_title']),
-            'brand_name'         => TechnicianSetting::get('brand_name',          $defaults['brand_name']),
-            'brand_logo'         => TechnicianSetting::get('brand_logo',          null),
-            'hero_title'         => TechnicianSetting::get('hero_title',          $defaults['hero_title']),
-            'hero_subtitle'      => TechnicianSetting::get('hero_subtitle',       $defaults['hero_subtitle']),
-            'hero_description'   => TechnicianSetting::get('hero_description',    $defaults['hero_description']),
-            'hero_cta_text'      => TechnicianSetting::get('hero_cta_text',       $defaults['hero_cta_text']),
-            'hero_cta_link'      => TechnicianSetting::get('hero_cta_link',       $defaults['hero_cta_link']),
+            'page_title' => TechnicianSetting::get('page_title', $defaults['page_title']),
+            'brand_name' => TechnicianSetting::get('brand_name', $defaults['brand_name']),
+            'brand_logo' => TechnicianSetting::get('brand_logo', null),
+            'hero_title' => TechnicianSetting::get('hero_title', $defaults['hero_title']),
+            'hero_subtitle' => TechnicianSetting::get('hero_subtitle', $defaults['hero_subtitle']),
+            'hero_description' => TechnicianSetting::get('hero_description', $defaults['hero_description']),
+            'hero_cta_text' => TechnicianSetting::get('hero_cta_text', $defaults['hero_cta_text']),
+            'hero_cta_link' => TechnicianSetting::get('hero_cta_link', $defaults['hero_cta_link']),
             'hero_secondary_text' => TechnicianSetting::get('hero_secondary_text', $defaults['hero_secondary_text']),
             'hero_secondary_link' => TechnicianSetting::get('hero_secondary_link', $defaults['hero_secondary_link']),
-            'hero_badge'         => TechnicianSetting::get('hero_badge',          $defaults['hero_badge']),
-            'hero_bg_image'      => TechnicianSetting::get('hero_bg_image',        null),
-            'hero_overlay_color' => TechnicianSetting::get('hero_overlay_color',   '#0f2a4a'),
+            'hero_badge' => TechnicianSetting::get('hero_badge', $defaults['hero_badge']),
+            'hero_bg_image' => TechnicianSetting::get('hero_bg_image', null),
+            'hero_overlay_color' => TechnicianSetting::get('hero_overlay_color', '#0f2a4a'),
             'hero_overlay_opacity' => TechnicianSetting::get('hero_overlay_opacity', '60'),
-            'benefits_title'     => TechnicianSetting::get('benefits_title',      $defaults['benefits_title']),
-            'benefits_json'      => TechnicianSetting::get('benefits',            $defaults['benefits']),
-            'steps_title'        => TechnicianSetting::get('steps_title',         $defaults['steps_title']),
-            'steps_json'         => TechnicianSetting::get('steps',               $defaults['steps']),
-            'requirements_title' => TechnicianSetting::get('requirements_title',  $defaults['requirements_title']),
-            'requirements_json'  => TechnicianSetting::get('requirements',        $defaults['requirements']),
-            'faq_title'          => TechnicianSetting::get('faq_title',           $defaults['faq_title']),
-            'faq_json'           => TechnicianSetting::get('faq',                 $defaults['faq']),
-            'cta_title'          => TechnicianSetting::get('cta_title',           $defaults['cta_title']),
-            'cta_description'    => TechnicianSetting::get('cta_description',     $defaults['cta_description']),
-            'cta_badge'          => TechnicianSetting::get('cta_badge',           $defaults['cta_badge']),
-            'cta_button_text'    => TechnicianSetting::get('cta_button_text',     $defaults['cta_button_text']),
-            'cta_button_link'    => TechnicianSetting::get('cta_button_link',     $defaults['cta_button_link']),
-            'cta_phone_text'     => TechnicianSetting::get('cta_phone_text',      $defaults['cta_phone_text']),
-            'cta_phone'          => TechnicianSetting::get('cta_phone',           $defaults['cta_phone']),
-            'cta_footnote'       => TechnicianSetting::get('cta_footnote',        $defaults['cta_footnote']),
-            'contract_text'      => TechnicianSetting::get('contract_text',       ''),
+            'benefits_title' => TechnicianSetting::get('benefits_title', $defaults['benefits_title']),
+            'benefits_json' => TechnicianSetting::get('benefits', $defaults['benefits']),
+            'steps_title' => TechnicianSetting::get('steps_title', $defaults['steps_title']),
+            'steps_json' => TechnicianSetting::get('steps', $defaults['steps']),
+            'requirements_title' => TechnicianSetting::get('requirements_title', $defaults['requirements_title']),
+            'requirements_json' => TechnicianSetting::get('requirements', $defaults['requirements']),
+            'faq_title' => TechnicianSetting::get('faq_title', $defaults['faq_title']),
+            'faq_json' => TechnicianSetting::get('faq', $defaults['faq']),
+            'cta_title' => TechnicianSetting::get('cta_title', $defaults['cta_title']),
+            'cta_description' => TechnicianSetting::get('cta_description', $defaults['cta_description']),
+            'cta_badge' => TechnicianSetting::get('cta_badge', $defaults['cta_badge']),
+            'cta_button_text' => TechnicianSetting::get('cta_button_text', $defaults['cta_button_text']),
+            'cta_button_link' => TechnicianSetting::get('cta_button_link', $defaults['cta_button_link']),
+            'cta_phone_text' => TechnicianSetting::get('cta_phone_text', $defaults['cta_phone_text']),
+            'cta_phone' => TechnicianSetting::get('cta_phone', $defaults['cta_phone']),
+            'cta_footnote' => TechnicianSetting::get('cta_footnote', $defaults['cta_footnote']),
+            'contract_text' => TechnicianSetting::get('contract_text', ''),
             'contract_sms_template' => TechnicianSetting::get('contract_sms_template', ''),
             'default_commission_percent' => TechnicianSetting::get('default_commission_percent', ''),
             'default_promissory_note_amount' => TechnicianSetting::get('default_promissory_note_amount', ''),
@@ -132,7 +132,9 @@ class TechnicianAdminController extends Controller
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
             ]) && $file->getSize() <= 5 * 1024 * 1024) {
                 $old = TechnicianSetting::get('hero_bg_image');
-                if ($old) Storage::disk('public')->delete($old);
+                if ($old) {
+                    Storage::disk('public')->delete($old);
+                }
                 $path = $file->store('technician', 'public');
                 TechnicianSetting::set('hero_bg_image', $path);
             }
@@ -146,7 +148,9 @@ class TechnicianAdminController extends Controller
                 'image/svg+xml', 'image/bmp',
             ]) && $file->getSize() <= 2 * 1024 * 1024) {
                 $old = TechnicianSetting::get('brand_logo');
-                if ($old) Storage::disk('public')->delete($old);
+                if ($old) {
+                    Storage::disk('public')->delete($old);
+                }
                 $path = $file->store('technician', 'public');
                 TechnicianSetting::set('brand_logo', $path);
             }
@@ -155,8 +159,8 @@ class TechnicianAdminController extends Controller
         // فیلدهای JSON
         $jsonFields = ['benefits', 'steps', 'requirements', 'faq'];
         foreach ($jsonFields as $field) {
-            if ($request->has($field . '_json')) {
-                $raw = $request->input($field . '_json');
+            if ($request->has($field.'_json')) {
+                $raw = $request->input($field.'_json');
                 // اعتبارسنجی JSON
                 json_decode($raw);
                 if (json_last_error() === JSON_ERROR_NONE) {
@@ -176,7 +180,9 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
         $old = TechnicianSetting::get('hero_bg_image');
-        if ($old) Storage::disk('public')->delete($old);
+        if ($old) {
+            Storage::disk('public')->delete($old);
+        }
         TechnicianSetting::set('hero_bg_image', null);
 
         return redirect()->route('technician.admin.settings')
@@ -190,7 +196,9 @@ class TechnicianAdminController extends Controller
     {
         $this->checkAccess();
         $old = TechnicianSetting::get('brand_logo');
-        if ($old) Storage::disk('public')->delete($old);
+        if ($old) {
+            Storage::disk('public')->delete($old);
+        }
         TechnicianSetting::set('brand_logo', null);
 
         return redirect()->route('technician.admin.settings')
@@ -226,23 +234,29 @@ class TechnicianAdminController extends Controller
                 $search = $request->search;
                 $q->where(function ($qq) use ($search) {
                     $qq->where('first_name', 'like', "%{$search}%")
-                       ->orWhere('last_name', 'like', "%{$search}%")
-                       ->orWhere('mobile', 'like', "%{$search}%")
-                       ->orWhere('national_code', 'like', "%{$search}%");
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('national_code', 'like', "%{$search}%");
                 });
             }
             if ($request->filled('location')) {
                 $loc = $request->location;
                 $q->where(function ($qq) use ($loc) {
                     $qq->where('province', 'like', "%{$loc}%")
-                       ->orWhere('city', 'like', "%{$loc}%");
+                        ->orWhere('city', 'like', "%{$loc}%");
                 });
             }
             if ($request->filled('activity_type')) {
                 $q->where('activity_type', $request->activity_type);
             }
             if ($request->filled('appliance')) {
-                $q->whereJsonContains('appliance_categories', (int) $request->appliance);
+                // appliance_categories ممکن است int یا string ذخیره شده باشد
+                // (فرم مقادیر را رشته‌ای می‌فرستد)؛ هر دو حالت را تطبیق می‌دهیم.
+                $appliance = $request->appliance;
+                $q->where(function ($qq) use ($appliance) {
+                    $qq->whereJsonContains('appliance_categories', (int) $appliance)
+                        ->orWhereJsonContains('appliance_categories', (string) $appliance);
+                });
             }
         };
 
@@ -270,12 +284,12 @@ class TechnicianAdminController extends Controller
             ->all();
 
         $statusCounts = [
-            'all'        => array_sum(array_diff_key($rawCounts, ['archived' => true])),
+            'all' => array_sum(array_diff_key($rawCounts, ['archived' => true])),
             'incomplete' => (int) ($rawCounts['incomplete'] ?? 0),
-            'pending'    => (int) ($rawCounts['pending']    ?? 0),
-            'approved'   => (int) ($rawCounts['approved']   ?? 0),
-            'rejected'   => (int) ($rawCounts['rejected']   ?? 0),
-            'archived'   => (int) ($rawCounts['archived']   ?? 0),
+            'pending' => (int) ($rawCounts['pending'] ?? 0),
+            'approved' => (int) ($rawCounts['approved'] ?? 0),
+            'rejected' => (int) ($rawCounts['rejected'] ?? 0),
+            'archived' => (int) ($rawCounts['archived'] ?? 0),
         ];
 
         // داده‌های کمکی برای ستون‌ها و فیلترها
@@ -305,7 +319,7 @@ class TechnicianAdminController extends Controller
 
         // واکشی نام دستگاه‌ها از دیتابیس
         $applianceNames = [];
-        if (!empty($registration->appliance_categories)) {
+        if (! empty($registration->appliance_categories)) {
             $applianceNames = ApplianceCategory::whereIn('id', $registration->appliance_categories)
                 ->pluck('name')
                 ->toArray();
@@ -359,7 +373,7 @@ class TechnicianAdminController extends Controller
         return Storage::disk('public')->response(
             $relativePath,
             basename($relativePath),
-            ['Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"']
+            ['Content-Disposition' => 'inline; filename="'.basename($relativePath).'"']
         );
     }
 
@@ -390,8 +404,8 @@ class TechnicianAdminController extends Controller
         $genderTitle = $registration->gender === 'female' ? 'خانم' : 'آقای';
 
         $province = $registration->province ?? '';
-        $city     = $registration->city ?? '';
-        $address  = $province && $city ? $province . '، ' . $city : ($province ?: $city);
+        $city = $registration->city ?? '';
+        $address = $province && $city ? $province.'، '.$city : ($province ?: $city);
 
         // تاریخ شمسی: اگر امضا شده، تاریخ امضا؛ وگرنه امروز
         try {
@@ -419,7 +433,7 @@ class TechnicianAdminController extends Controller
             ],
             [
                 $genderTitle,
-                $registration->first_name . ' ' . $registration->last_name,
+                $registration->first_name.' '.$registration->last_name,
                 $registration->father_name ?? '',
                 $registration->national_code,
                 $address,
@@ -433,8 +447,8 @@ class TechnicianAdminController extends Controller
         );
 
         return view('technician::admin.registration-contract', [
-            'registration'   => $registration,
-            'contractText'   => $contractText,
+            'registration' => $registration,
+            'contractText' => $contractText,
             'contractNumber' => $contractNumber,
         ]);
     }
@@ -444,14 +458,14 @@ class TechnicianAdminController extends Controller
      */
     public function registrationUpdateStatus(Request $request, $id)
     {
-        if (!auth()->user()->can('approve-technician') && !auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
+        if (! auth()->user()->can('approve-technician') && ! auth()->user()->can('manage-technicians') && ! auth()->user()->can('manage-permissions')) {
             abort(403);
         }
 
         $request->validate([
-            'status'           => ['required', 'in:pending,approved,rejected,archived'],
+            'status' => ['required', 'in:pending,approved,rejected,archived'],
             'rejection_reason' => ['nullable', 'required_if:status,rejected', 'string', 'max:1000'],
-            'archive_reason'   => ['nullable', 'string', 'max:1000'],
+            'archive_reason' => ['nullable', 'string', 'max:1000'],
         ], [
             'rejection_reason.required_if' => 'لطفاً دلیل رد درخواست را وارد کنید.',
         ]);
@@ -465,12 +479,12 @@ class TechnicianAdminController extends Controller
             $data['rejection_reason'] = $request->rejection_reason;
         } elseif ($request->status === 'archived') {
             $data['archive_reason'] = $request->archive_reason;
-            $data['archived_at']    = now();
+            $data['archived_at'] = now();
         } else {
             // برگرداندن از حالت‌های rejected/archived — متادیتا را پاک کن
             $data['rejection_reason'] = null;
-            $data['archive_reason']   = null;
-            $data['archived_at']      = null;
+            $data['archive_reason'] = null;
+            $data['archived_at'] = null;
         }
 
         $registration->update($data);
@@ -497,14 +511,14 @@ class TechnicianAdminController extends Controller
         }
 
         $statusLabels = [
-            'pending'  => 'در انتظار بررسی',
+            'pending' => 'در انتظار بررسی',
             'approved' => 'تایید شده',
             'rejected' => 'رد شده',
             'archived' => 'بایگانی شده',
         ];
 
         return redirect()->route('technician.admin.registrations.show', $id)
-            ->with('success', 'وضعیت به «' . $statusLabels[$request->status] . '» تغییر یافت.');
+            ->with('success', 'وضعیت به «'.$statusLabels[$request->status].'» تغییر یافت.');
     }
 
     /**
@@ -519,8 +533,8 @@ class TechnicianAdminController extends Controller
             'current_step' => ['required', 'integer', 'min:1', 'max:10'],
         ], [
             'current_step.required' => 'مرحله الزامی است.',
-            'current_step.min'      => 'مرحله نمی‌تواند کمتر از ۱ باشد.',
-            'current_step.max'      => 'مرحله نمی‌تواند بیشتر از ۱۰ باشد.',
+            'current_step.min' => 'مرحله نمی‌تواند کمتر از ۱ باشد.',
+            'current_step.max' => 'مرحله نمی‌تواند بیشتر از ۱۰ باشد.',
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
@@ -536,11 +550,11 @@ class TechnicianAdminController extends Controller
                 $data['status'] = 'approved';
             }
         }
-        if ($request->current_step >= 7 && !$registration->documents_uploaded) {
+        if ($request->current_step >= 7 && ! $registration->documents_uploaded) {
             // مرحله ۷ (مدارک) به بالا = مدارک آپلود شده
             $data['documents_uploaded'] = true;
         }
-        if ($request->current_step >= 8 && !$registration->contract_signed_at) {
+        if ($request->current_step >= 8 && ! $registration->contract_signed_at) {
             // مرحله ۸ (قرارداد) به بالا = قرارداد امضا شده
             $data['contract_signed_at'] = now();
         }
@@ -600,7 +614,7 @@ class TechnicianAdminController extends Controller
         );
 
         return redirect()->route('technician.admin.registrations.show', $id)
-            ->with('success', 'مرحله به «' . ($stepLabels[$request->current_step] ?? $request->current_step) . '» تغییر یافت.');
+            ->with('success', 'مرحله به «'.($stepLabels[$request->current_step] ?? $request->current_step).'» تغییر یافت.');
     }
 
     /**
@@ -619,8 +633,8 @@ class TechnicianAdminController extends Controller
 
         if ($request->action === 'approve') {
             $registration->update([
-                'biometric_status'        => 'verified',
-                'biometric_verified_at'   => now(),
+                'biometric_status' => 'verified',
+                'biometric_verified_at' => now(),
                 'biometric_reject_reason' => null,
             ]);
 
@@ -636,9 +650,9 @@ class TechnicianAdminController extends Controller
         // رد ویدیو
         $rejectReason = $request->reject_reason ?: 'ویدیو مورد تایید نیست. لطفاً مجدداً ضبط کنید.';
         $registration->update([
-            'biometric_status'        => 'rejected',
+            'biometric_status' => 'rejected',
             'biometric_reject_reason' => $rejectReason,
-            'biometric_verified_at'   => null,
+            'biometric_verified_at' => null,
         ]);
 
         $this->logActivity($registration, 'biometric_review', 'pending', 'rejected', $rejectReason);
@@ -669,7 +683,7 @@ class TechnicianAdminController extends Controller
 
         $registration = TechnicianRegistration::findOrFail($id);
 
-        if (!$registration->documents_uploaded && $request->action === 'approve') {
+        if (! $registration->documents_uploaded && $request->action === 'approve') {
             return back()->with('error', 'مدارکی برای تایید وجود ندارد.');
         }
 
@@ -686,10 +700,10 @@ class TechnicianAdminController extends Controller
 
         // رد مدارک — کاربر باید دوباره آپلود کند
         $registration->update([
-            'documents_uploaded'      => false,
+            'documents_uploaded' => false,
             'documents_reject_reason' => $request->reject_reason,
             // بازگشت به مرحله قبل از مدارک تا resume logic به فاز N برگردد
-            'current_step'            => max(6, (int) $registration->current_step - 1),
+            'current_step' => max(6, (int) $registration->current_step - 1),
         ]);
 
         $this->logActivity($registration, 'documents_review', null, 'rejected', $request->reject_reason);
@@ -720,7 +734,7 @@ class TechnicianAdminController extends Controller
 
         $registration = TechnicianRegistration::findOrFail($id);
 
-        if (!$registration->contract_signed_at && $request->action === 'approve') {
+        if (! $registration->contract_signed_at && $request->action === 'approve') {
             return back()->with('error', 'قراردادی برای تایید وجود ندارد.');
         }
 
@@ -737,12 +751,12 @@ class TechnicianAdminController extends Controller
 
         // رد قرارداد — کاربر باید دوباره امضا کند
         $registration->update([
-            'contract_signed_at'     => null,
-            'contract_signature'     => null,
-            'contract_number'        => null,
+            'contract_signed_at' => null,
+            'contract_signature' => null,
+            'contract_number' => null,
             'contract_reject_reason' => $request->reject_reason,
             // برگرداندن به مرحله قبل از قرارداد (مدارک، چون در ترتیب جدید قبل از قرارداد است)
-            'current_step'           => max(7, (int) $registration->current_step - 1),
+            'current_step' => max(7, (int) $registration->current_step - 1),
         ]);
 
         $this->logActivity($registration, 'contract_review', null, 'rejected', $request->reject_reason);
@@ -788,27 +802,27 @@ class TechnicianAdminController extends Controller
         $this->checkEditAccess();
 
         $request->validate([
-            'commission_percent'      => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'promissory_note_amount'  => ['nullable', 'string', 'max:50'],
+            'commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'promissory_note_amount' => ['nullable', 'string', 'max:50'],
         ], [
             'commission_percent.numeric' => 'درصد کارمزد باید عدد باشد.',
-            'commission_percent.min'     => 'درصد کارمزد نمی‌تواند منفی باشد.',
-            'commission_percent.max'     => 'درصد کارمزد نمی‌تواند بیشتر از ۱۰۰ باشد.',
+            'commission_percent.min' => 'درصد کارمزد نمی‌تواند منفی باشد.',
+            'commission_percent.max' => 'درصد کارمزد نمی‌تواند بیشتر از ۱۰۰ باشد.',
         ]);
 
         $registration = TechnicianRegistration::findOrFail($id);
         $previousCommission = $registration->commission_percent;
         $previousNoteAmount = $registration->promissory_note_amount;
         $registration->update([
-            'commission_percent'     => $request->commission_percent,
+            'commission_percent' => $request->commission_percent,
             'promissory_note_amount' => $request->promissory_note_amount,
         ]);
 
         $this->logActivity(
             $registration,
             'contract_fields_change',
-            'commission=' . $previousCommission . ' / promissory=' . $previousNoteAmount,
-            'commission=' . $request->commission_percent . ' / promissory=' . $request->promissory_note_amount,
+            'commission='.$previousCommission.' / promissory='.$previousNoteAmount,
+            'commission='.$request->commission_percent.' / promissory='.$request->promissory_note_amount,
         );
 
         return response()->json([
@@ -822,16 +836,16 @@ class TechnicianAdminController extends Controller
      */
     public function registrationDestroy($id)
     {
-        if (!auth()->user()->can('delete-technician') && !auth()->user()->can('manage-technicians') && !auth()->user()->can('manage-permissions')) {
+        if (! auth()->user()->can('delete-technician') && ! auth()->user()->can('manage-technicians') && ! auth()->user()->can('manage-permissions')) {
             abort(403);
         }
 
         $registration = TechnicianRegistration::findOrFail($id);
-        $name = trim($registration->first_name . ' ' . $registration->last_name);
+        $name = trim($registration->first_name.' '.$registration->last_name);
         $registration->delete();
 
         return redirect()->route('technician.admin.registrations')
-            ->with('success', 'درخواست ثبت‌نام' . ($name ? ' «' . $name . '»' : '') . ' با موفقیت حذف شد.');
+            ->with('success', 'درخواست ثبت‌نام'.($name ? ' «'.$name.'»' : '').' با موفقیت حذف شد.');
     }
 
     /**
@@ -860,11 +874,11 @@ class TechnicianAdminController extends Controller
         $this->checkAccess();
 
         $request->validate([
-            'name'      => ['required', 'string', 'max:255', 'unique:appliance_categories,name'],
+            'name' => ['required', 'string', 'max:255', 'unique:appliance_categories,name'],
             'parent_id' => ['nullable', 'integer', 'exists:appliance_categories,id'],
         ], [
-            'name.required'    => 'نام دستگاه الزامی است.',
-            'name.unique'      => 'این دستگاه قبلاً اضافه شده است.',
+            'name.required' => 'نام دستگاه الزامی است.',
+            'name.unique' => 'این دستگاه قبلاً اضافه شده است.',
             'parent_id.exists' => 'دسته والد انتخاب‌شده معتبر نیست.',
         ]);
 
@@ -881,14 +895,14 @@ class TechnicianAdminController extends Controller
         $maxOrder = ApplianceCategory::max('sort_order') ?? 0;
 
         ApplianceCategory::create([
-            'parent_id'  => $request->parent_id ?: null,
-            'name'       => $request->name,
+            'parent_id' => $request->parent_id ?: null,
+            'name' => $request->name,
             'sort_order' => $maxOrder + 1,
-            'is_active'  => true,
+            'is_active' => true,
         ]);
 
         return redirect()->route('technician.admin.appliance-categories')
-            ->with('success', 'دستگاه «' . $request->name . '» با موفقیت اضافه شد.');
+            ->with('success', 'دستگاه «'.$request->name.'» با موفقیت اضافه شد.');
     }
 
     /**
@@ -901,12 +915,12 @@ class TechnicianAdminController extends Controller
         $category = ApplianceCategory::findOrFail($id);
 
         $request->validate([
-            'name'      => ['required', 'string', 'max:255', 'unique:appliance_categories,name,' . $id],
+            'name' => ['required', 'string', 'max:255', 'unique:appliance_categories,name,'.$id],
             'is_active' => ['required', 'boolean'],
             'parent_id' => ['nullable', 'integer', 'different:id', 'exists:appliance_categories,id'],
         ], [
-            'name.required'    => 'نام دستگاه الزامی است.',
-            'name.unique'      => 'این دستگاه قبلاً اضافه شده است.',
+            'name.required' => 'نام دستگاه الزامی است.',
+            'name.unique' => 'این دستگاه قبلاً اضافه شده است.',
             'parent_id.exists' => 'دسته والد انتخاب‌شده معتبر نیست.',
         ]);
 
@@ -929,13 +943,13 @@ class TechnicianAdminController extends Controller
         }
 
         $category->update([
-            'name'      => $request->name,
+            'name' => $request->name,
             'is_active' => $request->is_active,
             'parent_id' => $newParentId,
         ]);
 
         return redirect()->route('technician.admin.appliance-categories')
-            ->with('success', 'دستگاه «' . $request->name . '» با موفقیت ویرایش شد.');
+            ->with('success', 'دستگاه «'.$request->name.'» با موفقیت ویرایش شد.');
     }
 
     /**
@@ -950,7 +964,7 @@ class TechnicianAdminController extends Controller
         $category->delete();
 
         return redirect()->route('technician.admin.appliance-categories')
-            ->with('success', 'دستگاه «' . $name . '» حذف شد.');
+            ->with('success', 'دستگاه «'.$name.'» حذف شد.');
     }
 
     /**
@@ -987,7 +1001,7 @@ class TechnicianAdminController extends Controller
             default => null,
         };
 
-        if (!$templateKey) {
+        if (! $templateKey) {
             return;
         }
 
@@ -1022,7 +1036,7 @@ class TechnicianAdminController extends Controller
 
         if ($request->action === 'approve') {
             $registration->update([
-                'promissory_note_status'        => 'approved',
+                'promissory_note_status' => 'approved',
                 'promissory_note_reject_reason' => null,
             ]);
 
@@ -1034,9 +1048,9 @@ class TechnicianAdminController extends Controller
 
         // رد سفته — تکنسین باید دوباره آپلود کند
         $registration->update([
-            'promissory_note_path'          => null,
-            'promissory_note_uploaded_at'   => null,
-            'promissory_note_status'        => 'rejected',
+            'promissory_note_path' => null,
+            'promissory_note_uploaded_at' => null,
+            'promissory_note_status' => 'rejected',
             'promissory_note_reject_reason' => $request->reject_reason,
         ]);
 
@@ -1074,8 +1088,8 @@ class TechnicianAdminController extends Controller
         // اگر تکراری بود و کاربر force=1 نفرستاد، با پیغام برگرد
         if ($existing && ! $request->boolean('force')) {
             return back()->with('confirm_overwrite', [
-                'message' => 'تکنسینی با این موبایل از قبل در سیستم فعال است (' . $existing->full_name . '). آیا اطلاعات با داده‌های ثبت‌نام به‌روزرسانی شود؟',
-                'mobile'  => $registration->mobile,
+                'message' => 'تکنسینی با این موبایل از قبل در سیستم فعال است ('.$existing->full_name.'). آیا اطلاعات با داده‌های ثبت‌نام به‌روزرسانی شود؟',
+                'mobile' => $registration->mobile,
             ]);
         }
 
@@ -1089,11 +1103,11 @@ class TechnicianAdminController extends Controller
             if (! $user) {
                 $generatedPassword = Str::random(10);
                 $user = User::create([
-                    'name'               => trim(($registration->first_name ?? '') . ' ' . ($registration->last_name ?? '')) ?: $registration->mobile,
-                    'first_name'         => $registration->first_name,
-                    'mobile'             => $registration->mobile,
-                    'password'           => Hash::make($generatedPassword),
-                    'is_staff'           => true,
+                    'name' => trim(($registration->first_name ?? '').' '.($registration->last_name ?? '')) ?: $registration->mobile,
+                    'first_name' => $registration->first_name,
+                    'mobile' => $registration->mobile,
+                    'password' => Hash::make($generatedPassword),
+                    'is_staff' => true,
                     'mobile_verified_at' => now(),
                 ]);
             }
@@ -1118,16 +1132,16 @@ class TechnicianAdminController extends Controller
         $msg = $result['action'] === 'created'
             ? 'تکنسین با موفقیت در لیست تکنسین‌های فعال ساخته شد.'
             : 'تکنسین موجود با اطلاعات ثبت‌نام به‌روزرسانی شد.';
-        $msg .= ' (شناسه CRM: ' . $result['tech']->id . ')';
+        $msg .= ' (شناسه CRM: '.$result['tech']->id.')';
         if ($result['password']) {
-            $msg .= ' — رمز اولیه: ' . $result['password'] . ' (یادداشت کنید؛ دیگر نمایش داده نخواهد شد).';
+            $msg .= ' — رمز اولیه: '.$result['password'].' (یادداشت کنید؛ دیگر نمایش داده نخواهد شد).';
         }
 
         $this->logActivity(
             $registration,
             'convert_to_active',
             null,
-            'crm_technician_id=' . $result['tech']->id,
+            'crm_technician_id='.$result['tech']->id,
             $result['action'] === 'created' ? 'ایجاد تکنسین فعال جدید در CRM' : 'به‌روزرسانی تکنسین موجود در CRM'
         );
 
@@ -1137,7 +1151,7 @@ class TechnicianAdminController extends Controller
     /** نگاشت فیلدهای TechnicianRegistration به ستون‌های crm_technicians. */
     private function mapRegistrationToCrmTechnician(TechnicianRegistration $r): array
     {
-        $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
+        $fullName = trim(($r->first_name ?? '').' '.($r->last_name ?? ''));
         $cities = (array) ($r->tehran_districts ?? $r->tehran_province_cities ?? $r->alborz_cities ?? $r->other_provinces_cities ?? []);
         $address = trim($r->shop_address ?? '') ?: null;
 
@@ -1157,18 +1171,18 @@ class TechnicianAdminController extends Controller
         }
 
         return [
-            'first_name'      => $r->first_name,
-            'firstname_tech'  => $fullName ?: ($r->first_name ?? null),
-            'mobile'          => $r->mobile,
-            'national_code'   => $r->national_code,
-            'phone'           => $r->shop_phone,
-            'province'        => $r->province,
-            'address'         => $address,
-            'specialty'       => $specialty,
-            'type_tech'       => $r->activity_type,
-            'img_personal'    => $r->doc_photo_3x4 ? Storage::url($r->doc_photo_3x4) : null,
-            'cart_img'        => $r->doc_national_card_front ? Storage::url($r->doc_national_card_front) : null,
-            'status'          => 'active',
+            'first_name' => $r->first_name,
+            'firstname_tech' => $fullName ?: ($r->first_name ?? null),
+            'mobile' => $r->mobile,
+            'national_code' => $r->national_code,
+            'phone' => $r->shop_phone,
+            'province' => $r->province,
+            'address' => $address,
+            'specialty' => $specialty,
+            'type_tech' => $r->activity_type,
+            'img_personal' => $r->doc_photo_3x4 ? Storage::url($r->doc_photo_3x4) : null,
+            'cart_img' => $r->doc_national_card_front ? Storage::url($r->doc_national_card_front) : null,
+            'status' => 'active',
         ];
     }
 
@@ -1184,13 +1198,13 @@ class TechnicianAdminController extends Controller
         ?string $description = null
     ): void {
         TechnicianRegistrationLog::create([
-            'registration_id'    => $registration->id,
-            'action'             => $action,
-            'from_value'         => $this->stringifyForLog($from),
-            'to_value'           => $this->stringifyForLog($to),
-            'description'        => $description,
+            'registration_id' => $registration->id,
+            'action' => $action,
+            'from_value' => $this->stringifyForLog($from),
+            'to_value' => $this->stringifyForLog($to),
+            'description' => $description,
             'changed_by_user_id' => auth()->id(),
-            'created_at'         => now(),
+            'created_at' => now(),
         ]);
     }
 
@@ -1206,6 +1220,7 @@ class TechnicianAdminController extends Controller
         if (is_array($value) || is_object($value)) {
             return json_encode($value, JSON_UNESCAPED_UNICODE);
         }
+
         return (string) $value;
     }
 
@@ -1221,7 +1236,7 @@ class TechnicianAdminController extends Controller
         }
 
         $tokens = array_merge([
-            'token' => trim(($registration->first_name ?? '') . ' ' . ($registration->last_name ?? '')),
+            'token' => trim(($registration->first_name ?? '').' '.($registration->last_name ?? '')),
         ], $extraTokens);
 
         try {
@@ -1229,8 +1244,8 @@ class TechnicianAdminController extends Controller
         } catch (\Exception $e) {
             Log::warning('Failed to send technician SMS', [
                 'registration_id' => $registration->id,
-                'template'        => $templateKey,
-                'error'           => $e->getMessage(),
+                'template' => $templateKey,
+                'error' => $e->getMessage(),
             ]);
         }
     }

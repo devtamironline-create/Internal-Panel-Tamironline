@@ -219,7 +219,10 @@
     <link href="/vendor/css/tom-select.default.min.css" rel="stylesheet">
     <style>
         /* RTL + Tailwind-friendly tweaks for Tom Select — مطابق ظاهر سایر inputهای پنل */
-        .ts-wrapper { font-family: inherit; }
+        /* wrapper کلاس‌های کپی‌شدهٔ selectِ اصلی (padding/border) را می‌گیرد و با
+           .ts-control کادرِ تودرتو می‌سازد؛ wrapper را شفاف می‌کنیم تا فقط
+           .ts-control کادرِ دیده‌شونده باشد. */
+        .ts-wrapper { font-family: inherit; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
         .ts-wrapper .ts-control,
         .ts-wrapper.single .ts-control,
         .ts-wrapper.multi .ts-control {
