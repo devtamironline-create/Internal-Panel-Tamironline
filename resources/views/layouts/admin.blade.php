@@ -786,7 +786,9 @@
                 <!-- مدیریت سایت -->
                 @if(Route::has('site.admin.dashboard'))
                 @canany(['manage-site', 'view-site-contact-messages', 'manage-site-contact-messages', 'manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'manage-site-faqs', 'manage-site-pages', 'manage-site-banners', 'manage-site-settings'])
-                <div class="mt-2" x-data="{ open: {{ request()->routeIs('site.admin.*') ? 'true' : 'false' }} }">
+                {{-- بخشِ «کاتالوگ» (دستگاه/برند/صفحات ترکیبی) داخلِ همین منوست ولی
+                     routeهایش crm.* هستند؛ پس آکاردئون برای آن‌ها هم باید باز شود. --}}
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('site.admin.*', 'crm.devices.*', 'crm.device-categories.*', 'crm.brands.*', 'crm.service-prices.*', 'crm.device-brand-pages.*', 'crm.combo-manager.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
