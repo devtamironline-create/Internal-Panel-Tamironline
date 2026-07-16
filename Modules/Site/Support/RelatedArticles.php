@@ -21,21 +21,21 @@ final class RelatedArticles
     /** @return array<int, array<string, mixed>> */
     public static function forDevice(int $deviceId, int $limit = self::LIMIT): array
     {
-        return self::shape(
+        return self::guard(fn () => self::shape(
             self::baseQuery()
                 ->whereHas('activeDevices', fn ($q) => $q->where('crm_devices.id', $deviceId))
                 ->limit($limit)->get()
-        );
+        ));
     }
 
     /** @return array<int, array<string, mixed>> */
     public static function forBrand(int $brandId, int $limit = self::LIMIT): array
     {
-        return self::shape(
+        return self::guard(fn () => self::shape(
             self::baseQuery()
                 ->whereHas('activeBrands', fn ($q) => $q->where('crm_brands.id', $brandId))
                 ->limit($limit)->get()
-        );
+        ));
     }
 
     /**
@@ -46,17 +46,38 @@ final class RelatedArticles
      */
     public static function forCombo(int $deviceId, int $brandId, int $limit = self::LIMIT): array
     {
-        $combo = self::baseQuery()
-            ->whereHas('activeDevices', fn ($q) => $q->where('crm_devices.id', $deviceId))
-            ->whereHas('activeBrands', fn ($q) => $q->where('crm_brands.id', $brandId))
-            ->limit($limit)->get();
+        return self::guard(function () use ($deviceId, $brandId, $limit) {
+            $combo = self::baseQuery()
+                ->whereHas('activeDevices', fn ($q) => $q->where('crm_devices.id', $deviceId))
+                ->whereHas('activeBrands', fn ($q) => $q->where('crm_brands.id', $brandId))
+                ->limit($limit)->get();
 
-        if ($combo->isNotEmpty()) {
-            return self::shape($combo);
+            if ($combo->isNotEmpty()) {
+                return self::shape($combo);
+            }
+
+            // fallback: مقالاتِ دستگاه (بدونِ محدودیتِ برند).
+            return self::forDevice($deviceId, $limit);
+        });
+    }
+
+    /**
+     * محافظ: مقالاتِ مرتبط یک سکشنِ فرعی است و هرگز نباید کلِ صفحه‌ی
+     * کاتالوگ را ۵۰۰ کند. اگر کوئری/شکل‌دهی به هر دلیلی خطا داد، آرایه‌ی
+     * خالی برمی‌گردد و خطا در لاگ ثبت می‌شود (report) تا قابلِ پیگیری باشد.
+     *
+     * @param  callable():array<int, array<string, mixed>>  $fn
+     * @return array<int, array<string, mixed>>
+     */
+    private static function guard(callable $fn): array
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
         }
-
-        // fallback: مقالاتِ دستگاه (بدونِ محدودیتِ برند).
-        return self::forDevice($deviceId, $limit);
     }
 
     private static function baseQuery()
