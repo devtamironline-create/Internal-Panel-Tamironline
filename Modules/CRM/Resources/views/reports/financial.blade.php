@@ -183,9 +183,27 @@
                                     {{ $r['type_label'] }}
                                 </span>
                             </td>
-                            <td class="px-4 py-2 text-xs text-gray-700" dir="ltr">{{ $r['ref'] }}</td>
-                            <td class="px-4 py-2 text-xs">{{ $r['tech_name'] }}</td>
-                            <td class="px-4 py-2 text-xs">{{ $r['customer'] }}</td>
+                            <td class="px-4 py-2 text-xs" dir="ltr">
+                                @if(!empty($r['invoice_id']))
+                                    <a href="{{ route('crm.invoices.show', $r['invoice_id']) }}" class="text-sky-600 dark:text-sky-400 hover:underline font-medium">{{ $r['ref'] }}</a>
+                                @else
+                                    <span class="text-gray-700 dark:text-gray-300">{{ $r['ref'] }}</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-2 text-xs">
+                                @if(!empty($r['technician_id']))
+                                    <a href="{{ route('crm.wallet.show', $r['technician_id']) }}" class="text-sky-600 dark:text-sky-400 hover:underline">{{ $r['tech_name'] }}</a>
+                                @else
+                                    <span class="text-gray-700 dark:text-gray-300">{{ $r['tech_name'] }}</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-2 text-xs">
+                                @if(!empty($r['customer_id']))
+                                    <a href="{{ route('crm.customers.show', $r['customer_id']) }}" class="text-sky-600 dark:text-sky-400 hover:underline">{{ $r['customer'] }}</a>
+                                @else
+                                    <span class="text-gray-700 dark:text-gray-300">{{ $r['customer'] }}</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-2 text-xs font-bold {{ $r['amount'] >= 0 ? 'text-emerald-600' : 'text-rose-600' }}" dir="ltr">
                                 {{ ($r['amount'] >= 0 ? '+' : '') . number_format($r['amount']) }}
                             </td>

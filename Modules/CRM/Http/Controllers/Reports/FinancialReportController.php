@@ -4,7 +4,6 @@ namespace Modules\CRM\Http\Controllers\Reports;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Carbon;
 use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Invoice;
@@ -29,26 +28,26 @@ class FinancialReportController extends Controller
         $filters = $this->parseFilters($request);
 
         $summary = $this->buildSummary($filters);
-        $rows    = $this->buildRows($filters, paginate: true);
+        $rows = $this->buildRows($filters, paginate: true);
 
         $technicians = Technician::query()
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'firstname_tech']);
 
         return view('crm::reports.financial', [
-            'filters'     => $filters,
-            'summary'     => $summary,
-            'rows'        => $rows,
+            'filters' => $filters,
+            'summary' => $summary,
+            'rows' => $rows,
             'technicians' => $technicians,
-            'docTypes'    => $this->docTypeOptions(),
-            'profitOps'   => ['gte' => '≥', 'lte' => '≤'],
+            'docTypes' => $this->docTypeOptions(),
+            'profitOps' => ['gte' => '≥', 'lte' => '≤'],
         ]);
     }
 
     public function export(Request $request)
     {
         $filters = $this->parseFilters($request);
-        $format  = strtolower((string) $request->query('format', 'xlsx'));
+        $format = strtolower((string) $request->query('format', 'xlsx'));
 
         $headers = [
             'تاریخ',
@@ -74,7 +73,8 @@ class FinancialReportController extends Controller
             }
         };
 
-        $base = 'financial-report-' . ($filters['from_g'] ?: 'all') . '-to-' . ($filters['to_g'] ?: 'now');
+        $base = 'financial-report-'.($filters['from_g'] ?: 'all').'-to-'.($filters['to_g'] ?: 'now');
+
         return $this->streamSpreadsheet($base, $format, $headers, $rowsCallback);
     }
 
@@ -88,26 +88,26 @@ class FinancialReportController extends Controller
     protected function parseFilters(Request $request): array
     {
         $fromJ = trim((string) $request->query('from_date', ''));
-        $toJ   = trim((string) $request->query('to_date', ''));
+        $toJ = trim((string) $request->query('to_date', ''));
 
         // پیش‌فرض: ماه شمسی جاری
         if ($fromJ === '' && $toJ === '') {
-            $now   = Jalalian::now();
-            $fromJ = $now->format('Y/m/') . '01';
-            $toJ   = $now->format('Y/m/') . str_pad((string) $now->getDaysOf($now->getMonth()), 2, '0', STR_PAD_LEFT);
+            $now = Jalalian::now();
+            $fromJ = $now->format('Y/m/').'01';
+            $toJ = $now->format('Y/m/').str_pad((string) $now->getDaysOf($now->getMonth()), 2, '0', STR_PAD_LEFT);
         }
 
         return [
-            'from_j'        => $fromJ ?: null,
-            'to_j'          => $toJ ?: null,
-            'from_g'        => $this->jalaliToGregorian($fromJ),
-            'to_g'          => $this->jalaliToGregorian($toJ),
+            'from_j' => $fromJ ?: null,
+            'to_j' => $toJ ?: null,
+            'from_g' => $this->jalaliToGregorian($fromJ),
+            'to_g' => $this->jalaliToGregorian($toJ),
             'technician_id' => (int) $request->query('technician_id') ?: null,
-            'doc_type'      => (string) $request->query('doc_type', ''),
-            'doc_no'        => trim((string) $request->query('doc_no', '')) ?: null,
-            'mobile'        => trim((string) $request->query('mobile', '')) ?: null,
-            'profit_op'     => in_array($request->query('profit_op'), ['gte', 'lte'], true) ? $request->query('profit_op') : null,
-            'profit_val'    => is_numeric($request->query('profit_val')) ? (int) $request->query('profit_val') : null,
+            'doc_type' => (string) $request->query('doc_type', ''),
+            'doc_no' => trim((string) $request->query('doc_no', '')) ?: null,
+            'mobile' => trim((string) $request->query('mobile', '')) ?: null,
+            'profit_op' => in_array($request->query('profit_op'), ['gte', 'lte'], true) ? $request->query('profit_op') : null,
+            'profit_val' => is_numeric($request->query('profit_val')) ? (int) $request->query('profit_val') : null,
         ];
     }
 
@@ -153,17 +153,17 @@ class FinancialReportController extends Controller
         $txQ = WalletTransaction::query();
         $this->applyTxFilters($txQ, $f);
 
-        $rewardSum  = (int) (clone $txQ)->where('type', WalletTxType::Reward->value)->sum('amount');
+        $rewardSum = (int) (clone $txQ)->where('type', WalletTxType::Reward->value)->sum('amount');
         $penaltySum = (int) (clone $txQ)->where('type', WalletTxType::Penalty->value)->sum('amount');
         // adjustment+ → بستانکاری، adjustment− → بدهکاری
         $adjPos = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '>', 0)->sum('amount');
         $adjNeg = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '<', 0)->sum('amount');
-        $chargeSum  = (int) (clone $txQ)->where('type', WalletTxType::WalletCharge->value)->sum('amount');
+        $chargeSum = (int) (clone $txQ)->where('type', WalletTxType::WalletCharge->value)->sum('amount');
 
         $totalInvoice = (int) $invAgg->total_amount;
         $companyShare = (int) $invAgg->company_share;
-        $techShare    = (int) $invAgg->tech_share;
-        $profitPct    = $totalInvoice > 0 ? round(($companyShare / $totalInvoice) * 100, 1) : 0;
+        $techShare = (int) $invAgg->tech_share;
+        $profitPct = $totalInvoice > 0 ? round(($companyShare / $totalInvoice) * 100, 1) : 0;
 
         // وضعیت حساب تعمیرکار:
         //  - اگر تکنسین فیلتر شده: true_balance همان
@@ -180,27 +180,27 @@ class FinancialReportController extends Controller
             }
         } else {
             $sumWallet = (int) Technician::query()->active()->sum('wallet_balance');
-            $sumDebt   = (int) Invoice::query()->where('in_wallet', false)->sum('company_share');
+            $sumDebt = (int) Invoice::query()->where('in_wallet', false)->sum('company_share');
             $techStatusValue = $sumWallet - $sumDebt;
         }
         $techStatusLabel = $techStatusValue > 0
-            ? number_format($techStatusValue) . ' تومان (بستانکار)'
+            ? number_format($techStatusValue).' تومان (بستانکار)'
             : ($techStatusValue < 0
-                ? number_format(abs($techStatusValue)) . ' تومان (بدهکار)'
+                ? number_format(abs($techStatusValue)).' تومان (بدهکار)'
                 : '۰ تومان (تسویه)');
 
         return [
-            'total_invoice'   => $totalInvoice,
-            'company_share'   => $companyShare,
-            'tech_share'      => $techShare,
-            'reward'          => $rewardSum + $adjPos,
-            'penalty'         => $penaltySum + abs($adjNeg),
-            'profit_pct'      => $profitPct,
-            'expenses'        => $expenses,
-            'wallet_charge'   => $chargeSum,
-            'tech_status'     => $techStatusLabel,
+            'total_invoice' => $totalInvoice,
+            'company_share' => $companyShare,
+            'tech_share' => $techShare,
+            'reward' => $rewardSum + $adjPos,
+            'penalty' => $penaltySum + abs($adjNeg),
+            'profit_pct' => $profitPct,
+            'expenses' => $expenses,
+            'wallet_charge' => $chargeSum,
+            'tech_status' => $techStatusLabel,
             'tech_status_val' => $techStatusValue,
-            'invoice_count'   => (int) $invAgg->cnt,
+            'invoice_count' => (int) $invAgg->cnt,
         ];
     }
 
@@ -252,16 +252,19 @@ class FinancialReportController extends Controller
 
             foreach ($invQ->get() as $inv) {
                 $rows->push([
-                    'date_g'      => $inv->issued_at,
+                    'date_g' => $inv->issued_at,
                     'date_jalali' => $inv->issued_at ? Jalalian::fromDateTime($inv->issued_at)->format('Y/m/d') : '—',
-                    'type'        => 'invoice',
-                    'type_label'  => 'فاکتور',
-                    'ref'         => $inv->invoice_code,
-                    'tech_name'   => $inv->technician?->full_name ?? '—',
-                    'customer'    => $inv->customer?->first_name ?? '—',
-                    'amount'      => (int) $inv->total_amount,
-                    'note'        => 'سهم شرکت: ' . number_format((int) $inv->company_share)
-                                   . ' / سهم تکنسین: ' . number_format((int) $inv->tech_share),
+                    'type' => 'invoice',
+                    'type_label' => 'فاکتور',
+                    'ref' => $inv->invoice_code,
+                    'invoice_id' => (int) $inv->id,
+                    'technician_id' => $inv->technician_id ? (int) $inv->technician_id : null,
+                    'customer_id' => $inv->customer_id ? (int) $inv->customer_id : null,
+                    'tech_name' => $inv->technician?->full_name ?? '—',
+                    'customer' => $inv->customer?->first_name ?? '—',
+                    'amount' => (int) $inv->total_amount,
+                    'note' => 'سهم شرکت: '.number_format((int) $inv->company_share)
+                                   .' / سهم تکنسین: '.number_format((int) $inv->tech_share),
                 ]);
             }
         }
@@ -277,15 +280,18 @@ class FinancialReportController extends Controller
             foreach ($txQ->get() as $tx) {
                 $type = $tx->type instanceof WalletTxType ? $tx->type : WalletTxType::tryFrom((string) $tx->type);
                 $rows->push([
-                    'date_g'      => $tx->created_at,
+                    'date_g' => $tx->created_at,
                     'date_jalali' => $tx->created_at ? Jalalian::fromDateTime($tx->created_at)->format('Y/m/d') : '—',
-                    'type'        => $type?->value ?? 'tx',
-                    'type_label'  => $type?->label() ?? '—',
-                    'ref'         => '#' . $tx->id,
-                    'tech_name'   => $tx->technician?->full_name ?? '—',
-                    'customer'    => '—',
-                    'amount'      => (int) $tx->amount,
-                    'note'        => $tx->note ?? '—',
+                    'type' => $type?->value ?? 'tx',
+                    'type_label' => $type?->label() ?? '—',
+                    'ref' => '#'.$tx->id,
+                    'invoice_id' => null,
+                    'technician_id' => $tx->technician_id ? (int) $tx->technician_id : null,
+                    'customer_id' => null,
+                    'tech_name' => $tx->technician?->full_name ?? '—',
+                    'customer' => '—',
+                    'amount' => (int) $tx->amount,
+                    'note' => $tx->note ?? '—',
                 ]);
             }
         }
@@ -310,10 +316,10 @@ class FinancialReportController extends Controller
             $q->where('crm_invoices.technician_id', $f['technician_id']);
         }
         if ($f['doc_no']) {
-            $q->where('invoice_code', 'like', '%' . $f['doc_no'] . '%');
+            $q->where('invoice_code', 'like', '%'.$f['doc_no'].'%');
         }
         if ($f['mobile']) {
-            $q->whereHas('customer', fn ($c) => $c->where('mobile', 'like', '%' . $f['mobile'] . '%'));
+            $q->whereHas('customer', fn ($c) => $c->where('mobile', 'like', '%'.$f['mobile'].'%'));
         }
     }
 
@@ -337,22 +343,22 @@ class FinancialReportController extends Controller
     protected function txTypesForDocFilter(string $docType): array
     {
         return match ($docType) {
-            ''           => [WalletTxType::Reward->value, WalletTxType::Penalty->value, WalletTxType::WalletCharge->value, WalletTxType::Adjustment->value, WalletTxType::Payout->value, WalletTxType::Credit->value],
-            'reward'     => [WalletTxType::Reward->value],
-            'penalty'    => [WalletTxType::Penalty->value],
-            'charge'     => [WalletTxType::WalletCharge->value],
-            'invoice'    => [],
-            default      => [],
+            '' => [WalletTxType::Reward->value, WalletTxType::Penalty->value, WalletTxType::WalletCharge->value, WalletTxType::Adjustment->value, WalletTxType::Payout->value, WalletTxType::Credit->value],
+            'reward' => [WalletTxType::Reward->value],
+            'penalty' => [WalletTxType::Penalty->value],
+            'charge' => [WalletTxType::WalletCharge->value],
+            'invoice' => [],
+            default => [],
         };
     }
 
     protected function docTypeOptions(): array
     {
         return [
-            ''        => '— همه —',
+            '' => '— همه —',
             'invoice' => 'فاکتور',
-            'charge'  => 'شارژ کیف‌پول',
-            'reward'  => 'بستانکاری',
+            'charge' => 'شارژ کیف‌پول',
+            'reward' => 'بستانکاری',
             'penalty' => 'بدهکاری',
         ];
     }
