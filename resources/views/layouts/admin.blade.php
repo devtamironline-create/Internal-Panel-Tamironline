@@ -2152,8 +2152,29 @@
 
         var LS_KEY = 'chat_last_notified_{{ auth()->id() }}';
         var lastId = parseInt(localStorage.getItem(LS_KEY) || '0', 10) || null;
-        var beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleAN1qeNzAACy9l0AAMz/LxMl3P8MACX8/wAA');
-        beep.volume = 0.5;
+
+        // زنگِ ملایمِ دو‌نتی با Web Audio (بدونِ فایلِ صوتی؛ خیلی خوش‌صداتر از بوق).
+        var audioCtx = null;
+        function playChime() {
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+                var now = audioCtx.currentTime;
+                // دو نتِ صعودی: A5 → D6 (شبیهِ «دینگ‌دانگ»ِ نرم)
+                [[880.0, 0], [1174.66, 0.13]].forEach(function (p) {
+                    var osc = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = p[0];
+                    var t = now + p[1];
+                    gain.gain.setValueAtTime(0.0001, t);
+                    gain.gain.exponentialRampToValueAtTime(0.28, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(t); osc.stop(t + 0.42);
+                });
+            } catch (e) {}
+        }
 
         if ('Notification' in window && Notification.permission === 'default') {
             try { Notification.requestPermission(); } catch (e) {}
@@ -2166,7 +2187,7 @@
                     n.onclick = function () { window.focus(); window.location.href = '/admin/messenger'; try { n.close(); } catch (e) {} };
                 }
             } catch (e) {}
-            try { beep.currentTime = 0; beep.play().catch(function () {}); } catch (e) {}
+            playChime();
         }
 
         async function poll() {
