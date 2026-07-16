@@ -1396,7 +1396,7 @@ function messenger() {
 
         async loadConversations() {
             try {
-                const response = await fetch('/admin/chat/conversations');
+                const response = await fetch('/admin/chat/conversations', { cache: 'no-store' });
                 const data = await response.json();
                 this.conversations = data.conversations || [];
             } catch (e) {
@@ -1406,7 +1406,7 @@ function messenger() {
 
         async loadUsers() {
             try {
-                const response = await fetch('/admin/chat/users');
+                const response = await fetch('/admin/chat/users', { cache: 'no-store' });
                 const data = await response.json();
                 this.users = data.users || [];
             } catch (e) {
@@ -1446,7 +1446,7 @@ function messenger() {
 
         async loadMessages(conversationId, forceScroll = false) {
             try {
-                const response = await fetch(`/admin/chat/conversations/${conversationId}/messages`);
+                const response = await fetch(`/admin/chat/conversations/${conversationId}/messages`, { cache: 'no-store' });
                 const data = await response.json();
                 const newMessages = data.messages || [];
                 const hadNewMessages = newMessages.length > this.lastMessageCount;
@@ -2263,7 +2263,7 @@ function messenger() {
                 const container = this.$refs.messagesContainer;
                 const oldScrollHeight = container ? container.scrollHeight : 0;
 
-                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages?before=${oldestId}&limit=50`);
+                const resp = await fetch(`/admin/chat/conversations/${this.currentConversation.id}/messages?before=${oldestId}&limit=50`, { cache: 'no-store' });
                 const data = await resp.json();
                 const older = data.messages || [];
                 this.hasMoreMessages = data.has_more ?? false;
