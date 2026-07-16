@@ -3,6 +3,7 @@
 namespace Modules\Seo\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
@@ -158,53 +159,99 @@ class InternalLinkAnalyzer
             }
         }
 
-        // ─── امتیاز و جزیره‌ها ───
-        $islandOf = [];  // device slug => island data
-        foreach ($devices as $d) {
-            $islandOf[$d->slug] = ['label' => $d->name, 'mother' => '/services/'.$d->slug, 'members' => 0, 'orphans' => 0, 'score_sum' => 0, 'linked_mother' => 0, 'articles' => 0];
-        }
+        // ─── جزیره‌ها بر اساسِ رابطهٔ واقعیِ مقاله↔دستگاه (pivot)، نه متن‌کاوی ───
+        // نگاشتِ article_id → اسلاگِ دستگاه‌های فعالِ مرتبط (به ترتیبِ sort_order).
+        $articleDeviceSlugs = $this->articleDeviceSlugs(array_keys($articles), $devices->pluck('slug')->all());
 
-        // island مقالات از روی نامِ دستگاه در عنوان/متن
-        foreach ($articles as $id => $a) {
-            $path = '/blog/'.$a['slug'];
-            foreach ($devices as $d) {
-                $needle = mb_strtolower($d->name);
-                if ($needle !== '' && (mb_stripos($a['title'], $d->name) !== false || mb_strpos($a['text'], $needle) !== false)) {
-                    $pages[$path]['island'] = $d->slug;
-                    break;
-                }
+        // island (تکی) هر مقاله = دستگاهِ اصلی (اولین دستگاهِ فعالِ مرتبط) — برای
+        // بونوسِ امتیاز و تولیدِ پیشنهادِ لینک. مقاله‌ای که به هیچ دستگاهی وصل
+        // نیست island ندارد (درست: پیشنهاد برایش ساخته نمی‌شود).
+        foreach ($articleDeviceSlugs as $aid => $slugs) {
+            if (! isset($articles[$aid]) || empty($slugs)) {
+                continue;
             }
+            $pages['/blog/'.$articles[$aid]['slug']]['island'] = $slugs[0];
         }
 
+        // ─── امتیازِ همهٔ صفحات ───
         foreach ($pages as $path => $p) {
             $score = 0;
             $score += min(40, $p['in'] * 8);
             $score += $p['out'] > 0 ? 20 : 0;
             $score += max(0, 20 - 5 * (($p['depth'] ?? 5) - 1));
-            // بونوسِ اتصال به مادر برای مقاله/ترکیبی
             if ($p['island'] && in_array($p['type'], ['article', 'combo'], true)) {
                 $mother = '/services/'.$p['island'];
-                $linked = in_array($mother, $edges[$path] ?? [], true);
-                $score += $linked ? 20 : 0;
-                if (isset($islandOf[$p['island']])) {
-                    $islandOf[$p['island']]['linked_mother'] += $linked ? 1 : 0;
-                }
+                $score += in_array($mother, $edges[$path] ?? [], true) ? 20 : 0;
             } elseif ($p['type'] === 'device') {
                 $score += 20; // مادر خودش مرجع است
             }
             $pages[$path]['score'] = min(100, $score);
+        }
 
-            if ($p['island'] && isset($islandOf[$p['island']])) {
-                $islandOf[$p['island']]['members']++;
-                $islandOf[$p['island']]['score_sum'] += $pages[$path]['score'];
-                $islandOf[$p['island']]['orphans'] += ($p['in'] === 0 && $p['type'] !== 'device') ? 1 : 0;
-                $islandOf[$p['island']]['articles'] += $p['type'] === 'article' ? 1 : 0;
+        // ─── عضویتِ جزیره‌ها (چندعضوی، از رابطهٔ واقعی) ───
+        // یک مقاله می‌تواند به چند دستگاه وصل باشد و در هر جزیرهٔ مرتبط شمرده شود.
+        $islandMembers = [];
+        foreach ($devices as $d) {
+            $islandMembers[$d->slug] = ['/services/'.$d->slug]; // مادر عضوِ جزیرهٔ خودش
+        }
+        foreach ($combos as $c) {
+            $d = $deviceById[$c->device_id] ?? null;
+            $b = $brands[$c->brand_id] ?? null;
+            if ($d && $b && isset($islandMembers[$d->slug])) {
+                $islandMembers[$d->slug][] = '/services/'.$d->slug.'/'.$b->slug;
+            }
+        }
+        foreach ($articleDeviceSlugs as $aid => $slugs) {
+            if (! isset($articles[$aid])) {
+                continue;
+            }
+            $path = '/blog/'.$articles[$aid]['slug'];
+            foreach (array_unique($slugs) as $s) {
+                if (isset($islandMembers[$s])) {
+                    $islandMembers[$s][] = $path;
+                }
             }
         }
 
+        // ─── آمارِ دقیقِ هر جزیره ───
         $islands = [];
-        foreach ($islandOf as $slug => $i) {
-            $islands[$slug] = $i + ['avg' => $i['members'] > 0 ? (int) round($i['score_sum'] / $i['members']) : 0];
+        foreach ($devices as $d) {
+            $slug = $d->slug;
+            $mother = '/services/'.$slug;
+            $members = array_values(array_unique($islandMembers[$slug] ?? []));
+            $scoreSum = 0;
+            $articleCount = 0;
+            $orphans = 0;
+            $linkedMother = 0;
+            foreach ($members as $path) {
+                $p = $pages[$path] ?? null;
+                if (! $p) {
+                    continue;
+                }
+                $scoreSum += $p['score'];
+                if ($p['type'] === 'article') {
+                    $articleCount++;
+                }
+                if ($p['type'] !== 'device') {
+                    if ($p['in'] === 0) {
+                        $orphans++;
+                    }
+                    if (in_array($mother, $edges[$path] ?? [], true)) {
+                        $linkedMother++;
+                    }
+                }
+            }
+            $count = count($members);
+            $islands[$slug] = [
+                'label' => $d->name,
+                'mother' => $mother,
+                'members' => $count,
+                'articles' => $articleCount,
+                'linked_mother' => $linkedMother,
+                'orphans' => $orphans,
+                'score_sum' => $scoreSum,
+                'avg' => $count > 0 ? (int) round($scoreSum / $count) : 0,
+            ];
         }
 
         $all = collect($pages);
@@ -343,6 +390,47 @@ class InternalLinkAnalyzer
     private function page(string $type, string $label, int $id, ?string $island): array
     {
         return ['type' => $type, 'label' => $label, 'entity_id' => $id, 'island' => $island, 'out' => 0, 'in' => 0, 'depth' => null, 'score' => 0];
+    }
+
+    /**
+     * نگاشتِ article_id → اسلاگِ دستگاه‌های فعالِ مرتبط (از pivotِ واقعیِ
+     * site_blog_article_devices، نه متن‌کاوی). فقط دستگاه‌های فعال و pivotِ فعال؛
+     * به ترتیبِ sort_order (اولی = دستگاهِ اصلی).
+     *
+     * @param  array<int>  $articleIds
+     * @param  array<int, string>  $activeSlugs  اسلاگِ دستگاه‌های فعال (فیلترِ نهایی)
+     * @return array<int, list<string>>
+     */
+    private function articleDeviceSlugs(array $articleIds, array $activeSlugs): array
+    {
+        if (empty($articleIds) || ! Schema::hasTable('site_blog_article_devices')) {
+            return [];
+        }
+        $activeSet = array_flip($activeSlugs);
+        $hasActive = Schema::hasColumn('site_blog_article_devices', 'is_active');
+        $hasSort = Schema::hasColumn('site_blog_article_devices', 'sort_order');
+
+        $q = DB::table('site_blog_article_devices as ad')
+            ->join('crm_devices as d', 'd.id', '=', 'ad.device_id')
+            ->whereIn('ad.article_id', $articleIds)
+            ->where('d.is_active', true);
+        if ($hasActive) {
+            $q->where('ad.is_active', true);
+        }
+        $q->orderBy('ad.article_id');
+        if ($hasSort) {
+            $q->orderBy('ad.sort_order');
+        }
+
+        $out = [];
+        foreach ($q->get(['ad.article_id', 'd.slug']) as $row) {
+            $slug = (string) $row->slug;
+            if (isset($activeSet[$slug])) {
+                $out[(int) $row->article_id][] = $slug;
+            }
+        }
+
+        return $out;
     }
 
     /** استخراجِ مسیرهای داخلی از hrefهای یک HTML. @return list<string> */
