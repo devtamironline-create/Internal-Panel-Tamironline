@@ -34,6 +34,7 @@ class LeadController extends Controller
         $introduction = $request->string('introduction')->toString();
         $fromDate = $request->string('from_date')->toString();
         $toDate = $request->string('to_date')->toString();
+        $createdBy = $request->integer('created_by') ?: null;
 
         $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'district', 'leadReason'])
             ->leads();
@@ -43,6 +44,7 @@ class LeadController extends Controller
             'district_id' => $districtId,
             'brand_id' => $brandId, 'device_id' => $deviceId,
             'lead_reason_id' => $leadReasonId, 'introduction' => $introduction,
+            'created_by' => $createdBy,
             'from_date' => $fromDate, 'to_date' => $toDate,
         ]);
 
@@ -69,9 +71,15 @@ class LeadController extends Controller
         if (! is_array($introductionList)) {
             $introductionList = [];
         }
+        // اپراتورهایی که واقعاً لید ثبت کرده‌اند (برای فیلترِ «اپراتور ثبت‌کننده»).
+        $operators = \App\Models\User::whereIn(
+            'id',
+            Order::query()->leads()->whereNotNull('created_by')->distinct()->pluck('created_by')
+        )->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
         return view('crm::leads.index', compact(
             'leads', 'provinces', 'cities', 'brands', 'devices', 'leadReasons', 'introductionList',
+            'operators', 'createdBy',
             'search', 'provinceId', 'cityId', 'districtId', 'brandId', 'deviceId', 'leadReasonId',
             'introduction', 'fromDate', 'toDate', 'perPage'
         ));
@@ -148,6 +156,9 @@ class LeadController extends Controller
         }
         if (! empty($f['lead_reason_id'])) {
             $query->where('lead_reason_id', (int) $f['lead_reason_id']);
+        }
+        if (! empty($f['created_by'])) {
+            $query->where('created_by', (int) $f['created_by']);
         }
         if (! empty($f['introduction'])) {
             $query->where('introduction', $f['introduction']);
