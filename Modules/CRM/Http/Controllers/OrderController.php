@@ -48,12 +48,14 @@ class OrderController extends Controller
         $toDate = $request->string('to_date')->toString();
         $visitFrom = $request->string('visit_from')->toString();
         $visitTo = $request->string('visit_to')->toString();
+        // اپراتورِ ثبت‌کننده (کاربرِ پنل که سفارش را ثبت کرده — order.created_by).
+        $createdBy = $request->integer('created_by') ?: null;
 
         // closure برای اعمال همهٔ فیلترهای غیر-status — هم در query اصلی
         // و هم در شمارش تب‌های وضعیت استفاده می‌شود.
         $applyNonStatusFilters = function ($q, bool $includeTech = true) use (
             $search, $technicianId, $provinceId, $cityId, $brandId, $deviceId,
-            $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo
+            $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo, $createdBy
         ) {
             if ($search !== '') {
                 $q->search($search);
@@ -79,6 +81,9 @@ class OrderController extends Controller
             }
             if ($orderType !== '') {
                 $q->where('order_type', $orderType);
+            }
+            if ($createdBy) {
+                $q->where('created_by', $createdBy);
             }
             if ($introduction !== '') {
                 $q->where('introduction', $introduction);
@@ -176,9 +181,15 @@ class OrderController extends Controller
         if (! is_array($introductionList)) {
             $introductionList = [];
         }
+        // اپراتورهایی که واقعاً سفارش ثبت کرده‌اند (برای فیلترِ «اپراتور ثبت‌کننده»).
+        $operators = \App\Models\User::whereIn(
+            'id',
+            Order::whereNotNull('created_by')->distinct()->pluck('created_by')
+        )->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
         return view('crm::orders.index', compact(
             'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
+            'operators', 'createdBy',
             'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
             'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
             'statusCounts', 'perPage'
@@ -249,6 +260,9 @@ class OrderController extends Controller
         }
         if ($v = trim((string) $request->string('order_type'))) {
             $query->where('order_type', $v);
+        }
+        if ($v = $request->integer('created_by')) {
+            $query->where('created_by', $v);
         }
         if ($v = trim((string) $request->string('introduction'))) {
             $query->where('introduction', $v);

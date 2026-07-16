@@ -166,6 +166,21 @@
                 @endif
             </div>
             <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">اپراتور ثبت‌کننده</label>
+                @php
+                    $operatorOptions = ['' => '— همه —'];
+                    foreach ($operators as $op) {
+                        $operatorOptions[(string) $op->id] = trim(($op->first_name ?? '') . ' ' . ($op->last_name ?? '')) ?: ('#' . $op->id);
+                    }
+                @endphp
+                <x-searchable-select
+                    name="created_by"
+                    :options="$operatorOptions"
+                    :value="(string) ($createdBy ?? '')"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی اپراتور..." />
+            </div>
+            <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">فاکتور</label>
                 <select name="has_invoice" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                     <option value="">— همه —</option>
