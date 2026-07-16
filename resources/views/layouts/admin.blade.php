@@ -2139,5 +2139,60 @@
         document.addEventListener('livewire:navigated', scheduleReveal);
     })();
     </script>
+
+    {{-- ─── نوتیفایرِ سراسریِ پیام‌های چت ───────────────────────────────
+         روی همهٔ صفحاتِ پنل اجرا می‌شود: هر ۵ ثانیه پیام‌های جدیدِ طرفِ مقابل را
+         می‌گیرد و «به‌ازای هر پیام» یک Notification + صدا می‌دهد. آخرین id
+         اعلان‌شده در localStorage نگه‌داری می‌شود تا تکرار نشود. --}}
+    @auth
+    <script>
+    (function () {
+        if (window.__chatGlobalNotifier) return;
+        window.__chatGlobalNotifier = true;
+
+        var LS_KEY = 'chat_last_notified_{{ auth()->id() }}';
+        var lastId = parseInt(localStorage.getItem(LS_KEY) || '0', 10) || null;
+        var beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleAN1qeNzAACy9l0AAMz/LxMl3P8MACX8/wAA');
+        beep.volume = 0.5;
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            try { Notification.requestPermission(); } catch (e) {}
+        }
+
+        function notify(m) {
+            try {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    var n = new Notification(m.title, { body: m.body, icon: '/favicon.ico', tag: 'chat-' + m.id });
+                    n.onclick = function () { window.focus(); window.location.href = '/admin/messenger'; try { n.close(); } catch (e) {} };
+                }
+            } catch (e) {}
+            try { beep.currentTime = 0; beep.play().catch(function () {}); } catch (e) {}
+        }
+
+        async function poll() {
+            try {
+                var url = '/admin/chat/unread-recent' + (lastId ? ('?after=' + lastId) : '');
+                var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+                if (! r.ok) return;
+                var j = await r.json();
+                if (lastId === null) {
+                    // bootstrap: نقطهٔ شروع را ثبت کن، بدونِ اعلان برای تاریخچه
+                    lastId = j.max_id || 0;
+                    localStorage.setItem(LS_KEY, String(lastId));
+                    return;
+                }
+                (j.messages || []).forEach(notify);
+                if (j.max_id && j.max_id > lastId) {
+                    lastId = j.max_id;
+                    localStorage.setItem(LS_KEY, String(lastId));
+                }
+            } catch (e) {}
+        }
+
+        poll();
+        setInterval(poll, 5000);
+    })();
+    </script>
+    @endauth
 </body>
 </html>
