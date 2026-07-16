@@ -1451,6 +1451,16 @@ function messenger() {
                 const newMessages = data.messages || [];
                 const hadNewMessages = newMessages.length > this.lastMessageCount;
 
+                // صدای دریافتِ پیام در گفتگوی باز: اگر بینِ پیام‌های تازه‌رسیده
+                // (نسبت به بارِ قبل) دستِ‌کم یک پیامِ طرفِ مقابل باشد. نه در بارِ
+                // اولِ باز‌کردن (forceScroll) و نه وقتی هنوز چیزی لود نشده.
+                if (!forceScroll && this.lastMessageCount > 0 && hadNewMessages) {
+                    const fresh = newMessages.slice(this.lastMessageCount);
+                    if (fresh.some(function (m) { return m && m.is_mine === false; })) {
+                        this.playNotificationSound();
+                    }
+                }
+
                 // Debug: log is_mine values
                 if (newMessages.length > 0 && hadNewMessages) {
                     console.log('[Chat Debug] Messages:', JSON.stringify(newMessages.map(function(m) { return {id: m.id, sender: m.sender_name, is_mine: m.is_mine}; })));
