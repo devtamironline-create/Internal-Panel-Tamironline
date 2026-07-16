@@ -80,7 +80,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">دستگاه</label>
-                    <select name="device_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <select name="device_id" data-tom-select data-placeholder="جستجوی دستگاه..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                         <option value="">— همه —</option>
                         @foreach($devices as $d)
                             <option value="{{ $d->id }}" @selected($deviceId == $d->id)>{{ $d->name }}</option>
@@ -108,13 +108,13 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">از تاریخ</label>
-                    <input type="text" name="from_date" value="{{ $fromDate }}" placeholder="1405/03/01" dir="ltr"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <input type="text" name="from_date" value="{{ $fromDate }}" placeholder="1405/03/01" dir="ltr" readonly
+                           class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg cursor-pointer bg-white">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تا تاریخ</label>
-                    <input type="text" name="to_date" value="{{ $toDate }}" placeholder="1405/03/30" dir="ltr"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <input type="text" name="to_date" value="{{ $toDate }}" placeholder="1405/03/30" dir="ltr" readonly
+                           class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg cursor-pointer bg-white">
                 </div>
             </div>
 
