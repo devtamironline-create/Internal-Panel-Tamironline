@@ -1173,12 +1173,25 @@
                         @endforeach
                     </select>
 
-                    {{-- توضیح / دلیل — برای کنسل/رد اجباری، برای بقیه اختیاری --}}
-                    <div>
-                        <textarea name="note" rows="2"
-                                  :placeholder="isCancelled() ? 'دلیل کنسل / رد (اجباری)' : 'توضیح (اختیاری)'"
-                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
+                    {{-- دلیلِ کنسل/رد — انتخابی از لیستِ ثابت (فقط وقتی کنسل/رد).
+                         با disabled فقط فیلدِ فعالِ note سابمیت می‌شود تا نامِ یکسان تداخل نکند. --}}
+                    <div x-show="isCancelled()" x-cloak>
+                        <label class="block text-[11px] text-gray-600 dark:text-gray-300 mb-1">دلیل کنسل / رد <span class="text-rose-600">*</span></label>
+                        <select name="note" x-bind:required="isCancelled()" x-bind:disabled="!isCancelled()"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                            <option value="">— انتخاب دلیل —</option>
+                            @foreach(\Modules\CRM\Models\Order::CANCEL_REASONS as $reason)
+                            <option value="{{ $reason }}" @selected(old('note') === $reason)>{{ $reason }}</option>
+                            @endforeach
+                        </select>
                         @error('note')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    {{-- توضیح اختیاری — برای وضعیت‌های غیرِ کنسل/رد --}}
+                    <div x-show="!isCancelled()">
+                        <textarea name="note" rows="2" x-bind:disabled="isCancelled()"
+                                  placeholder="توضیح (اختیاری)"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
                     </div>
 
                     {{-- بخش فاکتور — فقط وقتی status=Completed --}}

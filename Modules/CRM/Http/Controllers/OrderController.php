@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
@@ -938,9 +939,9 @@ class OrderController extends Controller
         $isCompleting = $statusValue === OrderStatus::Completed->value;
         $isCancelling = in_array($statusValue, [OrderStatus::Cancelled->value, OrderStatus::Declined->value], true);
 
-        // برای کنسل/رد، دلیل اجباری
+        // برای کنسل/رد، دلیل اجباری و فقط از لیستِ ثابتِ دلایل (انتخابی).
         if ($isCancelling) {
-            $rules['note'] = 'required|string|min:5|max:2000';
+            $rules['note'] = ['required', 'string', Rule::in(Order::CANCEL_REASONS)];
         }
 
         // برای تکمیل، فیلدهای فاکتور — هم‌سو با Tech/DashboardController
@@ -958,8 +959,8 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate($rules, [
-            'note.required' => 'برای کنسل/رد سفارش، دلیل الزامی است.',
-            'note.min' => 'دلیل باید حداقل ۵ کاراکتر باشد.',
+            'note.required' => 'برای کنسل/رد سفارش، انتخابِ دلیل الزامی است.',
+            'note.in' => 'دلیلِ کنسل/رد را از لیست انتخاب کنید.',
             'invoice_descripotion.required' => 'توضیحات فاکتور (متن قابل ارسال به مشتری) اجباری است.',
             'invoice_descripotion.min' => 'توضیحات فاکتور حداقل ۵ کاراکتر.',
         ]);
