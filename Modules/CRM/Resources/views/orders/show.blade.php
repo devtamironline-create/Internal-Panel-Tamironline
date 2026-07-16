@@ -924,24 +924,24 @@
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">خلاصه مالی</h2>
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">برآورد اولیه</dt>
-                        <dd>{{ $order->estimated_price ? number_format($order->estimated_price) . ' تومان' : '—' }}</dd>
+                        <dt class="text-gray-500 dark:text-gray-400">برآورد اولیه</dt>
+                        <dd class="text-gray-900 dark:text-gray-100">{{ $order->estimated_price ? number_format($order->estimated_price) . ' تومان' : '—' }}</dd>
                     </div>
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">جمع آیتم‌ها</dt>
-                        <dd>{{ number_format($order->items_subtotal) }} تومان</dd>
+                        <dt class="text-gray-500 dark:text-gray-400">جمع آیتم‌ها</dt>
+                        <dd class="text-gray-900 dark:text-gray-100">{{ number_format($order->items_subtotal) }} تومان</dd>
                     </div>
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">مبلغ نهایی</dt>
-                        <dd>{{ $order->final_price ? number_format($order->final_price) . ' تومان' : '—' }}</dd>
+                        <dt class="text-gray-500 dark:text-gray-400">مبلغ نهایی</dt>
+                        <dd class="text-gray-900 dark:text-gray-100">{{ $order->final_price ? number_format($order->final_price) . ' تومان' : '—' }}</dd>
                     </div>
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">بیعانه</dt>
-                        <dd>{{ number_format($order->deposit ?? 0) }} تومان</dd>
+                        <dt class="text-gray-500 dark:text-gray-400">بیعانه</dt>
+                        <dd class="text-gray-900 dark:text-gray-100">{{ number_format($order->deposit ?? 0) }} تومان</dd>
                     </div>
                     <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700 font-bold">
-                        <dt>مانده قابل پرداخت</dt>
-                        <dd>{{ number_format($order->balance_due) }} تومان</dd>
+                        <dt class="text-gray-900 dark:text-gray-100">مانده قابل پرداخت</dt>
+                        <dd class="text-gray-900 dark:text-gray-100">{{ number_format($order->balance_due) }} تومان</dd>
                     </div>
                 </dl>
             </div>
