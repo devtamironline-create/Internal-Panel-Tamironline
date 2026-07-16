@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\Chat\NewMessageEvent;
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
+use App\Models\AnnouncementView;
+use App\Models\Chat\Call;
 use App\Models\Chat\Conversation;
 use App\Models\Chat\Message;
 use App\Models\Chat\MessageReaction;
-use App\Models\Chat\Call;
 use App\Models\Chat\UserPresence;
 use App\Models\User;
-use App\Models\Announcement;
-use App\Models\AnnouncementView;
-use Modules\Task\Models\Task;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Modules\Task\Models\Task;
 
 class ChatController extends Controller
 {
@@ -31,6 +32,7 @@ class ChatController extends Controller
             ->map(function ($user) {
                 $isOnline = $user->presence && $user->presence->status === 'online'
                     && $user->presence->last_seen_at?->diffInMinutes() < 5;
+
                 return [
                     'id' => $user->id,
                     'name' => $user->full_name,
@@ -57,8 +59,8 @@ class ChatController extends Controller
 
         // Get user's conversations
         $userConversations = Conversation::whereHas('participants', function ($q) use ($userId) {
-                $q->where('user_id', $userId)->whereNull('left_at');
-            })
+            $q->where('user_id', $userId)->whereNull('left_at');
+        })
             ->with(['latestMessage.user', 'activeParticipants.presence'])
             ->get();
 
@@ -91,15 +93,15 @@ class ChatController extends Controller
                 // For groups, show member count as status
                 if ($conversation->type === 'group') {
                     $memberCount = $conversation->activeParticipants()->count();
-                    $statusLabel = $memberCount . ' عضو';
+                    $statusLabel = $memberCount.' عضو';
                     $statusColor = 'blue';
 
                     // Check if it's a public group user is not a member of
                     $isPublic = $conversation->settings['is_public'] ?? false;
                     $isMember = $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists();
 
-                    if ($isPublic && !$isMember) {
-                        $statusLabel = 'گروه عمومی • ' . $memberCount . ' عضو';
+                    if ($isPublic && ! $isMember) {
+                        $statusLabel = 'گروه عمومی • '.$memberCount.' عضو';
                         $statusColor = 'green';
                     }
                 }
@@ -107,22 +109,22 @@ class ChatController extends Controller
                 // For channels, show member count as status
                 if ($conversation->type === 'channel') {
                     $memberCount = $conversation->activeParticipants()->count();
-                    $statusLabel = $memberCount . ' عضو';
+                    $statusLabel = $memberCount.' عضو';
                     $statusColor = 'purple';
 
                     // Check if it's a public channel user is not a member of
                     $isPublic = $conversation->settings['is_public'] ?? false;
                     $isMember = $conversation->participants()->where('user_id', $userId)->whereNull('left_at')->exists();
 
-                    if ($isPublic && !$isMember) {
-                        $statusLabel = 'کانال عمومی • ' . $memberCount . ' عضو';
+                    if ($isPublic && ! $isMember) {
+                        $statusLabel = 'کانال عمومی • '.$memberCount.' عضو';
                         $statusColor = 'green';
                     }
                 }
 
                 // Group/Channel avatar
                 $avatar = in_array($conversation->type, ['group', 'channel'])
-                    ? ($conversation->avatar ? asset('storage/' . $conversation->avatar) : null)
+                    ? ($conversation->avatar ? asset('storage/'.$conversation->avatar) : null)
                     : $other?->avatar_url;
 
                 // Get personal pin status from cache or session
@@ -157,7 +159,7 @@ class ChatController extends Controller
                     'member_ids' => $conversation->activeParticipants->pluck('id')->toArray(),
                 ];
             })
-            ->sortByDesc(fn($c) => $c['last_message_at']);
+            ->sortByDesc(fn ($c) => $c['last_message_at']);
 
         return response()->json(['conversations' => $conversations->values()]);
     }
@@ -225,7 +227,7 @@ class ChatController extends Controller
             ];
 
             // If not public and no members selected
-            if (!$settings['is_public'] && empty($memberIds)) {
+            if (! $settings['is_public'] && empty($memberIds)) {
                 return response()->json(['error' => 'لطفا حداقل یک عضو انتخاب کنید یا گروه را عمومی کنید'], 422);
             }
 
@@ -258,7 +260,7 @@ class ChatController extends Controller
             $conversation->participants()->attach($participants);
 
             // Set additional admins
-            if (!empty($adminIds)) {
+            if (! empty($adminIds)) {
                 foreach ($adminIds as $adminId) {
                     if ($conversation->participants()->where('user_id', $adminId)->exists()) {
                         $conversation->participants()->updateExistingPivot($adminId, [
@@ -272,7 +274,7 @@ class ChatController extends Controller
             $typeLabel = $type === 'channel' ? 'کانال' : 'گروه';
             Message::createSystem(
                 $conversation->id,
-                $typeLabel . ' «' . $request->name . '» ایجاد شد'
+                $typeLabel.' «'.$request->name.'» ایجاد شد'
             );
 
             return response()->json([
@@ -281,13 +283,13 @@ class ChatController extends Controller
                     'id' => $conversation->id,
                     'type' => $type,
                     'display_name' => $request->name,
-                    'avatar' => $avatarPath ? asset('storage/' . $avatarPath) : null,
+                    'avatar' => $avatarPath ? asset('storage/'.$avatarPath) : null,
                     'is_public' => $settings['is_public'],
                 ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'خطا در ایجاد: ' . $e->getMessage()
+                'error' => 'خطا در ایجاد: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -300,7 +302,7 @@ class ChatController extends Controller
         $userId = auth()->id();
 
         // Check if user is participant
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -328,7 +330,7 @@ class ChatController extends Controller
                 if ($message->user_id === $userId) {
                     // For my messages, check if any other participant has read it
                     $readByIds = $message->readBy->pluck('id')->toArray();
-                    $isRead = !empty(array_intersect($otherParticipantIds, $readByIds));
+                    $isRead = ! empty(array_intersect($otherParticipantIds, $readByIds));
                 }
 
                 // Group reactions by emoji
@@ -336,7 +338,7 @@ class ChatController extends Controller
                     return [
                         'emoji' => $group->first()->emoji,
                         'count' => $group->count(),
-                        'users' => $group->map(fn($r) => [
+                        'users' => $group->map(fn ($r) => [
                             'id' => $r->user_id,
                             'name' => $r->user->full_name,
                         ])->values(),
@@ -349,7 +351,7 @@ class ChatController extends Controller
                 if ($message->replyTo) {
                     $replyTo = [
                         'id' => $message->replyTo->id,
-                        'content' => mb_substr($message->replyTo->body ?? '', 0, 50) . (mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
+                        'content' => mb_substr($message->replyTo->body ?? '', 0, 50).(mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
                         'sender_name' => $message->replyTo->user->full_name,
                         'is_mine' => $message->replyTo->user_id === $userId,
                     ];
@@ -438,7 +440,7 @@ class ChatController extends Controller
         $userId = auth()->id();
 
         // Check if user is participant
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -489,7 +491,7 @@ class ChatController extends Controller
         $body = $request->content;
         if ($request->filled('caption')) {
             $body = $request->caption;
-        } elseif ($request->filled('file_path') && !$body) {
+        } elseif ($request->filled('file_path') && ! $body) {
             $body = 'فوروارد شده';
         }
 
@@ -516,12 +518,21 @@ class ChatController extends Controller
         // پارسر منشن: پیدا کردن @نام_کاربر در متن پیام
         $this->processMentions($message, $conversation);
 
+        // Broadcast برای دریافتِ لحظه‌ایِ سایرِ اعضای گفتگو (WebSocket/Reverb).
+        // toOthers تا فرستنده پیامِ خودش را دوباره از سوکت نگیرد. شکستِ broadcast
+        // (مثلاً Reverb خاموش) نباید ارسالِ پیام را بشکند.
+        try {
+            broadcast(new NewMessageEvent($message))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::warning('chat.broadcast_failed', ['error' => $e->getMessage()]);
+        }
+
         // Prepare reply_to info
         $replyTo = null;
         if ($message->replyTo) {
             $replyTo = [
                 'id' => $message->replyTo->id,
-                'content' => mb_substr($message->replyTo->body ?? '', 0, 50) . (mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
+                'content' => mb_substr($message->replyTo->body ?? '', 0, 50).(mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
                 'sender_name' => $message->replyTo->user->full_name,
                 'is_mine' => $message->replyTo->user_id === $userId,
             ];
@@ -614,8 +625,8 @@ class ChatController extends Controller
     public function onlineUsers(): JsonResponse
     {
         $onlineUsers = UserPresence::getOnlineUsers()
-            ->filter(fn($p) => $p->user_id !== auth()->id())
-            ->map(fn($p) => [
+            ->filter(fn ($p) => $p->user_id !== auth()->id())
+            ->map(fn ($p) => [
                 'id' => $p->user_id,
                 'name' => $p->user->full_name,
                 'status' => $p->status,
@@ -637,7 +648,7 @@ class ChatController extends Controller
         $receiver = User::find($request->receiver_id);
         $call = Call::initiate(auth()->id(), $request->receiver_id, $request->type ?? 'audio');
 
-        \Log::info("[CALL] Initiated: call={$call->id} caller=" . auth()->id() . " receiver={$request->receiver_id}");
+        \Log::info("[CALL] Initiated: call={$call->id} caller=".auth()->id()." receiver={$request->receiver_id}");
 
         return response()->json([
             'call' => [
@@ -660,7 +671,7 @@ class ChatController extends Controller
         $call->answer();
         $call->load('caller');
 
-        \Log::info("[CALL] Answered: call={$call->id} by=" . auth()->id() . " status={$call->status}");
+        \Log::info("[CALL] Answered: call={$call->id} by=".auth()->id()." status={$call->status}");
 
         return response()->json([
             'call' => [
@@ -676,7 +687,7 @@ class ChatController extends Controller
      */
     public function endCall(Call $call): JsonResponse
     {
-        if (!in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
+        if (! in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -753,7 +764,7 @@ class ChatController extends Controller
         $senderId = auth()->id();
 
         // Verify user is part of the call
-        if (!in_array($senderId, [$call->caller_id, $call->receiver_id])) {
+        if (! in_array($senderId, [$call->caller_id, $call->receiver_id])) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -785,7 +796,7 @@ class ChatController extends Controller
 
         $call = Call::find($callId);
         $myId = auth()->id();
-        if (!$call || !in_array($myId, [$call->caller_id, $call->receiver_id])) {
+        if (! $call || ! in_array($myId, [$call->caller_id, $call->receiver_id])) {
             return response()->json(['signals' => [], 'status' => 'ended']);
         }
 
@@ -795,15 +806,14 @@ class ChatController extends Controller
         $signals = Cache::get($cacheKey, []);
 
         // Return signals newer than lastSeq
-        $newSignals = array_values(array_filter($signals, fn($s) =>
-            $s['seq'] > $lastSeq
+        $newSignals = array_values(array_filter($signals, fn ($s) => $s['seq'] > $lastSeq
         ));
 
         $status = $call->fresh()->status;
         $seen = Cache::get("call_seen_{$callId}", false);
 
         if (count($newSignals) > 0) {
-            \Log::info("[CALL] Poll: call={$callId} user={$myId} reading from={$otherId} lastSeq={$lastSeq} total=" . count($signals) . " new=" . count($newSignals) . " status={$status}");
+            \Log::info("[CALL] Poll: call={$callId} user={$myId} reading from={$otherId} lastSeq={$lastSeq} total=".count($signals).' new='.count($newSignals)." status={$status}");
         }
 
         return response()->json([
@@ -876,7 +886,7 @@ class ChatController extends Controller
 
         // Verify user has access to this conversation
         $conversation = $message->conversation;
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -911,7 +921,7 @@ class ChatController extends Controller
 
         // Verify user has access to this conversation
         $conversation = $message->conversation;
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -944,7 +954,7 @@ class ChatController extends Controller
 
         // Verify user has access to this conversation
         $conversation = $message->conversation;
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -989,7 +999,7 @@ class ChatController extends Controller
             return [
                 'emoji' => $group->first()->emoji,
                 'count' => $group->count(),
-                'users' => $group->map(fn($r) => [
+                'users' => $group->map(fn ($r) => [
                     'id' => $r->user_id,
                     'name' => $r->user->full_name,
                 ])->values(),
@@ -1006,7 +1016,7 @@ class ChatController extends Controller
         $userId = auth()->id();
 
         // Verify it's a public group or channel
-        if (!in_array($conversation->type, ['group', 'channel']) || !($conversation->settings['is_public'] ?? false)) {
+        if (! in_array($conversation->type, ['group', 'channel']) || ! ($conversation->settings['is_public'] ?? false)) {
             return response()->json(['error' => 'این گروه/کانال عمومی نیست'], 403);
         }
 
@@ -1017,7 +1027,7 @@ class ChatController extends Controller
 
         // Add user to group/channel
         $conversation->participants()->attach([
-            $userId => ['joined_at' => now(), 'is_admin' => false]
+            $userId => ['joined_at' => now(), 'is_admin' => false],
         ]);
 
         // Create system message
@@ -1025,7 +1035,7 @@ class ChatController extends Controller
         $typeLabel = $conversation->type === 'channel' ? 'کانال' : 'گروه';
         Message::createSystem(
             $conversation->id,
-            $user->full_name . ' به ' . $typeLabel . ' پیوست'
+            $user->full_name.' به '.$typeLabel.' پیوست'
         );
 
         return response()->json([
@@ -1034,7 +1044,7 @@ class ChatController extends Controller
                 'id' => $conversation->id,
                 'type' => $conversation->type,
                 'display_name' => $conversation->name,
-                'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
+                'avatar' => $conversation->avatar ? asset('storage/'.$conversation->avatar) : null,
             ],
         ]);
     }
@@ -1052,12 +1062,12 @@ class ChatController extends Controller
         $isAdmin = $participant && $participant->pivot->is_admin;
         $canAddMembers = $user->can_add_group_members ?? false;
 
-        if (!$participant || (!$isAdmin && !$canAddMembers)) {
+        if (! $participant || (! $isAdmin && ! $canAddMembers)) {
             return response()->json(['error' => 'شما دسترسی به ویرایش این گروه ندارید'], 403);
         }
 
         // Non-admins with can_add_group_members can only add members, not edit settings
-        $onlyAddingMembers = !$isAdmin && $canAddMembers;
+        $onlyAddingMembers = ! $isAdmin && $canAddMembers;
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -1070,7 +1080,7 @@ class ChatController extends Controller
         $memberIds = json_decode($request->member_ids ?? '[]', true) ?: [];
 
         // Only admins can update settings and name
-        if (!$onlyAddingMembers) {
+        if (! $onlyAddingMembers) {
             // Update settings
             $settings = $conversation->settings ?? [];
             $settings['is_public'] = $settingsData['isPublic'] ?? ($settings['is_public'] ?? false);
@@ -1092,22 +1102,22 @@ class ChatController extends Controller
         }
 
         // Update members
-        if (!empty($memberIds)) {
+        if (! empty($memberIds)) {
             $currentMembers = $conversation->activeParticipants->pluck('id')->toArray();
 
             // Add new members
             foreach ($memberIds as $memberId) {
-                if (!in_array($memberId, $currentMembers)) {
+                if (! in_array($memberId, $currentMembers)) {
                     $conversation->participants()->attach([
-                        $memberId => ['joined_at' => now(), 'is_admin' => false]
+                        $memberId => ['joined_at' => now(), 'is_admin' => false],
                     ]);
                 }
             }
 
             // Only admins can remove members
-            if (!$onlyAddingMembers) {
+            if (! $onlyAddingMembers) {
                 foreach ($currentMembers as $currentMemberId) {
-                    if (!in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
+                    if (! in_array($currentMemberId, $memberIds) && $currentMemberId !== $userId) {
                         $conversation->participants()->updateExistingPivot($currentMemberId, ['left_at' => now()]);
                     }
                 }
@@ -1120,7 +1130,7 @@ class ChatController extends Controller
                 'id' => $conversation->id,
                 'type' => $conversation->type,
                 'display_name' => $conversation->name,
-                'avatar' => $conversation->avatar ? asset('storage/' . $conversation->avatar) : null,
+                'avatar' => $conversation->avatar ? asset('storage/'.$conversation->avatar) : null,
             ],
         ]);
     }
@@ -1134,7 +1144,7 @@ class ChatController extends Controller
 
         if (in_array($conversation->id, $personalPins)) {
             // Remove from pins
-            $personalPins = array_filter($personalPins, fn($id) => $id !== $conversation->id);
+            $personalPins = array_filter($personalPins, fn ($id) => $id !== $conversation->id);
         } else {
             // Check limit (max 3)
             if (count($personalPins) >= 3) {
@@ -1157,12 +1167,12 @@ class ChatController extends Controller
 
         // Verify user is admin of the group
         $participant = $conversation->participants()->where('user_id', $userId)->first();
-        if (!$participant || !$participant->pivot->is_admin) {
+        if (! $participant || ! $participant->pivot->is_admin) {
             return response()->json(['error' => 'شما دسترسی به این عملیات ندارید'], 403);
         }
 
         $settings = $conversation->settings ?? [];
-        $settings['is_pinned_global'] = !($settings['is_pinned_global'] ?? false);
+        $settings['is_pinned_global'] = ! ($settings['is_pinned_global'] ?? false);
         $conversation->settings = $settings;
         $conversation->save();
 
@@ -1178,7 +1188,7 @@ class ChatController extends Controller
         $user = auth()->user();
 
         // Only groups and channels can be deleted
-        if (!in_array($conversation->type, ['group', 'channel'])) {
+        if (! in_array($conversation->type, ['group', 'channel'])) {
             return response()->json(['error' => 'فقط گروه‌ها و کانال‌ها قابل حذف هستند'], 403);
         }
 
@@ -1187,7 +1197,7 @@ class ChatController extends Controller
         $isGroupAdmin = $participant && $participant->pivot->is_admin;
         $isSystemAdmin = $user->can('manage-permissions');
 
-        if (!$isGroupAdmin && !$isSystemAdmin) {
+        if (! $isGroupAdmin && ! $isSystemAdmin) {
             return response()->json(['error' => 'فقط مدیر گروه/کانال می‌تواند آن را حذف کند'], 403);
         }
 
@@ -1299,7 +1309,7 @@ class ChatController extends Controller
 
         // Verify user is admin of the group/channel
         $participant = $conversation->participants()->where('user_id', $userId)->first();
-        if (!$participant || !$participant->pivot->is_admin) {
+        if (! $participant || ! $participant->pivot->is_admin) {
             return response()->json(['error' => 'فقط مدیران می‌توانند اطلاعیه ایجاد کنند'], 403);
         }
 
@@ -1339,7 +1349,7 @@ class ChatController extends Controller
         $conversation = $message->conversation;
 
         // Verify user is participant
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1371,7 +1381,7 @@ class ChatController extends Controller
         $user = auth()->user();
         Message::createSystem(
             $conversation->id,
-            '📋 تسک جدید: ' . $request->title . ' (توسط ' . $user->full_name . ')'
+            '📋 تسک جدید: '.$request->title.' (توسط '.$user->full_name.')'
         );
 
         return response()->json([
@@ -1392,7 +1402,7 @@ class ChatController extends Controller
         $userId = auth()->id();
 
         // Verify user is participant
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1431,12 +1441,12 @@ class ChatController extends Controller
         $conversation = $task->conversation;
 
         // Only for message tasks with conversation
-        if (!$conversation || $task->source !== 'message') {
+        if (! $conversation || $task->source !== 'message') {
             return response()->json(['error' => 'تسک نامعتبر'], 400);
         }
 
         // Verify user is participant
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1452,7 +1462,7 @@ class ChatController extends Controller
             $user = auth()->user();
             Message::createSystem(
                 $conversation->id,
-                '✅ تسک تکمیل شد: ' . $task->title . ' (توسط ' . $user->full_name . ')'
+                '✅ تسک تکمیل شد: '.$task->title.' (توسط '.$user->full_name.')'
             );
         }
 
@@ -1525,7 +1535,7 @@ class ChatController extends Controller
         $dayOfWeek = $jalali->getDayOfWeek();
         $dayName = $dayNames[$dayOfWeek] ?? '';
 
-        return $dayName . ' ' . $jalali->getDay() . ' ' . ($monthNames[$jalali->getMonth()] ?? '') . ' ' . $jalali->getYear();
+        return $dayName.' '.$jalali->getDay().' '.($monthNames[$jalali->getMonth()] ?? '').' '.$jalali->getYear();
     }
 
     /**
@@ -1535,7 +1545,7 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1546,11 +1556,11 @@ class ChatController extends Controller
 
         $results = $conversation->messages()
             ->with('user')
-            ->where('body', 'LIKE', '%' . $query . '%')
+            ->where('body', 'LIKE', '%'.$query.'%')
             ->latest()
             ->take(50)
             ->get()
-            ->map(fn($m) => [
+            ->map(fn ($m) => [
                 'id' => $m->id,
                 'content' => $m->body,
                 'sender_name' => $m->user?->full_name ?? 'نامشخص',
@@ -1568,7 +1578,7 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1576,7 +1586,7 @@ class ChatController extends Controller
             ->where('users.id', '!=', $userId)
             ->select('users.id', 'users.first_name', 'users.last_name', 'users.avatar')
             ->get()
-            ->map(fn($u) => [
+            ->map(fn ($u) => [
                 'id' => $u->id,
                 'name' => $u->full_name,
                 'first_name' => $u->first_name,
@@ -1593,7 +1603,7 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        if (! $conversation->participants()->where('user_id', $userId)->exists()) {
             return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
         }
 
@@ -1635,7 +1645,7 @@ class ChatController extends Controller
     private function processMentions(Message $message, Conversation $conversation): void
     {
         $body = $message->body ?? '';
-        if (empty($body) || !str_contains($body, '@')) {
+        if (empty($body) || ! str_contains($body, '@')) {
             return;
         }
 
@@ -1651,7 +1661,7 @@ class ChatController extends Controller
             $firstName = $user->first_name;
 
             // چک نام کامل و نام کوچک
-            if (str_contains($body, '@' . $fullName) || str_contains($body, '@' . $firstName)) {
+            if (str_contains($body, '@'.$fullName) || str_contains($body, '@'.$firstName)) {
                 $mentionedUserIds[] = $user->id;
             }
         }
