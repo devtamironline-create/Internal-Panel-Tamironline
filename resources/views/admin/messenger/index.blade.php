@@ -1372,12 +1372,8 @@ function messenger() {
                 const oldUnread = this.getTotalUnread();
                 await this.loadConversations();
 
-                // Check for new messages
-                const newUnread = this.getTotalUnread();
-                if (newUnread > oldUnread) {
-                    this.showNotification('پیام جدید', `شما ${newUnread} پیام خوانده نشده دارید`);
-                    this.playNotificationSound();
-                }
+                // اعلان/صدای پیام توسط نوتیفایرِ سراسریِ layout مدیریت می‌شود
+                // (روی همهٔ صفحات، به‌ازای هر پیام) تا این‌جا تکراری نشود.
 
                 if (this.currentConversation) {
                     this.loadMessages(this.currentConversation.id);
@@ -1450,16 +1446,6 @@ function messenger() {
                 const data = await response.json();
                 const newMessages = data.messages || [];
                 const hadNewMessages = newMessages.length > this.lastMessageCount;
-
-                // صدای دریافتِ پیام در گفتگوی باز: اگر بینِ پیام‌های تازه‌رسیده
-                // (نسبت به بارِ قبل) دستِ‌کم یک پیامِ طرفِ مقابل باشد. نه در بارِ
-                // اولِ باز‌کردن (forceScroll) و نه وقتی هنوز چیزی لود نشده.
-                if (!forceScroll && this.lastMessageCount > 0 && hadNewMessages) {
-                    const fresh = newMessages.slice(this.lastMessageCount);
-                    if (fresh.some(function (m) { return m && m.is_mine === false; })) {
-                        this.playNotificationSound();
-                    }
-                }
 
                 // Debug: log is_mine values
                 if (newMessages.length > 0 && hadNewMessages) {

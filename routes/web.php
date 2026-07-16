@@ -143,6 +143,8 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     // Chat System
     Route::prefix('chat')->name('chat.')->group(function () {
         Route::get('/users', [ChatController::class, 'users'])->name('users');
+        // اعلانِ سراسریِ پیام‌های جدید (روی همهٔ صفحات پنل) — پیام‌های طرفِ مقابل بعد از یک id.
+        Route::get('/unread-recent', [ChatController::class, 'recentUnread'])->name('unread-recent');
         Route::get('/conversations', [ChatController::class, 'conversations'])->name('conversations');
         Route::post('/conversations/start', [ChatController::class, 'startConversation'])->name('conversations.start');
         Route::post('/conversations/group', [ChatController::class, 'createGroup'])->name('conversations.group');

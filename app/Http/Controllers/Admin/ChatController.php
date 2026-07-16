@@ -165,6 +165,67 @@ class ChatController extends Controller
     }
 
     /**
+     * پیام‌های جدیدِ طرفِ مقابل برای اعلانِ سراسری (روی همهٔ صفحات پنل).
+     *
+     * کلاینت آخرین id اعلان‌شده را در `after` می‌فرستد؛ سرور پیام‌های بعد از آن را
+     * (از گفتگوهای همین کاربر، فقط پیامِ دیگران) برمی‌گرداند تا کلاینت به‌ازای هر
+     * پیام یک Notification بدهد. اگر after خالی باشد، فقط max_id برای bootstrap
+     * برگردانده می‌شود (بدونِ پیام) تا برای تاریخچهٔ قدیمی اعلان نیاید.
+     */
+    public function recentUnread(Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $after = (int) $request->query('after', 0);
+
+        // idهای گفتگوهای فعالِ کاربر
+        $conversationIds = Conversation::whereHas('participants', function ($q) use ($userId) {
+            $q->where('user_id', $userId)->whereNull('left_at');
+        })->pluck('id');
+
+        if ($conversationIds->isEmpty()) {
+            return response()->json(['messages' => [], 'max_id' => $after])
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $maxId = (int) Message::whereIn('conversation_id', $conversationIds)
+            ->where('user_id', '!=', $userId)
+            ->max('id');
+
+        // bootstrap: بارِ اول (after=0) فقط نقطهٔ شروع را بده، بدونِ اعلان برای تاریخچه.
+        if ($after <= 0) {
+            return response()->json(['messages' => [], 'max_id' => $maxId])
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $messages = Message::with(['user:id,first_name,last_name', 'conversation:id,name,type'])
+            ->whereIn('conversation_id', $conversationIds)
+            ->where('user_id', '!=', $userId)
+            ->where('id', '>', $after)
+            ->orderBy('id')
+            ->limit(30)
+            ->get()
+            ->map(function (Message $m) {
+                $conv = $m->conversation;
+                $title = $conv && in_array($conv->type, ['group', 'channel'], true)
+                    ? ($conv->name ?: 'گفتگوی گروهی')
+                    : ($m->user->full_name ?? 'پیام جدید');
+
+                return [
+                    'id' => $m->id,
+                    'conversation_id' => $m->conversation_id,
+                    'title' => $title,
+                    'sender' => $m->user->full_name ?? '',
+                    'body' => $m->type === 'text'
+                        ? mb_substr((string) $m->body, 0, 120)
+                        : '📎 فایل',
+                ];
+            });
+
+        return response()->json(['messages' => $messages->values(), 'max_id' => $maxId])
+            ->header('Cache-Control', 'no-store');
+    }
+
+    /**
      * Get or create private conversation with a user
      */
     public function startConversation(Request $request): JsonResponse
