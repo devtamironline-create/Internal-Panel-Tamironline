@@ -163,11 +163,11 @@ enum OrderStatus: string
                 self::Cancelled, self::Declined,
             ],
 
-            // هماهنگ شده: تکنسین در محل — شروعِ کار یا حالت‌های انتظار.
+            // هماهنگ شده: تکنسین در محل — شروعِ کار، حالت‌های انتظار، یا ردِ سفارش.
             self::Coordinated => [
                 self::RepairStarted, self::Open, self::AwaitingPart,
                 self::AwaitingCustomerApproval, self::Suspended, self::NoAnswer,
-                self::Transit, self::Completed, self::Cancelled,
+                self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
             // شروع تعمیر (در حال انجام).
@@ -182,8 +182,14 @@ enum OrderStatus: string
                 self::Transit, self::Completed, self::Cancelled,
             ],
 
-            // معلق / حالت‌های انتظار.
-            self::Suspended,
+            // معلق: مثلِ حالت‌های انتظار + امکانِ ردِ سفارش توسط تکنسین.
+            self::Suspended => [
+                self::Coordinated, self::RepairStarted, self::Open,
+                self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::Completed, self::Cancelled, self::Declined,
+            ],
+
+            // حالت‌های انتظار (بدونِ رد).
             self::AwaitingPart,
             self::AwaitingCustomerApproval => [
                 self::Coordinated, self::RepairStarted, self::Open,
