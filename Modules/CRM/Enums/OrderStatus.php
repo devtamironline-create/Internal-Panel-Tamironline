@@ -189,12 +189,12 @@ enum OrderStatus: string
                 self::Completed, self::Cancelled, self::Declined,
             ],
 
-            // حالت‌های انتظار (بدونِ رد).
+            // حالت‌های انتظار: مثلِ معلق + امکانِ ایاب و ذهاب و ردِ سفارش.
             self::AwaitingPart,
             self::AwaitingCustomerApproval => [
                 self::Coordinated, self::RepairStarted, self::Open,
                 self::AwaitingPart, self::AwaitingCustomerApproval,
-                self::Completed, self::Cancelled,
+                self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
             // برگشتی گارانتی: کارشناسی (تأیید → هماهنگ‌شده، رد → تکمیل‌شده)،
