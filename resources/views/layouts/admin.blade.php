@@ -2113,7 +2113,7 @@
             var nav = document.querySelector('nav.overflow-y-auto.no-scrollbar');
             if (! nav) return;
             var active = nav.querySelector('.sidebar-menu-item-active');
-            if (! active) return;
+            if (! active || active.offsetParent === null) return; // هنوز داخلِ منوی بستهٔ Alpine
             var navRect = nav.getBoundingClientRect();
             var aRect = active.getBoundingClientRect();
             // اگر آیتمِ فعال از قبل کاملاً در دید است، دست نزن.
@@ -2121,9 +2121,17 @@
             var offset = (aRect.top - navRect.top) - (nav.clientHeight / 2 - active.offsetHeight / 2);
             nav.scrollTop += offset;
         }
-        // بعد از settle شدنِ layout (منوهای بازشونده) اجرا شود.
-        window.addEventListener('load', function () { requestAnimationFrame(revealActiveMenu); });
-        document.addEventListener('livewire:navigated', function () { requestAnimationFrame(revealActiveMenu); });
+        // چند تلاشِ زمان‌بندی‌شده: آیتم‌های عمیق داخلِ آکاردئونِ x-collapse تا
+        // پایانِ انیمیشنِ باز‌شدن موقعیتِ نهایی نمی‌گیرند؛ پس بعد از settle هم retry می‌کنیم.
+        function scheduleReveal() {
+            [0, 200, 450, 750].forEach(function (d) { setTimeout(revealActiveMenu, d); });
+        }
+        if (document.readyState === 'complete') {
+            scheduleReveal();
+        } else {
+            window.addEventListener('load', scheduleReveal);
+        }
+        document.addEventListener('livewire:navigated', scheduleReveal);
     })();
     </script>
 </body>
