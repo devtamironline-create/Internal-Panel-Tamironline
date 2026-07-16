@@ -97,6 +97,15 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">اپراتور ثبت‌کننده</label>
+                    <select name="created_by" data-tom-select data-placeholder="جستجوی اپراتور..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                        <option value="">— همه —</option>
+                        @foreach($operators as $op)
+                            <option value="{{ $op->id }}" @selected((int) ($createdBy ?? 0) === (int) $op->id)>{{ trim(($op->first_name ?? '') . ' ' . ($op->last_name ?? '')) ?: ('#' . $op->id) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">معرف</label>
                     <select name="introduction" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                         <option value="">— همه —</option>
