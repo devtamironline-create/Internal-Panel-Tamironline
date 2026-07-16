@@ -36,7 +36,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">دستگاه تحت پوشش</label>
-                <select name="appliance" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
+                <select name="appliance" data-tom-select data-placeholder="جستجوی دستگاه..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none">
                     <option value="">همه</option>
                     @foreach($appliances as $ap)
                         <option value="{{ $ap->id }}" @selected((int) request('appliance') === (int) $ap->id)>{{ $ap->name }}</option>
