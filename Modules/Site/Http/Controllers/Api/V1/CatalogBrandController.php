@@ -145,6 +145,12 @@ class CatalogBrandController extends Controller
                         'see_all_url' => '/forum?brand='.$brand->slug,
                         'items' => \Modules\Site\Support\ForumQuestionFeed::forBrand((int) $brand->id, 5),
                     ],
+                    'related_articles' => [
+                        'enabled' => $enabled('related_articles', true),
+                        'title' => $template['related_articles']['title'] ?? null,
+                        'subtitle' => $template['related_articles']['subtitle'] ?? null,
+                        'items' => \Modules\Site\Support\RelatedArticles::forBrand((int) $brand->id),
+                    ],
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');

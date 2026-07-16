@@ -179,6 +179,12 @@ class CatalogDeviceBrandController extends Controller
                         'see_all_url' => '/forum?device='.$device->slug.'&brand='.$brand->slug,
                         'items' => \Modules\Site\Support\ForumQuestionFeed::forDeviceBrand((int) $device->id, (int) $brand->id, 5),
                     ],
+                    'related_articles' => [
+                        'enabled' => $enabled('related_articles', true),
+                        'title' => $template['related_articles']['title'] ?? null,
+                        'subtitle' => $template['related_articles']['subtitle'] ?? null,
+                        'items' => \Modules\Site\Support\RelatedArticles::forCombo((int) $device->id, (int) $brand->id),
+                    ],
                 ],
             ])
             ->header('Cache-Control', 'public, max-age=600, s-maxage=600');
