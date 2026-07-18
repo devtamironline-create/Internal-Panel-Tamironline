@@ -401,7 +401,7 @@ class ChatController extends Controller
                         'count' => $group->count(),
                         'users' => $group->map(fn ($r) => [
                             'id' => $r->user_id,
-                            'name' => $r->user->full_name,
+                            'name' => $r->user?->full_name ?? 'کاربر حذف شده',
                         ])->values(),
                         'has_reacted' => $group->contains('user_id', $userId),
                     ];
@@ -413,7 +413,7 @@ class ChatController extends Controller
                     $replyTo = [
                         'id' => $message->replyTo->id,
                         'content' => mb_substr($message->replyTo->body ?? '', 0, 50).(mb_strlen($message->replyTo->body ?? '') > 50 ? '...' : ''),
-                        'sender_name' => $message->replyTo->user->full_name,
+                        'sender_name' => $message->replyTo->user?->full_name ?? 'کاربر حذف شده',
                         'is_mine' => $message->replyTo->user_id === $userId,
                     ];
                 }
