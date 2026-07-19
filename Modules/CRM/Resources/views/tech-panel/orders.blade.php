@@ -5,16 +5,16 @@
 @php
     use Modules\CRM\Enums\OrderStatus;
 
-    $filterChips = [
-        ['value' => null,                                'label' => 'همه'],
-        ['value' => OrderStatus::New->value,             'label' => 'جدید'],
-        ['value' => OrderStatus::Coordinated->value,     'label' => 'هماهنگ‌شده'],
-        ['value' => OrderStatus::Open->value,            'label' => 'باز شده'],
-        ['value' => OrderStatus::Completed->value,       'label' => 'انجام شده'],
-        ['value' => OrderStatus::Suspended->value,       'label' => 'معلق'],
-        ['value' => OrderStatus::Cancelled->value,       'label' => 'کنسل شده'],
-        ['value' => OrderStatus::Returned->value,        'label' => 'برگشتی'],
-    ];
+    // فیلترِ سریعِ همهٔ وضعیت‌ها — از خودِ enum ساخته می‌شود تا هیچ وضعیتی جا
+    // نیفتد. «رد شده» (Declined) کنار گذاشته می‌شود چون سفارش‌های ردشده از دیدِ
+    // تکنسین حذف‌اند و در این لیست هرگز نتیجه‌ای ندارند.
+    $filterChips = collect([['value' => null, 'label' => 'همه']])
+        ->concat(
+            collect(OrderStatus::cases())
+                ->reject(fn ($s) => $s === OrderStatus::Declined)
+                ->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()])
+        )
+        ->all();
 
     // helper برای ماسک کردن موبایل/تلفن — نمایش ۴ رقم اول + *** + ۴ رقم آخر.
     // برای سفارش‌های نهایی استفاده می‌شود تا اطلاعات تماس قابل‌استفاده نباشد.
