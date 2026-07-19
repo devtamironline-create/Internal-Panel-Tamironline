@@ -343,6 +343,17 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('orders/{order}/transfer-receipt', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'store'])->name('orders.transfer-receipt.store');
     });
 
+    // مدیریتِ رسیدِ انتقال — دسترسیِ مستقل (ادمین‌کل به هرکس بخواهد می‌دهد):
+    // دیدن/ویرایش/حذف/ارسالِ مجددِ پیامک.
+    Route::middleware('can:manage-transfer-receipts')->group(function () {
+        Route::put('orders/{order}/transfer-receipts/{transferReceipt}', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'update'])
+            ->name('orders.transfer-receipt.update')->whereNumber('order')->whereNumber('transferReceipt');
+        Route::delete('orders/{order}/transfer-receipts/{transferReceipt}', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'destroy'])
+            ->name('orders.transfer-receipt.destroy')->whereNumber('order')->whereNumber('transferReceipt');
+        Route::post('orders/{order}/transfer-receipts/{transferReceipt}/resend', [\Modules\CRM\Http\Controllers\TransferReceiptController::class, 'resend'])
+            ->name('orders.transfer-receipt.resend')->whereNumber('order')->whereNumber('transferReceipt');
+    });
+
     // موارد امنیتی — دسترسیِ مستقل (پیش‌فرض فقط ادمین‌کل؛ قابلِ واگذاری به نقش‌های دیگر)
     Route::middleware('can:manage-order-security')->group(function () {
         Route::post('orders/{order}/lock', [OrderController::class, 'toggleLock'])->name('orders.lock');

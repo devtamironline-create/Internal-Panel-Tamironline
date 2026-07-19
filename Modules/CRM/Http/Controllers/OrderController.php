@@ -427,7 +427,7 @@ class OrderController extends Controller
     {
         $order->load([
             'customer', 'brand', 'device', 'technician', 'province', 'city',
-            'creator', 'items', 'statusLogs.changer',
+            'creator', 'items', 'statusLogs.changer', 'transferReceipts',
         ]);
 
         $suggestions = collect();
