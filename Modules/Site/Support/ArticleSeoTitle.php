@@ -37,8 +37,10 @@ final class ArticleSeoTitle
         $base = self::cleanBase((string) $rawTitle);
 
         if ($base === '') {
-            // اگر بعد از پاک‌سازی چیزی نماند، از خودِ ورودی (بریده) استفاده کن.
-            $base = trim(mb_substr(trim((string) $rawTitle), 0, $max - mb_strlen($suffix)));
+            // اگر بعد از پاک‌سازی عنوانِ معناداری نماند (مثلاً ورودی فقط برند/پسوند
+            // بوده)، فقط برند را برگردان — نه اینکه پسوندِ خام را دوباره وارد کنیم
+            // (که باعثِ Titleِ خراب و تکراری می‌شد).
+            return self::BRAND;
         }
 
         $budget = $max - mb_strlen($suffix);
