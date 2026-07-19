@@ -248,16 +248,25 @@ class CatalogDeviceBrandController extends Controller
 
         return [
             'enabled' => $enabled,
-            'badge' => $this->merge($page?->eyebrow, $dc['badge'] ?? null, $device->eyebrow, $brand->eyebrow, $heroTpl['badge'] ?? null),
+            // اولویتِ متنِ هیرو در صفحهٔ ترکیبی:
+            //   per-pair (page) → الگوی اختصاصیِ این دستگاه (deviceCombo) →
+            //   «الگوی سراسریِ ترکیبی» (heroTpl، همان چیزی که ادمین در
+            //   page-content/device_brand ویرایش می‌کند) → فیلدهای عمومیِ دستگاه/برند →
+            //   پیش‌فرضِ محاسبه‌شده.
+            // نکته: الگوی ترکیبی باید بالاتر از service_name/subtitleِ خودِ دستگاه/برند
+            // باشد؛ وگرنه چون تقریباً همهٔ دستگاه‌ها service_name دارند، عنوانِ الگوی
+            // ترکیبی همیشه سایه می‌خورد و هرگز نمایش داده نمی‌شد. pick خالی‌ها را رد
+            // می‌کند، پس اگر الگو خالی باشد همچنان به فیلدهای دستگاه/برند برمی‌گردد.
+            'badge' => $this->merge($page?->eyebrow, $dc['badge'] ?? null, $heroTpl['badge'] ?? null, $device->eyebrow, $brand->eyebrow),
             'title' => $this->merge(
                 $page?->title,
                 $dc['title'] ?? null,
-                $device->service_name,
                 $heroTpl['title'] ?? null,
+                $device->service_name,
                 ($device->name.' '.$brand->name)
             ),
-            'subtitle' => $this->merge($page?->subtitle, $dc['subtitle'] ?? null, $device->subtitle, $brand->subtitle, $heroTpl['subtitle'] ?? null),
-            'caption' => $this->merge($page?->caption, $dc['caption'] ?? null, $device->caption, $brand->caption, $heroTpl['caption'] ?? null),
+            'subtitle' => $this->merge($page?->subtitle, $dc['subtitle'] ?? null, $heroTpl['subtitle'] ?? null, $device->subtitle, $brand->subtitle),
+            'caption' => $this->merge($page?->caption, $dc['caption'] ?? null, $heroTpl['caption'] ?? null, $device->caption, $brand->caption),
             'image' => $this->mergeHeroImage($dc['image'] ?? null, $device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null, $deviceTemplateImage),
             'cta_primary' => [
                 'label' => $this->merge($page?->cta_primary_label, $dcCtaPrimary['label'] ?? null, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),
