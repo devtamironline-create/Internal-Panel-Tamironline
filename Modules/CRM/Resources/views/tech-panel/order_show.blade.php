@@ -927,6 +927,27 @@
         </div>
     @endif
 
+    {{-- ─────── رسید انتقال ─────── --}}
+    @if($order->transferReceipts->isNotEmpty())
+        <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
+            <div class="text-[11px] text-gray-400 mb-3">رسید انتقال به تعمیرگاه</div>
+            <ul class="space-y-2">
+                @foreach($order->transferReceipts as $tr)
+                    <li class="flex items-center justify-between gap-2 border border-gray-100 rounded-xl px-3 py-2.5">
+                        <div class="min-w-0">
+                            <div class="font-mono text-sm text-gray-800" dir="ltr">{{ $tr->code }}</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5" dir="ltr">@jdatetime($tr->created_at)</div>
+                        </div>
+                        <a href="{{ route('crm.transfer-receipt.public', $tr->token) }}" target="_blank" rel="noopener"
+                           class="flex-shrink-0 text-xs font-bold text-brand-700 bg-brand-50 rounded-lg px-3 py-2">
+                            مشاهده / چاپ ↗
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     {{-- ─────── Status history ─────── --}}
     @if($order->statusLogs->isNotEmpty())
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
