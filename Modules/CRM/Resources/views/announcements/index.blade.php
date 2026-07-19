@@ -67,11 +67,20 @@
                             {{ trim(($a->creator?->first_name ?? '') . ' ' . ($a->creator?->last_name ?? '')) ?: '—' }}
                         </td>
                         <td class="p-3 text-xs text-gray-500" dir="ltr">@jdatetime($a->created_at)</td>
-                        <td class="p-3 text-xs">
-                            <span class="font-bold {{ $a->acks_count >= $activeTechCount ? 'text-emerald-600' : 'text-gray-700 dark:text-gray-300' }}">
-                                {{ number_format($a->acks_count) }}
-                            </span>
-                            <span class="text-gray-400">از {{ number_format($activeTechCount) }} تکنسین فعال</span>
+                        <td class="p-3 text-xs w-52">
+                            @php $pct = $activeTechCount > 0 ? min(100, (int) round($a->acks_count / $activeTechCount * 100)) : 0; @endphp
+                            <a href="{{ route('crm.announcements.show', $a) }}" class="block group">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span>
+                                        <span class="font-bold {{ $a->acks_count >= $activeTechCount ? 'text-emerald-600' : 'text-gray-700 dark:text-gray-300' }}">{{ number_format($a->acks_count) }}</span>
+                                        <span class="text-gray-400">از {{ number_format($activeTechCount) }}</span>
+                                    </span>
+                                    <span class="text-gray-400 group-hover:text-brand-600">{{ $pct }}٪ ←</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full {{ $pct >= 100 ? 'bg-emerald-500' : ($pct >= 50 ? 'bg-brand-500' : 'bg-amber-500') }}" style="width: {{ max($pct, 2) }}%"></div>
+                                </div>
+                            </a>
                         </td>
                         <td class="p-3">
                             @if($a->is_active)
@@ -82,6 +91,8 @@
                         </td>
                         <td class="p-3">
                             <div class="flex items-center gap-2">
+                                <a href="{{ route('crm.announcements.show', $a) }}"
+                                   class="px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 text-xs font-medium">جزئیات</a>
                                 <form method="POST" action="{{ route('crm.announcements.toggle', $a) }}">
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-medium
