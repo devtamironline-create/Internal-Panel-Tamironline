@@ -933,15 +933,40 @@
             <div class="text-[11px] text-gray-400 mb-3">رسید انتقال به تعمیرگاه</div>
             <ul class="space-y-2">
                 @foreach($order->transferReceipts as $tr)
-                    <li class="flex items-center justify-between gap-2 border border-gray-100 rounded-xl px-3 py-2.5">
-                        <div class="min-w-0">
-                            <div class="font-mono text-sm text-gray-800" dir="ltr">{{ $tr->code }}</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5" dir="ltr">@jdatetime($tr->created_at)</div>
+                    <li class="border border-gray-100 rounded-xl px-3 py-2.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-mono text-sm text-gray-800" dir="ltr">{{ $tr->code }}</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5" dir="ltr">@jdatetime($tr->created_at)</div>
+                            </div>
+                            <a href="{{ route('crm.transfer-receipt.public', $tr->token) }}" target="_blank" rel="noopener"
+                               class="flex-shrink-0 text-xs font-bold text-brand-700 bg-brand-50 rounded-lg px-3 py-2">
+                                مشاهده / چاپ ↗
+                            </a>
                         </div>
-                        <a href="{{ route('crm.transfer-receipt.public', $tr->token) }}" target="_blank" rel="noopener"
-                           class="flex-shrink-0 text-xs font-bold text-brand-700 bg-brand-50 rounded-lg px-3 py-2">
-                            مشاهده / چاپ ↗
-                        </a>
+
+                        {{-- ارسالِ پیامکِ رسید — دستی و فقط یک‌بار --}}
+                        <div class="mt-2.5 pt-2.5 border-t border-gray-100">
+                            @if($tr->smsSent())
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    پیامک برای مشتری ارسال شد
+                                    <span class="text-gray-400 font-normal" dir="ltr">— @jdatetime($tr->sms_sent_at)</span>
+                                </div>
+                            @else
+                                <form method="POST" action="{{ route('tech.orders.transfer-receipt.send-sms', [$order, $tr]) }}"
+                                      onsubmit="return confirm('پیامکِ رسید فقط یک‌بار قابلِ ارسال است. ارسال شود؟');">
+                                    @csrf
+                                    <button type="submit"
+                                            class="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold active:bg-emerald-700">
+                                        ارسال پیامک رسید به مشتری
+                                    </button>
+                                    <p class="text-[10px] text-gray-400 mt-1.5 text-center">فقط یک‌بار قابلِ ارسال است.</p>
+                                </form>
+                            @endif
+                        </div>
                     </li>
                 @endforeach
             </ul>

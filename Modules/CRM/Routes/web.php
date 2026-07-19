@@ -715,6 +715,9 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('orders/{order}/schedule-visit', [TechPanelDashboardController::class, 'scheduleVisit'])->name('orders.schedule-visit');
         Route::post('orders/{order}/call-result', [TechPanelDashboardController::class, 'callResult'])->name('orders.call-result');
         Route::post('orders/{order}/deliver-sms', [TechPanelDashboardController::class, 'sendDeliverSms'])->name('orders.deliver-sms');
+        // ارسالِ دستیِ پیامکِ رسیدِ انتقال به مشتری — فقط یک‌بار توسطِ تکنسین.
+        Route::post('orders/{order}/transfer-receipt/{transferReceipt}/send-sms', [TechPanelDashboardController::class, 'sendTransferReceiptSms'])
+            ->name('orders.transfer-receipt.send-sms')->whereNumber('transferReceipt');
         Route::get('wallet', [TechPanelDashboardController::class, 'wallet'])->name('wallet');
         // شارژ کیف‌پول از طریق درگاه — هم‌ارز Tech_Payment پنل WP
         Route::get('wallet/recharge', [TechPanelDashboardController::class, 'walletRecharge'])->name('wallet.recharge');

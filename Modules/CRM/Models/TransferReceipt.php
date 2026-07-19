@@ -16,7 +16,18 @@ class TransferReceipt extends Model
 
     protected $fillable = [
         'order_id', 'code', 'token', 'description', 'created_by', 'created_by_tech_id',
+        'sms_sent_at', 'sms_sent_by',
     ];
+
+    protected $casts = [
+        'sms_sent_at' => 'datetime',
+    ];
+
+    /** آیا پیامکِ رسید قبلاً برای مشتری ارسال شده؟ */
+    public function smsSent(): bool
+    {
+        return $this->sms_sent_at !== null;
+    }
 
     protected static function booted(): void
     {
