@@ -33,16 +33,16 @@ class AnnouncementController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:200',
-            'body'  => 'required|string|max:5000',
+            'body' => 'required|string|max:5000',
         ], [
             'title.required' => 'عنوان اعلان را وارد کنید.',
-            'title.max'      => 'عنوان حداکثر ۲۰۰ کاراکتر است.',
-            'body.required'  => 'متن اعلان را وارد کنید.',
-            'body.max'       => 'متن اعلان حداکثر ۵۰۰۰ کاراکتر است.',
+            'title.max' => 'عنوان حداکثر ۲۰۰ کاراکتر است.',
+            'body.required' => 'متن اعلان را وارد کنید.',
+            'body.max' => 'متن اعلان حداکثر ۵۰۰۰ کاراکتر است.',
         ]);
 
         Announcement::create($validated + [
-            'is_active'  => true,
+            'is_active' => true,
             'created_by' => auth()->id(),
         ]);
 
@@ -56,11 +56,22 @@ class AnnouncementController extends Controller
         // pivot acknowledged_at — keyBy id برای lookup سریع در view
         $acked = $announcement->acks()->get()->keyBy('id');
 
+        // تکنسین‌های فعال — تأییدنکرده‌ها اول (برای پیگیریِ راحت‌تر)، سپس بر اساسِ نام.
         $technicians = Technician::where('status', 'active')
             ->orderBy('first_name')
-            ->get(['id', 'first_name', 'firstname_tech', 'mobile']);
+            ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile'])
+            ->sortBy(fn ($t) => ($acked->has($t->id) ? '1' : '0').mb_strtolower($t->full_name))
+            ->values();
 
-        return view('crm::announcements.show', compact('announcement', 'technicians', 'acked'));
+        $totalCount = $technicians->count();
+        $seenCount = $technicians->filter(fn ($t) => $acked->has($t->id))->count();
+        $pendingCount = $totalCount - $seenCount;
+        $percent = $totalCount > 0 ? (int) round($seenCount / $totalCount * 100) : 0;
+
+        return view('crm::announcements.show', compact(
+            'announcement', 'technicians', 'acked',
+            'totalCount', 'seenCount', 'pendingCount', 'percent'
+        ));
     }
 
     public function toggle(Announcement $announcement)
