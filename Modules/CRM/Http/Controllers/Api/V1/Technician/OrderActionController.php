@@ -360,6 +360,11 @@ class OrderActionController extends Controller
 
         $priceCustomer = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
         $costPrice = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+        if (! $isDraft && ! $isReturned && $priceCustomer <= 0) {
+            throw ValidationException::withMessages([
+                'price_customer' => 'برای بستن سفارش، مبلغ کل فاکتور باید بیشتر از صفر باشد.',
+            ]);
+        }
         if (! $isDraft && ! $isReturned && $priceCustomer < $costPrice) {
             throw ValidationException::withMessages([
                 'price_customer' => 'جمع کل مبلغ فاکتور نمی‌تواند کمتر از جمع هزینهٔ قطعات باشد.',

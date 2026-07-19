@@ -238,7 +238,7 @@ class DashboardController extends Controller
         $order->load([
             'customer', 'brand', 'device', 'province', 'city',
             'customerAddress.province', 'customerAddress.city', 'customerAddress.district',
-            'items', 'statusLogs.changer',
+            'items', 'statusLogs.changer', 'transferReceipts',
         ]);
 
         // پیش‌فاکتورهای همین سفارش که خودِ تکنسین ساخته — برای دسترسی از صفحهٔ سفارش.
@@ -389,6 +389,14 @@ class DashboardController extends Controller
             // به ورودی کاربر اعتماد کنیم چون مبنای محاسبه سهم تکنسین است.
             $effectivePriceCustomer = (int) ($updates['price_customer'] ?? $order->price_customer ?? 0);
             $effectiveCostPrice = (int) ($updates['cost_price'] ?? $order->cost_price ?? 0);
+
+            // بستنِ سفارش با مبلغِ خالی یا صفر مجاز نیست — فاکتور باید مبلغِ واقعی
+            // داشته باشد. پیش‌نویس و سفارش‌های برگشتیِ رایگان (return_type) مستثنا.
+            if (! $isDraft && ! $isReturned && $effectivePriceCustomer <= 0) {
+                return back()->withInput()->withErrors([
+                    'price_customer' => 'برای بستن سفارش، مبلغ کل فاکتور باید بیشتر از صفر باشد.',
+                ]);
+            }
 
             // قاعده: جمع کل مبلغ فاکتور نباید کمتر از جمع هزینهٔ قطعات باشد.
             // بدون این چک، max(0, …) پایین مقدار منفی را به صفر کلمپ می‌کرد و
