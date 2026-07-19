@@ -117,11 +117,12 @@ class OrderActionController extends Controller
             }
         }
 
-        // رسیدِ انتقالِ خودکار هنگامِ Open (اگر فعال).
+        // رسیدِ انتقال هنگامِ Open ساخته می‌شود — بدونِ پیامکِ خودکار. ارسالِ
+        // پیامک دستی و فقط یک‌بار توسطِ تکنسین انجام می‌شود.
         if ($newStatus === OrderStatus::Open && TransferReceiptService::enabled()) {
             try {
                 app(TransferReceiptService::class)
-                    ->createAndNotify($order->refresh(), $description !== '' ? $description : null, $tech->user_id, $tech->id);
+                    ->create($order->refresh(), $description !== '' ? $description : null, $tech->user_id, $tech->id);
             } catch (\Throwable $e) {
             }
         }

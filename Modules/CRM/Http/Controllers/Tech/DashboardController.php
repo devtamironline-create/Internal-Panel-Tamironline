@@ -473,13 +473,14 @@ class DashboardController extends Controller
         }
 
         // رسیدِ انتقال — وقتی تکنسین سفارش را به «انتقال به تعمیرگاه» (Open)
-        // می‌برد، رسیدِ انتقال به‌صورت خودکار از روی توضیحِ همان وضعیت ساخته و
-        // لینکش برای مشتری پیامک می‌شود (در اپ مشتری و همان سفارش دیده شود).
-        // فقط وقتی قابلیت فعال است؛ خرابیِ آن نباید ثبتِ وضعیت را بشکند.
+        // می‌برد، رسیدِ انتقال از روی توضیحِ همان وضعیت ساخته می‌شود — ولی پیامک
+        // خودکار فرستاده نمی‌شود؛ تکنسین باید در صفحهٔ سفارش دستی و فقط یک‌بار
+        // پیامک را ارسال کند. فقط وقتی قابلیت فعال است؛ خرابیِ آن نباید ثبتِ
+        // وضعیت را بشکند.
         if ($newStatus === OrderStatus::Open && \Modules\CRM\Services\TransferReceiptService::enabled()) {
             try {
                 app(\Modules\CRM\Services\TransferReceiptService::class)
-                    ->createAndNotify($order->refresh(), $description !== '' ? $description : null, $tech->user_id, $tech->id);
+                    ->create($order->refresh(), $description !== '' ? $description : null, $tech->user_id, $tech->id);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('tech_panel.transfer_receipt_failed', [
                     'order_id' => $order->id,
@@ -516,6 +517,32 @@ class DashboardController extends Controller
         return redirect()
             ->route('tech.orders.show', $order)
             ->with('success', 'پیامک آماده تحویل برای مشتری ارسال شد.');
+    }
+
+    /**
+     * ارسالِ دستیِ پیامکِ رسیدِ انتقال به مشتری — فقط یک‌بار. اگر قبلاً ارسال
+     * شده باشد، دوباره ارسال نمی‌شود (قانون: تکنسین فقط یک‌بار). ارسالِ مجدد
+     * فقط از پنلِ ادمین (با دسترسیِ مربوطه) ممکن است.
+     */
+    public function sendTransferReceiptSms(Order $order, \Modules\CRM\Models\TransferReceipt $transferReceipt)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwnership($order, $tech);
+
+        if ((int) $transferReceipt->order_id !== (int) $order->id) {
+            abort(404);
+        }
+
+        if ($transferReceipt->smsSent()) {
+            return back()->with('error', 'پیامکِ این رسید قبلاً ارسال شده است و فقط یک‌بار قابلِ ارسال است.');
+        }
+
+        $sent = app(\Modules\CRM\Services\TransferReceiptService::class)
+            ->sendSms($order, $transferReceipt, $tech->user_id, false);
+
+        return $sent
+            ? back()->with('success', 'پیامکِ رسیدِ انتقال برای مشتری ارسال شد.')
+            : back()->with('error', 'پیامکِ این رسید قبلاً ارسال شده است.');
     }
 
     public function addOrderNote(Request $request, Order $order)

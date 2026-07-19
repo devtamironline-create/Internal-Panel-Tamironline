@@ -26,20 +26,52 @@ class TransferReceiptService
     }
 
     /**
-     * رسید را می‌سازد و لینکش را با SMS برای مشتری می‌فرستد.
+     * فقط رسید را می‌سازد (بدونِ ارسالِ پیامک). ارسالِ پیامک جداگانه و «دستی»
+     * توسطِ تکنسین انجام می‌شود (sendSms) تا فقط یک‌بار و با ارادهٔ او فرستاده شود.
      */
-    public function createAndNotify(Order $order, ?string $description, ?int $userId = null, ?int $techId = null): TransferReceipt
+    public function create(Order $order, ?string $description, ?int $userId = null, ?int $techId = null): TransferReceipt
     {
-        $receipt = TransferReceipt::create([
+        return TransferReceipt::create([
             'order_id' => $order->id,
             'description' => $description,
             'created_by' => $userId,
             'created_by_tech_id' => $techId,
         ]);
+    }
+
+    /**
+     * رسید را می‌سازد و بلافاصله پیامک را می‌فرستد (برای ثبتِ ادمین که خودش
+     * می‌خواهد همان لحظه اطلاع‌رسانی شود). با force، محدودیتِ «یک‌بار» را دور می‌زند.
+     */
+    public function createAndNotify(Order $order, ?string $description, ?int $userId = null, ?int $techId = null): TransferReceipt
+    {
+        $receipt = $this->create($order, $description, $userId, $techId);
+        $this->sendSms($order, $receipt, $userId, true);
+
+        return $receipt;
+    }
+
+    /**
+     * ارسالِ پیامکِ رسید به مشتری. به‌صورتِ پیش‌فرض «یک‌بار»؛ اگر قبلاً ارسال شده
+     * باشد و force نباشد، دوباره ارسال نمی‌شود و false برمی‌گرداند (قانونِ تکنسین:
+     * فقط یک‌بار). ادمین می‌تواند با force=true ارسالِ مجدد کند.
+     *
+     * @return bool موفقیتِ ارسال (یا false اگر قبلاً ارسال شده و force نبود)
+     */
+    public function sendSms(Order $order, TransferReceipt $receipt, ?int $userId = null, bool $force = false): bool
+    {
+        if (! $force && $receipt->sms_sent_at !== null) {
+            return false;
+        }
 
         $this->notify($order, $receipt, $userId);
 
-        return $receipt;
+        $receipt->forceFill([
+            'sms_sent_at' => now(),
+            'sms_sent_by' => $userId,
+        ])->save();
+
+        return true;
     }
 
     /**
