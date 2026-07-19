@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Modules\Site\Models\Article;
 use Modules\Site\Models\BlogTopic;
+use Modules\Site\Support\ArticleSeoTitle;
 use Modules\Site\Support\MediaUrl;
 
 /**
@@ -205,7 +206,9 @@ class BlogController extends Controller
 
         $payload = array_merge($this->shapeListItem($article), [
             'content' => $article->content,
-            'meta_title' => $article->meta_title,
+            // قالبِ Titleِ سئو: «{عنوانِ کوتاه} | تعمیرآنلاین» (~۶۵ کاراکتر، بدونِ
+            // پسوندهای اضافهٔ واردشده از وردپرس). H1/عنوانِ صفحه (title) دست‌نخورده.
+            'meta_title' => ArticleSeoTitle::build($article->meta_title ?: $article->title),
             'meta_description' => $article->meta_description,
             'views_count' => (int) $article->views_count,
             'devices' => $article->activeDevices->map(fn ($d) => [
