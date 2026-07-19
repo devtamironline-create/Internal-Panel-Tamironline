@@ -75,6 +75,7 @@ class PermissionSeeder extends Seeder
             'change-crm-order-status' => 'تغییر وضعیت سفارش CRM',
             'export-crm-orders' => 'خروجی Excel سفارش‌های CRM',
             'manage-order-security' => 'مدیریت موارد امنیتی (قفل/مشکوک به تقلب سفارش + بلاک مشتری)',
+            'manage-transfer-receipts' => 'مدیریت رسید انتقال (دیدن/ویرایش/حذف/ارسال مجدد پیامک)',
 
             // CRM - سفارش داخلی + QC
             'view-crm-internal-orders' => 'مشاهده سفارش‌های داخلی CRM',

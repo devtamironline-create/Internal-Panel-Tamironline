@@ -32,6 +32,48 @@ class TransferReceiptController extends Controller
             ->with('success', 'رسیدِ انتقال ثبت شد و لینکش برای مشتری پیامک شد: '.$receipt->code);
     }
 
+    /** ویرایشِ توضیحِ رسید — فقط با دسترسیِ manage-transfer-receipts (گیتِ روت). */
+    public function update(Request $request, Order $order, TransferReceipt $transferReceipt)
+    {
+        abort_unless((int) $transferReceipt->order_id === (int) $order->id, 404);
+
+        $data = $request->validate([
+            'description' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $transferReceipt->update(['description' => $data['description'] ?? null]);
+
+        return redirect()
+            ->route('crm.orders.show', $order)
+            ->with('success', 'توضیحِ رسیدِ انتقال به‌روزرسانی شد: '.$transferReceipt->code);
+    }
+
+    /** حذفِ رسید — فقط با دسترسیِ manage-transfer-receipts (گیتِ روت). */
+    public function destroy(Order $order, TransferReceipt $transferReceipt)
+    {
+        abort_unless((int) $transferReceipt->order_id === (int) $order->id, 404);
+
+        $code = $transferReceipt->code;
+        $transferReceipt->delete();
+
+        return redirect()
+            ->route('crm.orders.show', $order)
+            ->with('success', 'رسیدِ انتقال حذف شد: '.$code);
+    }
+
+    /** ارسالِ مجددِ پیامکِ رسید به مشتری — با force (محدودیتِ یک‌بارِ تکنسین را ندارد). */
+    public function resend(Order $order, TransferReceipt $transferReceipt)
+    {
+        abort_unless(TransferReceiptService::enabled(), 404);
+        abort_unless((int) $transferReceipt->order_id === (int) $order->id, 404);
+
+        app(TransferReceiptService::class)->sendSms($order, $transferReceipt, auth()->id(), true);
+
+        return redirect()
+            ->route('crm.orders.show', $order)
+            ->with('success', 'پیامکِ رسیدِ انتقال دوباره برای مشتری ارسال شد: '.$transferReceipt->code);
+    }
+
     public function print(TransferReceipt $transferReceipt)
     {
         return view('crm::transfer-receipts.print', $this->viewData($transferReceipt));

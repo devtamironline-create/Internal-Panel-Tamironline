@@ -7,7 +7,7 @@
     use Modules\CRM\Enums\OrderStatus;
     $adminNotes = $order->adminNotes()->with('user')->get();
 @endphp
-<div class="p-6 space-y-6" x-data="{ showNotes: false }">
+<div class="p-6 space-y-6" x-data="{ showNotes: false, showReceipts: false }">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">سفارش <span dir="ltr">{{ $order->order_code }}</span></h1>
@@ -105,6 +105,18 @@
                 @endif
             </button>
             @endcan
+            {{-- دکمهٔ مدیریت رسید انتقال — فقط با دسترسیِ manage-transfer-receipts --}}
+            @can('manage-transfer-receipts')
+            <button type="button" @click="showReceipts = true"
+                    class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg inline-flex items-center gap-2 text-sm font-bold"
+                    title="مدیریت رسید انتقال: مشاهده، ویرایش، حذف و ارسال مجدد پیامک">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 014-4h4m0 0l-3-3m3 3l-3 3M3 7h6a2 2 0 012 2v0"/></svg>
+                رسید انتقال
+                @if($order->transferReceipts->isNotEmpty())
+                    <span class="text-[10px] bg-white text-teal-700 rounded-full px-1.5 py-0.5 font-bold">{{ $order->transferReceipts->count() }}</span>
+                @endif
+            </button>
+            @endcan
             @can('edit-crm-order')
             <a href="{{ route('crm.orders.edit', $order) }}" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">ویرایش</a>
             @endcan
@@ -177,6 +189,80 @@
             </div>
         </div>
     </div>
+
+    {{-- ─── Modal مدیریت رسید انتقال (فقط با دسترسیِ manage-transfer-receipts) ─── --}}
+    @can('manage-transfer-receipts')
+    <div x-show="showReceipts" x-cloak @keydown.escape.window="showReceipts = false"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         @click.self="showReceipts = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+             x-transition.scale.duration.150ms>
+            <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">
+                    مدیریت رسید انتقال
+                    <span class="text-xs text-gray-500 font-normal mr-2">({{ $order->transferReceipts->count() }} رسید)</span>
+                </h2>
+                <button type="button" @click="showReceipts = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto flex-1">
+                @if($order->transferReceipts->isEmpty())
+                    <p class="text-sm text-gray-400 text-center py-6">برای این سفارش رسید انتقالی ثبت نشده.</p>
+                @else
+                    <ul class="space-y-4">
+                        @foreach($order->transferReceipts as $tr)
+                            <li class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between gap-2 mb-3">
+                                    <div class="min-w-0">
+                                        <span class="font-mono text-sm font-bold text-gray-800 dark:text-gray-100" dir="ltr">{{ $tr->code }}</span>
+                                        <span class="text-[11px] text-gray-400 mr-2" dir="ltr">@jdatetime($tr->created_at)</span>
+                                    </div>
+                                    <a href="{{ route('crm.transfer-receipt.public', $tr->token) }}" target="_blank" rel="noopener"
+                                       class="flex-shrink-0 text-xs font-bold text-teal-700 bg-teal-50 rounded-lg px-3 py-1.5">مشاهده / چاپ ↗</a>
+                                </div>
+
+                                {{-- وضعیت پیامک --}}
+                                <div class="text-xs mb-3">
+                                    @if($tr->smsSent())
+                                        <span class="text-emerald-600 font-bold">پیامک ارسال شد</span>
+                                        <span class="text-gray-400" dir="ltr">— @jdatetime($tr->sms_sent_at)</span>
+                                    @else
+                                        <span class="text-amber-600 font-bold">پیامک هنوز ارسال نشده</span>
+                                    @endif
+                                </div>
+
+                                {{-- ویرایش توضیح --}}
+                                <form method="POST" action="{{ route('crm.orders.transfer-receipt.update', [$order, $tr]) }}" class="space-y-2 mb-2">
+                                    @csrf @method('PUT')
+                                    <textarea name="description" rows="2" maxlength="2000"
+                                              class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm"
+                                              placeholder="توضیح رسید...">{{ $tr->description }}</textarea>
+                                    <button type="submit" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold">ذخیره توضیح</button>
+                                </form>
+
+                                {{-- ارسال مجدد پیامک + حذف --}}
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <form method="POST" action="{{ route('crm.orders.transfer-receipt.resend', [$order, $tr]) }}"
+                                          onsubmit="return confirm('پیامک رسید دوباره برای مشتری ارسال شود؟');">
+                                        @csrf
+                                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">ارسال مجدد پیامک</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('crm.orders.transfer-receipt.destroy', [$order, $tr]) }}" class="mr-auto"
+                                          onsubmit="return confirm('این رسید انتقال حذف شود؟ این کار قابل بازگشت نیست.');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold">حذف رسید</button>
+                                    </form>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endcan
 
     @if(session('success'))
     <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
