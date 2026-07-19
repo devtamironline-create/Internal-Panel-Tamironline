@@ -252,11 +252,38 @@
 
         function el(id) { return document.getElementById(id); }
 
+        // ─── حافظهٔ محلیِ «دیده‌شده» ─────────────────────────────────
+        // علتِ لوپ: ackِ سمتِ سرور یک fetchِ ساده بود که اگر اپ در موبایل
+        // بک‌گراند/ری‌لود می‌شد قبل از تکمیل، مرورگر آن را کنسل می‌کرد و اعلان
+        // «دیده‌نشده» می‌ماند و دوباره نمایش داده می‌شد. حالا:
+        //   ۱) idِ دیده‌شده در localStorage ذخیره می‌شود تا روی همین دستگاه
+        //      دیگر هرگز دوباره نمایش داده نشود (حتی اگر ackِ سرور گم شود).
+        //   ۲) خودِ ack با keepalive فرستاده می‌شود تا با unloadِ صفحه کنسل نشود.
+        var SEEN_KEY = 'techAnnSeen';
+        function seenGet() {
+            try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]') || []; }
+            catch (e) { return []; }
+        }
+        function seenHas(id) { return seenGet().indexOf(id) !== -1; }
+        function seenAdd(id) {
+            try {
+                var s = seenGet();
+                if (s.indexOf(id) === -1) {
+                    s.push(id);
+                    if (s.length > 300) s = s.slice(-300); // کران تا رشد نکند
+                    localStorage.setItem(SEEN_KEY, JSON.stringify(s));
+                }
+            } catch (e) {}
+        }
+
         function ack(id) {
-            // insertOrIgnore سمتِ سرور → تکرارِ درخواست بی‌ضرر است.
+            // insertOrIgnore سمتِ سرور → تکرارِ درخواست بی‌ضرر است. keepalive تضمین
+            // می‌کند حتی اگر صفحه بلافاصله بسته/ری‌لود شود، درخواست کامل برسد.
             return fetch('/tech/announcements/' + id + '/ack', {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                keepalive: true,
             }).catch(function () {});
         }
 
@@ -270,9 +297,9 @@
             if (b) b.textContent = current.body;
             if (d) d.textContent = current.date;
             modal.style.display = 'flex';
-            // «دیدن = تأیید»: همان لحظه‌ی نمایش ack ثبت می‌شود تا با رفرش/ناوبری
-            // دوباره نمایش داده نشود — قبلاً فقط با کلیکِ موفقِ دکمه ثبت می‌شد و
-            // اگر درخواست شکست می‌خورد یا کاربر صفحه را می‌بست، اعلان برمی‌گشت.
+            // «دیدن = تأیید»: همان لحظه‌ی نمایش، هم در localStorage علامت می‌خورد
+            // (تا روی این دستگاه دیگر نمایش داده نشود) و هم ackِ سرور فرستاده می‌شود.
+            seenAdd(current.id);
             ack(current.id);
         }
 
@@ -295,6 +322,9 @@
                 (json.items || []).forEach(function (item) {
                     if (known[item.id]) return;
                     known[item.id] = true;
+                    // اگر روی این دستگاه قبلاً دیده/تأیید شده، دوباره در صف نگذار
+                    // (شکستنِ لوپ حتی وقتی ackِ سرور گم شده باشد).
+                    if (seenHas(item.id)) return;
                     queue.push(item);
                 });
                 // بج اعلانات روی داشبورد (اگر در صفحهٔ جاری وجود دارد)
