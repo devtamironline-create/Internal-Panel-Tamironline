@@ -86,24 +86,31 @@
             </div>
         </form>
 
-        {{-- Filter chips --}}
-        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            @foreach($filterChips as $chip)
-                @php
-                    $isActive = (string) $chip['value'] === (string) $statusFilter;
-                    $params = array_filter([
-                        'q' => $search,
-                        'status' => $chip['value'],
-                    ], fn($v) => $v !== null && $v !== '');
-                    $url = route('tech.orders') . ($params ? '?' . http_build_query($params) : '');
-                @endphp
-                <a href="{{ $url }}"
-                   class="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium border transition
-                          {{ $isActive ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-gray-600 border-gray-200' }}">
-                    {{ $chip['label'] }}
-                </a>
-            @endforeach
-        </div>
+        {{-- فیلترِ وضعیت — یک منوی سادهٔ کشویی (برای استفادهٔ آسان). با انتخابِ هر
+             گزینه خودکار فیلتر می‌شود؛ نیازی به دکمهٔ جداگانه نیست. --}}
+        <label for="status-filter" class="block text-[11px] font-medium text-gray-400 mb-1.5">
+            نمایش سفارش‌ها بر اساس وضعیت
+        </label>
+        <form method="GET" action="{{ route('tech.orders') }}">
+            @if($search)
+                <input type="hidden" name="q" value="{{ $search }}">
+            @endif
+            <div class="relative">
+                <select id="status-filter" name="status" onchange="this.form.submit()"
+                        class="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl py-3 pr-4 pl-11 text-sm font-bold text-gray-900 focus:bg-white focus:border-brand-400 focus:outline-none">
+                    @foreach($filterChips as $chip)
+                        <option value="{{ $chip['value'] }}" @selected((string) $chip['value'] === (string) $statusFilter)>
+                            {{ $chip['label'] }}
+                        </option>
+                    @endforeach
+                </select>
+                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </span>
+            </div>
+        </form>
     </div>
 
     {{-- ─────── Orders list ─────── --}}
