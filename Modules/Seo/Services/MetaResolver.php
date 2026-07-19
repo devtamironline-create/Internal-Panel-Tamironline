@@ -68,6 +68,13 @@ class MetaResolver
             $context
         );
 
+        // مقالاتِ بلاگ: Title باید کوتاه و یکدست باشد «{عنوانِ کوتاه} | تعمیرآنلاین»
+        // (~۶۵ کاراکتر) — بدونِ پسوندهای اضافهٔ واردشده از وردپرس که Titleِ مقالات
+        // را از حدِ سئو رد می‌کردند. فقط نوعِ article؛ خدمات/برندها دست‌نخورده.
+        if ($type === 'article' && $title !== null && trim($title) !== '') {
+            $title = \Modules\Site\Support\ArticleSeoTitle::build($title);
+        }
+
         $description = $this->variables->render(
             self::pick($meta?->description, $this->template($type, 'description')),
             $context
