@@ -11,7 +11,7 @@
                 @csrf
                 <button type="submit" class="px-3 py-2 rounded-lg text-sm font-medium
                         {{ $announcement->is_active ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' }}">
-                    {{ $announcement->is_active ? 'غیرفعال کن' : 'فعال کن' }}
+                    {{ $announcement->is_active ? 'غیرفعال' : 'فعال' }}
                 </button>
             </form>
             <a href="{{ route('crm.announcements.index') }}" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">

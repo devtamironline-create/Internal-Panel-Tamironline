@@ -97,7 +97,7 @@
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-medium
                                             {{ $a->is_active ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' }}">
-                                        {{ $a->is_active ? 'غیرفعال کن' : 'فعال کن' }}
+                                        {{ $a->is_active ? 'غیرفعال' : 'فعال' }}
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ route('crm.announcements.destroy', $a) }}"
