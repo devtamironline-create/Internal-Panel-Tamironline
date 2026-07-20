@@ -61,8 +61,15 @@ class CreateOrderRequest extends FormRequest
             'device_id' => 'required|integer|exists:crm_devices,id,is_active_app,1',
             'brand_id' => 'nullable|integer|exists:crm_brands,id,is_active,1',
 
-            'objection_ids' => 'nullable|array|max:10',
-            'objection_ids.*' => 'integer|exists:crm_objections,id,is_active,1',
+            // ایرادها: برای «تعمیر» حداقل ۱ و حداکثر ۳ عنصر الزامی؛ برای سایر
+            // نوع‌های خدمت (service/install) اختیاری/خالی. هر id باید یکتا، فعال و
+            // متعلق به همین device_id باشد (چکِ تعلق در withValidator).
+            'objection_ids' => [
+                'array',
+                'max:3',
+                Rule::requiredIf(fn () => $this->input('order_type') === 'repair'),
+            ],
+            'objection_ids.*' => ['integer', 'distinct', 'exists:crm_objections,id,is_active,1'],
             'problem_description' => 'nullable|string|max:2000',
             'problem_title' => 'nullable|string|max:200',
 
@@ -89,6 +96,30 @@ class CreateOrderRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
+        // ایرادهای انتخاب‌شده باید متعلق به همان دستگاه باشند (crm_device_objection).
+        $validator->after(function ($v) {
+            $deviceId = (int) $this->input('device_id');
+            $ids = collect((array) $this->input('objection_ids', []))
+                ->filter(fn ($x) => is_numeric($x))
+                ->map(fn ($x) => (int) $x)
+                ->unique()
+                ->values();
+
+            if ($deviceId <= 0 || $ids->isEmpty()) {
+                return;
+            }
+
+            $ownedIds = \Modules\CRM\Models\Objection::query()
+                ->whereIn('id', $ids)
+                ->whereHas('devices', fn ($q) => $q->where('crm_devices.id', $deviceId))
+                ->pluck('id')
+                ->all();
+
+            if ($ids->diff($ownedIds)->isNotEmpty()) {
+                $v->errors()->add('objection_ids', 'برخی از ایرادهای انتخاب‌شده متعلق به این دستگاه نیستند.');
+            }
+        });
+
         $validator->after(function ($v) {
             $date = $this->input('scheduled_date');
             if (! $date) {
@@ -134,6 +165,12 @@ class CreateOrderRequest extends FormRequest
             'order_type.in' => 'نوع خدمت نامعتبر است.',
             'device_id.required' => 'انتخاب دستگاه الزامی است.',
             'device_id.exists' => 'دستگاه انتخاب‌شده نامعتبر است.',
+            'objection_ids.required' => 'برای تعمیر، انتخاب حداقل یک ایراد الزامی است.',
+            'objection_ids.array' => 'فهرست ایرادها نامعتبر است.',
+            'objection_ids.max' => 'حداکثر ۳ ایراد می‌توانید انتخاب کنید.',
+            'objection_ids.*.distinct' => 'ایرادهای تکراری مجاز نیستند.',
+            'objection_ids.*.exists' => 'ایراد انتخاب‌شده نامعتبر است.',
+            'objection_ids.*.integer' => 'شناسه ایراد نامعتبر است.',
             'scheduled_date.required' => 'تاریخ مراجعه الزامی است.',
             'scheduled_date.date_format' => 'فرمت تاریخ مراجعه نامعتبر است. شمسی یا میلادی به شکل YYYY-MM-DD یا YYYY/MM/DD.',
             'scheduled_date.after_or_equal' => 'تاریخ مراجعه نمی‌تواند قبل از امروز باشد.',
