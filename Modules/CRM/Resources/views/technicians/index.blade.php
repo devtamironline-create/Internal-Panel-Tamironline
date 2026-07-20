@@ -56,11 +56,17 @@
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">تکنسین‌های فعال</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">مدیریت تکنسین‌های در حال فعالیت (جدا از پیش‌ثبت‌نام)</p>
         </div>
-        <div class="flex items-center gap-2">
-            <a href="{{ route('crm.technicians.export', ['format' => 'xlsx'] + request()->query()) }}"
-               class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
+        <div class="flex items-center gap-2 flex-wrap">
+            {{-- خروجی اکسلِ مستقیمِ «تکنسین‌های فعال» — با یک کلیک، بدونِ نیاز به فیلتر --}}
+            <a href="{{ route('crm.technicians.export', ['format' => 'xlsx', 'status' => 'active']) }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-bold">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Excel
+                خروجی اکسل تکنسین‌های فعال
+            </a>
+            <a href="{{ route('crm.technicians.export', ['format' => 'xlsx'] + request()->query()) }}"
+               class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 text-sm" title="خروجی اکسل با فیلترهای فعلی">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Excel (فیلتر فعلی)
             </a>
             <a href="{{ route('crm.technicians.export', ['format' => 'csv'] + request()->query()) }}"
                class="inline-flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
