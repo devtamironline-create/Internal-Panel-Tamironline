@@ -1,13 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\AnnouncementController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\AuthController;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\ChatController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\DashboardController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\InvoiceController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderActionController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\ProfileController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\ProformaController;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\TicketController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TrainingController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TransferReceiptController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\WalletController;
@@ -79,5 +82,23 @@ Route::prefix('v1/technician')->group(function () {
         // پروفایل
         Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('api.tech.profile.avatar');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('api.tech.profile.password');
+
+        // تیکتِ پشتیبانی + دسته‌ها (منوی «تیکت جدید»)
+        Route::get('/ticket-categories', [TicketController::class, 'categories'])->name('api.tech.ticket-categories');
+        Route::get('/tickets', [TicketController::class, 'index'])->name('api.tech.tickets.index');
+        Route::post('/tickets', [TicketController::class, 'store'])->name('api.tech.tickets.store');
+        Route::get('/tickets/{id}', [TicketController::class, 'show'])->whereNumber('id')->name('api.tech.tickets.show');
+        Route::post('/tickets/{id}/reply', [TicketController::class, 'reply'])->whereNumber('id')->name('api.tech.tickets.reply');
+
+        // چت با اپراتور
+        Route::get('/messages', [ChatController::class, 'index'])->name('api.tech.messages.index');
+        Route::post('/messages', [ChatController::class, 'send'])->name('api.tech.messages.send');
+        Route::get('/messages/unread', [ChatController::class, 'unread'])->name('api.tech.messages.unread');
+        Route::post('/messages/read', [ChatController::class, 'markRead'])->name('api.tech.messages.read');
+
+        // اعلانات
+        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('api.tech.announcements.index');
+        Route::get('/announcements/unacked', [AnnouncementController::class, 'unacked'])->name('api.tech.announcements.unacked');
+        Route::post('/announcements/{id}/ack', [AnnouncementController::class, 'ack'])->whereNumber('id')->name('api.tech.announcements.ack');
     });
 });

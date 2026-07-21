@@ -256,37 +256,40 @@ Res: `data` (فاکتورها: `invoice_code, status, total_amount, tech_share, 
 
 ---
 
-## ۱۲) قابلیت‌هایی که در وب هستند ولی هنوز اندپوینتِ موبایل ندارند
+## ۱۲) تیکت پشتیبانی، چت و اعلانات — **پیاده‌سازی شد** ✅
 
-> این سه حوزه در **پنلِ وبِ** تکنسین کامل‌اند ولی هنوز در API موبایل (`/v1/technician/*`)
-> پیاده نشده‌اند. قراردادِ زیر **پیشنهادِ هم‌ترازی** است؛ منطق/اعتبارسنجی باید
-> دقیقاً معادلِ نسخهٔ وب باشد (مرجع: `docs/TECH_PANEL_FEATURES.md`). تا زمانِ
-> پیاده‌سازی، اپ می‌تواند این بخش‌ها را با WebViewِ همان صفحاتِ `/tech/*` نشان دهد.
+> این سه حوزه اکنون در API موبایل هم موجودند (منطق دقیقاً معادلِ نسخهٔ وب).
 
-### ۱۲.۱) ورود با رمز (فعلاً فقط وب)
-معادلِ `POST /tech/auth/login-password`. پیشنهاد: `POST /v1/technician/auth/login-password`
-با `{ mobile, password }` و همان پاسخِ `verify-otp` (token + technician). فقط برای
-تکنسین‌هایی که رمز تنظیم کرده‌اند؛ پیامِ خطای عمومی (بدونِ افشای وجودِ کاربر).
+### ۱۲.۰) دسته‌های تیکت (منوی «تیکت جدید»)
+`GET /v1/technician/ticket-categories` → `{ success:true, data:[{ id, name }] }` — فقط دسته‌های `is_active=true`، مرتب با `sort_order`. **فیلدِ عددیِ `category_id` را به Select تبدیل کنید.**
 
-### ۱۲.۲) تیکتِ پشتیبانی
-- `GET /v1/technician/tickets?status=&page=` → فهرستِ تیکت‌های خودِ تکنسین (order+category).
-- `POST /v1/technician/tickets` — Body: `category_id` (اجباری، `exists`), `body` (اجباری، ≤۵۰۰۰), `order_id?` (اگر باشد باید مالِ تکنسین باشد), `subject?`, `image?` (تصویر ≤۳۰MB). وضعیتِ اولیه `open`.
-- `GET /v1/technician/tickets/{id}` → جزئیات + گفتگو (مالکیت اجباری).
-- `POST /v1/technician/tickets/{id}/reply` — روی تیکتِ `closed` مجاز نیست. Body: `body` (اجباری، ≤۵۰۰۰), `image?`. با هر پاسخ وضعیت `open` و `last_reply_at` به‌روز.
+### ۱۲.۱) تیکتِ پشتیبانی
+- `GET /v1/technician/tickets?status=&page=` → `data` (فهرستِ فشرده) + `meta` (صفحه‌بندیِ ۱۵تایی). `status ∈ {open, replied, closed, archived}`.
+- `POST /v1/technician/tickets` — `multipart/form-data`. Body: `category_id` (**اجباری**, `exists`), `body` (**اجباری**, string ≤۵۰۰۰), `order_id?` (اگر باشد باید مالِ تکنسین باشد وگرنه `422`), `subject?` (≤۲۰۰), **`image?`** (تصویر `jpeg,png,jpg,webp`, **`max:30720` KB ≈ ۳۰MB**). وضعیتِ اولیه `open`. → `201` با `data` (تیکت + `replies`).
+- `GET /v1/technician/tickets/{id}` → جزئیات + `replies[]` (مالکیت؛ غیرخودی `403`).
+- `POST /v1/technician/tickets/{id}/reply` — روی تیکتِ `closed` مجاز نیست (`422`). Body: `body` (**اجباری**, ≤۵۰۰۰), **`image?`** (همان قاعده، ۳۰MB). با هر پاسخ وضعیت `open` و `last_reply_at` به‌روز.
+- شکلِ تیکت: `{ id, subject, status, status_label, category:{id,name}, order:{id,order_code}, body, image_url, last_reply_at, created_at, replies:[{id, sender_type:'tech'|'operator', body, image_url, created_at}] }`.
+> **تأییدِ فرانت (بندِ ۵):** بله — کلیدِ تصویر `image` و سقفِ **۳۰MB** برای هم `POST /tickets` و هم `/tickets/{id}/reply` درست است.
 
-### ۱۲.۳) چت با اپراتور
-- `GET /v1/technician/messages?after_id=` → پیام‌ها (و علامتِ خوانده‌شدنِ پیام‌های اپراتور).
-- `POST /v1/technician/messages` — Body: `body` (اجباری، ≤۲۰۰۰). اگر اپراتوری تخصیص نیافته → `422`.
-- `GET /v1/technician/messages/unread` → `{ unread: count }` برای بَجِ ناوبری.
-> در وب با `poll?after_id=` هر چند ثانیه صدا می‌شود؛ در موبایل می‌توان از همان
-> الگوی polling یا در آینده WebSocket استفاده کرد.
+### ۱۲.۲) چت با اپراتور
+- `GET /v1/technician/messages?after_id=&before_id=&limit=` → `data: { operators:[{id,name}], messages:[{id, sender_type, body, created_at}], has_more_older }`. **این GET پیام‌های اپراتور را «خوانده» می‌کند** (بَجِ نخوانده صفر می‌شود).
+  - بدونِ پارامتر → آخرین `limit` پیام (پیش‌فرض ۵۰، سقف ۱۰۰).
+  - `after_id=` → پیام‌های جدیدتر (polling).
+  - `before_id=` → پیام‌های قدیمی‌تر (بارگذاریِ تدریجی؛ `has_more_older` می‌گوید باز هم قدیمی‌تر هست).
+- `POST /v1/technician/messages` — Body: `body` (اجباری، ≤۲۰۰۰). اگر اپراتوری تخصیص نیافته → `422` با پیامِ **«هنوز کارشناسی برای شما تخصیص داده نشده است.»** → `201`.
+- `GET /v1/technician/messages/unread` → `{ success:true, data:{ unread: count } }`.
+- `POST /v1/technician/messages/read` → علامتِ صریحِ «خوانده شد» (اگر نخواستید به `GET` تکیه کنید). `data:{ marked: n }`.
+> **پاسخِ بندِ ۲:** هم `GET /messages` خودکار خوانده می‌کند (مثلِ وب) و هم `POST /messages/read` صریح اضافه شد. **پاسخِ بندِ ۳:** صفحه‌بندی با `before_id`/`limit` اضافه شد.
 
-### ۱۲.۴) اعلانات
-- `GET /v1/technician/announcements` → اعلان‌های فعال + وضعیتِ تأییدِ همین تکنسین.
-- `GET /v1/technician/announcements/unacked` → `{ count, items:[{id,title,body,date}] }` (تأییدنشده‌ها، قدیمی‌ترین اول، حداکثر ۱۰) — برای پاپ‌آپ.
-- `POST /v1/technician/announcements/{id}/ack` → ثبتِ «متوجه شدم» (idempotent). `{ ok:true }`.
-> رفتارِ ضدِ‌لوپِ پاپ‌آپ (که در وب با `keepalive`+`localStorage` حل شد) باید در
-> اپ هم رعایت شود: ackِ سمتِ سرور idempotent است، اپ هم idِ دیده‌شده را محلی نگه دارد.
+### ۱۲.۳) اعلانات
+- `GET /v1/technician/announcements` → `data:[{ id, title, body, created_at, acknowledged, acknowledged_at }]`.
+- `GET /v1/technician/announcements/unacked` → `data:{ count, items:[{id,title,body,created_at}] }` — **قدیمی‌ترین اول، حداکثر ۱۰** (پابرجاست ✅ — پاسخِ بندِ ۵).
+- `POST /v1/technician/announcements/{id}/ack` → `{ success:true, message }` (idempotent).
+> رفتارِ ضدِ‌لوپِ پاپ‌آپ: ackِ سرور idempotent است؛ اپ هم idِ دیده‌شده را محلی (مثلِ `AsyncStorage`) نگه دارد تا با ری‌لود دوباره نمایش داده نشود.
+
+### ۱۲.۴) هنوز باقی‌مانده
+- **ورود با رمز:** فقط وب. پیشنهاد `POST /v1/technician/auth/login-password` با `{mobile,password}` و همان پاسخِ `verify-otp`.
+- **بندِ ۴ (WebSocket/Push):** فعلاً همان polling (پیام ۵s، اعلانات ۶۰s). کانالِ Reverb/Web Push در نقشهٔ آینده.
 
 ---
 
