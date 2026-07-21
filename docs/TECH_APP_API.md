@@ -98,7 +98,7 @@ Res: `{ "success": true, "data": { "technician": {...} } }`
   "id": 78904, "order_code": "ORD-2607-01330", "order_type": "repair", "subscription": null,
   "status": "open", "status_label": "باز شده", "status_badge": "...", "status_group": "in_progress",
   "is_final": false, "is_returned": false, "return_type": null,
-  "scheduled_at": "...", "scheduled_date": "2026-07-13",
+  "scheduled_at": "...", "scheduled_date": "2026-07-13", "can_schedule": true,
   "customer": { "name": "...", "mobile": "0912...", "phone": null, "contact_locked": false },
   "address": { "full_address": "...", "province": "تهران", "city": "تهران", "district": "منطقه 11",
                "postal_code": null, "latitude": 35.7, "longitude": 51.4, "has_coordinates": true },
@@ -126,6 +126,20 @@ Res: `{ "success": true, "data": { "technician": {...} } }`
 `new, coordinated, open, suspended, completed, cancelled, transit, declined,`
 `repair_started, awaiting_part` و … . برچسب/بَج/گروه از خودِ پاسخ می‌آید — hard-code نکنید.
 
+### تضمین‌ها و ماتریسِ فیلدهای الزامیِ هر گذار (پاسخِ سؤالِ ۳)
+
+- **`allowed_transitions` مرجعِ نهایی است:** کامل و محاسبه‌شدهٔ سرور. فرانت فقط همین‌ها را نشان دهد و هیچ گذارِ دیگری نسازد. هر `status` خارج از این فهرست → `422`.
+- **فیلدهای الزامیِ هر گذار** (به‌جز این‌ها، گذار فیلدِ اجباریِ دیگری ندارد — مثلاً `awaiting_part` نامِ قطعه نمی‌خواهد):
+
+| گذار | فیلدهای الزامی |
+|---|---|
+| `coordinated`, `suspended`, `declined`, `transit` | `description` (رشته، **حداقل ۱۵** حداکثر ۲۰۰۰) |
+| `completed` (غیرِ پیش‌نویس و غیرِ برگشتی) | `price_customer > 0`؛ `invoice_descripotion` (غیرخالی)؛ `device_img1` (عکس، مگر قبلاً آپلود شده)؛ و `price_customer ≥ Σ pieces.buy_price` |
+| `completed` با `save_as_draft=1` **یا** سفارشِ برگشتی (`return_type`) | هیچ‌کدام اجباری نیست (چک‌ها معاف) |
+| `open`, `repair_started`, `awaiting_part`, `awaiting_customer_approval` | هیچ فیلدِ اجباری‌ای ندارند (`description` اختیاری) |
+
+> `pieces[]`، `hire/transportation/discount` همه اختیاری‌اند؛ `total_invoice` را سرور خودش = `max(0, price_customer − Σ buy_price)` حساب می‌کند (ورودیِ کاربر نادیده).
+
 ---
 
 ## ۴) اکشن‌های سفارش (نوشتن)
@@ -145,6 +159,11 @@ Res: `{ "success": true, "data": { "technician": {...} } }`
 ### `POST /v1/technician/orders/{id}/schedule-visit`  (auth)
 Body: `{ "visit_date": "2026-07-15", "visit_slot": 1..4 }` یا `{ "clear": true }` برای پاک‌کردن.
 اگر سفارش `new` بود، خودکار `coordinated` و پیامکِ هماهنگی می‌رود. Res: `{ success, message }`.
+
+**مجاز فقط در فازِ هماهنگی — سرور enforce می‌کند (پاسخِ سؤالِ ۱):**
+- وضعیت‌های مجاز: **`new`, `awaiting_coordination`, `no_answer`, `coordinated`**. در هر وضعیتِ دیگر (`open`, `repair_started`, `awaiting_part`, … و نهایی‌ها) → **`422`** با پیامِ «تنظیم زمان مراجعه فقط در فازِ هماهنگی…». همین قانون برای `{"clear": true}` هم برقرار است.
+- به‌جای حدس، از فیلدِ **`can_schedule` (boolean)** در پاسخِ جزئیاتِ سفارش استفاده کنید (کنارِ `allowed_transitions`). اگر `false` بود، دکمهٔ زمان‌بندی را نشان ندهید/غیرفعال کنید.
+- تغییرِ چندبارهٔ زمان: **سقفی ندارد**. پیامکِ هماهنگی **فقط وقتی** می‌رود که این اکشن باعثِ گذارِ `new/…→coordinated` شود (یعنی بارِ اولی که هماهنگ می‌شود). تغییرِ زمان روی سفارشی که از قبل `coordinated` است، **پیامکِ جدید نمی‌فرستد** (فقط `visit_scheduled_at` به‌روز می‌شود). پس متنِ هشدارِ «پیامکِ مجدد» لازم نیست.
 
 ### `POST /v1/technician/orders/{id}/notes`  (auth)
 Body: `{ "note": "..." }`. روی سفارشِ نهایی مجاز نیست (`422`). Res: `{ success, message }`.
@@ -167,6 +186,13 @@ Body: `{ "note": "..." }`. روی سفارشِ نهایی مجاز نیست (`42
   وضعیت «مشتری پاسخگو نیست» می‌شود و دلیل در تاریخچه ثبت می‌شود.
 - راهِ فرارِ «تماس برقرار نشد» که فقط مودال را می‌بندد.
 Res: `{ success, message, data: { status, next_action, has_default_time? } }`.
+
+**پاسخِ سؤال‌های باز (بندِ ۲):**
+- **در کدام وضعیت‌ها معنا دارد؟** فقط در **فازِ هماهنگی** (`new`, `awaiting_coordination`, `no_answer`). سرور روی سفارشِ **نهایی** آن را رد می‌کند (`422`). در `coordinated`/`open` به بعد نتیجهٔ تماس **وضعیت را عوض نمی‌کند** — اگر مایلید در `coordinated` هم برای هماهنگیِ مجدد بپرسید اشکالی ندارد، ولی معمولاً UI فقط در فازِ هماهنگی نشان می‌دهد.
+- **`no_answer` وضعیت را عوض می‌کند؟** بله — اگر در فازِ هماهنگی باشد و از قبل `no_answer` نباشد، وضعیت به `no_answer` می‌رود و `reason` در تاریخچه لاگ می‌شود. خارج از فازِ هماهنگی فقط لاگ می‌شود.
+- **سقفِ `no_answer`؟** فعلاً **سقف/شمارنده‌ای نیست** (نه تعلیقِ خودکار، نه برگشتِ خودکار به اپراتور). اگر بخواهید شمارنده + سقف (مثلاً بعد از ۳ بار → تعلیق/اطلاع به اپراتور) اضافه کنیم، یک درخواستِ جدا بدهید تا پیاده‌سازی شود.
+- **`has_default_time`؟** دقیقاً وقتی `true` است که سفارش از قبل `visit_scheduled_at` داشته باشد (سفارش از اپِ مشتری با روز/ساعتِ پیشنهادی آمده). تغییرِ زمانِ پیشنهادی **فرایندِ متفاوتی ندارد** — همان `schedule-visit` است؛ اگر باعثِ گذار به `coordinated` شود پیامکِ هماهنگی می‌رود، وگرنه نه.
+- **«تماس برقرار نشد» (اشغال/خاموش):** فعلاً endpointِ جدا نمی‌خواهیم؛ اگر خواستید ثبت شود، همان `no_answer` را با `reason` مثلِ «خط اشغال بود» بفرستید (لاگ می‌شود). اگر نوعِ مجزا لازم شد بگویید تا `result: "unreachable"` اضافه کنیم.
 
 ### `POST /v1/technician/orders/{id}/transfer-receipt`  (auth)
 ثبتِ **دستیِ** رسیدِ انتقال (علاوه بر ساختِ خودکار هنگامِ `open`). فقط وقتی قابلیت

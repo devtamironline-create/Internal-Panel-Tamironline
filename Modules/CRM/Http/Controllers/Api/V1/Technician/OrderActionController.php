@@ -147,8 +147,11 @@ class OrderActionController extends Controller
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
 
-        if ($order->status->isFinal()) {
-            throw ValidationException::withMessages(['status' => 'تنظیم زمان مراجعه روی سفارش‌های نهایی مجاز نیست.']);
+        // فقط در فازِ هماهنگی — پس از خروج (باز/شروع تعمیر/…) قفل است (enforce سمتِ سرور).
+        if (! $order->status->allowsVisitScheduling()) {
+            throw ValidationException::withMessages([
+                'status' => 'تنظیم زمان مراجعه فقط در فازِ هماهنگی (جدید/هماهنگ‌شده) ممکن است.',
+            ]);
         }
 
         // پاک‌کردن

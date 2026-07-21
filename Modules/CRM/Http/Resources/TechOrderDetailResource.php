@@ -55,6 +55,9 @@ class TechOrderDetailResource extends JsonResource
 
             'scheduled_at' => $this->visit_scheduled_at?->utc()->toIso8601String(),
             'scheduled_date' => $this->visit_scheduled_at?->format('Y-m-d'),
+            // آیا تکنسین همین حالا مجاز است زمانِ مراجعه را تنظیم/تغییر/پاک کند؟
+            // (سرور enforce می‌کند — فرانت نباید حدس بزند.)
+            'can_schedule' => (bool) $status?->allowsVisitScheduling(),
 
             'customer' => [
                 'name' => $this->customer_name ?: ($this->customer->display_name ?? null),

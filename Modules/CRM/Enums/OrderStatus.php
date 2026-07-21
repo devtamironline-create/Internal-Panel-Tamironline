@@ -248,6 +248,19 @@ enum OrderStatus: string
     }
 
     /**
+     * آیا در این وضعیت، تکنسین می‌تواند «زمانِ مراجعه» را تنظیم/تغییر/پاک کند؟
+     * فقط در فازِ هماهنگی معنا دارد (جدید/در انتظار هماهنگی/پاسخگو‌نیست/هماهنگ‌شده).
+     * پس از خروج از این فاز (باز/شروع تعمیر/انتظار قطعه/… و وضعیت‌های نهایی) قفل است.
+     */
+    public function allowsVisitScheduling(): bool
+    {
+        return match ($this) {
+            self::New, self::AwaitingCoordination, self::NoAnswer, self::Coordinated => true,
+            default => false,
+        };
+    }
+
+    /**
      * گروهِ گزارشیِ سه‌گانه — برای دسته‌بندیِ ساده‌ترِ تب‌ها و گزارش‌ها:
      * in_progress (در حال انجام) | waiting (در انتظار) | finished (پایان یافته).
      */
