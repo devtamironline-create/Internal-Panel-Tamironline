@@ -130,7 +130,7 @@ class OrderActionController extends Controller
         $order->load([
             'customer', 'brand', 'device', 'province', 'city',
             'customerAddress.province', 'customerAddress.city', 'customerAddress.district',
-            'items', 'statusLogs', 'transferReceipts',
+            'items', 'statusLogs', 'transferReceipts', 'objections',
         ]);
 
         return response()->json([

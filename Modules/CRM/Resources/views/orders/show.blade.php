@@ -399,8 +399,16 @@
                             <span class="text-gray-900 dark:text-gray-100 font-medium">{{ $order->device?->name ?: '—' }}</span>
                         </div>
                         <div class="flex items-start">
-                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">عنوان مشکل:</span>
-                            <span class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</span>
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">مشکل‌ها:</span>
+                            @if($order->objections->isNotEmpty())
+                                <span class="flex flex-wrap gap-1.5">
+                                    @foreach($order->objections as $obj)
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ $obj->name }}</span>
+                                    @endforeach
+                                </span>
+                            @else
+                                <span class="text-gray-900 dark:text-gray-100">{{ $order->problem_title ?: '—' }}</span>
+                            @endif
                         </div>
                         @if($order->problem_description)
                             <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">

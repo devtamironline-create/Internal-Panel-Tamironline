@@ -72,6 +72,10 @@ class TechOrderDetailResource extends JsonResource
             'problem' => [
                 'title' => $this->problem_title,
                 'description' => $this->problem_description,
+                // مشکل‌های ساختاریِ انتخاب‌شدهٔ مشتری (۱ تا ۳) — علاوه بر عنوانِ متنی.
+                'objections' => $this->whenLoaded('objections', fn () => $this->objections
+                    ->map(fn ($o) => ['id' => $o->id, 'title' => $o->name])
+                    ->values()),
             ],
 
             'tech_notes' => array_values(array_filter([

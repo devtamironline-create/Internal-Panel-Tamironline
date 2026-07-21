@@ -65,7 +65,7 @@ class OrderController extends Controller
         $order->load([
             'customer', 'brand', 'device', 'province', 'city',
             'customerAddress.province', 'customerAddress.city', 'customerAddress.district',
-            'items', 'statusLogs',
+            'items', 'statusLogs', 'objections',
             'proformas' => fn ($q) => $q->where('created_by_tech_id', $request->user()->id)->latest(),
             'transferReceipts',
         ]);

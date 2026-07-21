@@ -238,7 +238,7 @@ class DashboardController extends Controller
         $order->load([
             'customer', 'brand', 'device', 'province', 'city',
             'customerAddress.province', 'customerAddress.city', 'customerAddress.district',
-            'items', 'statusLogs.changer', 'transferReceipts',
+            'items', 'statusLogs.changer', 'transferReceipts', 'objections',
         ]);
 
         // پیش‌فاکتورهای همین سفارش که خودِ تکنسین ساخته — برای دسترسی از صفحهٔ سفارش.
