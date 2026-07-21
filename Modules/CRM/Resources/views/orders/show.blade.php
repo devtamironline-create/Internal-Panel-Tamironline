@@ -21,7 +21,7 @@
                 <span class="text-xs text-gray-500 dark:text-gray-400">ثبت شده در <span dir="ltr">@jdatetime($order->created_at)</span></span>
             </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
             {{-- ── دکمهٔ سوابق مشتری ── --}}
             @if($order->customer_id)
             <button type="button" @click="$dispatch('open-customer-history')"

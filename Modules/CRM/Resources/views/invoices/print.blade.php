@@ -15,10 +15,13 @@
     $customer = $invoice->customer;
     $order = $invoice->order;
 
-    // اولویت با مقادیر روی خود سفارش — این‌ها snapshot زمان سفارش‌اند
-    $custName   = $order?->customer_name   ?: ($customer->display_name ?? '—');
-    $custMobile = $order?->customer_mobile ?: ($customer->mobile ?? '');
-    $custPhone  = $order?->customer_phone  ?: ($customer->phone ?? '');
+    // اولویت با مشتریِ رسمیِ لینک‌شدهٔ فاکتور (همان که در صفحهٔ جزئیاتِ فاکتور
+    // نمایش داده می‌شود). snapshotِ روی سفارش فقط fallback است — چون نامِ روی
+    // سفارش می‌تواند قدیمی/اشتباه باشد و با مشتریِ واقعیِ فاکتور نخواند
+    // (مثلاً فاکتور به «فاطمه لامی» ولی snapshotِ سفارش «خانم یوسفی»).
+    $custName   = ($customer?->display_name) ?: ($order?->customer_name) ?: '—';
+    $custMobile = ($customer?->mobile)       ?: ($order?->customer_mobile) ?: '';
+    $custPhone  = ($customer?->phone)        ?: ($order?->customer_phone) ?: '';
 
     $cityName     = optional($order?->city)->name ?? '';
     $provinceName = optional($order?->province ?? null)->name ?? '';
