@@ -90,15 +90,17 @@ Route::prefix('v1/technician')->group(function () {
         Route::get('/tickets/{id}', [TicketController::class, 'show'])->whereNumber('id')->name('api.tech.tickets.show');
         Route::post('/tickets/{id}/reply', [TicketController::class, 'reply'])->whereNumber('id')->name('api.tech.tickets.reply');
 
-        // چت با اپراتور
-        Route::get('/messages', [ChatController::class, 'index'])->name('api.tech.messages.index');
-        Route::post('/messages', [ChatController::class, 'send'])->name('api.tech.messages.send');
-        Route::get('/messages/unread', [ChatController::class, 'unread'])->name('api.tech.messages.unread');
-        Route::post('/messages/read', [ChatController::class, 'markRead'])->name('api.tech.messages.read');
+        // چت با اپراتور + اعلانات — no.cache: پاسخ‌های بلادرنگ نباید توسطِ
+        // کشِ مرورگر/پروکسی/LiteSpeed ذخیره شوند (باگِ «پیام بعد از پاک‌کردنِ کش»).
+        Route::middleware('no.cache')->group(function () {
+            Route::get('/messages', [ChatController::class, 'index'])->name('api.tech.messages.index');
+            Route::post('/messages', [ChatController::class, 'send'])->name('api.tech.messages.send');
+            Route::get('/messages/unread', [ChatController::class, 'unread'])->name('api.tech.messages.unread');
+            Route::post('/messages/read', [ChatController::class, 'markRead'])->name('api.tech.messages.read');
 
-        // اعلانات
-        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('api.tech.announcements.index');
-        Route::get('/announcements/unacked', [AnnouncementController::class, 'unacked'])->name('api.tech.announcements.unacked');
-        Route::post('/announcements/{id}/ack', [AnnouncementController::class, 'ack'])->whereNumber('id')->name('api.tech.announcements.ack');
+            Route::get('/announcements', [AnnouncementController::class, 'index'])->name('api.tech.announcements.index');
+            Route::get('/announcements/unacked', [AnnouncementController::class, 'unacked'])->name('api.tech.announcements.unacked');
+            Route::post('/announcements/{id}/ack', [AnnouncementController::class, 'ack'])->whereNumber('id')->name('api.tech.announcements.ack');
+        });
     });
 });

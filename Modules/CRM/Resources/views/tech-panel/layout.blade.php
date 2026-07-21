@@ -316,7 +316,7 @@
 
         async function poll() {
             try {
-                var res = await fetch('{{ route('tech.announcements.unacked') }}', { headers: { 'Accept': 'application/json' } });
+                var res = await fetch('{{ route('tech.announcements.unacked') }}', { cache: 'no-store', headers: { 'Accept': 'application/json' } });
                 if (! res.ok) return;
                 var json = await res.json();
                 (json.items || []).forEach(function (item) {

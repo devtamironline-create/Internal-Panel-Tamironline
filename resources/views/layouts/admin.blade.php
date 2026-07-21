@@ -432,7 +432,7 @@
                         @auth
                         <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"
                            x-data="{ unread: 0 }"
-                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); setInterval(refresh, 20000); })()">
+                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { cache: 'no-store', headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); setInterval(refresh, 20000); })()">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                             <span>گفت‌وگو با تکنسین‌ها</span>
                             <span x-cloak x-show="unread > 0"

@@ -107,7 +107,7 @@
                 },
                 async poll() {
                     try {
-                        const res = await fetch('{{ route('tech.messages.poll') }}?after_id=' + this.lastId);
+                        const res = await fetch('{{ route('tech.messages.poll') }}?after_id=' + this.lastId, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
                         const json = await res.json();
                         (json.messages || []).forEach(m => this.append(m));
                     } catch (e) {}

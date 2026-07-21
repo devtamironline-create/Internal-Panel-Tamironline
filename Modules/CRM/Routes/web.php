@@ -611,7 +611,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     });
 
     // ─── چت اپراتور↔تکنسین (سمت ادمین) ─────────────────────────────
-    Route::prefix('tech-chats')->name('tech-chats.')->group(function () {
+    // no.cache: بدونِ آن، پاسخ‌های poll/unread توسطِ کشِ مرورگر/LiteSpeed ذخیره
+    // می‌شدند و پیامِ جدید فقط بعد از پاک‌کردنِ کش دیده می‌شد.
+    Route::prefix('tech-chats')->name('tech-chats.')->middleware('no.cache')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\TechChatController::class, 'index'])->name('index');
         Route::get('/unread-summary', [\Modules\CRM\Http\Controllers\TechChatController::class, 'unreadSummary'])->name('unread');
         Route::get('/search', [\Modules\CRM\Http\Controllers\TechChatController::class, 'search'])->name('search');
@@ -769,16 +771,18 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::get('tickets/{ticket}', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'show'])->name('tickets.show');
         Route::post('tickets/{ticket}/reply', [\Modules\CRM\Http\Controllers\Tech\TicketController::class, 'reply'])->name('tickets.reply');
 
-        // چت تکنسین با اپراتورِ تخصیص‌داده‌شده
-        Route::get('messages', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'index'])->name('messages');
-        Route::post('messages/send', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'send'])->name('messages.send');
-        Route::get('messages/poll', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'poll'])->name('messages.poll');
-        Route::get('messages/unread', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'unread'])->name('messages.unread');
+        // چت تکنسین با اپراتور + اعلانات — no.cache: پاسخ‌های poll نباید کش شوند
+        Route::middleware('no.cache')->group(function () {
+            Route::get('messages', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'index'])->name('messages');
+            Route::post('messages/send', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'send'])->name('messages.send');
+            Route::get('messages/poll', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'poll'])->name('messages.poll');
+            Route::get('messages/unread', [\Modules\CRM\Http\Controllers\Tech\ChatController::class, 'unread'])->name('messages.unread');
 
-        // ── اعلانات (نوشته‌شده توسط اپراتور از پنل ادمین) ────────
-        Route::get('announcements', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'index'])->name('announcements');
-        Route::get('announcements/unacked', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'unacked'])->name('announcements.unacked');
-        Route::post('announcements/{announcement}/ack', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'ack'])->name('announcements.ack')->whereNumber('announcement');
+            // ── اعلانات (نوشته‌شده توسط اپراتور از پنل ادمین) ────────
+            Route::get('announcements', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'index'])->name('announcements');
+            Route::get('announcements/unacked', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'unacked'])->name('announcements.unacked');
+            Route::post('announcements/{announcement}/ack', [\Modules\CRM\Http\Controllers\Tech\AnnouncementController::class, 'ack'])->name('announcements.ack')->whereNumber('announcement');
+        });
     });
 
     // خروج از حالت impersonate — بدون نیاز به guard auth، فقط بر اساس
