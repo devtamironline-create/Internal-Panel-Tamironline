@@ -140,8 +140,8 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/restore/{table}', [DataRestoreController::class, 'show'])->name('restore.show');
     Route::post('/restore/{table}', [DataRestoreController::class, 'restore'])->name('restore.do');
 
-    // Chat System
-    Route::prefix('chat')->name('chat.')->group(function () {
+    // Chat System — no.cache: پاسخ‌های بلادرنگ نباید توسطِ مرورگر/LiteSpeed کش شوند
+    Route::prefix('chat')->name('chat.')->middleware('no.cache')->group(function () {
         Route::get('/users', [ChatController::class, 'users'])->name('users');
         // اعلانِ سراسریِ پیام‌های جدید (روی همهٔ صفحات پنل) — پیام‌های طرفِ مقابل بعد از یک id.
         Route::get('/unread-recent', [ChatController::class, 'recentUnread'])->name('unread-recent');

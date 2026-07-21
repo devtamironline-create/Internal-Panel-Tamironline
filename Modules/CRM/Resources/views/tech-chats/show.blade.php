@@ -94,6 +94,7 @@ function techChat() {
         async poll() {
             try {
                 const res = await fetch('{{ route('crm.tech-chats.poll', $technician) }}?after_id=' + this.lastId, {
+                    cache: 'no-store',
                     headers: { 'Accept': 'application/json' },
                 });
                 const json = await res.json();
