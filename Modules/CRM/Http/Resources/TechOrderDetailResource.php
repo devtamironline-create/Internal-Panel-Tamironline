@@ -66,8 +66,13 @@ class TechOrderDetailResource extends JsonResource
 
             'address' => $this->address(),
             'device' => [
+                'id' => $this->device?->id,
                 'name' => $this->device?->name,
+                'slug' => $this->device?->slug,
                 'brand' => $this->brand?->name,
+                // تصویرِ کاتالوگِ دستگاه (همان /v1/catalog/devices) — آیکن + تصویرِ بندانگشتی.
+                'icon' => $this->device?->icon,
+                'thumbnail' => \Modules\Site\Support\MediaUrl::resolve($this->device?->thumbnail),
             ],
             'problem' => [
                 'title' => $this->problem_title,

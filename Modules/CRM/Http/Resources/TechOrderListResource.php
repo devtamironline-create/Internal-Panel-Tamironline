@@ -34,6 +34,9 @@ class TechOrderListResource extends JsonResource
             'is_returned' => ! is_null($this->return_type),
             'device_name' => $this->device?->name,
             'brand_name' => $this->brand?->name,
+            // تصویرِ کاتالوگِ دستگاه برای thumbnailِ کارتِ لیست.
+            'device_icon' => $this->device?->icon,
+            'device_thumbnail' => \Modules\Site\Support\MediaUrl::resolve($this->device?->thumbnail),
             'scheduled_at' => $this->visit_scheduled_at?->utc()->toIso8601String(),
             'created_at' => $this->created_at?->utc()->toIso8601String(),
         ];

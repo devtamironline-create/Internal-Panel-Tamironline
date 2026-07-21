@@ -33,7 +33,7 @@ class OrderController extends Controller
         ];
 
         $query = (clone $base)
-            ->with(['customer:id,first_name,last_name,mobile', 'brand:id,name', 'device:id,name'])
+            ->with(['customer:id,first_name,last_name,mobile', 'brand:id,name', 'device:id,name,slug,icon,thumbnail'])
             ->search($request->query('q'));
 
         $statusFilter = (string) $request->query('status', '');

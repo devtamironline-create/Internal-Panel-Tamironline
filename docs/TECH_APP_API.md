@@ -83,6 +83,7 @@ Res: `{ "success": true, "data": { "technician": {...} } }`
     "status_badge": "bg-...", "status_group": "in_progress",
     "is_final": false, "is_returned": false,
     "device_name": "لباسشویی", "brand_name": "سامسونگ",
+    "device_icon": "...", "device_thumbnail": "https://.../device.webp",  // تصویرِ کاتالوگِ دستگاه
     "scheduled_at": "...", "created_at": "..."
   }],
   "meta": { "current_page": 1, "last_page": 3, "per_page": 15, "total": 42 },
@@ -101,7 +102,8 @@ Res: `{ "success": true, "data": { "technician": {...} } }`
   "customer": { "name": "...", "mobile": "0912...", "phone": null, "contact_locked": false },
   "address": { "full_address": "...", "province": "تهران", "city": "تهران", "district": "منطقه 11",
                "postal_code": null, "latitude": 35.7, "longitude": 51.4, "has_coordinates": true },
-  "device": { "name": "لباسشویی", "brand": "سامسونگ" },
+  "device": { "id": 3, "name": "لباسشویی", "slug": "washing-machine", "brand": "سامسونگ",
+              "icon": "...", "thumbnail": "https://.../device.webp" },  // thumbnail = تصویرِ کاتالوگِ دستگاه
   "problem": { "title": "...", "description": "..." },
   "tech_notes": [{ "key": "description_tech2", "label": "...", "value": "..." }],
   "my_notes": [{ "content": "...", "date": "2026-07-13 11:31:00" }],
