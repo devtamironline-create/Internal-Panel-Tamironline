@@ -242,7 +242,7 @@ Res: `data` (فاکتورها: `invoice_code, status, total_amount, tech_share, 
 ## ۱۰) پروفایل
 
 - خواندنی: از `GET /me`.
-- `POST /v1/technician/profile/avatar` (multipart، `avatar` تصویر ≤ ۳MB) — **فقط یک‌بار**؛ بعد از آن `422`. Res شاملِ Technicianِ به‌روز.
+- `POST /v1/technician/profile/avatar` (multipart، `avatar` تصویر `jpg,jpeg,png,webp`، `max:30720` KB ≈ ۳۰MB) — **فقط یک‌بار**؛ بعد از آن `422`. Res شاملِ Technicianِ به‌روز.
 - `POST /v1/technician/profile/password` — Body: `{ current_password, password, password_confirmation }` (حداقل ۶). Res `{ success, message }`.
 - ویرایشِ اطلاعاتِ تماس از اپ **مجاز نیست** (مثلِ پنل).
 
@@ -253,3 +253,46 @@ Res: `data` (فاکتورها: `invoice_code, status, total_amount, tech_share, 
 - TanStack Query برای cache/invalidation؛ بعد از هر اکشنِ سفارش، `orders` و `orders/{id}` را invalidate کنید (پاسخِ status خودش جزئیاتِ تازه می‌دهد).
 - فرم‌های مالی: محاسبهٔ زنده سمتِ کلاینت، اما مقدارِ نهایی را از پاسخِ سرور نشان دهید.
 - تاریخِ شمسی سمتِ فرانت؛ اعداد فارسی؛ RTL؛ فونتِ Vazirmatn.
+
+---
+
+## ۱۲) قابلیت‌هایی که در وب هستند ولی هنوز اندپوینتِ موبایل ندارند
+
+> این سه حوزه در **پنلِ وبِ** تکنسین کامل‌اند ولی هنوز در API موبایل (`/v1/technician/*`)
+> پیاده نشده‌اند. قراردادِ زیر **پیشنهادِ هم‌ترازی** است؛ منطق/اعتبارسنجی باید
+> دقیقاً معادلِ نسخهٔ وب باشد (مرجع: `docs/TECH_PANEL_FEATURES.md`). تا زمانِ
+> پیاده‌سازی، اپ می‌تواند این بخش‌ها را با WebViewِ همان صفحاتِ `/tech/*` نشان دهد.
+
+### ۱۲.۱) ورود با رمز (فعلاً فقط وب)
+معادلِ `POST /tech/auth/login-password`. پیشنهاد: `POST /v1/technician/auth/login-password`
+با `{ mobile, password }` و همان پاسخِ `verify-otp` (token + technician). فقط برای
+تکنسین‌هایی که رمز تنظیم کرده‌اند؛ پیامِ خطای عمومی (بدونِ افشای وجودِ کاربر).
+
+### ۱۲.۲) تیکتِ پشتیبانی
+- `GET /v1/technician/tickets?status=&page=` → فهرستِ تیکت‌های خودِ تکنسین (order+category).
+- `POST /v1/technician/tickets` — Body: `category_id` (اجباری، `exists`), `body` (اجباری، ≤۵۰۰۰), `order_id?` (اگر باشد باید مالِ تکنسین باشد), `subject?`, `image?` (تصویر ≤۳۰MB). وضعیتِ اولیه `open`.
+- `GET /v1/technician/tickets/{id}` → جزئیات + گفتگو (مالکیت اجباری).
+- `POST /v1/technician/tickets/{id}/reply` — روی تیکتِ `closed` مجاز نیست. Body: `body` (اجباری، ≤۵۰۰۰), `image?`. با هر پاسخ وضعیت `open` و `last_reply_at` به‌روز.
+
+### ۱۲.۳) چت با اپراتور
+- `GET /v1/technician/messages?after_id=` → پیام‌ها (و علامتِ خوانده‌شدنِ پیام‌های اپراتور).
+- `POST /v1/technician/messages` — Body: `body` (اجباری، ≤۲۰۰۰). اگر اپراتوری تخصیص نیافته → `422`.
+- `GET /v1/technician/messages/unread` → `{ unread: count }` برای بَجِ ناوبری.
+> در وب با `poll?after_id=` هر چند ثانیه صدا می‌شود؛ در موبایل می‌توان از همان
+> الگوی polling یا در آینده WebSocket استفاده کرد.
+
+### ۱۲.۴) اعلانات
+- `GET /v1/technician/announcements` → اعلان‌های فعال + وضعیتِ تأییدِ همین تکنسین.
+- `GET /v1/technician/announcements/unacked` → `{ count, items:[{id,title,body,date}] }` (تأییدنشده‌ها، قدیمی‌ترین اول، حداکثر ۱۰) — برای پاپ‌آپ.
+- `POST /v1/technician/announcements/{id}/ack` → ثبتِ «متوجه شدم» (idempotent). `{ ok:true }`.
+> رفتارِ ضدِ‌لوپِ پاپ‌آپ (که در وب با `keepalive`+`localStorage` حل شد) باید در
+> اپ هم رعایت شود: ackِ سمتِ سرور idempotent است، اپ هم idِ دیده‌شده را محلی نگه دارد.
+
+---
+
+## ۱۳) تفاوت‌های ریزِ وب و موبایل (برای هماهنگی)
+- **TTL کدِ OTP:** وب ۳۰۰s، موبایل `config('sms.otp.expires_in', 120)`s.
+- **سقفِ آواتار:** `max:30720` KB (۳۰MB) در هر دو (نه ۳MB).
+- **ورود با رمز:** فعلاً فقط وب.
+- **رسیدِ انتقال:** موبایل «ثبتِ رسیدِ جدید» دارد؛ وب «ارسالِ دوبارهٔ پیامکِ رسیدِ موجود (یک‌بار)».
+- **مرجعِ کاملِ همهٔ قابلیت‌ها (وب+موبایل):** `docs/TECH_PANEL_FEATURES.md`.
