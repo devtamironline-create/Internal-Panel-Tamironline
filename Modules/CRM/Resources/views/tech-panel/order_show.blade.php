@@ -290,7 +290,7 @@
     @endif
 
     {{-- ─────── Device / problem card ─────── --}}
-    @if($order->brand || $order->device || $order->problem_title || $order->problem_description)
+    @if($order->brand || $order->device || $order->objections->isNotEmpty() || $order->problem_title || $order->problem_description)
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
             <div class="text-[11px] text-gray-400 mb-2">دستگاه و عیب</div>
             @if($order->brand || $order->device)
@@ -298,7 +298,13 @@
                     {{ $order->brand?->name }}{{ $order->brand && $order->device ? ' / ' : '' }}{{ $order->device?->name }}
                 </div>
             @endif
-            @if($order->problem_title)
+            @if($order->objections->isNotEmpty())
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                    @foreach($order->objections as $obj)
+                        <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-50 text-amber-700">{{ $obj->name }}</span>
+                    @endforeach
+                </div>
+            @elseif($order->problem_title)
                 <div class="text-sm text-gray-800 mt-2">{{ $order->problem_title }}</div>
             @endif
             @if($order->problem_description)
