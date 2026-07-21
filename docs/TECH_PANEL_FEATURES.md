@@ -105,8 +105,9 @@
 - **ماشینِ وضعیت (`allowedStatusesFor`):** وضعیت‌های نهایی قفل (بدونِ transition)؛ `return_type==1`→فقط Completed؛ `return_type==2`→Cancelled+Completed؛ در حالتِ فریز وضعیت‌های نهایی حذف می‌شوند.
 
 ### زمانِ مراجعه
-- `visit_date` (`Y-m-d`, `after_or_equal:today`) + `visit_slot` (`1..4`)، یا `{clear:true}` برای پاک‌کردن. روی سفارشِ نهایی قفل.
-- اگر سفارش `new` بود و Coordinated مجاز بود → خودکار «هماهنگ‌شده» + **پیامکِ هماهنگی** به مشتری.
+- `visit_date` (`Y-m-d`, `after_or_equal:today`) + `visit_slot` (`1..4`)، یا `{clear:true}` برای پاک‌کردن.
+- **مجاز فقط در فازِ هماهنگی** (`new`, `awaiting_coordination`, `no_answer`, `coordinated`) — سرور enforce می‌کند (`OrderStatus::allowsVisitScheduling()`)؛ خارج از آن (باز/شروع تعمیر/…/نهایی) → خطا. همین قانون برای `clear`. فیلدِ `can_schedule` در پاسخِ جزئیاتِ سفارش برای فرانت برگردانده می‌شود.
+- اگر سفارش در فازِ هماهنگی بود و Coordinated مجاز بود → خودکار «هماهنگ‌شده» + **پیامکِ هماهنگی** (فقط بارِ اول؛ تغییرِ زمانِ سفارشِ از‌قبل‌هماهنگ پیامکِ جدید نمی‌فرستد).
 
 ### یادداشت
 - `note` (`required|max:2000`). به `wp_notes` JSON اضافه می‌شود. روی سفارشِ نهایی قفل.

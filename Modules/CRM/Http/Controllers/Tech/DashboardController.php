@@ -591,8 +591,9 @@ class DashboardController extends Controller
         $tech = Auth::guard('tech')->user();
         $this->ensureOwnership($order, $tech);
 
-        if ($order->status->isFinal()) {
-            return back()->with('error', 'تنظیم زمان مراجعه روی سفارش‌های نهایی مجاز نیست.');
+        // فقط در فازِ هماهنگی — پس از خروج (باز/شروع تعمیر/…) قفل است (enforce سمتِ سرور).
+        if (! $order->status->allowsVisitScheduling()) {
+            return back()->with('error', 'تنظیم زمان مراجعه فقط در فازِ هماهنگی (جدید/هماهنگ‌شده) ممکن است.');
         }
 
         // پاک کردن
