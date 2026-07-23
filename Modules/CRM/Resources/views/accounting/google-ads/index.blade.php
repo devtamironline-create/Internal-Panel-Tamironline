@@ -50,6 +50,31 @@
 
     @push('scripts')
     <script>
+    // پارسِ عددِ ورودی با هر سبکِ جداکننده — آینهٔ parseFlexibleNumber سمتِ سرور،
+    // تا باکسِ «مبلغ (خودکار)» دقیقاً همان عددی را نشان دهد که ذخیره خواهد شد.
+    // (قبلاً Number('5,970') = NaN بود و همیشه «۰» نشان می‌داد.)
+    window.gadsNum = function (v) {
+        v = String(v ?? '')
+            .replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); })
+            .replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); })
+            .replace(/٫/g, '.').replace(/[٬،]/g, ',')
+            .replace(/[^0-9.,]/g, '');
+        if (!v) return 0;
+        var ld = v.lastIndexOf('.'), lc = v.lastIndexOf(',');
+        if (ld !== -1 && lc !== -1) {
+            var dec = ld > lc ? '.' : ',';
+            v = v.split(dec === '.' ? ',' : '.').join('');
+            if (dec === ',') v = v.replace(',', '.');
+        } else if (lc !== -1) {
+            if (/^\d{1,3}(,\d{3})+$/.test(v)) v = v.split(',').join('');
+            else if (v.split(',').length === 2 && v.length - lc - 1 <= 2) v = v.replace(',', '.');
+            else v = v.split(',').join('');
+        } else if (ld !== -1) {
+            if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.split('.').join('');
+            else if (v.split('.').length > 2) v = v.split('.').join('');
+        }
+        return Number(v) || 0;
+    };
     (function () {
         function initGadsChart() {
             var el = document.getElementById('gads-chart');
@@ -68,10 +93,8 @@
                 markers: { size: 0, hover: { size: 4 } },
                 dataLabels: { enabled: false },
                 xaxis: { categories: @json($chart['labels']), tickPlacement: 'on', axisTicks: { show: false }, tooltip: { enabled: false } },
-                yaxis: [
-                    { seriesName: 'درآمد', labels: { formatter: fmt }, title: { text: 'درآمد' } },
-                    { seriesName: 'هزینهٔ ادز', opposite: true, labels: { formatter: fmt }, title: { text: 'هزینهٔ ادز' } }
-                ],
+                {{-- یک محورِ مشترک برای هر دو سری — دو محورِ جدا مقایسهٔ درآمد/هزینه را گمراه‌کننده می‌کرد --}}
+                yaxis: { labels: { formatter: fmt }, title: { text: 'تومان' } },
                 legend: { position: 'top', horizontalAlign: 'right' },
                 tooltip: { shared: true, intersect: false, y: { formatter: function (v) { return fmt(v) + ' تومان'; } } },
                 grid: { borderColor: dark ? 'rgba(148,163,184,.15)' : 'rgba(148,163,184,.25)' },
@@ -89,8 +112,8 @@
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
         <div class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">ثبتِ روزِ جدید <span class="text-[11px] font-normal text-gray-400">(معمولاً امروز برای دیروز)</span></div>
         <form method="POST" action="{{ route('crm.google-ads.store') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3"
-              x-data="{ lira: @js((float) old('lira_count', 0)), price: @js((int) old('lira_unit_price', 0)),
-                        get total(){ return Math.round((Number(this.lira)||0) * (Number(this.price)||0)); },
+              x-data="{ lira: @js((string) old('lira_count', '')), price: @js((string) old('lira_unit_price', '')),
+                        get total(){ return Math.round(gadsNum(this.lira) * gadsNum(this.price)); },
                         fmt(n){ return Number(n||0).toLocaleString('fa-IR'); } }">
             @csrf
             <div>
@@ -165,8 +188,8 @@
                         <tr x-show="editId === {{ $e->id }}" x-cloak class="bg-sky-50/50 dark:bg-sky-900/10">
                             <td colspan="8" class="px-3 py-3">
                                 <form method="POST" action="{{ route('crm.google-ads.update', $e) }}" class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end"
-                                      x-data="{ lira: {{ (float) $e->lira_count }}, price: {{ (int) $e->lira_unit_price }},
-                                                get total(){ return Math.round((Number(this.lira)||0) * (Number(this.price)||0)); },
+                                      x-data="{ lira: '{{ (float) $e->lira_count }}', price: '{{ (int) $e->lira_unit_price }}',
+                                                get total(){ return Math.round(gadsNum(this.lira) * gadsNum(this.price)); },
                                                 fmt(n){ return Number(n||0).toLocaleString('fa-IR'); } }">
                                     @csrf @method('PUT')
                                     <div><label class="block text-[11px] text-gray-500 mb-1">تاریخ</label>

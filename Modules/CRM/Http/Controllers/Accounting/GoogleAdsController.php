@@ -91,9 +91,10 @@ class GoogleAdsController extends Controller
             ->keyBy(fn ($e) => $e->date->toDateString())
             ->map(fn ($e) => (int) $e->ad_amount);
 
-        // درآمدِ هر روز = مجموعِ فاکتورهای صادرشدهٔ آن روز (به‌جز لغوشده‌ها).
+        // درآمدِ هر روز = مجموعِ فاکتورهای واقعیِ آن روز — پیش‌نویس (draft) هنوز
+        // درآمد نیست و لغوشده هم حذف؛ وگرنه نمودارِ درآمد بیش‌ازواقع نشان می‌داد.
         $incomeByDate = Invoice::query()
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'draft'])
             ->whereBetween(DB::raw('DATE(COALESCE(issued_at, created_at))'), [$startStr, $endStr])
             ->selectRaw('DATE(COALESCE(issued_at, created_at)) as d, SUM(total_amount) as s')
             ->groupBy('d')->pluck('s', 'd');
@@ -178,8 +179,8 @@ class GoogleAdsController extends Controller
         }
 
         // مبلغِ تومنی دیگر دستی وارد نمی‌شود؛ = تعداد لیر × قیمتِ هر لیر.
-        $liraCount = $this->normalizeDecimal($validated['lira_count']);
-        $liraUnitPrice = (int) ($this->normalizeAmount($validated['lira_unit_price']) ?? 0);
+        $liraCount = round($this->parseFlexibleNumber($validated['lira_count']), 2);
+        $liraUnitPrice = (int) round($this->parseFlexibleNumber($validated['lira_unit_price']));
 
         return [
             'date' => $gregorian,
@@ -190,16 +191,55 @@ class GoogleAdsController extends Controller
         ];
     }
 
-    /** تعداد لیر می‌تواند اعشاری باشد (مثلاً ۱۲٫۵). */
-    private function normalizeDecimal(string $value): float
+    /**
+     * پارسِ عددِ ورودی با هر سبکِ جداکننده — ریشهٔ باگِ «صفرهای اضافه».
+     *
+     * قبلاً normalizeAmount نقطهٔ اعشار را حذف می‌کرد و ارقامِ اعشار به عدد
+     * می‌چسبید: «4,300.00» → 430000 و «4,300.000» → 4300000 (×۱۰۰/×۱۰۰۰).
+     * این پارسر جداکنندهٔ هزارگان/اعشار را در هر سه سبک تشخیص می‌دهد:
+     *   انگلیسی 4,300.50 — ترکی/اروپایی 4.300,50 — فارسی ۴٬۳۰۰٫۵۰
+     */
+    private function parseFlexibleNumber(string $value): float
     {
         $latin = strtr($value, [
             '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
-            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9', '٫' => '.', '،' => '',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '٫' => '.', '٬' => ',', '،' => ',',
         ]);
-        $clean = preg_replace('/[^\d.]/', '', $latin);
+        $s = preg_replace('/[^0-9.,]/', '', $latin) ?? '';
+        if ($s === '') {
+            return 0.0;
+        }
 
-        return $clean === '' ? 0.0 : (float) $clean;
+        $lastDot = strrpos($s, '.');
+        $lastComma = strrpos($s, ',');
+
+        if ($lastDot !== false && $lastComma !== false) {
+            // هر دو جداکننده حاضرند: آخری اعشار است، دیگری هزارگان.
+            $decimal = $lastDot > $lastComma ? '.' : ',';
+            $thousand = $decimal === '.' ? ',' : '.';
+            $s = str_replace($thousand, '', $s);
+            $s = str_replace($decimal, '.', $s);
+        } elseif ($lastComma !== false) {
+            if (preg_match('/^\d{1,3}(,\d{3})+$/', $s)) {
+                $s = str_replace(',', '', $s);                    // هزارگانِ انگلیسی
+            } elseif (substr_count($s, ',') === 1 && strlen($s) - $lastComma - 1 <= 2) {
+                $s = str_replace(',', '.', $s);                   // اعشارِ اروپایی (12,5)
+            } else {
+                $s = str_replace(',', '', $s);
+            }
+        } elseif ($lastDot !== false) {
+            if (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {
+                $s = str_replace('.', '', $s);                    // هزارگانِ ترکی (4.300)
+            } elseif (substr_count($s, '.') > 1) {
+                $s = str_replace('.', '', $s);
+            }
+            // وگرنه اعشارِ معمولی است — دست نمی‌زنیم.
+        }
+
+        return (float) $s;
     }
 
     /**
