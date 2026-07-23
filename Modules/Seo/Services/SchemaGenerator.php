@@ -86,7 +86,7 @@ class SchemaGenerator
 
     /**
      * @type نهاییِ نود اختصاصی را تعیین می‌کند:
-     * override آیتم ← default_schema نوع (config) ← null.
+     *                    override آیتم ← default_schema نوع (config) ← null.
      */
     private function resolveSchemaType(string $type, ?string $override): ?string
     {
@@ -292,6 +292,35 @@ class SchemaGenerator
      */
     private function qaPage(Model $model, array $meta): array
     {
+        // پاسخ‌های تأییدشده — پاسخِ تخصصی به‌عنوانِ acceptedAnswer، بقیه
+        // suggestedAnswer (ریچ‌ریزالتِ Q&A گوگل). سقفِ ۱۰ برای سبک‌ماندنِ JSON-LD.
+        $accepted = null;
+        $suggested = [];
+        if (method_exists($model, 'approvedAnswers')) {
+            $answers = $model->approvedAnswers()
+                ->orderByDesc('is_expert_reply')
+                ->orderBy('created_at')
+                ->limit(10)
+                ->get();
+
+            foreach ($answers as $answer) {
+                $node = array_filter([
+                    '@type' => 'Answer',
+                    'text' => $this->plain((string) $answer->getAttribute('body')),
+                    'dateCreated' => $answer->getAttribute('created_at')?->toIso8601String(),
+                ], fn ($v) => $v !== null && $v !== '');
+
+                if (($node['text'] ?? '') === '') {
+                    continue;
+                }
+                if ($accepted === null && $answer->getAttribute('is_expert_reply')) {
+                    $accepted = $node;
+                } else {
+                    $suggested[] = $node;
+                }
+            }
+        }
+
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'QAPage',
@@ -300,6 +329,9 @@ class SchemaGenerator
                 'name' => $model->getAttribute('title'),
                 'text' => $this->plain((string) $model->getAttribute('body')),
                 'answerCount' => (int) $model->getAttribute('answers_count'),
+                'dateCreated' => $model->getAttribute('created_at')?->toIso8601String(),
+                'acceptedAnswer' => $accepted,
+                'suggestedAnswer' => $suggested !== [] ? $suggested : null,
             ], fn ($v) => $v !== null && $v !== ''),
         ], fn ($v) => $v !== null && $v !== '');
     }
