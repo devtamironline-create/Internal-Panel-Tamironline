@@ -185,11 +185,13 @@ class SitemapBuilder
     ];
 
     /**
-     * فایل‌هایی که فعلاً در sitemap.xml اصلی معرفی می‌شوند (فازِ اول).
-     * blog-topics / faq-taxonomies / forum عمداً معرفی نمی‌شوند تا کیفیتِ
-     * محتوای مستقلِ آن‌ها بررسی شود (کدشان می‌ماند و از مسیرِ نام‌دار سرو می‌شوند).
+     * فایل‌هایی که در sitemap.xml اصلی معرفی می‌شوند.
+     * blog-topics / faq-taxonomies عمداً معرفی نمی‌شوند تا کیفیتِ محتوای
+     * مستقل‌شان بررسی شود (کدشان می‌ماند و از مسیرِ نام‌دار سرو می‌شوند).
+     * forum طبقِ درخواستِ فرانت اضافه شد — فیلترِ کیفیِ specTypeUrls فقط
+     * پرسش‌های منتشر+تأییدشده با حداقل یک پاسخِ تخصصیِ تأییدشده را می‌گذارد.
      */
-    public const INDEX_FILES = ['pages', 'services', 'service-brands', 'brands', 'articles'];
+    public const INDEX_FILES = ['pages', 'services', 'service-brands', 'brands', 'articles', 'forum'];
 
     /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-pages باشند (بندِ ۵ اسپک). */
     public const STATIC_PATHS = [
@@ -295,7 +297,13 @@ class SitemapBuilder
             if (! $this->passesGuard($loc)) {
                 continue; // مسیرِ blacklist / پارامتردار / fragment / archive
             }
-            $out[] = ['loc' => $loc];
+            $entry = ['loc' => $loc];
+            // فورَم: طبقِ درخواستِ فرانت lastmod هم برمی‌گردد (رندررِ XML پشتیبانی
+            // می‌کند؛ بقیهٔ فایل‌ها طبقِ بندِ ۷ اسپک بدونِ lastmod می‌مانند).
+            if ($type === 'forum_question' && $model->getAttribute('updated_at')) {
+                $entry['lastmod'] = $model->getAttribute('updated_at')->toDateString();
+            }
+            $out[] = $entry;
         }
 
         return $out;
