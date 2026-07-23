@@ -40,12 +40,12 @@
                 </a>
             </div>
             <div class="flex items-center gap-4 text-xs">
-                <span class="text-gray-500 dark:text-gray-400">جمعِ درآمد: <b class="text-green-600 dark:text-green-400" dir="ltr">{{ number_format($chart['total_income']) }}</b></span>
+                <span class="text-gray-500 dark:text-gray-400">جمعِ شارژ کیف‌پول: <b class="text-green-600 dark:text-green-400" dir="ltr">{{ number_format($chart['total_income']) }}</b></span>
                 <span class="text-gray-500 dark:text-gray-400">جمعِ ادز: <b class="text-red-600 dark:text-red-400" dir="ltr">{{ number_format($chart['total_ad']) }}</b></span>
             </div>
         </div>
         <div id="gads-chart" wire:ignore></div>
-        <p class="text-[11px] text-gray-400 mt-1 text-center">به تفکیکِ روزِ ماه — سبز: درآمد (فاکتورها)، قرمز: هزینهٔ ادز (تومان).</p>
+        <p class="text-[11px] text-gray-400 mt-1 text-center">به تفکیکِ روزِ ماه — سبز: شارژِ کیف‌پولِ تکنسین (همان ستونِ جدول)، قرمز: هزینهٔ ادز (تومان).</p>
     </div>
 
     @push('scripts')
@@ -85,7 +85,7 @@
                 chart: { type: 'line', height: 320, fontFamily: 'inherit', toolbar: { show: false }, foreColor: dark ? '#9ca3af' : '#374151', zoom: { enabled: false } },
                 theme: { mode: dark ? 'dark' : 'light' },
                 series: [
-                    { name: 'درآمد', data: @json($chart['income_series']) },
+                    { name: 'شارژ کیف‌پول', data: @json($chart['income_series']) },
                     { name: 'هزینهٔ ادز', data: @json($chart['ad_series']) }
                 ],
                 colors: ['#16a34a', '#dc2626'],

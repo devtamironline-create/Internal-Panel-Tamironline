@@ -9,7 +9,6 @@ use Illuminate\Validation\ValidationException;
 use Modules\CRM\Concerns\FiltersExpenses;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\GoogleAdsEntry;
-use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\WalletTransaction;
 
@@ -91,12 +90,13 @@ class GoogleAdsController extends Controller
             ->keyBy(fn ($e) => $e->date->toDateString())
             ->map(fn ($e) => (int) $e->ad_amount);
 
-        // درآمدِ هر روز = مجموعِ فاکتورهای واقعیِ آن روز — پیش‌نویس (draft) هنوز
-        // درآمد نیست و لغوشده هم حذف؛ وگرنه نمودارِ درآمد بیش‌ازواقع نشان می‌داد.
-        $incomeByDate = Invoice::query()
-            ->whereNotIn('status', ['cancelled', 'draft'])
-            ->whereBetween(DB::raw('DATE(COALESCE(issued_at, created_at))'), [$startStr, $endStr])
-            ->selectRaw('DATE(COALESCE(issued_at, created_at)) as d, SUM(total_amount) as s')
+        // درآمدِ هر روز = مجموعِ «شارژِ کیف‌پولِ تکنسین» همان روز — همان ستونِ
+        // خودکارِ جدول، تا نمودار و جدول یک عدد را بگویند. (قبلاً جمعِ فاکتورها
+        // بود که با جدول نمی‌خواند و درآمد را چند برابر نشان می‌داد.)
+        $incomeByDate = WalletTransaction::query()
+            ->where('type', WalletTxType::WalletCharge->value)
+            ->whereBetween(DB::raw('DATE(created_at)'), [$startStr, $endStr])
+            ->selectRaw('DATE(created_at) as d, SUM(amount) as s')
             ->groupBy('d')->pluck('s', 'd');
 
         $labels = $adSeries = $incomeSeries = [];
