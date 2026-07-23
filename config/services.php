@@ -20,6 +20,11 @@ return [
         'token' => env('INTERNAL_API_TOKEN'),
         // برای rotation بدون downtime می‌توان توکن قدیمی را موقتاً نگه داشت.
         'token_old' => env('INTERNAL_API_TOKEN_OLD'),
+        // IPهای معتمدِ سرورِ فرانت (SSR/ISR) — با کاما جدا. درخواست‌های این IPها
+        // از rate-limitِ endpointهای فقط‌خواندنیِ عمومی (seo/کاتالوگ) معاف‌اند؛
+        // هنگامِ بازتولیدِ انبوهِ صفحاتِ ISR همه از یک IP می‌آیند و سقفِ per-IP
+        // خیلی زود پر می‌شد (429 → بیک‌شدنِ متایِ پیش‌فرض در صفحهٔ استاتیک).
+        'trusted_ips' => env('TRUSTED_FRONTEND_IPS', '62.220.124.156'),
     ],
 
     // Webhook به فرانت Next.js برای revalidateTag فوری پس از تغییر بنر/مقاله/...
