@@ -179,6 +179,10 @@ class AppServiceProvider extends ServiceProvider
      * سرورِ فرانتِ معتمد: یا توکنِ BFF دارد، یا IPاش در فهرستِ
      * services.internal.trusted_ips است (fetchهای ISR/generateMetadata که
      * بدونِ توکن مستقیم به بک‌اند می‌زنند).
+     *
+     * نکتهٔ امنیتی: چون trustProxies(at:'*') فعال است، request->ip() با هدرِ
+     * X-Forwarded-For قابلِ جعل است؛ برای این معافیت REMOTE_ADDR (طرفِ واقعیِ
+     * TCP — غیرقابلِ جعل) مقایسه می‌شود.
      */
     private static function isTrustedFrontend(Request $request): bool
     {
@@ -188,6 +192,6 @@ class AppServiceProvider extends ServiceProvider
 
         $trusted = array_filter(array_map('trim', explode(',', (string) config('services.internal.trusted_ips'))));
 
-        return $trusted !== [] && in_array($request->ip(), $trusted, true);
+        return $trusted !== [] && in_array((string) $request->server('REMOTE_ADDR', ''), $trusted, true);
     }
 }

@@ -158,10 +158,11 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Internal-only detail endpoints (BFF → API) ────────────────
-    // catalog brand/device detail با تمام فیلدهای CMS — فقط برای فرانت Next.js
-    // throttle:catalog → چون internal.token الزامی است، عملاً BFF نامحدود می‌شود
-    // و دیگر 429 روی صفحات ترکیبی/دستگاه رخ نمی‌دهد.
-    Route::middleware(['internal.token', 'throttle:catalog'])->group(function () {
+    // catalog brand/device detail با تمام فیلدهای CMS — فقط برای فرانت Next.js.
+    // trusted.frontend = توکنِ BFF **یا** IPِ معتمدِ سرورِ فرانت — چون هنگامِ
+    // `npm run build` در Docker توکن در مرحلهٔ build در دسترس نیست و همهٔ
+    // fetchهای ISR با 401 می‌شکستند (متا/محتوای پیش‌فرض بیک می‌شد).
+    Route::middleware(['trusted.frontend', 'throttle:catalog'])->group(function () {
         Route::get('/catalog/brands/{slug}', [CatalogBrandController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.catalog.brands.show');
