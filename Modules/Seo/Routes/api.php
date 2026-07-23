@@ -38,15 +38,19 @@ Route::prefix('v1/seo')->group(function () {
         Route::get('/llms.txt', [LlmsController::class, 'show'])->name('api.v1.seo.llms');
     });
 
-    // ── بقیه‌ی اندپوینت‌های سئو (سقفِ معمول) ──
-    Route::middleware('throttle:120,1')->group(function () {
+    // ── خواندنی‌های سئو (meta/settings/redirects) — limiterِ «seo-read»:
+    // سرورِ فرانت (توکنِ BFF یا IPِ معتمدِ TRUSTED_FRONTEND_IPS) معاف است تا
+    // بازتولیدِ انبوهِ ISR باعثِ 429 و بیک‌شدنِ متایِ پیش‌فرض نشود؛ بقیه 120/min.
+    Route::middleware('throttle:seo-read')->group(function () {
         Route::get('/meta', [MetaController::class, 'show'])->name('api.v1.seo.meta');
         Route::get('/settings', [SettingsController::class, 'show'])->name('api.v1.seo.settings');
 
         // ریدایرکت‌ها (برای middleware.ts فرانت)
         Route::get('/redirects', [RedirectController::class, 'index'])->name('api.v1.seo.redirects');
+    });
 
-        // ثبت بازدید ۴۰۴ از فرانت
+    // ثبت بازدید ۴۰۴ از فرانت — نوشتنی است؛ سقفِ جدا و محدود می‌ماند.
+    Route::middleware('throttle:120,1')->group(function () {
         Route::post('/404', [NotFoundController::class, 'store'])->name('api.v1.seo.404');
     });
 });

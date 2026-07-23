@@ -78,11 +78,25 @@ class AppServiceProvider extends ServiceProvider
         // در غیر این صورت سقفِ مشترک خیلی زود پر می‌شود و 429 می‌دهد.
         // کاربرانِ عادیِ مرورگر (بدون توکن) همچنان IP-based محدود می‌مانند.
         RateLimiter::for('catalog', function (Request $request) {
-            if (self::isInternalBff($request)) {
+            if (self::isTrustedFrontend($request)) {
                 return Limit::none();
             }
 
             return Limit::perMinute(60)->by($request->ip());
+        });
+
+        // ─── Rate limiter «seo-read» برای endpointهای فقط‌خواندنیِ سئو ───
+        // (meta/settings/redirects). فرانتِ ISR هنگامِ بازتولیدِ انبوهِ صفحات
+        // (بعد از دیپلوی/انقضای کش) از یک IP صدها بار /v1/seo/meta را می‌زند؛
+        // با سقفِ per-IPِ معمولی 429 می‌گرفت و متایِ «پیش‌فرض» در نسخهٔ
+        // استاتیکِ صفحه بیک می‌شد. سرورِ فرانت (توکنِ BFF یا IPِ معتمد) معاف
+        // است؛ بقیه همان سقفِ قبلی را دارند.
+        RateLimiter::for('seo-read', function (Request $request) {
+            if (self::isTrustedFrontend($request)) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(120)->by($request->ip());
         });
 
         // ─── نوشتنی‌های عمومیِ پشتِ BFF — کلید بر اساسِ کاربر یا IPِ واقعی ───
@@ -159,5 +173,21 @@ class AppServiceProvider extends ServiceProvider
         }
 
         return false;
+    }
+
+    /**
+     * سرورِ فرانتِ معتمد: یا توکنِ BFF دارد، یا IPاش در فهرستِ
+     * services.internal.trusted_ips است (fetchهای ISR/generateMetadata که
+     * بدونِ توکن مستقیم به بک‌اند می‌زنند).
+     */
+    private static function isTrustedFrontend(Request $request): bool
+    {
+        if (self::isInternalBff($request)) {
+            return true;
+        }
+
+        $trusted = array_filter(array_map('trim', explode(',', (string) config('services.internal.trusted_ips'))));
+
+        return $trusted !== [] && in_array($request->ip(), $trusted, true);
     }
 }

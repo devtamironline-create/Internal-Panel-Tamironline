@@ -48,6 +48,6 @@ class MetaController extends Controller
 
         return response()->json($payload)
             ->setEtag(trim($etag, '"'))
-            ->header('Cache-Control', 'public, max-age=300, s-maxage=300');
+            ->header('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
     }
 }
