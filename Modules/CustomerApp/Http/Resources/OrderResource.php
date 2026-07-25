@@ -32,6 +32,7 @@ class OrderResource extends JsonResource
             'status_label' => $status?->label() ?? 'نامشخص',
             'is_terminal' => $status ? OrderStatusMapper::isTerminal($status) : false,
             'order_type' => $this->order_type,
+            'source' => $this->source,
 
             'device' => $this->whenLoaded('device', fn () => $this->device ? [
                 'id' => (int) $this->device->id,

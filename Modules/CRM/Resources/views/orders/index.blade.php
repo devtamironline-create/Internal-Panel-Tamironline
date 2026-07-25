@@ -148,6 +148,16 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">منبع ثبت (کانال)</label>
+                <select name="source" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+                    <option value="">— همه —</option>
+                    @foreach(\Modules\CRM\Models\Order::SOURCES as $srcKey => $srcLabel)
+                        <option value="{{ $srcKey }}" @selected(($source ?? '') === $srcKey)>{{ $srcLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">معرف</label>
                 @if(count($introductionList))
                     @php

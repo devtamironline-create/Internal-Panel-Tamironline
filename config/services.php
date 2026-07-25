@@ -27,6 +27,14 @@ return [
         'trusted_ips' => env('TRUSTED_FRONTEND_IPS', '62.220.124.156'),
     ],
 
+    // رباتِ بلهٔ تعمیرآنلاین — توکنِ ربات رازِ مشترکِ اعتبارسنجیِ initData
+    // مینی‌اپ است (الگوریتمِ WebAppData). فقط سمتِ سرور؛ هرگز در فرانت.
+    'bale' => [
+        'bot_token' => env('BALE_BOT_TOKEN'),
+        // حداکثر عمرِ auth_date برای پذیرشِ initData (ثانیه)
+        'init_data_max_age' => env('BALE_INIT_DATA_MAX_AGE', 86400),
+    ],
+
     // Webhook به فرانت Next.js برای revalidateTag فوری پس از تغییر بنر/مقاله/...
     // در فرانت endpoint مثل /api/revalidate تعریف کنید که tag را با
     // header X-Revalidation-Secret تأیید کند و revalidateTag(tag) را صدا بزند.

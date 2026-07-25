@@ -15,6 +15,10 @@ Route::prefix('v1/auth')->group(function () {
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
         ->middleware('throttle:otp-verify')->name('identity.verify-otp');
 
+    // ورود از مینی‌اپِ بله — initData امضاشده با توکنِ ربات اعتبارسنجی می‌شود.
+    Route::post('/bale-miniapp', [AuthController::class, 'baleMiniapp'])
+        ->middleware('throttle:otp-verify')->name('identity.bale-miniapp');
+
     // Auth required
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('identity.me');

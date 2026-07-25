@@ -176,6 +176,8 @@ class OrderController extends Controller
                 'subscription' => $customer->subscription ?? null,
                 'introduction' => $introduction,
                 'attribution' => $attribution,
+                // منبعِ ثبت — کلاینتِ قدیمی که نمی‌فرستد → app (رفتارِ قبلی).
+                'source' => $data['source'] ?? 'app',
 
                 'order_type' => $data['order_type'],
                 'device_id' => $data['device_id'],

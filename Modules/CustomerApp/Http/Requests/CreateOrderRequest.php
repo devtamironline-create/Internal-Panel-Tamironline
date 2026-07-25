@@ -86,6 +86,10 @@ class CreateOrderRequest extends FormRequest
             // ساده؛ سرور فقط کلیدهای مجاز را نگه می‌دارد (sanitizeAttribution).
             'attribution' => 'nullable|array',
             'attribution.*' => 'nullable|string|max:500',
+
+            // منبعِ ثبتِ سفارش (کانال) — رباتِ بله bale_bot می‌فرستد؛ کلاینت‌های
+            // قدیمی که نمی‌فرستند → پیش‌فرضِ app (رفتارِ فعلی حفظ می‌شود).
+            'source' => ['nullable', 'string', Rule::in(array_keys(\Modules\CRM\Models\Order::SOURCES))],
         ];
     }
 

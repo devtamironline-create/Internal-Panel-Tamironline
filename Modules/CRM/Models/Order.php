@@ -16,6 +16,20 @@ class Order extends Model
      * دلایلِ ثابتِ کنسل/ردِ سفارش — در پنل ادمین به‌صورتِ لیستِ انتخابی (select)
      * نمایش داده می‌شوند و مقدارِ انتخاب‌شده در ستونِ cancel_reason ذخیره می‌شود.
      */
+    /** منبعِ ثبتِ سفارش (کانالِ ورودی) — برچسبِ فارسی برای UI. */
+    public const SOURCES = [
+        'app' => 'اپلیکیشن',
+        'web' => 'وب‌سایت',
+        'bale_bot' => 'ربات بله',
+        'bale_miniapp' => 'مینی‌اپ بله',
+    ];
+
+    /** برچسبِ فارسیِ منبعِ ثبت — مقدارِ ناشناخته همان‌طور نمایش داده می‌شود. */
+    public function sourceLabel(): ?string
+    {
+        return $this->source ? (self::SOURCES[$this->source] ?? $this->source) : null;
+    }
+
     public const CANCEL_REASONS = [
         'از نمایندگی درخواست خدمات دارند',
         'با هزینه اعلام شده برای خدمات موافقت نشد',
@@ -39,7 +53,7 @@ class Order extends Model
         'order_code', 'wp_id',
         'customer_id', 'subscription', 'introduction', 'attribution',
         'brand_id', 'device_id', 'technician_id', 'technician_wp_id', 'order_type',
-        'source_of_truth',
+        'source_of_truth', 'source',
         'customer_name', 'customer_mobile', 'customer_phone',
         'province_id', 'city_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',

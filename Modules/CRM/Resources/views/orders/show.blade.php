@@ -483,6 +483,14 @@
                             <span class="text-gray-900 dark:text-gray-100">{{ trim(($order->creator->first_name ?? '') . ' ' . ($order->creator->last_name ?? '')) ?: '—' }}</span>
                         </div>
                         @endif
+                        @if($order->source)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">منبع ثبت:</span>
+                            <span class="px-2 py-0.5 text-xs font-medium rounded-full {{ str_starts_with($order->source, 'bale') ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-700' }}">
+                                {{ $order->sourceLabel() }}
+                            </span>
+                        </div>
+                        @endif
                         @if($order->order_type)
                         <div class="flex items-start">
                             <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">نوع سفارش:</span>
