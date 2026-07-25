@@ -82,7 +82,7 @@ class MetaResolver
 
         $canonical = self::pick($meta?->canonical) ?: $this->absoluteUrl($this->registry->pathFor($type, $model));
 
-        $robotsFlags = $this->resolveRobots($cfg, $model, $meta);
+        $robotsFlags = $this->resolveRobots($type, $cfg, $model, $meta);
 
         $og = [
             'title' => self::pick($meta?->og_title, $title),
@@ -169,7 +169,7 @@ class MetaResolver
      * @param  array<string, mixed>  $cfg
      * @return array<string, mixed>
      */
-    private function resolveRobots(array $cfg, Model $model, ?SeoMeta $meta): array
+    private function resolveRobots(string $type, array $cfg, Model $model, ?SeoMeta $meta): array
     {
         $flags = (array) config('seo.robots_default', []);
 
@@ -207,6 +207,21 @@ class MetaResolver
         // وضعیت گردش‌کار انتشار → پیش‌نویس/بایگانی/noindex اجباراً noindex.
         if ($meta && in_array($meta->status, ['draft', 'archived', 'noindex'], true)) {
             $flags['noindex'] = true;
+        }
+
+        // سیاستِ داده‌محورِ ایندکس (نقشهٔ Search Console) — فقط وقتی ادمین
+        // روی خودِ آیتم robots را صریحاً override نکرده باشد:
+        //  - برندِ خارج از whitelist → noindex,follow (برندهای نحیف)
+        //  - سوالِ انجمنِ زیرِ آستانهٔ بازدید → noindex,follow
+        if ($meta?->robots_noindex === null) {
+            if ($type === 'brand'
+                && ! \Modules\Seo\Support\IndexingPolicy::brandIndexable((string) $model->getAttribute('slug'))) {
+                $flags['noindex'] = true;
+            }
+            if ($type === 'forum_question'
+                && ! \Modules\Seo\Support\IndexingPolicy::forumIndexable((int) $model->getAttribute('view_count'))) {
+                $flags['noindex'] = true;
+            }
         }
 
         return $flags;
