@@ -259,6 +259,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:edit-crm-customer')->group(function () {
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        Route::post('customers/{customer}/bale-unlink', [CustomerController::class, 'baleUnlink'])->name('customers.bale-unlink');
     });
     Route::middleware('can:delete-crm-customer')->group(function () {
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
@@ -529,6 +530,24 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // ─── محدودهٔ سرویس‌دهی اپلیکیشن — هابِ پیمایش استان→شهر→منطقه ──
     Route::middleware('can:manage-crm-settings')->group(function () {
         Route::get('app-service-area', [\Modules\CRM\Http\Controllers\AppServiceAreaController::class, 'index'])->name('app-service-area.index');
+    });
+
+    // ─── قالب‌های پیامِ اطلاع‌رسانیِ مشتری (نوتیفِ اپ + بله) ──────────
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('notify-templates', [\Modules\CRM\Http\Controllers\NotifyTemplatesController::class, 'index'])->name('notify-templates.index');
+        Route::post('notify-templates', [\Modules\CRM\Http\Controllers\NotifyTemplatesController::class, 'update'])->name('notify-templates.update');
+        Route::post('notify-templates/reset', [\Modules\CRM\Http\Controllers\NotifyTemplatesController::class, 'reset'])->name('notify-templates.reset');
+    });
+
+    // ─── کمپین‌های پیام‌رسانِ بله ──────────────────────────────────────
+    Route::middleware('can:manage-crm-settings')->prefix('bale-campaigns')->name('bale-campaigns.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'index'])->name('index');
+        Route::get('create', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'create'])->name('create');
+        Route::post('/', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'store'])->name('store');
+        Route::get('{baleCampaign}', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'show'])->name('show')->whereNumber('baleCampaign');
+        Route::post('{baleCampaign}/process', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'process'])->name('process')->whereNumber('baleCampaign');
+        Route::post('{baleCampaign}/test', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'test'])->name('test')->whereNumber('baleCampaign');
+        Route::delete('{baleCampaign}', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'destroy'])->name('destroy')->whereNumber('baleCampaign');
     });
 
     // ─── ایرادات فرم ثبت سفارش پنل (objectionsList در ویزارد اپراتور) ───
