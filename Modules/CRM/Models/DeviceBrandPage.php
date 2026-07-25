@@ -28,6 +28,7 @@ class DeviceBrandPage extends Model
         'title',
         'subtitle',
         'caption',
+        'hero_image',
         'cta_primary_label',
         'cta_primary_url',
         'cta_primary_icon',
@@ -44,6 +45,7 @@ class DeviceBrandPage extends Model
     ];
 
     protected $casts = [
+        'hero_image' => 'array',
         'sections_enabled' => 'array',
         'is_active' => 'boolean',
     ];
