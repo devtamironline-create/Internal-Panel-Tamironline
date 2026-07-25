@@ -203,11 +203,73 @@ class TechnicianController extends Controller
                 .' تومان ثبت شد. مانده فعلی: '.number_format($target).' تومان.');
     }
 
+    /**
+     * ثبتِ تغییرِ زمان‌دارِ درصدِ کمیسیون — «از تاریخ/ساعتِ X درصد Y شود».
+     * محاسباتِ مالیِ قبل از آن تاریخ دست‌نخورده می‌مانند (CommissionCalculator
+     * درصدِ مؤثر در لحظهٔ تکمیلِ سفارش را از تاریخچه می‌خواند).
+     */
+    public function storePercentChange(Request $request, Technician $technician)
+    {
+        $validated = $request->validate([
+            'percent' => 'nullable|integer|min:0|max:100',
+            'tech_per_of_all' => 'nullable|integer|min:0|max:100',
+            'effective_date' => 'required|string|max:12',
+            'effective_time' => ['nullable', 'regex:/^\d{1,2}:\d{2}$/'],
+            'note' => 'nullable|string|max:500',
+        ], [
+            'effective_date.required' => 'تاریخِ اعمال الزامی است.',
+            'effective_time.regex' => 'ساعت باید به شکل HH:MM باشد (مثلاً 00:00).',
+        ]);
+
+        if ($validated['percent'] === null && $validated['tech_per_of_all'] === null) {
+            return back()->withErrors(['percent' => 'حداقل یکی از دو درصد را وارد کنید.'])->withInput();
+        }
+
+        // تاریخِ شمسی Y/m/d (+ ساعتِ اختیاری) → Carbon میلادی.
+        try {
+            $jalali = trim($validated['effective_date']).' '.($validated['effective_time'] ?: '00:00');
+            $effectiveFrom = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d H:i', $jalali)->toCarbon();
+        } catch (\Throwable) {
+            return back()->withErrors(['effective_date' => 'تاریخ شمسی نامعتبر است (مثال: 1405/03/01).'])->withInput();
+        }
+
+        \Modules\CRM\Models\TechnicianPercentChange::create([
+            'technician_id' => $technician->id,
+            'percent' => $validated['percent'],
+            'tech_per_of_all' => $validated['tech_per_of_all'],
+            'effective_from' => $effectiveFrom,
+            'note' => $validated['note'] ?? null,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'تغییرِ درصد ثبت شد و از '
+            .\Morilog\Jalali\Jalalian::fromCarbon($effectiveFrom)->format('Y/m/d H:i')
+            .' در محاسبات اعمال می‌شود. محاسباتِ قبل از این تاریخ تغییری نمی‌کنند.');
+    }
+
+    /** حذفِ تغییرِ درصد — فقط تا قبل از رسیدنِ تاریخِ اعمال (حفظِ تاریخچهٔ مالی). */
+    public function destroyPercentChange(Technician $technician, \Modules\CRM\Models\TechnicianPercentChange $percentChange)
+    {
+        abort_unless((int) $percentChange->technician_id === (int) $technician->id, 404);
+
+        if (! $percentChange->isPending()) {
+            return back()->with('error', 'این تغییر اعمال شده و برای حفظِ تاریخچهٔ مالی قابلِ حذف نیست. در صورت نیاز یک تغییرِ جدید با تاریخِ جدید ثبت کنید.');
+        }
+
+        $percentChange->delete();
+
+        return back()->with('success', 'تغییرِ برنامه‌ریزی‌شده حذف شد.');
+    }
+
     public function edit(Technician $technician)
     {
         $technician->load('cities:id', 'regions:id', 'brands:id', 'devices:id');
 
         return view('crm::technicians.edit', [
+            'percentChanges' => $technician->percentChanges()
+                ->with('creator:id,first_name,last_name')
+                ->orderByDesc('effective_from')
+                ->get(),
             'technician' => $technician,
             'allCities' => \Modules\CRM\Models\City::active()->orderBy('name')->get(['id', 'name', 'province_id']),
             // همه‌ی برندهای تعریف‌شده در پنل (فعال و غیرفعال) — وضعیتِ سایت/اپ

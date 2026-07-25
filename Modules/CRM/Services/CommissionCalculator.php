@@ -45,9 +45,15 @@ class CommissionCalculator
             ? (int) $explicitTotal
             : (int) ($order->price_customer ?? $order->total_invoice ?? $order->final_price ?? $order->items_subtotal ?? 0);
 
-        $percent      = max(0, min(100, (int) $technician->percent));
-        $techPerOfAll = max(0, min(100, (int) ($technician->tech_per_of_all ?? 0)));
-        $calcType     = (string) ($technician->type_of_calc_tech ?? '');
+        // درصدِ مؤثر در لحظهٔ تکمیلِ سفارش (نه درصدِ «الان») — تغییراتِ زمان‌دارِ
+        // درصد (crm_technician_percent_changes) تاریخِ مالیِ گذشته را عوض نمی‌کنند
+        // و درصدِ جدید فقط از effective_from به بعد اعمال می‌شود.
+        $at = $order->completed_at ?? now();
+        $profile = $technician->percentProfileAt($at);
+
+        $percent = max(0, min(100, (int) $profile['percent']));
+        $techPerOfAll = max(0, min(100, (int) $profile['tech_per_of_all']));
+        $calcType = (string) ($technician->type_of_calc_tech ?? '');
 
         // ۱) ایاب و ذهاب: تکنسین ۱۰۰٪ می‌گیرد
         $statusValue = $order->status instanceof OrderStatus
@@ -67,7 +73,7 @@ class CommissionCalculator
         // ۲) Internal — درصد شرکت از tech_per_of_all
         if ($calcType === '1' || $calcType === 'internal') {
             $companyShare = intdiv($total * $techPerOfAll, 100);
-            $techShare    = max(0, $total - $companyShare);
+            $techShare = max(0, $total - $companyShare);
 
             return [
                 'total' => $total,
@@ -80,7 +86,7 @@ class CommissionCalculator
 
         // ۳) External — درصد شرکت از percent
         $companyShare = intdiv($total * $percent, 100);
-        $techShare    = max(0, $total - $companyShare);
+        $techShare = max(0, $total - $companyShare);
 
         return [
             'total' => $total,
