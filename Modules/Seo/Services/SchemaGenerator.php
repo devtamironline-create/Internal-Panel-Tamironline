@@ -31,7 +31,11 @@ class SchemaGenerator
         $graph[] = $this->website();
         $graph[] = $this->webPage($type, $meta);
 
-        if ($crumbs = $this->breadcrumb($meta)) {
+        // BreadcrumbList برای صفحاتِ device / brand_device / brand را از این پس
+        // خودِ فرانت رندر می‌کند (نامهٔ نقشهٔ ایندکس) — اگر بک‌اند هم بدهد دو نودِ
+        // BreadcrumbList تکراری می‌شود. بقیهٔ نوع‌ها مثل قبل از بک‌اند می‌گیرند.
+        $frontOwnsBreadcrumb = in_array($type, ['device', 'brand_device', 'brand', 'device_brand_page'], true);
+        if (! $frontOwnsBreadcrumb && ($crumbs = $this->breadcrumb($meta))) {
             $graph[] = $crumbs;
         }
 
