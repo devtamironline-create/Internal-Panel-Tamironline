@@ -25,6 +25,11 @@ class OrderCreatedNotification extends Notification
      */
     public function via($notifiable): array
     {
+        // قالبِ قابلِ‌مدیریت از پنل — خاموش بودن یعنی هیچ کانالی پیام نگیرد.
+        if (\Modules\CustomerApp\Support\NotifyTemplates::resolve('order_created', $this->order) === null) {
+            return [];
+        }
+
         $channels = ['database'];
 
         // بله: از طریقِ چتِ ربات (bale_user_id) یا سفیر (شمارهٔ موبایل) —
@@ -36,11 +41,12 @@ class OrderCreatedNotification extends Notification
         return $channels;
     }
 
-    /** متنِ پیامِ بله — همان محتوای نوتیفیکیشنِ اپ. */
+    /** متنِ پیامِ بله — همان قالبِ پنل. */
     public function toBale($notifiable): string
     {
-        return "✅ سفارش شما ثبت شد\n"
-            .sprintf('سفارش با کد پیگیری %s ثبت شد. به‌زودی برای هماهنگی با شما تماس می‌گیریم.', $this->order->order_code);
+        $tpl = \Modules\CustomerApp\Support\NotifyTemplates::resolve('order_created', $this->order);
+
+        return $tpl ? $tpl['title']."\n".$tpl['body'] : '';
     }
 
     /**
@@ -50,12 +56,11 @@ class OrderCreatedNotification extends Notification
      */
     public function toDatabase($notifiable): array
     {
+        $tpl = \Modules\CustomerApp\Support\NotifyTemplates::resolve('order_created', $this->order);
+
         return [
-            'title' => 'سفارش شما ثبت شد',
-            'body' => sprintf(
-                'سفارش با کد پیگیری %s ثبت شد. به‌زودی برای هماهنگی با شما تماس می‌گیریم.',
-                $this->order->order_code
-            ),
+            'title' => $tpl['title'] ?? 'سفارش شما ثبت شد',
+            'body' => $tpl['body'] ?? sprintf('سفارش با کد پیگیری %s ثبت شد.', $this->order->order_code),
             'payload' => [
                 'order_id' => (int) $this->order->id,
                 'tracking_code' => $this->order->order_code,

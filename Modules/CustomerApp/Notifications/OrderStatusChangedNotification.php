@@ -30,6 +30,11 @@ class OrderStatusChangedNotification extends Notification
      */
     public function via($notifiable): array
     {
+        // قالبِ قابلِ‌مدیریت از پنل — خاموش بودنِ این وضعیت یعنی هیچ پیامی نرود.
+        if ($this->template() === null) {
+            return [];
+        }
+
         $channels = ['database'];
 
         // بله: از طریقِ چتِ ربات (bale_user_id) یا سفیر (شمارهٔ موبایل) —
@@ -41,11 +46,21 @@ class OrderStatusChangedNotification extends Notification
         return $channels;
     }
 
-    /** متنِ پیامِ بله — همان تیتر/بدنهٔ نوتیفیکیشنِ اپ. */
+    /** متنِ پیامِ بله — همان قالبِ پنل. */
     public function toBale($notifiable): string
     {
-        return '🔔 '.$this->titleFor($this->newStatus)."\n"
-            .sprintf('سفارش %s: %s', $this->order->order_code, $this->newStatus->label());
+        $tpl = $this->template();
+
+        return $tpl ? $tpl['title']."\n".$tpl['body'] : '';
+    }
+
+    /** @return array{title: string, body: string}|null */
+    private function template(): ?array
+    {
+        return \Modules\CustomerApp\Support\NotifyTemplates::resolve(
+            \Modules\CustomerApp\Support\NotifyTemplates::statusKey($this->newStatus),
+            $this->order,
+        );
     }
 
     /**
@@ -53,12 +68,9 @@ class OrderStatusChangedNotification extends Notification
      */
     public function toDatabase($notifiable): array
     {
-        $title = $this->titleFor($this->newStatus);
-        $body = sprintf(
-            'سفارش %s: %s',
-            $this->order->order_code,
-            $this->newStatus->label()
-        );
+        $tpl = $this->template();
+        $title = $tpl['title'] ?? $this->titleFor($this->newStatus);
+        $body = $tpl['body'] ?? sprintf('سفارش %s: %s', $this->order->order_code, $this->newStatus->label());
 
         return [
             'title' => $title,
