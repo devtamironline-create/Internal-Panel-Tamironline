@@ -61,6 +61,9 @@
                 'faq'                 => 'سوالات متداول',
                 'brand_other_devices' => 'سایر دستگاه‌های برند',
                 'testimonials'        => 'نظرات مشتریان',
+                'videos'              => 'ویدیوها',
+                'forum_questions'     => 'سوالات انجمن',
+                'related_articles'    => 'مقالات مرتبط',
             ] as $key => $label)
                 <label class="inline-flex items-center gap-2">
                     <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
@@ -103,6 +106,27 @@
                       class="rich-editor w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">{{ old('description', $page?->description ?? '') }}</textarea>
             <p class="text-xs text-gray-500 mt-1">HTML از TinyMCE. اگر خالی باشد، از description دستگاه (یا brand یا الگو) استفاده می‌شود.</p>
         </div>
+    </div>
+
+    {{-- تصاویر Hero اختصاصی این صفحهٔ ترکیبی --}}
+    <div class="pt-4 border-t border-gray-100">
+        <h4 class="text-sm font-bold mb-3">🖼️ تصاویر Hero اختصاصی این صفحه</h4>
+        @php
+            $comboHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $page?->hero_image ?? null));
+        @endphp
+        <p class="text-xs text-gray-500 mb-3">
+            ۲ تصویر دسکتاپ (چپ/راست) + ۱ تصویر موبایل، هرکدام با alt مجزا. هر slot که پر کنید فقط برای همین صفحهٔ ترکیبی override می‌شود؛
+            slotهای خالی از دستگاه ← برند ← <a href="{{ route('site.admin.page-content.edit', 'device_brand') }}" target="_blank" class="text-blue-600 hover:underline">الگوی ترکیبی</a> پر می‌شوند.
+        </p>
+        @include('site::admin.partials.hero-visual-picker', [
+            'name' => 'hero_image',
+            'desktopLeftUrl' => $comboHero['desktop_left']['url'],
+            'desktopLeftAlt' => $comboHero['desktop_left']['alt'],
+            'desktopRightUrl' => $comboHero['desktop_right']['url'],
+            'desktopRightAlt' => $comboHero['desktop_right']['alt'],
+            'mobileUrl' => $comboHero['mobile']['url'],
+            'mobileAlt' => $comboHero['mobile']['alt'],
+        ])
     </div>
 
     {{-- CTAs --}}

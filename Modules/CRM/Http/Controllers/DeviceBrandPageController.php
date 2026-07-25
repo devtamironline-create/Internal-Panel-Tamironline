@@ -169,6 +169,15 @@ class DeviceBrandPageController extends Controller
             'caption' => 'nullable|string|max:500',
             'description' => 'nullable|string|max:200000',
 
+            // تصویرِ Hero اختصاصیِ همین صفحهٔ ترکیبی — همان ساختارِ ۳-اسلاتیِ دستگاه.
+            'hero_image' => 'nullable|array',
+            'hero_image.desktop_left.url' => 'nullable|string|max:500',
+            'hero_image.desktop_left.alt' => 'nullable|string|max:200',
+            'hero_image.desktop_right.url' => 'nullable|string|max:500',
+            'hero_image.desktop_right.alt' => 'nullable|string|max:200',
+            'hero_image.mobile.url' => 'nullable|string|max:500',
+            'hero_image.mobile.alt' => 'nullable|string|max:200',
+
             'cta_primary_label' => 'nullable|string|max:60',
             'cta_primary_url' => 'nullable|string|max:500',
             'cta_primary_icon' => 'nullable|string|max:60',
@@ -201,6 +210,20 @@ class DeviceBrandPageController extends Controller
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
         if (array_key_exists('description', $validated)) {
             $validated['description'] = HtmlSanitizer::clean($validated['description']);
+        }
+
+        // نرمالایز hero_image (شکل ۳-اسلاتی) — اگر همهٔ فیلدها خالی است null
+        // ذخیره می‌شود تا مثلِ قبل از زنجیرهٔ دستگاه/برند/قالب fallback شود.
+        if (array_key_exists('hero_image', $validated)) {
+            $hi = \Modules\Site\Services\PageSectionService::normalizeHeroVisual($validated['hero_image']);
+            $isEmpty = true;
+            foreach (['desktop_left', 'desktop_right', 'mobile'] as $slot) {
+                if (! empty($hi[$slot]['url']) || ! empty($hi[$slot]['alt'])) {
+                    $isEmpty = false;
+                    break;
+                }
+            }
+            $validated['hero_image'] = $isEmpty ? null : $hi;
         }
     }
 
