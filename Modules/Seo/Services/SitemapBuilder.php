@@ -172,30 +172,44 @@ class SitemapBuilder
     |   - sitemap-pages شاملِ هاب‌ها/صفحاتِ ثابتِ اصلی هم هست
     */
 
-    /** نگاشتِ نامِ فایلِ سایت‌مپ (اسپک) → نوعِ داخلیِ رجیستری. ترتیب = ترتیبِ index. */
+    /**
+     * نگاشتِ نامِ فایلِ سایت‌مپ → نوعِ داخلیِ رجیستری.
+     * نام‌گذاری طبقِ «نامهٔ نقشهٔ ایندکس» (تیر ۱۴۰۵): core / services-devices /
+     * services-combo / brands / forum / blog-1 / blog-2.
+     * نام‌های قدیمی به‌عنوانِ alias نگه داشته شده‌اند (GSC ممکن است هنوز fetch کند)
+     * ولی در index معرفی نمی‌شوند.
+     */
     public const SPEC_FILES = [
+        // نام‌گذاریِ جدید (نامهٔ نقشهٔ ایندکس)
+        'core' => 'page',
+        'services-devices' => 'device',
+        'services-combo' => 'brand_device',
+        'brands' => 'brand',
+        'forum' => 'forum_question',
+        'blog-1' => 'article',
+        'blog-2' => 'article',
+        // aliasهای قدیمی — فقط برای سازگاری؛ در INDEX_FILES نیستند.
         'pages' => 'page',
         'services' => 'device',
         'service-brands' => 'brand_device',
-        'brands' => 'brand',
         'articles' => 'article',
         'blog-topics' => 'blog_topic',
         'faq-taxonomies' => 'taxonomy',
-        'forum' => 'forum_question',
     ];
 
     /**
-     * فایل‌هایی که در sitemap.xml اصلی معرفی می‌شوند.
+     * فایل‌هایی که در sitemap.xml اصلی معرفی می‌شوند — ۷ فایلِ نامهٔ نقشهٔ ایندکس،
+     * تا نرخِ ایندکسِ هر بخش در Search Console جدا پایش شود.
      * blog-topics / faq-taxonomies عمداً معرفی نمی‌شوند تا کیفیتِ محتوای
      * مستقل‌شان بررسی شود (کدشان می‌ماند و از مسیرِ نام‌دار سرو می‌شوند).
-     * forum طبقِ درخواستِ فرانت اضافه شد — فیلترِ کیفیِ specTypeUrls فقط
-     * پرسش‌های منتشر+تأییدشده با حداقل یک پاسخِ تخصصیِ تأییدشده را می‌گذارد.
      */
-    public const INDEX_FILES = ['pages', 'services', 'service-brands', 'brands', 'articles', 'forum'];
+    public const INDEX_FILES = [
+        'core', 'services-devices', 'services-combo', 'brands', 'forum', 'blog-1', 'blog-2',
+    ];
 
-    /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-pages باشند (بندِ ۵ اسپک). */
+    /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-core باشند. */
     public const STATIC_PATHS = [
-        '/', '/services', '/brands', '/blog', '/faq', '/forum', '/about', '/guarantee', '/pricing',
+        '/', '/services', '/brands', '/blog', '/faq', '/forum', '/about', '/contact', '/guarantee', '/pricing',
     ];
 
     /** پیشوندهای مسیر که تحتِ هیچ شرایطی نباید وارد سایت‌مپ شوند (blacklist صریح). */
@@ -223,9 +237,9 @@ class SitemapBuilder
     }
 
     /**
-     * URLهای یک فایلِ سایت‌مپِ اسپک (فقط <loc>؛ بدونِ lastmod/changefreq/priority).
+     * URLهای یک فایلِ سایت‌مپِ اسپک (فقط <loc>؛ بلاگ/فروم lastmod واقعی دارند).
      *
-     * @return list<array{loc:string}>
+     * @return list<array{loc:string,lastmod?:string}>
      */
     public function specUrls(string $name): array
     {
@@ -233,9 +247,22 @@ class SitemapBuilder
             return [];
         }
 
-        return $name === 'pages'
-            ? $this->specPageUrls()
-            : $this->specTypeUrls(self::SPEC_FILES[$name]);
+        if ($name === 'core' || $name === 'pages') {
+            return $this->specPageUrls();
+        }
+
+        // بلاگ به دو فایل تقسیم می‌شود (blog-1 نیمهٔ اول، blog-2 نیمهٔ دوم بر اساسِ id)
+        // تا نرخِ ایندکسِ مقالات در GSC در دو دستهٔ قابلِ‌پایش دیده شود.
+        if ($name === 'blog-1' || $name === 'blog-2') {
+            $all = $this->specTypeUrls('article');
+            $half = (int) ceil(count($all) / 2);
+
+            return $name === 'blog-1'
+                ? array_slice($all, 0, $half)
+                : array_slice($all, $half);
+        }
+
+        return $this->specTypeUrls(self::SPEC_FILES[$name]);
     }
 
     /** آیا نامِ فایل معتبر است؟ (برای ۴۰۴ در کنترلر). */
@@ -277,10 +304,19 @@ class SitemapBuilder
         }
 
         // فورَم: فقط پرسش‌های منتشر+تأییدشده که حداقل یک «پاسخِ تخصصیِ تأییدشده»
-        // دارند (بندِ ۲ اسپک). شرط‌های کیفیِ محتوایی/۲۰۰ در crawlِ زنده کنترل می‌شوند.
+        // دارند + بالای آستانهٔ بازدید (سیاستِ ایندکس — سوالاتِ کم‌بازده حذف).
         if ($type === 'forum_question') {
             $query->approved()
                 ->whereHas('approvedAnswers', fn ($q) => $q->where('is_expert_reply', true));
+            $minViews = \Modules\Seo\Support\IndexingPolicy::forumMinViews();
+            if ($minViews > 0) {
+                $query->where('view_count', '>=', $minViews);
+            }
+        }
+
+        // بلاگ: ترتیبِ قطعی بر اساسِ id تا تقسیمِ blog-1/blog-2 پایدار بماند.
+        if ($type === 'article') {
+            $query->orderBy('id');
         }
 
         $publishedCol = $cfg['published'] ?? null;
@@ -288,6 +324,12 @@ class SitemapBuilder
         $out = [];
         foreach ($query->cursor() as $model) {
             if (! $this->isIndexable($model, $publishedCol)) {
+                continue;
+            }
+            // برندهای نحیف (خارج از whitelistِ ایندکس) هم از سایت‌مپ حذف می‌شوند
+            // تا سایت‌مپ با robotsِ per-page هم‌خوان بماند.
+            if ($type === 'brand'
+                && ! \Modules\Seo\Support\IndexingPolicy::brandIndexable((string) $model->getAttribute('slug'))) {
                 continue;
             }
             $loc = $this->absoluteUrl($this->registry->pathFor($type, $model));
@@ -298,15 +340,38 @@ class SitemapBuilder
                 continue; // مسیرِ blacklist / پارامتردار / fragment / archive
             }
             $entry = ['loc' => $loc];
-            // فورَم: طبقِ درخواستِ فرانت lastmod هم برمی‌گردد (رندررِ XML پشتیبانی
-            // می‌کند؛ بقیهٔ فایل‌ها طبقِ بندِ ۷ اسپک بدونِ lastmod می‌مانند).
+            // lastmod فقط جایی که مقدارِ واقعی داریم (نامهٔ نقشهٔ ایندکس: تاریخِ
+            // ساختگی بدتر از نبودن است):
+            //  - فورَم: updated_at (با هر پاسخ/ویرایش تغییر می‌کند)
+            //  - بلاگ: updated_at اگر بعد از created_at ویرایش شده؛ وگرنه published_at
+            //    (تاریخِ واقعیِ انتشار — نه تاریخِ یکسانِ import).
             if ($type === 'forum_question' && $model->getAttribute('updated_at')) {
                 $entry['lastmod'] = $model->getAttribute('updated_at')->toDateString();
+            }
+            if ($type === 'article' && ($lm = $this->articleLastmod($model))) {
+                $entry['lastmod'] = $lm;
             }
             $out[] = $entry;
         }
 
         return $out;
+    }
+
+    /**
+     * lastmod واقعیِ مقاله: اگر بعد از ساخت ویرایش شده updated_at؛ وگرنه
+     * published_at (تاریخِ واقعیِ WP). اگر هیچ‌کدام نبود، null → تگ حذف می‌شود.
+     */
+    private function articleLastmod(object $model): ?string
+    {
+        $updated = $model->getAttribute('updated_at');
+        $created = $model->getAttribute('created_at');
+        if ($updated && $created && Carbon::parse($updated)->greaterThan(Carbon::parse($created))) {
+            return Carbon::parse($updated)->toDateString();
+        }
+
+        $published = $model->getAttribute('published_at');
+
+        return $published ? Carbon::parse($published)->toDateString() : null;
     }
 
     /**

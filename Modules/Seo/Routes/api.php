@@ -24,8 +24,9 @@ Route::prefix('v1/seo')->group(function () {
         // Index اصلی → tamironline.com/sitemap.xml (فرانت به این rewrite می‌کند)
         Route::get('/sitemap.xml', [SitemapController::class, 'specIndex'])->name('api.v1.seo.sitemap.spec-index');
         // فایل‌های نام‌دار → tamironline.com/sitemaps/sitemap-{name}.xml
+        // regex شاملِ رقم است چون blog-1 / blog-2 داریم.
         Route::get('/sitemaps/sitemap-{name}.xml', [SitemapController::class, 'specNamed'])
-            ->where('name', '[a-z\-]+')->name('api.v1.seo.sitemap.spec-file');
+            ->where('name', '[a-z0-9\-]+')->name('api.v1.seo.sitemap.spec-file');
 
         // ── نسخهٔ قدیمی (دست‌نخورده تا تستِ نسخهٔ جدید در Search Console) ──
         Route::get('/sitemap-index.xml', [SitemapController::class, 'index'])->name('api.v1.seo.sitemap-index');

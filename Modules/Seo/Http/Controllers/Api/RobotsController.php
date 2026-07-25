@@ -17,16 +17,18 @@ class RobotsController extends Controller
         $base = SeoSetting::siteUrl();
         $custom = trim((string) SeoSetting::get('robots_txt'));
 
+        // آدرسِ عمومیِ سایت‌مپ (فرانت /sitemap.xml را از بک‌اند پروکسی می‌کند) —
+        // نه مسیرِ داخلیِ /v1/seo/… که برای گوگل کاربردی ندارد.
         $body = $custom !== '' ? $custom : implode("\n", [
             'User-agent: *',
             'Allow: /',
             '',
-            'Sitemap: '.$base.'/v1/seo/sitemap-index.xml',
+            'Sitemap: '.$base.'/sitemap.xml',
         ]);
 
         // تضمین وجود دایرکتیو Sitemap حتی اگر ادمین فراموش کرده باشد.
         if (! str_contains($body, 'Sitemap:')) {
-            $body .= "\n\nSitemap: ".$base.'/v1/seo/sitemap-index.xml';
+            $body .= "\n\nSitemap: ".$base.'/sitemap.xml';
         }
 
         return response($body, 200, [
