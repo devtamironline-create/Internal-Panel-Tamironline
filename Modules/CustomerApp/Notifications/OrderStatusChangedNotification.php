@@ -30,7 +30,21 @@ class OrderStatusChangedNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        // مشتریِ متصل به بله → همان پیام به چتِ بله هم می‌رود (BaleChannel).
+        if (! empty($notifiable->bale_user_id) && (string) config('services.bale.bot_token') !== '') {
+            $channels[] = \Modules\CustomerApp\Channels\BaleChannel::class;
+        }
+
+        return $channels;
+    }
+
+    /** متنِ پیامِ بله — همان تیتر/بدنهٔ نوتیفیکیشنِ اپ. */
+    public function toBale($notifiable): string
+    {
+        return '🔔 '.$this->titleFor($this->newStatus)."\n"
+            .sprintf('سفارش %s: %s', $this->order->order_code, $this->newStatus->label());
     }
 
     /**

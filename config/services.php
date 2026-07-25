@@ -33,6 +33,8 @@ return [
         'bot_token' => env('BALE_BOT_TOKEN'),
         // حداکثر عمرِ auth_date برای پذیرشِ initData (ثانیه)
         'init_data_max_age' => env('BALE_INIT_DATA_MAX_AGE', 86400),
+        // پایهٔ APIِ ربات (سازگار با تلگرام) — برای ارسالِ نوتیفیکیشن به چتِ کاربر
+        'api_base' => env('BALE_API_BASE', 'https://tapi.bale.ai'),
     ],
 
     // Webhook به فرانت Next.js برای revalidateTag فوری پس از تغییر بنر/مقاله/...
