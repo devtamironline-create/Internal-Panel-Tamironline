@@ -35,6 +35,13 @@ return [
         'init_data_max_age' => env('BALE_INIT_DATA_MAX_AGE', 86400),
         // پایهٔ APIِ ربات (سازگار با تلگرام) — برای ارسالِ نوتیفیکیشن به چتِ کاربر
         'api_base' => env('BALE_API_BASE', 'https://tapi.bale.ai'),
+
+        // سفیرِ بله (docs.bale.ai/safir) — ارسالِ پیام با «شمارهٔ موبایل» برای
+        // مشتری‌هایی که bale_user_id ندارند. سرویسِ تجاری است و کلیدِ دسترسیِ
+        // جدا دارد؛ خالی = این مسیر غیرفعال.
+        'safir_access_key' => env('BALE_SAFIR_ACCESS_KEY'),
+        'safir_bot_id' => env('BALE_SAFIR_BOT_ID'),
+        'safir_base' => env('BALE_SAFIR_BASE', 'https://safir.bale.ai'),
     ],
 
     // Webhook به فرانت Next.js برای revalidateTag فوری پس از تغییر بنر/مقاله/...
