@@ -282,6 +282,10 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('technicians/{technician}/edit', [TechnicianController::class, 'edit'])->name('technicians.edit');
         Route::put('technicians/{technician}', [TechnicianController::class, 'update'])->name('technicians.update');
         Route::post('technicians/{technician}/training-gate', [TechnicianController::class, 'toggleTrainingGate'])->name('technicians.training-gate');
+
+        // تغییرِ زمان‌دارِ درصدِ کمیسیون — «از تاریخ X درصد Y» بدونِ دست‌زدن به تاریخِ مالیِ گذشته
+        Route::post('technicians/{technician}/percent-changes', [TechnicianController::class, 'storePercentChange'])->name('technicians.percent-changes.store');
+        Route::delete('technicians/{technician}/percent-changes/{percentChange}', [TechnicianController::class, 'destroyPercentChange'])->name('technicians.percent-changes.destroy')->whereNumber('percentChange');
     });
     Route::middleware('can:delete-crm-technician')->group(function () {
         Route::delete('technicians/{technician}', [TechnicianController::class, 'destroy'])->name('technicians.destroy');

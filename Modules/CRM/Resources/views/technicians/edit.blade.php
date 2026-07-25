@@ -19,6 +19,112 @@
         </form>
     </div>
 
+    {{-- ─── تغییرِ زمان‌دارِ درصدِ کمیسیون — فرم جدا (endpoint جداگانه) ─── --}}
+    @php
+        $nowProfile = $technician->percentProfileAt(now());
+    @endphp
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div class="flex items-start justify-between mb-1 flex-wrap gap-3">
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">⏱ تغییرِ زمان‌دارِ درصدِ کمیسیون</h2>
+                <p class="text-xs text-gray-500 mt-1 leading-6">
+                    به‌جای تغییرِ مستقیمِ درصد، این‌جا مشخص کنید «از چه تاریخ و ساعتی» درصدِ جدید اعمال شود.
+                    محاسباتِ مالیِ <b>قبل از آن تاریخ دست‌نخورده می‌مانند</b> — درصدِ هر سفارش بر اساسِ لحظهٔ تکمیلِ همان سفارش از این تاریخچه خوانده می‌شود.
+                </p>
+            </div>
+            <div class="text-xs bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg px-3 py-2 text-sky-800 dark:text-sky-300">
+                درصدِ مؤثرِ الان: <b>{{ $nowProfile['percent'] }}٪</b>
+                <span class="text-gray-400">| درصد دوم: {{ $nowProfile['tech_per_of_all'] }}٪</span>
+            </div>
+        </div>
+
+        {{-- فرم افزودن تغییر --}}
+        <form method="POST" action="{{ route('crm.technicians.percent-changes.store', $technician) }}"
+              class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mt-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+            @csrf
+            <div>
+                <label class="block text-[11px] text-gray-500 mb-1">درصد کمیسیونِ جدید (0-100)</label>
+                <input type="number" name="percent" min="0" max="100" value="{{ old('percent') }}" placeholder="مثلاً 25"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                @error('percent')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-[11px] text-gray-500 mb-1">درصد دومِ جدید (اختیاری)</label>
+                <input type="number" name="tech_per_of_all" min="0" max="100" value="{{ old('tech_per_of_all') }}" placeholder="خالی = بدون تغییر"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-[11px] text-gray-500 mb-1">از تاریخ (شمسی) *</label>
+                <input type="text" name="effective_date" value="{{ old('effective_date') }}" dir="ltr" placeholder="1405/03/01"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center">
+                @error('effective_date')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-[11px] text-gray-500 mb-1">ساعت (اختیاری)</label>
+                <input type="text" name="effective_time" value="{{ old('effective_time') }}" dir="ltr" placeholder="00:00"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center">
+                @error('effective_time')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <button type="submit" class="w-full px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">ثبت تغییر</button>
+            </div>
+            <div class="md:col-span-5">
+                <label class="block text-[11px] text-gray-500 mb-1">یادداشت (اختیاری)</label>
+                <input type="text" name="note" value="{{ old('note') }}" maxlength="500" placeholder="مثلاً: توافقِ جدید از خرداد"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+            </div>
+        </form>
+
+        {{-- تاریخچه/برنامه‌ریزی‌شده‌ها --}}
+        @if(($percentChanges ?? collect())->isEmpty())
+            <p class="text-sm text-gray-400 text-center py-4">هنوز تغییرِ زمان‌داری ثبت نشده — محاسبات با درصدِ پایهٔ فرمِ بالا انجام می‌شود.</p>
+        @else
+            <div class="overflow-x-auto mt-3">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300">
+                        <tr>
+                            <th class="p-2.5 text-start">از تاریخ</th>
+                            <th class="p-2.5 text-start">درصد کمیسیون</th>
+                            <th class="p-2.5 text-start">درصد دوم</th>
+                            <th class="p-2.5 text-start">یادداشت</th>
+                            <th class="p-2.5 text-start">ثبت‌کننده</th>
+                            <th class="p-2.5 text-start">وضعیت</th>
+                            <th class="p-2.5 w-20"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($percentChanges as $pc)
+                            <tr>
+                                <td class="p-2.5 font-bold" dir="ltr">@jdatetime($pc->effective_from)</td>
+                                <td class="p-2.5">{{ $pc->percent !== null ? $pc->percent.'٪' : '—' }}</td>
+                                <td class="p-2.5">{{ $pc->tech_per_of_all !== null ? $pc->tech_per_of_all.'٪' : '—' }}</td>
+                                <td class="p-2.5 text-xs text-gray-500">{{ $pc->note ?: '—' }}</td>
+                                <td class="p-2.5 text-xs text-gray-500">{{ trim(($pc->creator?->first_name ?? '').' '.($pc->creator?->last_name ?? '')) ?: '—' }}</td>
+                                <td class="p-2.5">
+                                    @if($pc->isPending())
+                                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-800">در انتظار اعمال</span>
+                                    @else
+                                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800">اعمال‌شده</span>
+                                    @endif
+                                </td>
+                                <td class="p-2.5">
+                                    @if($pc->isPending())
+                                        <form method="POST" action="{{ route('crm.technicians.percent-changes.destroy', [$technician, $pc]) }}"
+                                              onsubmit="return confirm('این تغییرِ برنامه‌ریزی‌شده حذف شود؟');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-xs text-rose-600 hover:text-rose-800">حذف</button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-2">تغییراتِ «اعمال‌شده» برای حفظِ تاریخچهٔ مالی قابلِ حذف نیستند — در صورت نیاز تغییرِ جدیدی با تاریخِ جدید ثبت کنید.</p>
+        @endif
+    </div>
+
     {{-- ─── قفل آموزش (Training Gate) — فرم جدا چون POST endpoint جداگانه دارد ─── --}}
     @php
         $isLocked = $technician->training_completed_at === null;

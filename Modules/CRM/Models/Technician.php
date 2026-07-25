@@ -171,6 +171,43 @@ class Technician extends Authenticatable
         return $this->hasMany(TechChatMessage::class)->orderBy('created_at');
     }
 
+    /** تغییراتِ زمان‌دارِ درصدِ کمیسیون (تاریخچه + برنامه‌ریزی‌شده‌ها). */
+    public function percentChanges(): HasMany
+    {
+        return $this->hasMany(TechnicianPercentChange::class)->orderBy('effective_from');
+    }
+
+    /**
+     * درصدهای مؤثرِ این تکنسین در یک لحظهٔ مشخص.
+     *
+     * برای هر فیلد، آخرین تغییرِ زمان‌داری که effective_from آن <= $at و مقدارِ
+     * همان فیلد را دارد برنده است؛ اگر هیچ تغییری نبود، ستون‌های پایهٔ خودِ
+     * تکنسین. تغییراتِ آینده (effective_from > $at) هیچ اثری ندارند — پس
+     * برنامه‌ریزیِ «از ۱ خرداد درصد ۲۵» تا رسیدنِ آن لحظه، محاسبات را عوض نمی‌کند
+     * و بعد از آن هم محاسباتِ قبلی (با تاریخِ تکمیلِ قدیمی) دست‌نخورده می‌مانند.
+     *
+     * @return array{percent:int, tech_per_of_all:int}
+     */
+    public function percentProfileAt(\Carbon\CarbonInterface $at): array
+    {
+        // reorder(): ترتیبِ پیش‌فرضِ رابطه (صعودی) را پاک می‌کند — این‌جا جدیدترین
+        // تغییرِ اعمال‌شده باید اول باشد.
+        $rows = $this->percentChanges()
+            ->where('effective_from', '<=', $at)
+            ->reorder()
+            ->orderByDesc('effective_from')
+            ->orderByDesc('id')
+            ->get(['percent', 'tech_per_of_all', 'effective_from']);
+
+        $percent = $rows->first(fn ($r) => $r->percent !== null)?->percent;
+        $techPerOfAll = $rows->first(fn ($r) => $r->tech_per_of_all !== null)?->tech_per_of_all;
+
+        return [
+            'percent' => (int) ($percent ?? $this->percent ?? 0),
+            'tech_per_of_all' => (int) ($techPerOfAll ?? $this->tech_per_of_all ?? 0),
+        ];
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
