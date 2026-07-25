@@ -121,6 +121,46 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * اتصالِ حسابِ بله به مشتریِ لاگین‌شدهٔ فعلی — برای کاربری که داخلِ
+     * مینی‌اپِ بله با OTP وارد شده (bale_user_id ندارد). بعد از اتصال،
+     * نوتیفیکیشن‌های اپ به چتِ بله‌اش هم می‌روند.
+     */
+    public function baleLink(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate(['init_data' => 'required|string|max:8192']);
+
+        $botToken = (string) config('services.bale.bot_token');
+        if ($botToken === '') {
+            return response()->json(['ok' => false, 'message' => 'احرازِ بله روی سرور پیکربندی نشده است.'], 503);
+        }
+
+        $result = \Modules\Identity\Support\BaleInitData::validate(
+            (string) $request->input('init_data'),
+            $botToken,
+            (int) config('services.bale.init_data_max_age', 86400),
+        );
+
+        if (! ($result['ok'] ?? false) || empty($result['user']['id'])) {
+            return response()->json(['ok' => false, 'message' => 'اعتبارسنجیِ initData ناموفق بود.'], 401);
+        }
+
+        $baleUserId = (int) $result['user']['id'];
+
+        // اگر این شناسهٔ بله قبلاً به مشتریِ دیگری وصل است، جابه‌جا نمی‌کنیم.
+        $conflict = \Modules\CRM\Models\Customer::query()
+            ->where('bale_user_id', $baleUserId)
+            ->where('id', '!=', $request->user()->id)
+            ->exists();
+        if ($conflict) {
+            return response()->json(['ok' => false, 'message' => 'این حسابِ بله به مشتریِ دیگری متصل است.'], 422);
+        }
+
+        $request->user()->forceFill(['bale_user_id' => $baleUserId])->save();
+
+        return response()->json(['ok' => true, 'linked' => true, 'bale_user_id' => $baleUserId]);
+    }
+
     public function completeProfile(CompleteProfileRequest $request): JsonResponse
     {
         $customer = $this->identity->completeProfile(
