@@ -642,10 +642,21 @@ class OrderWizard extends Component
             'isOrderable' => 'boolean',
             'leadNotes' => 'nullable|string|max:2000',
         ];
+        $messages = [];
+        // ایرادِ دستگاه فقط وقتی اجباری است که لیستِ ایرادها اصلاً موجود باشد؛
+        // وگرنه (سینک‌نشدنِ تنظیماتِ WP) ثبتِ سفارش به‌کل قفل می‌شد.
+        $objectionsAvailable = count($this->objectionsList) > 0;
+
         if (! $this->isOrderable) {
             $rules['leadReasonId'] = 'required|integer|exists:crm_lead_reasons,id';
         } else {
             $rules['orderType'] = 'required|string|in:repair,service';
+            if ($objectionsAvailable) {
+                // ایرادِ دستگاه برای سفارشِ قابلِ ثبت اجباری است (حداقل یک مورد).
+                $rules['objections'] = 'required|array|min:1';
+                $messages['objections.required'] = 'حداقل یک ایراد دستگاه را انتخاب کنید.';
+                $messages['objections.min'] = 'حداقل یک ایراد دستگاه را انتخاب کنید.';
+            }
         }
         // اعتبارسنجی دستگاه‌های اضافه
         foreach ($this->extraDevices as $i => $d) {
@@ -653,9 +664,14 @@ class OrderWizard extends Component
             $rules["extraDevices.$i.device_id"] = 'required|integer|exists:crm_devices,id';
             if (! ($d['is_orderable'] ?? true)) {
                 $rules["extraDevices.$i.lead_reason_id"] = 'required|integer|exists:crm_lead_reasons,id';
+            } elseif ($objectionsAvailable) {
+                // مثلِ دستگاهِ اول: سفارشِ قابلِ ثبت بدونِ ایراد ثبت نمی‌شود.
+                $rules["extraDevices.$i.objections"] = 'required|array|min:1';
+                $messages["extraDevices.$i.objections.required"] = 'برای دستگاه اضافه #'.($i + 1).' حداقل یک ایراد انتخاب کنید.';
+                $messages["extraDevices.$i.objections.min"] = 'برای دستگاه اضافه #'.($i + 1).' حداقل یک ایراد انتخاب کنید.';
             }
         }
-        $this->validate($rules, attributes: [
+        $this->validate($rules, $messages, attributes: [
             'provinceId' => 'استان',
             'cityId' => 'شهر',
             'regionId' => 'منطقه',
@@ -663,6 +679,7 @@ class OrderWizard extends Component
             'deviceId' => 'نوع دستگاه',
             'orderType' => 'نوع سفارش',
             'leadReasonId' => 'دلیل عدم سفارش',
+            'objections' => 'ایراد دستگاه',
         ]);
     }
 

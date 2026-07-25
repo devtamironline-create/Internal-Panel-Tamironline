@@ -89,7 +89,8 @@
 
     {{-- ایرادات (multi-select با سرچ) — فقط در حالت قابل سفارش --}}
     <div @class(['hidden' => ! $isOrderable])>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید)</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">ایراد دستگاه (می‌توانید چند مورد را انتخاب کنید) <span class="text-rose-600">*</span></label>
+        @error('objections')<p class="text-xs text-rose-600 mb-2">{{ $message }}</p>@enderror
         @if(count($this->objectionsList))
             <div x-data="{
                 query: '',
@@ -243,7 +244,8 @@
             {{-- ایرادات این دستگاه — فقط در حالت قابل سفارش --}}
             @if(count($this->objectionsList) && $edOrderable)
             <div x-data="{ q: '', norm(s) { return String(s ?? '').replace(/[يﻱ]/g,'ی').replace(/[كﻙ]/g,'ک').toLowerCase().trim(); }, m(l) { return this.norm(l).includes(this.norm(this.q)); } }">
-                <label class="block text-xs font-medium text-gray-700 mb-1">ایراد دستگاه</label>
+                <label class="block text-xs font-medium text-gray-700 mb-1">ایراد دستگاه <span class="text-rose-600">*</span></label>
+                @error('extraDevices.'.$i.'.objections')<p class="text-xs text-rose-600 mb-1">{{ $message }}</p>@enderror
                 @php $selObjections = $ed['objections'] ?? []; @endphp
                 @if(count($selObjections))
                     <div class="flex flex-wrap gap-1.5 mb-2">
