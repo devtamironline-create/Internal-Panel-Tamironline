@@ -102,7 +102,25 @@ class CustomerController extends Controller
 
     public function show(Customer $customer)
     {
-        return view('crm::customers.show', compact('customer'));
+        // سفارش‌های مشتری (با منبعِ ثبت) + آخرین نوتیفیکیشن‌های ارسال‌شده —
+        // برای پروفایلِ کاملِ مشتری در پنل.
+        $orders = $customer->orders()
+            ->with(['device:id,name', 'brand:id,name'])
+            ->latest()
+            ->limit(30)
+            ->get();
+
+        $notifications = $customer->notifications()->latest()->limit(15)->get();
+
+        return view('crm::customers.show', compact('customer', 'orders', 'notifications'));
+    }
+
+    /** قطعِ اتصالِ حسابِ بلهٔ مشتری (bale_user_id). */
+    public function baleUnlink(Customer $customer)
+    {
+        $customer->forceFill(['bale_user_id' => null])->save();
+
+        return back()->with('success', 'اتصالِ بلهٔ مشتری قطع شد.');
     }
 
     public function edit(Customer $customer)

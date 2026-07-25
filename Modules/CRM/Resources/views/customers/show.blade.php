@@ -255,9 +255,111 @@
         </p>
     </div>
 
+    {{-- ─── اتصالِ بله ─────────────────────────────────────────── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">سفارش‌های مشتری</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">در فازهای بعدی، لیست سفارش‌های تعمیر این مشتری اینجا نمایش داده می‌شود.</p>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">💬 اتصال به پیام‌رسانِ بله</h2>
+                @if($customer->bale_user_id)
+                    <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-teal-100 text-teal-800">متصل ✓</span>
+                @else
+                    <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-gray-100 text-gray-600">متصل نیست</span>
+                @endif
+            </div>
+            @if($customer->bale_user_id)
+                @can('edit-crm-customer')
+                <form method="POST" action="{{ route('crm.customers.bale-unlink', $customer) }}"
+                      onsubmit="return confirm('اتصالِ بلهٔ این مشتری قطع شود؟ نوتیفیکیشن‌های چتِ ربات دیگر برایش نمی‌رود.');">
+                    @csrf
+                    <button type="submit" class="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg text-xs font-medium">قطعِ اتصال</button>
+                </form>
+                @endcan
+            @endif
+        </div>
+        <p class="text-xs text-gray-500 mt-2 leading-6">
+            @if($customer->bale_user_id)
+                شناسهٔ بله: <b dir="ltr">{{ $customer->bale_user_id }}</b> — نوتیفیکیشن‌های سفارش از طریقِ <b>چتِ ربات (رایگان)</b> برای این مشتری ارسال می‌شود.
+            @else
+                این مشتری هنوز از مینی‌اپِ بله وارد/متصل نشده. نوتیفیکیشن‌های بله (در صورتِ فعال‌بودنِ سفیر) با <b>شمارهٔ موبایل</b> ارسال می‌شوند.
+            @endif
+        </p>
+    </div>
+
+    {{-- ─── سفارش‌های مشتری ─────────────────────────────────────── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">🧾 سفارش‌های مشتری</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ $orders->count() }} سفارشِ اخیر</span>
+        </div>
+        @if($orders->isEmpty())
+            <p class="text-sm text-gray-400 p-6">این مشتری هنوز سفارشی ندارد.</p>
+        @else
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300">
+                    <tr>
+                        <th class="p-3 text-start">کد سفارش</th>
+                        <th class="p-3 text-start">دستگاه / برند</th>
+                        <th class="p-3 text-start">وضعیت</th>
+                        <th class="p-3 text-start">منبع ثبت</th>
+                        <th class="p-3 text-start">مبلغ (تومان)</th>
+                        <th class="p-3 text-start">تاریخ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    @foreach($orders as $o)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="p-3">
+                                <a href="{{ route('crm.orders.show', $o) }}" class="font-bold text-brand-700 hover:underline" dir="ltr">{{ $o->order_code }}</a>
+                                @if($o->is_lead)<span class="px-1.5 py-0.5 text-[10px] rounded bg-rose-100 text-rose-700 mr-1">لید</span>@endif
+                            </td>
+                            <td class="p-3 text-xs">{{ $o->device?->name ?: '—' }}@if($o->brand) / {{ $o->brand->name }}@endif</td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 text-[11px] font-medium rounded-full {{ $o->status?->badgeClass() }}">{{ $o->status?->label() }}</span>
+                            </td>
+                            <td class="p-3 text-xs">
+                                @if($o->source)
+                                    <span class="px-2 py-0.5 text-[10px] font-medium rounded-full {{ str_starts_with($o->source, 'bale') ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-700' }}">{{ $o->sourceLabel() }}</span>
+                                @else — @endif
+                            </td>
+                            <td class="p-3 text-xs" dir="ltr">{{ $o->price_customer ? number_format($o->price_customer) : '—' }}</td>
+                            <td class="p-3 text-xs text-gray-500" dir="ltr">@jdatetime($o->created_at)</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            </div>
+        @endif
+    </div>
+
+    {{-- ─── نوتیفیکیشن‌های ارسال‌شده ─────────────────────────────── --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">🔔 آخرین نوتیفیکیشن‌های ارسال‌شده</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ $notifications->count() }} موردِ اخیر</span>
+        </div>
+        @if($notifications->isEmpty())
+            <p class="text-sm text-gray-400 p-6">هنوز نوتیفیکیشنی برای این مشتری ارسال نشده.</p>
+        @else
+            <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($notifications as $n)
+                    <li class="px-6 py-3 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $n->data['title'] ?? '—' }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5 leading-6">{{ $n->data['body'] ?? '' }}</div>
+                        </div>
+                        <div class="text-left shrink-0">
+                            <div class="text-[10px] text-gray-400" dir="ltr">@jdatetime($n->created_at)</div>
+                            @if($n->read_at)
+                                <span class="text-[10px] text-emerald-600">خوانده شد</span>
+                            @else
+                                <span class="text-[10px] text-amber-600">خوانده نشده</span>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
     </div>
 </div>
 @endsection
