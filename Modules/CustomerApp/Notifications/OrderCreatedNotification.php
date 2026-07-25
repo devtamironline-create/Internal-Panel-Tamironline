@@ -27,9 +27,9 @@ class OrderCreatedNotification extends Notification
     {
         $channels = ['database'];
 
-        // اگر مشتری به بله وصل است و توکنِ ربات پیکربندی شده، همان پیام به
-        // چتِ بله هم می‌رود (خرابی/کندیِ بله ثبت را خراب نمی‌کند — afterResponse).
-        if (! empty($notifiable->bale_user_id) && (string) config('services.bale.bot_token') !== '') {
+        // بله: از طریقِ چتِ ربات (bale_user_id) یا سفیر (شمارهٔ موبایل) —
+        // BaleChannel خودش بهترین مسیرِ در دسترس را انتخاب می‌کند.
+        if (\Modules\CustomerApp\Channels\BaleChannel::configuredFor($notifiable)) {
             $channels[] = \Modules\CustomerApp\Channels\BaleChannel::class;
         }
 
