@@ -69,6 +69,8 @@ class DeviceBrandPageController extends Controller
         $page->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $page->reviews()->sync($reviewIds);
 
+        $this->purgeFrontend($page);
+
         return redirect()->route('crm.device-brand-pages.edit', $page->id)
             ->with('success', 'صفحه‌ی ترکیبی ایجاد شد.');
     }
@@ -96,6 +98,8 @@ class DeviceBrandPageController extends Controller
         $page->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $page->reviews()->sync($reviewIds);
 
+        $this->purgeFrontend($page);
+
         return redirect()->route('crm.device-brand-pages.edit', $page->id)
             ->with('success', 'صفحه‌ی ترکیبی به‌روز شد.');
     }
@@ -119,6 +123,8 @@ class DeviceBrandPageController extends Controller
         }
         $devicebrandpage->is_active = ! $devicebrandpage->is_active;
         $devicebrandpage->save();
+
+        $this->purgeFrontend($devicebrandpage);
 
         return back()->with('success', 'وضعیت صفحه‌ی ترکیبی به‌روز شد.');
     }
@@ -203,6 +209,29 @@ class DeviceBrandPageController extends Controller
             'review_ids' => 'nullable|array',
             'review_ids.*' => 'string|exists:site_reviews,id',
         ]);
+    }
+
+    /**
+     * پاک‌سازیِ کشِ فرانتِ همین صفحهٔ ترکیبی (fire-and-forget؛ هرگز throw نمی‌کند)
+     * تا تغییراتِ ادمین (مثلاً تصویرِ Hero) بدونِ انتظار برای TTL دیده شود.
+     */
+    private function purgeFrontend(DeviceBrandPage $page): void
+    {
+        try {
+            $page->loadMissing('device:id,slug', 'brand:id,slug');
+            $d = (string) ($page->device->slug ?? '');
+            $b = (string) ($page->brand->slug ?? '');
+            if ($d === '' || $b === '') {
+                return;
+            }
+
+            app(\Modules\Site\Support\FrontendRevalidator::class)->purge(
+                ['/services/'.$d.'/'.$b, '/devices/'.$d.'/'.$b],
+                ['page:device_brand', 'device:'.$d],
+            );
+        } catch (\Throwable) {
+            // خرابیِ purge نباید ذخیره را بشکند.
+        }
     }
 
     private function applyDefaults(array &$validated): void
