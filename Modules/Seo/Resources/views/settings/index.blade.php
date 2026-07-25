@@ -149,6 +149,27 @@
         </fieldset>
 
         <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+            <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">سیاستِ ایندکس (نقشهٔ Search Console)</legend>
+            <label class="block text-sm">whitelistِ برندهای ایندکس‌شونده
+                <textarea name="brand_index_whitelist" rows="4" dir="ltr" placeholder="bosch&#10;samsung&#10;lg&#10;ariston"
+                          class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm font-mono">{{ old('brand_index_whitelist', $settings['brand_index_whitelist'] ?? '') }}</textarea>
+            </label>
+            <p class="text-xs text-gray-500 leading-6">
+                slug برندها، هر خط یکی (یا با کاما). <b>خالی = سیاست خاموش</b> (همهٔ برندها مثل قبل index می‌شوند).
+                وقتی پر شود: فقط این برندها <code class="font-mono ltr">index,follow</code> می‌گیرند و در
+                <code class="font-mono ltr">sitemap-brands.xml</code> می‌آیند؛ بقیه (برندهای نحیف)
+                <code class="font-mono ltr">noindex,follow</code> می‌شوند. لیست را از Search Console
+                (برندهای بالای ~۱۵۰ نمایش/سال) استخراج کنید. override دستیِ robots روی خودِ برند همیشه مقدم است.
+            </p>
+            <label class="block text-sm md:w-64">حداقل بازدید برای ایندکسِ سوالِ انجمن
+                <input name="forum_index_min_views" type="number" min="0" dir="ltr"
+                       value="{{ old('forum_index_min_views', $settings['forum_index_min_views'] ?? '') }}" placeholder="40"
+                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+            </label>
+            <p class="text-xs text-gray-500">سوالاتِ زیرِ این تعداد بازدید <code class="font-mono ltr">noindex,follow</code> می‌شوند و از <code class="font-mono ltr">sitemap-forum.xml</code> حذف می‌شوند. خالی = پیش‌فرض ۴۰؛ مقدارِ <b>0</b> = خاموش.</p>
+        </fieldset>
+
+        <fieldset class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
             <legend class="font-bold text-gray-800 dark:text-gray-100 px-2">مانیتورینگ و هشدار</legend>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block text-sm">ایمیل هشدار

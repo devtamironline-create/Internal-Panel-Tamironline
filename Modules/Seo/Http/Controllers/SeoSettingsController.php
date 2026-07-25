@@ -53,6 +53,9 @@ class SeoSettingsController extends Controller
         'lb_lng' => 'local',
         // technical
         'robots_txt' => 'technical',
+        // indexing policy (نقشهٔ ایندکس)
+        'brand_index_whitelist' => 'indexing',
+        'forum_index_min_views' => 'indexing',
         // monitoring
         'alert_email' => 'monitoring',
         'alert_webhook' => 'monitoring',
@@ -113,6 +116,8 @@ class SeoSettingsController extends Controller
             'lb_lat' => 'nullable|string|max:30',
             'lb_lng' => 'nullable|string|max:30',
             'robots_txt' => 'nullable|string|max:20000',
+            'brand_index_whitelist' => 'nullable|string|max:20000',
+            'forum_index_min_views' => 'nullable|integer|min:0|max:1000000',
             'alert_email' => 'nullable|email|max:255',
             'alert_webhook' => 'nullable|url|max:500',
             'pagespeed_api_key' => 'nullable|string|max:255',
