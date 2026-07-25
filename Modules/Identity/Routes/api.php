@@ -22,6 +22,10 @@ Route::prefix('v1/auth')->group(function () {
     // Auth required
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('identity.me');
+        // اتصالِ حسابِ بله به نشستِ فعلی (کاربری که با OTP داخلِ بله وارد شده) —
+        // بدونِ این، bale_user_id ست نمی‌شود و نوتیفیکیشنِ بله نمی‌رسد.
+        Route::post('/bale-link', [AuthController::class, 'baleLink'])
+            ->middleware('throttle:otp-verify')->name('identity.bale-link');
         Route::post('/complete-profile', [AuthController::class, 'completeProfile'])->name('identity.complete-profile');
         Route::post('/logout', [AuthController::class, 'logout'])->name('identity.logout');
         Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('identity.logout-all');
