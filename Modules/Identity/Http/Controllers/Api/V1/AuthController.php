@@ -65,6 +65,62 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * ورود از مینی‌اپِ بله — initData امضاشدهٔ بله را با توکنِ ربات اعتبارسنجی
+     * می‌کند و همان توکنِ نشستِ verify-otp را برمی‌گرداند (بدونِ OTP دوباره).
+     */
+    public function baleMiniapp(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate([
+            'init_data' => 'required|string|max:8192',
+        ], [
+            'init_data.required' => 'initData الزامی است.',
+        ]);
+
+        $botToken = (string) config('services.bale.bot_token');
+        if ($botToken === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'احرازِ مینی‌اپِ بله روی سرور پیکربندی نشده است.',
+            ], 503);
+        }
+
+        $result = \Modules\Identity\Support\BaleInitData::validate(
+            (string) $request->input('init_data'),
+            $botToken,
+            (int) config('services.bale.init_data_max_age', 86400),
+        );
+
+        if (! ($result['ok'] ?? false)) {
+            return response()->json([
+                'ok' => false,
+                'message' => match ($result['reason'] ?? '') {
+                    'expired' => 'نشستِ بله منقضی شده است؛ مینی‌اپ را دوباره باز کنید.',
+                    default => 'اعتبارسنجیِ initData ناموفق بود.',
+                },
+            ], 401);
+        }
+
+        $baleUser = $result['user'] ?? null;
+        if (! is_array($baleUser) || empty($baleUser['id'])) {
+            return response()->json(['ok' => false, 'message' => 'اطلاعاتِ کاربرِ بله در initData نیست.'], 422);
+        }
+
+        $deviceId = trim((string) $request->header('X-Device-ID', ''));
+        $login = $this->identity->loginWithBale($baleUser, $deviceId !== '' ? $deviceId : null);
+
+        $customer = $login['customer'];
+
+        return response()->json([
+            'ok' => true,
+            'token' => $login['token']->plainTextToken,
+            'token_type' => 'Bearer',
+            'customer' => new CustomerResource($customer),
+            'is_new' => $login['is_new'],
+            'needs_profile' => ! $this->identity->isProfileComplete($customer),
+        ]);
+    }
+
     public function completeProfile(CompleteProfileRequest $request): JsonResponse
     {
         $customer = $this->identity->completeProfile(

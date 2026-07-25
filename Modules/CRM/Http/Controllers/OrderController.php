@@ -42,6 +42,7 @@ class OrderController extends Controller
         $brandId = $request->integer('brand_id');
         $deviceId = $request->integer('device_id');
         $orderType = $request->string('order_type')->toString();
+        $source = $request->string('source')->toString();
         $introduction = $request->string('introduction')->toString();
         $hasInvoice = $request->string('has_invoice')->toString(); // '1' | '0' | ''
         $fromDate = $request->string('from_date')->toString();
@@ -55,7 +56,7 @@ class OrderController extends Controller
         // و هم در شمارش تب‌های وضعیت استفاده می‌شود.
         $applyNonStatusFilters = function ($q, bool $includeTech = true) use (
             $search, $technicianId, $provinceId, $cityId, $brandId, $deviceId,
-            $orderType, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo, $createdBy
+            $orderType, $source, $introduction, $hasInvoice, $fromDate, $toDate, $visitFrom, $visitTo, $createdBy
         ) {
             if ($search !== '') {
                 $q->search($search);
@@ -81,6 +82,9 @@ class OrderController extends Controller
             }
             if ($orderType !== '') {
                 $q->where('order_type', $orderType);
+            }
+            if ($source !== '') {
+                $q->where('source', $source);
             }
             if ($createdBy) {
                 $q->where('created_by', $createdBy);
@@ -191,7 +195,7 @@ class OrderController extends Controller
             'orders', 'technicians', 'provinces', 'cities', 'brands', 'devices', 'introductionList',
             'operators', 'createdBy',
             'search', 'status', 'technicianId', 'provinceId', 'cityId', 'brandId', 'deviceId',
-            'orderType', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
+            'orderType', 'source', 'introduction', 'hasInvoice', 'fromDate', 'toDate', 'visitFrom', 'visitTo',
             'statusCounts', 'perPage'
         ));
     }

@@ -50,6 +50,7 @@ class Customer extends Authenticatable
         'block_reason',
         'blocked_by',
         'blocked_at',
+        'bale_user_id',
     ];
 
     protected $hidden = [

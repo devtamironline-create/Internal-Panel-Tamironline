@@ -198,6 +198,99 @@ final class IdentityService
     }
 
     /**
+     * ورود از مینی‌اپِ بله — initData از قبل توسطِ BaleInitData اعتبارسنجی شده.
+     *
+     * نگاشت: اول با bale_user_id (ورودهای بعدی حتی بدونِ شماره)، سپس با شمارهٔ
+     * به‌اشتراک‌گذاشته‌شده (upsert مثلِ verifyOtp — شمارهٔ بله verified حساب
+     * می‌شود چون بله آن را احراز کرده). بدونِ هیچ‌کدام → 422 (کاربر با OTP وارد شود).
+     *
+     * @param  array<string, mixed>  $baleUser  آبجکتِ user داخلِ initData
+     * @return array{customer: Customer, token: NewAccessToken, is_new: bool}
+     */
+    public function loginWithBale(array $baleUser, ?string $deviceId = null): array
+    {
+        $baleUserId = (int) ($baleUser['id'] ?? 0);
+        $normalized = PhoneNormalizer::normalize((string) ($baleUser['phone_number'] ?? ''));
+
+        [$customer, $isNew] = DB::transaction(function () use ($baleUser, $baleUserId, $normalized): array {
+            // ۱) نگاشتِ قبلی با شناسهٔ بله
+            if ($baleUserId > 0) {
+                $mapped = Customer::query()->withTrashed()
+                    ->where('bale_user_id', $baleUserId)->lockForUpdate()->first();
+                if ($mapped && $mapped->trashed()) {
+                    throw ValidationException::withMessages([
+                        'init_data' => 'این حساب به درخواستِ شما حذف شده است. برای بازگردانی با پشتیبانی تماس بگیرید.',
+                    ]);
+                }
+                if ($mapped) {
+                    return [$mapped, false];
+                }
+            }
+
+            // ۲) با شمارهٔ به‌اشتراک‌گذاشته‌شده در بله
+            if ($normalized === null || $normalized === '') {
+                throw ValidationException::withMessages([
+                    'init_data' => 'شمارهٔ موبایل در بله به اشتراک گذاشته نشده است؛ لطفاً با کدِ یک‌بارمصرف وارد شوید.',
+                ]);
+            }
+
+            $existing = Customer::query()->withTrashed()->byMobile($normalized)->lockForUpdate()->first();
+            if ($existing && $existing->trashed()) {
+                throw ValidationException::withMessages([
+                    'mobile' => 'این حساب به درخواستِ شما حذف شده است. برای بازگردانی با پشتیبانی تماس بگیرید.',
+                ]);
+            }
+            if ($existing) {
+                $fill = [];
+                if (! $existing->mobile_verified_at) {
+                    $fill['mobile_verified_at'] = now();
+                }
+                if ($baleUserId > 0 && ! $existing->bale_user_id) {
+                    $fill['bale_user_id'] = $baleUserId;
+                }
+                if ($fill !== []) {
+                    $existing->forceFill($fill)->save();
+                }
+
+                return [$existing, false];
+            }
+
+            $created = Customer::query()->create([
+                'mobile' => $normalized,
+                'mobile_verified_at' => now(),
+                'is_active' => true,
+                'bale_user_id' => $baleUserId > 0 ? $baleUserId : null,
+                'first_name' => $baleUser['first_name'] ?? null,
+                'last_name' => $baleUser['last_name'] ?? null,
+            ]);
+
+            return [$created, true];
+        });
+
+        if (! $customer->isActive()) {
+            throw ValidationException::withMessages([
+                'mobile' => 'حساب شما غیرفعال است. با پشتیبانی تماس بگیرید.',
+            ]);
+        }
+
+        $customer->recordLogin(request()?->ip());
+
+        $token = $customer->createToken(self::TOKEN_NAME, ['*']);
+        if ($deviceId !== null && $deviceId !== '' && $this->isValidDeviceId($deviceId)) {
+            $token->accessToken->forceFill([
+                'device_id' => substr($deviceId, 0, 64),
+                'last_used_ip' => request()?->ip(),
+            ])->save();
+        }
+
+        return [
+            'customer' => $customer->fresh(),
+            'token' => $token,
+            'is_new' => $isNew,
+        ];
+    }
+
+    /**
      * آیا حالت تست برای این شماره فعال است؟
      *
      * شرایط:
