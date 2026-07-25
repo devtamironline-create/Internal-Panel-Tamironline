@@ -5,7 +5,6 @@ namespace Modules\CustomerApp\Channels;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 /**
  * کانالِ نوتیفیکیشنِ «بله» — همان نوتیفیکیشن‌های اپِ مشتری را به بله می‌فرستد.
@@ -66,11 +65,11 @@ class BaleChannel
         $phone = self::intlPhone((string) ($notifiable->mobile ?? ''));
         if ($accessKey !== '' && $safirBotId !== '' && $phone !== null) {
             $base = rtrim((string) config('services.bale.safir_base', 'https://safir.bale.ai'), '/');
+            // قراردادِ تأییدشده با curl واقعی: bot_id عددی و message_data.message.text
             $this->deliver($base.'/api/v3/send_message', [
-                'request_id' => (string) Str::uuid(),
-                'bot_id' => $safirBotId,
+                'bot_id' => is_numeric($safirBotId) ? (int) $safirBotId : $safirBotId,
                 'phone_number' => $phone,
-                'message_data' => ['text' => $text],
+                'message_data' => ['message' => ['text' => $text]],
             ], ['api-access-key' => $accessKey], 'safir:'.$phone);
         }
     }
