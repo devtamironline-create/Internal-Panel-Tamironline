@@ -55,7 +55,8 @@ class SitemapController extends Controller
 
     /**
      * فایلِ سایت‌مپِ اسپک: sitemaps/sitemap-{name}.xml
-     * فقط <loc> — بدونِ changefreq/priority/lastmod (بندهای ۷ و ۸ اسپک).
+     * فقط <loc>؛ به‌جز بلاگ/فروم که lastmod واقعی دارند (نامهٔ نقشهٔ ایندکس:
+     * lastmod یا واقعی یا اصلاً نباشد — بدونِ changefreq/priority).
      */
     public function specNamed(string $name): Response
     {
@@ -70,6 +71,9 @@ class SitemapController extends Controller
         foreach ($urls as $u) {
             $xml .= "  <url>\n";
             $xml .= '    <loc>'.$this->esc($u['loc']).'</loc>'."\n";
+            if (! empty($u['lastmod'])) {
+                $xml .= '    <lastmod>'.$this->esc($u['lastmod']).'</lastmod>'."\n";
+            }
             $xml .= "  </url>\n";
         }
         $xml .= '</urlset>';
