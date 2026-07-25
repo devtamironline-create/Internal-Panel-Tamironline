@@ -160,10 +160,67 @@
                 </button>
             </div>
 
+            @php $edOrderable = (bool) ($ed['is_orderable'] ?? true); @endphp
+
+            {{-- تَوگل قابل سفارش — مستقل برای همین دستگاه (لید و سفارش همزمان ممکن است) --}}
+            <div class="flex items-center justify-between p-3 rounded-xl border-2 {{ $edOrderable ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40' }}">
+                <div>
+                    <div class="font-bold text-sm {{ $edOrderable ? 'text-emerald-800' : 'text-rose-800' }}">
+                        {{ $edOrderable ? '✓ قابل سفارش' : '✗ غیرقابل سفارش — این دستگاه به‌عنوان لید ثبت می‌شود' }}
+                    </div>
+                    <div class="text-[11px] text-gray-500 mt-0.5">
+                        {{ $edOrderable ? 'برای این دستگاه سفارش ساخته می‌شود.' : 'برای این دستگاه فقط رکوردِ لید (گزارش‌گیری) ذخیره می‌شود.' }}
+                    </div>
+                </div>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" wire:model.live="extraDevices.{{ $i }}.is_orderable" class="sr-only peer">
+                    <div class="relative w-12 h-6 bg-gray-300 peer-checked:bg-emerald-500 rounded-full transition-colors">
+                        <div class="absolute top-0.5 start-0.5 bg-white w-5 h-5 rounded-full transition-transform peer-checked:translate-x-6 rtl:peer-checked:-translate-x-6"></div>
+                    </div>
+                </label>
+            </div>
+
+            {{-- بخش لید این دستگاه — وقتی غیرقابل سفارش است --}}
+            @if(! $edOrderable)
+                <div class="space-y-3 p-3 rounded-xl bg-rose-50/30 border border-rose-200">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">دلیل عدم امکان سفارش <span class="text-rose-600">*</span></label>
+                        <select wire:model="extraDevices.{{ $i }}.lead_reason_id"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                            <option value="">— یک گزینه را انتخاب کنید —</option>
+                            @foreach($this->leadReasons as $lr)
+                                <option value="{{ $lr->id }}">{{ $lr->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('extraDevices.'.$i.'.lead_reason_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">یادداشت‌ها</label>
+                        <textarea wire:model="extraDevices.{{ $i }}.lead_notes" rows="2" placeholder="هرگونه توضیح اضافی…"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm"></textarea>
+                    </div>
+                </div>
+            @endif
+
+            {{-- نوع سفارش (تعمیر / نصب) — فقط در حالت قابل سفارش --}}
+            <div @class(['hidden' => ! $edOrderable])>
+                <label class="block text-xs font-medium text-gray-700 mb-1">نوع سفارش *</label>
+                <div class="grid grid-cols-2 gap-2">
+                    @foreach(['repair' => 'تعمیر', 'service' => 'نصب'] as $key => $label)
+                        <label class="cursor-pointer">
+                            <input type="radio" wire:model="extraDevices.{{ $i }}.order_type" value="{{ $key }}" class="peer sr-only">
+                            <div class="px-3 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg text-sm text-center peer-checked:border-indigo-500 peer-checked:bg-indigo-50 dark:peer-checked:bg-indigo-900/30 transition">
+                                {{ $label }}
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">نوع دستگاه *</label>
-                    <select wire:model="extraDevices.{{ $i }}.device_id"
+                    <select wire:model="extraDevices.{{ $i }}.device_id" data-searchable
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                         <option value="">— انتخاب —</option>
                         @foreach($this->devices as $d)
@@ -173,7 +230,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">برند *</label>
-                    <select wire:model="extraDevices.{{ $i }}.brand_id"
+                    <select wire:model="extraDevices.{{ $i }}.brand_id" data-searchable
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                         <option value="">— انتخاب —</option>
                         @foreach($this->brands as $b)
@@ -183,8 +240,8 @@
                 </div>
             </div>
 
-            {{-- ایرادات این دستگاه --}}
-            @if(count($this->objectionsList))
+            {{-- ایرادات این دستگاه — فقط در حالت قابل سفارش --}}
+            @if(count($this->objectionsList) && $edOrderable)
             <div x-data="{ q: '', norm(s) { return String(s ?? '').replace(/[يﻱ]/g,'ی').replace(/[كﻙ]/g,'ک').toLowerCase().trim(); }, m(l) { return this.norm(l).includes(this.norm(this.q)); } }">
                 <label class="block text-xs font-medium text-gray-700 mb-1">ایراد دستگاه</label>
                 @php $selObjections = $ed['objections'] ?? []; @endphp
@@ -216,7 +273,7 @@
             </div>
             @endif
 
-            <div>
+            <div @class(['hidden' => ! $edOrderable])>
                 <label class="block text-xs font-medium text-gray-700 mb-1">شرح ایراد</label>
                 <textarea wire:model="extraDevices.{{ $i }}.objection_description" rows="2"
                           placeholder="جزئیات بیشتر..."
@@ -232,8 +289,23 @@
             + افزودن دستگاه دیگر (سفارش جداگانه ساخته می‌شود)
         </button>
         @if(! empty($extraDevices))
+            @php
+                $totalDevices = count($extraDevices) + 1;
+                $leadCount = (int) (! $isOrderable);
+                foreach ($extraDevices as $edRow) {
+                    if (! (bool) ($edRow['is_orderable'] ?? true)) $leadCount++;
+                }
+                $orderCount = $totalDevices - $leadCount;
+            @endphp
             <p class="text-[10px] text-gray-500 text-center mt-2">
-                با ثبت نهایی، <b>{{ count($extraDevices) + 1 }} سفارش جداگانه</b> با اطلاعات مشترک مشتری/آدرس/تکنسین ساخته می‌شود.
+                با ثبت نهایی، <b>{{ $totalDevices }} رکورد جداگانه</b> با اطلاعات مشترک مشتری/آدرس ساخته می‌شود
+                @if($leadCount > 0 && $orderCount > 0)
+                    (<b class="text-emerald-700">{{ $orderCount }} سفارش</b> + <b class="text-rose-700">{{ $leadCount }} لید</b>).
+                @elseif($leadCount === $totalDevices)
+                    (همه به‌صورت <b class="text-rose-700">لید</b>).
+                @else
+                    (همه به‌صورت <b class="text-emerald-700">سفارش</b>).
+                @endif
             </p>
         @endif
     </div>
