@@ -25,7 +25,22 @@ class OrderCreatedNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        // اگر مشتری به بله وصل است و توکنِ ربات پیکربندی شده، همان پیام به
+        // چتِ بله هم می‌رود (خرابی/کندیِ بله ثبت را خراب نمی‌کند — afterResponse).
+        if (! empty($notifiable->bale_user_id) && (string) config('services.bale.bot_token') !== '') {
+            $channels[] = \Modules\CustomerApp\Channels\BaleChannel::class;
+        }
+
+        return $channels;
+    }
+
+    /** متنِ پیامِ بله — همان محتوای نوتیفیکیشنِ اپ. */
+    public function toBale($notifiable): string
+    {
+        return "✅ سفارش شما ثبت شد\n"
+            .sprintf('سفارش با کد پیگیری %s ثبت شد. به‌زودی برای هماهنگی با شما تماس می‌گیریم.', $this->order->order_code);
     }
 
     /**
