@@ -215,6 +215,40 @@ return [
         'changefreq' => 'weekly',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | بازوی سئو (SEO Command Center — فاز ۱)
+    |--------------------------------------------------------------------------
+    | فاز ۱ فقط providerِ دیتابیس دارد؛ سوییچ‌ها برای فازهای بعد (Windsor/GSC/
+    | GA4/SEMrush) از همین‌جا روشن می‌شوند. هیچ credentialی اینجا قرار نمی‌گیرد.
+    */
+    'arm' => [
+        'default_provider' => env('SEO_ARM_PROVIDER', 'database'),
+        'integrations' => [
+            'search_console' => false,
+            'semrush' => false,
+            'ga4' => false,
+            'ai' => false,
+        ],
+        // وزن‌های فرمول امتیاز فرصت — قابل تنظیم بدون تغییر کد.
+        // opportunity_score = normalized_impressions × position_potential × ctr_gap × business_value × confidence × scale
+        'opportunity_weights' => [
+            'impressions_cap' => 250000,   // سقف نرمال‌سازی ایمپرشن
+            'business_value_weight' => 1.0,
+            'confidence_default' => 0.7,
+            'scale' => 100,                // ضریب مقیاس خروجی (خوانایی 0..100+)
+        ],
+        // وزن‌های امتیاز سلامت داخلی (جمع = 100). «امتیاز عملیاتی داخلی» است، نه متریک گوگل.
+        'health_weights' => [
+            'technical' => 25,
+            'content_progress' => 20,
+            'keyword_visibility' => 20,
+            'ctr_health' => 10,
+            'roadmap_completion' => 15,
+            'commercial_performance' => 10,
+        ],
+    ],
+
     // robots پیش‌فرض سراسری (وقتی آیتم و نوع چیزی تعیین نکرده‌اند).
     'robots_default' => [
         'noindex' => false,
