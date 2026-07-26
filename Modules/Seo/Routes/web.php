@@ -112,3 +112,42 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/roles', [SeoRoleController::class, 'index'])->name('roles.index');
         Route::put('/roles', [SeoRoleController::class, 'update'])->name('roles.update');
     });
+
+/*
+|--------------------------------------------------------------------------
+| بازوی سئو (SEO Command Center — فاز ۱)
+|--------------------------------------------------------------------------
+| فضای کاری عملیاتی سئو: مرکز فرمان، برنامهٔ ۹۰ روزه، تقویم محتوا، صفحات و
+| کلمات، فرصت‌ها، مشکلات فنی، لینک‌سازی، گزارش‌ها و تنظیمات.
+| مشاهده: manage-seo (الگوی موجود ماژول). عملیات نوشتنی: seo-arm-manage.
+*/
+Route::middleware(['auth', 'can:manage-seo'])
+    ->prefix('admin/seo/arm')
+    ->name('seo.arm.')
+    ->group(function () {
+        Route::get('/', [\Modules\Seo\Http\Controllers\Arm\CommandCenterController::class, 'index'])->name('dashboard');
+
+        Route::get('/roadmap', [\Modules\Seo\Http\Controllers\Arm\RoadmapController::class, 'index'])->name('roadmap.index');
+        Route::get('/calendar', [\Modules\Seo\Http\Controllers\Arm\CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('/pages', [\Modules\Seo\Http\Controllers\Arm\PagesController::class, 'index'])->name('pages.index');
+        Route::get('/opportunities', [\Modules\Seo\Http\Controllers\Arm\OpportunityController::class, 'index'])->name('opportunities.index');
+        Route::get('/issues', [\Modules\Seo\Http\Controllers\Arm\IssueController::class, 'index'])->name('issues.index');
+        Route::get('/links', [\Modules\Seo\Http\Controllers\Arm\LinkController::class, 'index'])->name('links.index');
+        Route::get('/reports', [\Modules\Seo\Http\Controllers\Arm\ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/{type}', [\Modules\Seo\Http\Controllers\Arm\ReportController::class, 'show'])
+            ->where('type', '[a-z]+')->name('reports.show');
+        Route::get('/settings', [\Modules\Seo\Http\Controllers\Arm\ArmSettingsController::class, 'index'])->name('settings.index');
+
+        // ── عملیات نوشتنی — دسترسی ریزدانهٔ seo-arm-manage ──
+        Route::middleware('can:seo-arm-manage')->group(function () {
+            Route::put('/roadmap/{item}/status', [\Modules\Seo\Http\Controllers\Arm\RoadmapController::class, 'updateStatus'])->name('roadmap.status');
+            Route::put('/calendar/{item}/status', [\Modules\Seo\Http\Controllers\Arm\CalendarController::class, 'updateStatus'])->name('calendar.status');
+            Route::put('/calendar/{item}/reschedule', [\Modules\Seo\Http\Controllers\Arm\CalendarController::class, 'reschedule'])->name('calendar.reschedule');
+            Route::put('/pages/{page}', [\Modules\Seo\Http\Controllers\Arm\PagesController::class, 'update'])->name('pages.update');
+            Route::put('/opportunities/{opportunity}/status', [\Modules\Seo\Http\Controllers\Arm\OpportunityController::class, 'updateStatus'])->name('opportunities.status');
+            Route::put('/issues/{issue}', [\Modules\Seo\Http\Controllers\Arm\IssueController::class, 'update'])->name('issues.update');
+            Route::post('/links', [\Modules\Seo\Http\Controllers\Arm\LinkController::class, 'store'])->name('links.store');
+            Route::put('/links/{link}', [\Modules\Seo\Http\Controllers\Arm\LinkController::class, 'update'])->name('links.update');
+            Route::put('/settings', [\Modules\Seo\Http\Controllers\Arm\ArmSettingsController::class, 'update'])->name('settings.update');
+        });
+    });
