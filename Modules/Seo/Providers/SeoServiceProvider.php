@@ -21,6 +21,15 @@ class SeoServiceProvider extends ServiceProvider
         $this->app->register(RouteServiceProvider::class);
 
         $this->mergeConfigFrom(__DIR__.'/../Config/config.php', 'seo');
+
+        // بازوی سئو — binding قرارداد عملکرد به providerِ انتخابی config.
+        // فاز ۱ فقط «database» دارد؛ آداپتورهای Windsor/GSC/GA4 بعداً به این
+        // نگاشت اضافه می‌شوند بدون آنکه کنترلر/UI تغییری کند.
+        $this->app->singleton(\Modules\Seo\Contracts\SeoPerformanceProvider::class, function () {
+            return match (config('seo.arm.default_provider', 'database')) {
+                default => new \Modules\Seo\Services\Arm\DatabaseSeoPerformanceProvider,
+            };
+        });
     }
 
     public function boot(): void
