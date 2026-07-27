@@ -39,7 +39,7 @@ class CalendarController extends BaseArmController
         $monthEnd = (new Jalalian($jy, $jm, $monthDays))->toCarbon()->endOfDay();
 
         $base = $project->contentItems()
-            ->with(['author:id,name', 'reviewer:id,name', 'page:id,title,path,url'])
+            ->with(['author:id,first_name,last_name', 'reviewer:id,first_name,last_name', 'page:id,title,path,url'])
             ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
             ->when($filters['content_type'], fn ($q, $v) => $q->where('content_type', $v))
             ->when($filters['cluster'], fn ($q, $v) => $q->where('cluster', $v))
@@ -58,7 +58,7 @@ class CalendarController extends BaseArmController
                 ->get();
 
         $clusters = $project->contentItems()->whereNotNull('cluster')->distinct()->pluck('cluster');
-        $owners = \App\Models\User::whereIn('id', $project->contentItems()->whereNotNull('author_id')->distinct()->pluck('author_id'))->get(['id', 'name']);
+        $owners = \App\Models\User::whereIn('id', $project->contentItems()->whereNotNull('author_id')->distinct()->pluck('author_id'))->get(['id', 'first_name', 'last_name']);
 
         return view('seo::arm.calendar.index', compact('project', 'view', 'filters', 'items', 'jy', 'jm', 'monthStart', 'monthDays', 'clusters', 'owners'));
     }

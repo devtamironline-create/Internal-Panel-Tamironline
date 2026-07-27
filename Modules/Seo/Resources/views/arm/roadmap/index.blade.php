@@ -81,7 +81,7 @@
                         <div class="text-[11px] text-gray-400 mt-0.5">
                             @if($item->planned_date) موعد: {{ \Morilog\Jalali\Jalalian::fromCarbon($item->planned_date)->format('Y/m/d') }} @endif
                             @if($item->relatedPage) · صفحهٔ مرتبط: {{ $item->relatedPage->title }} @endif
-                            @if($item->owner) · مسئول: {{ $item->owner->name }} @endif
+                            @if($item->owner) · مسئول: {{ $item->owner->full_name }} @endif
                         </div>
                     </div>
                     <div class="flex items-center gap-2">

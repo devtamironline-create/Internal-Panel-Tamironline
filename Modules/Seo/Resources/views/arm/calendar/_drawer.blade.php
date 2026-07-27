@@ -26,8 +26,8 @@
                         {{ $item->published_url ?: ($item->page?->url ?: ($item->page?->path ?: '⚠ نیازمند نگاشت URL')) }}
                     </dd>
                 </div>
-                <div><dt class="text-gray-400 mb-0.5">نویسنده</dt><dd class="text-gray-700 dark:text-gray-200">{{ $item->author?->name ?: 'تعیین نشده' }}</dd></div>
-                <div><dt class="text-gray-400 mb-0.5">بازبین</dt><dd class="text-gray-700 dark:text-gray-200">{{ $item->reviewer?->name ?: 'تعیین نشده' }}</dd></div>
+                <div><dt class="text-gray-400 mb-0.5">نویسنده</dt><dd class="text-gray-700 dark:text-gray-200">{{ $item->author?->full_name ?: 'تعیین نشده' }}</dd></div>
+                <div><dt class="text-gray-400 mb-0.5">بازبین</dt><dd class="text-gray-700 dark:text-gray-200">{{ $item->reviewer?->full_name ?: 'تعیین نشده' }}</dd></div>
                 <div><dt class="text-gray-400 mb-0.5">تاریخ برنامه</dt><dd class="text-gray-700 dark:text-gray-200" dir="ltr">{{ $item->planned_at ? Jalalian::fromCarbon($item->planned_at->copy())->format('Y/m/d') : '—' }}</dd></div>
                 <div><dt class="text-gray-400 mb-0.5">مهلت</dt><dd @class(['font-bold text-red-600' => $item->isDelayed(), 'text-gray-700 dark:text-gray-200' => ! $item->isDelayed()]) dir="ltr">{{ $item->due_at ? Jalalian::fromCarbon($item->due_at->copy())->format('Y/m/d') : '—' }}</dd></div>
                 <div><dt class="text-gray-400 mb-0.5">تاریخ انتشار</dt><dd class="text-gray-700 dark:text-gray-200" dir="ltr">{{ $item->published_at ? Jalalian::fromCarbon($item->published_at)->format('Y/m/d') : '—' }}</dd></div>
