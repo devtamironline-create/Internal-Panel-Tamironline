@@ -36,3 +36,11 @@ Schedule::command('ai:auto-reply --limit=20')
 Schedule::call(function () {
     \Illuminate\Support\Facades\Cache::put('scheduler_heartbeat', now()->toDateTimeString(), now()->addDay());
 })->everyMinute()->name('scheduler-heartbeat');
+
+// پاک‌سازیِ فایل‌های گزارشِ فعالیتِ قدیمی‌تر از بازهٔ نگهداری (پیش‌فرض ۱۵ روز).
+// چرخشِ Monolog فقط هنگامِ نوشتن حذف می‌کند؛ این زمان‌بندی تضمین می‌کند سقفِ
+// نگهداری حتی در روزهای بی‌فعالیت هم رعایت شود.
+Schedule::command('activity-log:purge')
+    ->dailyAt('02:30')
+    ->onOneServer()
+    ->withoutOverlapping();

@@ -135,6 +135,12 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
 
+    // گزارش فعالیت (فایل‌محور، نگهداری ۱۵ روزه) — فقط مدیر کل
+    Route::middleware('can:manage-permissions')->group(function () {
+        Route::get('/activity-log', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('activity-log.index');
+        Route::get('/activity-log/export', [\App\Http\Controllers\Admin\ActivityLogController::class, 'export'])->name('activity-log.export');
+    });
+
     // Data Restore from backup database
     Route::get('/restore', [DataRestoreController::class, 'index'])->name('restore.index');
     Route::get('/restore/{table}', [DataRestoreController::class, 'show'])->name('restore.show');
