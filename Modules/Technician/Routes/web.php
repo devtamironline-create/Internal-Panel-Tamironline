@@ -28,6 +28,12 @@ Route::post('/join-technician/register/upload-promissory-note', [RegistrationCon
 
 // بخش مدیریت تکنسین‌ها (نیاز به لاگین)
 Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.')->group(function () {
+    // داشبورد مدیریتی تکنسین‌ها — آمار، رتبه‌بندی بر اساس تعداد سفارش و
+    // تفکیک وضعیت سفارش‌های هر تکنسین.
+    Route::get('/', [\Modules\Technician\Http\Controllers\TechnicianDashboardController::class, 'index'])
+        ->middleware('can:manage-technicians')
+        ->name('dashboard');
+
     Route::get('/settings', [TechnicianAdminController::class, 'settings'])->name('settings');
     Route::put('/settings', [TechnicianAdminController::class, 'updateSettings'])->name('settings.update');
     Route::post('/settings/reset', [TechnicianAdminController::class, 'resetDefaults'])->name('settings.reset');
