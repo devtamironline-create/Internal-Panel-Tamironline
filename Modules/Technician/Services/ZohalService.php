@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Log;
 class ZohalService
 {
     protected string $baseUrl;
+
     protected string $token;
+
     protected int $timeout;
 
     public function __construct()
@@ -27,9 +29,9 @@ class ZohalService
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->token,
+                    'Authorization' => 'Bearer '.$this->token,
                 ])
-                ->post($this->baseUrl . '/services/inquiry/shahkar', [
+                ->post($this->baseUrl.'/services/inquiry/shahkar', [
                     'mobile' => $mobile,
                     'national_code' => $nationalCode,
                 ]);
@@ -39,6 +41,7 @@ class ZohalService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return [
                     'success' => false,
                     'message' => 'خطا در ارتباط با سرویس شاهکار',
@@ -62,6 +65,7 @@ class ZohalService
             ];
         } catch (\Exception $e) {
             Log::error('Zohal Shahkar exception', ['error' => $e->getMessage()]);
+
             return [
                 'success' => false,
                 'message' => 'خطا در ارتباط با سرویس احراز هویت',
@@ -78,9 +82,9 @@ class ZohalService
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->token,
+                    'Authorization' => 'Bearer '.$this->token,
                 ])
-                ->post($this->baseUrl . '/services/inquiry/national_identity_inquiry', [
+                ->post($this->baseUrl.'/services/inquiry/national_identity_inquiry', [
                     'national_code' => $nationalCode,
                     'birth_date' => $birthDate,
                 ]);
@@ -90,6 +94,7 @@ class ZohalService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return [
                     'success' => false,
                     'message' => 'خطا در ارتباط با سرویس استعلام هویت',
@@ -117,6 +122,7 @@ class ZohalService
             ];
         } catch (\Exception $e) {
             Log::error('Zohal Identity exception', ['error' => $e->getMessage()]);
+
             return [
                 'success' => false,
                 'message' => 'خطا در ارتباط با سرویس استعلام هویت',
@@ -133,15 +139,15 @@ class ZohalService
             Log::info('Zohal uploadBiometricMedia: starting', [
                 'file_size' => filesize($filePath),
                 'base_url' => $this->baseUrl,
-                'has_token' => !empty($this->token),
+                'has_token' => ! empty($this->token),
             ]);
 
             $response = Http::timeout(60)
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
+                    'Authorization' => 'Bearer '.$this->token,
                 ])
                 ->attach('file', file_get_contents($filePath), 'selfie.webm')
-                ->post($this->baseUrl . '/services/biometric/media/', [
+                ->post($this->baseUrl.'/services/biometric/media/', [
                     'type' => 'selfie_video',
                 ]);
 
@@ -153,7 +159,7 @@ class ZohalService
             if ($response->failed()) {
                 return [
                     'success' => false,
-                    'message' => 'خطا در آپلود ویدیو به سرویس احراز هویت (HTTP ' . $response->status() . ')',
+                    'message' => 'خطا در آپلود ویدیو به سرویس احراز هویت (HTTP '.$response->status().')',
                 ];
             }
 
@@ -168,15 +174,17 @@ class ZohalService
             }
 
             Log::warning('Zohal uploadBiometricMedia: unexpected response format', ['data' => $data]);
+
             return [
                 'success' => false,
-                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: ' . json_encode($data),
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: '.json_encode($data),
             ];
         } catch (\Exception $e) {
             Log::error('Zohal Biometric Media exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: '.$e->getMessage(),
             ];
         }
     }
@@ -199,10 +207,10 @@ class ZohalService
 
             Log::info('Zohal createLivenessSession: starting', [
                 'media_id' => $mediaId,
-                'national_code' => substr($nationalCode, 0, 3) . '****' . substr($nationalCode, -2),
+                'national_code' => substr($nationalCode, 0, 3).'****'.substr($nationalCode, -2),
                 'birth_date' => $birthDate,
                 'birth_date_length' => strlen($birthDate),
-                'national_card_serial' => substr($nationalCardSerial, 0, 3) . '****' . substr($nationalCardSerial, -2),
+                'national_card_serial' => substr($nationalCardSerial, 0, 3).'****'.substr($nationalCardSerial, -2),
                 'national_card_serial_length' => strlen($nationalCardSerial),
                 'callback_url' => $callbackUrl,
                 'full_payload_keys' => array_keys($payload),
@@ -211,9 +219,9 @@ class ZohalService
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->token,
+                    'Authorization' => 'Bearer '.$this->token,
                 ])
-                ->post($this->baseUrl . '/services/biometric/session/liveness/', $payload);
+                ->post($this->baseUrl.'/services/biometric/session/liveness/', $payload);
 
             Log::info('Zohal createLivenessSession: response', [
                 'http_status' => $response->status(),
@@ -223,7 +231,7 @@ class ZohalService
             if ($response->failed()) {
                 return [
                     'success' => false,
-                    'message' => 'خطا در ایجاد جلسه احراز هویت (HTTP ' . $response->status() . ')',
+                    'message' => 'خطا در ایجاد جلسه احراز هویت (HTTP '.$response->status().')',
                 ];
             }
 
@@ -239,15 +247,17 @@ class ZohalService
             }
 
             Log::warning('Zohal createLivenessSession: unexpected response format', ['data' => $data]);
+
             return [
                 'success' => false,
-                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: ' . json_encode($data),
+                'message' => 'پاسخ نامعتبر از سرویس احراز هویت: '.json_encode($data),
             ];
         } catch (\Exception $e) {
             Log::error('Zohal Liveness Session exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: '.$e->getMessage(),
             ];
         }
     }
@@ -262,9 +272,9 @@ class ZohalService
 
             $response = Http::timeout($this->timeout)
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
+                    'Authorization' => 'Bearer '.$this->token,
                 ])
-                ->get($this->baseUrl . '/services/biometric/session/' . $sessionId . '/result');
+                ->get($this->baseUrl.'/services/biometric/session/'.$sessionId.'/result');
 
             Log::info('Zohal getLivenessResult: response', [
                 'session_id' => $sessionId,
@@ -275,7 +285,7 @@ class ZohalService
             if ($response->failed()) {
                 return [
                     'success' => false,
-                    'message' => 'خطا در دریافت نتیجه احراز هویت (HTTP ' . $response->status() . ')',
+                    'message' => 'خطا در دریافت نتیجه احراز هویت (HTTP '.$response->status().')',
                 ];
             }
 
@@ -283,6 +293,7 @@ class ZohalService
 
             if (($data['result'] ?? 0) == 1 && isset($data['response_body'])) {
                 $body = $data['response_body'];
+
                 return [
                     'success' => true,
                     'status' => $body['status'] ?? 'pending',
@@ -296,15 +307,17 @@ class ZohalService
                 'session_id' => $sessionId,
                 'data' => $data,
             ]);
+
             return [
                 'success' => false,
                 'message' => 'پاسخ نامعتبر از سرویس احراز هویت',
             ];
         } catch (\Exception $e) {
             Log::error('Zohal Liveness Result exception', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
+
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با سرویس احراز هویت: ' . $e->getMessage(),
+                'message' => 'خطا در ارتباط با سرویس احراز هویت: '.$e->getMessage(),
             ];
         }
     }
