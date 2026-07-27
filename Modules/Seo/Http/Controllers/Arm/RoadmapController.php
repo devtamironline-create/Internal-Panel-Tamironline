@@ -25,7 +25,7 @@ class RoadmapController extends BaseArmController
         ];
 
         $items = $project->roadmapItems()
-            ->with(['owner:id,name', 'relatedPage:id,title,path'])
+            ->with(['owner:id,first_name,last_name', 'relatedPage:id,title,path'])
             ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
             ->when($filters['phase'], fn ($q, $v) => $q->where('phase', (int) $v))
             ->when($filters['week'], fn ($q, $v) => $q->where('week_number', (int) $v))

@@ -46,7 +46,7 @@
         </select>
         <select name="owner" class="px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
             <option value="">همهٔ نویسنده‌ها</option>
-            @foreach($owners as $o)<option value="{{ $o->id }}" @selected($filters['owner'] === (string) $o->id)>{{ $o->name }}</option>@endforeach
+            @foreach($owners as $o)<option value="{{ $o->id }}" @selected($filters['owner'] === (string) $o->id)>{{ $o->full_name }}</option>@endforeach
         </select>
         <button class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm">اعمال</button>
         <a href="{{ route('seo.arm.calendar.index', ['view' => $view]) }}" class="px-3 py-2 text-gray-500 text-sm">پاک‌کردن</a>
@@ -161,7 +161,7 @@
                                 <td class="p-3 text-center text-xs text-gray-600 dark:text-gray-300">{{ $item->primary_keyword ?: '—' }}</td>
                                 <td class="p-3 text-center text-xs" dir="ltr">{{ $item->planned_at ? Jalalian::fromCarbon($item->planned_at->copy())->format('Y/m/d') : '—' }}</td>
                                 <td class="p-3 text-center text-xs" dir="ltr">{{ $item->due_at ? Jalalian::fromCarbon($item->due_at->copy())->format('Y/m/d') : '—' }}</td>
-                                <td class="p-3 text-center text-xs text-gray-500">{{ $item->author?->name ?: '—' }}</td>
+                                <td class="p-3 text-center text-xs text-gray-500">{{ $item->author?->full_name ?: '—' }}</td>
                                 <td class="p-3 text-center">@include('seo::arm.partials._priority', ['priority' => $item->priority])</td>
                                 <td class="p-3 text-center">@include('seo::arm.partials._status', ['status' => $item->status, 'label' => $item->statusLabel()])</td>
                                 <td class="p-3 text-center">

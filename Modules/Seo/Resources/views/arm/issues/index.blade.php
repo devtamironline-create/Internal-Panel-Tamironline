@@ -50,7 +50,7 @@
                         <div class="font-bold text-sm text-gray-800 dark:text-gray-100 mt-1">{{ $issue->title }}</div>
                         <div class="text-[10px] text-gray-400 mt-0.5">
                             @if($issue->page) صفحه: {{ $issue->page->title }} @endif
-                            @if($issue->assignee) · مسئول: {{ $issue->assignee->name }} @endif
+                            @if($issue->assignee) · مسئول: {{ $issue->assignee->full_name }} @endif
                             @if($issue->detected_at) · شناسایی: {{ \Morilog\Jalali\Jalalian::fromCarbon($issue->detected_at)->format('Y/m/d') }} @endif
                         </div>
                     </div>

@@ -22,7 +22,7 @@ class IssueController extends BaseArmController
         ];
 
         $issues = $project->issues()
-            ->with(['page:id,title,path', 'assignee:id,name'])
+            ->with(['page:id,title,path', 'assignee:id,first_name,last_name'])
             ->when($filters['category'], fn ($q, $v) => $q->where('category', $v))
             ->when($filters['severity'], fn ($q, $v) => $q->where('severity', $v))
             ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
