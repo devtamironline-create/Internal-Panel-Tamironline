@@ -375,8 +375,23 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::post('orders/{order}/convert-from-lead', [OrderController::class, 'convertFromLead'])
         ->name('orders.convert-from-lead');
 
+    // گزارشِ «چرا این سفارش به این تکنسین رسید»
+    Route::middleware('can:view-tech-suggestions')->group(function () {
+        Route::get('assignment-logs', [\Modules\CRM\Http\Controllers\AssignmentLogController::class, 'index'])
+            ->name('assignment-logs.index');
+    });
+
+    // کلیدِ «خودکار پخش کن / فقط پیشنهاد بده»
+    Route::middleware('can:manage-crm-settings')->group(function () {
+        Route::get('assignment-settings', [\Modules\CRM\Http\Controllers\AssignmentSettingsController::class, 'index'])
+            ->name('assignment-settings.index');
+        Route::post('assignment-settings', [\Modules\CRM\Http\Controllers\AssignmentSettingsController::class, 'update'])
+            ->name('assignment-settings.update');
+    });
+
     Route::middleware('can:assign-crm-technician')->group(function () {
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
+        Route::post('orders/{order}/assign-group', [OrderController::class, 'assignGroup'])->name('orders.assign-group');
         Route::post('orders/{order}/unassign', [OrderController::class, 'unassign'])->name('orders.unassign');
         Route::post('orders/{order}/source-of-truth', [OrderController::class, 'updateSourceOfTruth'])->name('orders.source-of-truth');
     });

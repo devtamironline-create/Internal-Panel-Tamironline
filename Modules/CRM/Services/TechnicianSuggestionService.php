@@ -4,6 +4,8 @@ namespace Modules\CRM\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
@@ -12,14 +14,15 @@ use Modules\CRM\Models\Technician;
  * فاز ۱ سیستم پیشنهاد هوشمند تخصیص تکنسین — Smart Suggestion.
  *
  * منطق:
- *   ۱) فیلتر hard: تکنسین فعال + تگ‌های منطقه/برند/دستگاه پر باشد و
- *      با سفارش match کند + ظرفیت پر نباشد.
+ *   ۱) فیلتر hard: تکنسین فعال + تگ‌های منطقه/برند/دستگاه با سفارش match
+ *      کند + ظرفیت پر نباشد.
  *   ۲) امتیازدهی روی متغیرهای ۶گانه با وزن‌های ثابت (جمع = ۱۰۰).
  *   ۳) خروجی مرتب‌شده با breakdown قابل نمایش در UI.
  *
- * تصمیم محصولی: تکنسین بدون تگ تخصص exclude می‌شود (option 5-ب) — این
- * اپراتور را وادار می‌کند پروفایل تکنسین‌ها را پُر کند، سیستم همیشه
- * دیتای دقیق دارد، و پیشنهادها قابل اعتماد می‌مانند.
+ * توجه: امتیاز فقط به خودِ تکنسین وابسته است، نه به سفارش. سفارش صرفاً
+ * در مرحلهٔ فیلتر hard نقش دارد. به همین دلیل برای یک گروه سفارش،
+ * امتیازها یک‌بار محاسبه و بین همهٔ سفارش‌ها به اشتراک گذاشته می‌شوند
+ * (نگاه کنید به TechnicianGroupPlanner).
  */
 class TechnicianSuggestionService
 {
@@ -42,52 +45,97 @@ class TechnicianSuggestionService
 
     public const TIER_CAUTION = 20;
 
+    /** وضعیت‌هایی که «سفارش باز» محسوب می‌شوند. */
+    public const ACTIVE_STATUSES = [
+        'coordinated', 'open', 'new', 'suspended',
+    ];
+
     /**
      * @return Collection<int, object{technician:Technician, score:int, breakdown:array, tier:string, label:string, reasons:array}>
      */
     public function suggestForOrder(Order $order, int $limit = 5): Collection
     {
+        $pool = $this->candidatePool();
+        $openCounts = $this->openCountsFor($pool);
+
         // مرحله ۱ — فیلتر hard
-        $candidates = $this->filterCandidates($order);
+        $candidates = $pool->filter(
+            fn (Technician $t) => $this->rejectionFor($t, $order, (int) ($openCounts[$t->id] ?? 0)) === null
+        )->values();
+
+        if ($candidates->isEmpty()) {
+            return collect();
+        }
 
         // مرحله ۲ — امتیازدهی
-        $scored = $candidates->map(fn (Technician $t) => $this->scoreTechnician($t, $order));
+        $scored = $this->scoreAll($candidates, $openCounts);
 
         // مرتب‌سازی نزولی + محدود به limit
-        return $scored->sortByDesc('score')->take($limit)->values();
+        return $scored->values()->sortByDesc('score')->take($limit)->values();
     }
 
-    /** فیلتر اولیه: فعال + آماده سفارش + match تخصص + ظرفیت آزاد. */
-    protected function filterCandidates(Order $order): Collection
+    /**
+     * استخرِ پایهٔ نامزدها — فعال، آمادهٔ دریافت سفارش، غیرمستثنا.
+     * رکوردهای placeholder (مثل «سفارش کنسل شده») هرگز پیشنهاد نمی‌شوند.
+     *
+     * @return Collection<int, Technician>
+     */
+    public function candidatePool(bool $onlyReady = true): Collection
     {
-        $query = Technician::query()
+        return Technician::query()
             ->where('status', 'active')
-            ->where('ready_for_delivery', true)
-            // رکوردهای placeholder (مثل «سفارش کنسل شده») هرگز پیشنهاد نمی‌شوند.
+            ->when($onlyReady, fn ($q) => $q->where('ready_for_delivery', true))
             ->where('exclude_from_suggestions', false)
-            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id']);
+            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id'])
+            ->get();
+    }
 
-        // ظرفیت کلی نباید پر باشد — اگر max_order ست شده، نهایتاً به آن
-        // محدود کنیم. شمارش سفارش‌های فعال در همان loop انجام می‌شود.
-        $techs = $query->get();
-        $activeStatuses = [
-            OrderStatus::Coordinated->value,
-            OrderStatus::Open->value,
-            OrderStatus::New->value,
-            OrderStatus::Suspended->value,
-        ];
-        $openCounts = Order::query()->realOrders()
-            ->whereIn('status', $activeStatuses)
-            ->whereIn('technician_id', $techs->pluck('id'))
+    /**
+     * تعداد سفارش‌های بازِ هر تکنسین — یک کوئری برای کل استخر.
+     *
+     * @param  Collection<int, Technician>  $techs
+     * @return array<int, int>
+     */
+    public function openCountsFor(Collection $techs): array
+    {
+        $ids = $techs->pluck('id')->all();
+        if (empty($ids)) {
+            return [];
+        }
+
+        return Order::query()->realOrders()
+            ->whereIn('status', self::ACTIVE_STATUSES)
+            ->whereIn('technician_id', $ids)
             ->groupBy('technician_id')
             ->selectRaw('technician_id, COUNT(*) as cnt')
-            ->pluck('cnt', 'technician_id');
+            ->pluck('cnt', 'technician_id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+    }
 
-        return $techs->filter(function (Technician $t) use ($order, $openCounts) {
-            return $this->rejectionReason($t, $order, $openCounts) === null;
-        })->each(function (Technician $t) use ($openCounts) {
+    /**
+     * امتیاز همهٔ تکنسین‌های داده‌شده — آمار و زمانِ پاسخ یک‌بار به‌صورت
+     * دسته‌ای کوئری می‌شود (به‌جای N+1 قبلی).
+     *
+     * @param  Collection<int, Technician>  $techs
+     * @param  array<int, int>  $openCounts
+     * @return Collection<int, object> کلید = technician id
+     */
+    public function scoreAll(Collection $techs, array $openCounts): Collection
+    {
+        $ids = $techs->pluck('id')->all();
+        $stats = $this->statsFor($ids);
+        $response = $this->responseMinutesFor($techs);
+
+        return $techs->mapWithKeys(function (Technician $t) use ($openCounts, $stats, $response) {
             $t->setAttribute('_now_orders', (int) ($openCounts[$t->id] ?? 0));
-        })->values();
+
+            return [$t->id => $this->scoreTechnician(
+                $t,
+                $stats[$t->id] ?? ['total' => 0, 'cancelled' => 0, 'last_assigned_at' => null],
+                $response[$t->id] ?? null
+            )];
+        });
     }
 
     /**
@@ -95,15 +143,14 @@ class TechnicianSuggestionService
      * پیشنهاد است. هم در فیلتر اصلی استفاده می‌شود هم در diagnose.
      *
      * Backward-compatible: اگر تکنسین برای cities/brands/devices هیچ
-     * تگی ست نکرده باشد، فرض می‌کنیم پوشش کامل دارد (option 5-الف). این
-     * false-negative ها را کاهش می‌دهد اما ممکن است پیشنهاد عمومی‌تر
-     * باشد. اپراتور با امتیاز پایین می‌تواند تشخیص دهد.
+     * تگی ست نکرده باشد، فرض می‌کنیم پوشش کامل دارد. این false-negative
+     * ها را کاهش می‌دهد اما ممکن است پیشنهاد عمومی‌تر باشد. اپراتور با
+     * امتیاز پایین می‌تواند تشخیص دهد.
      */
-    protected function rejectionReason(Technician $t, Order $order, $openCounts): ?string
+    public function rejectionFor(Technician $t, Order $order, int $openCount): ?string
     {
-        $now = (int) ($openCounts[$t->id] ?? 0);
         $max = (int) ($t->max_order ?? 0);
-        if ($max > 0 && $now >= $max) {
+        if ($max > 0 && $openCount >= $max) {
             return 'capacity';
         }
 
@@ -160,24 +207,8 @@ class TechnicianSuggestionService
      */
     public function diagnoseForOrder(Order $order): array
     {
-        $techs = Technician::query()
-            ->where('status', 'active')
-            ->where('exclude_from_suggestions', false)
-            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'brands:id', 'devices:id'])
-            ->get();
-
-        $activeStatuses = [
-            OrderStatus::Coordinated->value,
-            OrderStatus::Open->value,
-            OrderStatus::New->value,
-            OrderStatus::Suspended->value,
-        ];
-        $openCounts = Order::query()->realOrders()
-            ->whereIn('status', $activeStatuses)
-            ->whereIn('technician_id', $techs->pluck('id'))
-            ->groupBy('technician_id')
-            ->selectRaw('technician_id, COUNT(*) as cnt')
-            ->pluck('cnt', 'technician_id');
+        $techs = $this->candidatePool(onlyReady: false);
+        $openCounts = $this->openCountsFor($techs);
 
         $rejections = [];
         $accepted = 0;
@@ -188,7 +219,7 @@ class TechnicianSuggestionService
 
                 continue;
             }
-            $reason = $this->rejectionReason($t, $order, $openCounts);
+            $reason = $this->rejectionFor($t, $order, (int) ($openCounts[$t->id] ?? 0));
             if ($reason === null) {
                 $accepted++;
             } else {
@@ -207,7 +238,7 @@ class TechnicianSuggestionService
     }
 
     /** امتیاز هر تکنسین — جمع ۶ بُعد با وزن‌های ثابت، خروجی int 0..100. */
-    protected function scoreTechnician(Technician $t, Order $order): object
+    protected function scoreTechnician(Technician $t, array $stats, ?float $avgResponseMin): object
     {
         $breakdown = [];
         $reasons = [];
@@ -247,7 +278,7 @@ class TechnicianSuggestionService
             $reasons[] = '⚠ بدهی بحرانی';
         }
 
-        // ─── ۳) رضایت مشتری (20٪) — option 2-ب: دستی توسط ادمین
+        // ─── ۳) رضایت مشتری (20٪) — دستی توسط ادمین
         $sat = $t->satisfaction_score !== null ? (float) $t->satisfaction_score : null;
         if ($sat !== null) {
             $satScore = max(0, min(1, $sat / 5));
@@ -261,7 +292,6 @@ class TechnicianSuggestionService
         }
 
         // ─── ۴) نرخ کنسلی (10٪)
-        $stats = $this->orderStats($t->id);
         if ($stats['total'] >= 5) {
             $cancelRate = $stats['total'] > 0 ? $stats['cancelled'] / $stats['total'] : 0;
         } else {
@@ -284,7 +314,6 @@ class TechnicianSuggestionService
 
         // ─── ۶) سرعت پاسخگویی (5٪)
         // میانگین فاصلهٔ assigned_at تا اولین تغییر وضعیت توسط تکنسین
-        $avgResponseMin = $this->avgResponseMinutes($t->id);
         if ($avgResponseMin === null) {
             $respScore = 0.5; // داده‌ای نداریم
         } elseif ($avgResponseMin < 60) {
@@ -317,59 +346,88 @@ class TechnicianSuggestionService
         ];
     }
 
-    /** آمار سفارش‌های تکنسین — total, cancelled, last_assigned_at. */
-    protected function orderStats(int $techId): array
+    /**
+     * آمار سفارش‌های چند تکنسین در یک کوئری — total, cancelled, last_assigned_at.
+     *
+     * @param  array<int, int>  $techIds
+     * @return array<int, array{total:int, cancelled:int, last_assigned_at:?string}>
+     */
+    protected function statsFor(array $techIds): array
     {
-        $row = Order::query()->realOrders()
-            ->where('technician_id', $techId)
+        if (empty($techIds)) {
+            return [];
+        }
+
+        return Order::query()->realOrders()
+            ->whereIn('technician_id', $techIds)
+            ->groupBy('technician_id')
             ->selectRaw('
+                technician_id,
                 COUNT(*) as total,
                 SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as cancelled,
                 MAX(assigned_at) as last_assigned_at
             ', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])
-            ->first();
-
-        return [
-            'total' => (int) ($row->total ?? 0),
-            'cancelled' => (int) ($row->cancelled ?? 0),
-            'last_assigned_at' => $row->last_assigned_at ?? null,
-        ];
+            ->get()
+            ->mapWithKeys(fn ($row) => [(int) $row->technician_id => [
+                'total' => (int) $row->total,
+                'cancelled' => (int) $row->cancelled,
+                'last_assigned_at' => $row->last_assigned_at,
+            ]])
+            ->all();
     }
 
     /**
-     * میانگین زمان پاسخ تکنسین به سفارش‌های تخصیص‌داده‌شده.
-     * فاصله از assigned_at تا اولین OrderStatusLog که by این تکنسین است.
+     * میانگین زمان پاسخ چند تکنسین در یک کوئری.
+     * فاصله از assigned_at تا اولین OrderStatusLog که by آن تکنسین است.
+     *
+     * TIMESTAMPDIFF مخصوص MySQL است؛ روی درایورهای دیگر (تست‌ها) کوئری
+     * می‌شکند و چون این بُعد فقط ۵٪ وزن دارد، خطا را بلعیده و مقدار خنثی
+     * برمی‌گردانیم تا امتیازدهی از کار نیفتد.
+     *
+     * @param  Collection<int, Technician>  $techs
+     * @return array<int, float>
      */
-    protected function avgResponseMinutes(int $techId): ?float
+    protected function responseMinutesFor(Collection $techs): array
     {
-        $tech = Technician::find($techId);
-        if (! $tech || ! $tech->user_id) {
-            return null;
+        $userIds = $techs->pluck('user_id', 'id')->filter()->all();
+        if (empty($userIds)) {
+            return [];
         }
 
-        // فقط سفارش‌هایی که تکنسین وضعیت‌شان را عوض کرده
-        // o.assigned_at را MIN می‌گیریم تا با ONLY_FULL_GROUP_BY MySQL
-        // سازگار بماند (per-order یکتاست پس MIN/MAX/ANY_VALUE یکسان است).
-        $rows = \DB::select('
-            SELECT TIMESTAMPDIFF(MINUTE, MIN(o.assigned_at), MIN(l.created_at)) AS mins
-            FROM crm_orders o
-            INNER JOIN crm_order_status_logs l ON l.order_id = o.id AND l.changed_by = ?
-            WHERE o.technician_id = ?
-              AND o.assigned_at IS NOT NULL
-              AND l.created_at > o.assigned_at
-            GROUP BY o.id
-            LIMIT 50
-        ', [$tech->user_id, $techId]);
+        try {
+            $rows = DB::table('crm_orders as o')
+                ->join('crm_technicians as t', 't.id', '=', 'o.technician_id')
+                ->join('crm_order_status_logs as l', function ($join) {
+                    $join->on('l.order_id', '=', 'o.id')
+                        ->on('l.changed_by', '=', 't.user_id');
+                })
+                ->whereIn('o.technician_id', array_keys($userIds))
+                ->whereNotNull('o.assigned_at')
+                ->whereColumn('l.created_at', '>', 'o.assigned_at')
+                ->groupBy('o.technician_id', 'o.id')
+                ->selectRaw('o.technician_id as tech_id, TIMESTAMPDIFF(MINUTE, MIN(o.assigned_at), MIN(l.created_at)) as mins')
+                ->get();
+        } catch (\Throwable $e) {
+            Log::debug('responseMinutesFor skipped', ['err' => $e->getMessage()]);
 
-        if (empty($rows)) {
-            return null;
-        }
-        $values = array_filter(array_map(fn ($r) => (int) $r->mins, $rows), fn ($v) => $v > 0);
-        if (empty($values)) {
-            return null;
+            return [];
         }
 
-        return array_sum($values) / count($values);
+        $buckets = [];
+        foreach ($rows as $row) {
+            $mins = (int) $row->mins;
+            if ($mins <= 0) {
+                continue;
+            }
+            $id = (int) $row->tech_id;
+            // سقف ۵۰ نمونه به‌ازای هر تکنسین — مثل نسخهٔ قبلی.
+            if (count($buckets[$id] ?? []) >= 50) {
+                continue;
+            }
+            $buckets[$id][] = $mins;
+        }
+
+        return array_map(fn (array $v) => array_sum($v) / count($v), $buckets);
     }
 
     /** دسته‌بندی tier از روی score 0..100. */

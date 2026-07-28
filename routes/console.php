@@ -44,3 +44,12 @@ Schedule::command('activity-log:purge')
     ->dailyAt('02:30')
     ->onOneServer()
     ->withoutOverlapping();
+
+// پخشِ خودکارِ سفارش‌های بدون تکنسین. کامند اگر حالت تنظیمات روی «فقط
+// پیشنهاد» باشد بلافاصله خارج می‌شود، پس زمان‌بندیِ همیشگی بی‌خطر است.
+// مهلتِ انتظار (پیش‌فرض ۱۰ دقیقه) داخل خود سرویس اعمال می‌شود تا
+// سفارش‌های هم‌گروهِ یک مشتری فرصت ثبت‌شدن پیدا کنند.
+Schedule::command('crm:orders:auto-assign')
+    ->everyFiveMinutes()
+    ->onOneServer()
+    ->withoutOverlapping();
