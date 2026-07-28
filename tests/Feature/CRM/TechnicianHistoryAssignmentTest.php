@@ -73,6 +73,8 @@ class TechnicianHistoryAssignmentTest extends TestCase
             $t->text('address')->nullable();
             $t->string('order_type')->nullable();
             $t->string('status', 30)->default('new');
+            // هوکِ مدل روی هر تغییر وضعیت این را می‌نویسد.
+            $t->timestamp('status_changed_at')->nullable();
             $t->boolean('is_lead')->default(false);
             $t->timestamp('assigned_at')->nullable();
             $t->timestamp('completed_at')->nullable();

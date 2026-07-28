@@ -60,7 +60,9 @@ class Order extends Model
         'visit_scheduled_at', 'visit_scheduled_slot',
 
         // وضعیت
-        'status', 'cancel_reason', 'cancel_reason_id',
+        'status', 'status_changed_at', 'cancel_reason', 'cancel_reason_id',
+        'estimated_ready_at',
+        'return_review_pending', 'return_reviewed_at', 'return_review_approved', 'return_review_days',
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
         'send_technician', 'send_sms_tec', 'send_sms_customer', 'save_as_draft',
         'is_legacy_closed', 'legacy_tech_share', 'legacy_company_share',
@@ -96,6 +98,12 @@ class Order extends Model
 
     protected $casts = [
         'status' => OrderStatus::class,
+        'status_changed_at' => 'datetime',
+        'estimated_ready_at' => 'date',
+        'return_review_pending' => 'boolean',
+        'return_reviewed_at' => 'datetime',
+        'return_review_approved' => 'boolean',
+        'return_review_days' => 'integer',
         'visit_scheduled_at' => 'datetime',
         'assigned_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -220,6 +228,19 @@ class Order extends Model
     protected static function booted(): void
     {
         static::saving(function (self $order) {
+            // status_changed_at ← لحظهٔ ورود به وضعیت جدید.
+            //
+            // در همان hook نگه داشته می‌شود تا هیچ‌کدام از ده‌ها نقطه‌ای که
+            // وضعیت را عوض می‌کنند (پنل، اپ تکنسین، سینک ووکامرس، پخش
+            // خودکار) نتوانند فراموشش کنند. اگر فراخواننده خودش مقدار
+            // داده باشد، دست نمی‌زنیم.
+            if ($order->isDirty('status') && ! $order->isDirty('status_changed_at')) {
+                $order->status_changed_at = now();
+            }
+            if (! $order->exists && blank($order->status_changed_at)) {
+                $order->status_changed_at = now();
+            }
+
             // cost_price ← sum(buy_price_list) (در صورت خالی بودن)
             if ((int) ($order->cost_price ?? 0) === 0
                 && is_array($order->buy_price_list)

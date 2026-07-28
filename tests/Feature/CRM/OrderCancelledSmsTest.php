@@ -56,6 +56,8 @@ class OrderCancelledSmsTest extends TestCase
             $t->string('customer_mobile')->nullable();
             $t->unsignedBigInteger('technician_id')->nullable();
             $t->string('status', 30)->default('new');
+            // هوکِ مدل روی هر تغییر وضعیت این را می‌نویسد.
+            $t->timestamp('status_changed_at')->nullable();
             $t->text('cancel_reason')->nullable();
             $t->boolean('is_lead')->default(false);
             $t->timestamps();
