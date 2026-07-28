@@ -36,3 +36,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 /.phpunit.result.cache
+/storage/app/mpdf-tmp
+/storage/app/public/staff-contracts
