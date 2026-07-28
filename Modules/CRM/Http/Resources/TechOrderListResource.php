@@ -39,6 +39,11 @@ class TechOrderListResource extends JsonResource
             'device_thumbnail' => \Modules\Site\Support\MediaUrl::resolve($this->device?->thumbnail),
             'scheduled_at' => $this->visit_scheduled_at?->utc()->toIso8601String(),
             'created_at' => $this->created_at?->utc()->toIso8601String(),
+
+            // ─── مهلت تعیین وضعیت (SLA) — مرجعِ قفلِ اپ
+            'status_changed_at' => $this->status_changed_at?->utc()->toIso8601String(),
+            'sla_deadline_at' => \Modules\CRM\Support\SlaPolicy::deadlineFor($this->resource)?->utc()->toIso8601String(),
+            'return_review_pending' => (bool) $this->return_review_pending,
         ];
     }
 }

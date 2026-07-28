@@ -66,6 +66,8 @@ class TechnicianDashboardTest extends TestCase
             $t->id();
             $t->unsignedBigInteger('technician_id')->nullable();
             $t->string('status', 30)->default('new');
+            // هوکِ مدل روی هر تغییر وضعیت این را می‌نویسد.
+            $t->timestamp('status_changed_at')->nullable();
             $t->unsignedBigInteger('price_customer')->nullable();
             $t->unsignedBigInteger('total_invoice')->nullable();
             $t->unsignedBigInteger('final_price')->nullable();
