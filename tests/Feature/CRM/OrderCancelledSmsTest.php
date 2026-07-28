@@ -86,10 +86,12 @@ class OrderCancelledSmsTest extends TestCase
             $t->timestamp('created_at')->nullable();
         });
 
-        Artisan::call('migrate', [
-            '--path' => 'Modules/CRM/Database/Migrations/2026_07_28_230000_refresh_order_cancelled_sms_templates.php',
-            '--force' => true,
-        ]);
+        foreach ([
+            'Modules/CRM/Database/Migrations/2026_07_28_230000_refresh_order_cancelled_sms_templates.php',
+            'Modules/CRM/Database/Migrations/2026_07_28_240000_align_cancel_sms_kavenegar_template_names.php',
+        ] as $path) {
+            Artisan::call('migrate', ['--path' => $path, '--force' => true]);
+        }
 
         // سرویسِ واقعیِ کاوه‌نگار اجرا می‌شود ولی HTTP فیک است — تا رفتارِ
         // واقعیِ خودِ سرویس (از جمله تبدیلِ فاصله به نقطه در توکن‌ها) هم
@@ -152,12 +154,12 @@ class OrderCancelledSmsTest extends TestCase
         $this->assertDatabaseHas('crm_sms_templates', [
             'trigger_key' => 'order_cancelled',
             'recipient' => 'customer',
-            'kavenegar_template' => 'customer_cancel_order',
+            'kavenegar_template' => 'customercancelorder',
         ]);
         $this->assertDatabaseHas('crm_sms_templates', [
             'trigger_key' => 'tech_order_cancelled',
             'recipient' => 'technician',
-            'kavenegar_template' => 'tech_order_cancelled',
+            'kavenegar_template' => 'techordercancelled',
         ]);
     }
 
@@ -183,13 +185,13 @@ class OrderCancelledSmsTest extends TestCase
         $this->assertCount(2, $sent);
 
         $toCustomer = collect($sent)->firstWhere('receptor', '09120000222');
-        $this->assertSame('customer_cancel_order', $toCustomer['template']);
+        $this->assertSame('customercancelorder', $toCustomer['template']);
         // فاصله‌ها را کاوه‌نگار قبول نمی‌کند؛ سرویس آن‌ها را به نقطه تبدیل می‌کند.
         $this->assertSame('مریم.کریمی', $toCustomer['tokens']['token']);
         $this->assertSame('TOL-501', $toCustomer['tokens']['token2']);
 
         $toTechnician = collect($sent)->firstWhere('receptor', '09120000111');
-        $this->assertSame('tech_order_cancelled', $toTechnician['template']);
+        $this->assertSame('techordercancelled', $toTechnician['template']);
         $this->assertSame('علی.رضایی', $toTechnician['tokens']['token']);
         $this->assertSame('TOL-501', $toTechnician['tokens']['token2']);
         $this->assertSame('مریم.کریمی', $toTechnician['tokens']['token3']);
