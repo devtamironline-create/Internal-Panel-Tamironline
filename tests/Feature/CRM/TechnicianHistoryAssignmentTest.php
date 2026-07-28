@@ -141,6 +141,7 @@ class TechnicianHistoryAssignmentTest extends TestCase
             'ready_for_delivery' => true,
             'exclude_from_suggestions' => false,
             'wallet_balance' => 0,
+            'service_types' => ['repair'],
         ], $attributes));
 
         foreach ($devices as $id) {
@@ -163,6 +164,7 @@ class TechnicianHistoryAssignmentTest extends TestCase
             'city_id' => 1,
             'technician_id' => $tech->id,
             'status' => $status,
+            'order_type' => 'repair',
             'is_lead' => false,
             'completed_at' => $at,
         ]);
@@ -184,6 +186,7 @@ class TechnicianHistoryAssignmentTest extends TestCase
             'device_id' => $deviceId,
             'city_id' => 1,
             'address' => 'تهران خیابان ولیعصر پلاک ۱۲',
+            'order_type' => 'repair',
             'status' => 'new',
             'is_lead' => false,
         ], $attributes));

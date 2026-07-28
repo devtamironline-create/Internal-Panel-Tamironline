@@ -85,13 +85,14 @@
                    placeholder="مثلاً regular / senior / expert / freelance">
         </div>
         <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع خدمات قابل ارائه</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع خدمات قابل ارائه *</label>
             @php
                 $selectedServices = old('service_types', $technician->service_types ?? []);
                 if (! is_array($selectedServices)) $selectedServices = [];
+                $serviceOptions = \Modules\CRM\Support\ServiceTypeOptions::all();
             @endphp
             <div class="flex flex-wrap gap-4 mt-1">
-                @foreach(['repair' => 'تعمیر', 'service' => 'سرویس', 'install' => 'نصب'] as $val => $label)
+                @foreach($serviceOptions as $val => $label)
                     <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                         <input type="checkbox" name="service_types[]" value="{{ $val }}"
                                @checked(in_array($val, $selectedServices, true))
@@ -100,9 +101,14 @@
                     </label>
                 @endforeach
             </div>
+            @if(empty($selectedServices))
+                <div class="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 leading-6">
+                    ⚠ تا وقتی هیچ نوع خدمتی انتخاب نشود، این تکنسین <b>نه در پیشنهاد هوشمند دیده می‌شود و نه سفارش خودکار می‌گیرد</b>.
+                </div>
+            @endif
             <p class="text-[10px] text-gray-500 mt-1">
-                در پیشنهاد تکنسین برای سفارش‌ها، فقط تکنسین‌هایی که نوع سفارش را در این لیست دارند نمایش داده می‌شوند.
-                اگر هیچ‌کدام انتخاب نشود، رفتار قدیمی حفظ می‌شود (همه نوع سفارش را قبول می‌کند).
+                در پیشنهاد و پخش سفارش، فقط تکنسین‌هایی که نوع آن سفارش را در این فهرست دارند در نظر گرفته می‌شوند.
+                فهرست از بخش «انواع خدمات» خوانده می‌شود؛ اگر نوع جدیدی آنجا اضافه کنید، همین‌جا ظاهر می‌شود.
             </p>
         </div>
         <div class="md:col-span-2">

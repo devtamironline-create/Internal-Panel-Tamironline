@@ -33,17 +33,29 @@ final class AutoAssignService
     ) {}
 
     /**
-     * @return array{groups:int, assigned:int, skipped_low_score:int, unassignable:int}
+     * @return array{groups:int, assigned:int, skipped_low_score:int, unassignable:int, skipped_no_type:int}
      */
     public function run(bool $dryRun = false): array
     {
-        $stats = ['groups' => 0, 'assigned' => 0, 'skipped_low_score' => 0, 'unassignable' => 0];
+        $stats = [
+            'groups' => 0, 'assigned' => 0, 'skipped_low_score' => 0,
+            'unassignable' => 0, 'skipped_no_type' => 0,
+        ];
 
         if (! AssignmentSettings::isAuto() && ! $dryRun) {
             return $stats;
         }
 
         $pending = $this->pendingOrders();
+
+        // بدونِ «نوع خدمت» نمی‌شود گفت سفارش تعمیر است یا نصب، پس
+        // نمی‌شود تکنسینِ درست را انتخاب کرد. این‌ها را برای اپراتور
+        // می‌گذاریم و تعدادشان را گزارش می‌کنیم تا اگر روزی صفر نبود
+        // بی‌صدا نماند.
+        [$typed, $untyped] = $pending->partition(fn (Order $o) => filled($o->order_type));
+        $stats['skipped_no_type'] = $untyped->count();
+        $pending = $typed->values();
+
         if ($pending->isEmpty()) {
             return $stats;
         }
